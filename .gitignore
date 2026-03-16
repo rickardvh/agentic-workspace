@@ -1,0 +1,14 @@
+# Local agent working context
+.agent-work/
+
+# Local Python environment
+.venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Common test and tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/

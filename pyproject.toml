@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentic-memory-bootstrap"
+version = "0.1.0"
+description = "Install the agentic memory bootstrap into an existing repository."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "OpenAI Codex" },
+]
+dependencies = []
+
+[project.scripts]
+agentic-memory-bootstrap = "repo_memory_bootstrap.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/repo_memory_bootstrap"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"bootstrap" = "src/repo_memory_bootstrap/_payload"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/README.md",
+  "/bootstrap",
+  "/src/repo_memory_bootstrap",
+]
