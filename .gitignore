@@ -12,3 +12,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db
