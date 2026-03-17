@@ -8,6 +8,7 @@
 - Treat memory as maintained working knowledge, not a documentation archive.
 - Treat memory as a cache of reusable knowledge, not an archive of everything learned.
 - Shared workflow rules live in `memory/system/WORKFLOW.md`; `AGENTS.md` points there directly.
+- `memory/system/` contains bootstrap system docs and version markers rather than routed task memory.
 
 ## How to use memory
 

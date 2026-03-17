@@ -4,6 +4,10 @@ This file is the local bootstrap contract for agents working in this repository.
 
 Keep it short, stable, and repo-specific. Shared workflow rules live in `memory/system/WORKFLOW.md`.
 
+<!-- agentic-memory:workflow:start -->
+Read `memory/system/WORKFLOW.md` for shared workflow rules.
+<!-- agentic-memory:workflow:end -->
+
 ## Before doing any work
 
 1. Read `TODO.md`.

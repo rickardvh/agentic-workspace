@@ -19,6 +19,23 @@ Keep this file execution-focused only. Collapse completed detail into short outc
 
 ## Active milestones
 
+### Milestone: Deterministic Upgrade System
+
+Status: done
+
+- [x] Add bootstrap versioning and system docs needed for deterministic upgrades.
+- [x] Refactor the installer around file roles and a shared plan engine for install, adopt, doctor, and upgrade flows.
+- [x] Add doctor and upgrade commands, structured plan output, and local `AGENTS.md` patch support.
+- [x] Update docs and workflow references for the new upgrade model.
+- [x] Run CLI smoke tests and collapse this milestone into short outcome notes.
+
+Progress notes:
+
+- 2026-03-17: Reviewed the current installer, bootstrap payload, and workflow split to map where the existing logic still conflates empty bootstrap, live-repo adoption, and upgrades.
+- 2026-03-17: Added `memory/system/VERSION.md`, `memory/system/UPGRADE.md`, a marker-based `AGENTS.md` workflow pointer block, and file-role-aware planning for install, adopt, doctor, and upgrade flows.
+- 2026-03-17: Added `doctor`, `adopt`, `upgrade`, and `--format json`, plus deterministic upgrade rules for shared files, local entrypoints, starter notes, and append-only fragments.
+- 2026-03-17: Verified with `uv run python scripts/check/check_memory_freshness.py`, `uv run agentic-memory-bootstrap doctor --target .`, `uv run agentic-memory-bootstrap upgrade --dry-run --target . --format json`, `uv run agentic-memory-bootstrap adopt --dry-run --target .`, and disposable empty-repo and older-install smoke targets under `.agent-work/`.
+
 ### Milestone: Workflow Document Split
 
 Status: done

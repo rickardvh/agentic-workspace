@@ -27,7 +27,6 @@ STALE_DAYS = 180
 
 SKIP_FILES = {
     MEMORY_ROOT / "index.md",
-    MEMORY_ROOT / "system" / "WORKFLOW.md",
     MEMORY_ROOT / "domains" / "README.md",
     MEMORY_ROOT / "invariants" / "README.md",
     MEMORY_ROOT / "runbooks" / "README.md",
@@ -35,6 +34,7 @@ SKIP_FILES = {
 }
 SKIP_DIRS = {
     MEMORY_ROOT / "templates",
+    MEMORY_ROOT / "system",
 }
 
 

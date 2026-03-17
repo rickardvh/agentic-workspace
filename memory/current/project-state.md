@@ -13,6 +13,8 @@ Active
 - `TODO.md`
 - `memory/index.md`
 - `memory/system/WORKFLOW.md`
+- `memory/system/VERSION.md`
+- `memory/system/UPGRADE.md`
 - `<KEY_REPO_DOCS>`
 
 ## Load when
@@ -54,6 +56,8 @@ Active
 - `TODO.md`
 - `memory/index.md`
 - `memory/system/WORKFLOW.md`
+- `memory/system/VERSION.md`
+- `memory/system/UPGRADE.md`
 - `README.md`
 
 ## What to do
@@ -63,4 +67,4 @@ Active
 
 ## Last confirmed
 
-2026-03-17 during workflow split review
+2026-03-17 during upgrade system review

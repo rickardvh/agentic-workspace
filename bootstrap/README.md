@@ -8,6 +8,8 @@ It is intended to be copied into an existing repository to provide:
 - `TODO.md` as the execution-focused planning surface
 - `memory/` as durable checked-in technical memory
 - `memory/system/WORKFLOW.md` as the shared reusable workflow rules
+- `memory/system/VERSION.md` as the installed bootstrap version marker
+- `memory/system/UPGRADE.md` as the upgrade playbook for older installs
 - `.agent-work/` as local scratch working context
 - an advisory memory freshness audit
 - optional workflow fragments for common contribution flows
@@ -77,6 +79,17 @@ Delete unused routing examples once the target repository has concrete notes.
 
 `AGENTS.md` should stay short and point to `memory/system/WORKFLOW.md` for the shared operating model.
 
+`memory/system/VERSION.md` is the machine-readable version marker used for deterministic upgrades.
+
+## Upgrade model
+
+Prefer this flow for existing or older installs:
+
+1. Run `agentic-memory-bootstrap doctor --target <repo>`.
+2. Run `agentic-memory-bootstrap upgrade --dry-run --target <repo>`.
+3. Apply the minimal-safe upgrade plan.
+4. Use `--apply-local-entrypoint` only when you want the installer to patch `AGENTS.md`.
+
 ## Automation notes
 
 A later automation script should:
@@ -86,4 +99,5 @@ A later automation script should:
 - create `.agent-work/` locally if the target repo should not commit it
 - replace placeholders or leave them for a human to fill in
 - avoid overwriting existing repo-specific memory notes blindly
+- treat `memory/system/VERSION.md` as the installed system version marker
 - run the freshness audit after installation

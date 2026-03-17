@@ -12,6 +12,10 @@ uv run agentic-memory-bootstrap install --target /path/to/repo
 uv run agentic-memory-bootstrap install --dry-run
 uv run agentic-memory-bootstrap install --force
 uv run agentic-memory-bootstrap init --target /path/to/repo
+uv run agentic-memory-bootstrap adopt --target /path/to/repo
+uv run agentic-memory-bootstrap doctor --target /path/to/repo
+uv run agentic-memory-bootstrap upgrade --dry-run --target /path/to/repo
+uv run agentic-memory-bootstrap upgrade --target /path/to/repo --apply-local-entrypoint
 uv run agentic-memory-bootstrap status
 uv run agentic-memory-bootstrap list-files
 ```
@@ -20,6 +24,8 @@ The installed model is:
 
 - `AGENTS.md` = slim local entrypoint
 - `memory/system/WORKFLOW.md` = shared reusable workflow rules
+- `memory/system/VERSION.md` = installed bootstrap version marker
+- `memory/system/UPGRADE.md` = repo-agnostic upgrade playbook
 - `memory/index.md` = routing layer for task-relevant durable knowledge
 - `TODO.md` = execution and planning surface
 
@@ -40,6 +46,23 @@ Default behaviour is conservative:
 
 - `--dry-run` reports what would change without writing anything
 - `--force` allows overwriting managed files that already exist
+
+## Adoption, diagnosis, and upgrades
+
+- `adopt` adds missing bootstrap capability to an existing repo without replacing local files by default
+- `doctor` reports missing files, stale versions, and manual-review items such as older `AGENTS.md` layouts
+- `upgrade` applies a deterministic minimal-safe upgrade plan
+
+Upgrade defaults:
+
+- add missing core files
+- replace shared repo-agnostic files such as `memory/system/WORKFLOW.md`, templates, and the audit script
+- never replace `AGENTS.md` automatically
+- never replace `TODO.md` automatically
+- only replace starter notes automatically when they still look like untouched bootstrap placeholders
+
+Use `--apply-local-entrypoint` to patch `AGENTS.md` with the canonical workflow pointer block.  
+Use `--format json` on `doctor`, `upgrade`, `status`, and `list-files` for structured output that an agent can consume.
 
 Mode summary:
 

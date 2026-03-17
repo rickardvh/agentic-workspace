@@ -49,6 +49,8 @@ Active
 
 - `AGENTS.md`
 - `memory/system/WORKFLOW.md`
+- `memory/system/VERSION.md`
+- `memory/system/UPGRADE.md`
 - `README.md`
 - `src/repo_memory_bootstrap/installer.py`
 
@@ -59,4 +61,4 @@ Active
 
 ## Last confirmed
 
-2026-03-17 during workflow split review
+2026-03-17 during upgrade system review

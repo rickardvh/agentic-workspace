@@ -49,6 +49,8 @@ Active
 
 - `AGENTS.md`
 - `memory/system/WORKFLOW.md`
+- `memory/system/VERSION.md`
+- `memory/system/UPGRADE.md`
 - `<KEY_REPO_DOCS>`
 - `<RELEVANT_RUNTIME_OR_INTERFACE_PATHS>`
 

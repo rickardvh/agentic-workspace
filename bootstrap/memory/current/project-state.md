@@ -13,6 +13,8 @@ Active
 - `TODO.md`
 - `memory/index.md`
 - `memory/system/WORKFLOW.md`
+- `memory/system/VERSION.md`
+- `memory/system/UPGRADE.md`
 - `<KEY_REPO_DOCS>`
 
 ## Load when
@@ -54,6 +56,8 @@ Active
 - `TODO.md`
 - `memory/index.md`
 - `memory/system/WORKFLOW.md`
+- `memory/system/VERSION.md`
+- `memory/system/UPGRADE.md`
 - `<KEY_REPO_DOCS>`
 
 ## What to do
