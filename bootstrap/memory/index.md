@@ -56,6 +56,7 @@ Delete unused routing examples once the repository has concrete notes.
 
 - Do not load all of `/memory` by default.
 - Start with always-relevant files, then load only what is needed for the current task.
+- When notes include an `Applies to` section, use touched files, modules, commands, or surfaces to decide which notes to load first.
 - Prefer a small, precise working set over broad context loading.
 
 ## Memory freshness rules

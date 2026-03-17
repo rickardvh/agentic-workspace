@@ -14,6 +14,8 @@ Use one status exactly as written above.
 
 List concrete files, modules, tools, commands, or runtime surfaces that this note relates to.
 
+Use concrete paths, modules, tools, commands, or runtime surfaces so agents can match touched files to relevant notes quickly.
+
 This helps agents determine relevance from touched files during a task.
 
 Examples:
