@@ -21,6 +21,21 @@ def test_payload_entries_do_not_include_todo_stub() -> None:
     assert any(entry.relative_path == Path("memory/current/task-context.md") for entry in entries)
 
 
+def test_payload_current_baseline_is_project_state_and_task_context_only() -> None:
+    entries = installer._payload_entries(installer.payload_root())
+
+    current_paths = {
+        entry.relative_path.as_posix()
+        for entry in entries
+        if entry.relative_path.as_posix().startswith("memory/current/")
+    }
+
+    assert current_paths == {
+        "memory/current/project-state.md",
+        "memory/current/task-context.md",
+    }
+
+
 def test_extract_make_targets_ignores_assignments_and_recipes() -> None:
     text = """
     .PHONY: lint test
@@ -110,6 +125,31 @@ def test_patch_agents_workflow_block_inserts_pointer_after_heading() -> None:
     assert patched.endswith("Repo-local rules live here.\n")
 
 
+def test_doctor_flags_agents_that_embed_current_shared_workflow_sections(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "AGENTS.md").write_text(
+        "# Agent Instructions\n\n"
+        f"{installer.WORKFLOW_POINTER_BLOCK}\n\n"
+        "## Overview file\n"
+        "- copied shared rule\n\n"
+        "## Task-context file\n"
+        "- copied shared rule\n",
+        encoding="utf-8",
+    )
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 8\n", encoding="utf-8")
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.path == target / "AGENTS.md"
+        and action.kind == "manual review"
+        and "embeds shared workflow rules" in action.detail
+        for action in result.actions
+    )
+
+
 def test_upgrade_replaces_shared_files_without_todo_manual_review(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / "memory" / "system").mkdir(parents=True)
@@ -142,3 +182,20 @@ def test_list_payload_files_excludes_agent_work_templates_and_gitignore_append(t
     assert all(action.path != target / ".gitignore" for action in result.actions)
     assert all(".agent-work" not in action.path.as_posix() for action in result.actions)
     assert all(action.path != target / "memory" / "current" / "active-decisions.md" for action in result.actions)
+
+
+def test_install_dry_run_includes_current_memory_baseline(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    result = installer.install_bootstrap(target=target, dry_run=True)
+
+    planned_copies = {
+        action.path.relative_to(target).as_posix()
+        for action in result.actions
+        if action.kind == "would copy"
+    }
+
+    assert "memory/current/project-state.md" in planned_copies
+    assert "memory/current/task-context.md" in planned_copies
+    assert "memory/current/active-decisions.md" not in planned_copies

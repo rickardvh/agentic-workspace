@@ -45,9 +45,10 @@ Do not install maintainer-only repo docs or implementation notes by default.
 
 ## Placeholder replacement
 
-Replace placeholders such as:
+`<PROJECT_NAME>` is filled by the installer when possible.
 
-- `<PROJECT_NAME>`
+Review and replace repo-specific placeholders such as:
+
 - `<PROJECT_PURPOSE>`
 - `<KEY_REPO_DOCS>`
 - `<KEY_SUBSYSTEMS>`

@@ -23,13 +23,15 @@ WORKFLOW_POINTER_BLOCK = (
     f"{WORKFLOW_MARKER_END}"
 )
 
-OLD_WORKFLOW_HEADINGS = (
+EMBEDDED_WORKFLOW_HEADINGS = (
     "## Task system boundary",
     "## Memory discipline",
     "## Memory admission rule",
     "## Memory freshness rule",
     "## Memory routing",
     "## Overview file",
+    "## Task-context file",
+    "## Local working notes (optional)",
 )
 PLACEHOLDER_RE = re.compile(r"<[A-Z0-9_/-]+>")
 VERSION_RE = re.compile(r"^\s*Version:\s*(\d+)\s*$", re.MULTILINE)
@@ -564,9 +566,9 @@ def _plan_agents_entrypoint(
     doctor_mode: bool,
 ) -> None:
     has_reference = "memory/system/WORKFLOW.md" in existing
-    embeds_old_rules = any(heading in existing for heading in OLD_WORKFLOW_HEADINGS)
+    embeds_shared_rules = _embeds_shared_workflow_rules(existing)
 
-    if has_reference and WORKFLOW_MARKER_START in existing and not embeds_old_rules:
+    if has_reference and WORKFLOW_MARKER_START in existing and not embeds_shared_rules:
         result.add("current", destination, "workflow pointer block already present", role="local-entrypoint", safety="safe", source=str(AGENTS_PATH))
         return
 
@@ -582,7 +584,7 @@ def _plan_agents_entrypoint(
             source=str(AGENTS_PATH),
             detail="added or refreshed workflow pointer block",
         )
-        if embeds_old_rules:
+        if embeds_shared_rules:
             result.add(
                 "manual review",
                 destination,
@@ -594,7 +596,7 @@ def _plan_agents_entrypoint(
         return
 
     detail = "missing workflow pointer block"
-    if embeds_old_rules:
+    if embeds_shared_rules:
         detail = "older AGENTS.md still embeds shared workflow rules"
     result.add(
         "manual review",
@@ -761,6 +763,11 @@ def _read_installed_version(path: Path) -> int | None:
 
 def _has_placeholders(text: str) -> bool:
     return bool(PLACEHOLDER_RE.search(text))
+
+
+def _embeds_shared_workflow_rules(text: str) -> bool:
+    matches = {heading for heading in EMBEDDED_WORKFLOW_HEADINGS if heading in text}
+    return "## Task system boundary" in matches or len(matches) >= 2
 
 
 def _patch_agents_workflow_block(existing: str) -> str:

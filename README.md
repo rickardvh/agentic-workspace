@@ -185,7 +185,7 @@ When changing installer behaviour, check whether the same change also needs an u
 
 ## What `install` does
 
-`install` detects whether the target is in clean bootstrap mode or augment mode, copies the base bootstrap files, applies simple placeholder substitution, and appends a few small text fragments when they are not already present.
+`install` detects whether the target is in clean bootstrap mode or augment mode, copies the base bootstrap files, fills `<PROJECT_NAME>`, leaves other repo-specific placeholders for manual review, and appends a few small text fragments when they are not already present.
 
 Default behaviour is conservative:
 
