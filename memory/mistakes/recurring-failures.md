@@ -6,11 +6,14 @@ Active
 
 ## Scope
 
-- Symptom-first recurring failure patterns that matter across tasks.
+- Symptom-first recurring failure patterns that matter across tasks in this repository.
 
 ## Applies to
 
-- `<RELEVANT_MODULES_OR_SURFACES>`
+- `bootstrap/`
+- `memory/`
+- `src/repo_memory_bootstrap/`
+- `scripts/check/check_memory_freshness.py`
 
 ## Load when
 
@@ -29,10 +32,14 @@ Active
 
 ## Rule or lesson
 
+- No recurring failure pattern is recorded here yet.
+- Add an entry only when the same root problem has appeared more than once or is likely to recur across tasks.
 - Keep entries concise, symptom-driven, and operational.
 - Use one entry per recurring root problem.
 
-### <Failure name>
+## Entry format
+
+### Failure: <short symptom-first label>
 
 Symptom
 - <What users or developers observe>
@@ -65,4 +72,4 @@ YYYY-MM-DD during <task / investigation>
 
 ## Last confirmed
 
-2026-03-17 during memory hardening review
+2026-03-17 during documentation review

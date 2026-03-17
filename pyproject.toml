@@ -9,6 +9,7 @@ description = "Install the agentic memory bootstrap into an existing repository.
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
+  { name = "Rickard von Haugwitz" },
   { name = "OpenAI Codex" },
 ]
 dependencies = []

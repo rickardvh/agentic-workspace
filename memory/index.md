@@ -168,7 +168,7 @@ Typical maintenance actions:
 
 ## Suggested maintenance cadence
 
-As periodic upkeep, review `/memory` roughly every 2–3 months to:
+As periodic upkeep, review `/memory` roughly every 2-3 months to:
 
 - run the freshness audit
 - prune deprecated notes

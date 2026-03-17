@@ -16,6 +16,8 @@ It is intended to be copied into an existing repository to provide:
 
 Treat the packaged memory notes as a starting cache of reusable operating knowledge, not an archive to expand without limit.
 
+When maintaining this repository, treat `bootstrap/` as the source of truth for installed files. The packaged wheel payload is built from this directory.
+
 ## Copy targets
 
 Copy as-is:
@@ -89,6 +91,8 @@ Prefer this flow for existing or older installs:
 2. Run `agentic-memory-bootstrap upgrade --dry-run --target <repo>`.
 3. Apply the minimal-safe upgrade plan.
 4. Use `--apply-local-entrypoint` only when you want the installer to patch `AGENTS.md`.
+
+Use `agentic-memory-bootstrap list-files` to preview the packaged files and local templates that the installer exposes.
 
 ## Automation notes
 

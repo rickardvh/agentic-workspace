@@ -16,6 +16,7 @@ Keep this file execution-focused only. Collapse completed detail into short outc
 ## Current focus
 
 - Keep repository housekeeping files aligned with current workspace needs.
+- Keep repository and bootstrap documentation aligned with the upgrade system and current maintainer workflow.
 
 ## Active milestones
 
@@ -35,6 +36,9 @@ Progress notes:
 - 2026-03-17: Added `memory/system/VERSION.md`, `memory/system/UPGRADE.md`, a marker-based `AGENTS.md` workflow pointer block, and file-role-aware planning for install, adopt, doctor, and upgrade flows.
 - 2026-03-17: Added `doctor`, `adopt`, `upgrade`, and `--format json`, plus deterministic upgrade rules for shared files, local entrypoints, starter notes, and append-only fragments.
 - 2026-03-17: Verified with `uv run python scripts/check/check_memory_freshness.py`, `uv run agentic-memory-bootstrap doctor --target .`, `uv run agentic-memory-bootstrap upgrade --dry-run --target . --format json`, `uv run agentic-memory-bootstrap adopt --dry-run --target .`, and disposable empty-repo and older-install smoke targets under `.agent-work/`.
+- 2026-03-17: Reviewed repo and bootstrap documentation, replaced placeholder-heavy repo memory notes with concrete guidance, and tightened maintainer orientation in `README.md`.
+- 2026-03-17: Reworked the `README.md` local usage section so commands are grouped as examples by task rather than reading like a required sequence.
+- 2026-03-17: Reworked `README.md` again to document commands and arguments explicitly, so flags such as `--force`, `--dry-run`, and `--apply-local-entrypoint` are scannable without reading examples as instructions.
 
 ### Milestone: Workflow Document Split
 

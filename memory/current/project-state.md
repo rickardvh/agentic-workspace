@@ -6,16 +6,18 @@ Active
 
 ## Scope
 
-- Repository orientation and document map for `agentic-memory`.
+- Repository orientation and document map for `agentic-memory-bootstrap`.
 
 ## Applies to
 
+- `AGENTS.md`
 - `TODO.md`
+- `README.md`
 - `memory/index.md`
 - `memory/system/WORKFLOW.md`
 - `memory/system/VERSION.md`
 - `memory/system/UPGRADE.md`
-- `<KEY_REPO_DOCS>`
+- `bootstrap/README.md`
 
 ## Load when
 
@@ -35,9 +37,9 @@ Active
 
 ## Rule or lesson
 
-- `agentic-memory` exists for `<PROJECT_PURPOSE>`.
+- `agentic-memory-bootstrap` exists to provide a reusable bootstrap system for agent memory, planning, and local working context in other repositories.
 - `TODO.md` is the single source of truth for milestone status and pending work.
-- Main repository docs live in `<KEY_REPO_DOCS>`.
+- Main repository orientation docs live in `README.md`, `AGENTS.md`, `memory/index.md`, and `memory/system/WORKFLOW.md`.
 - Keep this note short; it is an orientation note, not a changelog.
 
 ## How to recognise it
@@ -49,16 +51,18 @@ Active
 
 - Read `TODO.md` and confirm the active milestones still match reality.
 - Read `memory/index.md` and confirm the routing still matches the memory structure.
-- Confirm `<KEY_REPO_DOCS>` still exist and are the correct orientation docs.
+- Confirm `README.md`, `AGENTS.md`, and the `memory/system/` docs still exist and remain the correct orientation set.
 
 ## Verified against
 
+- `AGENTS.md`
 - `TODO.md`
+- `README.md`
 - `memory/index.md`
 - `memory/system/WORKFLOW.md`
 - `memory/system/VERSION.md`
 - `memory/system/UPGRADE.md`
-- `README.md`
+- `bootstrap/README.md`
 
 ## What to do
 
@@ -67,4 +71,4 @@ Active
 
 ## Last confirmed
 
-2026-03-17 during upgrade system review
+2026-03-17 during documentation review

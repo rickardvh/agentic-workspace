@@ -6,11 +6,11 @@ Active
 
 ## Scope
 
-- Symptom-first recurring failure patterns that matter across tasks.
+- Symptom-first recurring failure patterns that matter across tasks in the target repository.
 
 ## Applies to
 
-- `<RELEVANT_MODULES_OR_SURFACES>`
+- Add concrete files, commands, or surfaces once the first recurring failure is known.
 
 ## Load when
 
@@ -29,10 +29,14 @@ Active
 
 ## Rule or lesson
 
+- No recurring failure pattern is recorded here yet.
+- Add an entry only after the same root problem has appeared more than once or clearly risks recurring.
 - Keep entries concise, symptom-driven, and operational.
 - Use one entry per recurring root problem.
 
-### <Failure name>
+## Entry format
+
+### Failure: <short symptom-first label>
 
 Symptom
 - <What users or developers observe>
@@ -57,6 +61,10 @@ Failure signals
 
 Last confirmed
 YYYY-MM-DD during <task / investigation>
+
+## Verified against
+
+- `memory/templates/`
 
 ## Last confirmed
 

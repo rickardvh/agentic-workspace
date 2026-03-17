@@ -6,13 +6,18 @@ Active
 
 ## Scope
 
-- Current high-impact technical or operational decisions for `agentic-memory`.
+- Current high-impact technical and operational decisions for `agentic-memory-bootstrap`.
 
 ## Applies to
 
-- `<KEY_SUBSYSTEMS>`
-- `<KEY_REPO_DOCS>`
-- `<RELEVANT_RUNTIME_OR_INTERFACE_PATHS>`
+- `bootstrap/`
+- `README.md`
+- `AGENTS.md`
+- `memory/system/WORKFLOW.md`
+- `memory/system/VERSION.md`
+- `memory/system/UPGRADE.md`
+- `src/repo_memory_bootstrap/cli.py`
+- `src/repo_memory_bootstrap/installer.py`
 
 ## Load when
 
@@ -48,17 +53,25 @@ Active
 ## Verified against
 
 - `AGENTS.md`
+- `bootstrap/README.md`
+- `src/repo_memory_bootstrap/cli.py`
+- `src/repo_memory_bootstrap/installer.py`
 - `memory/system/WORKFLOW.md`
 - `memory/system/VERSION.md`
 - `memory/system/UPGRADE.md`
 - `README.md`
-- `src/repo_memory_bootstrap/installer.py`
 
 ## What to do
 
 - Keep this file current and compact.
 - Prefer one line per active decision unless more detail is required for safe implementation.
 
+## Current decisions
+
+- `bootstrap/` is the source of truth for installed payload files; packaging should mirror it rather than fork from it.
+- Shared operating rules belong in `memory/system/WORKFLOW.md`; `AGENTS.md` should stay local, short, and repo-specific.
+- `upgrade` may replace shared repo-agnostic files automatically, but must continue to treat `AGENTS.md`, `TODO.md`, and customised starter notes conservatively.
+
 ## Last confirmed
 
-2026-03-17 during upgrade system review
+2026-03-17 during documentation review
