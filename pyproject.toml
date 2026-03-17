@@ -17,6 +17,13 @@ dependencies = []
 [project.scripts]
 agentic-memory-bootstrap = "repo_memory_bootstrap.cli:main"
 
+[dependency-groups]
+dev = [
+  "pytest",
+  "ruff",
+  "ty",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/repo_memory_bootstrap"]
 
@@ -29,3 +36,14 @@ include = [
   "/bootstrap",
   "/src/repo_memory_bootstrap",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
