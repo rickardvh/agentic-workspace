@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Iterable
 
@@ -10,10 +12,35 @@ PROJECT_MARKERS = ("pyproject.toml", "package.json", "Cargo.toml", ".hg")
 AGENT_ROOT_MARKERS = (Path("AGENTS.md"), Path("memory"))
 VERSION_PATH = Path("memory/system/VERSION.md")
 WORKFLOW_PATH = Path("memory/system/WORKFLOW.md")
-UPGRADE_PLAYBOOK_PATH = Path("memory/system/UPGRADE.md")
 AGENTS_PATH = Path("AGENTS.md")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 8
+BOOTSTRAP_VERSION = 9
+BUNDLED_SKILLS_ROOT = Path("skills")
+
+CURRENT_MEMORY_BASELINE = (
+    Path("memory/current/project-state.md"),
+    Path("memory/current/task-context.md"),
+)
+PAYLOAD_REQUIRED_FILES = (
+    AGENTS_PATH,
+    Path("memory/index.md"),
+    Path("memory/system/WORKFLOW.md"),
+    Path("memory/current/project-state.md"),
+    Path("memory/current/task-context.md"),
+    Path("memory/domains/README.md"),
+    Path("memory/invariants/README.md"),
+    Path("memory/runbooks/README.md"),
+    Path("memory/mistakes/recurring-failures.md"),
+    Path("memory/decisions/README.md"),
+    AUDIT_SCRIPT_PATH,
+)
+FORBIDDEN_PAYLOAD_FILES = (
+    Path("TODO.md"),
+    Path("memory/current/active-decisions.md"),
+)
+FORBIDDEN_PAYLOAD_PREFIXES = (".agent-work/",)
+CURRENT_TASK_STALE_DAYS = 30
+CURRENT_TASK_MAX_LINES = 120
 
 WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
 WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
@@ -22,7 +49,6 @@ WORKFLOW_POINTER_BLOCK = (
     "Read `memory/system/WORKFLOW.md` for shared workflow rules.\n"
     f"{WORKFLOW_MARKER_END}"
 )
-
 EMBEDDED_WORKFLOW_HEADINGS = (
     "## Task system boundary",
     "## Memory discipline",
@@ -34,6 +60,7 @@ EMBEDDED_WORKFLOW_HEADINGS = (
     "## Local working notes (optional)",
 )
 PLACEHOLDER_RE = re.compile(r"<[A-Z0-9_/-]+>")
+DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\b")
 VERSION_RE = re.compile(r"^\s*Version:\s*(\d+)\s*$", re.MULTILINE)
 
 OPTIONAL_APPEND_TARGETS = {
@@ -51,6 +78,7 @@ class Action:
     role: str = ""
     safety: str = ""
     source: str = ""
+    category: str = ""
 
     def to_dict(self, target_root: Path) -> dict[str, str]:
         relative_path = self.path.relative_to(target_root) if self.path.is_relative_to(target_root) else self.path
@@ -61,6 +89,7 @@ class Action:
             "role": self.role,
             "safety": self.safety,
             "source": self.source,
+            "category": self.category,
         }
 
 
@@ -83,9 +112,18 @@ class InstallResult:
         role: str = "",
         safety: str = "",
         source: str = "",
+        category: str = "",
     ) -> None:
         self.actions.append(
-            Action(kind=kind, path=path, detail=detail, role=role, safety=safety, source=source)
+            Action(
+                kind=kind,
+                path=path,
+                detail=detail,
+                role=role,
+                safety=safety,
+                source=source,
+                category=category or _infer_action_category(kind=kind, path=path, detail=detail, role=role, safety=safety),
+            )
         )
 
     def counts(self) -> dict[str, int]:
@@ -112,6 +150,36 @@ class PayloadEntry:
     role: str
     strategy: str
     source_path: Path
+
+
+@dataclass(frozen=True, slots=True)
+class CurrentNoteView:
+    path: Path
+    exists: bool
+    content: str
+
+
+@dataclass(slots=True)
+class CurrentViewResult:
+    target_root: Path
+    detected_version: int | None = None
+    bootstrap_version: int = BOOTSTRAP_VERSION
+    notes: list[CurrentNoteView] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "target_root": str(self.target_root),
+            "detected_version": self.detected_version,
+            "bootstrap_version": self.bootstrap_version,
+            "notes": [
+                {
+                    "path": note.path.as_posix(),
+                    "exists": note.exists,
+                    "content": note.content,
+                }
+                for note in self.notes
+            ],
+        }
 
 
 class RepoDetectionError(ValueError):
@@ -154,16 +222,44 @@ def payload_root() -> Path:
     raise FileNotFoundError("Bootstrap payload directory is not available.")
 
 
+def skills_root() -> Path:
+    package_root = Path(__file__).resolve().parent
+    packaged = package_root / "_skills"
+    if packaged.exists():
+        return packaged
+
+    dev_skills = package_root.parents[1] / "skills"
+    if dev_skills.exists():
+        return dev_skills
+
+    raise FileNotFoundError("Bundled skills directory is not available.")
+
+
 def install_bootstrap(
     *,
     target: str | Path | None = None,
     dry_run: bool = False,
     force: bool = False,
     project_name: str | None = None,
+    project_purpose: str | None = None,
+    key_repo_docs: str | None = None,
+    key_subsystems: str | None = None,
+    primary_build_command: str | None = None,
+    primary_test_command: str | None = None,
+    other_key_commands: str | None = None,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     source_root = payload_root()
-    substitutions = build_substitutions(target_root=target_root, project_name=project_name)
+    substitutions = build_substitutions(
+        target_root=target_root,
+        project_name=project_name,
+        project_purpose=project_purpose,
+        key_repo_docs=key_repo_docs,
+        key_subsystems=key_subsystems,
+        primary_build_command=primary_build_command,
+        primary_test_command=primary_test_command,
+        other_key_commands=other_key_commands,
+    )
     result = _new_result(target_root, dry_run=dry_run, message="Install plan")
     _record_repo_context_warnings(target_root, result)
 
@@ -191,10 +287,25 @@ def adopt_bootstrap(
     dry_run: bool = False,
     apply_local_entrypoint: bool = False,
     project_name: str | None = None,
+    project_purpose: str | None = None,
+    key_repo_docs: str | None = None,
+    key_subsystems: str | None = None,
+    primary_build_command: str | None = None,
+    primary_test_command: str | None = None,
+    other_key_commands: str | None = None,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     source_root = payload_root()
-    substitutions = build_substitutions(target_root=target_root, project_name=project_name)
+    substitutions = build_substitutions(
+        target_root=target_root,
+        project_name=project_name,
+        project_purpose=project_purpose,
+        key_repo_docs=key_repo_docs,
+        key_subsystems=key_subsystems,
+        primary_build_command=primary_build_command,
+        primary_test_command=primary_test_command,
+        other_key_commands=other_key_commands,
+    )
     result = _new_result(target_root, dry_run=dry_run, message="Adoption plan for existing repository")
     _record_repo_context_warnings(target_root, result)
     _plan_from_entries(
@@ -218,10 +329,25 @@ def upgrade_bootstrap(
     force: bool = False,
     apply_local_entrypoint: bool = False,
     project_name: str | None = None,
+    project_purpose: str | None = None,
+    key_repo_docs: str | None = None,
+    key_subsystems: str | None = None,
+    primary_build_command: str | None = None,
+    primary_test_command: str | None = None,
+    other_key_commands: str | None = None,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     source_root = payload_root()
-    substitutions = build_substitutions(target_root=target_root, project_name=project_name)
+    substitutions = build_substitutions(
+        target_root=target_root,
+        project_name=project_name,
+        project_purpose=project_purpose,
+        key_repo_docs=key_repo_docs,
+        key_subsystems=key_subsystems,
+        primary_build_command=primary_build_command,
+        primary_test_command=primary_test_command,
+        other_key_commands=other_key_commands,
+    )
     result = _new_result(target_root, dry_run=dry_run, message="Upgrade plan")
     _record_repo_context_warnings(target_root, result)
     _plan_from_entries(
@@ -258,10 +384,25 @@ def doctor_bootstrap(
     *,
     target: str | Path | None = None,
     project_name: str | None = None,
+    project_purpose: str | None = None,
+    key_repo_docs: str | None = None,
+    key_subsystems: str | None = None,
+    primary_build_command: str | None = None,
+    primary_test_command: str | None = None,
+    other_key_commands: str | None = None,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     source_root = payload_root()
-    substitutions = build_substitutions(target_root=target_root, project_name=project_name)
+    substitutions = build_substitutions(
+        target_root=target_root,
+        project_name=project_name,
+        project_purpose=project_purpose,
+        key_repo_docs=key_repo_docs,
+        key_subsystems=key_subsystems,
+        primary_build_command=primary_build_command,
+        primary_test_command=primary_test_command,
+        other_key_commands=other_key_commands,
+    )
     result = _new_result(target_root, dry_run=True, message="Doctor report")
     _record_repo_context_warnings(target_root, result)
     _plan_from_entries(
@@ -307,10 +448,308 @@ def list_payload_files(target: str | Path | None = None) -> InstallResult:
     return result
 
 
-def build_substitutions(*, target_root: Path, project_name: str | None) -> dict[str, str]:
-    return {
-        "<PROJECT_NAME>": project_name or target_root.name,
+def list_bundled_skills() -> InstallResult:
+    skills_dir = skills_root()
+    result = InstallResult(target_root=skills_dir, dry_run=True, message="Bundled skills")
+    result.mode = "skills"
+    result.detected_version = None
+
+    for skill_dir in sorted(path for path in skills_dir.iterdir() if path.is_dir()):
+        skill_file = skill_dir / "SKILL.md"
+        if not skill_file.exists():
+            continue
+        result.add(
+            "bundled skill",
+            skill_dir,
+            "packaged product skill",
+            role="skill",
+            safety="safe",
+            source=skill_dir.name,
+        )
+    return result
+
+
+def show_current_memory(target: str | Path | None = None) -> CurrentViewResult:
+    target_root = resolve_target_root(target)
+    result = CurrentViewResult(
+        target_root=target_root,
+        detected_version=_read_installed_version(target_root / VERSION_PATH),
+    )
+    for relative_path in CURRENT_MEMORY_BASELINE:
+        note_path = target_root / relative_path
+        if note_path.exists():
+            result.notes.append(CurrentNoteView(path=relative_path, exists=True, content=note_path.read_text(encoding="utf-8")))
+        else:
+            result.notes.append(CurrentNoteView(path=relative_path, exists=False, content=""))
+    return result
+
+
+def check_current_memory(target: str | Path | None = None) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = _new_result(target_root, dry_run=True, message="Current-memory check")
+    for relative_path in CURRENT_MEMORY_BASELINE:
+        note_path = target_root / relative_path
+        if not note_path.exists():
+            result.add(
+                "missing",
+                note_path,
+                "current-memory note is missing",
+                role="current-memory",
+                safety="manual",
+                source=relative_path.as_posix(),
+                category="current-memory-review",
+            )
+            continue
+        text = note_path.read_text(encoding="utf-8")
+        if _has_placeholders(text):
+            result.add(
+                "manual review",
+                note_path,
+                "current-memory note still contains placeholders",
+                role="current-memory",
+                safety="manual",
+                source=relative_path.as_posix(),
+                category="placeholder-review",
+            )
+        else:
+            result.add(
+                "current",
+                note_path,
+                "current-memory note present",
+                role="current-memory",
+                safety="safe",
+                source=relative_path.as_posix(),
+                category="safe-update",
+            )
+        if relative_path == Path("memory/current/task-context.md"):
+            stale_reason = _current_task_staleness_reason(text)
+            if stale_reason is not None:
+                result.add(
+                    "manual review",
+                    note_path,
+                    stale_reason,
+                    role="current-memory",
+                    safety="manual",
+                    source=relative_path.as_posix(),
+                    category="current-memory-review",
+                )
+    return result
+
+
+def route_memory(
+    *,
+    target: str | Path | None = None,
+    files: list[str] | None = None,
+    surfaces: list[str] | None = None,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = _new_result(target_root, dry_run=True, message="Memory routing suggestions")
+    if not files and not surfaces:
+        result.add(
+            "manual review",
+            target_root / Path("memory/index.md"),
+            "provide --files and/or --surface to request routing suggestions",
+            role="memory-route",
+            safety="manual",
+            source="memory/index.md",
+            category="manual-review",
+        )
+        return result
+
+    selected_surfaces = {_normalise_surface_name(surface) for surface in (surfaces or [])}
+    selected_surfaces.update(_infer_surfaces_from_paths(files or []))
+
+    suggestions: list[tuple[str, str]] = [(path.as_posix(), "always relevant current-memory note") for path in CURRENT_MEMORY_BASELINE]
+    for section_surface, notes in _parse_route_sections(target_root / "memory" / "index.md"):
+        if section_surface in selected_surfaces:
+            for note in notes:
+                suggestions.append((note, f"matched route surface '{section_surface}'"))
+
+    seen: set[str] = set()
+    for note, reason in suggestions:
+        if note in seen:
+            continue
+        seen.add(note)
+        result.add(
+            "recommended",
+            target_root / Path(note),
+            reason,
+            role="memory-route",
+            safety="safe",
+            source=note,
+            category="safe-update",
+        )
+
+    if files and len(seen) == len(CURRENT_MEMORY_BASELINE):
+        result.add(
+            "manual review",
+            target_root / Path("memory/index.md"),
+            "no route-specific notes matched; review memory/index.md and related notes manually",
+            role="memory-route",
+            safety="manual",
+            source="memory/index.md",
+            category="manual-review",
+        )
+    return result
+
+
+def sync_memory(
+    *,
+    target: str | Path | None = None,
+    files: list[str] | None = None,
+    notes: list[str] | None = None,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    changed_files = list(files or [])
+    if not changed_files:
+        changed_files = _git_changed_files(target_root)
+
+    result = _new_result(target_root, dry_run=True, message="Memory sync suggestions")
+    if not changed_files and not notes:
+        result.add(
+            "manual review",
+            target_root / Path("memory/index.md"),
+            "provide --files/--notes or run inside a git repo with changed files",
+            role="memory-sync",
+            safety="manual",
+            source="memory/index.md",
+            category="manual-review",
+        )
+        return result
+
+    routed = route_memory(target=target_root, files=changed_files)
+    for action in routed.actions:
+        if action.kind != "recommended":
+            continue
+        note_path = action.path
+        note_exists = note_path.exists()
+        note_text = note_path.read_text(encoding="utf-8") if note_exists else ""
+        recommendation = "review"
+        if not note_exists or _has_placeholders(note_text):
+            recommendation = "update"
+        if note_path.name == "index.md":
+            recommendation = "update index"
+        result.add(
+            recommendation,
+            note_path,
+            f"{action.detail}; suggested by changed files {', '.join(changed_files) if changed_files else 'explicit input'}",
+            role="memory-sync",
+            safety="manual",
+            source=action.source,
+            category="manual-review",
+        )
+    for note in notes or []:
+        result.add(
+            "review",
+            target_root / Path(note),
+            "explicit note supplied for sync review",
+            role="memory-sync",
+            safety="manual",
+            source=note,
+            category="manual-review",
+        )
+    return result
+
+
+def verify_payload(target: str | Path | None = None) -> InstallResult:
+    target_root = resolve_target_root(target)
+    source_root = payload_root()
+    result = _new_result(target_root, dry_run=True, message="Payload verification")
+    payload_paths = {entry.relative_path for entry in _payload_entries(source_root)}
+
+    for required in PAYLOAD_REQUIRED_FILES:
+        if required in payload_paths:
+            result.add(
+                "current",
+                target_root / required,
+                "required payload file present",
+                role="payload-contract",
+                safety="safe",
+                source=required.as_posix(),
+                category="safe-update",
+            )
+        else:
+            result.add(
+                "manual review",
+                target_root / required,
+                "required payload file missing",
+                role="payload-contract",
+                safety="manual",
+                source=required.as_posix(),
+                category="contract-drift",
+            )
+
+    current_payload = {path for path in payload_paths if path.as_posix().startswith("memory/current/")}
+    expected_current = set(CURRENT_MEMORY_BASELINE)
+    for extra in sorted(current_payload - expected_current):
+        result.add(
+            "manual review",
+            target_root / extra,
+            "local-only or unexpected current-memory note is in the shipped payload",
+            role="payload-contract",
+            safety="manual",
+            source=extra.as_posix(),
+            category="contract-drift",
+        )
+    for missing in sorted(expected_current - current_payload):
+        result.add(
+            "manual review",
+            target_root / missing,
+            "baseline current-memory note missing from shipped payload",
+            role="payload-contract",
+            safety="manual",
+            source=missing.as_posix(),
+            category="contract-drift",
+        )
+    for forbidden in FORBIDDEN_PAYLOAD_FILES:
+        if forbidden in payload_paths:
+            result.add(
+                "manual review",
+                target_root / forbidden,
+                "forbidden file is present in the shipped payload",
+                role="payload-contract",
+                safety="manual",
+                source=forbidden.as_posix(),
+                category="contract-drift",
+            )
+    for payload_path in payload_paths:
+        if any(payload_path.as_posix().startswith(prefix) for prefix in FORBIDDEN_PAYLOAD_PREFIXES):
+            result.add(
+                "manual review",
+                target_root / payload_path,
+                "forbidden path prefix is present in the shipped payload",
+                role="payload-contract",
+                safety="manual",
+                source=payload_path.as_posix(),
+                category="contract-drift",
+            )
+    return result
+
+
+def build_substitutions(
+    *,
+    target_root: Path,
+    project_name: str | None,
+    project_purpose: str | None = None,
+    key_repo_docs: str | None = None,
+    key_subsystems: str | None = None,
+    primary_build_command: str | None = None,
+    primary_test_command: str | None = None,
+    other_key_commands: str | None = None,
+) -> dict[str, str]:
+    substitutions = {"<PROJECT_NAME>": project_name or target_root.name}
+    optional_values = {
+        "<PROJECT_PURPOSE>": project_purpose,
+        "<KEY_REPO_DOCS>": key_repo_docs,
+        "<KEY_SUBSYSTEMS>": key_subsystems,
+        "<PRIMARY_BUILD_COMMAND>": primary_build_command,
+        "<PRIMARY_TEST_COMMAND>": primary_test_command,
+        "<OTHER_KEY_COMMANDS>": other_key_commands,
     }
+    for placeholder, value in optional_values.items():
+        if value:
+            substitutions[placeholder] = value
+    return substitutions
 
 
 def detect_install_mode(target_root: Path) -> str:
@@ -333,12 +772,14 @@ def format_actions(actions: Iterable[Action], target_root: Path) -> list[str]:
             details.append(f"role={action.role}")
         if action.safety:
             details.append(f"safety={action.safety}")
+        if action.category:
+            details.append(f"category={action.category}")
         detail = f" ({'; '.join(details)})" if details else ""
         lines.append(f"{action.kind}: {relative_path}{detail}")
     return lines
 
 
-def format_result_json(result: InstallResult) -> str:
+def format_result_json(result) -> str:
     return json.dumps(result.to_dict(), indent=2)
 
 
@@ -352,16 +793,13 @@ def _new_result(target_root: Path, *, dry_run: bool, message: str) -> InstallRes
 
 def _payload_entries(source_root: Path) -> list[PayloadEntry]:
     entries: list[PayloadEntry] = []
-
-    files = [AGENTS_PATH, AUDIT_SCRIPT_PATH]
-    for relative_path in files:
-        source_path = source_root / relative_path
+    for relative_path in (AGENTS_PATH, AUDIT_SCRIPT_PATH):
         entries.append(
             PayloadEntry(
                 relative_path=relative_path,
                 role=_classify_role(relative_path),
                 strategy=_strategy_for_role(_classify_role(relative_path)),
-                source_path=source_path,
+                source_path=source_root / relative_path,
             )
         )
 
@@ -409,6 +847,10 @@ def _strategy_for_role(role: str) -> str:
         "shared-template": "replace",
         "seed-note": "seed",
         "managed-file": "create-only",
+        "current-memory": "seed",
+        "memory-route": "analyze",
+        "memory-sync": "analyze",
+        "payload-contract": "analyze",
     }[role]
 
 
@@ -541,7 +983,16 @@ def _plan_existing_file_for_upgrade(
     if entry.role == "seed-note":
         if _has_placeholders(existing) or force:
             detail = "seed note still contains placeholders" if _has_placeholders(existing) else "forced replacement"
-            _write_text(destination, rendered, result, "replaced", "would replace", role=entry.role, source=str(entry.relative_path), detail=detail)
+            _write_text(
+                destination,
+                rendered,
+                result,
+                "replaced",
+                "would replace",
+                role=entry.role,
+                source=str(entry.relative_path),
+                detail=detail,
+            )
         else:
             result.add(
                 "manual review",
@@ -707,6 +1158,8 @@ def _plan_optional_appends(
             safety="safe",
             source=str(fragment_path),
         )
+
+
 def _append_text(existing: str, fragment: str) -> str:
     normalized = existing.rstrip()
     if not normalized:
@@ -765,6 +1218,133 @@ def _has_placeholders(text: str) -> bool:
     return bool(PLACEHOLDER_RE.search(text))
 
 
+def _infer_action_category(*, kind: str, path: Path, detail: str, role: str, safety: str) -> str:
+    detail_lower = detail.lower()
+    path_str = path.as_posix()
+    if "placeholder" in detail_lower:
+        return "placeholder-review"
+    if any(path_str.endswith(current_path.as_posix()) for current_path in CURRENT_MEMORY_BASELINE):
+        if kind in {"missing", "manual review"}:
+            return "current-memory-review"
+    if role in {"payload-contract", "local-entrypoint"} or role.startswith("shared-"):
+        if kind in {"manual review", "missing"}:
+            return "contract-drift"
+    if kind in {"would create", "would copy", "would replace", "created", "copied", "replaced", "current", "present", "recommended"}:
+        return "safe-update"
+    if kind == "manual review":
+        return "manual-review"
+    if safety == "safe":
+        return "safe-update"
+    return ""
+
+
+def _current_task_staleness_reason(text: str) -> str | None:
+    lines = text.splitlines()
+    if len(lines) > CURRENT_TASK_MAX_LINES:
+        return f"task-context note is oversized ({len(lines)} lines)"
+    for idx, line in enumerate(lines):
+        if line.strip().lower() == "## last confirmed":
+            for follow in lines[idx + 1 :]:
+                stripped = follow.strip()
+                if not stripped:
+                    continue
+                date_match = DATE_RE.match(stripped)
+                if date_match:
+                    confirmed = datetime.strptime(date_match.group(1), "%Y-%m-%d").replace(tzinfo=UTC)
+                    if confirmed < datetime.now(UTC) - timedelta(days=CURRENT_TASK_STALE_DAYS):
+                        return f"task-context note has not been confirmed in over {CURRENT_TASK_STALE_DAYS} days"
+                break
+    return None
+
+
+def _parse_route_sections(index_path: Path) -> list[tuple[str, list[str]]]:
+    if not index_path.exists():
+        return []
+    sections: list[tuple[str, list[str]]] = []
+    current_heading: str | None = None
+    current_notes: list[str] = []
+    in_task_routing = False
+    for raw_line in index_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if line == "## Task routing":
+            in_task_routing = True
+            continue
+        if in_task_routing and line.startswith("## "):
+            break
+        if not in_task_routing:
+            continue
+        if line.startswith("### "):
+            if current_heading is not None:
+                sections.append((_normalise_surface_name(current_heading), current_notes))
+            current_heading = line.removeprefix("### ").strip()
+            current_notes = []
+            continue
+        if line.startswith("- `") and line.endswith("`"):
+            current_notes.append(line[3:-1])
+    if current_heading is not None:
+        sections.append((_normalise_surface_name(current_heading), current_notes))
+    return sections
+
+
+def _normalise_surface_name(text: str) -> str:
+    lowered = text.lower()
+    if "runtime" in lowered or "deployment" in lowered:
+        return "runtime"
+    if "api" in lowered or "interface" in lowered or "tool behaviour" in lowered:
+        return "api"
+    if "retrieval" in lowered or "search" in lowered:
+        return "retrieval"
+    if "test" in lowered or "validation" in lowered:
+        return "tests"
+    if "data model" in lowered or "architecture" in lowered:
+        return "architecture"
+    if "choosing an approach" in lowered or "multiple subsystems" in lowered:
+        return "decision"
+    return lowered
+
+
+def _infer_surfaces_from_paths(paths: list[str]) -> set[str]:
+    surfaces: set[str] = set()
+    for raw_path in paths:
+        path = raw_path.replace("\\", "/").lower()
+        if any(token in path for token in ("test", "/tests/", "_test.", "spec.")):
+            surfaces.add("tests")
+        if any(token in path for token in ("deploy", "infra", "docker", "k8s", "terraform", "compose")):
+            surfaces.add("runtime")
+        if any(token in path for token in ("api", "route", "contract", "interface", "cli")):
+            surfaces.add("api")
+        if any(token in path for token in ("search", "retriev", "vector", "index")):
+            surfaces.add("retrieval")
+        if any(token in path for token in ("schema", "model", "architect", "design", "invariant")):
+            surfaces.add("architecture")
+    return surfaces
+
+
+def _git_changed_files(target_root: Path) -> list[str]:
+    if not (target_root / ".git").exists():
+        return []
+    try:
+        completed = subprocess.run(
+            ["git", "status", "--short", "--porcelain"],
+            cwd=target_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return []
+
+    files: list[str] = []
+    for line in completed.stdout.splitlines():
+        if len(line) < 4:
+            continue
+        candidate = line[3:]
+        if " -> " in candidate:
+            candidate = candidate.split(" -> ", 1)[1]
+        files.append(candidate)
+    return files
+
+
 def _embeds_shared_workflow_rules(text: str) -> bool:
     matches = {heading for heading in EMBEDDED_WORKFLOW_HEADINGS if heading in text}
     return "## Task system boundary" in matches or len(matches) >= 2
@@ -805,8 +1385,7 @@ def _record_repo_context_warnings(target_root: Path, result: InstallResult) -> N
             safety="safe",
         )
 
-    nested_repos = _find_nested_repo_roots(target_root)
-    for nested_repo in nested_repos:
+    for nested_repo in _find_nested_repo_roots(target_root):
         result.add(
             "warning",
             nested_repo,

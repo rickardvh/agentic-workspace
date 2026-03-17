@@ -14,6 +14,7 @@ Keep it concise, operational, and repo-agnostic.
 - `/memory` = durable, shared technical knowledge
 - `memory/current/project-state.md` = lightweight repo overview
 - `memory/current/task-context.md` = optional checked-in current-task compression
+- skills = optional repeatable procedures over checked-in knowledge
 - local notes = optional scratch context only
 
 ## Memory discipline
@@ -30,7 +31,7 @@ Only add memory that is likely to matter again, such as:
 - recurring failures
 - subsystem boundaries that are easy to misunderstand
 - invariants future edits could break
-- repeatable procedures
+- durable runbooks or procedures that should stay visible in git
 
 Do not store one-off discoveries or temporary task details in `/memory`.
 
@@ -74,9 +75,19 @@ Do not leave contradicted memory behind.
 - Do not use it as a task list, detailed plan, or historical log.
 - Shrink or clear stale detail once it no longer helps the next session continue quickly.
 
+## Agent tooling note
+
+- `agentic-memory-bootstrap current` is the fast current-memory inspection surface.
+- `agentic-memory-bootstrap route` suggests likely relevant memory notes from touched files or explicit surfaces.
+- `agentic-memory-bootstrap sync-memory` suggests which memory notes need review after code changes.
+- These commands support the memory workflow; they do not replace selective reading or durable note maintenance.
+
 ## Skills note
 
-Specialised repeatable procedures may live in skills, but the core operating model must stay in checked-in docs.
+- Use checked-in files for durable facts, invariants, runbooks, and shared coordination notes.
+- Use skills for repeatable, bounded procedures that operate on those files.
+- Do not let the core operating model depend on skills being available.
+- If workflow prose keeps growing for a recurring procedure, that procedure is a good skill candidate.
 
 ## Local working notes (optional)
 

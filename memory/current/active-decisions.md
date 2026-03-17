@@ -76,9 +76,11 @@ Active
 - The bootstrap product boundary is memory-only and task-system agnostic.
 - `memory/current/project-state.md` is a lightweight overview file and must not become a task list.
 - `memory/current/task-context.md` is the checked-in current-work compression note and must not become a backlog, detailed plan, or history log.
+- Durable shared knowledge must stay in checked-in files; repeatable bounded workflows over that knowledge should be implemented as skills.
 - `upgrade` may replace shared repo-agnostic files automatically, but must continue to treat `AGENTS.md` and customised starter notes conservatively.
-- Skills are an optional extension layer for specialised procedures and should not be bundled into the mandatory bootstrap payload.
+- Skills are bundled product assets for specialised procedures and should stay outside the mandatory bootstrap payload.
+- The base memory system must remain understandable and usable even when skills are unavailable.
 
 ## Last confirmed
 
-2026-03-17 during task-context contract implementation
+2026-03-17 during skills-boundary clarification

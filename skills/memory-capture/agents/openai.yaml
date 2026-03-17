@@ -1,0 +1,4 @@
+interface:
+  display_name: "Memory Capture"
+  short_description: "Capture durable lessons into memory notes."
+  default_prompt: "Use $memory-capture to turn a solved issue or discovered rule into the right checked-in memory note."

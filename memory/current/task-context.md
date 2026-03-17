@@ -33,53 +33,63 @@ Active
 
 ## Current focus
 
-- Add `memory/current/task-context.md` to the shipped bootstrap contract and align the workflow docs, installer, and tests with that model.
+- Ship the first wave of installable product skills for memory operations while keeping the mandatory bootstrap payload memory-only.
 
 ## Active surfaces
 
+- `AGENTS.md`
+- `README.md`
 - `bootstrap/AGENTS.md`
-- `bootstrap/memory/current/task-context.md`
+- `bootstrap/README.md`
+- `memory/current/project-state.md`
+- `memory/current/active-decisions.md`
+- `memory/index.md`
+- `memory/system/SKILLS.md`
+- `skills/README.md`
+- `skills/memory-capture/SKILL.md`
+- `skills/memory-refresh/SKILL.md`
+- `skills/memory-router/SKILL.md`
+- `memory/system/WORKFLOW.md`
 - `bootstrap/memory/index.md`
 - `bootstrap/memory/system/WORKFLOW.md`
-- `README.md`
-- `memory/current/project-state.md`
-- `memory/index.md`
-- `memory/system/WORKFLOW.md`
-- `src/repo_memory_bootstrap/cli.py`
-- `src/repo_memory_bootstrap/installer.py`
-- `tests/test_installer.py`
 
 ## Key constraints
 
 - Keep the product memory-only and task-system agnostic.
 - `task-context.md` is a checked-in compression note, not a task list, detailed plan, or historical log.
+- Keep the base memory system usable without skills.
 - Do not reintroduce `TODO.md`, Beads, or `.agent-work/` as core contract surfaces.
-- Update this repo's own installed memory version with the payload change.
+- Do not blur the line between bundled product skills and the mandatory bootstrap payload.
 
 ## Relevant memory
 
 - `memory/current/project-state.md`
 - `memory/current/active-decisions.md`
 - `memory/index.md`
+- `memory/system/SKILLS.md`
 - `memory/system/WORKFLOW.md`
 - `memory/system/UPGRADE.md`
 
 ## Notes
 
-- The payload and source repo should both treat `task-context.md` as an optional but first-class current-memory note.
-- Shared bootstrap docs must stop implying that `memory/current/active-decisions.md` is part of the installed baseline.
+- Shared docs should make the files-vs-skills boundary explicit without turning the bootstrap into a skills dependency.
+- The first wave of shipped memory skills should stay narrow and operate on visible checked-in outcomes.
+- Bundled skills should be discoverable from the installed product without becoming part of the repo payload.
+- `skills/` should be treated as the optional product skill catalogue, not a separate local-only layer for this source repo.
 
 ## Failure signals
 
-- `task-context.md` starts acting like a backlog or implementation log.
-- Shared docs refer to `active-decisions.md` as a mandatory installed note.
-- Installer or tests miss the new file or fail to bump the contract version.
+- Shared docs blur durable memory and procedural workflows.
+- Skills start acting like hidden storage instead of executable procedures.
+- The shipped contract becomes harder to understand without the skills layer.
+- The product docs describe skills as available, but do not explain how to install them.
 
 ## Verify
 
-- Confirm `task-context.md` appears in the packaged payload and installer previews.
-- Confirm the shared workflow and index docs describe the overview/task-context split consistently.
+- Confirm the shared docs describe the files-vs-skills split consistently.
+- Confirm the shipped skills remain optional and are not treated as installed payload.
+- Validate the new skills with the skill validator in the repo dev environment.
 
 ## Last confirmed
 
-2026-03-17 during task-context contract implementation
+2026-03-17 during first-wave memory skill shipping

@@ -7,6 +7,8 @@ description: Review and clean a repository's checked-in memory and workflow docs
 
 Use this skill to keep checked-in memory accurate, compact, and aligned with the codebase.
 
+It operates on checked-in memory files. It does not replace them.
+
 ## Workflow
 
 1. Read the repo's local contract:
@@ -32,6 +34,7 @@ Use this skill to keep checked-in memory accurate, compact, and aligned with the
 ## Guardrails
 
 - Keep the core operating model in checked-in docs; do not move repo purpose, invariants, or task state into a skill.
+- Keep durable knowledge in checked-in files so the result stays visible and reviewable in git.
 - Preserve useful current guidance; remove only what no longer helps the next contributor.
 - Do not move durable technical knowledge into task tooling.
 - Mark uncertain notes `Needs verification` instead of guessing.

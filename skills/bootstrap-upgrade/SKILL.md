@@ -7,6 +7,8 @@ description: Upgrade an already bootstrapped repository safely. Use when a repo 
 
 Use this skill to move an existing repo to the current bootstrap version without flattening local customisation.
 
+It upgrades the checked-in memory scaffolding; it does not become the storage layer for repo knowledge.
+
 ## Workflow
 
 1. Read the target repo's local contract:
@@ -38,6 +40,7 @@ Use this skill to move an existing repo to the current bootstrap version without
 - Treat task-system-specific local docs as manual-review surfaces.
 - Preserve repo-specific scope, commands, and guardrails in `AGENTS.md`.
 - If a repo already has an equivalent optional fragment, keep the existing behaviour and avoid duplicate appends.
+- Keep the upgrade outcome visible in checked-in files rather than in skill-only state.
 
 ## Typical outputs
 

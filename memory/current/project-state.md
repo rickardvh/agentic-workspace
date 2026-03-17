@@ -32,15 +32,20 @@ Active
 
 ## Current focus
 
-- Keep the bootstrap payload and installer aligned with the memory-only, task-system-agnostic product boundary, with current-task compression living in checked-in memory rather than local scratch.
+- Keep the bootstrap payload and installer aligned with a two-layer model: checked-in files hold durable shared knowledge, while skills handle repeatable procedures over that knowledge.
 
 ## Recent meaningful progress
 
 - Removed task-management guidance from the core payload and installer.
 - Repositioned `memory/current/project-state.md` as the overview note rather than a planning surface.
-- Reduced the shipped skill set to memory and bootstrap maintenance workflows.
+- Shipped the first installable product skill set for memory and bootstrap workflows.
 - Removed repo-local Beads and task-tracking expectations from this source repository.
 - Promoted `memory/current/task-context.md` as the checked-in current-work compression note.
+- Added agent-facing memory ergonomics to the CLI for current-memory inspection, routing, sync suggestions, and payload verification.
+- Clarified that the base system must remain understandable and maintainable even when skills are unavailable.
+- Clarified that `skills/` is the product's bundled skills catalogue, not a separate source-repo-only layer.
+- Added bundled `memory-capture`, `memory-refresh`, and `memory-router` skills alongside the existing hygiene and bootstrap skills.
+- Shifted the product model toward bundled auto-discoverable skills, with manual installation only as fallback guidance.
 
 ## Blockers
 
@@ -50,6 +55,8 @@ Active
 
 - Optional local scratch conventions are outside the core bootstrap contract.
 - `memory/current/project-state.md` is the overview note; `memory/current/task-context.md` is the current-work compression note.
+- Skills are the execution layer for repeatable memory workflows, not the storage layer for durable repo knowledge.
+- The current bundled skill catalogue now covers hygiene, capture, refresh, routing, adoption, and upgrade workflows.
 
 ## Failure signals
 
@@ -74,4 +81,4 @@ Active
 
 ## Last confirmed
 
-2026-03-17 during local repo cleanup after the memory-only boundary refactor
+2026-03-17 during first-wave memory skill shipping

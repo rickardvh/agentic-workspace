@@ -14,7 +14,11 @@ It is intended to be copied into an existing repository to provide:
 - an advisory memory freshness audit
 - optional workflow fragments for common contribution flows
 
+The packaged files are the durable state and knowledge layer. Repeatable workflow-like actions should live in optional skills rather than expanding the mandatory payload indefinitely.
+
 Optional extension mechanisms such as skills should stay outside the mandatory payload unless a repository explicitly chooses to add them.
+
+The CLI around this payload can also inspect the current-memory surface, suggest relevant notes for touched files, and verify payload consistency for maintainers and agent workflows.
 
 Treat the packaged memory notes as a starting cache of reusable operating knowledge, not an archive to expand without limit.
 
@@ -55,13 +59,15 @@ Review and replace repo-specific placeholders such as:
 - `<PRIMARY_BUILD_COMMAND>`
 - `<PRIMARY_TEST_COMMAND>`
 
+The installer can also fill these placeholders when you pass the matching explicit CLI flags.
+
 Delete unused routing examples once the target repository has concrete notes.
 
 `AGENTS.md` should stay short and point to `memory/system/WORKFLOW.md` for the shared operating model.
 
 This bootstrap is task-system agnostic. `/memory` owns durable technical knowledge, `memory/current/project-state.md` is the overview note, and `memory/current/task-context.md` is optional checked-in current-work compression.
 
-Skills are an optional extension layer for specialised repeatable procedures. They are not part of the mandatory bootstrap payload.
+Skills are an optional extension layer for specialised repeatable procedures over checked-in memory. They are product assets, but they are not part of the mandatory bootstrap payload and should be installed separately when wanted.
 
 `memory/system/VERSION.md` is the machine-readable version marker used for deterministic upgrades.
 

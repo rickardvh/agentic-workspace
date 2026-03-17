@@ -7,6 +7,8 @@ description: Add the bootstrap to an existing repository conservatively. Use whe
 
 Use this skill to introduce the bootstrap into an existing repository without treating local files as disposable.
 
+It is an execution layer for applying the memory system. The installed files remain the durable source of truth.
+
 ## Workflow
 
 1. Inspect the target repository first:
@@ -33,6 +35,7 @@ Use this skill to introduce the bootstrap into an existing repository without tr
 - Do not overwrite repo-local files just because the bootstrap has a newer generic version.
 - Keep bootstrap payload behaviour repo-agnostic.
 - Do not auto-install optional skills into the target repo.
+- Keep durable knowledge in checked-in files rather than moving it into procedural guidance.
 - Treat sibling repos outside the explicit target as out of scope.
 
 ## Typical outputs

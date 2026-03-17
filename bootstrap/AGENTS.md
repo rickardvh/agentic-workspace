@@ -22,6 +22,8 @@ Do not rely on transient chat context when the same knowledge should exist in ch
 `memory/index.md` is the routing layer for task-relevant durable knowledge.  
 `memory/system/WORKFLOW.md` defines the shared memory, overview, task-context, freshness, and handoff rules.
 
+Keep durable repo knowledge in checked-in files. Prefer skills for repeatable procedures that operate on that knowledge.
+
 ## Repo scope
 
 Replace the placeholders below with repository-specific details.

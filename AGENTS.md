@@ -22,6 +22,8 @@ Do not rely on transient chat context when the same knowledge should exist in ch
 `memory/index.md` is the routing layer for task-relevant durable knowledge.  
 `memory/system/WORKFLOW.md` defines the shared memory, overview, task-context, freshness, and handoff rules.
 
+Repeatable workflow-like actions should usually become skills. Durable shared knowledge should remain in checked-in files.
+
 ## Repo scope
 
 This repository produces and maintains a reusable bootstrap system that adds durable repository memory and overview-note conventions to other repositories.
@@ -31,6 +33,7 @@ The repo contains:
 - a reusable `bootstrap/` payload that can be copied into a target repo
 - a CLI installer intended for later use via `uvx`
 - templates and helper tooling for durable memory, overview notes, and memory freshness checks
+- bundled product skills for repeatable memory and bootstrap workflows
 - optional workflow fragments for integrating the system into common repo workflows
 
 Treat this repo as both:
@@ -119,10 +122,18 @@ When working on the installer:
 When developing this bootstrap tool in this repository:
 
 - continuously evaluate whether the current task exposed friction, ambiguity, or unnecessary manual review in the install, doctor, adopt, or upgrade workflow
+- continuously evaluate whether a repeatable procedure is stretching `AGENTS.md`, `WORKFLOW.md`, or repo docs beyond what should stay in checked-in guidance
 - if you spot a meaningful improvement, suggest it explicitly and, when in scope, implement it in the tool or docs
 - treat your own use of the bootstrap system here as product feedback, not just local task execution
 - prefer small improvements that make future repo adoption, upgrade review, or maintainer use clearer and safer
+- prefer promoting bounded repeatable procedures into skills rather than growing core workflow prose
+- treat `skills/` in this repo as the source of truth for product skills during development
+- do not assume a bundled installed copy matches the repo; reinstall the package only when intentionally testing the packaged skill path
+- validate and edit skills from the repo paths first, and treat bundled installed copies as potentially stale test artefacts
 - when a change affects the repo's installed memory or workflow contract, update this repo's own `memory/system/VERSION.md` as part of the change rather than leaving the source repo behind the payload
+- after changing the installed payload contract, exercise the installed behavior against this repo itself with the bootstrap tool, not just by editing checked-in source files directly
+- treat `agentic-memory-bootstrap doctor --target .` and the relevant install or upgrade path on this repo as required production testing when the payload or installer behavior changes
+- do not assume editing `bootstrap/` or this repo's checked-in `memory/` files is equivalent to verifying the installed tool path
 
 ## Before ending a task
 
@@ -131,3 +142,4 @@ When developing this bootstrap tool in this repository:
 3. Update, deprecate, or remove those notes as needed.
 4. Keep durable notes concise, factual, and de-duplicated.
 5. When a change affects the repo's installed memory or workflow contract, update this repo's own `memory/system/VERSION.md` in the same change.
+6. When the payload or installer behavior changed, run the bootstrap tool against this repo itself as part of verification rather than relying only on direct source-file edits.

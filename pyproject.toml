@@ -30,11 +30,13 @@ packages = ["src/repo_memory_bootstrap"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "bootstrap" = "src/repo_memory_bootstrap/_payload"
+"skills" = "src/repo_memory_bootstrap/_skills"
 
 [tool.hatch.build.targets.sdist]
 include = [
   "/README.md",
   "/bootstrap",
+  "/skills",
   "/src/repo_memory_bootstrap",
 ]
 

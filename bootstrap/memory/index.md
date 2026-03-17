@@ -9,6 +9,7 @@
 - Treat memory as a cache of reusable knowledge, not an archive of everything learned.
 - Shared workflow rules live in `memory/system/WORKFLOW.md`; `AGENTS.md` points there directly.
 - `memory/system/` contains bootstrap system docs and version markers rather than routed task memory.
+- Use skills for repeatable procedures over memory; use checked-in files for durable facts.
 
 ## How to use memory
 
@@ -82,7 +83,7 @@ Good candidates:
 
 - recurring failures
 - invariants or contracts
-- repeatable procedures
+- durable runbooks that should remain visible in git
 - subsystem boundaries that are easy to misunderstand
 
 Do not add memory for:
@@ -90,6 +91,8 @@ Do not add memory for:
 - one-off discoveries
 - temporary task details
 - implementation steps specific to a single task
+
+If a recurring procedure is reusable but not itself durable repo knowledge, prefer a skill over a new memory note.
 
 Use local working notes only if helpful; do not rely on them as part of the system.
 
