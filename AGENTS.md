@@ -10,17 +10,17 @@ Read `memory/system/WORKFLOW.md` for shared workflow rules.
 
 ## Before doing any work
 
-1. Read `TODO.md`.
-2. Read `memory/index.md`.
-3. Read `memory/system/WORKFLOW.md`.
+1. Read `memory/index.md`.
+2. Read `memory/system/WORKFLOW.md`.
+3. Use Beads for task tracking and next-work discovery. Prefer `bd ready` before starting, then maintain the active issue with `bd update`, `bd create`, and dependencies.
 4. Read only the memory files relevant to the subsystem you will touch.
 5. Read any repo docs explicitly referenced by those files.
-6. Declare your working set in `.agent-work/current-task.md` or an equivalent local note before coding.
+6. Use `.agent-work/current-task.md` or an equivalent local note only when it helps; it is optional support, not the planning system.
 
 Do not rely on transient chat context when the same knowledge should exist in checked-in files.
 
 `memory/index.md` is the routing layer for task-relevant durable knowledge.  
-`memory/system/WORKFLOW.md` defines the shared planning, memory, freshness, and handoff rules.
+`memory/system/WORKFLOW.md` defines the shared planning, Beads, memory, freshness, and handoff rules.
 
 ## Repo scope
 
@@ -30,7 +30,7 @@ The repo contains:
 
 - a reusable `bootstrap/` payload that can be copied into a target repo
 - a CLI installer intended for later use via `uvx`
-- templates and helper tooling for durable memory, `TODO.md`, and local agent scratch space
+- templates and helper tooling for durable memory, Beads-first workflow guidance, and local agent scratch space
 - optional workflow fragments for integrating the system into common repo workflows
 
 Treat this repo as both:
@@ -85,9 +85,16 @@ The installer must remain:
 - It is not durable technical memory.
 - It should be git-ignored.
 - Durable lessons belong in `/memory`.
-- Milestone state belongs in `TODO.md`.
+- Task state and dependencies belong in Beads.
 
 Do not turn `.agent-work/` into a checked-in knowledge store.
+
+## Beads guidance
+
+- Use Beads for work tracking, dependency tracking, and next-action discovery.
+- Start with `bd ready` when you need unblocked work.
+- Create new work with `bd create` and express relationships with `bd dep`.
+- Do not store durable technical knowledge or architecture facts in Beads; those belong in `/memory`.
 
 ## Runtime and tooling
 
@@ -127,8 +134,8 @@ When developing this bootstrap tool in this repository:
 
 ## Before ending a task
 
-1. Update `TODO.md`.
+1. Update the relevant Beads issue state, dependencies, or follow-up work.
 2. Check whether your changes affected any existing memory notes or workflow docs.
 3. Update, deprecate, or remove those notes as needed.
 4. Keep durable notes concise, factual, and de-duplicated.
-5. Remove completed task detail from `TODO.md` once it no longer changes what the next contributor should do.
+5. When a change affects the repo's installed memory or workflow contract, update this repo's own `memory/system/VERSION.md` in the same change.

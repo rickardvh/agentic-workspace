@@ -3,6 +3,7 @@ dolt/
 dolt-access.lock
 
 # Runtime files
+.beads-credential-key
 bd.sock
 bd.sock.startlock
 sync-state.json
