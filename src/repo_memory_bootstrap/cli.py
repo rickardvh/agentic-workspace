@@ -18,7 +18,7 @@ from repo_memory_bootstrap.installer import (
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="agentic-memory-bootstrap",
-        description="Install and upgrade the repository memory bootstrap.",
+        description="Install and upgrade a repository memory and lightweight coordination bootstrap.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -59,7 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_target_arguments(status_parser)
     _add_format_argument(status_parser)
 
-    list_files_parser = subparsers.add_parser("list-files", help="Preview packaged bootstrap files and local templates.")
+    list_files_parser = subparsers.add_parser("list-files", help="Preview packaged bootstrap files.")
     _add_target_arguments(list_files_parser)
     _add_format_argument(list_files_parser)
 
@@ -167,8 +167,9 @@ def _print_install_summary(result) -> None:
     summary = ", ".join(f"{kind}={count}" for kind, count in sorted(counts.items()))
     print(f"Summary: {summary}")
     print("Next steps:")
-    print("- Review placeholders and repository-specific details in AGENTS.md and TODO.md.")
+    print("- Review placeholders and repository-specific details in AGENTS.md and memory/current/project-state.md.")
+    print("- Review memory/current/task-context.md when active work would benefit from a short checked-in continuation note.")
     print("- Review the shared workflow rules in memory/system/WORKFLOW.md.")
+    print("- Confirm the repo's chosen task system separately; this bootstrap does not install one.")
     print("- Run agentic-memory-bootstrap doctor --target <repo> before upgrading an older install.")
-    print("- Create a local .agent-work/ directory from the packaged templates if you want disposable task notes.")
     print("- Run python scripts/check/check_memory_freshness.py after customising memory notes.")

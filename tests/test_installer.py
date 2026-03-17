@@ -5,6 +5,22 @@ from pathlib import Path
 from repo_memory_bootstrap import installer
 
 
+def test_detect_install_mode_is_full_without_todo_file(tmp_path: Path) -> None:
+    (tmp_path / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (tmp_path / "memory").mkdir()
+
+    assert installer.detect_install_mode(tmp_path) == "full"
+
+
+def test_payload_entries_do_not_include_todo_stub() -> None:
+    entries = installer._payload_entries(installer.payload_root())
+
+    assert all(entry.relative_path != Path("TODO.md") for entry in entries)
+    assert all(".agent-work" not in entry.relative_path.as_posix() for entry in entries)
+    assert all(entry.relative_path != Path("memory/current/active-decisions.md") for entry in entries)
+    assert any(entry.relative_path == Path("memory/current/task-context.md") for entry in entries)
+
+
 def test_extract_make_targets_ignores_assignments_and_recipes() -> None:
     text = """
     .PHONY: lint test
@@ -92,3 +108,37 @@ def test_patch_agents_workflow_block_inserts_pointer_after_heading() -> None:
     assert installer.WORKFLOW_POINTER_BLOCK in patched
     assert patched.startswith("# Agent Instructions\n\n")
     assert patched.endswith("Repo-local rules live here.\n")
+
+
+def test_upgrade_replaces_shared_files_without_todo_manual_review(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "memory" / "current").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 7\n", encoding="utf-8")
+    (target / "memory" / "system" / "WORKFLOW.md").write_text("old workflow\n", encoding="utf-8")
+    (target / "memory" / "current" / "task-context.md").write_text("# Task Context\n\n<CURRENT_FOCUS>\n", encoding="utf-8")
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert all(action.path != target / "TODO.md" for action in result.actions)
+    assert any(
+        action.path == target / "memory" / "system" / "WORKFLOW.md" and action.kind == "would replace"
+        for action in result.actions
+    )
+    assert any(
+        action.path == target / "memory" / "current" / "task-context.md" and action.kind == "would replace"
+        for action in result.actions
+    )
+
+
+def test_list_payload_files_excludes_agent_work_templates_and_gitignore_append(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    (target / ".git").mkdir()
+
+    result = installer.list_payload_files(target=target)
+
+    assert all(action.path != target / ".gitignore" for action in result.actions)
+    assert all(".agent-work" not in action.path.as_posix() for action in result.actions)
+    assert all(action.path != target / "memory" / "current" / "active-decisions.md" for action in result.actions)

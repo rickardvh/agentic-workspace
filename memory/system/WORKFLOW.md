@@ -2,29 +2,19 @@
 
 ## Purpose
 
-This file defines the shared workflow for planning, memory usage, and task handoff.
+This file defines the shared workflow for memory use and lightweight checked-in coordination notes.
 
 Keep it concise, operational, and repo-agnostic.
 
 ## Operating split
 
 - `AGENTS.md` = local bootstrap contract
-- `TODO.md` = cross-task execution state and milestone continuity
+- task system = external to this bootstrap
+- built-in agent planning = short-horizon planning and execution
 - `/memory` = durable, shared technical knowledge
-- local notes (e.g. `.agent-work/`) = optional scratch context
-
-Use built-in agent planning and memory for short-horizon task execution.
-
-## TODO discipline
-
-- Read `TODO.md` before planning or implementation.
-- Write the active plan into `TODO.md` before non-trivial work.
-- Update `TODO.md` immediately after finishing work or changing scope.
-- Keep it execution-focused: next actions, blockers, decisions, and short handoff context only.
-- Replace completed detail with a short outcome note once it no longer affects next actions.
-- Prune anything that does not affect what happens next.
-
-`TODO.md` is for cross-task continuity, not detailed step-by-step reasoning.
+- `memory/current/project-state.md` = lightweight repo overview
+- `memory/current/task-context.md` = optional checked-in current-task compression
+- local notes = optional scratch context only
 
 ## Memory discipline
 
@@ -71,13 +61,26 @@ Do not leave contradicted memory behind.
 - Keep the index compact.
 - Load only the notes relevant to the files, interfaces, or behaviour you are touching.
 
+## Overview file
+
+- `memory/current/project-state.md` is a lightweight human-readable overview.
+- Use it for current focus, recent meaningful progress, blockers, and short high-level notes.
+- Do not turn it into a task list or implementation log.
+
+## Task-context file
+
+- `memory/current/task-context.md` is optional but recommended when it reduces re-orientation cost across sessions.
+- Use it to compress the current focus, active surfaces, key constraints, relevant memory, and a few short continuation notes.
+- Do not use it as a task list, detailed plan, or historical log.
+- Shrink or clear stale detail once it no longer helps the next session continue quickly.
+
 ## Skills note
 
 Specialised repeatable procedures may live in skills, but the core operating model must stay in checked-in docs.
 
 ## Local working notes (optional)
 
-Local scratch notes (for example `.agent-work/`) may be used when helpful:
+Local scratch notes may be used when helpful:
 
 - for temporary planning
 - for tracking findings
@@ -89,7 +92,8 @@ Do not treat them as durable memory.
 
 ## Before ending a task
 
-1. Update `TODO.md`.
-2. Check whether memory notes were affected.
-3. Update or remove stale memory in the same change.
-4. Leave a short handoff note if work is incomplete.
+1. Check whether memory notes were affected.
+2. Update or remove stale memory in the same change.
+3. Update `memory/current/project-state.md` if the repo overview changed materially.
+4. Refresh `memory/current/task-context.md` if it would materially reduce re-orientation cost for the next session.
+5. Shrink or clear stale current-task context when it no longer helps.

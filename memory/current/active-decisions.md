@@ -73,9 +73,12 @@ Active
 
 - `bootstrap/` is the source of truth for installed payload files; packaging should mirror it rather than fork from it.
 - Shared operating rules belong in `memory/system/WORKFLOW.md`; `AGENTS.md` should stay local, short, and repo-specific.
-- `upgrade` may replace shared repo-agnostic files automatically, but must continue to treat `AGENTS.md`, `TODO.md`, and customised starter notes conservatively.
+- The bootstrap product boundary is memory-only and task-system agnostic.
+- `memory/current/project-state.md` is a lightweight overview file and must not become a task list.
+- `memory/current/task-context.md` is the checked-in current-work compression note and must not become a backlog, detailed plan, or history log.
+- `upgrade` may replace shared repo-agnostic files automatically, but must continue to treat `AGENTS.md` and customised starter notes conservatively.
 - Skills are an optional extension layer for specialised procedures and should not be bundled into the mandatory bootstrap payload.
 
 ## Last confirmed
 
-2026-03-17 during skills adoption implementation
+2026-03-17 during task-context contract implementation

@@ -14,13 +14,13 @@ Use three layers:
 
 ## Keep in checked-in docs
 
-Keep these in `AGENTS.md`, `TODO.md`, or `/memory`:
+Keep these in `AGENTS.md`, the repo's chosen task system, or `/memory`:
 
 - repo purpose
 - local constraints and guardrails
 - architecture facts and invariants
-- milestone state
-- handoff context
+- milestone or task state
+- lightweight current-task context that should stay visible in checked-in memory
 
 The core operating model must remain visible and useful even when skills are unavailable.
 

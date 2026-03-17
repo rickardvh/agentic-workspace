@@ -6,12 +6,11 @@ Active
 
 ## Scope
 
-- Repository orientation and document map for `agentic-memory-bootstrap`.
+- Lightweight current overview for `agentic-memory-bootstrap`.
 
 ## Applies to
 
 - `AGENTS.md`
-- `TODO.md`
 - `README.md`
 - `memory/index.md`
 - `memory/system/SKILLS.md`
@@ -22,42 +21,49 @@ Active
 
 ## Load when
 
-- Starting work and confirming where milestone truth and operating docs live.
+- Starting work and needing a short current overview.
 - Returning to the repository after a break.
 
 ## Review when
 
-- Repository-level operating docs change.
-- Bootstrap instructions change where agents should read first.
-- Shared workflow rules move between `AGENTS.md` and `memory/system/WORKFLOW.md`.
+- The product boundary changes.
+- The current focus, recent meaningful progress, or blockers change materially.
+- Main orientation docs move or change role.
+
+## Current focus
+
+- Keep the bootstrap payload and installer aligned with the memory-only, task-system-agnostic product boundary, with current-task compression living in checked-in memory rather than local scratch.
+
+## Recent meaningful progress
+
+- Removed task-management guidance from the core payload and installer.
+- Repositioned `memory/current/project-state.md` as the overview note rather than a planning surface.
+- Reduced the shipped skill set to memory and bootstrap maintenance workflows.
+- Removed repo-local Beads and task-tracking expectations from this source repository.
+- Promoted `memory/current/task-context.md` as the checked-in current-work compression note.
+
+## Blockers
+
+- None currently noted.
+
+## High-level notes
+
+- Optional local scratch conventions are outside the core bootstrap contract.
+- `memory/current/project-state.md` is the overview note; `memory/current/task-context.md` is the current-work compression note.
 
 ## Failure signals
 
-- Contributors use the wrong file as the source of milestone truth.
+- The overview becomes a task list instead of a short current-state note.
 - Shared workflow guidance drifts back into `AGENTS.md` instead of `memory/system/WORKFLOW.md`.
-
-## Rule or lesson
-
-- `agentic-memory-bootstrap` exists to provide a reusable bootstrap system for agent memory, planning, and local working context in other repositories.
-- `TODO.md` is the single source of truth for milestone status and pending work.
-- Main repository orientation docs live in `README.md`, `AGENTS.md`, `memory/index.md`, `memory/system/WORKFLOW.md`, and `memory/system/SKILLS.md`.
-- Keep this note short; it is an orientation note, not a changelog.
-
-## How to recognise it
-
-- You need a fast start point before touching code.
-- You need to know which document owns status, procedure, or interface reference.
 
 ## Verify
 
-- Read `TODO.md` and confirm the active milestones still match reality.
 - Read `memory/index.md` and confirm the routing still matches the memory structure.
 - Confirm `README.md`, `AGENTS.md`, and the relevant `memory/system/` docs still exist and remain the correct orientation set.
 
 ## Verified against
 
 - `AGENTS.md`
-- `TODO.md`
 - `README.md`
 - `memory/index.md`
 - `memory/system/SKILLS.md`
@@ -66,11 +72,6 @@ Active
 - `memory/system/UPGRADE.md`
 - `bootstrap/README.md`
 
-## What to do
-
-- Start from `TODO.md`, then `memory/index.md`, then only task-relevant notes.
-- Keep reusable workflow rules in `memory/system/WORKFLOW.md`, not `AGENTS.md`.
-
 ## Last confirmed
 
-2026-03-17 during skills adoption implementation
+2026-03-17 during local repo cleanup after the memory-only boundary refactor

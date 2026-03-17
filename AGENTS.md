@@ -12,31 +12,31 @@ Read `memory/system/WORKFLOW.md` for shared workflow rules.
 
 1. Read `memory/index.md`.
 2. Read `memory/system/WORKFLOW.md`.
-3. Use Beads for task tracking and next-work discovery. Prefer `bd ready` before starting, then maintain the active issue with `bd update`, `bd create`, and dependencies.
+3. Use the user's request to determine what to work on next.
 4. Read only the memory files relevant to the subsystem you will touch.
 5. Read any repo docs explicitly referenced by those files.
-6. Use `.agent-work/current-task.md` or an equivalent local note only when it helps; it is optional support, not the planning system.
+6. Use local scratch notes only when they help; they are optional support, not part of the system.
 
 Do not rely on transient chat context when the same knowledge should exist in checked-in files.
 
 `memory/index.md` is the routing layer for task-relevant durable knowledge.  
-`memory/system/WORKFLOW.md` defines the shared planning, Beads, memory, freshness, and handoff rules.
+`memory/system/WORKFLOW.md` defines the shared memory, overview, task-context, freshness, and handoff rules.
 
 ## Repo scope
 
-This repository produces and maintains a reusable bootstrap system that adds agent memory, planning, and working-context conventions to other repositories.
+This repository produces and maintains a reusable bootstrap system that adds durable repository memory and overview-note conventions to other repositories.
 
 The repo contains:
 
 - a reusable `bootstrap/` payload that can be copied into a target repo
 - a CLI installer intended for later use via `uvx`
-- templates and helper tooling for durable memory, Beads-first workflow guidance, and local agent scratch space
+- templates and helper tooling for durable memory, overview notes, and memory freshness checks
 - optional workflow fragments for integrating the system into common repo workflows
 
 Treat this repo as both:
 
 - a normal software project
-- the reference implementation of the memory/planning system it distributes
+- the reference implementation of the memory system it distributes
 
 ## Workspace guardrails
 
@@ -80,21 +80,13 @@ The installer must remain:
 
 ## Local scratch policy
 
-`.agent-work/` is local scratch working context.
+Local scratch notes are optional working context.
 
-- It is not durable technical memory.
-- It should be git-ignored.
+- They are not durable technical memory.
 - Durable lessons belong in `/memory`.
-- Task state and dependencies belong in Beads.
+- They must not become a hidden dependency of the bootstrap.
 
-Do not turn `.agent-work/` into a checked-in knowledge store.
-
-## Beads guidance
-
-- Use Beads for work tracking, dependency tracking, and next-action discovery.
-- Start with `bd ready` when you need unblocked work.
-- Create new work with `bd create` and express relationships with `bd dep`.
-- Do not store durable technical knowledge or architecture facts in Beads; those belong in `/memory`.
+Do not turn local scratch into a checked-in knowledge store.
 
 ## Runtime and tooling
 
@@ -134,7 +126,7 @@ When developing this bootstrap tool in this repository:
 
 ## Before ending a task
 
-1. Update the relevant Beads issue state, dependencies, or follow-up work.
+1. Update any affected memory or overview notes.
 2. Check whether your changes affected any existing memory notes or workflow docs.
 3. Update, deprecate, or remove those notes as needed.
 4. Keep durable notes concise, factual, and de-duplicated.

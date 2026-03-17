@@ -1,6 +1,6 @@
 ---
 name: bootstrap-adoption
-description: Add the bootstrap to an existing repository conservatively. Use when a repo does not fully use the `agentic-memory-bootstrap` structure yet and needs `doctor`, `install`, or `adopt` guidance, manual review of existing `AGENTS.md` or `TODO.md`, or careful alignment of local docs with the bootstrap model.
+description: Add the bootstrap to an existing repository conservatively. Use when a repo does not fully use the `agentic-memory-bootstrap` structure yet and needs `doctor`, `install`, or `adopt` guidance, manual review of local workflow docs, or careful alignment of local docs with the bootstrap model.
 ---
 
 # Bootstrap Adoption
@@ -10,20 +10,21 @@ Use this skill to introduce the bootstrap into an existing repository without tr
 ## Workflow
 
 1. Inspect the target repository first:
-   - read `AGENTS.md` and `TODO.md` if they exist
+   - read `AGENTS.md` if it exists
    - check whether `memory/` and `scripts/check/check_memory_freshness.py` already exist
+   - note any existing repo-local task system without trying to replace it
 2. Run `agentic-memory-bootstrap doctor --target <repo>` to see the current state.
 3. Decide which path fits:
    - `install` for general bootstrap application
    - `adopt` when the repo already has local files that should be preserved conservatively
 4. Review manual-review items before changing anything, especially:
    - older `AGENTS.md` files that embed shared workflow rules
-   - local `TODO.md`
+   - local docs that mix task-tracking instructions into the memory contract
    - customised starter memory notes
 5. Apply only the safe bootstrap actions automatically.
 6. Manually align local docs where needed:
    - slim `AGENTS.md` back to the local contract
-   - keep `TODO.md` as the execution surface
+   - keep the task system external to the installed memory contract
    - preserve repo-specific scope and commands
 7. Run the memory freshness audit if the repo includes it.
 
@@ -38,5 +39,5 @@ Use this skill to introduce the bootstrap into an existing repository without tr
 
 - a bootstrap doctor summary
 - safe install or adopt actions applied
-- manually aligned `AGENTS.md` and `TODO.md` where necessary
-- a short `TODO.md` outcome note in the target repo
+- manually aligned `AGENTS.md` and memory guidance where necessary
+- a clear note about the overview, task-context, and durable-memory surfaces

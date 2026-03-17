@@ -1,16 +1,16 @@
 # Bootstrap Package
 
-This package is a repo-agnostic bootstrap for agent memory, planning, and local working context.
+This package is a repo-agnostic bootstrap for agent memory and lightweight checked-in coordination notes.
 
 It is intended to be copied into an existing repository to provide:
 
 - `AGENTS.md` as the slim local bootstrap entrypoint
-- `TODO.md` as the execution-focused planning surface
 - `memory/` as durable checked-in technical memory
-- `memory/system/WORKFLOW.md` as the shared reusable workflow rules
+- `memory/system/WORKFLOW.md` as the shared reusable memory workflow rules
 - `memory/system/VERSION.md` as the installed bootstrap version marker
 - `memory/system/UPGRADE.md` as the upgrade playbook for older installs
-- `.agent-work/` as local scratch working context
+- `memory/current/project-state.md` as a short human-readable overview
+- `memory/current/task-context.md` as optional checked-in current-task compression
 - an advisory memory freshness audit
 - optional workflow fragments for common contribution flows
 
@@ -25,48 +25,23 @@ When maintaining this repository, treat `bootstrap/` as the source of truth for 
 Copy as-is:
 
 - `AGENTS.md`
-- `TODO.md`
 - `memory/`
 - `scripts/check/check_memory_freshness.py`
 
 Merge or append:
 
-- `.gitignore.append`
 - `optional/pull_request_template.fragment.md`
 - `optional/CONTRIBUTING.fragment.md`
 - `optional/Makefile.fragment.mk`
 
 Do not install maintainer-only repo docs or implementation notes by default.
 
-Local-only templates:
-
-- `.agent-work/README.md`
-- `.agent-work/current-task.md`
-- `.agent-work/findings.md`
-- `.agent-work/handoff.md`
-
-In many repositories, `.agent-work/` should be created locally rather than committed. The templates live here so a later automation script can materialise them consistently.
-
-## Git-ignore guidance
-
-`.agent-work/` should be git-ignored in the target repository.
-
-Use `bootstrap/.gitignore.append` to append:
-
-```gitignore
-# Local agent working context
-.agent-work/
-```
-
 ## Recommended installation order
 
 1. Copy `AGENTS.md`.
-2. Copy `TODO.md`.
-3. Copy `memory/`, including `memory/system/WORKFLOW.md`.
-4. Copy `.agent-work/` templates or create them locally from the templates here.
-5. Append `.gitignore.append` to the target repo `.gitignore`.
-6. Optionally merge the workflow fragments.
-7. Run `scripts/check/check_memory_freshness.py`.
+2. Copy `memory/`, including `memory/system/WORKFLOW.md`, `memory/current/project-state.md`, and `memory/current/task-context.md`.
+3. Optionally merge the workflow fragments.
+4. Run `scripts/check/check_memory_freshness.py`.
 
 ## Placeholder replacement
 
@@ -83,6 +58,8 @@ Delete unused routing examples once the target repository has concrete notes.
 
 `AGENTS.md` should stay short and point to `memory/system/WORKFLOW.md` for the shared operating model.
 
+This bootstrap is task-system agnostic. `/memory` owns durable technical knowledge, `memory/current/project-state.md` is the overview note, and `memory/current/task-context.md` is optional checked-in current-work compression.
+
 Skills are an optional extension layer for specialised repeatable procedures. They are not part of the mandatory bootstrap payload.
 
 `memory/system/VERSION.md` is the machine-readable version marker used for deterministic upgrades.
@@ -96,7 +73,7 @@ Prefer this flow for existing or older installs:
 3. Apply the minimal-safe upgrade plan.
 4. Use `--apply-local-entrypoint` only when you want the installer to patch `AGENTS.md`.
 
-Use `agentic-memory-bootstrap list-files` to preview the packaged files and local templates that the installer exposes.
+Use `agentic-memory-bootstrap list-files` to preview the packaged files that the installer exposes.
 
 ## Automation notes
 
@@ -104,7 +81,6 @@ A later automation script should:
 
 - copy stable files as-is
 - merge append-only fragments into existing files
-- create `.agent-work/` locally if the target repo should not commit it
 - replace placeholders or leave them for a human to fill in
 - avoid overwriting existing repo-specific memory notes blindly
 - treat `memory/system/VERSION.md` as the installed system version marker

@@ -7,14 +7,13 @@ from pathlib import Path
 from typing import Iterable
 
 PROJECT_MARKERS = ("pyproject.toml", "package.json", "Cargo.toml", ".hg")
-AGENT_ROOT_MARKERS = (Path("AGENTS.md"), Path("TODO.md"), Path("memory"))
+AGENT_ROOT_MARKERS = (Path("AGENTS.md"), Path("memory"))
 VERSION_PATH = Path("memory/system/VERSION.md")
 WORKFLOW_PATH = Path("memory/system/WORKFLOW.md")
 UPGRADE_PLAYBOOK_PATH = Path("memory/system/UPGRADE.md")
 AGENTS_PATH = Path("AGENTS.md")
-TODO_PATH = Path("TODO.md")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 4
+BOOTSTRAP_VERSION = 8
 
 WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
 WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
@@ -25,11 +24,12 @@ WORKFLOW_POINTER_BLOCK = (
 )
 
 OLD_WORKFLOW_HEADINGS = (
-    "## TODO discipline",
+    "## Task system boundary",
     "## Memory discipline",
     "## Memory admission rule",
     "## Memory freshness rule",
     "## Memory routing",
+    "## Overview file",
 )
 PLACEHOLDER_RE = re.compile(r"<[A-Z0-9_/-]+>")
 VERSION_RE = re.compile(r"^\s*Version:\s*(\d+)\s*$", re.MULTILINE)
@@ -39,7 +39,6 @@ OPTIONAL_APPEND_TARGETS = {
     Path("CONTRIBUTING.md"): Path("optional/CONTRIBUTING.fragment.md"),
     Path(".github/pull_request_template.md"): Path("optional/pull_request_template.fragment.md"),
 }
-LOCAL_TEMPLATE_TREES = [Path(".agent-work")]
 
 
 @dataclass(slots=True)
@@ -180,9 +179,7 @@ def install_bootstrap(
             dry_kind="would copy" if not destination.exists() else "would overwrite",
         )
 
-    _plan_gitignore_append(source_root, target_root, result, apply=not dry_run)
     _plan_optional_appends(source_root, target_root, result, apply=not dry_run)
-    _plan_local_template_note(target_root, result)
     return result
 
 
@@ -208,9 +205,7 @@ def adopt_bootstrap(
         apply_local_entrypoint=apply_local_entrypoint,
         force=False,
     )
-    _plan_gitignore_append(source_root, target_root, result, apply=not dry_run)
     _plan_optional_appends(source_root, target_root, result, apply=not dry_run)
-    _plan_local_template_note(target_root, result)
     return result
 
 
@@ -237,9 +232,7 @@ def upgrade_bootstrap(
         apply_local_entrypoint=apply_local_entrypoint,
         force=force,
     )
-    _plan_gitignore_append(source_root, target_root, result, apply=not dry_run)
     _plan_optional_appends(source_root, target_root, result, apply=not dry_run)
-    _plan_local_template_note(target_root, result)
     return result
 
 
@@ -255,9 +248,7 @@ def collect_status(target: str | Path | None = None) -> InstallResult:
         else:
             result.add("missing", destination, "file missing", role=entry.role, safety="safe", source=str(entry.relative_path))
 
-    _plan_gitignore_append(payload_root(), target_root, result, apply=False, status_only=True)
     _plan_optional_appends(payload_root(), target_root, result, apply=False, status_only=True)
-    _plan_local_template_note(target_root, result)
     return result
 
 
@@ -281,9 +272,7 @@ def doctor_bootstrap(
         apply_local_entrypoint=False,
         force=False,
     )
-    _plan_gitignore_append(source_root, target_root, result, apply=False, status_only=True)
     _plan_optional_appends(source_root, target_root, result, apply=False, status_only=True)
-    _plan_local_template_note(target_root, result)
     return result
 
 
@@ -303,7 +292,6 @@ def list_payload_files(target: str | Path | None = None) -> InstallResult:
             source=str(entry.relative_path),
         )
 
-    result.add("append target", target_root / ".gitignore", "append .agent-work/ ignore rule if needed", role="append-target", safety="safe")
     for target_file, fragment_path in OPTIONAL_APPEND_TARGETS.items():
         result.add(
             "append target",
@@ -313,19 +301,6 @@ def list_payload_files(target: str | Path | None = None) -> InstallResult:
             safety="safe",
             source=str(fragment_path),
         )
-
-    for relative_tree in LOCAL_TEMPLATE_TREES:
-        for source_path in sorted((source_root / relative_tree).rglob("*")):
-            if source_path.is_dir():
-                continue
-            result.add(
-                "local template",
-                target_root / source_path.relative_to(source_root),
-                "create locally if you want disposable task notes",
-                role="local-scratch-template",
-                safety="safe",
-                source=str(source_path.relative_to(source_root)),
-            )
 
     return result
 
@@ -376,7 +351,7 @@ def _new_result(target_root: Path, *, dry_run: bool, message: str) -> InstallRes
 def _payload_entries(source_root: Path) -> list[PayloadEntry]:
     entries: list[PayloadEntry] = []
 
-    files = [AGENTS_PATH, TODO_PATH, AUDIT_SCRIPT_PATH]
+    files = [AGENTS_PATH, AUDIT_SCRIPT_PATH]
     for relative_path in files:
         source_path = source_root / relative_path
         entries.append(
@@ -408,8 +383,6 @@ def _classify_role(relative_path: Path) -> str:
     path_str = relative_path.as_posix()
     if relative_path == AGENTS_PATH:
         return "local-entrypoint"
-    if relative_path == TODO_PATH:
-        return "execution-surface"
     if relative_path == AUDIT_SCRIPT_PATH:
         return "shared-replaceable"
     if path_str.startswith("memory/system/"):
@@ -430,7 +403,6 @@ def _classify_role(relative_path: Path) -> str:
 def _strategy_for_role(role: str) -> str:
     return {
         "local-entrypoint": "patch-or-review",
-        "execution-surface": "create-only",
         "shared-replaceable": "replace",
         "shared-template": "replace",
         "seed-note": "seed",
@@ -560,20 +532,6 @@ def _plan_existing_file_for_upgrade(
         )
         return
 
-    if entry.role == "execution-surface":
-        if force and not doctor_mode:
-            _write_text(destination, rendered, result, "overwritten", "would overwrite", role=entry.role, source=str(entry.relative_path))
-        else:
-            result.add(
-                "manual review",
-                destination,
-                "TODO.md is local execution state and is not auto-replaced",
-                role=entry.role,
-                safety="manual",
-                source=str(entry.relative_path),
-            )
-        return
-
     if entry.role in {"shared-replaceable", "shared-template"}:
         _write_text(destination, rendered, result, "replaced", "would replace", role=entry.role, source=str(entry.relative_path))
         return
@@ -681,34 +639,6 @@ def _write_text(
     result.add(action_kind, destination, detail or "applied", role=role, safety="safe", source=source)
 
 
-def _plan_gitignore_append(
-    source_root: Path,
-    target_root: Path,
-    result: InstallResult,
-    *,
-    apply: bool,
-    status_only: bool = False,
-) -> None:
-    destination = target_root / ".gitignore"
-    fragment = (source_root / ".gitignore.append").read_text(encoding="utf-8").strip()
-    existing = destination.read_text(encoding="utf-8") if destination.exists() else ""
-    if fragment in existing:
-        result.add("current" if status_only else "skipped", destination, "already contains .agent-work/ ignore rule", role="append-target", safety="safe", source=".gitignore.append")
-        return
-
-    if status_only:
-        result.add("missing", destination, "missing .agent-work/ ignore rule", role="append-target", safety="safe", source=".gitignore.append")
-        return
-
-    if not apply:
-        result.add("would append", destination, "add .agent-work/ ignore rule", role="append-target", safety="safe", source=".gitignore.append")
-        return
-
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(_append_text(existing, fragment), encoding="utf-8")
-    result.add("appended", destination, "added .agent-work/ ignore rule", role="append-target", safety="safe", source=".gitignore.append")
-
-
 def _plan_optional_appends(
     source_root: Path,
     target_root: Path,
@@ -775,18 +705,6 @@ def _plan_optional_appends(
             safety="safe",
             source=str(fragment_path),
         )
-
-
-def _plan_local_template_note(target_root: Path, result: InstallResult) -> None:
-    result.add(
-        "note",
-        target_root / ".agent-work",
-        "Templates are bundled in the bootstrap payload; create this directory locally if needed.",
-        role="local-scratch-template",
-        safety="safe",
-    )
-
-
 def _append_text(existing: str, fragment: str) -> str:
     normalized = existing.rstrip()
     if not normalized:

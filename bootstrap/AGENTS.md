@@ -10,9 +10,9 @@ Read `memory/system/WORKFLOW.md` for shared workflow rules.
 
 ## Before doing work
 
-1. Read `TODO.md`.
-2. Read `memory/index.md`.
-3. Read `memory/system/WORKFLOW.md`.
+1. Read `memory/index.md`.
+2. Read `memory/system/WORKFLOW.md`.
+3. Consult the repository's chosen task system or the user's request for what to work on next.
 4. Load only the memory files relevant to the task.
 5. Read any repository docs referenced by those files.
 
@@ -20,7 +20,7 @@ Use built-in agent planning and memory for task execution.
 Do not rely on transient chat context when the same knowledge should exist in checked-in files.
 
 `memory/index.md` is the routing layer for task-relevant durable knowledge.  
-`memory/system/WORKFLOW.md` defines the shared planning, memory, freshness, and handoff rules.
+`memory/system/WORKFLOW.md` defines the shared memory, overview, task-context, freshness, and handoff rules.
 
 ## Repo scope
 
@@ -40,8 +40,14 @@ This section should remain short and high-level.
 - Prefer the existing project tooling, layout, and conventions.
 - Avoid introducing new tooling or structure unless it clearly improves maintainability.
 
+## Task-system boundary
+
+- This bootstrap does not install or define a task system.
+- Use the repository's chosen task system or explicit user request to decide what to work on.
+- Use built-in agent planning to execute the current task.
+
 ## Optional working notes
 
-Local working notes (for example under `.agent-work/`) may be used when helpful, but are not required.
+Local working notes may be used when helpful, but are not required.
 
 Do not treat local working notes as durable memory. Persist reusable knowledge in `/memory`.

@@ -3,7 +3,7 @@
 ## Purpose
 
 - `/memory` is the durable repository memory layer.
-- Read this file immediately after `TODO.md`.
+- Read this file after identifying the work from the repo's task system or the user's request, and after reading `memory/system/WORKFLOW.md`.
 - Load only the notes relevant to the task at hand.
 - Treat memory as maintained working knowledge, not a documentation archive.
 - Treat memory as a cache of reusable knowledge, not an archive of everything learned.
@@ -20,7 +20,7 @@
 ## Always relevant
 
 - `memory/current/project-state.md`
-- `memory/current/active-decisions.md`
+- `memory/current/task-context.md`
 
 ## Task routing
 
@@ -101,7 +101,7 @@ Each durable idea must have one primary home.
 - `invariants/` for things that must remain true
 - `runbooks/` for procedures
 - `mistakes/` for recurring failures
-- `TODO.md` for milestone state
+- the external task system or explicit user request for task state and dependencies
 
 Do not duplicate the same guidance across multiple files.  
 Use short references instead.
