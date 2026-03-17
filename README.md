@@ -13,7 +13,15 @@ uv run agentic-memory-bootstrap install --dry-run
 uv run agentic-memory-bootstrap install --force
 uv run agentic-memory-bootstrap init --target /path/to/repo
 uv run agentic-memory-bootstrap status
+uv run agentic-memory-bootstrap list-files
 ```
+
+The installed model is:
+
+- `AGENTS.md` = slim local entrypoint
+- `memory/system/WORKFLOW.md` = shared reusable workflow rules
+- `memory/index.md` = routing layer for task-relevant durable knowledge
+- `TODO.md` = execution and planning surface
 
 ## What `install` does
 
@@ -40,3 +48,5 @@ Mode summary:
 - full agent setup: do nothing unless new append-only fragments are needed, or `--force` is used
 
 If root detection from the current working directory is ambiguous, the installer stops and asks for `--target` instead of guessing. The installer does not create a committed `.agent-work/` working directory. It only ensures `.agent-work/` is ignored and reports that local templates are available from the packaged bootstrap payload.
+
+When `--target` points inside another repository or contains nested repositories, the installer warns and treats the explicit target as authoritative instead of guessing or walking upward.

@@ -13,6 +13,7 @@ MANAGED_FILES = [
     Path("scripts/check/check_memory_freshness.py"),
 ]
 MANAGED_TREES = [Path("memory")]
+LOCAL_TEMPLATE_TREES = [Path(".agent-work")]
 OPTIONAL_APPEND_TARGETS = {
     Path("Makefile"): Path("optional/Makefile.fragment.mk"),
     Path("CONTRIBUTING.md"): Path("optional/CONTRIBUTING.fragment.md"),
@@ -98,6 +99,7 @@ def install_bootstrap(
     source_root = payload_root()
     result.mode = detect_install_mode(target_root)
     result.message = _mode_message(result.mode)
+    _record_repo_context_warnings(target_root, result)
 
     for relative_path in MANAGED_FILES:
         _copy_file(
@@ -148,6 +150,7 @@ def collect_status(target: str | Path | None = None) -> InstallResult:
     result = InstallResult(target_root=target_root, dry_run=False)
     result.mode = detect_install_mode(target_root)
     result.message = _mode_message(result.mode, detected=True)
+    _record_repo_context_warnings(target_root, result)
 
     for relative_path in MANAGED_FILES:
         _record_presence(target_root / relative_path, result)
@@ -164,6 +167,44 @@ def collect_status(target: str | Path | None = None) -> InstallResult:
         result.add("present", gitignore_path, "contains .agent-work/")
     else:
         result.add("missing", gitignore_path, "missing .agent-work/ ignore rule")
+
+    return result
+
+
+def list_payload_files(target: str | Path | None = None) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = InstallResult(target_root=target_root, dry_run=True)
+    source_root = payload_root()
+    result.mode = detect_install_mode(target_root)
+    result.message = "Packaged bootstrap file preview"
+    _record_repo_context_warnings(target_root, result)
+
+    for relative_path in MANAGED_FILES:
+        result.add("managed file", target_root / relative_path, f"from {relative_path}")
+
+    for relative_tree in MANAGED_TREES:
+        for source_path in sorted((source_root / relative_tree).rglob("*")):
+            if source_path.is_dir():
+                continue
+            result.add(
+                "managed file",
+                target_root / source_path.relative_to(source_root),
+                f"from {source_path.relative_to(source_root)}",
+            )
+
+    result.add("append target", target_root / ".gitignore", "append .agent-work/ ignore rule if needed")
+    for target_file, fragment_path in OPTIONAL_APPEND_TARGETS.items():
+        result.add("append target", target_root / target_file, f"optional fragment {fragment_path}")
+
+    for relative_tree in LOCAL_TEMPLATE_TREES:
+        for source_path in sorted((source_root / relative_tree).rglob("*")):
+            if source_path.is_dir():
+                continue
+            result.add(
+                "local template",
+                target_root / source_path.relative_to(source_root),
+                "create locally if you want disposable task notes",
+            )
 
     return result
 
@@ -277,6 +318,24 @@ def _contains_line(path: Path, value: str) -> bool:
     return any(line.strip() == value for line in path.read_text(encoding="utf-8").splitlines())
 
 
+def _record_repo_context_warnings(target_root: Path, result: InstallResult) -> None:
+    parent_repo = _find_parent_repo_root(target_root)
+    if parent_repo is not None:
+        result.add(
+            "warning",
+            target_root,
+            f"target is inside parent repository {parent_repo}; --target is being treated as authoritative",
+        )
+
+    nested_repos = _find_nested_repo_roots(target_root)
+    for nested_repo in nested_repos:
+        result.add(
+            "warning",
+            nested_repo,
+            "nested repository detected under target; installer will not recurse into repo roots automatically",
+        )
+
+
 def format_actions(actions: Iterable[Action], target_root: Path) -> list[str]:
     lines: list[str] = []
     for action in actions:
@@ -296,6 +355,28 @@ def _find_repo_candidates(start: Path) -> list[Path]:
         if any((candidate / marker).exists() for marker in PROJECT_MARKERS):
             candidates.append(candidate)
     return candidates
+
+
+def _find_parent_repo_root(target_root: Path) -> Path | None:
+    for candidate in target_root.parents:
+        git_dir = candidate / ".git"
+        if git_dir.is_dir() or git_dir.is_file():
+            return candidate
+        if any((candidate / marker).exists() for marker in PROJECT_MARKERS):
+            return candidate
+    return None
+
+
+def _find_nested_repo_roots(target_root: Path) -> list[Path]:
+    nested: list[Path] = []
+    seen: set[Path] = set()
+    for candidate in target_root.rglob(".git"):
+        repo_root = candidate.parent
+        if repo_root == target_root or repo_root in seen:
+            continue
+        nested.append(repo_root)
+        seen.add(repo_root)
+    return sorted(nested)
 
 
 def _mode_message(mode: str, *, detected: bool = False) -> str:

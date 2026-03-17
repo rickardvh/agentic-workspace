@@ -58,6 +58,11 @@ Failure signals
 Last confirmed
 YYYY-MM-DD during <task / investigation>
 
+## Verified against
+
+- `scripts/check/check_memory_freshness.py`
+- `memory/templates/`
+
 ## Last confirmed
 
-YYYY-MM-DD during <task / PR / investigation>
+2026-03-17 during memory hardening review

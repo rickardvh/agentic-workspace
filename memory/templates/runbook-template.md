@@ -4,6 +4,8 @@
 
 Stable | Active | Needs verification | Deprecated
 
+Use one status exactly as written above.
+
 ## Scope
 
 <system / workflow / operator task>
@@ -52,6 +54,10 @@ Examples:
 ## Verification
 
 - <How to confirm the procedure worked>
+
+## Verified against
+
+- Optional: list the exact files, interfaces, commands, or environments this runbook was last checked against.
 
 ## Pitfalls
 

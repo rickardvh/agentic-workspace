@@ -19,6 +19,36 @@ Keep this file execution-focused only. Collapse completed detail into short outc
 
 ## Active milestones
 
+### Milestone: Workflow Document Split
+
+Status: done
+
+- [x] Add `memory/system/WORKFLOW.md` to the repo and bootstrap payload as the reusable workflow rules document.
+- [x] Slim local and bootstrap `AGENTS.md` so they point to `WORKFLOW.md` instead of embedding shared workflow policy.
+- [x] Update docs, installer messaging, and memory notes to reflect the new separation of responsibilities.
+- [x] Exclude `memory/system/WORKFLOW.md` from the freshness audit and verify the installer/docs flow still works.
+
+Progress notes:
+
+- 2026-03-17: Reviewed the current bootstrap payload, repo `AGENTS.md`, memory routing docs, installer output, and audit script to identify assumptions that still treat `AGENTS.md` as the primary shared workflow document.
+- 2026-03-17: Added `memory/system/WORKFLOW.md` to both the repo and the bootstrap payload, slimmed both `AGENTS.md` entrypoints, and updated routing/docs text so `AGENTS.md` now points to the shared workflow file.
+- 2026-03-17: Updated the freshness audit to skip `memory/system/WORKFLOW.md` and verified with `uv run python scripts/check/check_memory_freshness.py` plus `uv run agentic-memory-bootstrap list-files --target .`.
+
+### Milestone: Memory System Hardening
+
+Status: done
+
+- [x] Tighten repo and bootstrap guidance around memory hygiene, routing, cleanup bias, and working-set declaration.
+- [x] Update bootstrap templates and scratch templates to standardise note metadata and working-set fields.
+- [x] Improve installer safety and UX for explicit nested targets and packaged file preview.
+- [x] Run freshness and CLI verification, then collapse this milestone into a short outcome note.
+
+Progress notes:
+
+- 2026-03-17: Reviewed current `AGENTS.md`, `memory/index.md`, bootstrap payload, installer CLI, and freshness audit to separate already-implemented checklist items from remaining gaps.
+- 2026-03-17: Added memory cache/cleanup guidance, standardised template metadata including optional `Verified against`, tightened `.agent-work/current-task.md` working-set expectations, and extended the installer with nested-target warnings plus `list-files`.
+- 2026-03-17: Verified with `uv run python scripts/check/check_memory_freshness.py`, `uv run agentic-memory-bootstrap list-files --target .`, and `uv run agentic-memory-bootstrap status --target src`.
+
 ### Milestone: Git Ignore Baseline
 
 Status: done

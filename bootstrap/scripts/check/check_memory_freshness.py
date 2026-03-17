@@ -27,6 +27,7 @@ STALE_DAYS = 180
 
 SKIP_FILES = {
     MEMORY_ROOT / "index.md",
+    MEMORY_ROOT / "system" / "WORKFLOW.md",
     MEMORY_ROOT / "domains" / "README.md",
     MEMORY_ROOT / "invariants" / "README.md",
     MEMORY_ROOT / "runbooks" / "README.md",
@@ -43,6 +44,7 @@ class NoteScan:
     title: str | None
     line_count: int
     has_last_confirmed: bool
+    has_valid_last_confirmed_date: bool
     has_verify: bool
     has_load_when: bool
     has_review_when: bool
@@ -84,6 +86,7 @@ def _scan_note(path: Path) -> NoteScan:
             break
 
     has_last_confirmed = False
+    has_valid_last_confirmed_date = False
     has_verify = False
     has_load_when = False
     has_review_when = False
@@ -112,6 +115,7 @@ def _scan_note(path: Path) -> NoteScan:
                     continue
                 match = RE_LAST_CONFIRMED_DATE.match(stripped)
                 if match:
+                    has_valid_last_confirmed_date = True
                     dates.append(
                         datetime.strptime(match.group(1), "%Y-%m-%d").replace(
                             tzinfo=UTC
@@ -133,6 +137,7 @@ def _scan_note(path: Path) -> NoteScan:
         title=title,
         line_count=len(lines),
         has_last_confirmed=has_last_confirmed,
+        has_valid_last_confirmed_date=has_valid_last_confirmed_date,
         has_verify=has_verify,
         has_load_when=has_load_when,
         has_review_when=has_review_when,
@@ -167,6 +172,11 @@ def main() -> int:
 
     missing_last_confirmed = sorted(
         _render_path(scan.path) for scan in scans if not scan.has_last_confirmed
+    )
+    invalid_last_confirmed = sorted(
+        _render_path(scan.path)
+        for scan in scans
+        if scan.has_last_confirmed and not scan.has_valid_last_confirmed_date
     )
     missing_verify = sorted(
         _render_path(scan.path) for scan in scans if not scan.has_verify
@@ -217,6 +227,7 @@ def main() -> int:
     _print_section("Needs verification", needs_verification)
     _print_section("Missing trigger metadata", missing_trigger)
     _print_section("Missing Last confirmed", missing_last_confirmed)
+    _print_section("Invalid Last confirmed date", invalid_last_confirmed)
     _print_section("Missing verification section", missing_verify)
     _print_section("Missing Load when", missing_load)
     _print_section("Missing Review when", missing_review)

@@ -4,6 +4,8 @@
 
 Stable | Active | Needs verification | Deprecated
 
+Use one status exactly as written above.
+
 ## Scope
 
 <files / subsystem / surface>
@@ -46,6 +48,10 @@ Examples:
 ## Verify
 
 - <Files, tests, commands, or checks that confirm this note is still correct>
+
+## Verified against
+
+- Optional: list the exact files, interfaces, commands, or test suites this note was last checked against.
 
 ## Last confirmed
 

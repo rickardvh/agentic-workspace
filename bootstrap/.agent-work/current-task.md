@@ -1,5 +1,7 @@
 # Current Task
 
+Declare this working set before coding. Keep it disposable and prune it freely.
+
 ## Objective
 - [What is being implemented now]
 
@@ -10,7 +12,7 @@
 - [Key constraints and non-goals]
 
 ## Touched files
-- [File paths edited in this task]
+- [Likely file paths edited in this task]
 
 ## Memory to load
 - [Relevant memory files for this task]

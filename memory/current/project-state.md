@@ -12,6 +12,7 @@ Active
 
 - `TODO.md`
 - `memory/index.md`
+- `memory/system/WORKFLOW.md`
 - `<KEY_REPO_DOCS>`
 
 ## Load when
@@ -23,11 +24,12 @@ Active
 
 - Repository-level operating docs change.
 - Bootstrap instructions change where agents should read first.
+- Shared workflow rules move between `AGENTS.md` and `memory/system/WORKFLOW.md`.
 
 ## Failure signals
 
 - Contributors use the wrong file as the source of milestone truth.
-- Operational guidance drifts into `AGENTS.md`.
+- Shared workflow guidance drifts back into `AGENTS.md` instead of `memory/system/WORKFLOW.md`.
 
 ## Rule or lesson
 
@@ -47,11 +49,18 @@ Active
 - Read `memory/index.md` and confirm the routing still matches the memory structure.
 - Confirm `<KEY_REPO_DOCS>` still exist and are the correct orientation docs.
 
+## Verified against
+
+- `TODO.md`
+- `memory/index.md`
+- `memory/system/WORKFLOW.md`
+- `README.md`
+
 ## What to do
 
 - Start from `TODO.md`, then `memory/index.md`, then only task-relevant notes.
-- Move repeated technical lessons into `memory/`, not `AGENTS.md`.
+- Keep reusable workflow rules in `memory/system/WORKFLOW.md`, not `AGENTS.md`.
 
 ## Last confirmed
 
-YYYY-MM-DD during <task / PR / investigation>
+2026-03-17 during workflow split review

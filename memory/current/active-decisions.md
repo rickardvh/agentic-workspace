@@ -33,6 +33,7 @@ Active
 
 - Record only the active decisions that materially affect implementation choices.
 - Move mature, long-lived rationale into `memory/decisions/` when it no longer belongs in a current-orientation note.
+- Keep repo-local scope and guardrails in `AGENTS.md`; keep reusable operating rules in `memory/system/WORKFLOW.md`.
 
 ## How to recognise it
 
@@ -44,6 +45,13 @@ Active
 - Check the active architecture docs, contracts, or decision records referenced in `## Applies to`.
 - Confirm that older decisions have been moved out if they are no longer current.
 
+## Verified against
+
+- `AGENTS.md`
+- `memory/system/WORKFLOW.md`
+- `README.md`
+- `src/repo_memory_bootstrap/installer.py`
+
 ## What to do
 
 - Keep this file current and compact.
@@ -51,4 +59,4 @@ Active
 
 ## Last confirmed
 
-YYYY-MM-DD during <task / PR / investigation>
+2026-03-17 during workflow split review

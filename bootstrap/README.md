@@ -4,12 +4,15 @@ This package is a repo-agnostic bootstrap for agent memory, planning, and local 
 
 It is intended to be copied into an existing repository to provide:
 
-- `AGENTS.md` bootstrap instructions
+- `AGENTS.md` as the slim local bootstrap entrypoint
 - `TODO.md` as the execution-focused planning surface
 - `memory/` as durable checked-in technical memory
+- `memory/system/WORKFLOW.md` as the shared reusable workflow rules
 - `.agent-work/` as local scratch working context
 - an advisory memory freshness audit
 - optional workflow fragments for common contribution flows
+
+Treat the packaged memory notes as a starting cache of reusable operating knowledge, not an archive to expand without limit.
 
 ## Copy targets
 
@@ -26,6 +29,8 @@ Merge or append:
 - `optional/pull_request_template.fragment.md`
 - `optional/CONTRIBUTING.fragment.md`
 - `optional/Makefile.fragment.mk`
+
+Do not install maintainer-only repo docs or implementation notes by default.
 
 Local-only templates:
 
@@ -51,7 +56,7 @@ Use `bootstrap/.gitignore.append` to append:
 
 1. Copy `AGENTS.md`.
 2. Copy `TODO.md`.
-3. Copy `memory/`.
+3. Copy `memory/`, including `memory/system/WORKFLOW.md`.
 4. Copy `.agent-work/` templates or create them locally from the templates here.
 5. Append `.gitignore.append` to the target repo `.gitignore`.
 6. Optionally merge the workflow fragments.
@@ -69,6 +74,8 @@ Replace placeholders such as:
 - `<PRIMARY_TEST_COMMAND>`
 
 Delete unused routing examples once the target repository has concrete notes.
+
+`AGENTS.md` should stay short and point to `memory/system/WORKFLOW.md` for the shared operating model.
 
 ## Automation notes
 

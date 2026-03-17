@@ -4,6 +4,8 @@
 
 Stable | Active | Needs verification | Deprecated
 
+Use one status exactly as written above.
+
 ## Scope
 
 <files / subsystem / contract>
@@ -46,6 +48,10 @@ Examples:
 ## Verify
 
 - <Tests, commands, or files that confirm the invariant still holds>
+
+## Verified against
+
+- Optional but recommended for critical invariants: list the exact files, interfaces, commands, or test suites checked.
 
 ## Last confirmed
 

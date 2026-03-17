@@ -5,7 +5,16 @@
 - `/memory` is the durable repository memory layer.
 - Read this file immediately after `TODO.md`.
 - Load only the notes relevant to the task at hand.
-- Treat memory as maintained working knowledge, not as a documentation archive.
+- Treat memory as maintained working knowledge, not a documentation archive.
+- Treat memory as a cache of reusable knowledge, not an archive of everything learned.
+- Shared workflow rules live in `memory/system/WORKFLOW.md`; `AGENTS.md` points there directly.
+
+## How to use memory
+
+- Use built-in agent planning and memory for task execution.
+- Use `/memory` for shared, durable, and repo-specific knowledge.
+- Start with always-relevant files, then follow task routing.
+- Do not load the entire memory tree.
 
 ## Always relevant
 
@@ -41,12 +50,13 @@
 - `memory/invariants/<relevant-invariant-note>.md`
 - `memory/decisions/README.md`
 
-Delete unused routing examples once the target repository has concrete notes.
+Delete unused routing examples once the repository has concrete notes.
 
 ## Loading rule
 
 - Do not load all of `/memory` by default.
-- Start with the always-relevant files, then load only the notes needed for the current task.
+- Start with always-relevant files, then load only what is needed for the current task.
+- Prefer a small, precise working set over broad context loading.
 
 ## Memory freshness rules
 
@@ -79,7 +89,7 @@ Do not add memory for:
 - temporary task details
 - implementation steps specific to a single task
 
-Use `.agent-work/` for temporary working context.
+Use local working notes only if helpful; do not rely on them as part of the system.
 
 ## One-home rule
 
@@ -90,9 +100,8 @@ Each durable idea must have one primary home.
 - `runbooks/` for procedures
 - `mistakes/` for recurring failures
 - `TODO.md` for milestone state
-- `.agent-work/` for temporary working context
 
-Do not duplicate the same guidance across multiple files.
+Do not duplicate the same guidance across multiple files.  
 Use short references instead.
 
 ## Memory pruning rules
@@ -104,7 +113,11 @@ When updating `/memory`:
 - remove notes that are no longer true
 - shorten notes that contain history with no operational value
 - move architectural background into `decisions/` when that is a better fit
-- do not preserve stale operational advice just because it might be useful later
+
+Bias toward cleanup:
+
+- prefer delete or merge over keeping near-duplicates
+- prefer a shorter current rule over a longer historical narrative
 
 If a note cannot currently be verified:
 
@@ -128,9 +141,8 @@ Large memory files degrade selective loading and retrieval quality.
 
 `memory/index.md` is a routing layer, not a knowledge file.
 
-Keep it short.
-Do not summarise the contents of notes beyond what is needed for routing.
-If a section becomes crowded, split the underlying memory files rather than expanding index prose.
+Keep it short.  
+Do not summarise note contents beyond what is needed for routing.
 
 ## Index maintenance
 
@@ -150,10 +162,11 @@ Typical maintenance actions:
 - split oversized files
 - update trigger metadata
 - mark uncertain notes `Needs verification`
+- delete notes that no longer improve future task execution
 
 ## Suggested maintenance cadence
 
-As periodic upkeep, review `/memory` roughly every 2-3 months to:
+As periodic upkeep, review `/memory` roughly every 2–3 months to:
 
 - run the freshness audit
 - prune deprecated notes

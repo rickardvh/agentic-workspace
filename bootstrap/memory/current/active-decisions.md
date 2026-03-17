@@ -33,6 +33,7 @@ Active
 
 - Record only the active decisions that materially affect implementation choices.
 - Move mature, long-lived rationale into `memory/decisions/` when it no longer belongs in a current-orientation note.
+- Keep repo-local scope and guardrails in `AGENTS.md`; keep reusable operating rules in `memory/system/WORKFLOW.md`.
 
 ## How to recognise it
 
@@ -43,6 +44,13 @@ Active
 
 - Check the active architecture docs, contracts, or decision records referenced in `## Applies to`.
 - Confirm that older decisions have been moved out if they are no longer current.
+
+## Verified against
+
+- `AGENTS.md`
+- `memory/system/WORKFLOW.md`
+- `<KEY_REPO_DOCS>`
+- `<RELEVANT_RUNTIME_OR_INTERFACE_PATHS>`
 
 ## What to do
 

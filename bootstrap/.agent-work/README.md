@@ -9,9 +9,10 @@ Rules:
 - Do not treat `.agent-work/` as durable technical memory.
 - Durable knowledge belongs in `memory/`.
 - Milestone state belongs in `TODO.md`.
-- Before implementation, update `current-task.md` with:
+- Before implementation, declare the working set in `current-task.md` with:
   - task type
   - likely touched files
   - memory to load
   - memory to review
+- Add out-of-scope items when they help prevent drift.
 - Prune or overwrite stale `.agent-work/` content freely.
