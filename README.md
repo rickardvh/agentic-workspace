@@ -51,13 +51,13 @@ From a Git repository URL:
 
 ```bash
 # uv users
-uv tool install --from <repo-url> agentic-memory-bootstrap
+uv tool install --from https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap
 
 # pipx users
-pipx install <repo-url>
+pipx install https://github.com/Tenfifty/agentic-memory
 
 # pip users
-python -m pip install <repo-url>
+python -m pip install https://github.com/Tenfifty/agentic-memory
 ```
 
 After installation, use the installed command:
