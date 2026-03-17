@@ -14,7 +14,7 @@ UPGRADE_PLAYBOOK_PATH = Path("memory/system/UPGRADE.md")
 AGENTS_PATH = Path("AGENTS.md")
 TODO_PATH = Path("TODO.md")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 3
+BOOTSTRAP_VERSION = 4
 
 WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
 WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"

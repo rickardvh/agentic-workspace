@@ -22,6 +22,7 @@ Use this playbook when upgrading an older repository install of the bootstrap sy
 7. Preserve repo-specific scope, commands, and workspace guardrails.
 8. Review any manual-review items before applying them.
 9. Run the memory freshness audit after the upgrade.
+10. If the repo uses skills, review whether any optional skill docs or references also need updating.
 
 ## Typical manual review items
 

@@ -17,7 +17,6 @@ Keep this file execution-focused only. Replace completed detail with short outco
 
 - Keep repository housekeeping files aligned with current workspace needs.
 - Keep repository and bootstrap documentation aligned with the upgrade system and current maintainer workflow.
-- Define how skills should fit into this project without bloating the mandatory bootstrap payload.
 
 ## Active milestones
 
@@ -28,6 +27,7 @@ Status: done
 Outcome:
 
 - Added deterministic bootstrap versioning, doctor/adopt/upgrade flows, conservative upgrade rules, clearer installer documentation, smarter optional-append detection for equivalent `Makefile` targets, focused `pytest`/`ruff`/`ty` verification for the installer package, and a clearer user-facing README introduction.
+- This repo now keeps `uv.lock` checked in for development reproducibility; publishing-oriented packaging can stay decoupled until needed.
 
 ### Milestone: Workflow Document Split
 
@@ -55,26 +55,7 @@ Outcome:
 
 ### Milestone: Skills Adoption
 
-Status: planned
-
-- [ ] Define the layer boundary explicitly:
-  - bootstrap contract = always-on, minimal, repo-local
-  - checked-in memory = durable repo knowledge and continuity
-  - skills = optional specialised executable playbooks
-- [ ] Add user-facing docs explaining bootstrap vs memory vs skills responsibilities and when each should be used.
-- [ ] Add one shared workflow note explaining that specialised repeatable procedures may live in skills, while the core operating model stays in checked-in docs.
-- [ ] Create the first small repo-local skill set:
-  - memory hygiene
-  - bootstrap install/adoption
-  - bootstrap upgrade
-- [ ] Validate that the first skills reduce repeated prompting or workflow-doc bloat before expanding the model.
-- [ ] Decide whether long-term skill distribution belongs in this repo, a companion package, or both.
-- [ ] Explicitly document what should not move into skills:
-  - repo purpose
-  - local constraints
-  - architecture facts and invariants
-  - milestone state and handoff context
-- [ ] Avoid fuzzy early skills that overlap heavily with built-in agent behaviour, such as generic planning or generic coding.
+Status: done
 
 Outcome or handoff notes:
 
@@ -82,6 +63,8 @@ Outcome or handoff notes:
 - Skills are for reusable, triggerable, procedural routines that are too detailed for the core repo contract.
 - The core operating model must remain visible and useful even when skills are unavailable.
 - Do not auto-install skills into target repos by default.
+- Added starter skills under `skills/`: memory hygiene, bootstrap adoption, and bootstrap upgrade.
+- Documented the current distribution stance as "keep skills in this repo first; revisit a companion package only if reuse justifies it."
 
 ## Blocked / pending decisions
 

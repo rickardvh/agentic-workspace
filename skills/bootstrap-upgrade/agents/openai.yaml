@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bootstrap Upgrade"
+  short_description: "Upgrade an existing bootstrap install safely."
+  default_prompt: "Use $bootstrap-upgrade to review and apply a bootstrap upgrade safely."

@@ -14,6 +14,7 @@ Active
 - `README.md`
 - `AGENTS.md`
 - `memory/system/WORKFLOW.md`
+- `memory/system/SKILLS.md`
 - `memory/system/VERSION.md`
 - `memory/system/UPGRADE.md`
 - `src/repo_memory_bootstrap/cli.py`
@@ -39,6 +40,7 @@ Active
 - Record only the active decisions that materially affect implementation choices.
 - Move mature, long-lived rationale into `memory/decisions/` when it no longer belongs in a current-orientation note.
 - Keep repo-local scope and guardrails in `AGENTS.md`; keep reusable operating rules in `memory/system/WORKFLOW.md`.
+- Keep skills optional and specialised; the core operating model must remain usable from checked-in docs alone.
 
 ## How to recognise it
 
@@ -56,6 +58,7 @@ Active
 - `bootstrap/README.md`
 - `src/repo_memory_bootstrap/cli.py`
 - `src/repo_memory_bootstrap/installer.py`
+- `memory/system/SKILLS.md`
 - `memory/system/WORKFLOW.md`
 - `memory/system/VERSION.md`
 - `memory/system/UPGRADE.md`
@@ -71,7 +74,8 @@ Active
 - `bootstrap/` is the source of truth for installed payload files; packaging should mirror it rather than fork from it.
 - Shared operating rules belong in `memory/system/WORKFLOW.md`; `AGENTS.md` should stay local, short, and repo-specific.
 - `upgrade` may replace shared repo-agnostic files automatically, but must continue to treat `AGENTS.md`, `TODO.md`, and customised starter notes conservatively.
+- Skills are an optional extension layer for specialised procedures and should not be bundled into the mandatory bootstrap payload.
 
 ## Last confirmed
 
-2026-03-17 during documentation review
+2026-03-17 during skills adoption implementation

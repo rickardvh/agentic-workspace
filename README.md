@@ -30,6 +30,20 @@ This tool is not:
 - a destructive scaffolder that overwrites heavily customised local files by default
 - an agent runtime or orchestration framework
 
+## Skills
+
+This project also supports an optional skills layer for specialised repeatable procedures.
+
+Use the layers like this:
+
+- bootstrap contract = minimal repo-local structure that should always be present
+- checked-in memory = durable repo knowledge and continuity
+- skills = optional executable playbooks for maintenance, setup, and migration routines
+
+Skills are a good fit for workflows such as memory hygiene, bootstrap adoption, and bootstrap upgrades. They are not a replacement for `AGENTS.md`, `TODO.md`, or repo memory notes.
+
+The first starter skills for this repo live under `skills/`. They are deliberately optional and are not installed into target repositories by default.
+
 ## Install
 
 Pick the install method that matches your toolchain.
@@ -47,7 +61,7 @@ pipx install .
 python -m pip install .
 ```
 
-From a Git repository URL:
+From the Git repository URL:
 
 ```bash
 # uv users
@@ -130,9 +144,12 @@ agentic-memory-bootstrap list-files
 If you are developing this repository itself, running through `uv` is still the shortest path:
 
 ```bash
+uv sync --group dev
 uv run agentic-memory-bootstrap --help
 uv run agentic-memory-bootstrap install --dry-run
 ```
+
+This repository now checks in `uv.lock` for development reproducibility. Treat it as part of the normal maintainer workflow in this repo.
 
 The installed model is:
 
@@ -149,6 +166,7 @@ The installed model is:
 - `src/repo_memory_bootstrap/` = installer and upgrade logic
 - `scripts/check/check_memory_freshness.py` = advisory audit for stale or contradictory memory notes
 - `memory/` = this repository's own durable operating notes
+- `skills/` = optional specialised playbooks used to prove the skills model in this repo
 
 When changing installer behaviour, check whether the same change also needs an update under `bootstrap/` or `memory/`.
 

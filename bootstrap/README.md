@@ -14,6 +14,8 @@ It is intended to be copied into an existing repository to provide:
 - an advisory memory freshness audit
 - optional workflow fragments for common contribution flows
 
+Optional extension mechanisms such as skills should stay outside the mandatory payload unless a repository explicitly chooses to add them.
+
 Treat the packaged memory notes as a starting cache of reusable operating knowledge, not an archive to expand without limit.
 
 When maintaining this repository, treat `bootstrap/` as the source of truth for installed files. The packaged wheel payload is built from this directory.
@@ -80,6 +82,8 @@ Replace placeholders such as:
 Delete unused routing examples once the target repository has concrete notes.
 
 `AGENTS.md` should stay short and point to `memory/system/WORKFLOW.md` for the shared operating model.
+
+Skills are an optional extension layer for specialised repeatable procedures. They are not part of the mandatory bootstrap payload.
 
 `memory/system/VERSION.md` is the machine-readable version marker used for deterministic upgrades.
 

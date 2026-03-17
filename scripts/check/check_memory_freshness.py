@@ -13,7 +13,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-
 RE_HEADING = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*$")
 RE_H1 = re.compile(r"^\s{0,3}#\s+(.+?)\s*$")
 RE_LAST_CONFIRMED_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2})\b")

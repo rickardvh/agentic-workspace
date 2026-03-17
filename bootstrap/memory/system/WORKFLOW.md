@@ -71,6 +71,10 @@ Do not leave contradicted memory behind.
 - Keep the index compact.
 - Load only the notes relevant to the files, interfaces, or behaviour you are touching.
 
+## Skills note
+
+Specialised repeatable procedures may live in skills, but the core operating model must stay in checked-in docs.
+
 ## Local working notes (optional)
 
 Local scratch notes (for example `.agent-work/`) may be used when helpful:
