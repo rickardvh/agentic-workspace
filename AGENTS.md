@@ -115,6 +115,16 @@ When working on the installer:
 - keep dry-run output clear and trustworthy
 - avoid destructive behaviour unless explicitly requested
 
+## Tool feedback loop
+
+When developing this bootstrap tool in this repository:
+
+- continuously evaluate whether the current task exposed friction, ambiguity, or unnecessary manual review in the install, doctor, adopt, or upgrade workflow
+- if you spot a meaningful improvement, suggest it explicitly and, when in scope, implement it in the tool or docs
+- treat your own use of the bootstrap system here as product feedback, not just local task execution
+- prefer small improvements that make future repo adoption, upgrade review, or maintainer use clearer and safer
+- when a change affects the repo's installed memory or workflow contract, update this repo's own `memory/system/VERSION.md` as part of the change rather than leaving the source repo behind the payload
+
 ## Before ending a task
 
 1. Update `TODO.md`.

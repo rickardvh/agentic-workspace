@@ -65,6 +65,7 @@ Outcome or handoff notes:
 - Do not auto-install skills into target repos by default.
 - Added starter skills under `skills/`: memory hygiene, bootstrap adoption, and bootstrap upgrade.
 - Documented the current distribution stance as "keep skills in this repo first; revisit a companion package only if reuse justifies it."
+- Used the new bootstrap-upgrade skill to re-upgrade `transfer-tool` and `budo-research`, confirming the shared version 4 replacements and the intended manual-review treatment of `AGENTS.md`, `TODO.md`, and customised seed notes.
 
 ## Blocked / pending decisions
 
@@ -72,7 +73,7 @@ Outcome or handoff notes:
 
 ## Handoff notes
 
-- No open follow-up for this task.
+- 2026-03-17: Added a repo-local AGENTS instruction to treat day-to-day use of the bootstrap tool in this source repo as a feedback loop for product improvements, then verified whether any versioned self-upgrade was needed.
 
 ## Recurring maintenance
 
