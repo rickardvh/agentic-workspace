@@ -32,7 +32,7 @@ Active
 
 ## Current focus
 
-- Keep the bootstrap payload and installer aligned with a two-layer model: checked-in files hold durable shared knowledge, while skills handle repeatable procedures over that knowledge.
+- Keep the always-read surface small: `AGENTS.md` plus `memory/index.md` by default, with other docs loaded on demand.
 
 ## Recent meaningful progress
 
@@ -46,6 +46,7 @@ Active
 - Clarified that `skills/` is the product's bundled skills catalogue, not a separate source-repo-only layer.
 - Added bundled `memory-capture`, `memory-refresh`, and `memory-router` skills alongside the existing hygiene and bootstrap skills.
 - Shifted the product model toward bundled auto-discoverable skills, with manual installation only as fallback guidance.
+- Trimmed `AGENTS.md`, `memory/system/WORKFLOW.md`, and `memory/index.md` toward a lower-token, skill-first operating surface.
 
 ## Blockers
 
@@ -57,6 +58,7 @@ Active
 - `memory/current/project-state.md` is the overview note; `memory/current/task-context.md` is the current-work compression note.
 - Skills are the execution layer for repeatable memory workflows, not the storage layer for durable repo knowledge.
 - The current bundled skill catalogue now covers hygiene, capture, refresh, routing, adoption, and upgrade workflows.
+- `memory/system/WORKFLOW.md` is now a compact policy shim rather than a workflow handbook.
 
 ## Failure signals
 
@@ -81,4 +83,4 @@ Active
 
 ## Last confirmed
 
-2026-03-17 during first-wave memory skill shipping
+2026-03-17 during token-saving workflow pass

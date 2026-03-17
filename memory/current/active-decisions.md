@@ -80,7 +80,8 @@ Active
 - `upgrade` may replace shared repo-agnostic files automatically, but must continue to treat `AGENTS.md` and customised starter notes conservatively.
 - Skills are bundled product assets for specialised procedures and should stay outside the mandatory bootstrap payload.
 - The base memory system must remain understandable and usable even when skills are unavailable.
+- The default always-read surface should stay as close as possible to `AGENTS.md` plus `memory/index.md`, with workflow and current-context docs loaded only when needed.
 
 ## Last confirmed
 
-2026-03-17 during skills-boundary clarification
+2026-03-17 during token-saving workflow pass

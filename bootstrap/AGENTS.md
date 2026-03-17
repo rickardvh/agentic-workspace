@@ -11,16 +11,16 @@ Read `memory/system/WORKFLOW.md` for shared workflow rules.
 ## Before doing work
 
 1. Read `memory/index.md`.
-2. Read `memory/system/WORKFLOW.md`.
-3. Consult the repository's chosen task system or the user's request for what to work on next.
-4. Load only the memory files relevant to the task.
+2. Consult the repository's chosen task system or the user's request for what to work on next.
+3. Load only the memory files routed by `memory/index.md` that are relevant to the task.
+4. Read `memory/system/WORKFLOW.md` only when you need the shared operating model or policy boundary clarified.
 5. Read any repository docs referenced by those files.
 
 Use built-in agent planning and memory for task execution.  
 Do not rely on transient chat context when the same knowledge should exist in checked-in files.
 
 `memory/index.md` is the routing layer for task-relevant durable knowledge.  
-`memory/system/WORKFLOW.md` defines the shared memory, overview, task-context, freshness, and handoff rules.
+`memory/system/WORKFLOW.md` is a compact policy shim for the shared operating model.
 
 Keep durable repo knowledge in checked-in files. Prefer skills for repeatable procedures that operate on that knowledge.
 

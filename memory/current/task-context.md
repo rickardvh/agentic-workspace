@@ -33,7 +33,7 @@ Active
 
 ## Current focus
 
-- Ship the first wave of installable product skills for memory operations while keeping the mandatory bootstrap payload memory-only.
+- Reduce the default documentation surface and push repeatable workflow logic out of always-read prose and into the skill boundary.
 
 ## Active surfaces
 
@@ -50,6 +50,7 @@ Active
 - `skills/memory-refresh/SKILL.md`
 - `skills/memory-router/SKILL.md`
 - `memory/system/WORKFLOW.md`
+- `bootstrap/AGENTS.md`
 - `bootstrap/memory/index.md`
 - `bootstrap/memory/system/WORKFLOW.md`
 
@@ -60,6 +61,7 @@ Active
 - Keep the base memory system usable without skills.
 - Do not reintroduce `TODO.md`, Beads, or `.agent-work/` as core contract surfaces.
 - Do not blur the line between bundled product skills and the mandatory bootstrap payload.
+- Keep the default read path close to `AGENTS.md` and `memory/index.md`.
 
 ## Relevant memory
 
@@ -76,6 +78,7 @@ Active
 - The first wave of shipped memory skills should stay narrow and operate on visible checked-in outcomes.
 - Bundled skills should be discoverable from the installed product without becoming part of the repo payload.
 - `skills/` should be treated as the optional product skill catalogue, not a separate local-only layer for this source repo.
+- `memory/system/WORKFLOW.md` and `memory/index.md` should keep rules and routing, not long repeatable procedures.
 
 ## Failure signals
 
@@ -83,13 +86,15 @@ Active
 - Skills start acting like hidden storage instead of executable procedures.
 - The shipped contract becomes harder to understand without the skills layer.
 - The product docs describe skills as available, but do not explain how to install them.
+- Agents are told to read more than `AGENTS.md` plus `memory/index.md` by default.
 
 ## Verify
 
 - Confirm the shared docs describe the files-vs-skills split consistently.
 - Confirm the shipped skills remain optional and are not treated as installed payload.
 - Validate the new skills with the skill validator in the repo dev environment.
+- Confirm `AGENTS.md` and `memory/index.md` now form the default read path.
 
 ## Last confirmed
 
-2026-03-17 during first-wave memory skill shipping
+2026-03-17 during token-saving workflow pass
