@@ -11,7 +11,7 @@ Use it for:
 
 Do not use it for durable technical memory. Put subsystem knowledge, runbooks, invariants, and recurring failures in `/memory`.
 
-Keep this file execution-focused only. Collapse completed detail into short outcome notes.
+Keep this file execution-focused only. Replace completed detail with short outcome notes once it no longer affects next actions.
 
 ## Current focus
 
@@ -26,7 +26,7 @@ Status: done
 
 Outcome:
 
-- Added deterministic bootstrap versioning, doctor/adopt/upgrade flows, conservative upgrade rules, and clearer installer documentation.
+- Added deterministic bootstrap versioning, doctor/adopt/upgrade flows, conservative upgrade rules, clearer installer documentation, and smarter optional-append detection for equivalent `Makefile` targets.
 
 ### Milestone: Workflow Document Split
 

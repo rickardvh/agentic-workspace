@@ -11,7 +11,7 @@ Use it for:
 
 Do not use it for durable technical memory. Put subsystem knowledge, runbooks, invariants, and recurring failures in `/memory`.
 
-Keep this file execution-focused only. Collapse completed detail into short outcome notes.
+Keep this file execution-focused only. Replace completed detail with short outcome notes once it no longer affects next actions.
 
 ## Current focus
 
@@ -26,7 +26,7 @@ Status: planned | in progress | blocked | done
 - [ ] <next action>
 - [ ] <next action>
 
-Progress notes:
+Outcome or handoff notes:
 
 - YYYY-MM-DD: <short outcome or handoff note>
 

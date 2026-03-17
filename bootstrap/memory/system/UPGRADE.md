@@ -18,9 +18,10 @@ Use this playbook when upgrading an older repository install of the bootstrap sy
 3. Run `agentic-memory-bootstrap upgrade --dry-run --target <repo>`.
 4. Replace shared repo-agnostic files the upgrade plan marks as safe.
 5. Patch `AGENTS.md` only enough to point at `memory/system/WORKFLOW.md`.
-6. Preserve repo-specific scope, commands, and workspace guardrails.
-7. Review any manual-review items before applying them.
-8. Run the memory freshness audit after the upgrade.
+6. Review `TODO.md` manually if the shared workflow changed how completed detail should be condensed.
+7. Preserve repo-specific scope, commands, and workspace guardrails.
+8. Review any manual-review items before applying them.
+9. Run the memory freshness audit after the upgrade.
 
 ## Typical manual review items
 

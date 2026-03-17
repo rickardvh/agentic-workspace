@@ -14,7 +14,7 @@ UPGRADE_PLAYBOOK_PATH = Path("memory/system/UPGRADE.md")
 AGENTS_PATH = Path("AGENTS.md")
 TODO_PATH = Path("TODO.md")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 2
+BOOTSTRAP_VERSION = 3
 
 WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
 WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
@@ -743,6 +743,18 @@ def _plan_optional_appends(
             )
             continue
 
+        equivalent_detail = _equivalent_optional_fragment_detail(target_file=target_file, existing=existing, fragment=fragment)
+        if equivalent_detail is not None:
+            result.add(
+                "current" if status_only else "skipped",
+                destination,
+                equivalent_detail,
+                role="append-target",
+                safety="safe",
+                source=str(fragment_path),
+            )
+            continue
+
         if status_only or not apply:
             result.add(
                 "would append",
@@ -780,6 +792,37 @@ def _append_text(existing: str, fragment: str) -> str:
     if not normalized:
         return f"{fragment}\n"
     return f"{normalized}\n\n{fragment}\n"
+
+
+def _equivalent_optional_fragment_detail(*, target_file: Path, existing: str, fragment: str) -> str | None:
+    if target_file != Path("Makefile"):
+        return None
+
+    targets = _extract_make_targets(fragment)
+    if not targets:
+        return None
+
+    existing_targets = _extract_make_targets(existing)
+    if not targets.issubset(existing_targets):
+        return None
+
+    joined = ", ".join(sorted(targets))
+    plural = "s" if len(targets) != 1 else ""
+    return f"equivalent Makefile target{plural} already present ({joined})"
+
+
+def _extract_make_targets(text: str) -> set[str]:
+    targets: set[str] = set()
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("\t") or line.startswith("#") or "=" in line.split(":", 1)[0]:
+            continue
+        match = re.match(r"^([A-Za-z0-9_.-]+(?:\s+[A-Za-z0-9_.-]+)*)\s*:(?![=])", line)
+        if not match:
+            continue
+        for target in match.group(1).split():
+            targets.add(target)
+    return targets
 
 
 def _render_text(source: Path, substitutions: dict[str, str]) -> str:
