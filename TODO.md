@@ -26,7 +26,7 @@ Status: done
 
 Outcome:
 
-- Added deterministic bootstrap versioning, doctor/adopt/upgrade flows, conservative upgrade rules, clearer installer documentation, smarter optional-append detection for equivalent `Makefile` targets, and focused `pytest`/`ruff`/`ty` verification for the installer package.
+- Added deterministic bootstrap versioning, doctor/adopt/upgrade flows, conservative upgrade rules, clearer installer documentation, smarter optional-append detection for equivalent `Makefile` targets, focused `pytest`/`ruff`/`ty` verification for the installer package, and a clearer user-facing README introduction.
 
 ### Milestone: Workflow Document Split
 

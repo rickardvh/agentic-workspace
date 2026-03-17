@@ -6,6 +6,30 @@ This repository is both the installer implementation and the reference copy of t
 
 Requires Python 3.11 or newer.
 
+## What This Is
+
+`agentic-memory-bootstrap` is a small installer for adding a lightweight agent-workflow layer to an existing repository.
+
+It gives a repo a predictable structure for:
+
+- local repo-specific agent instructions in `AGENTS.md`
+- shared workflow rules in `memory/system/WORKFLOW.md`
+- milestone and handoff continuity in `TODO.md`
+- durable technical notes in `memory/`
+- local disposable scratch notes in `.agent-work/`
+
+The goal is not heavy process. The goal is to make agent-assisted work easier to continue safely across sessions, contributors, and repositories without turning the repo into a documentation system of its own.
+
+## What It Does Not Try To Be
+
+This tool is not:
+
+- a replacement for product docs, architecture docs, or contribution guides
+- a project-management system
+- a knowledge base that stores every implementation detail forever
+- a destructive scaffolder that overwrites heavily customised local files by default
+- an agent runtime or orchestration framework
+
 ## Install
 
 Pick the install method that matches your toolchain.
