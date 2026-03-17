@@ -121,3 +121,4 @@ When working on the installer:
 2. Check whether your changes affected any existing memory notes or workflow docs.
 3. Update, deprecate, or remove those notes as needed.
 4. Keep durable notes concise, factual, and de-duplicated.
+5. Remove completed task detail from `TODO.md` once it no longer changes what the next contributor should do.

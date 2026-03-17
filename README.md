@@ -4,9 +4,47 @@ Small CLI for installing the repository memory bootstrap into an existing repo.
 
 This repository is both the installer implementation and the reference copy of the bootstrap payload it distributes.
 
-## Local usage
+Requires Python 3.11 or newer.
 
-Run the command from this workspace with `uv`.
+## Install
+
+Pick the install method that matches your toolchain.
+
+From a local clone:
+
+```bash
+# uv users
+uv tool install --from . agentic-memory-bootstrap
+
+# pipx users
+pipx install .
+
+# pip users
+python -m pip install .
+```
+
+From a Git repository URL:
+
+```bash
+# uv users
+uv tool install --from <repo-url> agentic-memory-bootstrap
+
+# pipx users
+pipx install <repo-url>
+
+# pip users
+python -m pip install <repo-url>
+```
+
+After installation, use the installed command:
+
+```bash
+agentic-memory-bootstrap --help
+```
+
+## Command reference
+
+These commands use the installed `agentic-memory-bootstrap` executable.
 
 Common commands:
 
@@ -38,29 +76,38 @@ Examples:
 
 ```bash
 # Install into the current repository
-uv run agentic-memory-bootstrap install
+agentic-memory-bootstrap install
 
 # Install into a specific repository
-uv run agentic-memory-bootstrap install --target /path/to/repo
+agentic-memory-bootstrap install --target /path/to/repo
 
 # Preview or force an install
-uv run agentic-memory-bootstrap install --dry-run
-uv run agentic-memory-bootstrap install --force
+agentic-memory-bootstrap install --dry-run
+agentic-memory-bootstrap install --force
 
 # Clean bootstrap alias
-uv run agentic-memory-bootstrap init --target /path/to/repo
+agentic-memory-bootstrap init --target /path/to/repo
 
 # Adopt or inspect an existing repository
-uv run agentic-memory-bootstrap adopt --target /path/to/repo
-uv run agentic-memory-bootstrap doctor --target /path/to/repo
+agentic-memory-bootstrap adopt --target /path/to/repo
+agentic-memory-bootstrap doctor --target /path/to/repo
 
 # Preview or apply an upgrade
-uv run agentic-memory-bootstrap upgrade --dry-run --target /path/to/repo
-uv run agentic-memory-bootstrap upgrade --target /path/to/repo --apply-local-entrypoint
+agentic-memory-bootstrap upgrade --dry-run --target /path/to/repo
+agentic-memory-bootstrap upgrade --target /path/to/repo --apply-local-entrypoint
 
 # Inspect the packaged payload
-uv run agentic-memory-bootstrap status
-uv run agentic-memory-bootstrap list-files
+agentic-memory-bootstrap status
+agentic-memory-bootstrap list-files
+```
+
+## Maintainer usage in this repository
+
+If you are developing this repository itself, running through `uv` is still the shortest path:
+
+```bash
+uv run agentic-memory-bootstrap --help
+uv run agentic-memory-bootstrap install --dry-run
 ```
 
 The installed model is:

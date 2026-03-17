@@ -21,7 +21,7 @@ Use built-in agent planning and memory for short-horizon task execution.
 - Write the active plan into `TODO.md` before non-trivial work.
 - Update `TODO.md` immediately after finishing work or changing scope.
 - Keep it execution-focused: next actions, blockers, decisions, and short handoff context only.
-- Collapse completed detail into short outcome notes.
+- Replace completed detail with a short outcome note once it no longer affects next actions.
 - Prune anything that does not affect what happens next.
 
 `TODO.md` is for cross-task continuity, not detailed step-by-step reasoning.
