@@ -73,7 +73,7 @@ The shipped skills are:
 - `bootstrap-adoption`
 - `bootstrap-upgrade`
 
-See [skills/README.md](C:/Users/ricka/src/agentic-memory/skills/README.md) for the catalogue and fallback installation methods.
+See [skills/README.md](skills/README.md) for the catalogue and fallback installation methods.
 
 In the normal case, install the product and let your runtime auto-discover the bundled skills.
 
@@ -83,7 +83,7 @@ To inspect the bundled catalogue:
 agentic-memory-bootstrap list-skills
 ```
 
-If your runtime does not auto-discover packaged skills, use the fallback install methods in [skills/README.md](C:/Users/ricka/src/agentic-memory/skills/README.md).
+If your runtime does not auto-discover packaged skills, use the fallback install methods in [skills/README.md](skills/README.md).
 
 When developing this repository itself, treat `skills/` in the repo as the canonical source of truth. Bundled copies in an installed package are for explicit packaging or install-path testing and may be stale until the package is reinstalled.
 
