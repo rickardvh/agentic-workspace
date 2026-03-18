@@ -22,6 +22,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Keep durable facts, invariants, runbooks, recurring failures, and lightweight shared context in checked-in files.
 - Keep repeatable workflow-like actions in skills.
 - Use `memory/index.md` as the routing layer; do not bulk-load `/memory`.
+- Prefer the smallest useful working set.
 - Prefer editing, merging, or removing existing notes over accumulating near-duplicates.
 - When referenced behaviour changes, update the note, mark it `Needs verification`, or remove it in the same change.
 
@@ -40,7 +41,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 ## Skills boundary
 
 - Skills operate on memory; they do not replace it.
-- If prose is describing a repeatable maintenance, routing, refresh, capture, hygiene, or upgrade workflow, that is usually a skill candidate.
+- If prose starts describing a repeatable maintenance, routing, refresh, capture, hygiene, or upgrade workflow, that is usually a skill candidate.
 - The base memory system must remain understandable without skills.
 
 ## Local notes

@@ -14,7 +14,7 @@ VERSION_PATH = Path("memory/system/VERSION.md")
 WORKFLOW_PATH = Path("memory/system/WORKFLOW.md")
 AGENTS_PATH = Path("AGENTS.md")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 11
+BOOTSTRAP_VERSION = 12
 BUNDLED_SKILLS_ROOT = Path("skills")
 
 CURRENT_MEMORY_BASELINE = (

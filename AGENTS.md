@@ -2,7 +2,7 @@
 
 This file is the local bootstrap contract for agents working in this repository.
 
-Keep it short, stable, and repo-specific. Shared workflow rules live in `memory/system/WORKFLOW.md`.
+Keep it short, stable, and repo-specific.
 
 <!-- agentic-memory:workflow:start -->
 Read `memory/system/WORKFLOW.md` for shared workflow rules.
@@ -13,33 +13,26 @@ Read `memory/system/WORKFLOW.md` for shared workflow rules.
 1. Read `memory/index.md`.
 2. Use the user's request to determine what to work on next.
 3. Read only the memory files routed by `memory/index.md` that are relevant to the subsystem you will touch.
-4. Read `memory/system/WORKFLOW.md` only when you need the shared operating model or policy boundary clarified.
-5. Read any repo docs explicitly referenced by those files.
-6. Use local scratch notes only when they help; they are optional support, not part of the system.
+4. Read `memory/system/WORKFLOW.md` only when the policy boundary is unclear.
+5. Read repo docs only when routed memory points to them.
+6. Prefer targeted tool checks over broad re-reading when they answer the question faster.
+7. Use local scratch notes only when they help; they are optional support, not part of the system.
 
 Do not rely on transient chat context when the same knowledge should exist in checked-in files.
 
 `memory/index.md` is the routing layer for task-relevant durable knowledge.  
 `memory/system/WORKFLOW.md` is a compact policy shim for the shared operating model.
 
-Repeatable workflow-like actions should usually become skills. Durable shared knowledge should remain in checked-in files.
+For this repo, prefer command-targeted checks like `agentic-memory-bootstrap current`, `route`, `sync-memory`, `doctor`, and `verify-payload` when they reduce file reading.
 
 ## Repo scope
 
 This repository produces and maintains a reusable bootstrap system that adds durable repository memory and overview-note conventions to other repositories.
 
-The repo contains:
-
-- a reusable `bootstrap/` payload that can be copied into a target repo
-- a CLI installer intended for later use via `uvx`
-- templates and helper tooling for durable memory, overview notes, and memory freshness checks
-- bundled product skills for repeatable memory and bootstrap workflows
-- optional workflow fragments for integrating the system into common repo workflows
-
-Treat this repo as both:
-
-- a normal software project
-- the reference implementation of the memory system it distributes
+- `bootstrap/` is the repo-agnostic installed payload.
+- `src/repo_memory_bootstrap/` is the CLI and installer.
+- `skills/` is the bundled product skill catalogue.
+- Treat this repo as both the product source and the reference implementation it ships.
 
 ## Workspace guardrails
 
@@ -48,48 +41,12 @@ Treat this repo as both:
 - When changing the bootstrap payload, preserve repo-agnostic behaviour unless the task explicitly asks for source-repo-specific customisation.
 - Avoid leaking source-repo-specific details into generic bootstrap files.
 
-## Design goals
+## Design constraints
 
-Prioritise these goals when making changes:
-
-1. simplicity
-2. portability
-3. safe repeatability
-4. low maintenance burden
-5. agent-agnostic behaviour
-
-When trade-offs appear, prefer the simplest design that is safe to apply repeatedly to existing repositories.
-
-## Bootstrap-system rules
-
-The bootstrap payload must remain:
-
-- repo-agnostic by default
-- conservative about overwriting user files
-- easy to inspect as plain files
-- suitable for incremental adoption in an existing repo
-- suitable for clean bootstrap in an empty repo
-
-Changes to files under `bootstrap/` affect future installations of the system.  
-Keep these files repo-agnostic unless a change is explicitly intended to alter the bootstrap behaviour.
-
-The installer must remain:
-
-- conservative by default
-- explicit about overwrites
-- safe on repeated runs
-- simple in its merge behaviour
-- suitable for later `uvx` use
-
-## Local scratch policy
-
-Local scratch notes are optional working context.
-
-- They are not durable technical memory.
-- Durable lessons belong in `/memory`.
-- They must not become a hidden dependency of the bootstrap.
-
-Do not turn local scratch into a checked-in knowledge store.
+- Keep the payload repo-agnostic, conservative, and easy to inspect as plain files.
+- Keep the installer conservative, repeatable, and explicit about overwrites.
+- Prefer the simplest design that is safe to apply repeatedly to existing repositories.
+- Local scratch is optional only; durable lessons belong in `/memory`.
 
 ## Runtime and tooling
 
@@ -106,16 +63,11 @@ Do not turn local scratch into a checked-in knowledge store.
 - Prefer explicit placeholders over vague prose in bootstrap files.
 - Keep bootstrap files self-contained so they can be copied by script with minimal extra logic.
 
-## Packaging and installer guidance
+## Installer guidance
 
-When working on the installer:
-
-- treat the packaged `bootstrap/` directory as the source of truth for installed payload files
-- avoid assumptions about the caller's working directory
-- do not guess aggressively in monorepos or nested repos
-- prefer explicit `--target` handling when repo-root detection is ambiguous
-- keep dry-run output clear and trustworthy
-- avoid destructive behaviour unless explicitly requested
+- Treat packaged `bootstrap/` as the source of truth for installed payload files.
+- Avoid guessing in ambiguous repo-root situations; prefer explicit `--target`.
+- Keep dry-run output clear and trustworthy.
 
 ## Tool feedback loop
 

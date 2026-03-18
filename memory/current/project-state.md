@@ -51,6 +51,8 @@ Active
 - Hardened bootstrap adoption so fresh current-memory seed notes are audit-clean immediately.
 - Added `agentic-memory-bootstrap prompt populate` and made the post-adoption populate handoff explicit in the CLI and skill docs.
 - Tightened AGENTS patch guidance and optional `check-memory` append messaging.
+- Trimmed the always-read contract further so installed agents start from `AGENTS.md` plus `memory/index.md`, with workflow policy loaded only on demand.
+- Tightened the local contract to prefer targeted CLI checks over broad file re-reading when they answer the question faster.
 
 ## Blockers
 
@@ -87,4 +89,4 @@ Active
 
 ## Last confirmed
 
-2026-03-18 during adoption/populate hardening
+2026-03-18 during token-discipline pass

@@ -33,55 +33,56 @@ Active
 
 ## Current focus
 
-- Harden the bootstrap adoption and populate handoff so a fresh install is audit-clean and the next agent step is obvious.
+- Reduce routine token overhead by shrinking the always-read doc surface and biasing the local contract toward targeted checks.
 
 ## Active surfaces
 
+- `AGENTS.md`
+- `bootstrap/AGENTS.md`
+- `bootstrap/memory/index.md`
+- `bootstrap/memory/system/WORKFLOW.md`
 - `README.md`
-- `bootstrap/memory/current/project-state.md`
-- `bootstrap/memory/current/task-context.md`
 - `memory/current/project-state.md`
 - `memory/index.md`
+- `memory/system/WORKFLOW.md`
 - `memory/current/task-context.md`
-- `skills/README.md`
-- `skills/bootstrap-adoption/SKILL.md`
-- `skills/bootstrap-populate/SKILL.md`
-- `src/repo_memory_bootstrap/cli.py`
 - `src/repo_memory_bootstrap/installer.py`
-- `tests/test_installer.py`
 
 ## Key constraints
 
 - Keep the product memory-only and task-system agnostic.
 - `task-context.md` is a checked-in compression note, not a task list, detailed plan, or historical log.
-- Adoption alone must leave starter notes in a freshness-audit-clean state.
-- Keep `bootstrap-populate` as a skill-driven follow-up rather than a semantic write command in the CLI.
+- The default read path should stay close to `AGENTS.md` plus `memory/index.md`.
+- Shared policy must remain available, but not mandatory to load on every task.
+- Prefer targeted command output over broad file reads when it materially reduces context cost.
 - Self-hosted verification must exercise the installed tool path against this repo, not just the source files.
 
 ## Relevant memory
 
 - `memory/current/project-state.md`
 - `memory/current/active-decisions.md`
+- `memory/index.md`
+- `memory/system/WORKFLOW.md`
 - `memory/system/UPGRADE.md`
 
 ## Notes
 
-- The shipped current-memory starter notes now need real install-time `Last confirmed` dates rather than audit-breaking placeholders.
-- The adoption prompt and summary should hand off to `prompt populate` without implying the CLI can semantically fill repo context by itself.
-- The smoke flow to preserve is: adopt -> freshness audit -> doctor -> prompt populate.
+- The biggest remaining token sinks were long local instructions and repeated explanatory lines in `memory/index.md` and `WORKFLOW.md`.
+- The installed contract should still explain the boundary, but not teach whole workflows in prose.
+- This pass preserves routing and policy while cutting habitual over-reading.
 
 ## Failure signals
 
-- Fresh adoption leaves invalid `Last confirmed` metadata or placeholder-heavy current-memory files.
-- Adoption output fails to make the populate follow-up obvious.
-- AGENTS pointer patching still introduces awkward spacing or unclear manual-review guidance.
+- Agents are still implicitly encouraged to read `memory/system/WORKFLOW.md` on every task.
+- `memory/index.md` keeps expanding into a mini handbook instead of a routing file.
+- Repo-local instructions keep growing instead of deferring repeatable logic to tools or skills.
 
 ## Verify
 
 - Run pytest, ruff, ty, and the freshness audit.
 - Run doctor, upgrade --dry-run, and verify-payload against this repo.
-- Smoke-test adopt -> audit -> doctor -> prompt populate in a temporary repo.
+- Confirm the installed repo now reports version 12 and that the slimmer guidance is present through the tool path.
 
 ## Last confirmed
 
-2026-03-18 during adoption/populate hardening
+2026-03-18 during token-discipline pass

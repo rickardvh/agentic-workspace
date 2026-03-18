@@ -2,7 +2,7 @@
 
 This file is the local bootstrap contract for agents working in this repository.
 
-Keep it short and repo-specific. Shared workflow rules live in `memory/system/WORKFLOW.md`.
+Keep it short and repo-specific.
 
 <!-- agentic-memory:workflow:start -->
 Read `memory/system/WORKFLOW.md` for shared workflow rules.
@@ -13,7 +13,7 @@ Read `memory/system/WORKFLOW.md` for shared workflow rules.
 1. Read `memory/index.md`.
 2. Consult the repository's chosen task system or the user's request for what to work on next.
 3. Load only the memory files routed by `memory/index.md` that are relevant to the task.
-4. Read `memory/system/WORKFLOW.md` only when you need the shared operating model or policy boundary clarified.
+4. Read `memory/system/WORKFLOW.md` only when the shared policy boundary is unclear.
 5. Read any repository docs referenced by those files.
 
 Use built-in agent planning and memory for task execution.  

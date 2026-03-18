@@ -5,7 +5,6 @@
 - `/memory` is the durable repository memory layer.
 - Read this file after identifying the work from the repo's task system or the user's request.
 - Load only the notes relevant to the task at hand.
-- `memory/system/` contains bootstrap system docs and version markers rather than routed task memory.
 - Use checked-in files for durable facts and lightweight shared context.
 - Use skills for repeatable workflow operations on that knowledge.
 
@@ -45,8 +44,7 @@ Delete unused routing examples once the repository has concrete notes.
 - Do not load all of `/memory` by default.
 - Start from the smallest useful working set.
 - Load `memory/current/project-state.md` or `memory/current/task-context.md` only when they will reduce re-orientation cost for the current task.
-- When notes include an `Applies to` section, use touched files, modules, commands, or surfaces to decide which notes to load first.
-- Prefer a small, precise working set over broad context loading.
+- Use touched files, modules, commands, or surfaces to decide which notes to load first.
 
 ## Memory admission rule
 
@@ -66,8 +64,6 @@ Do not add memory for:
 - implementation steps specific to a single task
 
 If a recurring procedure is reusable but not itself durable repo knowledge, prefer a skill over a new memory note.
-
-Use local working notes only if helpful; do not rely on them as part of the system.
 
 ## One-home rule
 
@@ -93,13 +89,6 @@ Use short references instead.
 
 Memory files should normally stay under ~200 lines.
 
-If a file grows beyond that:
-
-- split it by subsystem or topic
-- move procedures into `runbooks/`
-- move architectural context into `decisions/`
-- remove duplicated material
-
 Large memory files degrade selective loading and retrieval quality.
 
 ## Index compactness rule
@@ -108,9 +97,4 @@ Large memory files degrade selective loading and retrieval quality.
 
 Keep it short.  
 Do not summarise note contents beyond what is needed for routing.
-
-## Index maintenance
-
-When creating, renaming, splitting, or significantly repurposing memory files, update this index in the same change.
-
-The index must always reflect the real memory structure.
+Update this index in the same change when the memory structure changes.
