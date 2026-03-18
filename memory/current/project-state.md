@@ -38,13 +38,14 @@ Active
 
 - Removed task-management guidance from the core payload and installer.
 - Repositioned `memory/current/project-state.md` as the overview note rather than a planning surface.
-- Shipped the first installable product skill set for memory and bootstrap workflows.
+- Shipped the first bundled product skill set for memory and bootstrap workflows.
 - Removed repo-local Beads and task-tracking expectations from this source repository.
 - Promoted `memory/current/task-context.md` as the checked-in current-work compression note.
 - Added agent-facing memory ergonomics to the CLI for current-memory inspection, routing, sync suggestions, and payload verification.
 - Clarified that the base system must remain understandable and maintainable even when skills are unavailable.
 - Clarified that `skills/` is the product's bundled skills catalogue, not a separate source-repo-only layer.
 - Added bundled `memory-capture`, `memory-refresh`, and `memory-router` skills alongside the existing hygiene and bootstrap skills.
+- Added `bootstrap-populate` as the conservative post-adoption skill for filling new current-memory files from repo evidence.
 - Shifted the product model toward bundled auto-discoverable skills, with manual installation only as fallback guidance.
 - Trimmed `AGENTS.md`, `memory/system/WORKFLOW.md`, and `memory/index.md` toward a lower-token, skill-first operating surface.
 
@@ -83,4 +84,4 @@ Active
 
 ## Last confirmed
 
-2026-03-17 during token-saving workflow pass
+2026-03-18 during token-saving workflow pass

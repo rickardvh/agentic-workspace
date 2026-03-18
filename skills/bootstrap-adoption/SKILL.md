@@ -29,6 +29,7 @@ It is an execution layer for applying the memory system. The installed files rem
    - keep the task system external to the installed memory contract
    - preserve repo-specific scope and commands
 7. Run the memory freshness audit if the repo includes it.
+8. If adoption created fresh current-memory files, offer to use `bootstrap-populate` as the next conservative step so those files are populated from existing repo docs and visible repo state instead of being left as raw templates.
 
 ## Guardrails
 
@@ -44,3 +45,4 @@ It is an execution layer for applying the memory system. The installed files rem
 - safe install or adopt actions applied
 - manually aligned `AGENTS.md` and memory guidance where necessary
 - a clear note about the overview, task-context, and durable-memory surfaces
+- an offer to populate new current-memory files conservatively when adoption created them

@@ -48,6 +48,7 @@ def test_list_bundled_skills_includes_memory_and_bootstrap_skills() -> None:
         "memory-refresh",
         "memory-router",
         "bootstrap-adoption",
+        "bootstrap-populate",
         "bootstrap-upgrade",
     }.issubset(bundled)
 
@@ -376,6 +377,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
 
     current_args = parser.parse_args(["current", "check", "--target", "."])
     list_skills_args = parser.parse_args(["list-skills", "--format", "json"])
+    prompt_args = parser.parse_args(["prompt", "adopt", "--target", "C:/repo"])
     route_args = parser.parse_args(["route", "--files", "src/app.py"])
     sync_args = parser.parse_args(["sync-memory", "--notes", "memory/index.md"])
     verify_args = parser.parse_args(["verify-payload", "--format", "json"])
@@ -395,10 +397,21 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
 
     assert current_args.command == "current"
     assert list_skills_args.command == "list-skills"
+    assert prompt_args.command == "prompt"
+    assert prompt_args.prompt_command == "adopt"
     assert route_args.command == "route"
     assert sync_args.command == "sync-memory"
     assert verify_args.command == "verify-payload"
     assert install_args.project_purpose == "purpose"
+
+
+def test_build_agent_prompt_mentions_list_skills_and_target() -> None:
+    prompt = cli._build_agent_prompt("adopt", target="C:/repo")
+
+    assert "agentic-memory-bootstrap list-skills" in prompt
+    assert "bootstrap-adoption" in prompt
+    assert "bootstrap-populate" in prompt
+    assert "C:/repo" in prompt
 
 
 def test_current_view_json_shape(tmp_path: Path) -> None:

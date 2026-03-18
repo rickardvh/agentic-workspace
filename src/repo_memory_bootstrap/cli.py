@@ -72,6 +72,13 @@ def build_parser() -> argparse.ArgumentParser:
     list_skills_parser = subparsers.add_parser("list-skills", help="List bundled product skills.")
     _add_format_argument(list_skills_parser)
 
+    prompt_parser = subparsers.add_parser("prompt", help="Print a canonical agent prompt for adoption or upgrade.")
+    prompt_subparsers = prompt_parser.add_subparsers(dest="prompt_command", required=True)
+    prompt_adopt_parser = prompt_subparsers.add_parser("adopt", help="Print the canonical adoption prompt.")
+    _add_target_arguments(prompt_adopt_parser)
+    prompt_upgrade_parser = prompt_subparsers.add_parser("upgrade", help="Print the canonical upgrade prompt.")
+    _add_target_arguments(prompt_upgrade_parser)
+
     current_parser = subparsers.add_parser("current", help="Inspect or check the current-memory surface.")
     current_subparsers = current_parser.add_subparsers(dest="current_command", required=True)
     current_show_parser = current_subparsers.add_parser("show", help="Show current-memory notes.")
@@ -214,6 +221,10 @@ def main(argv: list[str] | None = None) -> int:
             _emit_result(result, output_format=args.format)
             return 0
 
+        if args.command == "prompt":
+            print(_build_agent_prompt(args.prompt_command, target=args.target))
+            return 0
+
         if args.command == "current":
             if args.current_command == "show":
                 _emit_current_view(show_current_memory(target=args.target), output_format=args.format)
@@ -290,3 +301,22 @@ def _print_install_summary(result) -> None:
     print("- Confirm the repo's chosen task system separately; this bootstrap does not install one.")
     print("- Run agentic-memory-bootstrap doctor --target <repo> before upgrading an older install.")
     print("- Run python scripts/check/check_memory_freshness.py after customising memory notes.")
+
+
+def _build_agent_prompt(command: str, *, target: str | None) -> str:
+    target_clause = ""
+    if target:
+        target_clause = f" at {target}"
+
+    if command == "adopt":
+        return (
+            "Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled skills in this session. "
+            f"Then use the `bootstrap-adoption` skill from the installed `agentic-memory-bootstrap` product to adopt the repository{target_clause} conservatively and report any manual-review items. "
+            "After adoption, offer to use the `bootstrap-populate` skill to populate any new current-memory files conservatively from existing repo docs and visible repo state."
+        )
+    if command == "upgrade":
+        return (
+            "Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled skills in this session. "
+            f"Then use the `bootstrap-upgrade` skill from the installed `agentic-memory-bootstrap` product to upgrade the repository{target_clause} conservatively and report any manual-review items."
+        )
+    raise ValueError(f"Unknown prompt command: {command}")

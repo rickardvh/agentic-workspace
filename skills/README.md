@@ -20,6 +20,8 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
   - identify the smallest relevant memory set for the current work
 - `bootstrap-adoption`
   - introduce the memory bootstrap into an existing repository conservatively
+- `bootstrap-populate`
+  - populate new current-memory files conservatively after adoption
 - `bootstrap-upgrade`
   - upgrade an installed bootstrap safely without flattening local customisation
 
@@ -33,13 +35,14 @@ install-skill-from-github.py --repo Tenfifty/agentic-memory --path skills/memory
 install-skill-from-github.py --repo Tenfifty/agentic-memory --path skills/memory-refresh
 install-skill-from-github.py --repo Tenfifty/agentic-memory --path skills/memory-router
 install-skill-from-github.py --repo Tenfifty/agentic-memory --path skills/bootstrap-adoption
+install-skill-from-github.py --repo Tenfifty/agentic-memory --path skills/bootstrap-populate
 install-skill-from-github.py --repo Tenfifty/agentic-memory --path skills/bootstrap-upgrade
 ```
 
 Or install several at once:
 
 ```bash
-install-skill-from-github.py --repo Tenfifty/agentic-memory --path skills/memory-hygiene --path skills/memory-capture --path skills/memory-refresh --path skills/memory-router --path skills/bootstrap-adoption --path skills/bootstrap-upgrade
+install-skill-from-github.py --repo Tenfifty/agentic-memory --path skills/memory-hygiene --path skills/memory-capture --path skills/memory-refresh --path skills/memory-router --path skills/bootstrap-adoption --path skills/bootstrap-populate --path skills/bootstrap-upgrade
 ```
 
 ## Fallback install from a local clone

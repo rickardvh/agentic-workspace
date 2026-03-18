@@ -1,16 +1,14 @@
 # agentic-memory-bootstrap
 
-Small CLI for installing a repository memory and lightweight coordination bootstrap into an existing repo.
-
-This repository is both the installer implementation and the reference copy of the bootstrap payload it distributes.
+Small CLI for adding durable repository memory to an existing repo.
 
 Requires Python 3.11 or newer.
 
-## What This Is
+## What It Is
 
-`agentic-memory-bootstrap` is a small installer for adding a lightweight repository memory layer to an existing repository.
+`agentic-memory-bootstrap` installs a small checked-in memory system for agent-assisted work.
 
-It gives a repo a predictable structure for:
+It gives a repo:
 
 - local repo-specific agent instructions in `AGENTS.md`
 - shared workflow rules in `memory/system/WORKFLOW.md`
@@ -18,91 +16,31 @@ It gives a repo a predictable structure for:
 - a lightweight human-readable overview in `memory/current/project-state.md`
 - an optional checked-in current-task compression note in `memory/current/task-context.md`
 
-The goal is not heavy process. The goal is to make agent-assisted work easier to continue safely across sessions, contributors, and repositories without turning the repo into a documentation system of its own.
+The goal is to make work easier to continue across sessions and contributors without turning the repo into a heavy process system.
 
-It also provides small agent-facing helpers for inspecting current-memory notes, routing to likely relevant memory, checking payload contract drift, and suggesting memory follow-up after code changes.
+## Core Model
 
-## What It Does Not Try To Be
+Use the layers like this:
 
-This tool is not:
+- checked-in files = durable shared knowledge and lightweight shared context
+- skills = repeatable operations on that knowledge
+- built-in agent planning = short-horizon execution
+- external task system = task tracking
+
+This tool is memory-only and task-system agnostic.
+
+If something is a durable fact about the repo, store it in files.  
+If something is a repeatable workflow over those files, make it a skill.
+
+## What It Is Not
+
+This tool does not try to be:
 
 - a replacement for product docs, architecture docs, or contribution guides
 - a project-management system
 - a knowledge base that stores every implementation detail forever
 - a destructive scaffolder that overwrites heavily customised local files by default
 - an agent runtime or orchestration framework
-
-## Files And Skills
-
-This project uses two complementary layers:
-
-- checked-in files = durable shared knowledge and lightweight shared context
-- skills = repeatable procedures that operate on that knowledge
-
-Use checked-in files for:
-
-- architecture and subsystem notes
-- invariants
-- runbooks
-- recurring failures
-- `memory/current/project-state.md`
-- `memory/current/task-context.md`
-- routing and template files
-
-Use skills for actions that are recognisably:
-
-- repeatable
-- procedural
-- bounded
-- reusable
-
-Skills are a good fit for workflows such as memory hygiene, memory refresh, memory routing, bootstrap adoption, and bootstrap upgrades. They are not a replacement for `AGENTS.md`, the repo's chosen task system, or repo memory notes.
-
-The product's bundled skills live under `skills/`. They are deliberately separate from the mandatory bootstrap payload, but they are part of the product distribution and can be auto-discovered by runtimes that support packaged skills.
-
-## Bundled Skills
-
-The core bootstrap works without skills, but the product also ships bundled memory-operation skills for capable runtimes.
-
-The shipped skills are:
-
-- `memory-hygiene`
-- `memory-capture`
-- `memory-refresh`
-- `memory-router`
-- `bootstrap-adoption`
-- `bootstrap-upgrade`
-
-See [skills/README.md](skills/README.md) for the catalogue and fallback installation methods.
-
-In the normal case, install the product and let your runtime auto-discover the bundled skills.
-
-To inspect the bundled catalogue:
-
-```bash
-agentic-memory-bootstrap list-skills
-```
-
-If your runtime does not auto-discover packaged skills, use the fallback install methods in [skills/README.md](skills/README.md).
-
-When developing this repository itself, treat `skills/` in the repo as the canonical source of truth. Bundled copies in an installed package are for explicit packaging or install-path testing and may be stale until the package is reinstalled.
-
-## Boundary
-
-Use the layers like this:
-
-- task system = external to this tool
-- built-in agent planning = how to execute the current task
-- `/memory` = durable facts, invariants, runbooks, and recurring failures
-- `memory/current/project-state.md` = short human-readable repo overview
-- `memory/current/task-context.md` = optional checked-in current-task compression
-
-This tool is task-system agnostic. It is intended to work alongside issue trackers, boards, agent-native planning, or other repo-local task systems without trying to own them.
-
-The core design rule is:
-
-- if something is a durable fact about the repo, store it in files
-- if something is a repeatable workflow over those files, make it a skill
 
 ## Install
 
@@ -125,26 +63,84 @@ From the Git repository URL:
 
 ```bash
 # uv users
-uv tool install --from https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap
+uv tool install --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap
 
 # pipx users
-pipx install https://github.com/Tenfifty/agentic-memory
+pipx install git+https://github.com/Tenfifty/agentic-memory
 
 # pip users
-python -m pip install https://github.com/Tenfifty/agentic-memory
+python -m pip install git+https://github.com/Tenfifty/agentic-memory
 ```
 
-After installation, use the installed command:
+## First Use
+
+After installation:
 
 ```bash
 agentic-memory-bootstrap --help
 ```
 
+Typical first commands:
+
+```bash
+# install into a repo
+agentic-memory-bootstrap install --target /path/to/repo
+
+# inspect an existing install
+agentic-memory-bootstrap doctor --target /path/to/repo
+
+# inspect current-memory notes
+agentic-memory-bootstrap current show --target /path/to/repo
+```
+
+## Using With An Agent
+
+In a fresh repo, the simplest path is usually to tell the agent to use the bundled bootstrap skill directly.
+
+For first-time adoption, paste:
+
+```text
+Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled skills in this session. Then use the `bootstrap-adoption` skill from the installed `agentic-memory-bootstrap` product to adopt this repository conservatively and report any manual-review items.
+```
+
+For upgrading an existing install, paste:
+
+```text
+Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled skills in this session. Then use the `bootstrap-upgrade` skill from the installed `agentic-memory-bootstrap` product to upgrade this repository conservatively and report any manual-review items.
+```
+
+Or have the tool print the prompt for you:
+
+```bash
+agentic-memory-bootstrap prompt adopt
+agentic-memory-bootstrap prompt upgrade
+```
+
+## Bundled Skills
+
+The shipped skills are:
+
+- `memory-hygiene`
+- `memory-capture`
+- `memory-refresh`
+- `memory-router`
+- `bootstrap-adoption`
+- `bootstrap-populate`
+- `bootstrap-upgrade`
+
+If your runtime supports packaged skill discovery, these skills should be available from the installed product.
+
+To inspect the bundled catalogue:
+
+```bash
+agentic-memory-bootstrap list-skills
+```
+
+See [skills/README.md](C:/Users/ricka/src/agentic-memory/skills/README.md) for the skill catalogue and fallback installation methods.
+
 ## Command reference
 
-These commands use the installed `agentic-memory-bootstrap` executable.
-
-Common commands:
+Main commands:
 
 - `install` installs the bootstrap into the target repository.
 - `init` is an alias for `install`, intended for clean bootstrap cases.
@@ -159,7 +155,7 @@ Common commands:
 - `sync-memory` suggests which memory notes to review after code changes.
 - `verify-payload` validates the packaged bootstrap contract.
 
-Shared arguments:
+Common arguments:
 
 - `--target <path>` selects the repository to inspect or modify. It defaults to the current directory.
 - `--format text|json` chooses human-readable or structured output. JSON is useful for agent-driven workflows.
@@ -171,103 +167,22 @@ Shared arguments:
 - `--primary-test-command <text>` fills `<PRIMARY_TEST_COMMAND>` when explicitly provided.
 - `--other-key-commands <text>` fills `<OTHER_KEY_COMMANDS>` when explicitly provided.
 
-Command-specific arguments:
-
-- `install --dry-run` previews the planned install without writing files.
-- `install --force` overwrites managed files that already exist.
-- `adopt --dry-run` previews the adoption plan without writing files.
-- `adopt --apply-local-entrypoint` patches `AGENTS.md` with the canonical workflow pointer block when needed.
-- `upgrade --dry-run` previews the upgrade plan without writing files.
-- `upgrade --force` allows replacement of customised starter files during upgrade.
-- `upgrade --apply-local-entrypoint` patches `AGENTS.md` with the canonical workflow pointer block when needed.
-- `route --files <paths...>` routes from touched files.
-- `route --surface <surfaces...>` routes from explicit surfaces like `runtime`, `api`, `retrieval`, `tests`, or `architecture`.
-- `sync-memory --files <paths...>` suggests memory review targets from explicit changed files.
-- `sync-memory --notes <paths...>` adds explicit memory notes to the sync suggestion set.
-
 Examples:
 
 ```bash
-# Install into the current repository
-agentic-memory-bootstrap install
+# preview an install
+agentic-memory-bootstrap install --dry-run --target /path/to/repo
 
-# Install into a specific repository
-agentic-memory-bootstrap install --target /path/to/repo
+# apply an upgrade
+agentic-memory-bootstrap upgrade --target /path/to/repo
 
-# Preview or force an install
-agentic-memory-bootstrap install --dry-run
-agentic-memory-bootstrap install --force
-
-# Clean bootstrap alias
-agentic-memory-bootstrap init --target /path/to/repo
-
-# Adopt or inspect an existing repository
-agentic-memory-bootstrap adopt --target /path/to/repo
-agentic-memory-bootstrap doctor --target /path/to/repo
-
-# Preview or apply an upgrade
-agentic-memory-bootstrap upgrade --dry-run --target /path/to/repo
-agentic-memory-bootstrap upgrade --target /path/to/repo --apply-local-entrypoint
-
-# Inspect the packaged payload
-agentic-memory-bootstrap status
-agentic-memory-bootstrap list-files
-
-# Inspect current-memory notes
-agentic-memory-bootstrap current show
-agentic-memory-bootstrap current check
-
-# Route or sync memory after code changes
-agentic-memory-bootstrap route --files src/app.py tests/test_app.py
-agentic-memory-bootstrap sync-memory --files src/app.py
-
-# Verify the packaged payload contract
-agentic-memory-bootstrap verify-payload
+# route likely relevant memory for changed files
+agentic-memory-bootstrap route --files src/app.py tests/test_app.py --target /path/to/repo
 ```
 
-## Maintainer usage in this repository
+## How `install` behaves
 
-If you are developing this repository itself, running through `uv` is still the shortest path:
-
-```bash
-uv sync --group dev
-uv run agentic-memory-bootstrap --help
-uv run agentic-memory-bootstrap install --dry-run
-```
-
-This repository now checks in `uv.lock` for development reproducibility. Treat it as part of the normal maintainer workflow in this repo.
-
-When a change affects the installed payload contract or installer behavior, verify it by running the bootstrap tool against this repo itself, not only by editing the source files in place. That self-hosted upgrade path is part of production testing.
-
-Use the same rule for skills:
-
-- develop and validate the canonical skill definitions under `skills/`
-- reinstall the package only when intentionally testing the bundled skill path
-- do not assume a bundled installed copy matches the repo during active skill development
-
-The installed model is:
-
-- `AGENTS.md` = slim local entrypoint
-- `memory/system/WORKFLOW.md` = shared reusable workflow rules
-- `memory/system/VERSION.md` = installed bootstrap version marker
-- `memory/system/UPGRADE.md` = repo-agnostic upgrade playbook
-- `memory/index.md` = routing layer for task-relevant durable knowledge
-- `memory/current/project-state.md` = lightweight overview file
-- `memory/current/task-context.md` = optional checked-in current-task compression
-
-## Repository layout
-
-- `bootstrap/` = source-of-truth files that get installed into target repositories
-- `src/repo_memory_bootstrap/` = installer and upgrade logic
-- `scripts/check/check_memory_freshness.py` = advisory audit for stale or contradictory memory notes
-- `memory/` = this repository's own durable operating notes
-- `skills/` = bundled product skills for repeatable memory and bootstrap workflows
-
-When changing installer behaviour, check whether the same change also needs an update under `bootstrap/` or `memory/`.
-
-## What `install` does
-
-`install` detects whether the target is in clean bootstrap mode or augment mode, copies the base bootstrap files, fills `<PROJECT_NAME>`, applies any explicitly supplied placeholder flags, leaves other repo-specific placeholders for manual review, and appends a few small text fragments when they are not already present.
+`install` detects whether the target is in clean bootstrap mode or augment mode, copies the base bootstrap files, fills `<PROJECT_NAME>`, applies any explicitly supplied placeholder flags, and leaves other repo-specific placeholders for manual review.
 
 Default behaviour is conservative:
 
@@ -275,41 +190,20 @@ Default behaviour is conservative:
 - existing `AGENTS.md` and files under `memory/` are left untouched
 - optional fragments are appended only when the target file already exists and does not already contain the fragment
 
-## Overwrite and dry-run
-
-- `--dry-run` reports what would change without writing anything
-- `--force` allows overwriting managed files that already exist
-
-## Adoption, diagnosis, and upgrades
-
-- `adopt` adds missing bootstrap capability to an existing repo without replacing local files by default
-- `doctor` reports missing files, stale versions, and manual-review items such as older `AGENTS.md` layouts
-- `upgrade` applies a deterministic minimal-safe upgrade plan
-
-Upgrade defaults:
-
-- add missing core files
-- replace shared repo-agnostic files such as `memory/system/WORKFLOW.md`, templates, and the audit script
-- never replace `AGENTS.md` automatically
-- only replace starter notes automatically when they still look like untouched bootstrap placeholders
-
-Use `--apply-local-entrypoint` to patch `AGENTS.md` with the canonical workflow pointer block.  
-Use `--format json` on `doctor`, `upgrade`, `status`, and `list-files` for structured output that an agent can consume.
-
-Mode summary:
-
-- empty repo or repo without agent files: bootstrap everything
-- partial agent setup: install missing pieces and skip existing ones
-- full agent setup: do nothing unless new append-only fragments are needed, or `--force` is used
-
 If root detection from the current working directory is ambiguous, the installer stops and asks for `--target` instead of guessing.
 
 When `--target` points inside another repository or contains nested repositories, the installer warns and treats the explicit target as authoritative instead of guessing or walking upward.
 
-## Maintenance checks
+## Developing This Repository
 
-Run the freshness audit after changing repository memory, bootstrap docs, or installer behaviour that affects documented commands or file roles:
+This repository is both the installer implementation and the reference copy of the bootstrap payload it distributes.
+
+Useful maintainer commands:
 
 ```bash
+uv sync --group dev
+uv run --group dev pytest
 uv run python scripts/check/check_memory_freshness.py
 ```
+
+When changing the installed payload contract or installer behaviour, verify it by running the bootstrap tool against this repo itself, not only by editing source files in place.
