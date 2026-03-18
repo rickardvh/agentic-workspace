@@ -100,7 +100,7 @@ In a fresh repo, the simplest path is usually to tell the agent to use the bundl
 For first-time adoption, paste:
 
 ```text
-Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled skills in this session. Then use the `bootstrap-adoption` skill from the installed `agentic-memory-bootstrap` product to adopt this repository conservatively and report any manual-review items.
+Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled skills in this session. Then use the `bootstrap-adoption` skill from the installed `agentic-memory-bootstrap` product to adopt this repository conservatively and report any manual-review items. After adoption, offer to use `bootstrap-populate` if new current-memory files were created.
 ```
 
 For upgrading an existing install, paste:
@@ -113,6 +113,7 @@ Or have the tool print the prompt for you:
 
 ```bash
 agentic-memory-bootstrap prompt adopt
+agentic-memory-bootstrap prompt populate
 agentic-memory-bootstrap prompt upgrade
 ```
 
@@ -150,6 +151,7 @@ Main commands:
 - `status` reports whether bootstrap files are present.
 - `list-files` shows the packaged payload files.
 - `list-skills` shows the bundled product skills.
+- `prompt adopt|populate|upgrade` prints canonical agent prompts for the bundled bootstrap skills.
 - `current show|check` inspects or validates the current-memory surface.
 - `route` suggests likely relevant memory notes for touched files or explicit surfaces.
 - `sync-memory` suggests which memory notes to review after code changes.
@@ -189,6 +191,8 @@ Default behaviour is conservative:
 - missing files are copied
 - existing `AGENTS.md` and files under `memory/` are left untouched
 - optional fragments are appended only when the target file already exists and does not already contain the fragment
+
+If adoption creates new current-memory notes, the intended follow-up is to use `bootstrap-populate` so those notes are filled conservatively from existing repo evidence instead of remaining as generic starters.
 
 If root detection from the current working directory is ambiguous, the installer stops and asks for `--target` instead of guessing.
 

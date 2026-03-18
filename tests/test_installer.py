@@ -89,7 +89,7 @@ def test_equivalent_optional_fragment_detail_detects_existing_makefile_target() 
         fragment=fragment,
     )
 
-    assert detail == "equivalent Makefile target already present (check-memory)"
+    assert detail == "equivalent optional Makefile convenience target already present (check-memory)"
 
 
 def test_equivalent_optional_fragment_detail_requires_matching_targets() -> None:
@@ -129,7 +129,7 @@ def test_plan_optional_appends_skips_equivalent_makefile_target(tmp_path: Path) 
     makefile_actions = [action for action in result.actions if action.path == target_root / "Makefile"]
     assert len(makefile_actions) == 1
     assert makefile_actions[0].kind == "skipped"
-    assert makefile_actions[0].detail == "equivalent Makefile target already present (check-memory)"
+    assert makefile_actions[0].detail == "equivalent optional Makefile convenience target already present (check-memory)"
 
 
 def test_patch_agents_workflow_block_inserts_pointer_after_heading() -> None:
@@ -137,9 +137,11 @@ def test_patch_agents_workflow_block_inserts_pointer_after_heading() -> None:
 
     patched = installer._patch_agents_workflow_block(existing)
 
-    assert installer.WORKFLOW_POINTER_BLOCK in patched
-    assert patched.startswith("# Agent Instructions\n\n")
-    assert patched.endswith("Repo-local rules live here.\n")
+    assert patched == (
+        "# Agent Instructions\n\n"
+        f"{installer.WORKFLOW_POINTER_BLOCK}\n\n"
+        "Repo-local rules live here.\n"
+    )
 
 
 def test_doctor_flags_agents_that_embed_current_shared_workflow_sections(tmp_path: Path) -> None:
@@ -218,6 +220,18 @@ def test_install_dry_run_includes_current_memory_baseline(tmp_path: Path) -> Non
     assert "memory/current/active-decisions.md" not in planned_copies
 
 
+def test_install_writes_audit_clean_current_memory_seed_dates(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    installer.install_bootstrap(target=target)
+
+    for relative in ("memory/current/project-state.md", "memory/current/task-context.md"):
+        text = (target / relative).read_text(encoding="utf-8")
+        assert "<LAST_CONFIRMED_DATE>" not in text
+        assert "## Last confirmed\n\n20" in text
+
+
 def test_build_substitutions_supports_explicit_placeholder_flags(tmp_path: Path) -> None:
     substitutions = installer.build_substitutions(
         target_root=tmp_path,
@@ -262,6 +276,12 @@ def test_current_check_flags_placeholder_and_stale_task_context(tmp_path: Path) 
 
     assert any(action.category == "placeholder-review" for action in result.actions)
     assert any("not been confirmed" in action.detail for action in result.actions)
+
+
+def test_build_substitutions_include_last_confirmed_date(tmp_path: Path) -> None:
+    substitutions = installer.build_substitutions(target_root=tmp_path, project_name="demo")
+
+    assert substitutions["<LAST_CONFIRMED_DATE>"].count("-") == 2
 
 
 def test_route_memory_adds_baseline_and_runtime_suggestions(tmp_path: Path) -> None:
@@ -372,12 +392,29 @@ def test_doctor_reports_placeholder_review_category(tmp_path: Path) -> None:
     assert any(action.category == "placeholder-review" for action in result.actions)
 
 
+def test_doctor_agents_guidance_mentions_apply_local_entrypoint(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 10\n", encoding="utf-8")
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.path == target / "AGENTS.md"
+        and "--apply-local-entrypoint" in action.detail
+        for action in result.actions
+    )
+
+
 def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     parser = cli.build_parser()
 
     current_args = parser.parse_args(["current", "check", "--target", "."])
     list_skills_args = parser.parse_args(["list-skills", "--format", "json"])
     prompt_args = parser.parse_args(["prompt", "adopt", "--target", "C:/repo"])
+    prompt_populate_args = parser.parse_args(["prompt", "populate", "--target", "C:/repo"])
     route_args = parser.parse_args(["route", "--files", "src/app.py"])
     sync_args = parser.parse_args(["sync-memory", "--notes", "memory/index.md"])
     verify_args = parser.parse_args(["verify-payload", "--format", "json"])
@@ -399,6 +436,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     assert list_skills_args.command == "list-skills"
     assert prompt_args.command == "prompt"
     assert prompt_args.prompt_command == "adopt"
+    assert prompt_populate_args.prompt_command == "populate"
     assert route_args.command == "route"
     assert sync_args.command == "sync-memory"
     assert verify_args.command == "verify-payload"
@@ -412,6 +450,41 @@ def test_build_agent_prompt_mentions_list_skills_and_target() -> None:
     assert "bootstrap-adoption" in prompt
     assert "bootstrap-populate" in prompt
     assert "C:/repo" in prompt
+
+
+def test_build_populate_prompt_mentions_task_context_heuristic() -> None:
+    prompt = cli._build_agent_prompt("populate", target="C:/repo")
+
+    assert "agentic-memory-bootstrap list-skills" in prompt
+    assert "bootstrap-populate" in prompt
+    assert "task-context.md" in prompt
+    assert "C:/repo" in prompt
+
+
+def test_install_summary_mentions_populate_next_step_when_current_notes_created(capsys, tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    result = installer.install_bootstrap(target=target, dry_run=True)
+
+    cli._print_install_summary(result)
+
+    output = capsys.readouterr().out
+    assert "prompt populate" in output
+
+
+def test_install_summary_skips_populate_next_step_when_no_current_notes_created(capsys, tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "current").mkdir(parents=True)
+    (target / "memory" / "current" / "project-state.md").write_text("# Project State\n", encoding="utf-8")
+    (target / "memory" / "current" / "task-context.md").write_text("# Task Context\n", encoding="utf-8")
+    result = installer.adopt_bootstrap(target=target, dry_run=True)
+
+    cli._print_install_summary(result)
+
+    output = capsys.readouterr().out
+    assert "prompt populate" not in output
 
 
 def test_current_view_json_shape(tmp_path: Path) -> None:

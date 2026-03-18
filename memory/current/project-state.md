@@ -48,6 +48,9 @@ Active
 - Added `bootstrap-populate` as the conservative post-adoption skill for filling new current-memory files from repo evidence.
 - Shifted the product model toward bundled auto-discoverable skills, with manual installation only as fallback guidance.
 - Trimmed `AGENTS.md`, `memory/system/WORKFLOW.md`, and `memory/index.md` toward a lower-token, skill-first operating surface.
+- Hardened bootstrap adoption so fresh current-memory seed notes are audit-clean immediately.
+- Added `agentic-memory-bootstrap prompt populate` and made the post-adoption populate handoff explicit in the CLI and skill docs.
+- Tightened AGENTS patch guidance and optional `check-memory` append messaging.
 
 ## Blockers
 
@@ -84,4 +87,4 @@ Active
 
 ## Last confirmed
 
-2026-03-18 during token-saving workflow pass
+2026-03-18 during adoption/populate hardening

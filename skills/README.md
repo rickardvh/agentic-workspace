@@ -22,6 +22,7 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
   - introduce the memory bootstrap into an existing repository conservatively
 - `bootstrap-populate`
   - populate new current-memory files conservatively after adoption
+  - leave `task-context.md` minimal when there is no clear active work worth preserving
 - `bootstrap-upgrade`
   - upgrade an installed bootstrap safely without flattening local customisation
 

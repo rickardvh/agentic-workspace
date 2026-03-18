@@ -72,10 +72,12 @@ def build_parser() -> argparse.ArgumentParser:
     list_skills_parser = subparsers.add_parser("list-skills", help="List bundled product skills.")
     _add_format_argument(list_skills_parser)
 
-    prompt_parser = subparsers.add_parser("prompt", help="Print a canonical agent prompt for adoption or upgrade.")
+    prompt_parser = subparsers.add_parser("prompt", help="Print a canonical agent prompt for adoption, populate, or upgrade.")
     prompt_subparsers = prompt_parser.add_subparsers(dest="prompt_command", required=True)
     prompt_adopt_parser = prompt_subparsers.add_parser("adopt", help="Print the canonical adoption prompt.")
     _add_target_arguments(prompt_adopt_parser)
+    prompt_populate_parser = prompt_subparsers.add_parser("populate", help="Print the canonical populate prompt.")
+    _add_target_arguments(prompt_populate_parser)
     prompt_upgrade_parser = prompt_subparsers.add_parser("upgrade", help="Print the canonical upgrade prompt.")
     _add_target_arguments(prompt_upgrade_parser)
 
@@ -172,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
                 primary_test_command=args.primary_test_command,
                 other_key_commands=args.other_key_commands,
             )
-            _emit_result(result, output_format=args.format)
+            _emit_result(result, output_format=args.format, include_install_summary=True)
             return 0
 
         if args.command == "upgrade":
@@ -295,12 +297,28 @@ def _print_install_summary(result) -> None:
     summary = ", ".join(f"{kind}={count}" for kind, count in sorted(counts.items()))
     print(f"Summary: {summary}")
     print("Next steps:")
-    print("- Review placeholders and repository-specific details in AGENTS.md and memory/current/project-state.md.")
-    print("- Review memory/current/task-context.md when active work would benefit from a short checked-in continuation note.")
-    print("- Review the shared workflow rules in memory/system/WORKFLOW.md.")
+    print("- Review repository-specific details in AGENTS.md and the current-memory notes.")
+    print("- Keep memory/current/project-state.md as a short overview note, not a task list.")
+    print("- Populate memory/current/task-context.md only when active work would benefit from a short checked-in continuation note.")
     print("- Confirm the repo's chosen task system separately; this bootstrap does not install one.")
+    if _created_current_memory_notes(result):
+        print("- Recommended next step: run `agentic-memory-bootstrap prompt populate --target <repo>` and paste the printed prompt into the agent to fill the new current-memory notes conservatively.")
     print("- Run agentic-memory-bootstrap doctor --target <repo> before upgrading an older install.")
     print("- Run python scripts/check/check_memory_freshness.py after customising memory notes.")
+
+
+def _created_current_memory_notes(result) -> bool:
+    current_paths = {"memory/current/project-state.md", "memory/current/task-context.md"}
+    for action in result.actions:
+        if action.kind not in {"created", "copied", "would create", "would copy"}:
+            continue
+        try:
+            relative = action.path.relative_to(result.target_root).as_posix()
+        except ValueError:
+            relative = action.path.as_posix()
+        if relative in current_paths:
+            return True
+    return False
 
 
 def _build_agent_prompt(command: str, *, target: str | None) -> str:
@@ -313,6 +331,12 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             "Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled skills in this session. "
             f"Then use the `bootstrap-adoption` skill from the installed `agentic-memory-bootstrap` product to adopt the repository{target_clause} conservatively and report any manual-review items. "
             "After adoption, offer to use the `bootstrap-populate` skill to populate any new current-memory files conservatively from existing repo docs and visible repo state."
+        )
+    if command == "populate":
+        return (
+            "Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled skills in this session. "
+            f"Then use the `bootstrap-populate` skill from the installed `agentic-memory-bootstrap` product to populate the current-memory notes for the repository{target_clause} conservatively from existing repo docs and visible repo state. "
+            "Populate `memory/current/task-context.md` only when there is clearly active work worth preserving across sessions."
         )
     if command == "upgrade":
         return (

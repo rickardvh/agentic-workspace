@@ -10,12 +10,7 @@ Active
 
 ## Applies to
 
-- `AGENTS.md`
-- `memory/index.md`
-- `memory/system/WORKFLOW.md`
-- `memory/system/VERSION.md`
-- `memory/system/UPGRADE.md`
-- `<KEY_REPO_DOCS>`
+- The repository's currently active work, when a short shared continuation note is useful.
 
 ## Load when
 
@@ -30,23 +25,25 @@ Active
 
 ## Current focus
 
-- <short description of the work currently being done>
+- No active cross-session task context captured yet.
 
 ## Active surfaces
 
-- <files, modules, interfaces, commands, or runtime surfaces currently in play>
+- Add files, modules, interfaces, or commands here only when they materially help the next session continue quickly.
 
 ## Key constraints
 
-- <constraints, non-goals, safety requirements, compatibility requirements>
+- Leave this brief unless there is clearly active work worth preserving between sessions.
 
 ## Relevant memory
 
-- <memory notes that matter for this task>
+- Add only the memory notes that matter for the active work.
 
 ## Notes
 
-- <short task-relevant context that would help the next session continue quickly>
+- This note is optional.
+- Populate it only when there is active work worth preserving across sessions.
+- Do not turn it into a task list, detailed plan, or historical log.
 
 ## Failure signals
 
@@ -60,4 +57,4 @@ Active
 
 ## Last confirmed
 
-YYYY-MM-DD during <task / PR / investigation>
+<LAST_CONFIRMED_DATE> during bootstrap adoption

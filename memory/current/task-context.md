@@ -33,68 +33,55 @@ Active
 
 ## Current focus
 
-- Reduce the default documentation surface and push repeatable workflow logic out of always-read prose and into the skill boundary.
+- Harden the bootstrap adoption and populate handoff so a fresh install is audit-clean and the next agent step is obvious.
 
 ## Active surfaces
 
-- `AGENTS.md`
 - `README.md`
-- `bootstrap/AGENTS.md`
-- `bootstrap/README.md`
+- `bootstrap/memory/current/project-state.md`
+- `bootstrap/memory/current/task-context.md`
 - `memory/current/project-state.md`
-- `memory/current/active-decisions.md`
 - `memory/index.md`
-- `memory/system/SKILLS.md`
+- `memory/current/task-context.md`
 - `skills/README.md`
-- `skills/memory-capture/SKILL.md`
-- `skills/memory-refresh/SKILL.md`
-- `skills/memory-router/SKILL.md`
-- `memory/system/WORKFLOW.md`
-- `bootstrap/AGENTS.md`
-- `bootstrap/memory/index.md`
-- `bootstrap/memory/system/WORKFLOW.md`
+- `skills/bootstrap-adoption/SKILL.md`
+- `skills/bootstrap-populate/SKILL.md`
+- `src/repo_memory_bootstrap/cli.py`
+- `src/repo_memory_bootstrap/installer.py`
+- `tests/test_installer.py`
 
 ## Key constraints
 
 - Keep the product memory-only and task-system agnostic.
 - `task-context.md` is a checked-in compression note, not a task list, detailed plan, or historical log.
-- Keep the base memory system usable without skills.
-- Do not reintroduce `TODO.md`, Beads, or `.agent-work/` as core contract surfaces.
-- Do not blur the line between bundled product skills and the mandatory bootstrap payload.
-- Keep the default read path close to `AGENTS.md` and `memory/index.md`.
+- Adoption alone must leave starter notes in a freshness-audit-clean state.
+- Keep `bootstrap-populate` as a skill-driven follow-up rather than a semantic write command in the CLI.
+- Self-hosted verification must exercise the installed tool path against this repo, not just the source files.
 
 ## Relevant memory
 
 - `memory/current/project-state.md`
 - `memory/current/active-decisions.md`
-- `memory/index.md`
-- `memory/system/SKILLS.md`
-- `memory/system/WORKFLOW.md`
 - `memory/system/UPGRADE.md`
 
 ## Notes
 
-- Shared docs should make the files-vs-skills boundary explicit without turning the bootstrap into a skills dependency.
-- The first wave of shipped memory skills should stay narrow and operate on visible checked-in outcomes.
-- Bundled skills should be discoverable from the installed product without becoming part of the repo payload.
-- `skills/` should be treated as the optional product skill catalogue, not a separate local-only layer for this source repo.
-- `memory/system/WORKFLOW.md` and `memory/index.md` should keep rules and routing, not long repeatable procedures.
+- The shipped current-memory starter notes now need real install-time `Last confirmed` dates rather than audit-breaking placeholders.
+- The adoption prompt and summary should hand off to `prompt populate` without implying the CLI can semantically fill repo context by itself.
+- The smoke flow to preserve is: adopt -> freshness audit -> doctor -> prompt populate.
 
 ## Failure signals
 
-- Shared docs blur durable memory and procedural workflows.
-- Skills start acting like hidden storage instead of executable procedures.
-- The shipped contract becomes harder to understand without the skills layer.
-- The product docs describe skills as available, but do not explain how to install them.
-- Agents are told to read more than `AGENTS.md` plus `memory/index.md` by default.
+- Fresh adoption leaves invalid `Last confirmed` metadata or placeholder-heavy current-memory files.
+- Adoption output fails to make the populate follow-up obvious.
+- AGENTS pointer patching still introduces awkward spacing or unclear manual-review guidance.
 
 ## Verify
 
-- Confirm the shared docs describe the files-vs-skills split consistently.
-- Confirm the shipped skills remain optional and are not treated as installed payload.
-- Validate the new skills with the skill validator in the repo dev environment.
-- Confirm `AGENTS.md` and `memory/index.md` now form the default read path.
+- Run pytest, ruff, ty, and the freshness audit.
+- Run doctor, upgrade --dry-run, and verify-payload against this repo.
+- Smoke-test adopt -> audit -> doctor -> prompt populate in a temporary repo.
 
 ## Last confirmed
 
-2026-03-18 during token-saving workflow pass
+2026-03-18 during adoption/populate hardening

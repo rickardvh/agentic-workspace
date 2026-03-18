@@ -10,11 +10,7 @@ Active
 
 ## Applies to
 
-- `memory/index.md`
-- `memory/system/WORKFLOW.md`
-- `memory/system/VERSION.md`
-- `memory/system/UPGRADE.md`
-- `<KEY_REPO_DOCS>`
+- The repository's current shared orientation and memory entrypoints.
 
 ## Load when
 
@@ -29,19 +25,20 @@ Active
 
 ## Current focus
 
-- `<CURRENT_FOCUS>`
+- Bootstrap installed; summarise the repo's current focus here once it is clear.
 
 ## Recent meaningful progress
 
-- `<RECENT_PROGRESS>`
+- No shared project-state summary captured yet.
 
 ## Blockers
 
-- `<BLOCKERS_OR_NONE>`
+- None currently noted.
 
 ## High-level notes
 
-- `<HIGH_LEVEL_NOTE_OR_DELETE>`
+- Replace this starter text with a short overview drawn from existing repo docs and visible repo state.
+- Keep this note human-readable and concise; it is not a task list.
 
 ## Failure signals
 
@@ -51,16 +48,14 @@ Active
 ## Verify
 
 - Read `memory/index.md` and confirm the routing still matches the memory structure.
-- Confirm `<KEY_REPO_DOCS>` still exist and are the correct orientation docs.
+- Confirm the current focus, recent progress, and blockers still reflect the repo.
 
 ## Verified against
 
 - `memory/index.md`
 - `memory/system/WORKFLOW.md`
-- `memory/system/VERSION.md`
-- `memory/system/UPGRADE.md`
-- `<KEY_REPO_DOCS>`
+- repository README or equivalent orientation docs, when present
 
 ## Last confirmed
 
-YYYY-MM-DD during <task / PR / investigation>
+<LAST_CONFIRMED_DATE> during bootstrap adoption

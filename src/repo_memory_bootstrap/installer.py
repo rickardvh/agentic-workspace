@@ -14,7 +14,7 @@ VERSION_PATH = Path("memory/system/VERSION.md")
 WORKFLOW_PATH = Path("memory/system/WORKFLOW.md")
 AGENTS_PATH = Path("AGENTS.md")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 10
+BOOTSTRAP_VERSION = 11
 BUNDLED_SKILLS_ROOT = Path("skills")
 
 CURRENT_MEMORY_BASELINE = (
@@ -737,7 +737,10 @@ def build_substitutions(
     primary_test_command: str | None = None,
     other_key_commands: str | None = None,
 ) -> dict[str, str]:
-    substitutions = {"<PROJECT_NAME>": project_name or target_root.name}
+    substitutions = {
+        "<PROJECT_NAME>": project_name or target_root.name,
+        "<LAST_CONFIRMED_DATE>": datetime.now(UTC).date().isoformat(),
+    }
     optional_values = {
         "<PROJECT_PURPOSE>": project_purpose,
         "<KEY_REPO_DOCS>": key_repo_docs,
@@ -1033,22 +1036,22 @@ def _plan_agents_entrypoint(
             "would patch",
             role="local-entrypoint",
             source=str(AGENTS_PATH),
-            detail="added or refreshed workflow pointer block",
+            detail="added or refreshed the canonical workflow pointer block near the top of AGENTS.md",
         )
         if embeds_shared_rules:
             result.add(
                 "manual review",
                 destination,
-                "older AGENTS.md still embeds shared workflow rules; slim it manually after patching",
+                "older AGENTS.md still embeds shared workflow rules; --apply-local-entrypoint can patch the workflow pointer block, but copied shared rules still need manual slimming",
                 role="local-entrypoint",
                 safety="manual",
                 source=str(AGENTS_PATH),
             )
         return
 
-    detail = "missing workflow pointer block"
+    detail = "missing canonical workflow pointer block near the top of AGENTS.md; use --apply-local-entrypoint to add or refresh it safely"
     if embeds_shared_rules:
-        detail = "older AGENTS.md still embeds shared workflow rules"
+        detail = "older AGENTS.md still embeds shared workflow rules; --apply-local-entrypoint can patch the workflow pointer block, but copied shared rules still need manual slimming"
     result.add(
         "manual review",
         destination,
@@ -1103,6 +1106,7 @@ def _plan_optional_appends(
     for target_file, fragment_path in OPTIONAL_APPEND_TARGETS.items():
         destination = target_root / target_file
         fragment = (source_root / fragment_path).read_text(encoding="utf-8").strip()
+        fragment_description = OPTIONAL_APPEND_DESCRIPTIONS.get(target_file, f"optional fragment from {fragment_path.name}")
         if not destination.exists():
             result.add(
                 "skipped" if not status_only else "missing",
@@ -1142,7 +1146,7 @@ def _plan_optional_appends(
             result.add(
                 "would append",
                 destination,
-                f"add fragment from {fragment_path.name}",
+                fragment_description,
                 role="append-target",
                 safety="safe",
                 source=str(fragment_path),
@@ -1153,7 +1157,7 @@ def _plan_optional_appends(
         result.add(
             "appended",
             destination,
-            f"added fragment from {fragment_path.name}",
+            fragment_description,
             role="append-target",
             safety="safe",
             source=str(fragment_path),
@@ -1181,7 +1185,7 @@ def _equivalent_optional_fragment_detail(*, target_file: Path, existing: str, fr
 
     joined = ", ".join(sorted(targets))
     plural = "s" if len(targets) != 1 else ""
-    return f"equivalent Makefile target{plural} already present ({joined})"
+    return f"equivalent optional Makefile convenience target{plural} already present ({joined})"
 
 
 def _extract_make_targets(text: str) -> set[str]:
@@ -1360,16 +1364,14 @@ def _patch_agents_workflow_block(existing: str) -> str:
 
     lines = existing.splitlines()
     if lines and lines[0].startswith("#"):
-        insert_at = 1
-        while insert_at < len(lines) and lines[insert_at].strip():
-            insert_at += 1
-        prefix = lines[:insert_at]
-        suffix = lines[insert_at:]
-        pieces = prefix + ["", *WORKFLOW_POINTER_BLOCK.splitlines()]
-        if suffix:
-            pieces.append("")
-            pieces.extend(suffix)
-        return "\n".join(pieces).rstrip() + "\n"
+        rest_index = 1
+        while rest_index < len(lines) and not lines[rest_index].strip():
+            rest_index += 1
+        rest = lines[rest_index:]
+        body = "\n".join(rest).lstrip("\n")
+        if body:
+            return f"{lines[0]}\n\n{WORKFLOW_POINTER_BLOCK}\n\n{body.rstrip()}\n"
+        return f"{lines[0]}\n\n{WORKFLOW_POINTER_BLOCK}\n"
 
     return f"{WORKFLOW_POINTER_BLOCK}\n\n{existing.lstrip()}"
 
@@ -1427,3 +1429,8 @@ def _find_nested_repo_roots(target_root: Path) -> list[Path]:
         nested.append(repo_root)
         seen.add(repo_root)
     return sorted(nested)
+OPTIONAL_APPEND_DESCRIPTIONS = {
+    Path("Makefile"): "optional convenience target for running the memory freshness audit locally or in CI",
+    Path("CONTRIBUTING.md"): "optional contributor guidance fragment",
+    Path(".github/pull_request_template.md"): "optional pull request checklist fragment",
+}
