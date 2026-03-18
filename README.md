@@ -211,3 +211,5 @@ uv run python scripts/check/check_memory_freshness.py
 ```
 
 When changing the installed payload contract or installer behaviour, verify it by running the bootstrap tool against this repo itself, not only by editing source files in place.
+
+When changing the packaged tool in a way users should receive through `uv tool upgrade`, bump the package version in `pyproject.toml`. The package version and the bootstrap payload version are separate and both matter.

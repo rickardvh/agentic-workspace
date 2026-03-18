@@ -56,6 +56,7 @@ Active
 - Shared policy must remain available, but not mandatory to load on every task.
 - Prefer targeted command output over broad file reads when it materially reduces context cost.
 - Self-hosted verification must exercise the installed tool path against this repo, not just the source files.
+- Package version and bootstrap payload version are separate; Git-based upgrade visibility depends on bumping `pyproject.toml`.
 
 ## Relevant memory
 
@@ -70,6 +71,7 @@ Active
 - The biggest remaining token sinks were long local instructions and repeated explanatory lines in `memory/index.md` and `WORKFLOW.md`.
 - The installed contract should still explain the boundary, but not teach whole workflows in prose.
 - This pass preserves routing and policy while cutting habitual over-reading.
+- The packaged-tool update path also needs explicit versioning discipline so `uv tool upgrade` can see changes from Git installs.
 
 ## Failure signals
 
@@ -85,4 +87,4 @@ Active
 
 ## Last confirmed
 
-2026-03-18 during token-discipline pass
+2026-03-18 during package-versioning fix

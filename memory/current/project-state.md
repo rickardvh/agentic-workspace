@@ -53,6 +53,7 @@ Active
 - Tightened AGENTS patch guidance and optional `check-memory` append messaging.
 - Trimmed the always-read contract further so installed agents start from `AGENTS.md` plus `memory/index.md`, with workflow policy loaded only on demand.
 - Tightened the local contract to prefer targeted CLI checks over broad file re-reading when they answer the question faster.
+- Clarified that package version bumps are required for Git-based tool installs to receive updates via `uv tool upgrade`.
 
 ## Blockers
 

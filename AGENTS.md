@@ -83,6 +83,7 @@ When developing this bootstrap tool in this repository:
 - do not assume a bundled installed copy matches the repo; reinstall the package only when intentionally testing the packaged skill path
 - validate and edit skills from the repo paths first, and treat bundled installed copies as potentially stale test artefacts
 - when a change affects the repo's installed memory or workflow contract, update this repo's own `memory/system/VERSION.md` as part of the change rather than leaving the source repo behind the payload
+- when a change affects the packaged tool itself, bump the package version in `pyproject.toml` so Git-based installs can pick it up via `uv tool upgrade`
 - after changing the installed payload contract, exercise the installed behavior against this repo itself with the bootstrap tool, not just by editing checked-in source files directly
 - treat `agentic-memory-bootstrap doctor --target .` and the relevant install or upgrade path on this repo as required production testing when the payload or installer behavior changes
 - do not assume editing `bootstrap/` or this repo's checked-in `memory/` files is equivalent to verifying the installed tool path
@@ -94,4 +95,5 @@ When developing this bootstrap tool in this repository:
 3. Update, deprecate, or remove those notes as needed.
 4. Keep durable notes concise, factual, and de-duplicated.
 5. When a change affects the repo's installed memory or workflow contract, update this repo's own `memory/system/VERSION.md` in the same change.
-6. When the payload or installer behavior changed, run the bootstrap tool against this repo itself as part of verification rather than relying only on direct source-file edits.
+6. When a change affects the packaged tool, update `pyproject.toml` in the same change so tool upgrades are visible to package managers.
+7. When the payload or installer behavior changed, run the bootstrap tool against this repo itself as part of verification rather than relying only on direct source-file edits.
