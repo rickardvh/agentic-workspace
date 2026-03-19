@@ -109,6 +109,7 @@ Temporary bootstrap lifecycle skills:
 - `cleanup`
 
 Add repo-specific day-to-day memory skills as siblings under `memory/skills/`.
+Do not put general non-memory skills there.
 
 ## Command Summary
 

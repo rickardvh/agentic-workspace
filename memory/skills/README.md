@@ -14,9 +14,10 @@ Use these as shared building blocks for repo-local memory work.
 When a repository needs a local memory workflow beyond these, add a new sibling skill under `memory/skills/` instead of editing the shared core skills unless the reusable shared procedure itself changed.
 
 Keep repo-specific skills procedural and concise. Put durable repo facts in `/memory`, then have the skill operate on those files.
+Only put memory-facing skills here. General non-memory skills belong elsewhere.
 
 Ownership boundary:
 
 - the shipped core skill directories in this folder are product-managed and may be replaced on upgrade
-- repo-specific skills should be added as new sibling directories here
+- repo-specific memory skills should be added as new sibling directories here
 - if a local workflow must survive upgrades, do not customise the shipped core skill directories in place

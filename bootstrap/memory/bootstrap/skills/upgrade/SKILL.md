@@ -27,7 +27,7 @@ Use this skill after `agentic-memory-bootstrap upgrade`.
 
 - Do not flatten repo-local customisation.
 - Treat `memory/bootstrap/` as temporary bootstrap workspace only.
-- Keep repo-specific operational skills under `memory/skills/`.
+- Keep repo-specific memory skills under `memory/skills/`; general non-memory skills belong elsewhere.
 
 ## Typical outputs
 

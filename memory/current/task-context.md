@@ -32,7 +32,7 @@ Active
 
 ## Current focus
 
-- Reduce routine token overhead by shrinking the always-read doc surface and biasing the local contract toward targeted checks.
+- Reduce routine token overhead by shrinking the always-read doc surface, biasing the local contract toward targeted checks, and keeping the product boundary language unambiguous.
 
 ## Active surfaces
 
@@ -68,7 +68,8 @@ Active
 
 - The upgrade runbook is now obsolete; upgrade guidance should come from the prompt-driven CLI flow plus the temporary local bootstrap skill.
 - Prompt output should choose one no-install runner command instead of printing both `uvx` and `pipx run` together.
-- The next contract hardening step is to make file ownership explicit so agents know which checked-in files are product-managed and upgrade-replaceable versus repo-owned and expected to diverge.
+- File ownership and skill-surface boundaries have been tightened; the remaining expectation is that all bootstrap and memory-facing docs keep those statements aligned.
+- The top-level bundled `skills/` tree should contain only bootstrap lifecycle skills plus its catalogue README; empty or memory-skill directories there are drift.
 
 ## Failure signals
 
@@ -80,8 +81,8 @@ Active
 
 - Run pytest and the freshness audit.
 - Run doctor, upgrade, and verify-payload against this repo.
-- Confirm the installed repo reports the new payload version and that the ownership boundary is explicit in the installed docs.
+- Confirm the installed repo reports the new payload version, that `verify-payload` catches version drift, and that the installed `memory/` tree only differs from payload where the contract allows.
 
 ## Last confirmed
 
-2026-03-19 during ownership-boundary hardening
+2026-03-19 during ownership-boundary hardening, follow-up boundary sweep, and payload-structure cleanup

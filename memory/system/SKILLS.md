@@ -10,7 +10,7 @@ Use three layers inside a repo:
 
 - checked-in files = durable shared knowledge and lightweight shared context
 - temporary bootstrap workspace under `memory/bootstrap/` = bootstrap-managed lifecycle workspace during install or upgrade
-- checked-in repo skills under `memory/skills/` = repo-visible repeatable procedures over those files
+- checked-in repo skills under `memory/skills/` = repo-visible repeatable procedures whose primary purpose is operating on checked-in memory or maintaining the repo's memory system
 - bundled product skills = bootstrap lifecycle help such as adoption, populate, and upgrade
 
 The bootstrap contract remains the always-on minimal file structure that keeps the system understandable even without skills. `memory/bootstrap/` is temporary operator workspace, not a durable knowledge surface.
@@ -48,16 +48,17 @@ Treat them as shared repo-local building blocks.
 ## Repo-specific skills
 
 When a repository needs a memory workflow beyond the shared core, create a new checked-in sibling skill under `memory/skills/` instead of editing the shared core skills in place.
+Do not use `memory/skills/` for general coding, planning, review, deployment, or other non-memory workflows whose primary purpose is not operating on checked-in memory.
 
 Use a repo-specific skill when the behaviour is:
 
 - reusable across tasks or repos
 - optional rather than mandatory
 - triggerable from a clear request
-- procedural or operational
+- procedural and memory-operational
 - too detailed for the core repo contract
 
-If something is a repeatable workflow over checked-in files, it is a strong skill candidate.
+If something is a repeatable workflow over checked-in memory files, it is a strong skill candidate.
 
 Good repo-specific fits:
 
@@ -71,7 +72,7 @@ Keep repo-specific skills small, procedural, and explicitly grounded in checked-
 The safe split is:
 
 - shared product-managed skills = the shipped core directories already under `memory/skills/`
-- repo-managed skills = new sibling directories a repository adds under `memory/skills/`
+- repo-managed skills = new sibling directories a repository adds under `memory/skills/` for repo-specific memory workflows
 
 Upgrades may replace the shared product-managed skill directories, but should not touch added repo-specific sibling skills.
 

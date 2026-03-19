@@ -62,6 +62,9 @@ Active
 - Removed the obsolete checked-in `memory/system/UPGRADE.md` runbook from the payload contract and taught doctor and upgrade to treat it as a legacy file to remove.
 - Tightened prompt emission so the generated no-install command prefers `uvx` when available and otherwise falls back to `pipx run`.
 - Hardened the ownership guidance so agents are told explicitly that `memory/system/` and the shipped core skill directories are product-managed and may be overwritten on upgrade, while repo-specific knowledge and procedures should live elsewhere.
+- Swept the remaining boundary docs so `memory/skills/`, bundled `skills/`, and `memory/bootstrap/` all state the same scope explicitly: memory workflows under `memory/skills/`, bootstrap lifecycle work under bundled or temporary bootstrap skills, and no general non-memory skills in those memory-facing surfaces.
+- Removed stale empty `skills/memory-*` source directories so the top-level bundled `skills/` tree now matches its documented bootstrap-only scope.
+- Synced the payload version marker, installed repo version marker, and installer bootstrap version, and taught `verify-payload` to flag future mismatches.
 
 ## Blockers
 
@@ -73,6 +76,8 @@ Active
 - `memory/current/project-state.md` is the overview note; `memory/current/task-context.md` is the current-work compression note.
 - Skills are the execution layer for repeatable memory workflows, not the storage layer for durable repo knowledge.
 - The bundled skill catalogue is now intended for bootstrap lifecycle work, while `memory/skills/` carries the shared day-to-day memory-operation skills.
+- `memory/bootstrap/` is temporary lifecycle workspace only and should not accumulate day-to-day workflows or durable knowledge.
+- The installed `memory/` tree currently differs from payload only where expected: the temporary bootstrap workspace is absent after cleanup and `memory/current/active-decisions.md` remains a repo-owned extra note.
 - `memory/system/WORKFLOW.md` is now a compact policy shim rather than a workflow handbook.
 - `memory/manifest.toml` is the emerging machine-readable companion to `memory/index.md` for typed note metadata, routing hints, and freshness triggers.
 
@@ -98,4 +103,4 @@ Active
 
 ## Last confirmed
 
-2026-03-19 during ownership-boundary hardening
+2026-03-19 during ownership-boundary hardening, follow-up boundary sweep, and payload-structure cleanup

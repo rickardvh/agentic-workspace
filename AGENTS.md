@@ -26,7 +26,8 @@ Do not rely on transient chat context when the same knowledge should exist in ch
 
 For day-to-day memory work, use the checked-in skills under `memory/skills/` as the shared repo-local building blocks.
 If a repeatable repo-specific memory procedure is needed, add a new sibling skill under `memory/skills/` instead of editing the shared core skills in place.
-Treat `memory/system/` and the shipped core skills under `memory/skills/` as agentic-memory-managed files that may be replaced on upgrade; keep repo-specific durable knowledge in other `/memory` notes and repo-specific procedures in added sibling skills under `memory/skills/`.
+`memory/skills/` is only for skills whose primary purpose is operating on checked-in memory or maintaining the repo's memory system; general non-memory skills do not belong there.
+Treat `memory/system/` and the shipped core skills under `memory/skills/` as agentic-memory-managed files that may be replaced on upgrade; keep repo-specific durable knowledge in other `/memory` notes and repo-specific memory procedures in added sibling skills under `memory/skills/`.
 
 For this repo, prefer command-targeted checks like `agentic-memory-bootstrap current`, `route`, `sync-memory`, `doctor`, and `verify-payload` when they reduce file reading.
 

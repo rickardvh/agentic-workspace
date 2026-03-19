@@ -16,7 +16,7 @@ WORKFLOW_PATH = Path("memory/system/WORKFLOW.md")
 AGENTS_PATH = Path("AGENTS.md")
 MANIFEST_PATH = Path("memory/manifest.toml")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 20
+BOOTSTRAP_VERSION = 22
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
 
@@ -774,7 +774,29 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
     source_root = payload_root()
     result = _new_result(target_root, dry_run=True, message="Payload verification")
     payload_paths = {entry.relative_path for entry in _payload_entries(source_root)}
+    payload_version = _read_installed_version(source_root / VERSION_PATH)
     manifest = _load_memory_manifest(source_root / MANIFEST_PATH)
+
+    if payload_version is None:
+        result.add(
+            "manual review",
+            target_root / VERSION_PATH,
+            "payload version marker is missing or invalid",
+            role="payload-contract",
+            safety="manual",
+            source=VERSION_PATH.as_posix(),
+            category="contract-drift",
+        )
+    elif payload_version != BOOTSTRAP_VERSION:
+        result.add(
+            "manual review",
+            target_root / VERSION_PATH,
+            f"payload version marker ({payload_version}) does not match installer bootstrap version ({BOOTSTRAP_VERSION})",
+            role="payload-contract",
+            safety="manual",
+            source=VERSION_PATH.as_posix(),
+            category="contract-drift",
+        )
 
     for required in PAYLOAD_REQUIRED_FILES:
         if required in payload_paths:

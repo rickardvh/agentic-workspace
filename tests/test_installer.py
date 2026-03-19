@@ -57,6 +57,23 @@ def test_list_bundled_skills_only_includes_bootstrap_skills() -> None:
     }
 
 
+def test_dev_bundled_skills_tree_only_contains_bootstrap_skill_directories() -> None:
+    skills_dir = installer.skills_root()
+
+    skill_dirs = {
+        path.name
+        for path in skills_dir.iterdir()
+        if path.is_dir() and (path / "SKILL.md").exists()
+    }
+
+    assert skill_dirs == {
+        "bootstrap-adoption",
+        "bootstrap-populate",
+        "bootstrap-upgrade",
+        "bootstrap-uninstall",
+    }
+
+
 def test_extract_make_targets_ignores_assignments_and_recipes() -> None:
     text = """
     .PHONY: lint test
@@ -565,6 +582,22 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     assert sync_args.command == "sync-memory"
     assert verify_args.command == "verify-payload"
     assert install_args.project_purpose == "purpose"
+
+
+def test_verify_payload_reports_version_mismatch(tmp_path: Path, monkeypatch) -> None:
+    payload = tmp_path / "payload"
+    (payload / "memory" / "system").mkdir(parents=True)
+    (payload / "memory" / "system" / "VERSION.md").write_text("Version: 21\n", encoding="utf-8")
+    monkeypatch.setattr(installer, "payload_root", lambda: payload)
+
+    result = installer.verify_payload(target=payload)
+
+    assert any(
+        action.path == payload / "memory" / "system" / "VERSION.md"
+        and action.kind == "manual review"
+        and "does not match installer bootstrap version" in action.detail
+        for action in result.actions
+    )
 
 
 def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(monkeypatch) -> None:

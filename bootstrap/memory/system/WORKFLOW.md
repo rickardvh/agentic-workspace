@@ -50,6 +50,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 ## Skills boundary
 
 - Skills operate on memory; they do not replace it.
+- `memory/skills/` is reserved for skills whose primary purpose is operating on checked-in memory or maintaining the memory system, not for general repo workflows.
 - If prose starts describing a repeatable maintenance, routing, refresh, capture, hygiene, or upgrade workflow, that is usually a skill candidate.
 - The base memory system must remain understandable without skills.
 

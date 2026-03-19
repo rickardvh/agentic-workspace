@@ -26,7 +26,8 @@ Use this skill after `agentic-memory-bootstrap init`, `install`, or `adopt` to f
 
 - Do not overwrite repo-local files just because the bootstrap has a generic version.
 - Keep durable knowledge in checked-in files.
-- Keep repo-specific workflows under `memory/skills/`, not under `memory/bootstrap/skills/`.
+- Keep repo-specific memory workflows under `memory/skills/`, not under `memory/bootstrap/skills/`.
+- General non-memory workflows do not belong under `memory/skills/`.
 - Treat `memory/bootstrap/` as temporary bootstrap workspace only.
 
 ## Typical outputs

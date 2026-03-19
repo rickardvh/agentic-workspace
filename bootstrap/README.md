@@ -8,7 +8,7 @@ It is intended to be copied into an existing repository to provide:
 - `memory/` as durable checked-in technical memory
 - `memory/manifest.toml` as optional machine-readable memory metadata
 - `memory/bootstrap/` as a temporary bootstrap workspace for install and upgrade completion
-- `memory/skills/` as checked-in core memory skills for repo-local workflows
+- `memory/skills/` as checked-in core memory skills for repo-local memory workflows
 - `memory/system/WORKFLOW.md` as the shared reusable memory workflow rules
 - `memory/system/SKILLS.md` as the shared skill-boundary guidance
 - `memory/system/VERSION.md` as the installed bootstrap version marker
@@ -69,9 +69,9 @@ Delete unused routing examples once the target repository has concrete notes.
 
 `AGENTS.md` should stay short and point to `memory/system/WORKFLOW.md` for the shared operating model.
 
-This bootstrap is task-system agnostic. `/memory` owns durable technical knowledge, `memory/current/project-state.md` is the overview note, `memory/current/task-context.md` is optional checked-in current-work compression, `memory/skills/` holds the checked-in core memory skills that repos can extend with their own sibling skills, and `memory/bootstrap/` is a temporary bootstrap workspace for lifecycle completion only.
+This bootstrap is task-system agnostic. `/memory` owns durable technical knowledge, `memory/current/project-state.md` is the overview note, `memory/current/task-context.md` is optional checked-in current-work compression, `memory/skills/` holds the checked-in core memory skills that repos can extend with their own sibling memory skills, and `memory/bootstrap/` is a temporary bootstrap workspace for lifecycle completion only.
 
-Bundled product skills should stay limited to bootstrap lifecycle operations. Repo-local memory procedures should live in checked-in `memory/skills/`.
+Bundled product skills should stay limited to bootstrap lifecycle operations. Repo-local memory procedures should live in checked-in `memory/skills/`. General non-memory skills should not.
 
 `memory/system/VERSION.md` is the machine-readable version marker used for deterministic upgrades.
 
