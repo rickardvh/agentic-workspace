@@ -57,6 +57,7 @@ Active
 - Added first-class `memory/manifest.toml` support so routing and freshness checks can use typed note metadata and file-trigger hints.
 - Switched the recommended bootstrap entry path from installed-product-first prompts to `uvx` no-install execution, with bundled skills treated as optional when already visible in the runtime.
 - Added a temporary `memory/bootstrap/` workspace with local install, populate, upgrade, and cleanup skills so prompt-driven lifecycle work can hand off to repo-local skills and then remove the workspace.
+- Hardened the freshness audit so temporary `memory/bootstrap/` files are ignored and the recurring-failures starter note is audit-clean on install.
 
 ## Blockers
 
@@ -94,4 +95,4 @@ Active
 
 ## Last confirmed
 
-2026-03-19 during temporary bootstrap workspace rollout
+2026-03-19 during bootstrap audit hardening

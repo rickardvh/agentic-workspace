@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 from repo_memory_bootstrap import cli, installer
@@ -234,6 +236,17 @@ def test_install_writes_audit_clean_current_memory_seed_dates(tmp_path: Path) ->
         assert "## Last confirmed\n\n20" in text
 
 
+def test_install_writes_audit_clean_recurring_failures_seed_date(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    installer.install_bootstrap(target=target)
+
+    text = (target / "memory" / "mistakes" / "recurring-failures.md").read_text(encoding="utf-8")
+    assert "<LAST_CONFIRMED_DATE>" not in text
+    assert "## Last confirmed\n\n20" in text
+
+
 def test_build_substitutions_supports_explicit_placeholder_flags(tmp_path: Path) -> None:
     substitutions = installer.build_substitutions(
         target_root=tmp_path,
@@ -406,6 +419,26 @@ def test_verify_payload_passes_for_current_payload(tmp_path: Path) -> None:
     result = installer.verify_payload(target=target)
 
     assert not any(action.category == "contract-drift" for action in result.actions)
+
+
+def test_memory_freshness_audit_ignores_bootstrap_workspace(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    installer.install_bootstrap(target=target)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(installer.payload_root() / "scripts" / "check" / "check_memory_freshness.py"),
+        ],
+        cwd=target,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "memory/bootstrap/" not in completed.stdout
 
 
 def test_verify_payload_flags_forbidden_current_note(monkeypatch, tmp_path: Path) -> None:

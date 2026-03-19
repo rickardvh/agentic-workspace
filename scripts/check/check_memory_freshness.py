@@ -35,6 +35,7 @@ SKIP_FILES = {
     MEMORY_ROOT / "decisions" / "README.md",
 }
 SKIP_DIRS = {
+    MEMORY_ROOT / "bootstrap",
     MEMORY_ROOT / "skills",
     MEMORY_ROOT / "templates",
     MEMORY_ROOT / "system",

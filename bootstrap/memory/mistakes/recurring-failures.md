@@ -60,7 +60,7 @@ Failure signals
 - <Specific signal that this entry applies>
 
 Last confirmed
-YYYY-MM-DD during <task / investigation>
+<LAST_CONFIRMED_DATE> during <task / investigation>
 
 ## Verified against
 
@@ -68,4 +68,4 @@ YYYY-MM-DD during <task / investigation>
 
 ## Last confirmed
 
-YYYY-MM-DD during <task / PR / investigation>
+<LAST_CONFIRMED_DATE> during bootstrap adoption
