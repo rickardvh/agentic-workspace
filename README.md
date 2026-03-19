@@ -24,11 +24,9 @@ Print a ready-to-paste prompt:
 ```bash
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt install --target /path/to/repo
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
-pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt install --target /path/to/repo
-pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
 ```
 
-Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. The prompt runs the CLI, then hands off to the local skills under `/path/to/repo/memory/bootstrap/skills`, and finishes with `bootstrap-cleanup`.
+Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. Prompt output prefers `uvx` when it is available and otherwise falls back to `pipx run`. It runs the CLI, then hands off to the local skills under `/path/to/repo/memory/bootstrap/skills`, and finishes with `bootstrap-cleanup`.
 
 ### Manual alternative
 
@@ -57,10 +55,9 @@ Print a ready-to-paste prompt:
 
 ```bash
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
-pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
 ```
 
-That prompt runs the CLI, then hands off to the local skills under `/path/to/repo/memory/bootstrap/skills`, and finishes with `bootstrap-cleanup`.
+That prompt prefers `uvx` when it is available and otherwise falls back to `pipx run`. It runs the CLI, then hands off to the local skills under `/path/to/repo/memory/bootstrap/skills`, and finishes with `bootstrap-cleanup`.
 
 ### Manual alternative
 
@@ -80,10 +77,9 @@ Print a ready-to-paste prompt:
 
 ```bash
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt uninstall --target /path/to/repo
-pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt uninstall --target /path/to/repo
 ```
 
-That prompt runs the CLI uninstall conservatively and points to the bundled `bootstrap-uninstall` skill when manual-review items remain.
+That prompt prefers `uvx` when it is available and otherwise falls back to `pipx run`. It runs the CLI uninstall conservatively and points to the bundled `bootstrap-uninstall` skill when manual-review items remain.
 
 ### Manual alternative
 

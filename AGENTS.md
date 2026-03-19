@@ -26,6 +26,7 @@ Do not rely on transient chat context when the same knowledge should exist in ch
 
 For day-to-day memory work, use the checked-in skills under `memory/skills/` as the shared repo-local building blocks.
 If a repeatable repo-specific memory procedure is needed, add a new sibling skill under `memory/skills/` instead of editing the shared core skills in place.
+Treat `memory/system/` and the shipped core skills under `memory/skills/` as agentic-memory-managed files that may be replaced on upgrade; keep repo-specific durable knowledge in other `/memory` notes and repo-specific procedures in added sibling skills under `memory/skills/`.
 
 For this repo, prefer command-targeted checks like `agentic-memory-bootstrap current`, `route`, `sync-memory`, `doctor`, and `verify-payload` when they reduce file reading.
 
@@ -72,6 +73,7 @@ This repository produces and maintains a reusable bootstrap system that adds dur
 - Treat packaged `bootstrap/` as the source of truth for installed payload files.
 - Avoid guessing in ambiguous repo-root situations; prefer explicit `--target`.
 - Keep dry-run output clear and trustworthy.
+- Make it explicit when a file is product-managed and upgrade-replaceable versus repo-owned and expected to diverge locally.
 
 ## Tool feedback loop
 

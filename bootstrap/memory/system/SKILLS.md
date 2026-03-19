@@ -43,6 +43,7 @@ Treat them as shared repo-local building blocks.
 - Keep them repo-agnostic and conservative.
 - Upgrade may replace them as part of the shared payload.
 - Do not put repo-specific facts into these core skills.
+- Do not customise these directories in place for repo-local behaviour you expect to preserve across upgrades.
 
 ## Repo-specific skills
 
@@ -66,6 +67,13 @@ Good repo-specific fits:
 - architecture-note maintenance for local subsystems
 
 Keep repo-specific skills small, procedural, and explicitly grounded in checked-in memory.
+
+The safe split is:
+
+- shared product-managed skills = the shipped core directories already under `memory/skills/`
+- repo-managed skills = new sibling directories a repository adds under `memory/skills/`
+
+Upgrades may replace the shared product-managed skill directories, but should not touch added repo-specific sibling skills.
 
 ## Temporary bootstrap workspace
 

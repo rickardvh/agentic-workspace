@@ -12,7 +12,6 @@ It is intended to be copied into an existing repository to provide:
 - `memory/system/WORKFLOW.md` as the shared reusable memory workflow rules
 - `memory/system/SKILLS.md` as the shared skill-boundary guidance
 - `memory/system/VERSION.md` as the installed bootstrap version marker
-- `memory/system/UPGRADE.md` as the upgrade playbook for older installs
 - `memory/current/project-state.md` as a short human-readable overview
 - `memory/current/task-context.md` as optional checked-in current-task compression
 - an advisory memory freshness audit

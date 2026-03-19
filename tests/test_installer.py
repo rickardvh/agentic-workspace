@@ -567,51 +567,97 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     assert install_args.project_purpose == "purpose"
 
 
-def test_build_install_prompt_mentions_local_bootstrap_skills_and_target() -> None:
+def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(monkeypatch) -> None:
+    monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     prompt = cli._build_agent_prompt("install", target="C:/repo")
 
     assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap init --target C:/repo" in prompt
-    assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap init --target C:/repo" in prompt
     assert "`install` skill at `C:/repo/memory/bootstrap/skills`" in prompt
     assert "bootstrap-cleanup --target C:/repo" in prompt
 
 
-def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target() -> None:
+def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(monkeypatch) -> None:
+    monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     prompt = cli._build_agent_prompt("adopt", target="C:/repo")
 
     assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap adopt --target C:/repo" in prompt
-    assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap adopt --target C:/repo" in prompt
     assert "`install` skill at `C:/repo/memory/bootstrap/skills`" in prompt
     assert "`populate` from the same path" in prompt
     assert "bootstrap-cleanup --target C:/repo" in prompt
     assert "C:/repo" in prompt
 
 
-def test_build_populate_prompt_mentions_task_context_heuristic() -> None:
+def test_build_populate_prompt_mentions_task_context_heuristic(monkeypatch) -> None:
+    monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     prompt = cli._build_agent_prompt("populate", target="C:/repo")
 
     assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap current show --target C:/repo" in prompt
-    assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap current show --target C:/repo" in prompt
     assert "`populate` skill at `C:/repo/memory/bootstrap/skills`" in prompt
     assert "task-context.md" in prompt
     assert "C:/repo" in prompt
 
 
-def test_build_upgrade_prompt_mentions_local_bootstrap_skills() -> None:
+def test_build_upgrade_prompt_mentions_local_bootstrap_skills(monkeypatch) -> None:
+    monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     prompt = cli._build_agent_prompt("upgrade", target="C:/repo")
 
     assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target C:/repo" in prompt
-    assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target C:/repo" in prompt
     assert "`upgrade` skill at `C:/repo/memory/bootstrap/skills`" in prompt
     assert "bootstrap-cleanup --target C:/repo" in prompt
 
 
-def test_build_uninstall_prompt_mentions_bundled_skill() -> None:
+def test_build_uninstall_prompt_mentions_bundled_skill(monkeypatch) -> None:
+    monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     prompt = cli._build_agent_prompt("uninstall", target="C:/repo")
 
     assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap uninstall --target C:/repo" in prompt
-    assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap uninstall --target C:/repo" in prompt
     assert "bootstrap-uninstall" in prompt
+
+
+def test_build_prompt_falls_back_to_pipx_when_uvx_is_missing(monkeypatch) -> None:
+    monkeypatch.setattr(cli.shutil, "which", lambda name: None if name == "uvx" else "C:/tools/pipx.exe")
+
+    prompt = cli._build_agent_prompt("upgrade", target="C:/repo")
+
+    assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target C:/repo" in prompt
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target C:/repo" not in prompt
+
+
+def test_doctor_flags_legacy_upgrade_runbook_for_removal(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    installer.install_bootstrap(target=target)
+    legacy = target / "memory" / "system" / "UPGRADE.md"
+    legacy.write_text("# legacy\n", encoding="utf-8")
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.path == legacy
+        and action.kind == "would remove"
+        and action.category == "obsolete-managed-file"
+        for action in result.actions
+    )
+
+
+def test_upgrade_removes_legacy_upgrade_runbook(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    installer.install_bootstrap(target=target)
+    legacy = target / "memory" / "system" / "UPGRADE.md"
+    legacy.write_text("# legacy\n", encoding="utf-8")
+
+    result = installer.upgrade_bootstrap(target=target)
+
+    assert not legacy.exists()
+    assert any(
+        action.path == legacy
+        and action.kind == "removed"
+        and action.category == "obsolete-managed-file"
+        for action in result.actions
+    )
 
 
 def test_bootstrap_cleanup_removes_workspace(tmp_path: Path) -> None:

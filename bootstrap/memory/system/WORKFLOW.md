@@ -39,6 +39,14 @@ Keep it concise, repo-agnostic, and non-procedural.
 - `memory/current/task-context.md` is short current-context compression only.
 - Neither file should become a task list, detailed plan, journal, or duplicated memory summary.
 
+## Ownership boundary
+
+- `memory/system/` is product-managed shared guidance; treat it as upgrade-replaceable unless the repository is intentionally changing the shared bootstrap contract itself.
+- The shipped core skills under `memory/skills/` are also product-managed and may be replaced on upgrade.
+- Other checked-in `/memory` notes are repo-owned working knowledge and are expected to diverge from the starter payload over time.
+- When a repo needs local procedure changes, add a new sibling skill under `memory/skills/` instead of customising the shipped core skills in place.
+- If a local note or skill is meant to survive upgrades unchanged, do not place that repo-specific content in `memory/system/` or in the shipped core skill directories.
+
 ## Skills boundary
 
 - Skills operate on memory; they do not replace it.

@@ -16,7 +16,6 @@ Active
 - `memory/index.md`
 - `memory/system/WORKFLOW.md`
 - `memory/system/VERSION.md`
-- `memory/system/UPGRADE.md`
 - `bootstrap/AGENTS.md`
 - `bootstrap/README.md`
 
@@ -64,14 +63,12 @@ Active
 - `memory/current/active-decisions.md`
 - `memory/index.md`
 - `memory/system/WORKFLOW.md`
-- `memory/system/UPGRADE.md`
 
 ## Notes
 
-- The biggest remaining token sinks were long local instructions and repeated explanatory lines in `memory/index.md` and `WORKFLOW.md`.
-- The installed contract should still explain the boundary, but not teach whole workflows in prose.
-- This pass preserves routing and policy while cutting habitual over-reading.
-- The packaged-tool update path also needs explicit versioning discipline so `uv tool upgrade` can see changes from Git installs.
+- The upgrade runbook is now obsolete; upgrade guidance should come from the prompt-driven CLI flow plus the temporary local bootstrap skill.
+- Prompt output should choose one no-install runner command instead of printing both `uvx` and `pipx run` together.
+- The next contract hardening step is to make file ownership explicit so agents know which checked-in files are product-managed and upgrade-replaceable versus repo-owned and expected to diverge.
 
 ## Failure signals
 
@@ -81,10 +78,10 @@ Active
 
 ## Verify
 
-- Run pytest, ruff, ty, and the freshness audit.
-- Run doctor, upgrade --dry-run, and verify-payload against this repo.
-- Confirm the installed repo now reports version 12 and that the slimmer guidance is present through the tool path.
+- Run pytest and the freshness audit.
+- Run doctor, upgrade, and verify-payload against this repo.
+- Confirm the installed repo reports the new payload version and that the ownership boundary is explicit in the installed docs.
 
 ## Last confirmed
 
-2026-03-18 during package-versioning fix
+2026-03-19 during ownership-boundary hardening

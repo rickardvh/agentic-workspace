@@ -16,7 +16,6 @@ Active
 - `memory/system/SKILLS.md`
 - `memory/system/WORKFLOW.md`
 - `memory/system/VERSION.md`
-- `memory/system/UPGRADE.md`
 - `bootstrap/README.md`
 
 ## Load when
@@ -60,6 +59,9 @@ Active
 - Hardened the freshness audit so temporary `memory/bootstrap/` files are ignored and the recurring-failures starter note is audit-clean on install.
 - Added `bootstrap-cleanup` as the preferred executable cleanup path, and tightened the temporary bootstrap skill docs around that command.
 - Added conservative uninstall support with a real `uninstall` command, a `bootstrap-uninstall` bundled skill, and uninstall prompt/docs coverage.
+- Removed the obsolete checked-in `memory/system/UPGRADE.md` runbook from the payload contract and taught doctor and upgrade to treat it as a legacy file to remove.
+- Tightened prompt emission so the generated no-install command prefers `uvx` when available and otherwise falls back to `pipx run`.
+- Hardened the ownership guidance so agents are told explicitly that `memory/system/` and the shipped core skill directories are product-managed and may be overwritten on upgrade, while repo-specific knowledge and procedures should live elsewhere.
 
 ## Blockers
 
@@ -92,9 +94,8 @@ Active
 - `memory/system/SKILLS.md`
 - `memory/system/WORKFLOW.md`
 - `memory/system/VERSION.md`
-- `memory/system/UPGRADE.md`
 - `bootstrap/README.md`
 
 ## Last confirmed
 
-2026-03-19 during bootstrap uninstall rollout
+2026-03-19 during ownership-boundary hardening

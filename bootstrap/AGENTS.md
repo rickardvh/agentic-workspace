@@ -24,6 +24,7 @@ Do not rely on transient chat context when the same knowledge should exist in ch
 `memory/system/SKILLS.md` defines how checked-in `memory/skills/` and bundled bootstrap skills should coexist.
 
 Keep durable repo knowledge in checked-in files. Prefer skills for repeatable procedures that operate on that knowledge.
+Treat `memory/system/` and the shipped core skills under `memory/skills/` as bootstrap-managed files that may be replaced on upgrade. Put repo-specific durable knowledge in other `/memory` notes and repo-specific procedures in added sibling skills under `memory/skills/`.
 
 ## Repo scope
 

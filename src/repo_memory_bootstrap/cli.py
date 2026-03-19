@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 
 from repo_memory_bootstrap.installer import (
     BOOTSTRAP_WORKSPACE_ROOT,
@@ -365,52 +366,59 @@ def _created_current_memory_notes(result) -> bool:
 
 def _build_agent_prompt(command: str, *, target: str | None) -> str:
     target_root = target or "/path/to/repo"
-    runner = _git_runner_command()
-    pipx_runner = _pipx_git_runner_command()
+    runner = _preferred_git_runner_command()
     target_args = _target_args(target)
     bootstrap_skills = _bootstrap_skills_path(target)
 
     if command == "install":
         return (
-            f"Run `{runner} init{target_args}` or `{pipx_runner} init{target_args}`. "
+            f"Run `{runner} init{target_args}`. "
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
-            f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` or `{pipx_runner} bootstrap-cleanup{target_args}` and point out the checked-in core memory skills under `{target_root}/memory/skills`."
+            f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out the checked-in core memory skills under `{target_root}/memory/skills`."
         )
     if command == "adopt":
         return (
-            f"Run `{runner} adopt{target_args}` or `{pipx_runner} adopt{target_args}`. "
+            f"Run `{runner} adopt{target_args}`. "
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
-            f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` or `{pipx_runner} bootstrap-cleanup{target_args}` and point out the checked-in core memory skills under `{target_root}/memory/skills`."
+            f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out the checked-in core memory skills under `{target_root}/memory/skills`."
         )
     if command == "populate":
         return (
-            f"Run `{runner} current show{target_args}` or `{pipx_runner} current show{target_args}`. "
+            f"Run `{runner} current show{target_args}`. "
             f"Next, use the `populate` skill at `{bootstrap_skills}` to fill the current-memory notes conservatively from existing repo docs and visible repo state. "
             "Populate `memory/current/task-context.md` only when there is clearly active work worth preserving across sessions."
         )
     if command == "upgrade":
         return (
-            f"Run `{runner} upgrade{target_args}` or `{pipx_runner} upgrade{target_args}`. "
+            f"Run `{runner} upgrade{target_args}`. "
             f"Next, use the `upgrade` skill at `{bootstrap_skills}` to finish the upgrade review conservatively. "
-            f"When the upgrade is complete, run `{runner} bootstrap-cleanup{target_args}` or `{pipx_runner} bootstrap-cleanup{target_args}`."
+            f"When the upgrade is complete, run `{runner} bootstrap-cleanup{target_args}`."
         )
     if command == "uninstall":
         return (
-            f"Run `{runner} uninstall{target_args}` or `{pipx_runner} uninstall{target_args}`. "
+            f"Run `{runner} uninstall{target_args}`. "
             "Review any manual-review items before removing repo-local memory content. "
             "If bundled product skills are available, use `bootstrap-uninstall` to finish the uninstall conservatively."
         )
     raise ValueError(f"Unknown prompt command: {command}")
 
 
-def _git_runner_command() -> str:
+def _uvx_git_runner_command() -> str:
     return f"uvx --from {GIT_REPO_URL} agentic-memory-bootstrap"
 
 
 def _pipx_git_runner_command() -> str:
     return f"pipx run --spec {GIT_REPO_URL} agentic-memory-bootstrap"
+
+
+def _preferred_git_runner_command() -> str:
+    if shutil.which("uvx"):
+        return _uvx_git_runner_command()
+    if shutil.which("pipx"):
+        return _pipx_git_runner_command()
+    return _uvx_git_runner_command()
 
 
 def _target_args(target: str | None) -> str:

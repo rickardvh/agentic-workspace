@@ -16,7 +16,6 @@ Active
 - `memory/system/WORKFLOW.md`
 - `memory/system/SKILLS.md`
 - `memory/system/VERSION.md`
-- `memory/system/UPGRADE.md`
 - `src/repo_memory_bootstrap/cli.py`
 - `src/repo_memory_bootstrap/installer.py`
 
@@ -61,7 +60,6 @@ Active
 - `memory/system/SKILLS.md`
 - `memory/system/WORKFLOW.md`
 - `memory/system/VERSION.md`
-- `memory/system/UPGRADE.md`
 - `README.md`
 
 ## What to do
@@ -85,7 +83,10 @@ Active
 - Bundled product skills should stay limited to bootstrap lifecycle work; shared day-to-day memory workflows should ship as checked-in skills under `memory/skills/`, with repo-specific sibling skills added there when needed.
 - Temporary bootstrap lifecycle completion can live in a bootstrap-managed `memory/bootstrap/` workspace, which should be removed after install or upgrade work is complete.
 - Conservative bootstrap removal should use a real CLI uninstall path, with any remaining repo-local memory content handled as manual review rather than blind deletion.
+- The old checked-in `memory/system/UPGRADE.md` runbook is obsolete; upgrade guidance now lives in the CLI-driven upgrade flow plus the temporary local `memory/bootstrap/skills/upgrade` handoff.
+- Prompt generation should emit one no-install runner command: prefer `uvx` when available and otherwise fall back to `pipx run`.
+- `memory/system/` and the shipped core skill directories under `memory/skills/` are product-managed and upgrade-replaceable; repo-specific durable knowledge and reusable local procedures should live outside those files.
 
 ## Last confirmed
 
-2026-03-19 during bootstrap uninstall rollout
+2026-03-19 during ownership-boundary hardening

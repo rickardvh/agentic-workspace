@@ -16,7 +16,7 @@ WORKFLOW_PATH = Path("memory/system/WORKFLOW.md")
 AGENTS_PATH = Path("AGENTS.md")
 MANIFEST_PATH = Path("memory/manifest.toml")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 18
+BOOTSTRAP_VERSION = 20
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
 
@@ -66,6 +66,10 @@ PAYLOAD_REQUIRED_FILES = (
 FORBIDDEN_PAYLOAD_FILES = (
     Path("TODO.md"),
     Path("memory/current/active-decisions.md"),
+    Path("memory/system/UPGRADE.md"),
+)
+OBSOLETE_SHARED_FILES = (
+    Path("memory/system/UPGRADE.md"),
 )
 FORBIDDEN_PAYLOAD_PREFIXES = (".agent-work/",)
 CURRENT_TASK_STALE_DAYS = 30
@@ -418,6 +422,7 @@ def upgrade_bootstrap(
         force=force,
         include_bootstrap_workspace=True,
     )
+    _plan_obsolete_shared_files(target_root=target_root, result=result, apply=not dry_run)
     _plan_optional_appends(source_root, target_root, result, apply=not dry_run)
     return result
 
@@ -433,6 +438,19 @@ def collect_status(target: str | Path | None = None) -> InstallResult:
             result.add("present", destination, "file exists", role=entry.role, safety="safe", source=str(entry.relative_path))
         else:
             result.add("missing", destination, "file missing", role=entry.role, safety="safe", source=str(entry.relative_path))
+
+    for obsolete in OBSOLETE_SHARED_FILES:
+        destination = target_root / obsolete
+        if destination.exists():
+            result.add(
+                "obsolete",
+                destination,
+                "legacy shared file should be removed on upgrade",
+                role="shared-replaceable",
+                safety="safe",
+                source=obsolete.as_posix(),
+                category="obsolete-managed-file",
+            )
 
     _plan_optional_appends(payload_root(), target_root, result, apply=False, status_only=True)
     return result
@@ -474,6 +492,7 @@ def doctor_bootstrap(
         force=False,
         include_bootstrap_workspace=False,
     )
+    _plan_obsolete_shared_files(target_root=target_root, result=result, apply=False)
     _plan_optional_appends(source_root, target_root, result, apply=False, status_only=True)
     return result
 
@@ -1174,6 +1193,35 @@ def _plan_from_entries(
             continue
 
         raise ValueError(f"Unknown planning mode: {mode}")
+
+
+def _plan_obsolete_shared_files(*, target_root: Path, result: InstallResult, apply: bool) -> None:
+    for relative_path in OBSOLETE_SHARED_FILES:
+        destination = target_root / relative_path
+        if not destination.exists():
+            continue
+        if apply:
+            destination.unlink()
+            result.add(
+                "removed",
+                destination,
+                "obsolete shared file removed during upgrade",
+                role="shared-replaceable",
+                safety="safe",
+                source=relative_path.as_posix(),
+                category="obsolete-managed-file",
+            )
+            _prune_empty_parents(destination.parent, stop=target_root)
+        else:
+            result.add(
+                "would remove",
+                destination,
+                "obsolete shared file is no longer part of the payload contract",
+                role="shared-replaceable",
+                safety="safe",
+                source=relative_path.as_posix(),
+                category="obsolete-managed-file",
+            )
 
 
 def _plan_existing_file_for_adopt(
