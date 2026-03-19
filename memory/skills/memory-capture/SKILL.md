@@ -5,6 +5,8 @@ description: Capture durable lessons into checked-in repository memory. Use when
 
 # Memory Capture
 
+This is a checked-in core skill shipped with the payload. Add repo-specific sibling skills under `memory/skills/` instead of customising this core skill unless the shared reusable procedure itself changed.
+
 Use this skill to turn a solved issue or discovered rule into the smallest correct checked-in memory update.
 
 It operates on durable memory files. It does not create a separate storage layer.
@@ -15,6 +17,7 @@ It operates on durable memory files. It does not create a separate storage layer
    - `AGENTS.md`
    - `memory/index.md`
    - `memory/system/WORKFLOW.md`
+   - `memory/system/SKILLS.md` when deciding whether a repo-specific skill should be created
    - `memory/current/project-state.md` if present
    - `memory/current/task-context.md` if present
 2. Identify the durable lesson:
@@ -38,8 +41,10 @@ It operates on durable memory files. It does not create a separate storage layer
    - `Failure signals`
    - `Verify`
    - `Last confirmed`
+   - `memory/manifest.toml` when used
 7. If the note set changed materially, update `memory/index.md`.
-8. Update `memory/current/project-state.md` or `memory/current/task-context.md` only when the new memory changes current shared orientation.
+8. If the repeated procedure is repo-specific rather than a durable fact, create a new repo-specific checked-in skill under `memory/skills/` instead of growing this core skill.
+9. Update `memory/current/project-state.md` or `memory/current/task-context.md` only when the new memory changes current shared orientation.
 
 ## Capture test
 
@@ -65,4 +70,4 @@ If not, leave it out of `/memory`.
 - an updated invariant, domain note, runbook, or recurring-failures note
 - a new memory note when no suitable home exists
 - refreshed note metadata and `Last confirmed`
-- an updated `memory/index.md` when routing changed
+- an updated `memory/index.md` or `memory/manifest.toml` when routing changed

@@ -31,6 +31,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Keep strong note metadata so routing and future skills remain reliable.
 - Use statuses such as `Stable`, `Active`, `Needs verification`, and `Deprecated`.
 - Use ISO dates for `Last confirmed`.
+- Prefer `memory/manifest.toml` for machine-readable note typing, routing, and freshness triggers when the repository maintains that file.
 
 ## Current-context files
 

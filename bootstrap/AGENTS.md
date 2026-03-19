@@ -21,6 +21,7 @@ Do not rely on transient chat context when the same knowledge should exist in ch
 
 `memory/index.md` is the routing layer for task-relevant durable knowledge.  
 `memory/system/WORKFLOW.md` is a compact policy shim for the shared operating model.
+`memory/system/SKILLS.md` defines how checked-in `memory/skills/` and bundled bootstrap skills should coexist.
 
 Keep durable repo knowledge in checked-in files. Prefer skills for repeatable procedures that operate on that knowledge.
 

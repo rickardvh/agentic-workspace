@@ -5,6 +5,8 @@ description: Review and clean a repository's checked-in memory and workflow docs
 
 # Memory Hygiene
 
+This is a checked-in core skill shipped with the payload. Add repo-specific sibling skills under `memory/skills/` instead of customising this core skill unless the shared reusable procedure itself changed.
+
 Use this skill to keep checked-in memory accurate, compact, and aligned with the codebase.
 
 It operates on checked-in memory files. It does not replace them.
@@ -15,6 +17,7 @@ It operates on checked-in memory files. It does not replace them.
    - `AGENTS.md`
    - `memory/index.md`
    - `memory/system/WORKFLOW.md`
+   - `memory/system/SKILLS.md` when deciding whether a repo-specific skill should be created
    - `memory/current/project-state.md` if the repo uses it as an overview note
    - `memory/current/task-context.md` if the repo uses it as checked-in current-task compression
 2. Load only the memory notes relevant to the files, commands, or behaviours that changed.
@@ -28,7 +31,7 @@ It operates on checked-in memory files. It does not replace them.
    - edit existing notes before creating new ones
    - merge or delete stale notes instead of accumulating near-duplicates
    - keep the overview and task-context notes short and avoid turning current-memory files into task trackers
-6. If note names, roles, or routing changed, update `memory/index.md` in the same change.
+6. If note names, roles, or routing changed, update `memory/index.md` and `memory/manifest.toml` in the same change when used.
 7. Before finishing, rerun the audit or explain why it could not be run.
 
 ## Guardrails
@@ -44,4 +47,4 @@ It operates on checked-in memory files. It does not replace them.
 - pruned or merged memory notes
 - refreshed `Last confirmed` metadata
 - cleaner workflow docs and memory notes
-- an updated `memory/index.md` when routing changed
+- an updated `memory/index.md` or `memory/manifest.toml` when routing changed

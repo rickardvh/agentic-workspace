@@ -1,4 +1,0 @@
-interface:
-  display_name: "Memory Hygiene"
-  short_description: "Review and clean repo memory notes."
-  default_prompt: "Use $memory-hygiene to review and clean a repository's memory notes."

@@ -5,6 +5,8 @@ description: Refresh checked-in memory after code, docs, tests, commands, or beh
 
 # Memory Refresh
 
+This is a checked-in core skill shipped with the payload. Add repo-specific sibling skills under `memory/skills/` instead of customising this core skill unless the shared reusable procedure itself changed.
+
 Use this skill to inspect changed work and update the affected memory notes without over-editing the rest of the memory tree.
 
 It operates on checked-in memory files and keeps them aligned with the codebase.
@@ -15,6 +17,7 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
    - `AGENTS.md`
    - `memory/index.md`
    - `memory/system/WORKFLOW.md`
+   - `memory/system/SKILLS.md` when deciding whether a repo-specific skill should be created
    - `memory/current/project-state.md` if present
    - `memory/current/task-context.md` if present
 2. Identify the changed surfaces:
@@ -23,6 +26,7 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
 3. Use the repo's routing help first:
    - run `agentic-memory-bootstrap sync-memory --files <paths...>` when available
    - run `agentic-memory-bootstrap route --files <paths...>` when useful for note selection
+   - when `memory/manifest.toml` exists, prefer manifest-triggered note matches as the first stale-memory candidates
 4. Load only the affected notes.
 5. For each affected note, decide the smallest correct action:
    - `review` if the note should be checked manually
@@ -32,7 +36,8 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
    - `update index` if routing changed
 6. Apply the minimal checked-in edits needed.
 7. If current shared orientation changed, refresh `memory/current/project-state.md` or `memory/current/task-context.md`.
-8. Run the memory freshness audit when available.
+8. If the repeated procedure is repository-specific, create a new sibling skill under `memory/skills/` instead of expanding this shared core skill.
+9. Run the memory freshness audit when available.
 
 ## Decision rules
 
@@ -53,4 +58,4 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
 - updated memory notes aligned with the latest code or docs
 - notes marked `Needs verification` where certainty is incomplete
 - deprecated or removed stale notes
-- an updated `memory/index.md` when routing changed
+- an updated `memory/index.md` or `memory/manifest.toml` when routing changed

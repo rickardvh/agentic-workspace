@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import tomllib
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -13,17 +14,31 @@ AGENT_ROOT_MARKERS = (Path("AGENTS.md"), Path("memory"))
 VERSION_PATH = Path("memory/system/VERSION.md")
 WORKFLOW_PATH = Path("memory/system/WORKFLOW.md")
 AGENTS_PATH = Path("AGENTS.md")
+MANIFEST_PATH = Path("memory/manifest.toml")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 12
+BOOTSTRAP_VERSION = 14
 BUNDLED_SKILLS_ROOT = Path("skills")
 
 CURRENT_MEMORY_BASELINE = (
     Path("memory/current/project-state.md"),
     Path("memory/current/task-context.md"),
 )
+CORE_PAYLOAD_SKILL_FILES = (
+    Path("memory/skills/README.md"),
+    Path("memory/skills/memory-capture/SKILL.md"),
+    Path("memory/skills/memory-capture/agents/openai.yaml"),
+    Path("memory/skills/memory-hygiene/SKILL.md"),
+    Path("memory/skills/memory-hygiene/agents/openai.yaml"),
+    Path("memory/skills/memory-refresh/SKILL.md"),
+    Path("memory/skills/memory-refresh/agents/openai.yaml"),
+    Path("memory/skills/memory-router/SKILL.md"),
+    Path("memory/skills/memory-router/agents/openai.yaml"),
+)
 PAYLOAD_REQUIRED_FILES = (
     AGENTS_PATH,
     Path("memory/index.md"),
+    MANIFEST_PATH,
+    Path("memory/system/SKILLS.md"),
     Path("memory/system/WORKFLOW.md"),
     Path("memory/current/project-state.md"),
     Path("memory/current/task-context.md"),
@@ -33,6 +48,7 @@ PAYLOAD_REQUIRED_FILES = (
     Path("memory/mistakes/recurring-failures.md"),
     Path("memory/decisions/README.md"),
     AUDIT_SCRIPT_PATH,
+    *CORE_PAYLOAD_SKILL_FILES,
 )
 FORBIDDEN_PAYLOAD_FILES = (
     Path("TODO.md"),
@@ -180,6 +196,33 @@ class CurrentViewResult:
                 for note in self.notes
             ],
         }
+
+
+@dataclass(frozen=True, slots=True)
+class MemoryNoteRecord:
+    path: Path
+    note_type: str
+    canonical_home: Path
+    authority: str
+    audience: str
+    subsystems: tuple[str, ...] = ()
+    surfaces: tuple[str, ...] = ()
+    routes_from: tuple[str, ...] = ()
+    stale_when: tuple[str, ...] = ()
+    related_validations: tuple[str, ...] = ()
+    routing_only: bool = False
+    high_level: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class MemoryManifest:
+    path: Path
+    version: int
+    notes: tuple[MemoryNoteRecord, ...]
+    routing_only: tuple[Path, ...] = ()
+    high_level: tuple[Path, ...] = ()
+    canonical_dirs: tuple[Path, ...] = ()
+    task_board_globs: tuple[str, ...] = ()
 
 
 class RepoDetectionError(ValueError):
@@ -558,8 +601,17 @@ def route_memory(
 
     selected_surfaces = {_normalise_surface_name(surface) for surface in (surfaces or [])}
     selected_surfaces.update(_infer_surfaces_from_paths(files or []))
+    manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
 
     suggestions: list[tuple[str, str]] = [(path.as_posix(), "always relevant current-memory note") for path in CURRENT_MEMORY_BASELINE]
+    suggestions.extend(
+        _find_manifest_matches(
+            manifest,
+            files=files or [],
+            surfaces=selected_surfaces,
+            use_staleness=False,
+        )
+    )
     for section_surface, notes in _parse_route_sections(target_root / "memory" / "index.md"):
         if section_surface in selected_surfaces:
             for note in notes:
@@ -617,11 +669,42 @@ def sync_memory(
         )
         return result
 
+    manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
+    manifest_suggestions = _find_manifest_matches(
+        manifest,
+        files=changed_files,
+        surfaces=_infer_surfaces_from_paths(changed_files),
+        use_staleness=True,
+    )
+
+    seen_sync_paths: set[Path] = set()
+    for note, reason in manifest_suggestions:
+        note_path = target_root / Path(note)
+        note_exists = note_path.exists()
+        note_text = note_path.read_text(encoding="utf-8") if note_exists else ""
+        recommendation = "review"
+        if not note_exists or _has_placeholders(note_text):
+            recommendation = "update"
+        if note_path.name == "index.md":
+            recommendation = "update index"
+        result.add(
+            recommendation,
+            note_path,
+            f"{reason}; manifest staleness trigger matched {', '.join(changed_files) if changed_files else 'explicit input'}",
+            role="memory-sync",
+            safety="manual",
+            source=note,
+            category="manual-review",
+        )
+        seen_sync_paths.add(note_path)
+
     routed = route_memory(target=target_root, files=changed_files)
     for action in routed.actions:
         if action.kind != "recommended":
             continue
         note_path = action.path
+        if note_path in seen_sync_paths:
+            continue
         note_exists = note_path.exists()
         note_text = note_path.read_text(encoding="utf-8") if note_exists else ""
         recommendation = "review"
@@ -656,6 +739,7 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
     source_root = payload_root()
     result = _new_result(target_root, dry_run=True, message="Payload verification")
     payload_paths = {entry.relative_path for entry in _payload_entries(source_root)}
+    manifest = _load_memory_manifest(source_root / MANIFEST_PATH)
 
     for required in PAYLOAD_REQUIRED_FILES:
         if required in payload_paths:
@@ -723,6 +807,16 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
                 source=payload_path.as_posix(),
                 category="contract-drift",
             )
+    if manifest is None:
+        result.add(
+            "manual review",
+            target_root / MANIFEST_PATH,
+            "payload manifest is missing or invalid",
+            role="payload-contract",
+            safety="manual",
+            source=MANIFEST_PATH.as_posix(),
+            category="contract-drift",
+        )
     return result
 
 
@@ -796,29 +890,37 @@ def _new_result(target_root: Path, *, dry_run: bool, message: str) -> InstallRes
 
 def _payload_entries(source_root: Path) -> list[PayloadEntry]:
     entries: list[PayloadEntry] = []
-    for relative_path in (AGENTS_PATH, AUDIT_SCRIPT_PATH):
-        entries.append(
-            PayloadEntry(
-                relative_path=relative_path,
-                role=_classify_role(relative_path),
-                strategy=_strategy_for_role(_classify_role(relative_path)),
-                source_path=source_root / relative_path,
-            )
-        )
-
-    for source_path in sorted((source_root / "memory").rglob("*")):
-        if source_path.is_dir():
+    file_roots = [AGENTS_PATH, AUDIT_SCRIPT_PATH, Path("memory")]
+    for relative_root in file_roots:
+        source_path = source_root / relative_root
+        if not source_path.exists():
             continue
-        relative_path = source_path.relative_to(source_root)
-        role = _classify_role(relative_path)
-        entries.append(
-            PayloadEntry(
-                relative_path=relative_path,
-                role=role,
-                strategy=_strategy_for_role(role),
-                source_path=source_path,
+        if source_path.is_file():
+            relative_path = source_path.relative_to(source_root)
+            role = _classify_role(relative_path)
+            entries.append(
+                PayloadEntry(
+                    relative_path=relative_path,
+                    role=role,
+                    strategy=_strategy_for_role(role),
+                    source_path=source_path,
+                )
             )
-        )
+            continue
+        for child in sorted(source_path.rglob("*")):
+            if child.is_dir():
+                continue
+            relative_path = child.relative_to(source_root)
+            role = _classify_role(relative_path)
+            entries.append(
+                PayloadEntry(
+                    relative_path=relative_path,
+                    role=role,
+                    strategy=_strategy_for_role(role),
+                    source_path=child,
+                )
+            )
+
     return entries
 
 
@@ -829,6 +931,8 @@ def _classify_role(relative_path: Path) -> str:
     if relative_path == AUDIT_SCRIPT_PATH:
         return "shared-replaceable"
     if path_str.startswith("memory/system/"):
+        return "shared-replaceable"
+    if path_str.startswith("memory/skills/"):
         return "shared-replaceable"
     if path_str.startswith("memory/templates/"):
         return "shared-template"
@@ -1259,6 +1363,94 @@ def _current_task_staleness_reason(text: str) -> str | None:
                         return f"task-context note has not been confirmed in over {CURRENT_TASK_STALE_DAYS} days"
                 break
     return None
+
+
+def _load_memory_manifest(path: Path) -> MemoryManifest | None:
+    if not path.exists():
+        return None
+
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError:
+        return None
+    notes_table = data.get("notes", {})
+    rules_table = data.get("rules", {})
+    version = int(data.get("version", 1))
+
+    notes: list[MemoryNoteRecord] = []
+    for note_path, raw in notes_table.items():
+        if not isinstance(raw, dict):
+            continue
+        notes.append(
+            MemoryNoteRecord(
+                path=Path(note_path),
+                note_type=str(raw.get("note_type", "memory-note")),
+                canonical_home=Path(str(raw.get("canonical_home", note_path))),
+                authority=str(raw.get("authority", "supporting")),
+                audience=str(raw.get("audience", "human+agent")),
+                subsystems=tuple(_string_list(raw.get("subsystems"))),
+                surfaces=tuple(_normalise_surface_name(value) for value in _string_list(raw.get("surfaces"))),
+                routes_from=tuple(_string_list(raw.get("routes_from"))),
+                stale_when=tuple(_string_list(raw.get("stale_when"))),
+                related_validations=tuple(_string_list(raw.get("related_validations"))),
+                routing_only=bool(raw.get("routing_only", False)),
+                high_level=bool(raw.get("high_level", False)),
+            )
+        )
+
+    return MemoryManifest(
+        path=path,
+        version=version,
+        notes=tuple(notes),
+        routing_only=tuple(Path(value) for value in _string_list(rules_table.get("routing_only"))),
+        high_level=tuple(Path(value) for value in _string_list(rules_table.get("high_level"))),
+        canonical_dirs=tuple(Path(value) for value in _string_list(rules_table.get("canonical_dirs"))),
+        task_board_globs=tuple(_string_list(rules_table.get("task_board_globs"))),
+    )
+
+
+def _string_list(value: object) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item).strip()]
+    if isinstance(value, str) and value.strip():
+        return [value]
+    return []
+
+
+def _find_manifest_matches(
+    manifest: MemoryManifest | None,
+    *,
+    files: list[str],
+    surfaces: set[str],
+    use_staleness: bool,
+) -> list[tuple[str, str]]:
+    if manifest is None:
+        return []
+
+    suggestions: list[tuple[str, str]] = []
+    for note in manifest.notes:
+        reasons: list[str] = []
+        if surfaces and any(surface in surfaces for surface in note.surfaces):
+            matched = ", ".join(sorted({surface for surface in note.surfaces if surface in surfaces}))
+            reasons.append(f"manifest surface match ({matched})")
+
+        globs = note.stale_when if use_staleness else note.routes_from
+        if files and globs:
+            matched_globs = sorted({pattern for pattern in globs if any(_path_matches_pattern(path, pattern) for path in files)})
+            if matched_globs:
+                reasons.append(f"manifest path match ({', '.join(matched_globs)})")
+
+        if reasons:
+            suggestions.append((note.path.as_posix(), "; ".join(reasons)))
+    return suggestions
+
+
+def _path_matches_pattern(raw_path: str, pattern: str) -> bool:
+    normalised_path = raw_path.replace("\\", "/").strip("./")
+    normalised_pattern = pattern.replace("\\", "/").strip()
+    if not normalised_path or not normalised_pattern:
+        return False
+    return Path(normalised_path).match(normalised_pattern)
 
 
 def _parse_route_sections(index_path: Path) -> list[tuple[str, list[str]]]:

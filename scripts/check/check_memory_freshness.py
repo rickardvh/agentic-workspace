@@ -8,6 +8,7 @@ and growth signals. This is advisory and always exits with 0.
 from __future__ import annotations
 
 import re
+import tomllib
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -21,17 +22,20 @@ RE_STATUS_VALUE = re.compile(
 )
 
 MEMORY_ROOT = Path("memory")
+MANIFEST_PATH = MEMORY_ROOT / "manifest.toml"
 MAX_LINES = 200
 STALE_DAYS = 180
 
 SKIP_FILES = {
     MEMORY_ROOT / "index.md",
+    MANIFEST_PATH,
     MEMORY_ROOT / "domains" / "README.md",
     MEMORY_ROOT / "invariants" / "README.md",
     MEMORY_ROOT / "runbooks" / "README.md",
     MEMORY_ROOT / "decisions" / "README.md",
 }
 SKIP_DIRS = {
+    MEMORY_ROOT / "skills",
     MEMORY_ROOT / "templates",
     MEMORY_ROOT / "system",
 }
@@ -151,6 +155,17 @@ def _render_path(path: Path) -> str:
     return path.as_posix()
 
 
+def _load_manifest_note_entries(path: Path) -> dict[str, dict[str, object]]:
+    if not path.exists():
+        return {}
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError:
+        return {}
+    notes = data.get("notes", {})
+    return notes if isinstance(notes, dict) else {}
+
+
 def _print_section(title: str, items: list[str]) -> None:
     print(f"\n{title}:")
     if not items:
@@ -167,6 +182,7 @@ def main() -> int:
         return 0
 
     scans = [_scan_note(path) for path in _iter_notes(MEMORY_ROOT)]
+    manifest_notes = _load_manifest_note_entries(MANIFEST_PATH)
     stale_before = datetime.now(UTC) - timedelta(days=STALE_DAYS)
 
     missing_last_confirmed = sorted(
@@ -221,6 +237,27 @@ def main() -> int:
         for paths in title_map.values()
         if len(paths) > 1
     )
+    missing_manifest_entries = sorted(
+        _render_path(scan.path)
+        for scan in scans
+        if _render_path(scan.path) not in manifest_notes
+    )
+    manifest_records_for_missing_notes = sorted(
+        note_path
+        for note_path in manifest_notes
+        if not Path(note_path).exists()
+    )
+    canonical_home_map: dict[str, list[str]] = defaultdict(list)
+    for note_path, raw in manifest_notes.items():
+        if not isinstance(raw, dict):
+            continue
+        canonical_home = str(raw.get("canonical_home", note_path))
+        canonical_home_map[canonical_home].append(note_path)
+    shared_canonical_homes = sorted(
+        f"{home} <- {', '.join(paths)}"
+        for home, paths in canonical_home_map.items()
+        if len(paths) > 1
+    )
 
     print("Memory freshness report")
     _print_section("Needs verification", needs_verification)
@@ -234,6 +271,9 @@ def main() -> int:
     _print_section(f"Old confirmations (>{STALE_DAYS} days)", old_confirmations)
     _print_section("Oversized files", oversized_files)
     _print_section("Duplicate titles", duplicate_titles)
+    _print_section("Missing manifest entries", missing_manifest_entries)
+    _print_section("Manifest records for missing notes", manifest_records_for_missing_notes)
+    _print_section("Shared canonical homes", shared_canonical_homes)
     return 0
 
 

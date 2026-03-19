@@ -20,6 +20,9 @@ def test_payload_entries_do_not_include_todo_stub() -> None:
     assert all(".agent-work" not in entry.relative_path.as_posix() for entry in entries)
     assert all(entry.relative_path != Path("memory/current/active-decisions.md") for entry in entries)
     assert any(entry.relative_path == Path("memory/current/task-context.md") for entry in entries)
+    assert any(entry.relative_path == Path("memory/manifest.toml") for entry in entries)
+    assert any(entry.relative_path == Path("memory/system/SKILLS.md") for entry in entries)
+    assert any(entry.relative_path == Path("memory/skills/memory-router/SKILL.md") for entry in entries)
 
 
 def test_payload_current_baseline_is_project_state_and_task_context_only() -> None:
@@ -37,20 +40,16 @@ def test_payload_current_baseline_is_project_state_and_task_context_only() -> No
     }
 
 
-def test_list_bundled_skills_includes_memory_and_bootstrap_skills() -> None:
+def test_list_bundled_skills_only_includes_bootstrap_skills() -> None:
     result = installer.list_bundled_skills()
 
     bundled = {action.path.name for action in result.actions if action.kind == "bundled skill"}
 
-    assert {
-        "memory-hygiene",
-        "memory-capture",
-        "memory-refresh",
-        "memory-router",
+    assert bundled == {
         "bootstrap-adoption",
         "bootstrap-populate",
         "bootstrap-upgrade",
-    }.issubset(bundled)
+    }
 
 
 def test_extract_make_targets_ignores_assignments_and_recipes() -> None:
@@ -312,6 +311,36 @@ def test_route_memory_adds_architecture_suggestions(tmp_path: Path) -> None:
     assert "memory/decisions/README.md" in suggested
 
 
+def test_route_memory_uses_manifest_file_globs(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory").mkdir(parents=True)
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/cli.md"]
+note_type = "domain"
+canonical_home = "memory/domains/cli.md"
+authority = "canonical"
+audience = "human+agent"
+routes_from = ["src/**/*.py"]
+stale_when = ["src/**/*.py"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.route_memory(target=target, files=["src/repo_memory_bootstrap/cli.py"])
+
+    assert any(
+        action.kind == "recommended"
+        and action.path.relative_to(target).as_posix() == "memory/domains/cli.md"
+        and "manifest path match" in action.detail
+        for action in result.actions
+    )
+
+
 def test_sync_memory_without_input_returns_guidance(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
@@ -332,6 +361,39 @@ def test_sync_memory_with_explicit_file_produces_recommendations(tmp_path: Path)
     result = installer.sync_memory(target=target, files=["tests/test_cli.py"])
 
     assert any(action.kind in {"review", "update", "update index"} for action in result.actions)
+
+
+def test_sync_memory_uses_manifest_staleness_triggers(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "memory" / "domains" / "cli.md").write_text("# CLI\n", encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/cli.md"]
+note_type = "domain"
+canonical_home = "memory/domains/cli.md"
+authority = "canonical"
+audience = "human+agent"
+routes_from = ["src/**/*.py"]
+stale_when = ["src/**/*.py"]
+related_validations = ["uv run pytest"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.sync_memory(target=target, files=["src/repo_memory_bootstrap/installer.py"])
+
+    assert any(
+        action.path == target / "memory" / "domains" / "cli.md"
+        and action.kind == "review"
+        and "manifest staleness trigger matched" in action.detail
+        for action in result.actions
+    )
 
 
 def test_verify_payload_passes_for_current_payload(tmp_path: Path) -> None:

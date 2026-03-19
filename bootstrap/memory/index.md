@@ -5,6 +5,7 @@
 - `/memory` is the durable repository memory layer.
 - Read this file after identifying the work from the repo's task system or the user's request.
 - Load only the notes relevant to the task at hand.
+- If `memory/manifest.toml` exists, use it as the machine-readable routing and freshness companion to this file.
 - Use checked-in files for durable facts and lightweight shared context.
 - Use skills for repeatable workflow operations on that knowledge.
 

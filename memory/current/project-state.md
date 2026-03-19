@@ -43,8 +43,8 @@ Active
 - Promoted `memory/current/task-context.md` as the checked-in current-work compression note.
 - Added agent-facing memory ergonomics to the CLI for current-memory inspection, routing, sync suggestions, and payload verification.
 - Clarified that the base system must remain understandable and maintainable even when skills are unavailable.
-- Clarified that `skills/` is the product's bundled skills catalogue, not a separate source-repo-only layer.
-- Added bundled `memory-capture`, `memory-refresh`, and `memory-router` skills alongside the existing hygiene and bootstrap skills.
+- Clarified that `skills/` should be limited to bundled bootstrap-lifecycle skills.
+- Added checked-in core memory skills under `memory/skills/` so repo-local memory operations ship in the payload rather than only in the bundled product skill catalogue.
 - Added `bootstrap-populate` as the conservative post-adoption skill for filling new current-memory files from repo evidence.
 - Shifted the product model toward bundled auto-discoverable skills, with manual installation only as fallback guidance.
 - Trimmed `AGENTS.md`, `memory/system/WORKFLOW.md`, and `memory/index.md` toward a lower-token, skill-first operating surface.
@@ -54,6 +54,7 @@ Active
 - Trimmed the always-read contract further so installed agents start from `AGENTS.md` plus `memory/index.md`, with workflow policy loaded only on demand.
 - Tightened the local contract to prefer targeted CLI checks over broad file re-reading when they answer the question faster.
 - Clarified that package version bumps are required for Git-based tool installs to receive updates via `uv tool upgrade`.
+- Added first-class `memory/manifest.toml` support so routing and freshness checks can use typed note metadata and file-trigger hints.
 
 ## Blockers
 
@@ -64,8 +65,9 @@ Active
 - Optional local scratch conventions are outside the core bootstrap contract.
 - `memory/current/project-state.md` is the overview note; `memory/current/task-context.md` is the current-work compression note.
 - Skills are the execution layer for repeatable memory workflows, not the storage layer for durable repo knowledge.
-- The current bundled skill catalogue now covers hygiene, capture, refresh, routing, adoption, and upgrade workflows.
+- The bundled skill catalogue is now intended for bootstrap lifecycle work, while `memory/skills/` carries the shared day-to-day memory-operation skills.
 - `memory/system/WORKFLOW.md` is now a compact policy shim rather than a workflow handbook.
+- `memory/manifest.toml` is the emerging machine-readable companion to `memory/index.md` for typed note metadata, routing hints, and freshness triggers.
 
 ## Failure signals
 
@@ -90,4 +92,4 @@ Active
 
 ## Last confirmed
 
-2026-03-18 during token-discipline pass
+2026-03-19 during checked-in-skills split

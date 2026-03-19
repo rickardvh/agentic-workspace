@@ -69,7 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_target_arguments(list_files_parser)
     _add_format_argument(list_files_parser)
 
-    list_skills_parser = subparsers.add_parser("list-skills", help="List bundled product skills.")
+    list_skills_parser = subparsers.add_parser("list-skills", help="List bundled bootstrap-lifecycle skills.")
     _add_format_argument(list_skills_parser)
 
     prompt_parser = subparsers.add_parser("prompt", help="Print a canonical agent prompt for adoption, populate, or upgrade.")
@@ -298,6 +298,7 @@ def _print_install_summary(result) -> None:
     print(f"Summary: {summary}")
     print("Next steps:")
     print("- Review repository-specific details in AGENTS.md and the current-memory notes.")
+    print("- Review the checked-in core memory skills under memory/skills/ and add repo-specific sibling skills there when a local memory workflow is worth reusing.")
     print("- Keep memory/current/project-state.md as a short overview note, not a task list.")
     print("- Populate memory/current/task-context.md only when active work would benefit from a short checked-in continuation note.")
     print("- Confirm the repo's chosen task system separately; this bootstrap does not install one.")
@@ -328,19 +329,19 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
 
     if command == "adopt":
         return (
-            "Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled skills in this session. "
+            "Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled bootstrap skills in this session. "
             f"Then use the `bootstrap-adoption` skill from the installed `agentic-memory-bootstrap` product to adopt the repository{target_clause} conservatively and report any manual-review items. "
-            "After adoption, offer to use the `bootstrap-populate` skill to populate any new current-memory files conservatively from existing repo docs and visible repo state."
+            "After adoption, offer to use the `bootstrap-populate` skill to populate any new current-memory files conservatively from existing repo docs and visible repo state, and point out the checked-in core memory skills under `memory/skills/`."
         )
     if command == "populate":
         return (
-            "Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled skills in this session. "
+            "Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled bootstrap skills in this session. "
             f"Then use the `bootstrap-populate` skill from the installed `agentic-memory-bootstrap` product to populate the current-memory notes for the repository{target_clause} conservatively from existing repo docs and visible repo state. "
-            "Populate `memory/current/task-context.md` only when there is clearly active work worth preserving across sessions."
+            "Populate `memory/current/task-context.md` only when there is clearly active work worth preserving across sessions, and remind the agent that repo-specific memory workflows should be added as sibling skills under `memory/skills/`."
         )
     if command == "upgrade":
         return (
-            "Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled skills in this session. "
+            "Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled bootstrap skills in this session. "
             f"Then use the `bootstrap-upgrade` skill from the installed `agentic-memory-bootstrap` product to upgrade the repository{target_clause} conservatively and report any manual-review items."
         )
     raise ValueError(f"Unknown prompt command: {command}")

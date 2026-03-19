@@ -12,7 +12,10 @@ It gives a repo:
 
 - local repo-specific agent instructions in `AGENTS.md`
 - shared workflow rules in `memory/system/WORKFLOW.md`
+- shared skill-boundary guidance in `memory/system/SKILLS.md`
+- optional machine-readable note metadata in `memory/manifest.toml`
 - durable technical notes in `memory/`
+- checked-in core memory skills in `memory/skills/`
 - a lightweight human-readable overview in `memory/current/project-state.md`
 - an optional checked-in current-task compression note in `memory/current/task-context.md`
 
@@ -100,13 +103,13 @@ In a fresh repo, the simplest path is usually to tell the agent to use the bundl
 For first-time adoption, paste:
 
 ```text
-Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled skills in this session. Then use the `bootstrap-adoption` skill from the installed `agentic-memory-bootstrap` product to adopt this repository conservatively and report any manual-review items. After adoption, offer to use `bootstrap-populate` if new current-memory files were created.
+Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled bootstrap skills in this session. Then use the `bootstrap-adoption` skill from the installed `agentic-memory-bootstrap` product to adopt this repository conservatively and report any manual-review items. After adoption, offer to use `bootstrap-populate` if new current-memory files were created, and point out the checked-in core memory skills under `memory/skills/`.
 ```
 
 For upgrading an existing install, paste:
 
 ```text
-Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled skills in this session. Then use the `bootstrap-upgrade` skill from the installed `agentic-memory-bootstrap` product to upgrade this repository conservatively and report any manual-review items.
+Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled bootstrap skills in this session. Then use the `bootstrap-upgrade` skill from the installed `agentic-memory-bootstrap` product to upgrade this repository conservatively and report any manual-review items.
 ```
 
 Or have the tool print the prompt for you:
@@ -117,17 +120,22 @@ agentic-memory-bootstrap prompt populate
 agentic-memory-bootstrap prompt upgrade
 ```
 
-## Bundled Skills
+## Skills
 
-The shipped skills are:
+Bundled product skills are limited to bootstrap lifecycle work:
+
+- `bootstrap-adoption`
+- `bootstrap-populate`
+- `bootstrap-upgrade`
+
+Day-to-day memory skills are shipped as checked-in repo skills in `memory/skills/`:
 
 - `memory-hygiene`
 - `memory-capture`
 - `memory-refresh`
 - `memory-router`
-- `bootstrap-adoption`
-- `bootstrap-populate`
-- `bootstrap-upgrade`
+
+Repositories should add their own repo-specific memory skills alongside these checked-in core skills under `memory/skills/` rather than customising the shared core skills in place.
 
 If your runtime supports packaged skill discovery, these skills should be available from the installed product.
 
@@ -150,7 +158,7 @@ Main commands:
 - `upgrade` applies the deterministic upgrade flow for an existing install.
 - `status` reports whether bootstrap files are present.
 - `list-files` shows the packaged payload files.
-- `list-skills` shows the bundled product skills.
+- `list-skills` shows the bundled bootstrap-lifecycle skills.
 - `prompt adopt|populate|upgrade` prints canonical agent prompts for the bundled bootstrap skills.
 - `current show|check` inspects or validates the current-memory surface.
 - `route` suggests likely relevant memory notes for touched files or explicit surfaces.
@@ -168,6 +176,8 @@ Common arguments:
 - `--primary-build-command <text>` fills `<PRIMARY_BUILD_COMMAND>` when explicitly provided.
 - `--primary-test-command <text>` fills `<PRIMARY_TEST_COMMAND>` when explicitly provided.
 - `--other-key-commands <text>` fills `<OTHER_KEY_COMMANDS>` when explicitly provided.
+
+If `memory/manifest.toml` exists, `route` and `sync-memory` use it to match changed files and surfaces against typed note records before falling back to `memory/index.md`.
 
 Examples:
 
