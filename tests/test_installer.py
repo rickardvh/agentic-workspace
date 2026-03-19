@@ -511,6 +511,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
 
     current_args = parser.parse_args(["current", "check", "--target", "."])
     list_skills_args = parser.parse_args(["list-skills", "--format", "json"])
+    cleanup_args = parser.parse_args(["bootstrap-cleanup", "--target", ".", "--format", "json"])
     prompt_install_args = parser.parse_args(["prompt", "install", "--target", "C:/repo"])
     prompt_args = parser.parse_args(["prompt", "adopt", "--target", "C:/repo"])
     prompt_populate_args = parser.parse_args(["prompt", "populate", "--target", "C:/repo"])
@@ -533,6 +534,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
 
     assert current_args.command == "current"
     assert list_skills_args.command == "list-skills"
+    assert cleanup_args.command == "bootstrap-cleanup"
     assert prompt_install_args.prompt_command == "install"
     assert prompt_args.command == "prompt"
     assert prompt_args.prompt_command == "adopt"
@@ -549,7 +551,7 @@ def test_build_install_prompt_mentions_local_bootstrap_skills_and_target() -> No
     assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap init --target C:/repo" in prompt
     assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap init --target C:/repo" in prompt
     assert "`install` skill at `C:/repo/memory/bootstrap/skills`" in prompt
-    assert "`cleanup` at `C:/repo/memory/bootstrap/skills`" in prompt
+    assert "bootstrap-cleanup --target C:/repo" in prompt
 
 
 def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target() -> None:
@@ -559,7 +561,7 @@ def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target() -> None
     assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap adopt --target C:/repo" in prompt
     assert "`install` skill at `C:/repo/memory/bootstrap/skills`" in prompt
     assert "`populate` from the same path" in prompt
-    assert "`cleanup` at `C:/repo/memory/bootstrap/skills`" in prompt
+    assert "bootstrap-cleanup --target C:/repo" in prompt
     assert "C:/repo" in prompt
 
 
@@ -579,7 +581,30 @@ def test_build_upgrade_prompt_mentions_local_bootstrap_skills() -> None:
     assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target C:/repo" in prompt
     assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target C:/repo" in prompt
     assert "`upgrade` skill at `C:/repo/memory/bootstrap/skills`" in prompt
-    assert "`cleanup` at `C:/repo/memory/bootstrap/skills`" in prompt
+    assert "bootstrap-cleanup --target C:/repo" in prompt
+
+
+def test_bootstrap_cleanup_removes_workspace(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    installer.install_bootstrap(target=target)
+    workspace = target / "memory" / "bootstrap"
+    assert workspace.exists()
+
+    result = installer.cleanup_bootstrap_workspace(target=target)
+
+    assert not workspace.exists()
+    assert any(action.kind == "removed" for action in result.actions)
+
+
+def test_bootstrap_cleanup_is_safe_when_workspace_absent(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    result = installer.cleanup_bootstrap_workspace(target=target)
+
+    assert any(action.kind == "skipped" for action in result.actions)
 
 
 def test_install_summary_mentions_populate_next_step_when_current_notes_created(capsys, tmp_path: Path) -> None:
@@ -590,7 +615,7 @@ def test_install_summary_mentions_populate_next_step_when_current_notes_created(
     cli._print_install_summary(result)
 
     output = capsys.readouterr().out
-    assert "bootstrap" in output
+    assert "bootstrap-cleanup" in output
     assert "`populate` skill" in output
 
 

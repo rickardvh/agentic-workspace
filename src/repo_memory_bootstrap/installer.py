@@ -16,7 +16,7 @@ WORKFLOW_PATH = Path("memory/system/WORKFLOW.md")
 AGENTS_PATH = Path("AGENTS.md")
 MANIFEST_PATH = Path("memory/manifest.toml")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 16
+BOOTSTRAP_VERSION = 17
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
 
@@ -833,6 +833,46 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
             source=MANIFEST_PATH.as_posix(),
             category="contract-drift",
         )
+    return result
+
+
+def cleanup_bootstrap_workspace(target: str | Path | None = None) -> InstallResult:
+    target_root = resolve_target_root(target)
+    workspace = target_root / BOOTSTRAP_WORKSPACE_ROOT
+    result = _new_result(target_root, dry_run=False, message="Bootstrap workspace cleanup")
+
+    if not workspace.exists():
+        result.add(
+            "skipped",
+            workspace,
+            "temporary bootstrap workspace is already absent",
+            role="bootstrap-workspace",
+            safety="safe",
+            source=BOOTSTRAP_WORKSPACE_ROOT.as_posix(),
+            category="safe-update",
+        )
+        return result
+
+    removed_files = 0
+    removed_dirs = 0
+    for path in sorted(workspace.rglob("*"), reverse=True):
+        if path.is_file():
+            path.unlink()
+            removed_files += 1
+        elif path.is_dir():
+            path.rmdir()
+            removed_dirs += 1
+    workspace.rmdir()
+    removed_dirs += 1
+    result.add(
+        "removed",
+        workspace,
+        f"removed temporary bootstrap workspace ({removed_files} files, {removed_dirs} directories)",
+        role="bootstrap-workspace",
+        safety="safe",
+        source=BOOTSTRAP_WORKSPACE_ROOT.as_posix(),
+        category="safe-update",
+    )
     return result
 
 

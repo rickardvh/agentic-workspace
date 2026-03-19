@@ -15,16 +15,13 @@ Use this skill after `agentic-memory-bootstrap upgrade`.
    - `memory/system/WORKFLOW.md`
    - `memory/current/project-state.md` if present
    - `memory/current/task-context.md` if present
-2. Review the upgrade outcome:
-   - check `agentic-memory-bootstrap doctor --target <repo>` output when available
-   - review changed shared files
-   - separate safe replacements from manual-review items
+2. Review changed shared files and manual-review items.
 3. Finish the conservative upgrade review:
    - preserve repo-specific scope and commands in `AGENTS.md`
    - keep task tooling separate from the memory contract
    - confirm the active memory surfaces are still correct
 4. Run the memory freshness audit when available.
-5. When upgrade work is complete, offer `cleanup` from the same path.
+5. When upgrade work is complete, prefer `agentic-memory-bootstrap bootstrap-cleanup --target <repo>`.
 
 ## Guardrails
 
@@ -36,4 +33,4 @@ Use this skill after `agentic-memory-bootstrap upgrade`.
 
 - a concise upgrade review
 - manual-review items called out clearly
-- a follow-up to `cleanup` when bootstrap work is complete
+- a follow-up to `bootstrap-cleanup` when bootstrap work is complete

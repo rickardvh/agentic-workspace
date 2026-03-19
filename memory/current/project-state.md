@@ -58,6 +58,7 @@ Active
 - Switched the recommended bootstrap entry path from installed-product-first prompts to `uvx` no-install execution, with bundled skills treated as optional when already visible in the runtime.
 - Added a temporary `memory/bootstrap/` workspace with local install, populate, upgrade, and cleanup skills so prompt-driven lifecycle work can hand off to repo-local skills and then remove the workspace.
 - Hardened the freshness audit so temporary `memory/bootstrap/` files are ignored and the recurring-failures starter note is audit-clean on install.
+- Added `bootstrap-cleanup` as the preferred executable cleanup path, and tightened the temporary bootstrap skill docs around that command.
 
 ## Blockers
 
@@ -95,4 +96,4 @@ Active
 
 ## Last confirmed
 
-2026-03-19 during bootstrap audit hardening
+2026-03-19 during bootstrap cleanup command rollout

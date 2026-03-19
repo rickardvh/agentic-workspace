@@ -5,7 +5,7 @@ description: Remove the temporary bootstrap workspace after bootstrap installati
 
 # Cleanup
 
-Use this skill when bootstrap install, populate, or upgrade work is complete.
+Use this skill when bootstrap install, populate, or upgrade work is complete and the CLI cleanup command is not being used.
 
 ## Workflow
 

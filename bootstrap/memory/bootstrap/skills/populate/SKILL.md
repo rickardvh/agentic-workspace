@@ -20,7 +20,7 @@ Use this skill after bootstrap installation when `memory/current/project-state.m
 3. Populate `memory/current/project-state.md` conservatively.
 4. Populate `memory/current/task-context.md` only when there is clearly active work worth preserving across sessions.
 5. Keep both notes short and factual.
-6. When populate work is complete, offer `cleanup` from the same path if no more bootstrap work remains.
+6. When populate work is complete, prefer `agentic-memory-bootstrap bootstrap-cleanup --target <repo>` if no more bootstrap work remains.
 
 ## Guardrails
 
@@ -33,4 +33,4 @@ Use this skill after bootstrap installation when `memory/current/project-state.m
 
 - a populated `memory/current/project-state.md`
 - an optional populated `memory/current/task-context.md`
-- a follow-up to `cleanup` when bootstrap work is complete
+- a follow-up to `bootstrap-cleanup` when bootstrap work is complete

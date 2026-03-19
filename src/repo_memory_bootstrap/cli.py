@@ -14,6 +14,7 @@ from repo_memory_bootstrap.installer import (
     install_bootstrap,
     list_bundled_skills,
     list_payload_files,
+    cleanup_bootstrap_workspace,
     route_memory,
     show_current_memory,
     sync_memory,
@@ -110,6 +111,10 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser = subparsers.add_parser("verify-payload", help="Verify the packaged bootstrap payload contract.")
     _add_target_arguments(verify_parser)
     _add_format_argument(verify_parser)
+
+    cleanup_parser = subparsers.add_parser("bootstrap-cleanup", help="Remove the temporary bootstrap workspace.")
+    _add_target_arguments(cleanup_parser)
+    _add_format_argument(cleanup_parser)
 
     return parser
 
@@ -254,6 +259,11 @@ def main(argv: list[str] | None = None) -> int:
             result = verify_payload(target=args.target)
             _emit_result(result, output_format=args.format)
             return 0
+
+        if args.command == "bootstrap-cleanup":
+            result = cleanup_bootstrap_workspace(target=args.target)
+            _emit_result(result, output_format=args.format)
+            return 0
     except RepoDetectionError as exc:
         print(f"Error: {exc}")
         return 2
@@ -304,7 +314,7 @@ def _print_install_summary(result) -> None:
     bootstrap_skills_path = result.target_root / BOOTSTRAP_WORKSPACE_ROOT / "skills"
     print("Next steps:")
     print("- Review repository-specific details in AGENTS.md and the current-memory notes.")
-    print(f"- Use the temporary bootstrap skills under {bootstrap_skills_path} to finish install or upgrade review, then remove memory/bootstrap/ when that work is complete.")
+    print(f"- Use the temporary bootstrap skills under {bootstrap_skills_path} to finish install or upgrade review, then run `agentic-memory-bootstrap bootstrap-cleanup --target <repo>` when that work is complete.")
     print("- Review the checked-in core memory skills under memory/skills/ and add repo-specific sibling skills there when a local memory workflow is worth reusing.")
     print("- Keep memory/current/project-state.md as a short overview note, not a task list.")
     print("- Populate memory/current/task-context.md only when active work would benefit from a short checked-in continuation note.")
@@ -341,14 +351,14 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             f"Run `{runner} init{target_args}` or `{pipx_runner} init{target_args}`. "
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
-            f"When installation is complete, use `cleanup` at `{bootstrap_skills}` to remove the temporary bootstrap workspace and point out the checked-in core memory skills under `{target_root}/memory/skills`."
+            f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` or `{pipx_runner} bootstrap-cleanup{target_args}` and point out the checked-in core memory skills under `{target_root}/memory/skills`."
         )
     if command == "adopt":
         return (
             f"Run `{runner} adopt{target_args}` or `{pipx_runner} adopt{target_args}`. "
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
-            f"When installation is complete, use `cleanup` at `{bootstrap_skills}` to remove the temporary bootstrap workspace and point out the checked-in core memory skills under `{target_root}/memory/skills`."
+            f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` or `{pipx_runner} bootstrap-cleanup{target_args}` and point out the checked-in core memory skills under `{target_root}/memory/skills`."
         )
     if command == "populate":
         return (
@@ -360,7 +370,7 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
         return (
             f"Run `{runner} upgrade{target_args}` or `{pipx_runner} upgrade{target_args}`. "
             f"Next, use the `upgrade` skill at `{bootstrap_skills}` to finish the upgrade review conservatively. "
-            f"When the upgrade is complete, use `cleanup` at `{bootstrap_skills}` to remove the temporary bootstrap workspace."
+            f"When the upgrade is complete, run `{runner} bootstrap-cleanup{target_args}` or `{pipx_runner} bootstrap-cleanup{target_args}`."
         )
     raise ValueError(f"Unknown prompt command: {command}")
 

@@ -28,7 +28,7 @@ pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bo
 pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
 ```
 
-Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. The prompt runs the CLI, then hands off to the local skills under `/path/to/repo/memory/bootstrap/skills`, and finishes with cleanup.
+Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. The prompt runs the CLI, then hands off to the local skills under `/path/to/repo/memory/bootstrap/skills`, and finishes with `bootstrap-cleanup`.
 
 ### Manual alternative
 
@@ -60,7 +60,7 @@ uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstr
 pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
 ```
 
-That prompt runs the CLI, then hands off to the local skills under `/path/to/repo/memory/bootstrap/skills`, and finishes with cleanup.
+That prompt runs the CLI, then hands off to the local skills under `/path/to/repo/memory/bootstrap/skills`, and finishes with `bootstrap-cleanup`.
 
 ### Manual alternative
 
@@ -99,6 +99,7 @@ Main commands:
 - `doctor` to inspect state and recommended remediation
 - `upgrade` for deterministic upgrades
 - `prompt install|adopt|populate|upgrade` to print canonical agent prompts
+- `bootstrap-cleanup` to remove the temporary bootstrap workspace
 - `current show|check` to inspect current-memory notes
 - `route` and `sync-memory` to review likely relevant memory notes
 - `verify-payload` to validate the packaged bootstrap contract
