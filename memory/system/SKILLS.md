@@ -83,6 +83,7 @@ Bundled product skills should stay limited to bootstrap lifecycle operations:
 - `bootstrap-adoption`
 - `bootstrap-populate`
 - `bootstrap-upgrade`
+- `bootstrap-uninstall`
 
 Do not use bundled product skills as the main place for day-to-day repo memory behaviour.
 

@@ -16,7 +16,7 @@ WORKFLOW_PATH = Path("memory/system/WORKFLOW.md")
 AGENTS_PATH = Path("AGENTS.md")
 MANIFEST_PATH = Path("memory/manifest.toml")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 17
+BOOTSTRAP_VERSION = 18
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
 
@@ -876,6 +876,104 @@ def cleanup_bootstrap_workspace(target: str | Path | None = None) -> InstallResu
     return result
 
 
+def uninstall_bootstrap(
+    *,
+    target: str | Path | None = None,
+    dry_run: bool = False,
+    project_name: str | None = None,
+    project_purpose: str | None = None,
+    key_repo_docs: str | None = None,
+    key_subsystems: str | None = None,
+    primary_build_command: str | None = None,
+    primary_test_command: str | None = None,
+    other_key_commands: str | None = None,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    source_root = payload_root()
+    substitutions = build_substitutions(
+        target_root=target_root,
+        project_name=project_name,
+        project_purpose=project_purpose,
+        key_repo_docs=key_repo_docs,
+        key_subsystems=key_subsystems,
+        primary_build_command=primary_build_command,
+        primary_test_command=primary_test_command,
+        other_key_commands=other_key_commands,
+    )
+    result = _new_result(target_root, dry_run=dry_run, message="Uninstall plan")
+    _record_repo_context_warnings(target_root, result)
+
+    workspace = target_root / BOOTSTRAP_WORKSPACE_ROOT
+    if workspace.exists():
+        if dry_run:
+            result.add(
+                "would remove",
+                workspace,
+                "temporary bootstrap workspace",
+                role="bootstrap-workspace",
+                safety="safe",
+                source=BOOTSTRAP_WORKSPACE_ROOT.as_posix(),
+                category="safe-update",
+            )
+        else:
+            cleanup_result = cleanup_bootstrap_workspace(target=target_root)
+            result.actions.extend(cleanup_result.actions)
+
+    managed_paths: set[Path] = set()
+    removable_paths: set[Path] = set()
+    for entry in _payload_entries(source_root, include_bootstrap_workspace=False):
+        destination = target_root / entry.relative_path
+        managed_paths.add(destination)
+        if not destination.exists():
+            continue
+        rendered = _render_text(entry.source_path, substitutions)
+        existing = destination.read_text(encoding="utf-8")
+        if rendered == existing:
+            removable_paths.add(destination)
+            if dry_run:
+                result.add(
+                    "would remove",
+                    destination,
+                    "matches bootstrap payload",
+                    role=entry.role,
+                    safety="safe",
+                    source=str(entry.relative_path),
+                    category="safe-update",
+                )
+            else:
+                destination.unlink()
+                result.add(
+                    "removed",
+                    destination,
+                    "matched bootstrap payload",
+                    role=entry.role,
+                    safety="safe",
+                    source=str(entry.relative_path),
+                    category="safe-update",
+                )
+                _prune_empty_parents(destination.parent, stop=target_root)
+            continue
+
+        result.add(
+            "manual review",
+            destination,
+            "bootstrap-managed file differs from payload; review before removing",
+            role=entry.role,
+            safety="manual",
+            source=str(entry.relative_path),
+            category="manual-review",
+        )
+
+    _plan_optional_fragment_removals(
+        source_root=source_root,
+        target_root=target_root,
+        result=result,
+        apply=not dry_run,
+    )
+    _report_remaining_repo_local_memory(target_root=target_root, managed_paths=managed_paths, removable_paths=removable_paths, result=result)
+    return result
+
+
 def build_substitutions(
     *,
     target_root: Path,
@@ -1329,11 +1427,113 @@ def _plan_optional_appends(
         )
 
 
+def _plan_optional_fragment_removals(
+    *,
+    source_root: Path,
+    target_root: Path,
+    result: InstallResult,
+    apply: bool,
+) -> None:
+    for target_file, fragment_path in OPTIONAL_APPEND_TARGETS.items():
+        destination = target_root / target_file
+        if not destination.exists():
+            continue
+
+        fragment = (source_root / fragment_path).read_text(encoding="utf-8").strip()
+        existing = destination.read_text(encoding="utf-8")
+        if fragment not in existing:
+            continue
+
+        updated = _remove_appended_fragment(existing, fragment)
+        if not apply:
+            result.add(
+                "would patch",
+                destination,
+                "remove bootstrap optional fragment",
+                role="append-target",
+                safety="safe",
+                source=str(fragment_path),
+                category="safe-update",
+            )
+            continue
+
+        destination.write_text(updated, encoding="utf-8")
+        result.add(
+            "patched",
+            destination,
+            "removed bootstrap optional fragment",
+            role="append-target",
+            safety="safe",
+            source=str(fragment_path),
+            category="safe-update",
+        )
+
+
 def _append_text(existing: str, fragment: str) -> str:
     normalized = existing.rstrip()
     if not normalized:
         return f"{fragment}\n"
     return f"{normalized}\n\n{fragment}\n"
+
+
+def _remove_appended_fragment(existing: str, fragment: str) -> str:
+    lines = existing.splitlines()
+    fragment_lines = fragment.splitlines()
+    for index in range(len(lines) - len(fragment_lines) + 1):
+        if lines[index : index + len(fragment_lines)] != fragment_lines:
+            continue
+        before = lines[:index]
+        after = lines[index + len(fragment_lines) :]
+        while before and not before[-1].strip():
+            before.pop()
+        while after and not after[0].strip():
+            after.pop(0)
+        updated = before + ([""] if before and after else []) + after
+        return "\n".join(updated).rstrip() + ("\n" if updated else "")
+    return existing
+
+
+def _report_remaining_repo_local_memory(
+    *,
+    target_root: Path,
+    managed_paths: set[Path],
+    removable_paths: set[Path],
+    result: InstallResult,
+) -> None:
+    memory_root = target_root / "memory"
+    if not memory_root.exists():
+        return
+
+    remaining: list[Path] = []
+    for path in sorted(memory_root.rglob("*")):
+        if path.is_dir():
+            continue
+        if path in managed_paths and path not in removable_paths:
+            continue
+        if path in removable_paths:
+            continue
+        remaining.append(path)
+
+    for path in remaining:
+        result.add(
+            "manual review",
+            path,
+            "repo-local memory file remains after uninstall; remove manually if the repository should no longer keep memory",
+            role="repo-local-memory",
+            safety="manual",
+            source=path.relative_to(target_root).as_posix(),
+            category="manual-review",
+        )
+
+
+def _prune_empty_parents(start: Path, *, stop: Path) -> None:
+    current = start
+    while current != stop and current.exists():
+        try:
+            current.rmdir()
+        except OSError:
+            break
+        current = current.parent
 
 
 def _equivalent_optional_fragment_detail(*, target_file: Path, existing: str, fragment: str) -> str | None:

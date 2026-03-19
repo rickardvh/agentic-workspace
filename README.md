@@ -72,6 +72,30 @@ agentic-memory-bootstrap upgrade --dry-run --target /path/to/repo
 agentic-memory-bootstrap upgrade --target /path/to/repo
 ```
 
+## Uninstall
+
+### Agent workflow
+
+Print a ready-to-paste prompt:
+
+```bash
+uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt uninstall --target /path/to/repo
+pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt uninstall --target /path/to/repo
+```
+
+That prompt runs the CLI uninstall conservatively and points to the bundled `bootstrap-uninstall` skill when manual-review items remain.
+
+### Manual alternative
+
+If the tool is already installed, run:
+
+```bash
+agentic-memory-bootstrap uninstall --dry-run --target /path/to/repo
+agentic-memory-bootstrap uninstall --target /path/to/repo
+```
+
+`uninstall` removes safe bootstrap-managed files and reports remaining repo-local memory files for manual review instead of deleting them blindly.
+
 ## Skills
 
 Checked-in core memory skills:
@@ -98,7 +122,9 @@ Main commands:
 - `adopt` for conservative adoption into an existing repo
 - `doctor` to inspect state and recommended remediation
 - `upgrade` for deterministic upgrades
+- `uninstall` for conservative bootstrap removal
 - `prompt install|adopt|populate|upgrade` to print canonical agent prompts
+- `prompt uninstall` to print the canonical uninstall prompt
 - `bootstrap-cleanup` to remove the temporary bootstrap workspace
 - `current show|check` to inspect current-memory notes
 - `route` and `sync-memory` to review likely relevant memory notes

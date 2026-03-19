@@ -53,6 +53,7 @@ def test_list_bundled_skills_only_includes_bootstrap_skills() -> None:
         "bootstrap-adoption",
         "bootstrap-populate",
         "bootstrap-upgrade",
+        "bootstrap-uninstall",
     }
 
 
@@ -512,9 +513,11 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     current_args = parser.parse_args(["current", "check", "--target", "."])
     list_skills_args = parser.parse_args(["list-skills", "--format", "json"])
     cleanup_args = parser.parse_args(["bootstrap-cleanup", "--target", ".", "--format", "json"])
+    uninstall_args = parser.parse_args(["uninstall", "--target", ".", "--dry-run", "--format", "json"])
     prompt_install_args = parser.parse_args(["prompt", "install", "--target", "C:/repo"])
     prompt_args = parser.parse_args(["prompt", "adopt", "--target", "C:/repo"])
     prompt_populate_args = parser.parse_args(["prompt", "populate", "--target", "C:/repo"])
+    prompt_uninstall_args = parser.parse_args(["prompt", "uninstall", "--target", "C:/repo"])
     route_args = parser.parse_args(["route", "--files", "src/app.py"])
     sync_args = parser.parse_args(["sync-memory", "--notes", "memory/index.md"])
     verify_args = parser.parse_args(["verify-payload", "--format", "json"])
@@ -535,10 +538,12 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     assert current_args.command == "current"
     assert list_skills_args.command == "list-skills"
     assert cleanup_args.command == "bootstrap-cleanup"
+    assert uninstall_args.command == "uninstall"
     assert prompt_install_args.prompt_command == "install"
     assert prompt_args.command == "prompt"
     assert prompt_args.prompt_command == "adopt"
     assert prompt_populate_args.prompt_command == "populate"
+    assert prompt_uninstall_args.prompt_command == "uninstall"
     assert route_args.command == "route"
     assert sync_args.command == "sync-memory"
     assert verify_args.command == "verify-payload"
@@ -584,6 +589,14 @@ def test_build_upgrade_prompt_mentions_local_bootstrap_skills() -> None:
     assert "bootstrap-cleanup --target C:/repo" in prompt
 
 
+def test_build_uninstall_prompt_mentions_bundled_skill() -> None:
+    prompt = cli._build_agent_prompt("uninstall", target="C:/repo")
+
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap uninstall --target C:/repo" in prompt
+    assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap uninstall --target C:/repo" in prompt
+    assert "bootstrap-uninstall" in prompt
+
+
 def test_bootstrap_cleanup_removes_workspace(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
@@ -605,6 +618,37 @@ def test_bootstrap_cleanup_is_safe_when_workspace_absent(tmp_path: Path) -> None
     result = installer.cleanup_bootstrap_workspace(target=target)
 
     assert any(action.kind == "skipped" for action in result.actions)
+
+
+def test_uninstall_removes_safe_bootstrap_files(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    installer.install_bootstrap(target=target)
+
+    result = installer.uninstall_bootstrap(target=target)
+
+    assert not (target / "AGENTS.md").exists()
+    assert not (target / "memory" / "index.md").exists()
+    assert not (target / "scripts" / "check" / "check_memory_freshness.py").exists()
+    assert any(action.kind == "removed" for action in result.actions)
+
+
+def test_uninstall_flags_customised_seed_notes_for_manual_review(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    installer.install_bootstrap(target=target)
+    note_path = target / "memory" / "current" / "project-state.md"
+    note_path.write_text("# Project State\n\ncustomised\n", encoding="utf-8")
+
+    result = installer.uninstall_bootstrap(target=target, dry_run=True)
+
+    assert any(
+        action.path == note_path
+        and action.kind == "manual review"
+        for action in result.actions
+    )
 
 
 def test_install_summary_mentions_populate_next_step_when_current_notes_created(capsys, tmp_path: Path) -> None:

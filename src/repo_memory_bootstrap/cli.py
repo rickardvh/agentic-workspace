@@ -7,6 +7,7 @@ from repo_memory_bootstrap.installer import (
     RepoDetectionError,
     adopt_bootstrap,
     check_current_memory,
+    cleanup_bootstrap_workspace,
     collect_status,
     doctor_bootstrap,
     format_actions,
@@ -14,10 +15,10 @@ from repo_memory_bootstrap.installer import (
     install_bootstrap,
     list_bundled_skills,
     list_payload_files,
-    cleanup_bootstrap_workspace,
     route_memory,
     show_current_memory,
     sync_memory,
+    uninstall_bootstrap,
     upgrade_bootstrap,
     verify_payload,
 )
@@ -60,6 +61,12 @@ def build_parser() -> argparse.ArgumentParser:
     _add_project_metadata_arguments(upgrade_parser)
     _add_format_argument(upgrade_parser)
 
+    uninstall_parser = subparsers.add_parser("uninstall", help="Remove bootstrap-managed files conservatively.")
+    _add_target_arguments(uninstall_parser)
+    uninstall_parser.add_argument("--dry-run", action="store_true", help="Show the uninstall plan without writing files.")
+    _add_project_metadata_arguments(uninstall_parser)
+    _add_format_argument(uninstall_parser)
+
     doctor_parser = subparsers.add_parser("doctor", help="Diagnose bootstrap state and recommended remediation.")
     _add_target_arguments(doctor_parser)
     _add_project_metadata_arguments(doctor_parser)
@@ -76,7 +83,7 @@ def build_parser() -> argparse.ArgumentParser:
     list_skills_parser = subparsers.add_parser("list-skills", help="List bundled bootstrap-lifecycle skills.")
     _add_format_argument(list_skills_parser)
 
-    prompt_parser = subparsers.add_parser("prompt", help="Print a canonical agent prompt for install, adopt, populate, or upgrade.")
+    prompt_parser = subparsers.add_parser("prompt", help="Print a canonical agent prompt for install, adopt, populate, upgrade, or uninstall.")
     prompt_subparsers = prompt_parser.add_subparsers(dest="prompt_command", required=True)
     prompt_install_parser = prompt_subparsers.add_parser("install", help="Print the canonical install prompt.")
     _add_target_arguments(prompt_install_parser)
@@ -86,6 +93,8 @@ def build_parser() -> argparse.ArgumentParser:
     _add_target_arguments(prompt_populate_parser)
     prompt_upgrade_parser = prompt_subparsers.add_parser("upgrade", help="Print the canonical upgrade prompt.")
     _add_target_arguments(prompt_upgrade_parser)
+    prompt_uninstall_parser = prompt_subparsers.add_parser("uninstall", help="Print the canonical uninstall prompt.")
+    _add_target_arguments(prompt_uninstall_parser)
 
     current_parser = subparsers.add_parser("current", help="Inspect or check the current-memory surface.")
     current_subparsers = current_parser.add_subparsers(dest="current_command", required=True)
@@ -193,6 +202,21 @@ def main(argv: list[str] | None = None) -> int:
                 dry_run=args.dry_run,
                 force=args.force,
                 apply_local_entrypoint=args.apply_local_entrypoint,
+                project_name=args.project_name,
+                project_purpose=args.project_purpose,
+                key_repo_docs=args.key_repo_docs,
+                key_subsystems=args.key_subsystems,
+                primary_build_command=args.primary_build_command,
+                primary_test_command=args.primary_test_command,
+                other_key_commands=args.other_key_commands,
+            )
+            _emit_result(result, output_format=args.format)
+            return 0
+
+        if args.command == "uninstall":
+            result = uninstall_bootstrap(
+                target=args.target,
+                dry_run=args.dry_run,
                 project_name=args.project_name,
                 project_purpose=args.project_purpose,
                 key_repo_docs=args.key_repo_docs,
@@ -371,6 +395,12 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             f"Run `{runner} upgrade{target_args}` or `{pipx_runner} upgrade{target_args}`. "
             f"Next, use the `upgrade` skill at `{bootstrap_skills}` to finish the upgrade review conservatively. "
             f"When the upgrade is complete, run `{runner} bootstrap-cleanup{target_args}` or `{pipx_runner} bootstrap-cleanup{target_args}`."
+        )
+    if command == "uninstall":
+        return (
+            f"Run `{runner} uninstall{target_args}` or `{pipx_runner} uninstall{target_args}`. "
+            "Review any manual-review items before removing repo-local memory content. "
+            "If bundled product skills are available, use `bootstrap-uninstall` to finish the uninstall conservatively."
         )
     raise ValueError(f"Unknown prompt command: {command}")
 

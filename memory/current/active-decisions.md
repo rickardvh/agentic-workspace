@@ -84,7 +84,8 @@ Active
 - Machine-readable memory metadata should live in `memory/manifest.toml` as an optional companion to `memory/index.md`, not as a replacement for the human-readable routing layer.
 - Bundled product skills should stay limited to bootstrap lifecycle work; shared day-to-day memory workflows should ship as checked-in skills under `memory/skills/`, with repo-specific sibling skills added there when needed.
 - Temporary bootstrap lifecycle completion can live in a bootstrap-managed `memory/bootstrap/` workspace, which should be removed after install or upgrade work is complete.
+- Conservative bootstrap removal should use a real CLI uninstall path, with any remaining repo-local memory content handled as manual review rather than blind deletion.
 
 ## Last confirmed
 
-2026-03-19 during temporary bootstrap workspace rollout
+2026-03-19 during bootstrap uninstall rollout

@@ -4,7 +4,7 @@ requires-python = ">=3.11"
 
 [[package]]
 name = "agentic-memory-bootstrap"
-version = "0.2.7"
+version = "0.2.8"
 source = { editable = "." }
 
 [package.dev-dependencies]

@@ -17,6 +17,8 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
   - leave `task-context.md` minimal when there is no clear active work worth preserving
 - `bootstrap-upgrade`
   - upgrade an installed bootstrap safely without flattening local customisation
+- `bootstrap-uninstall`
+  - finish bootstrap removal conservatively after the CLI removes safe bootstrap-managed files
 
 Day-to-day memory skills are shipped as checked-in repo skills under `memory/skills/` in the bootstrap payload.
 
@@ -27,6 +29,7 @@ If your runtime does not auto-discover packaged skills, install them manually wi
 - install `skills/bootstrap-adoption/`
 - install `skills/bootstrap-populate/`
 - install `skills/bootstrap-upgrade/`
+- install `skills/bootstrap-uninstall/`
 
 ## Fallback install from a local clone
 
