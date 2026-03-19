@@ -195,6 +195,23 @@ def test_upgrade_replaces_shared_files_without_todo_manual_review(tmp_path: Path
     )
 
 
+def test_doctor_reports_customised_seed_notes_as_expected_customisation(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+    note_path = target / "memory" / "current" / "project-state.md"
+    note_path.write_text("# Project State\n\nlocalised\n", encoding="utf-8")
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.path == note_path
+        and action.kind == "customised"
+        and action.category == "customisation-present"
+        for action in result.actions
+    )
+
+
 def test_list_payload_files_excludes_agent_work_templates_and_gitignore_append(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     target.mkdir()

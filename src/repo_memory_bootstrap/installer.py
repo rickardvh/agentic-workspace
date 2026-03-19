@@ -1259,6 +1259,16 @@ def _plan_existing_file_for_upgrade(
                 source=str(entry.relative_path),
                 detail=detail,
             )
+        elif doctor_mode:
+            result.add(
+                "customised",
+                destination,
+                "starter note differs from payload; this is expected if the repository has localised the seed note",
+                role=entry.role,
+                safety="safe",
+                source=str(entry.relative_path),
+                category="customisation-present",
+            )
         else:
             result.add(
                 "manual review",
@@ -1590,6 +1600,8 @@ def _has_placeholders(text: str) -> bool:
 def _infer_action_category(*, kind: str, path: Path, detail: str, role: str, safety: str) -> str:
     detail_lower = detail.lower()
     path_str = path.as_posix()
+    if kind == "customised":
+        return "customisation-present"
     if "placeholder" in detail_lower:
         return "placeholder-review"
     if any(path_str.endswith(current_path.as_posix()) for current_path in CURRENT_MEMORY_BASELINE):
