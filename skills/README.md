@@ -4,6 +4,8 @@ This directory contains the product's bundled bootstrap-lifecycle skills.
 
 These skills are not part of the mandatory bootstrap payload, but they are part of the product distribution. Runtimes that support packaged skill discovery should be able to use them without a second installation step.
 
+If the bundled skill is not already visible, run the bootstrap CLI with `uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap ...` or `pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap ...`.
+
 For maintainers of this repository, `skills/` is the canonical source of truth. Any bundled copy inside an installed package is only a runtime copy for explicit packaging or install-path testing and may be stale until the package is reinstalled.
 
 ## Available skills

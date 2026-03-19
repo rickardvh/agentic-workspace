@@ -4,213 +4,114 @@ Small CLI for adding durable repository memory to an existing repo.
 
 Requires Python 3.11 or newer.
 
-## What It Is
+## What It Does
 
-`agentic-memory-bootstrap` installs a small checked-in memory system for agent-assisted work.
+`agentic-memory-bootstrap` adds a small checked-in memory system for agent-assisted work:
 
-It gives a repo:
+- `AGENTS.md` for the repo-local agent contract
+- `memory/` for durable notes
+- `memory/current/` for lightweight overview and optional current-work context
+- `memory/skills/` for checked-in core memory skills
 
-- local repo-specific agent instructions in `AGENTS.md`
-- shared workflow rules in `memory/system/WORKFLOW.md`
-- shared skill-boundary guidance in `memory/system/SKILLS.md`
-- optional machine-readable note metadata in `memory/manifest.toml`
-- durable technical notes in `memory/`
-- checked-in core memory skills in `memory/skills/`
-- a lightweight human-readable overview in `memory/current/project-state.md`
-- an optional checked-in current-task compression note in `memory/current/task-context.md`
-
-The goal is to make work easier to continue across sessions and contributors without turning the repo into a heavy process system.
-
-## Core Model
-
-Use the layers like this:
-
-- checked-in files = durable shared knowledge and lightweight shared context
-- skills = repeatable operations on that knowledge
-- built-in agent planning = short-horizon execution
-- external task system = task tracking
-
-This tool is memory-only and task-system agnostic.
-
-If something is a durable fact about the repo, store it in files.  
-If something is a repeatable workflow over those files, make it a skill.
-
-## What It Is Not
-
-This tool does not try to be:
-
-- a replacement for product docs, architecture docs, or contribution guides
-- a project-management system
-- a knowledge base that stores every implementation detail forever
-- a destructive scaffolder that overwrites heavily customised local files by default
-- an agent runtime or orchestration framework
+Install and upgrade flows also create a temporary `memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace.
 
 ## Install
 
-Pick the install method that matches your toolchain.
+### Agent workflow
 
-From a local clone:
+Print a ready-to-paste prompt:
 
 ```bash
-# uv users
-uv tool install --from . agentic-memory-bootstrap
-
-# pipx users
-pipx install .
-
-# pip users
-python -m pip install .
+uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt install --target /path/to/repo
+uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
+pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt install --target /path/to/repo
+pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
 ```
 
-From the Git repository URL:
+Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. The prompt runs the CLI, then hands off to the local skills under `/path/to/repo/memory/bootstrap/skills`, and finishes with cleanup.
+
+### Manual alternative
+
+Install the tool:
 
 ```bash
-# uv users
 uv tool install --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap
-
-# pipx users
 pipx install git+https://github.com/Tenfifty/agentic-memory
-
-# pip users
 python -m pip install git+https://github.com/Tenfifty/agentic-memory
 ```
 
-## First Use
-
-After installation:
+Then run:
 
 ```bash
-agentic-memory-bootstrap --help
-```
-
-Typical first commands:
-
-```bash
-# install into a repo
-agentic-memory-bootstrap install --target /path/to/repo
-
-# inspect an existing install
 agentic-memory-bootstrap doctor --target /path/to/repo
-
-# inspect current-memory notes
-agentic-memory-bootstrap current show --target /path/to/repo
+agentic-memory-bootstrap adopt --target /path/to/repo
 ```
 
-## Using With An Agent
+If you are working from a local clone, replace the Git URL with `.`.
 
-In a fresh repo, the simplest path is usually to tell the agent to use the bundled bootstrap skill directly.
+## Upgrade
 
-For first-time adoption, paste:
+### Agent workflow
 
-```text
-Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled bootstrap skills in this session. Then use the `bootstrap-adoption` skill from the installed `agentic-memory-bootstrap` product to adopt this repository conservatively and report any manual-review items. After adoption, offer to use `bootstrap-populate` if new current-memory files were created, and point out the checked-in core memory skills under `memory/skills/`.
-```
-
-For upgrading an existing install, paste:
-
-```text
-Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled bootstrap skills in this session. Then use the `bootstrap-upgrade` skill from the installed `agentic-memory-bootstrap` product to upgrade this repository conservatively and report any manual-review items.
-```
-
-Or have the tool print the prompt for you:
+Print a ready-to-paste prompt:
 
 ```bash
-agentic-memory-bootstrap prompt adopt
-agentic-memory-bootstrap prompt populate
-agentic-memory-bootstrap prompt upgrade
+uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
+pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
+```
+
+That prompt runs the CLI, then hands off to the local skills under `/path/to/repo/memory/bootstrap/skills`, and finishes with cleanup.
+
+### Manual alternative
+
+After installation, run:
+
+```bash
+agentic-memory-bootstrap doctor --target /path/to/repo
+agentic-memory-bootstrap upgrade --dry-run --target /path/to/repo
+agentic-memory-bootstrap upgrade --target /path/to/repo
 ```
 
 ## Skills
 
-Bundled product skills are limited to bootstrap lifecycle work:
-
-- `bootstrap-adoption`
-- `bootstrap-populate`
-- `bootstrap-upgrade`
-
-Day-to-day memory skills are shipped as checked-in repo skills in `memory/skills/`:
+Checked-in core memory skills:
 
 - `memory-hygiene`
 - `memory-capture`
 - `memory-refresh`
 - `memory-router`
 
-Repositories should add their own repo-specific memory skills alongside these checked-in core skills under `memory/skills/` rather than customising the shared core skills in place.
+Temporary bootstrap lifecycle skills:
 
-If your runtime supports packaged skill discovery, these skills should be available from the installed product.
+- `install`
+- `populate`
+- `upgrade`
+- `cleanup`
 
-To inspect the bundled catalogue:
+Add repo-specific day-to-day memory skills as siblings under `memory/skills/`.
 
-```bash
-agentic-memory-bootstrap list-skills
-```
-
-See [skills/README.md](C:/Users/ricka/src/agentic-memory/skills/README.md) for the skill catalogue and fallback installation methods.
-
-## Command reference
+## Command Summary
 
 Main commands:
 
-- `install` installs the bootstrap into the target repository.
-- `init` is an alias for `install`, intended for clean bootstrap cases.
-- `adopt` adds missing bootstrap pieces to an existing repository conservatively.
-- `doctor` reports bootstrap state and recommends remediation.
-- `upgrade` applies the deterministic upgrade flow for an existing install.
-- `status` reports whether bootstrap files are present.
-- `list-files` shows the packaged payload files.
-- `list-skills` shows the bundled bootstrap-lifecycle skills.
-- `prompt adopt|populate|upgrade` prints canonical agent prompts for the bundled bootstrap skills.
-- `current show|check` inspects or validates the current-memory surface.
-- `route` suggests likely relevant memory notes for touched files or explicit surfaces.
-- `sync-memory` suggests which memory notes to review after code changes.
-- `verify-payload` validates the packaged bootstrap contract.
+- `install` or `init` for clean bootstrap application
+- `adopt` for conservative adoption into an existing repo
+- `doctor` to inspect state and recommended remediation
+- `upgrade` for deterministic upgrades
+- `prompt install|adopt|populate|upgrade` to print canonical agent prompts
+- `current show|check` to inspect current-memory notes
+- `route` and `sync-memory` to review likely relevant memory notes
+- `verify-payload` to validate the packaged bootstrap contract
 
 Common arguments:
 
-- `--target <path>` selects the repository to inspect or modify. It defaults to the current directory.
-- `--format text|json` chooses human-readable or structured output. JSON is useful for agent-driven workflows.
-- `--project-name <name>` fills the `<PROJECT_NAME>` placeholder for commands that write or analyse starter files.
-- `--project-purpose <text>` fills `<PROJECT_PURPOSE>` when explicitly provided.
-- `--key-repo-docs <text>` fills `<KEY_REPO_DOCS>` when explicitly provided.
-- `--key-subsystems <text>` fills `<KEY_SUBSYSTEMS>` when explicitly provided.
-- `--primary-build-command <text>` fills `<PRIMARY_BUILD_COMMAND>` when explicitly provided.
-- `--primary-test-command <text>` fills `<PRIMARY_TEST_COMMAND>` when explicitly provided.
-- `--other-key-commands <text>` fills `<OTHER_KEY_COMMANDS>` when explicitly provided.
+- `--target <path>` selects the repo
+- `--format text|json` selects output format
+- `--project-name`, `--project-purpose`, `--key-repo-docs`, `--key-subsystems`, `--primary-build-command`, `--primary-test-command`, `--other-key-commands` fill starter placeholders explicitly
 
-If `memory/manifest.toml` exists, `route` and `sync-memory` use it to match changed files and surfaces against typed note records before falling back to `memory/index.md`.
-
-Examples:
-
-```bash
-# preview an install
-agentic-memory-bootstrap install --dry-run --target /path/to/repo
-
-# apply an upgrade
-agentic-memory-bootstrap upgrade --target /path/to/repo
-
-# route likely relevant memory for changed files
-agentic-memory-bootstrap route --files src/app.py tests/test_app.py --target /path/to/repo
-```
-
-## How `install` behaves
-
-`install` detects whether the target is in clean bootstrap mode or augment mode, copies the base bootstrap files, fills `<PROJECT_NAME>`, applies any explicitly supplied placeholder flags, and leaves other repo-specific placeholders for manual review.
-
-Default behaviour is conservative:
-
-- missing files are copied
-- existing `AGENTS.md` and files under `memory/` are left untouched
-- optional fragments are appended only when the target file already exists and does not already contain the fragment
-
-If adoption creates new current-memory notes, the intended follow-up is to use `bootstrap-populate` so those notes are filled conservatively from existing repo evidence instead of remaining as generic starters.
-
-If root detection from the current working directory is ambiguous, the installer stops and asks for `--target` instead of guessing.
-
-When `--target` points inside another repository or contains nested repositories, the installer warns and treats the explicit target as authoritative instead of guessing or walking upward.
+`install` and `adopt` are conservative by default: missing files are copied, existing `AGENTS.md` and `memory/` files are left alone, and optional fragments are appended only when appropriate.
 
 ## Developing This Repository
-
-This repository is both the installer implementation and the reference copy of the bootstrap payload it distributes.
 
 Useful maintainer commands:
 
@@ -220,6 +121,4 @@ uv run --group dev pytest
 uv run python scripts/check/check_memory_freshness.py
 ```
 
-When changing the installed payload contract or installer behaviour, verify it by running the bootstrap tool against this repo itself, not only by editing source files in place.
-
-When changing the packaged tool in a way users should receive through `uv tool upgrade`, bump the package version in `pyproject.toml`. The package version and the bootstrap payload version are separate and both matter.
+When installer behaviour or the payload changes, verify against this repo itself. When the packaged tool changes, bump the package version in `pyproject.toml`.

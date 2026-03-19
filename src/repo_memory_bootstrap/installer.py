@@ -16,12 +16,24 @@ WORKFLOW_PATH = Path("memory/system/WORKFLOW.md")
 AGENTS_PATH = Path("AGENTS.md")
 MANIFEST_PATH = Path("memory/manifest.toml")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 14
+BOOTSTRAP_VERSION = 15
 BUNDLED_SKILLS_ROOT = Path("skills")
+BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
 
 CURRENT_MEMORY_BASELINE = (
     Path("memory/current/project-state.md"),
     Path("memory/current/task-context.md"),
+)
+BOOTSTRAP_WORKSPACE_FILES = (
+    Path("memory/bootstrap/README.md"),
+    Path("memory/bootstrap/skills/install/SKILL.md"),
+    Path("memory/bootstrap/skills/install/agents/openai.yaml"),
+    Path("memory/bootstrap/skills/populate/SKILL.md"),
+    Path("memory/bootstrap/skills/populate/agents/openai.yaml"),
+    Path("memory/bootstrap/skills/upgrade/SKILL.md"),
+    Path("memory/bootstrap/skills/upgrade/agents/openai.yaml"),
+    Path("memory/bootstrap/skills/cleanup/SKILL.md"),
+    Path("memory/bootstrap/skills/cleanup/agents/openai.yaml"),
 )
 CORE_PAYLOAD_SKILL_FILES = (
     Path("memory/skills/README.md"),
@@ -48,6 +60,7 @@ PAYLOAD_REQUIRED_FILES = (
     Path("memory/mistakes/recurring-failures.md"),
     Path("memory/decisions/README.md"),
     AUDIT_SCRIPT_PATH,
+    *BOOTSTRAP_WORKSPACE_FILES,
     *CORE_PAYLOAD_SKILL_FILES,
 )
 FORBIDDEN_PAYLOAD_FILES = (
@@ -360,6 +373,7 @@ def adopt_bootstrap(
         apply=not dry_run,
         apply_local_entrypoint=apply_local_entrypoint,
         force=False,
+        include_bootstrap_workspace=True,
     )
     _plan_optional_appends(source_root, target_root, result, apply=not dry_run)
     return result
@@ -402,6 +416,7 @@ def upgrade_bootstrap(
         apply=not dry_run,
         apply_local_entrypoint=apply_local_entrypoint,
         force=force,
+        include_bootstrap_workspace=True,
     )
     _plan_optional_appends(source_root, target_root, result, apply=not dry_run)
     return result
@@ -412,7 +427,7 @@ def collect_status(target: str | Path | None = None) -> InstallResult:
     result = _new_result(target_root, dry_run=False, message="Status report")
     _record_repo_context_warnings(target_root, result)
 
-    for entry in _payload_entries(payload_root()):
+    for entry in _payload_entries(payload_root(), include_bootstrap_workspace=False):
         destination = target_root / entry.relative_path
         if destination.exists():
             result.add("present", destination, "file exists", role=entry.role, safety="safe", source=str(entry.relative_path))
@@ -457,6 +472,7 @@ def doctor_bootstrap(
         apply=False,
         apply_local_entrypoint=False,
         force=False,
+        include_bootstrap_workspace=False,
     )
     _plan_optional_appends(source_root, target_root, result, apply=False, status_only=True)
     return result
@@ -888,7 +904,7 @@ def _new_result(target_root: Path, *, dry_run: bool, message: str) -> InstallRes
     return result
 
 
-def _payload_entries(source_root: Path) -> list[PayloadEntry]:
+def _payload_entries(source_root: Path, *, include_bootstrap_workspace: bool = True) -> list[PayloadEntry]:
     entries: list[PayloadEntry] = []
     file_roots = [AGENTS_PATH, AUDIT_SCRIPT_PATH, Path("memory")]
     for relative_root in file_roots:
@@ -911,6 +927,8 @@ def _payload_entries(source_root: Path) -> list[PayloadEntry]:
             if child.is_dir():
                 continue
             relative_path = child.relative_to(source_root)
+            if not include_bootstrap_workspace and relative_path.as_posix().startswith("memory/bootstrap/"):
+                continue
             role = _classify_role(relative_path)
             entries.append(
                 PayloadEntry(
@@ -931,6 +949,8 @@ def _classify_role(relative_path: Path) -> str:
     if relative_path == AUDIT_SCRIPT_PATH:
         return "shared-replaceable"
     if path_str.startswith("memory/system/"):
+        return "shared-replaceable"
+    if path_str.startswith("memory/bootstrap/"):
         return "shared-replaceable"
     if path_str.startswith("memory/skills/"):
         return "shared-replaceable"
@@ -971,8 +991,9 @@ def _plan_from_entries(
     apply: bool,
     apply_local_entrypoint: bool,
     force: bool,
+    include_bootstrap_workspace: bool,
 ) -> None:
-    for entry in _payload_entries(source_root):
+    for entry in _payload_entries(source_root, include_bootstrap_workspace=include_bootstrap_workspace):
         destination = target_root / entry.relative_path
         rendered = _render_text(entry.source_path, substitutions)
         existing = destination.read_text(encoding="utf-8") if destination.exists() else None

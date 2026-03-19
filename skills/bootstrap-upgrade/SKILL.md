@@ -34,6 +34,8 @@ It upgrades the checked-in memory scaffolding; it does not become the storage la
    - run the memory freshness audit when available
    - review the final diff for accidental duplicate appends or local-doc drift
 
+When the packaged bootstrap skill is not already visible in the runtime, use the no-install CLI path with `uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap ...` or `pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap ...`.
+
 ## Guardrails
 
 - Never assume a shared file should replace a repo-local file with active customisation.

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 
 from repo_memory_bootstrap.installer import (
+    BOOTSTRAP_WORKSPACE_ROOT,
     RepoDetectionError,
     adopt_bootstrap,
     check_current_memory,
@@ -19,6 +20,8 @@ from repo_memory_bootstrap.installer import (
     upgrade_bootstrap,
     verify_payload,
 )
+
+GIT_REPO_URL = "git+https://github.com/Tenfifty/agentic-memory"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -72,8 +75,10 @@ def build_parser() -> argparse.ArgumentParser:
     list_skills_parser = subparsers.add_parser("list-skills", help="List bundled bootstrap-lifecycle skills.")
     _add_format_argument(list_skills_parser)
 
-    prompt_parser = subparsers.add_parser("prompt", help="Print a canonical agent prompt for adoption, populate, or upgrade.")
+    prompt_parser = subparsers.add_parser("prompt", help="Print a canonical agent prompt for install, adopt, populate, or upgrade.")
     prompt_subparsers = prompt_parser.add_subparsers(dest="prompt_command", required=True)
+    prompt_install_parser = prompt_subparsers.add_parser("install", help="Print the canonical install prompt.")
+    _add_target_arguments(prompt_install_parser)
     prompt_adopt_parser = prompt_subparsers.add_parser("adopt", help="Print the canonical adoption prompt.")
     _add_target_arguments(prompt_adopt_parser)
     prompt_populate_parser = prompt_subparsers.add_parser("populate", help="Print the canonical populate prompt.")
@@ -296,14 +301,16 @@ def _print_install_summary(result) -> None:
     counts = result.counts()
     summary = ", ".join(f"{kind}={count}" for kind, count in sorted(counts.items()))
     print(f"Summary: {summary}")
+    bootstrap_skills_path = result.target_root / BOOTSTRAP_WORKSPACE_ROOT / "skills"
     print("Next steps:")
     print("- Review repository-specific details in AGENTS.md and the current-memory notes.")
+    print(f"- Use the temporary bootstrap skills under {bootstrap_skills_path} to finish install or upgrade review, then remove memory/bootstrap/ when that work is complete.")
     print("- Review the checked-in core memory skills under memory/skills/ and add repo-specific sibling skills there when a local memory workflow is worth reusing.")
     print("- Keep memory/current/project-state.md as a short overview note, not a task list.")
     print("- Populate memory/current/task-context.md only when active work would benefit from a short checked-in continuation note.")
     print("- Confirm the repo's chosen task system separately; this bootstrap does not install one.")
     if _created_current_memory_notes(result):
-        print("- Recommended next step: run `agentic-memory-bootstrap prompt populate --target <repo>` and paste the printed prompt into the agent to fill the new current-memory notes conservatively.")
+        print(f"- If current-memory files were created, use the `populate` skill under {bootstrap_skills_path} to fill them conservatively before cleanup.")
     print("- Run agentic-memory-bootstrap doctor --target <repo> before upgrading an older install.")
     print("- Run python scripts/check/check_memory_freshness.py after customising memory notes.")
 
@@ -323,25 +330,55 @@ def _created_current_memory_notes(result) -> bool:
 
 
 def _build_agent_prompt(command: str, *, target: str | None) -> str:
-    target_clause = ""
-    if target:
-        target_clause = f" at {target}"
+    target_root = target or "/path/to/repo"
+    runner = _git_runner_command()
+    pipx_runner = _pipx_git_runner_command()
+    target_args = _target_args(target)
+    bootstrap_skills = _bootstrap_skills_path(target)
 
+    if command == "install":
+        return (
+            f"Run `{runner} init{target_args}` or `{pipx_runner} init{target_args}`. "
+            f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
+            "If new current-memory files were created, use `populate` from the same path before cleanup. "
+            f"When installation is complete, use `cleanup` at `{bootstrap_skills}` to remove the temporary bootstrap workspace and point out the checked-in core memory skills under `{target_root}/memory/skills`."
+        )
     if command == "adopt":
         return (
-            "Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled bootstrap skills in this session. "
-            f"Then use the `bootstrap-adoption` skill from the installed `agentic-memory-bootstrap` product to adopt the repository{target_clause} conservatively and report any manual-review items. "
-            "After adoption, offer to use the `bootstrap-populate` skill to populate any new current-memory files conservatively from existing repo docs and visible repo state, and point out the checked-in core memory skills under `memory/skills/`."
+            f"Run `{runner} adopt{target_args}` or `{pipx_runner} adopt{target_args}`. "
+            f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
+            "If new current-memory files were created, use `populate` from the same path before cleanup. "
+            f"When installation is complete, use `cleanup` at `{bootstrap_skills}` to remove the temporary bootstrap workspace and point out the checked-in core memory skills under `{target_root}/memory/skills`."
         )
     if command == "populate":
         return (
-            "Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled bootstrap skills in this session. "
-            f"Then use the `bootstrap-populate` skill from the installed `agentic-memory-bootstrap` product to populate the current-memory notes for the repository{target_clause} conservatively from existing repo docs and visible repo state. "
-            "Populate `memory/current/task-context.md` only when there is clearly active work worth preserving across sessions, and remind the agent that repo-specific memory workflows should be added as sibling skills under `memory/skills/`."
+            f"Run `{runner} current show{target_args}` or `{pipx_runner} current show{target_args}`. "
+            f"Next, use the `populate` skill at `{bootstrap_skills}` to fill the current-memory notes conservatively from existing repo docs and visible repo state. "
+            "Populate `memory/current/task-context.md` only when there is clearly active work worth preserving across sessions."
         )
     if command == "upgrade":
         return (
-            "Run `agentic-memory-bootstrap list-skills` if you do not already see the bundled bootstrap skills in this session. "
-            f"Then use the `bootstrap-upgrade` skill from the installed `agentic-memory-bootstrap` product to upgrade the repository{target_clause} conservatively and report any manual-review items."
+            f"Run `{runner} upgrade{target_args}` or `{pipx_runner} upgrade{target_args}`. "
+            f"Next, use the `upgrade` skill at `{bootstrap_skills}` to finish the upgrade review conservatively. "
+            f"When the upgrade is complete, use `cleanup` at `{bootstrap_skills}` to remove the temporary bootstrap workspace."
         )
     raise ValueError(f"Unknown prompt command: {command}")
+
+
+def _git_runner_command() -> str:
+    return f"uvx --from {GIT_REPO_URL} agentic-memory-bootstrap"
+
+
+def _pipx_git_runner_command() -> str:
+    return f"pipx run --spec {GIT_REPO_URL} agentic-memory-bootstrap"
+
+
+def _target_args(target: str | None) -> str:
+    if not target:
+        return ""
+    return f" --target {target}"
+
+
+def _bootstrap_skills_path(target: str | None) -> str:
+    target_root = target or "/path/to/repo"
+    return f"{target_root}/{BOOTSTRAP_WORKSPACE_ROOT.as_posix()}/skills"

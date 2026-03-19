@@ -22,6 +22,8 @@ def test_payload_entries_do_not_include_todo_stub() -> None:
     assert any(entry.relative_path == Path("memory/current/task-context.md") for entry in entries)
     assert any(entry.relative_path == Path("memory/manifest.toml") for entry in entries)
     assert any(entry.relative_path == Path("memory/system/SKILLS.md") for entry in entries)
+    assert any(entry.relative_path == Path("memory/bootstrap/README.md") for entry in entries)
+    assert any(entry.relative_path == Path("memory/bootstrap/skills/install/SKILL.md") for entry in entries)
     assert any(entry.relative_path == Path("memory/skills/memory-router/SKILL.md") for entry in entries)
 
 
@@ -216,6 +218,7 @@ def test_install_dry_run_includes_current_memory_baseline(tmp_path: Path) -> Non
 
     assert "memory/current/project-state.md" in planned_copies
     assert "memory/current/task-context.md" in planned_copies
+    assert "memory/bootstrap/README.md" in planned_copies
     assert "memory/current/active-decisions.md" not in planned_copies
 
 
@@ -475,6 +478,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
 
     current_args = parser.parse_args(["current", "check", "--target", "."])
     list_skills_args = parser.parse_args(["list-skills", "--format", "json"])
+    prompt_install_args = parser.parse_args(["prompt", "install", "--target", "C:/repo"])
     prompt_args = parser.parse_args(["prompt", "adopt", "--target", "C:/repo"])
     prompt_populate_args = parser.parse_args(["prompt", "populate", "--target", "C:/repo"])
     route_args = parser.parse_args(["route", "--files", "src/app.py"])
@@ -496,6 +500,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
 
     assert current_args.command == "current"
     assert list_skills_args.command == "list-skills"
+    assert prompt_install_args.prompt_command == "install"
     assert prompt_args.command == "prompt"
     assert prompt_args.prompt_command == "adopt"
     assert prompt_populate_args.prompt_command == "populate"
@@ -505,22 +510,43 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     assert install_args.project_purpose == "purpose"
 
 
-def test_build_agent_prompt_mentions_list_skills_and_target() -> None:
+def test_build_install_prompt_mentions_local_bootstrap_skills_and_target() -> None:
+    prompt = cli._build_agent_prompt("install", target="C:/repo")
+
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap init --target C:/repo" in prompt
+    assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap init --target C:/repo" in prompt
+    assert "`install` skill at `C:/repo/memory/bootstrap/skills`" in prompt
+    assert "`cleanup` at `C:/repo/memory/bootstrap/skills`" in prompt
+
+
+def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target() -> None:
     prompt = cli._build_agent_prompt("adopt", target="C:/repo")
 
-    assert "agentic-memory-bootstrap list-skills" in prompt
-    assert "bootstrap-adoption" in prompt
-    assert "bootstrap-populate" in prompt
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap adopt --target C:/repo" in prompt
+    assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap adopt --target C:/repo" in prompt
+    assert "`install` skill at `C:/repo/memory/bootstrap/skills`" in prompt
+    assert "`populate` from the same path" in prompt
+    assert "`cleanup` at `C:/repo/memory/bootstrap/skills`" in prompt
     assert "C:/repo" in prompt
 
 
 def test_build_populate_prompt_mentions_task_context_heuristic() -> None:
     prompt = cli._build_agent_prompt("populate", target="C:/repo")
 
-    assert "agentic-memory-bootstrap list-skills" in prompt
-    assert "bootstrap-populate" in prompt
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap current show --target C:/repo" in prompt
+    assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap current show --target C:/repo" in prompt
+    assert "`populate` skill at `C:/repo/memory/bootstrap/skills`" in prompt
     assert "task-context.md" in prompt
     assert "C:/repo" in prompt
+
+
+def test_build_upgrade_prompt_mentions_local_bootstrap_skills() -> None:
+    prompt = cli._build_agent_prompt("upgrade", target="C:/repo")
+
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target C:/repo" in prompt
+    assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target C:/repo" in prompt
+    assert "`upgrade` skill at `C:/repo/memory/bootstrap/skills`" in prompt
+    assert "`cleanup` at `C:/repo/memory/bootstrap/skills`" in prompt
 
 
 def test_install_summary_mentions_populate_next_step_when_current_notes_created(capsys, tmp_path: Path) -> None:
@@ -531,7 +557,8 @@ def test_install_summary_mentions_populate_next_step_when_current_notes_created(
     cli._print_install_summary(result)
 
     output = capsys.readouterr().out
-    assert "prompt populate" in output
+    assert "bootstrap" in output
+    assert "`populate` skill" in output
 
 
 def test_install_summary_skips_populate_next_step_when_no_current_notes_created(capsys, tmp_path: Path) -> None:
@@ -546,7 +573,7 @@ def test_install_summary_skips_populate_next_step_when_no_current_notes_created(
     cli._print_install_summary(result)
 
     output = capsys.readouterr().out
-    assert "prompt populate" not in output
+    assert "`populate` skill" not in output
 
 
 def test_current_view_json_shape(tmp_path: Path) -> None:

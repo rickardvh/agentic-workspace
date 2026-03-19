@@ -9,10 +9,11 @@ This document defines the boundary between checked-in memory, checked-in repo sk
 Use three layers inside a repo:
 
 - checked-in files = durable shared knowledge and lightweight shared context
+- temporary bootstrap workspace under `memory/bootstrap/` = bootstrap-managed lifecycle workspace during install or upgrade
 - checked-in repo skills under `memory/skills/` = repo-visible repeatable procedures over those files
 - bundled product skills = bootstrap lifecycle help such as adoption, populate, and upgrade
 
-The bootstrap contract remains the always-on minimal file structure that keeps the system understandable even without skills.
+The bootstrap contract remains the always-on minimal file structure that keeps the system understandable even without skills. `memory/bootstrap/` is temporary operator workspace, not a durable knowledge surface.
 
 ## Keep in checked-in docs
 
@@ -65,6 +66,15 @@ Good repo-specific fits:
 - architecture-note maintenance for local subsystems
 
 Keep repo-specific skills small, procedural, and explicitly grounded in checked-in memory.
+
+## Temporary bootstrap workspace
+
+The payload may create a temporary bootstrap workspace under `memory/bootstrap/` during install or upgrade.
+
+- use it for bootstrap lifecycle completion only
+- do not store durable repo knowledge there
+- do not add repo-specific day-to-day workflows there
+- remove it after bootstrap work is complete
 
 ## Bundled product skills
 
