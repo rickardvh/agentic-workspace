@@ -24,6 +24,9 @@ Do not rely on transient chat context when the same knowledge should exist in ch
 `memory/system/WORKFLOW.md` is a compact policy shim for the shared operating model.
 `memory/system/SKILLS.md` defines how checked-in `memory/skills/` and bundled bootstrap skills should coexist.
 
+For day-to-day memory work, use the checked-in skills under `memory/skills/` as the shared repo-local building blocks.
+If a repeatable repo-specific memory procedure is needed, add a new sibling skill under `memory/skills/` instead of editing the shared core skills in place.
+
 For this repo, prefer command-targeted checks like `agentic-memory-bootstrap current`, `route`, `sync-memory`, `doctor`, and `verify-payload` when they reduce file reading.
 
 ## Repo scope
