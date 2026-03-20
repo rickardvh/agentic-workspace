@@ -56,6 +56,7 @@ Examples:
 ## Verification
 
 - <How to confirm the procedure worked>
+- Optional: add a short expected-state checklist here when production verification matters.
 
 ## Verified against
 

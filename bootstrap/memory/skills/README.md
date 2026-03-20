@@ -15,6 +15,7 @@ When a repository needs a local memory workflow beyond these, add a new sibling 
 
 Keep repo-specific skills procedural and concise. Put durable repo facts in `/memory`, then have the skill operate on those files.
 Only put memory-facing skills here. General non-memory skills belong elsewhere.
+When both a checked-in repo skill and a runtime-local mirrored copy exist, treat the checked-in copy as authoritative.
 
 Ownership boundary:
 

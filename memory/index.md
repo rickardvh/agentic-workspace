@@ -52,6 +52,13 @@ Delete unused routing examples once the repository has concrete notes.
 - Load `memory/current/project-state.md` or `memory/current/task-context.md` only when they will reduce re-orientation cost for the current task.
 - Use touched files, modules, commands, or surfaces to decide which notes to load first.
 
+## Note type split
+
+- `domains/` = orientation notes about subsystem behaviour, boundaries, and traps.
+- `decisions/` = longer-lived rationale or trade-offs that are still worth remembering but are no longer current-orientation notes.
+- `runbooks/` = repeatable operational procedures, recovery steps, and verification sequences.
+- `current/` = lightweight current overview and optional current-task compression, not historical records.
+
 ## Memory admission rule
 
 Only store information in `/memory` if it is likely to matter again.
@@ -62,6 +69,9 @@ Good candidates:
 - invariants or contracts
 - durable runbooks that should remain visible in git
 - subsystem boundaries that are easy to misunderstand
+
+High-value memory tends to capture boundaries, invariants, operator sequences, recurring failures, or routing hints that are expensive to reconstruct.
+Low-value memory tends to restate code that is easy to inspect directly or to preserve one-off task details.
 
 Do not add memory for:
 
@@ -87,8 +97,10 @@ Use short references instead.
 ## Pruning rule
 
 - Prefer editing an existing note over creating a new one.
+- Update a note when its primary home is still correct and the content is still useful.
 - Merge or delete near-duplicates.
 - Remove or deprecate notes that are no longer true.
+- If a note is mostly repeated procedure, keep the durable fact in files and move the procedure into a skill.
 - Mark uncertain notes `Needs verification` instead of guessing.
 
 ## Memory size limits
@@ -96,6 +108,29 @@ Use short references instead.
 Memory files should normally stay under ~200 lines.
 
 Large memory files degrade selective loading and retrieval quality.
+
+## Token-efficiency rule
+
+- Memory is a net token saver when it prevents repeated rediscovery of boundaries, invariants, operator steps, or routing context.
+- Memory is likely overhead when it merely restates code, repeats task chatter, or forces broad re-reading.
+- Keep the working set small enough that reading the notes is cheaper than re-deriving the same facts.
+
+## Small routing examples
+
+Example: API contract work
+
+- `memory/domains/api.md`
+- `memory/invariants/response-contracts.md`
+
+Example: deployment incident
+
+- `memory/runbooks/deploy-recovery.md`
+- `memory/domains/runtime.md`
+
+Example: architecture trade-off review
+
+- `memory/current/active-decisions.md`
+- `memory/decisions/README.md`
 
 ## Index compactness rule
 

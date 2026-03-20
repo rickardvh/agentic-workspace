@@ -38,6 +38,7 @@ Examples:
 ## Rule or lesson
 
 - <Core rule or durable lesson>
+- Prefer durable orientation or boundary knowledge here; move procedure-heavy repeated steps into a skill or runbook as appropriate.
 
 ## How to recognise it
 

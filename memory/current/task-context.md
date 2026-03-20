@@ -70,6 +70,7 @@ Active
 - Prompt output should choose one no-install runner command instead of printing both `uvx` and `pipx run` together.
 - File ownership and skill-surface boundaries have been tightened; the remaining expectation is that all bootstrap and memory-facing docs keep those statements aligned.
 - The top-level bundled `skills/` tree should contain only bootstrap lifecycle skills plus its catalogue README; empty or memory-skill directories there are drift.
+- The current doc pass is implementing the temporary TODO backlog by folding the highest-value items into shared docs and examples rather than adding new mandatory files.
 
 ## Failure signals
 
@@ -82,7 +83,8 @@ Active
 - Run pytest and the freshness audit.
 - Run doctor, upgrade, and verify-payload against this repo.
 - Confirm the installed repo reports the new payload version, that `verify-payload` catches version drift, and that the installed `memory/` tree only differs from payload where the contract allows.
+- Confirm the new workflow, index, and README guidance stays compact enough to preserve the small default working set.
 
 ## Last confirmed
 
-2026-03-19 during ownership-boundary hardening, follow-up boundary sweep, and payload-structure cleanup
+2026-03-20 during core-guidance hardening and optional-pattern documentation

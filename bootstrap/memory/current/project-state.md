@@ -38,7 +38,8 @@ Active
 ## High-level notes
 
 - Replace this starter text with a short overview drawn from existing repo docs and visible repo state.
-- Keep this note human-readable and concise; it is not a task list.
+- Keep this note human-readable and concise; it is not a task list or changelog.
+- A good shape is: current focus, recent meaningful progress, blockers, then a few high-level notes.
 
 ## Failure signals
 

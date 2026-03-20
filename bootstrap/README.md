@@ -24,6 +24,7 @@ Temporary bootstrap workspace files are part of the payload so install and upgra
 The CLI around this payload can also inspect the current-memory surface, suggest relevant notes for touched files, use manifest-aware routing when `memory/manifest.toml` is present, and verify payload consistency for maintainers and agent workflows.
 
 Treat the packaged memory notes as a starting cache of reusable operating knowledge, not an archive to expand without limit.
+Use them when they save rediscovery cost; avoid adding notes that merely restate code or transient task chatter.
 
 When maintaining this repository, treat `bootstrap/` as the source of truth for installed files. The packaged wheel payload is built from this directory.
 
@@ -72,6 +73,12 @@ Delete unused routing examples once the target repository has concrete notes.
 This bootstrap is task-system agnostic. `/memory` owns durable technical knowledge, `memory/current/project-state.md` is the overview note, `memory/current/task-context.md` is optional checked-in current-work compression, `memory/skills/` holds the checked-in core memory skills that repos can extend with their own sibling memory skills, and `memory/bootstrap/` is a temporary bootstrap workspace for lifecycle completion only.
 
 Bundled product skills should stay limited to bootstrap lifecycle operations. Repo-local memory procedures should live in checked-in `memory/skills/`. General non-memory skills should not.
+
+`memory/current/project-state.md` should stay summary-shaped: current focus, recent meaningful progress, blockers, and a few high-level notes are usually enough. If it starts reading like a changelog or backlog, compress it.
+
+Small routing layers work better than summary-heavy indexes. A good `memory/index.md` points to a few likely-relevant notes rather than trying to restate them.
+
+Optional repo pattern only: keep short-horizon task execution in the repo's chosen task system, keep long-horizon roadmap or epic planning separate, and use checked-in current-context notes only for concise re-orientation.
 
 `memory/system/VERSION.md` is the machine-readable version marker used for deterministic upgrades.
 

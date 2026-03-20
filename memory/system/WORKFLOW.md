@@ -26,6 +26,13 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Prefer editing, merging, or removing existing notes over accumulating near-duplicates.
 - When referenced behaviour changes, update the note, mark it `Needs verification`, or remove it in the same change.
 
+## Note maintenance rule
+
+- Update a note when its primary home is still correct and the guidance is still valuable.
+- Prune a note when it is obsolete, duplicated, low-value, or easier to recover directly from code or tooling.
+- Move procedure-heavy prose into a skill when the durable fact should stay in files but the repeated workflow should become optional execution guidance.
+- Prefer one primary home for the durable fact and a short cross-reference elsewhere rather than parallel note copies.
+
 ## Metadata
 
 - Keep strong note metadata so routing and future skills remain reliable.
@@ -38,12 +45,15 @@ Keep it concise, repo-agnostic, and non-procedural.
 - `memory/current/project-state.md` is a short overview only.
 - `memory/current/task-context.md` is short current-context compression only.
 - Neither file should become a task list, detailed plan, journal, or duplicated memory summary.
+- A good `project-state.md` normally covers current focus, recent meaningful progress, blockers, and a few high-level notes.
+- Keep `project-state.md` summary-shaped rather than chronological; if it starts reading like a changelog, compress it.
 
 ## Ownership boundary
 
 - `memory/system/` is product-managed shared guidance; treat it as upgrade-replaceable unless the repository is intentionally changing the shared bootstrap contract itself.
 - The shipped core skills under `memory/skills/` are also product-managed and may be replaced on upgrade.
 - Other checked-in `/memory` notes are repo-owned working knowledge and are expected to diverge from the starter payload over time.
+- Runtime-local or user-local mirrored skill copies are cache-only convenience copies, not a durable source of truth.
 - When a repo needs local procedure changes, add a new sibling skill under `memory/skills/` instead of customising the shipped core skills in place.
 - If a local note or skill is meant to survive upgrades unchanged, do not place that repo-specific content in `memory/system/` or in the shipped core skill directories.
 
@@ -52,7 +62,13 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Skills operate on memory; they do not replace it.
 - `memory/skills/` is reserved for skills whose primary purpose is operating on checked-in memory or maintaining the memory system, not for general repo workflows.
 - If prose starts describing a repeatable maintenance, routing, refresh, capture, hygiene, or upgrade workflow, that is usually a skill candidate.
+- Checked-in repo-local skills should take precedence over runtime-local mirrors or cached user copies when both exist.
 - The base memory system must remain understandable without skills.
+
+## Stale-note pressure
+
+- Review notes not only by age, but also when they become large, frequently touched, cross-domain, or hard to route cleanly.
+- If a note keeps growing through unrelated edits, split it by primary home or move repeated procedure into a skill.
 
 ## Local notes
 

@@ -28,6 +28,8 @@ Use this skill after `agentic-memory-bootstrap upgrade`.
 - Do not flatten repo-local customisation.
 - Treat `memory/bootstrap/` as temporary bootstrap workspace only.
 - Keep repo-specific memory skills under `memory/skills/`; general non-memory skills belong elsewhere.
+- Shared product-managed files are safe replacement candidates; repo-owned notes and checked-in repo-local skills require conservative manual review when customised.
+- Runtime-local mirrored skill copies are cache-only artefacts; align them to checked-in repo skills instead of treating them as the source of truth.
 
 ## Typical outputs
 

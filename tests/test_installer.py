@@ -600,6 +600,31 @@ def test_verify_payload_reports_version_mismatch(tmp_path: Path, monkeypatch) ->
     )
 
 
+def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_guidance() -> None:
+    text = (installer.payload_root() / "memory" / "system" / "WORKFLOW.md").read_text(encoding="utf-8")
+
+    assert "## Note maintenance rule" in text
+    assert "Update a note when its primary home is still correct" in text
+    assert "Checked-in repo-local skills should take precedence" in text
+    assert "## Stale-note pressure" in text
+
+
+def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() -> None:
+    text = (installer.payload_root() / "memory" / "index.md").read_text(encoding="utf-8")
+
+    assert "## Token-efficiency rule" in text
+    assert "Memory is a net token saver" in text
+    assert "## Small routing examples" in text
+    assert "Example: deployment incident" in text
+
+
+def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -> None:
+    text = (installer.payload_root() / "README.md").read_text(encoding="utf-8")
+
+    assert "Optional repo pattern only" in text
+    assert "current focus, recent meaningful progress, blockers" in text
+
+
 def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(monkeypatch) -> None:
     monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     prompt = cli._build_agent_prompt("install", target="C:/repo")

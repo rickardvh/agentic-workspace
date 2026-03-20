@@ -12,6 +12,7 @@ Use three layers inside a repo:
 - temporary bootstrap workspace under `memory/bootstrap/` = bootstrap-managed lifecycle workspace during install or upgrade
 - checked-in repo skills under `memory/skills/` = repo-visible repeatable procedures whose primary purpose is operating on checked-in memory or maintaining the repo's memory system
 - bundled product skills = bootstrap lifecycle help such as adoption, populate, and upgrade
+- runtime-local mirrored skill copies = disposable caches for runtimes that copy or mirror skills locally
 
 The bootstrap contract remains the always-on minimal file structure that keeps the system understandable even without skills. `memory/bootstrap/` is temporary operator workspace, not a durable knowledge surface.
 
@@ -73,8 +74,10 @@ The safe split is:
 
 - shared product-managed skills = the shipped core directories already under `memory/skills/`
 - repo-managed skills = new sibling directories a repository adds under `memory/skills/` for repo-specific memory workflows
+- runtime-local caches = mirrored copies that should follow checked-in skills rather than override them
 
 Upgrades may replace the shared product-managed skill directories, but should not touch added repo-specific sibling skills.
+When both a checked-in repo skill and a runtime-local mirrored copy exist, treat the checked-in repo skill as authoritative.
 
 ## Temporary bootstrap workspace
 

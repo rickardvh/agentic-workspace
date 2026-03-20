@@ -11,3 +11,4 @@ Use this folder for notes such as:
 - data-model or architecture subsystem notes
 
 Keep domain notes concise, operational, and easy to route from touched files.
+Use domain notes for orientation and subsystem boundaries, not for historical rationale or step-by-step operator procedure.

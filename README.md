@@ -111,6 +111,60 @@ Temporary bootstrap lifecycle skills:
 Add repo-specific day-to-day memory skills as siblings under `memory/skills/`.
 Do not put general non-memory skills there.
 
+## Memory Guidance
+
+Use checked-in memory when it saves repeated rediscovery cost:
+
+- good fits: boundaries, invariants, operator procedures, recurring failures, routing hints
+- poor fits: one-off task chatter or code that is easier to inspect directly
+
+Keep the default working set small. Memory is a token saver only when the notes you load are cheaper than rediscovering the same facts from code and docs.
+
+Use note types deliberately:
+
+- `domains/` for subsystem orientation
+- `decisions/` for lasting rationale and trade-offs
+- `runbooks/` for repeatable procedures and verification sequences
+- `current/project-state.md` for a short overview, not a changelog
+- `current/task-context.md` for short active-work compression, not a backlog
+
+Small routing layers work better than summary-heavy indexes. A good routing slice is often only 2-3 note links for the current task surface.
+
+Example routing slices:
+
+- API contract change: `memory/domains/api.md` plus `memory/invariants/response-contracts.md`
+- deployment recovery: `memory/runbooks/deploy-recovery.md` plus `memory/domains/runtime.md`
+- architecture trade-off review: `memory/decisions/README.md` plus the relevant domain note
+
+Compact `project-state.md` shape:
+
+- current focus
+- recent meaningful progress
+- blockers
+- a few high-level notes
+
+If it starts reading like a dated changelog, compress it.
+
+## Optional Repo Patterns
+
+These are recommended patterns, not part of the mandatory bootstrap contract.
+
+Short-horizon task tracking versus long-horizon planning:
+
+- keep the active task board in the repo's chosen task system or TODO surface
+- keep roadmap or epic planning separate so `task-context.md` does not become a backlog
+- promote a roadmap item into active execution only when it has a clear next owner and next action
+
+Operational verification:
+
+- keep the operational procedure in a runbook
+- add a short verification checklist or expected-state section near the procedure when deploy-state confirmation matters
+- keep environment-specific deploy status outside the generic bootstrap payload unless the repo intentionally owns that note
+
+## Future Direction
+
+If skill manifests are added in future, they should only be introduced for concrete tool consumers such as routing, verification, or freshness checks. A new machine-readable surface without an immediate consumer would add contract weight without enough payoff.
+
 ## Command Summary
 
 Main commands:
