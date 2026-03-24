@@ -535,7 +535,7 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
     if command == "upgrade":
         return (
             f"Run `{upgrade_runner} upgrade{target_args}`. "
-            "Then use the packaged `bootstrap-upgrade` skill to determine the installation source automatically and report any conservative manual-review items."
+            "Then use the checked-in `memory-upgrade` skill under `memory/skills/` to run the repo-local upgrade workflow and report any conservative manual-review items."
         )
     if command == "uninstall":
         return (

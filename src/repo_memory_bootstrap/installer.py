@@ -17,7 +17,7 @@ AGENTS_PATH = Path("AGENTS.md")
 MANIFEST_PATH = Path("memory/manifest.toml")
 UPGRADE_SOURCE_PATH = Path("memory/system/UPGRADE-SOURCE.toml")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 28
+BOOTSTRAP_VERSION = 29
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
 
@@ -40,6 +40,8 @@ CORE_PAYLOAD_SKILL_FILES = (
     Path("memory/skills/memory-capture/agents/openai.yaml"),
     Path("memory/skills/memory-hygiene/SKILL.md"),
     Path("memory/skills/memory-hygiene/agents/openai.yaml"),
+    Path("memory/skills/memory-upgrade/SKILL.md"),
+    Path("memory/skills/memory-upgrade/agents/openai.yaml"),
     Path("memory/skills/memory-refresh/SKILL.md"),
     Path("memory/skills/memory-refresh/agents/openai.yaml"),
     Path("memory/skills/memory-router/SKILL.md"),

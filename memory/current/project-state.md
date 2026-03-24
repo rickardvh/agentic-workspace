@@ -38,6 +38,8 @@ Active
 - Repositioned `memory/current/project-state.md` as a compact overview note rather than a planning surface.
 - Tightened the shared workflow guidance so current-state notes stay aggressively summary-shaped instead of ledger-like.
 - Clarified that closed work should only move into durable notes when the detail is still hard to recover from code, docs, or tooling.
+- Added a permanent checked-in `memory-upgrade` core skill under `memory/skills/` as the stable repo-local entrypoint for "upgrade memory".
+- Repositioned bundled `bootstrap-upgrade` as the packaged implementation behind that checked-in entrypoint instead of the only normal upgrade surface.
 
 ## Blockers
 
@@ -50,6 +52,7 @@ Active
 - Current-state notes should stay short: current focus, recent meaningful progress, blockers, and a few high-value notes only.
 - Closed transitions and operational residue belong in durable notes only when they still add hard-to-recover value.
 - `memory/system/WORKFLOW.md` is now a compact policy shim rather than a workflow handbook.
+- Normal upgrade intent should route through the checked-in `memory-upgrade` skill, which stays minimal and stable while the bundled implementation can evolve.
 
 ## Failure signals
 
@@ -74,4 +77,4 @@ Active
 
 ## Last confirmed
 
-2026-03-24 during current-state guidance tightening
+2026-03-24 during current-state guidance tightening and checked-in upgrade-skill hardening

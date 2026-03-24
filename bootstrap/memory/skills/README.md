@@ -6,6 +6,7 @@ The shipped core skills are:
 
 - `memory-hygiene`
 - `memory-capture`
+- `memory-upgrade`
 - `memory-refresh`
 - `memory-router`
 

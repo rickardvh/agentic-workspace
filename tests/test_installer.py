@@ -47,6 +47,10 @@ def test_payload_entries_do_not_include_todo_stub() -> None:
         entry.relative_path == Path("memory/skills/memory-router/SKILL.md")
         for entry in entries
     )
+    assert any(
+        entry.relative_path == Path("memory/skills/memory-upgrade/SKILL.md")
+        for entry in entries
+    )
     assert all(
         entry.relative_path != Path("memory/bootstrap/skills/upgrade/SKILL.md")
         for entry in entries
@@ -963,9 +967,9 @@ def test_build_upgrade_prompt_mentions_local_bootstrap_skills(monkeypatch) -> No
         "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target C:/repo"
         in prompt
     )
-    assert "bootstrap-upgrade" in prompt
+    assert "memory-upgrade" in prompt
     assert "bootstrap-cleanup --target C:/repo" not in prompt
-    assert "determine the installation source automatically" in prompt
+    assert "memory/skills/" in prompt
 
 
 def test_build_upgrade_prompt_uses_local_source_when_recorded(

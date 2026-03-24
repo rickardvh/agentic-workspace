@@ -18,6 +18,7 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
 - `bootstrap-upgrade`
   - upgrade memory for an already bootstrapped repository safely
   - determine the installation source automatically
+  - acts as the packaged implementation behind the checked-in `memory-upgrade` skill
 - `bootstrap-uninstall`
   - finish bootstrap removal conservatively after the CLI removes safe bootstrap-managed files
 

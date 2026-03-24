@@ -32,20 +32,25 @@ Active
 
 ## Current focus
 
-- Reduce routine token overhead by shrinking the always-read doc surface, biasing the local contract toward targeted checks, and keeping the product boundary language unambiguous.
+- Make "upgrade memory" resolve through a permanent checked-in repo-local skill instead of relying on bundled-skill discovery or prompt ceremony.
 
 ## Active surfaces
 
 - `AGENTS.md`
 - `bootstrap/AGENTS.md`
-- `bootstrap/memory/index.md`
-- `bootstrap/memory/system/WORKFLOW.md`
+- `bootstrap/memory/skills/README.md`
+- `bootstrap/memory/system/SKILLS.md`
 - `README.md`
 - `memory/current/project-state.md`
-- `memory/index.md`
-- `memory/system/WORKFLOW.md`
 - `memory/current/task-context.md`
+- `memory/index.md`
+- `memory/skills/README.md`
+- `memory/system/SKILLS.md`
+- `memory/system/VERSION.md`
+- `memory/system/WORKFLOW.md`
 - `src/repo_memory_bootstrap/installer.py`
+- `src/repo_memory_bootstrap/cli.py`
+- `tests/test_installer.py`
 
 ## Key constraints
 
@@ -56,6 +61,7 @@ Active
 - Prefer targeted command output over broad file reads when it materially reduces context cost.
 - Self-hosted verification must exercise the installed tool path against this repo, not just the source files.
 - Package version and bootstrap payload version are separate; Git-based upgrade visibility depends on bumping `pyproject.toml`.
+- The checked-in upgrade skill must stay minimal and invariant; evolving upgrade choreography belongs in the packaged implementation, not in the repo-local entrypoint.
 
 ## Relevant memory
 
@@ -66,11 +72,10 @@ Active
 
 ## Notes
 
-- The upgrade runbook is now obsolete; upgrade guidance should come from the prompt-driven CLI flow plus the permanent packaged `bootstrap-upgrade` skill.
-- Prompt output should choose one no-install runner command instead of printing both `uvx` and `pipx run` together.
-- File ownership and skill-surface boundaries have been tightened; the remaining expectation is that all bootstrap and memory-facing docs keep those statements aligned.
-- The top-level bundled `skills/` tree should contain only bootstrap lifecycle skills plus its catalogue README; empty or memory-skill directories there are drift.
-- The current doc pass is implementing the temporary TODO backlog by folding the highest-value items into shared docs and examples rather than adding new mandatory files.
+- `memory/skills/memory-upgrade/` is now the stable repo-local entrypoint for "upgrade memory".
+- Bundled `skills/bootstrap-upgrade/` remains the packaged implementation surface and can evolve independently.
+- Prompt and README text should steer normal upgrade intent toward the checked-in skill rather than making bundled-skill discovery the primary path.
+- Upgrade should not broaden into generic repo-memory maintenance unless the user explicitly asks for that follow-up.
 
 ## Failure signals
 
@@ -83,8 +88,8 @@ Active
 - Run pytest and the freshness audit.
 - Run doctor, upgrade, and verify-payload against this repo.
 - Confirm the installed repo reports the new payload version, that `verify-payload` catches version drift, and that the installed `memory/` tree only differs from payload where the contract allows.
-- Confirm the new workflow, index, and README guidance stays compact enough to preserve the small default working set.
+- Confirm that `prompt upgrade` now points to the checked-in `memory-upgrade` entrypoint and that the local skill exists in the installed payload.
 
 ## Last confirmed
 
-2026-03-20 during core-guidance hardening and optional-pattern documentation
+2026-03-24 during checked-in upgrade-skill hardening

@@ -13,7 +13,7 @@ Requires Python 3.11 or newer.
 - `memory/current/` for lightweight overview and optional current-work context
 - `memory/skills/` for checked-in core memory skills
 
-Install and adopt flows may create a temporary `memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace. Upgrade now uses the packaged `bootstrap-upgrade` skill and no longer depends on that workspace as part of the primary model.
+Install and adopt flows may create a temporary `memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace. Upgrade should normally route through the checked-in `memory-upgrade` skill and no longer depends on that workspace as part of the primary model.
 
 ## Install
 
@@ -26,7 +26,7 @@ uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstr
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
 ```
 
-Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. Prompt output prefers `uvx` when it is available and otherwise falls back to `pipx run`. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but upgrade is handled by the packaged `bootstrap-upgrade` skill, which reads `memory/system/UPGRADE-SOURCE.toml` and uses the recorded source when present, falling back to the packaged git source when no record exists.
+Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. Prompt output prefers `uvx` when it is available and otherwise falls back to `pipx run`. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but normal upgrades should route through the checked-in `memory-upgrade` skill under `memory/skills/`, which runs the packaged upgrade flow using `memory/system/UPGRADE-SOURCE.toml`.
 
 ### Manual alternative
 
@@ -57,7 +57,7 @@ Print a ready-to-paste prompt:
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
 ```
 
-That prompt prefers `uvx` when it is available and otherwise falls back to `pipx run`. It tells the agent to upgrade memory with the packaged `bootstrap-upgrade` skill, which reads `memory/system/UPGRADE-SOURCE.toml` and uses the recorded source when present, falling back to the packaged git source when no record exists.
+That prompt prefers `uvx` when it is available and otherwise falls back to `pipx run`. It tells the agent to use the checked-in `memory-upgrade` skill, which runs the packaged upgrade flow using `memory/system/UPGRADE-SOURCE.toml`.
 
 ### Manual alternative
 
@@ -98,6 +98,7 @@ Checked-in core memory skills:
 
 - `memory-hygiene`
 - `memory-capture`
+- `memory-upgrade`
 - `memory-refresh`
 - `memory-router`
 

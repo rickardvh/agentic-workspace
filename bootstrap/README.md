@@ -107,7 +107,7 @@ Prefer this flow for existing or older installs:
 3. Apply the minimal-safe upgrade plan.
 4. Use `--apply-local-entrypoint` only when you want the installer to patch `AGENTS.md`.
 
-Upgrade is driven by the packaged `bootstrap-upgrade` skill and the resolved source record in `memory/system/UPGRADE-SOURCE.toml`. Temporary bootstrap workspace files are for install and adopt lifecycle completion, not the primary upgrade path.
+Upgrade is normally triggered through the checked-in `memory-upgrade` skill under `memory/skills/`, which runs the packaged upgrade implementation using the resolved source record in `memory/system/UPGRADE-SOURCE.toml`. Temporary bootstrap workspace files are for install and adopt lifecycle completion, not the primary upgrade path.
 
 Use `agentic-memory-bootstrap list-files` to preview the packaged files that the installer exposes.
 
