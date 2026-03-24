@@ -9,20 +9,21 @@ This is a checked-in core skill shipped with the payload. Keep it minimal and st
 
 Use this skill as the repo-local entrypoint for "upgrade memory".
 
-It should trigger the packaged upgrade flow, not recreate that flow in prose.
+When invoked, run the packaged `agentic-memory-bootstrap upgrade` flow for the current repo and stop there unless the tool reports specific manual-review items.
 
-## Contract
+## Workflow
 
-- run the packaged `agentic-memory-bootstrap upgrade` command for the current repo
-- let the tool resolve the installation source from `memory/system/UPGRADE-SOURCE.toml`
-- report manual-review items only when the tool leaves repo-owned files untouched
-- do not treat upgrade as a general memory-maintenance pass
+1. Run `agentic-memory-bootstrap upgrade --target <repo>` for the current repository.
+2. Let the tool resolve the installation source from `memory/system/UPGRADE-SOURCE.toml`.
+3. Report manual-review items only when the tool leaves repo-owned files untouched.
+4. Verify with the packaged checks that are relevant to the repo.
 
 ## Guardrails
 
 - Do not rewrite repo-owned notes such as `memory/current/project-state.md` or `memory/current/task-context.md` unless the user explicitly asks for that follow-up.
 - Do not broaden the task into package-manager investigation when the repo already has an installed memory scaffold.
 - Preserve repo-local customisation in `AGENTS.md` and other repo-owned files.
+- Do not turn upgrade into a general memory refresh or note-maintenance task.
 
 ## Typical outputs
 

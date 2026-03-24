@@ -963,13 +963,13 @@ def test_build_upgrade_prompt_mentions_local_bootstrap_skills(monkeypatch) -> No
     monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     prompt = cli._build_agent_prompt("upgrade", target="C:/repo")
 
-    assert (
-        "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target C:/repo"
-        in prompt
-    )
+    assert prompt.startswith("Use the checked-in `memory-upgrade` skill")
     assert "memory-upgrade" in prompt
+    assert "C:/repo/memory/skills/" in prompt
+    assert "recorded upgrade source automatically" in prompt
+    assert "packaged upgrade flow for this repo" in prompt
     assert "bootstrap-cleanup --target C:/repo" not in prompt
-    assert "memory/skills/" in prompt
+    assert not prompt.startswith("Run `")
 
 
 def test_build_upgrade_prompt_uses_local_source_when_recorded(
@@ -986,7 +986,9 @@ def test_build_upgrade_prompt_uses_local_source_when_recorded(
 
     prompt = cli._build_agent_prompt("upgrade", target=str(target))
 
-    assert "uvx --from C:/src/agentic-memory agentic-memory-bootstrap upgrade" in prompt
+    assert prompt.startswith("Use the checked-in `memory-upgrade` skill")
+    assert "recorded upgrade source automatically" in prompt
+    assert "packaged upgrade flow for this repo" in prompt
     assert "git+https://github.com/Tenfifty/agentic-memory" not in prompt
 
 
@@ -1008,14 +1010,11 @@ def test_build_prompt_falls_back_to_pipx_when_uvx_is_missing(monkeypatch) -> Non
 
     prompt = cli._build_agent_prompt("upgrade", target="C:/repo")
 
-    assert (
-        "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target C:/repo"
-        in prompt
-    )
-    assert (
-        "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target C:/repo"
-        not in prompt
-    )
+    assert prompt.startswith("Use the checked-in `memory-upgrade` skill")
+    assert "C:/repo/memory/skills/" in prompt
+    assert "recorded upgrade source automatically" in prompt
+    assert "uvx --from" not in prompt
+    assert "pipx run --spec" not in prompt
 
 
 def test_doctor_flags_legacy_upgrade_runbook_for_removal(tmp_path: Path) -> None:

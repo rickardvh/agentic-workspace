@@ -56,6 +56,12 @@ Examples:
 ## Verification
 
 - <How to confirm the procedure worked>
+- Optional: add a short expected-state checklist here when production verification matters.
+
+## Boundary reminder
+
+- Keep the runbook focused on durable facts, entry conditions, symptoms, checks, boundaries, and verification.
+- Move reusable maintenance choreography, refresh cadence, and multi-step workflow prose into a skill instead of expanding the runbook.
 
 ## Verified against
 

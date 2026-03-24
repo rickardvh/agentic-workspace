@@ -57,7 +57,7 @@ Print a ready-to-paste prompt:
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
 ```
 
-That prompt prefers `uvx` when it is available and otherwise falls back to `pipx run`. It tells the agent to use the checked-in `memory-upgrade` skill, which runs the packaged upgrade flow using `memory/system/UPGRADE-SOURCE.toml`.
+That prompt prefers `uvx` when it is available and otherwise falls back to `pipx run`. It tells the agent to use the checked-in `memory-upgrade` skill as the single repo-local upgrade entrypoint; the skill then runs the packaged upgrade flow using `memory/system/UPGRADE-SOURCE.toml`.
 
 ### Manual alternative
 
