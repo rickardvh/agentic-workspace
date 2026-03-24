@@ -60,6 +60,7 @@ Use a repo-specific skill when the behaviour is:
 - too detailed for the core repo contract
 
 If something is a repeatable workflow over checked-in memory files, it is a strong skill candidate.
+If the prose is mostly reusable steps, refresh cadence, or maintenance choreography, it probably belongs in a skill rather than in a runbook or note.
 
 Good repo-specific fits:
 
@@ -97,6 +98,8 @@ Bundled product skills should stay limited to bootstrap lifecycle operations:
 - `bootstrap-upgrade`
 - `bootstrap-uninstall`
 
+Treat `bootstrap-upgrade` as the canonical packaged surface for "upgrade memory".
+It should stay compact, deterministic, and source-aware.
 Do not use bundled product skills as the main place for day-to-day repo memory behaviour.
 
 ## Avoid first

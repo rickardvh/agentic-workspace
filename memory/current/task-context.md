@@ -66,7 +66,7 @@ Active
 
 ## Notes
 
-- The upgrade runbook is now obsolete; upgrade guidance should come from the prompt-driven CLI flow plus the temporary local bootstrap skill.
+- The upgrade runbook is now obsolete; upgrade guidance should come from the prompt-driven CLI flow plus the permanent packaged `bootstrap-upgrade` skill.
 - Prompt output should choose one no-install runner command instead of printing both `uvx` and `pipx run` together.
 - File ownership and skill-surface boundaries have been tightened; the remaining expectation is that all bootstrap and memory-facing docs keep those statements aligned.
 - The top-level bundled `skills/` tree should contain only bootstrap lifecycle skills plus its catalogue README; empty or memory-skill directories there are drift.

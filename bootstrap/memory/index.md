@@ -9,36 +9,20 @@
 - Use checked-in files for durable facts and lightweight shared context.
 - Use skills for repeatable workflow operations on that knowledge.
 
+## Common task bundles
+
+- current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` when needed
+- live decision review: `memory/current/active-decisions.md` plus `memory/decisions/README.md`
+- runtime or deployment change: `memory/domains/<runtime-or-deployment-note>.md` plus `memory/runbooks/<relevant-operator-runbook>.md`
+- API or interface change: `memory/domains/<api-or-interface-note>.md` plus `memory/invariants/<response-or-contract-note>.md`
+- retrieval or search change: `memory/domains/<retrieval-or-search-note>.md` plus `memory/invariants/<retrieval-contract-note>.md` plus `memory/mistakes/recurring-failures.md`
+- tests or validation work: `memory/domains/<testing-or-validation-note>.md` plus `memory/mistakes/recurring-failures.md`
+- architecture or data-model work: `memory/domains/<data-model-or-architecture-note>.md` plus `memory/invariants/<relevant-invariant-note>.md` plus `memory/decisions/README.md`
+
 ## Task routing
 
-### If touching runtime or deployment
-
-- `memory/domains/<runtime-or-deployment-note>.md`
-- `memory/runbooks/<relevant-operator-runbook>.md`
-
-### If touching API contracts or tool behaviour
-
-- `memory/domains/<api-or-interface-note>.md`
-- `memory/invariants/<response-or-contract-note>.md`
-
-### If touching retrieval or search
-
-- `memory/domains/<retrieval-or-search-note>.md`
-- `memory/invariants/<retrieval-contract-note>.md`
-- `memory/mistakes/recurring-failures.md`
-
-### If touching tests or validation
-
-- `memory/domains/<testing-or-validation-note>.md`
-- `memory/mistakes/recurring-failures.md`
-
-### If touching data model or architecture
-
-- `memory/domains/<data-model-or-architecture-note>.md`
-- `memory/invariants/<relevant-invariant-note>.md`
-- `memory/decisions/README.md`
-
 Delete unused routing examples once the repository has concrete notes.
+Prefer the smallest bundle that still covers the task surface.
 
 ## Loading rule
 
@@ -117,7 +101,7 @@ Example: API contract work
 - `memory/domains/api.md`
 - `memory/invariants/response-contracts.md`
 
-Example: deployment incident
+Example: deployment recovery
 
 - `memory/runbooks/deploy-recovery.md`
 - `memory/domains/runtime.md`

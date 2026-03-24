@@ -1,52 +1,36 @@
 ---
 name: bootstrap-upgrade
-description: Upgrade an already bootstrapped repository safely. Use when a repo has an installed bootstrap version and needs `doctor` plus `upgrade` review, replacement of shared repo-agnostic files, manual handling of local workflow docs, or verification that optional fragments and starter notes were treated conservatively.
+description: Upgrade memory for an already bootstrapped repository safely. Use when an agent should let the tool determine the installation source automatically, run the upgrade, and report conservative manual-review items.
 ---
 
 # Bootstrap Upgrade
 
-Use this skill to move an existing repo to the current bootstrap version without flattening local customisation.
+Use this skill to upgrade memory without asking the user to choose an installation source.
 
-It upgrades the checked-in memory scaffolding; it does not become the storage layer for repo knowledge.
+The skill is intentionally small. It exists to execute the upgrade contract, not to duplicate CLI behaviour or long review choreography.
 
-## Workflow
+## Contract
 
-1. Read the target repo's local contract:
-   - `AGENTS.md`
-   - `memory/index.md`
-   - `memory/system/WORKFLOW.md`
-   - `memory/current/project-state.md` if present
-   - `memory/current/task-context.md` if present
-2. Run `agentic-memory-bootstrap doctor --target <repo>`.
-3. Run `agentic-memory-bootstrap upgrade --dry-run --target <repo>`.
-4. Separate the plan into:
-   - safe shared replacements
-   - manual-review items
-   - optional append targets
-5. Apply the safe upgrade actions.
-6. Manually review local files that the tool deliberately leaves alone:
-   - `AGENTS.md`
-   - repo-local task-system notes or planning docs
-   - customised seed notes
-7. If the shared workflow changed, check whether the repo's local contract still keeps task tooling separate from memory.
-8. Verify the result:
-   - rerun `doctor`
-   - run the memory freshness audit when available
-   - review the final diff for accidental duplicate appends or local-doc drift
+- determine the installation source automatically
+- run the upgrade with the packaged tool
+- report conservative manual-review items only when the tool leaves local files untouched
+- confirm the result with the relevant built-in checks
 
-When the packaged bootstrap skill is not already visible in the runtime, use the no-install CLI path with `uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap ...` or `pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap ...`.
+## Use
+
+Invoke the packaged CLI upgrade path for the target repo. If the packaged skill is not already visible in the runtime, use the no-install CLI runner that the product docs point to.
 
 ## Guardrails
 
 - Never assume a shared file should replace a repo-local file with active customisation.
-- Treat task-system-specific local docs as manual-review surfaces.
+- Treat repo-local workflow notes and customised seed notes as manual-review surfaces.
 - Preserve repo-specific scope, commands, and guardrails in `AGENTS.md`.
 - If a repo already has an equivalent optional fragment, keep the existing behaviour and avoid duplicate appends.
 - Keep the upgrade outcome visible in checked-in files rather than in skill-only state.
 
 ## Typical outputs
 
-- a reviewed upgrade plan
 - shared bootstrap files updated to the new version
-- local docs aligned manually where needed
-- post-upgrade verification notes and a clear statement of the active memory surfaces
+- local docs left untouched when they are repo-owned
+- a short summary of manual-review items, if any
+- verification that the active memory surfaces still look correct

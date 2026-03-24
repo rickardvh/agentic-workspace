@@ -9,12 +9,17 @@
 - Use checked-in files for durable facts and lightweight shared context.
 - Use skills for repeatable workflow operations on that knowledge.
 
+## Common task bundles
+
+- current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` when needed
+- live decision review: `memory/current/active-decisions.md` plus `memory/decisions/README.md`
+- runtime or deployment change: `memory/domains/<runtime-or-deployment-note>.md` plus `memory/runbooks/<relevant-operator-runbook>.md`
+- API or interface change: `memory/domains/<api-or-interface-note>.md` plus `memory/invariants/<response-or-contract-note>.md`
+- retrieval or search change: `memory/domains/<retrieval-or-search-note>.md` plus `memory/invariants/<retrieval-contract-note>.md` plus `memory/mistakes/recurring-failures.md`
+- tests or validation work: `memory/domains/<testing-or-validation-note>.md` plus `memory/mistakes/recurring-failures.md`
+- architecture or data-model work: `memory/domains/<data-model-or-architecture-note>.md` plus `memory/invariants/<relevant-invariant-note>.md` plus `memory/decisions/README.md`
+
 ## Task routing
-
-### If choosing an approach across multiple subsystems in this repository
-
-- `memory/current/active-decisions.md`
-- `memory/decisions/README.md`
 
 ### If touching runtime or deployment
 
@@ -44,6 +49,7 @@
 - `memory/decisions/README.md`
 
 Delete unused routing examples once the repository has concrete notes.
+Prefer the smallest bundle that still covers the task surface.
 
 ## Loading rule
 
@@ -117,12 +123,12 @@ Large memory files degrade selective loading and retrieval quality.
 
 ## Small routing examples
 
-Example: API contract work
+Example: API contract change
 
 - `memory/domains/api.md`
 - `memory/invariants/response-contracts.md`
 
-Example: deployment incident
+Example: deployment recovery
 
 - `memory/runbooks/deploy-recovery.md`
 - `memory/domains/runtime.md`

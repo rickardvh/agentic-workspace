@@ -30,6 +30,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 
 - Update a note when its primary home is still correct and the guidance is still valuable.
 - Prune a note when it is obsolete, duplicated, low-value, or easier to recover directly from code or tooling.
+- Move closed work into a durable note only when the detail remains hard to recover from code, docs, or tooling.
 - Move procedure-heavy prose into a skill when the durable fact should stay in files but the repeated workflow should become optional execution guidance.
 - Prefer one primary home for the durable fact and a short cross-reference elsewhere rather than parallel note copies.
 
@@ -44,9 +45,9 @@ Keep it concise, repo-agnostic, and non-procedural.
 
 - `memory/current/project-state.md` is a short overview only.
 - `memory/current/task-context.md` is short current-context compression only.
-- Neither file should become a task list, detailed plan, journal, or duplicated memory summary.
-- A good `project-state.md` normally covers current focus, recent meaningful progress, blockers, and a few high-level notes.
-- Keep `project-state.md` summary-shaped rather than chronological; if it starts reading like a changelog, compress it.
+- Neither file should become a task list, detailed plan, journal, backlog, ledger, tranche history, or duplicated memory summary.
+- A good `project-state.md` normally covers current focus, recent meaningful progress, blockers, and a few high-value notes only.
+- Keep `project-state.md` aggressively summary-shaped; if it starts reading like a changelog, history log, or backlog, compress it.
 
 ## Ownership boundary
 
@@ -68,6 +69,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 ## Stale-note pressure
 
 - Review notes not only by age, but also when they become large, frequently touched, cross-domain, or hard to route cleanly.
+- Pay extra attention to oversized or stale current-state surfaces such as `memory/current/project-state.md` and `memory/current/task-context.md`.
 - If a note keeps growing through unrelated edits, split it by primary home or move repeated procedure into a skill.
 
 ## Local notes

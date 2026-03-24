@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-memory-bootstrap"
-version = "0.2.12"
+version = "0.2.17"
 description = "Install the agentic memory bootstrap into an existing repository."
 readme = "README.md"
 requires-python = ">=3.11"

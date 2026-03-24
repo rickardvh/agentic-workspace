@@ -39,6 +39,7 @@ Examples:
 
 - <Core rule or durable lesson>
 - Prefer durable orientation or boundary knowledge here; move procedure-heavy repeated steps into a skill or runbook as appropriate.
+- If the note starts to read like a reusable maintenance script or refresh checklist, prefer a skill instead.
 
 ## How to recognise it
 
