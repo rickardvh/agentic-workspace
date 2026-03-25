@@ -11,7 +11,8 @@ Keep it concise, repo-agnostic, and non-procedural.
 - `AGENTS.md` = local bootstrap contract
 - task system = external to this bootstrap
 - built-in agent planning = short-horizon planning and execution
-- `/memory` = durable, shared technical knowledge
+- checked-in docs outside `/memory` = canonical repo docs and user-facing engineering guidance
+- `/memory` = assistive durable technical knowledge and lightweight shared context
 - `memory/current/project-state.md` = lightweight repo overview
 - `memory/current/task-context.md` = optional checked-in current-task compression
 - skills = optional repeatable procedures over checked-in knowledge
@@ -40,6 +41,14 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Use statuses such as `Stable`, `Active`, `Needs verification`, and `Deprecated`.
 - Use ISO dates for `Last confirmed`.
 - Prefer `memory/manifest.toml` for machine-readable note typing, routing, and freshness triggers when the repository maintains that file.
+- Use manifest fields such as `canonicality` and `task_relevance` to distinguish agent-only residue from promotion candidates and to mark what is required for task correctness versus optional convenience.
+
+## Canonical-doc boundary
+
+- Prefer checked-in canonical docs first and memory second when stable policies, procedures, or engineering guidance already have a natural home in `README.md`, `docs/`, or equivalent repo docs.
+- Treat memory as assistive residue by default: short lessons, pitfalls, routing hints, operator context, and compact shared state.
+- If a memory note becomes stable guidance for humans, mark it as a promotion candidate, move the canonical truth into checked-in docs, then leave a short memory stub or fallback note instead of duplicate prose.
+- Do not make core repo docs depend on memory unless the repository explicitly chooses that policy boundary.
 
 ## Current-context files
 

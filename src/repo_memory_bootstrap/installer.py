@@ -17,7 +17,7 @@ AGENTS_PATH = Path("AGENTS.md")
 MANIFEST_PATH = Path("memory/manifest.toml")
 UPGRADE_SOURCE_PATH = Path("memory/system/UPGRADE-SOURCE.toml")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 29
+BOOTSTRAP_VERSION = 30
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
 
@@ -97,6 +97,28 @@ EMBEDDED_WORKFLOW_HEADINGS = (
 PLACEHOLDER_RE = re.compile(r"<[A-Z0-9_/-]+>")
 DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\b")
 VERSION_RE = re.compile(r"^\s*Version:\s*(\d+)\s*$", re.MULTILINE)
+MEMORY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_.-])memory/[A-Za-z0-9_./-]+")
+MARKDOWN_MEMORY_LINK_RE = re.compile(r"\[[^\]]+\]\((?!https?://)([^)]*memory/[^)]*)\)")
+
+DEFAULT_CORE_DOC_GLOBS = (
+    "README.md",
+    "docs/**/*.md",
+    "CONTRIBUTING.md",
+    ".github/**/*.md",
+)
+DEFAULT_CORE_DOC_EXCLUDE_GLOBS = (
+    "AGENTS.md",
+    "memory/**/*.md",
+    "memory/bootstrap/**/*.md",
+)
+VALID_CANONICALITY_VALUES = {
+    "agent_only",
+    "candidate_for_promotion",
+    "canonical_elsewhere",
+    "deprecated",
+}
+VALID_TASK_RELEVANCE_VALUES = {"required", "optional"}
+SHADOW_DOC_MIN_SHARED_TERMS = 6
 
 OPTIONAL_APPEND_TARGETS = {
     Path("Makefile"): Path("optional/Makefile.fragment.mk"),
@@ -235,6 +257,8 @@ class MemoryNoteRecord:
     canonical_home: Path
     authority: str
     audience: str
+    canonicality: str = "agent_only"
+    task_relevance: str = "optional"
     subsystems: tuple[str, ...] = ()
     surfaces: tuple[str, ...] = ()
     routes_from: tuple[str, ...] = ()
@@ -253,6 +277,9 @@ class MemoryManifest:
     high_level: tuple[Path, ...] = ()
     canonical_dirs: tuple[Path, ...] = ()
     task_board_globs: tuple[str, ...] = ()
+    core_doc_globs: tuple[str, ...] = ()
+    core_doc_exclude_globs: tuple[str, ...] = ()
+    forbid_core_docs_depend_on_memory: bool = False
 
 
 class RepoDetectionError(ValueError):
@@ -509,6 +536,7 @@ def collect_status(target: str | Path | None = None) -> InstallResult:
 def doctor_bootstrap(
     *,
     target: str | Path | None = None,
+    strict_doc_ownership: bool = False,
     project_name: str | None = None,
     project_purpose: str | None = None,
     key_repo_docs: str | None = None,
@@ -545,6 +573,11 @@ def doctor_bootstrap(
     _plan_obsolete_shared_files(target_root=target_root, result=result, apply=False)
     _plan_optional_appends(
         source_root, target_root, result, apply=False, status_only=True
+    )
+    _audit_memory_doc_ownership(
+        target_root=target_root,
+        result=result,
+        force_enforcement=strict_doc_ownership,
     )
     return result
 
@@ -718,8 +751,8 @@ def route_memory(
     selected_surfaces.update(_infer_surfaces_from_paths(files or []))
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
 
-    suggestions: list[tuple[str, str]] = [
-        (path.as_posix(), "always relevant current-memory note")
+    suggestions: list[tuple[str, str, str]] = [
+        ("recommended", path.as_posix(), "always relevant current-memory note")
         for path in CURRENT_MEMORY_BASELINE
     ]
     suggestions.extend(
@@ -735,15 +768,18 @@ def route_memory(
     ):
         if section_surface in selected_surfaces:
             for note in notes:
-                suggestions.append((note, f"matched route surface '{section_surface}'"))
+                suggestions.append(
+                    ("recommended", note, f"matched route surface '{section_surface}'")
+                )
 
     seen: set[str] = set()
-    for note, reason in suggestions:
-        if note in seen:
+    for recommendation, note, reason in suggestions:
+        key = f"{recommendation}:{note}"
+        if key in seen:
             continue
-        seen.add(note)
+        seen.add(key)
         result.add(
-            "recommended",
+            recommendation,
             target_root / Path(note),
             reason,
             role="memory-route",
@@ -752,7 +788,9 @@ def route_memory(
             category="safe-update",
         )
 
-    if files and len(seen) == len(CURRENT_MEMORY_BASELINE):
+    if files and all(
+        key.startswith("recommended:memory/current/") for key in seen
+    ):
         result.add(
             "manual review",
             target_root / Path("memory/index.md"),
@@ -798,7 +836,7 @@ def sync_memory(
     )
 
     seen_sync_paths: set[Path] = set()
-    for note, reason in manifest_suggestions:
+    for _, note, reason in manifest_suggestions:
         note_path = target_root / Path(note)
         note_exists = note_path.exists()
         note_text = note_path.read_text(encoding="utf-8") if note_exists else ""
@@ -820,7 +858,7 @@ def sync_memory(
 
     routed = route_memory(target=target_root, files=changed_files)
     for action in routed.actions:
-        if action.kind != "recommended":
+        if action.kind not in {"recommended", "required"}:
             continue
         note_path = action.path
         if note_path in seen_sync_paths:
@@ -849,6 +887,49 @@ def sync_memory(
             role="memory-sync",
             safety="manual",
             source=note,
+            category="manual-review",
+        )
+    return result
+
+
+def promotion_report(
+    *,
+    target: str | Path | None = None,
+    notes: list[str] | None = None,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = _new_result(target_root, dry_run=True, message="Promotion report")
+    manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
+
+    requested = {Path(note) for note in (notes or [])}
+    records = _iter_promotion_candidates(
+        target_root=target_root,
+        manifest=manifest,
+        requested=requested,
+    )
+    if not records:
+        result.add(
+            "manual review",
+            target_root / MANIFEST_PATH,
+            "no promotion candidates found; mark notes candidate_for_promotion or pass --notes to inspect specific memory notes",
+            role="promotion-report",
+            safety="manual",
+            source=MANIFEST_PATH.as_posix(),
+            category="manual-review",
+        )
+        return result
+
+    for note_path, note, detail in records:
+        action_kind = "candidate"
+        if note is None and not note_path.exists():
+            action_kind = "manual review"
+        result.add(
+            action_kind,
+            note_path,
+            detail,
+            role="promotion-report",
+            safety="manual",
+            source=note.path.as_posix() if note is not None else note_path.relative_to(target_root).as_posix(),
             category="manual-review",
         )
     return result
@@ -1925,6 +2006,7 @@ def _infer_action_category(
         "current",
         "present",
         "recommended",
+        "required",
     }:
         return "safe-update"
     if kind == "manual review":
@@ -2081,6 +2163,8 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
                 canonical_home=Path(str(raw.get("canonical_home", note_path))),
                 authority=str(raw.get("authority", "supporting")),
                 audience=str(raw.get("audience", "human+agent")),
+                canonicality=str(raw.get("canonicality", "agent_only")),
+                task_relevance=str(raw.get("task_relevance", "optional")),
                 subsystems=tuple(_string_list(raw.get("subsystems"))),
                 surfaces=tuple(
                     _normalise_surface_name(value)
@@ -2108,6 +2192,17 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
             Path(value) for value in _string_list(rules_table.get("canonical_dirs"))
         ),
         task_board_globs=tuple(_string_list(rules_table.get("task_board_globs"))),
+        core_doc_globs=tuple(
+            _string_list(rules_table.get("core_doc_globs"))
+            or list(DEFAULT_CORE_DOC_GLOBS)
+        ),
+        core_doc_exclude_globs=tuple(
+            _string_list(rules_table.get("core_doc_exclude_globs"))
+            or list(DEFAULT_CORE_DOC_EXCLUDE_GLOBS)
+        ),
+        forbid_core_docs_depend_on_memory=bool(
+            rules_table.get("forbid_core_docs_depend_on_memory", False)
+        ),
     )
 
 
@@ -2119,17 +2214,284 @@ def _string_list(value: object) -> list[str]:
     return []
 
 
+def _routes_to_canonical_doc(note: MemoryNoteRecord) -> bool:
+    if note.canonicality != "canonical_elsewhere":
+        return False
+    return _is_non_memory_canonical_home(note.canonical_home, note.path)
+
+
+def _is_non_memory_canonical_home(canonical_home: Path, note_path: Path) -> bool:
+    if canonical_home == note_path:
+        return False
+    return canonical_home.parts[:1] != ("memory",)
+
+
+def _audit_memory_doc_ownership(
+    *, target_root: Path, result: InstallResult, force_enforcement: bool = False
+) -> None:
+    manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
+    if manifest is None:
+        return
+
+    for note in manifest.notes:
+        if note.canonicality not in VALID_CANONICALITY_VALUES:
+            result.add(
+                "manual review",
+                target_root / note.path,
+                "manifest canonicality must be one of: agent_only, candidate_for_promotion, canonical_elsewhere, deprecated",
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
+        if note.task_relevance not in VALID_TASK_RELEVANCE_VALUES:
+            result.add(
+                "manual review",
+                target_root / note.path,
+                "manifest task_relevance must be required or optional",
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
+        if note.canonicality == "canonical_elsewhere" and not _is_non_memory_canonical_home(
+            note.canonical_home, note.path
+        ):
+            result.add(
+                "manual review",
+                target_root / note.path,
+                "canonical_elsewhere notes must point canonical_home at a checked-in canonical doc outside memory/",
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
+
+    if not manifest.forbid_core_docs_depend_on_memory and not force_enforcement:
+        return
+
+    core_docs = tuple(
+        _iter_core_docs(
+            target_root=target_root,
+            include_globs=manifest.core_doc_globs,
+            exclude_globs=manifest.core_doc_exclude_globs,
+        )
+    )
+
+    for doc_path in core_docs:
+        matches = _extract_memory_references(doc_path.read_text(encoding="utf-8"))
+        if not matches:
+            continue
+        detail = ", ".join(matches[:3])
+        if len(matches) > 3:
+            detail = f"{detail}, ..."
+        result.add(
+            "manual review",
+            doc_path,
+            f"core doc depends on memory ({detail}); promote stable guidance into checked-in canonical docs and leave memory as assistive residue or stubs",
+            role="doc-ownership-audit",
+            safety="manual",
+            source=doc_path.relative_to(target_root).as_posix(),
+            category="manual-review",
+        )
+
+    for note in manifest.notes:
+        note_path = target_root / note.path
+        if not note_path.exists():
+            continue
+        overlaps = _find_shadow_doc_matches(
+            note_path=note_path,
+            canonical_home=target_root / note.canonical_home,
+            core_docs=core_docs,
+            target_root=target_root,
+        )
+        for canonical_doc, shared_terms in overlaps:
+            result.add(
+                "manual review",
+                note_path,
+                f"shadow-doc overlap with {canonical_doc.relative_to(target_root).as_posix()} ({', '.join(shared_terms[:8])}); consolidate stable guidance into canonical docs and leave memory as residue or a stub",
+                role="shadow-doc-audit",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="manual-review",
+            )
+
+
+def _iter_core_docs(
+    *, target_root: Path, include_globs: tuple[str, ...], exclude_globs: tuple[str, ...]
+) -> Iterable[Path]:
+    seen: set[Path] = set()
+    for pattern in include_globs:
+        for path in target_root.glob(pattern):
+            if not path.is_file():
+                continue
+            relative = path.relative_to(target_root)
+            relative_str = relative.as_posix()
+            if any(_path_matches_pattern(relative_str, glob) for glob in exclude_globs):
+                continue
+            if path in seen:
+                continue
+            seen.add(path)
+            yield path
+
+
+def _extract_memory_references(text: str) -> list[str]:
+    matches = {match.group(0) for match in MEMORY_PATH_RE.finditer(text)}
+    matches.update(match.group(1) for match in MARKDOWN_MEMORY_LINK_RE.finditer(text))
+    return sorted(match.rstrip(").,`") for match in matches if match.strip())
+
+
+def _iter_promotion_candidates(
+    *,
+    target_root: Path,
+    manifest: MemoryManifest | None,
+    requested: set[Path],
+) -> list[tuple[Path, MemoryNoteRecord | None, str]]:
+    candidates: list[tuple[Path, MemoryNoteRecord | None, str]] = []
+
+    if manifest is not None:
+        for note in manifest.notes:
+            note_path = target_root / note.path
+            if requested and note.path not in requested:
+                continue
+            if note.canonicality not in {
+                "candidate_for_promotion",
+                "canonical_elsewhere",
+            }:
+                continue
+            if note.canonicality == "candidate_for_promotion":
+                destination = (
+                    note.canonical_home.as_posix()
+                    if note.canonical_home != note.path
+                    else _suggest_canonical_doc_path(note.path).as_posix()
+                )
+                detail = (
+                    f"promotion candidate; suggested canonical doc {destination}. "
+                    "Promote stable guidance there, then leave this memory note as a short stub, backlink, or fallback summary."
+                )
+            else:
+                detail = (
+                    f"canonical truth should live in {note.canonical_home.as_posix()}. "
+                    "Keep this memory note compact and non-authoritative."
+                )
+            candidates.append((note_path, note, detail))
+
+    for requested_note in requested:
+        if any(candidate[0] == target_root / requested_note for candidate in candidates):
+            continue
+        requested_path = target_root / requested_note
+        if not requested_path.exists():
+            detail = "explicit note supplied for promotion review, but the file does not exist"
+            candidates.append((requested_path, None, detail))
+            continue
+        detail = (
+            f"explicit note supplied; suggested canonical doc {_suggest_canonical_doc_path(requested_note).as_posix()}. "
+            "Review whether the stable parts should be promoted out of memory."
+        )
+        candidates.append((requested_path, None, detail))
+
+    return candidates
+
+
+def _suggest_canonical_doc_path(note_path: Path) -> Path:
+    if note_path.parts[:2] == ("memory", "runbooks") and len(note_path.parts) >= 3:
+        return Path("docs/runbooks") / note_path.name
+    if note_path.parts[:2] == ("memory", "domains") and len(note_path.parts) >= 3:
+        return Path("docs") / note_path.name
+    if note_path.parts[:2] == ("memory", "invariants") and len(note_path.parts) >= 3:
+        return Path("docs/invariants") / note_path.name
+    if note_path.parts[:2] == ("memory", "decisions") and len(note_path.parts) >= 3:
+        return Path("docs/decisions") / note_path.name
+    return Path("docs") / note_path.name
+
+
+def _find_shadow_doc_matches(
+    *,
+    note_path: Path,
+    canonical_home: Path,
+    core_docs: tuple[Path, ...],
+    target_root: Path,
+) -> list[tuple[Path, list[str]]]:
+    note_tokens = _significant_terms(note_path.read_text(encoding="utf-8"))
+    if len(note_tokens) < SHADOW_DOC_MIN_SHARED_TERMS:
+        return []
+
+    overlaps: list[tuple[Path, list[str]]] = []
+    for doc_path in core_docs:
+        if doc_path == note_path:
+            continue
+        if canonical_home.exists() and doc_path == canonical_home:
+            continue
+        if not _shadow_doc_paths_related(note_path, doc_path):
+            continue
+        shared_terms = sorted(
+            note_tokens & _significant_terms(doc_path.read_text(encoding="utf-8"))
+        )
+        if len(shared_terms) >= SHADOW_DOC_MIN_SHARED_TERMS:
+            overlaps.append((doc_path, shared_terms))
+    return overlaps
+
+
+def _significant_terms(text: str) -> set[str]:
+    words = re.findall(r"[A-Za-z][A-Za-z0-9_-]{3,}", text.lower())
+    stop_words = {
+        "this",
+        "that",
+        "with",
+        "from",
+        "when",
+        "where",
+        "should",
+        "would",
+        "there",
+        "their",
+        "into",
+        "only",
+        "keep",
+        "note",
+        "memory",
+        "docs",
+        "repo",
+        "repository",
+        "stable",
+        "guidance",
+        "canonical",
+        "review",
+        "using",
+        "used",
+        "than",
+        "then",
+        "them",
+        "have",
+        "will",
+        "what",
+        "which",
+        "while",
+        "task",
+        "tasks",
+    }
+    return {word for word in words if word not in stop_words}
+
+
+def _shadow_doc_paths_related(note_path: Path, doc_path: Path) -> bool:
+    note_stem = note_path.stem.lower()
+    doc_stem = doc_path.stem.lower()
+    if note_stem == doc_stem:
+        return True
+    return note_stem in doc_stem or doc_stem in note_stem
+
+
 def _find_manifest_matches(
     manifest: MemoryManifest | None,
     *,
     files: list[str],
     surfaces: set[str],
     use_staleness: bool,
-) -> list[tuple[str, str]]:
+) -> list[tuple[str, str, str]]:
     if manifest is None:
         return []
 
-    suggestions: list[tuple[str, str]] = []
+    suggestions: list[tuple[str, str, str]] = []
     for note in manifest.notes:
         reasons: list[str] = []
         if surfaces and any(surface in surfaces for surface in note.surfaces):
@@ -2146,12 +2508,33 @@ def _find_manifest_matches(
                     for pattern in globs
                     if any(_path_matches_pattern(path, pattern) for path in files)
                 }
-            )
+                )
             if matched_globs:
                 reasons.append(f"manifest path match ({', '.join(matched_globs)})")
 
         if reasons:
-            suggestions.append((note.path.as_posix(), "; ".join(reasons)))
+            reason = "; ".join(reasons)
+            if _routes_to_canonical_doc(note):
+                suggestions.append(
+                    (
+                        "required",
+                        note.canonical_home.as_posix(),
+                        f"{reason}; canonical doc takes precedence over memory",
+                    )
+                )
+                suggestions.append(
+                    (
+                        "recommended",
+                        note.path.as_posix(),
+                        f"{reason}; memory note is fallback context only",
+                    )
+                )
+                continue
+
+            recommendation = (
+                "required" if note.task_relevance == "required" else "recommended"
+            )
+            suggestions.append((recommendation, note.path.as_posix(), reason))
     return suggestions
 
 

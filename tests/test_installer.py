@@ -825,6 +825,9 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     uninstall_args = parser.parse_args(
         ["uninstall", "--target", ".", "--dry-run", "--format", "json"]
     )
+    doctor_args = parser.parse_args(
+        ["doctor", "--target", ".", "--strict-doc-ownership"]
+    )
     prompt_install_args = parser.parse_args(
         ["prompt", "install", "--target", "C:/repo"]
     )
@@ -837,6 +840,9 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     )
     route_args = parser.parse_args(["route", "--files", "src/app.py"])
     sync_args = parser.parse_args(["sync-memory", "--notes", "memory/index.md"])
+    promotion_args = parser.parse_args(
+        ["promotion-report", "--notes", "memory/domains/api.md"]
+    )
     verify_args = parser.parse_args(["verify-payload", "--format", "json"])
     install_args = parser.parse_args(
         [
@@ -856,6 +862,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     assert list_skills_args.command == "list-skills"
     assert cleanup_args.command == "bootstrap-cleanup"
     assert uninstall_args.command == "uninstall"
+    assert doctor_args.strict_doc_ownership is True
     assert prompt_install_args.prompt_command == "install"
     assert prompt_args.command == "prompt"
     assert prompt_args.prompt_command == "adopt"
@@ -863,6 +870,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     assert prompt_uninstall_args.prompt_command == "uninstall"
     assert route_args.command == "route"
     assert sync_args.command == "sync-memory"
+    assert promotion_args.command == "promotion-report"
     assert verify_args.command == "verify-payload"
     assert install_args.project_purpose == "purpose"
 
@@ -896,6 +904,8 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
     assert "Update a note when its primary home is still correct" in text
     assert "Checked-in repo-local skills should take precedence" in text
     assert "## Stale-note pressure" in text
+    assert "## Canonical-doc boundary" in text
+    assert "Treat memory as assistive residue by default" in text
 
 
 def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() -> None:
@@ -907,6 +917,8 @@ def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() 
     assert "Memory is a net token saver" in text
     assert "## Small routing examples" in text
     assert "Example: deployment recovery" in text
+    assert "## Canonicality rule" in text
+    assert "core docs should not depend on memory" in text
 
 
 def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -> None:
@@ -1175,3 +1187,341 @@ def test_current_view_json_shape(tmp_path: Path) -> None:
     data = json.loads(installer.format_result_json(payload))
 
     assert data["notes"][0]["path"] == "memory/current/project-state.md"
+
+
+def test_route_memory_prefers_canonical_doc_when_manifest_marks_note_canonical_elsewhere(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "docs").mkdir(parents=True)
+    (target / "memory" / "domains" / "api.md").write_text("# API memory\n", encoding="utf-8")
+    (target / "docs" / "api.md").write_text("# API docs\n", encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/api.md"]
+note_type = "domain"
+canonical_home = "docs/api.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "canonical_elsewhere"
+task_relevance = "optional"
+surfaces = ["api"]
+routes_from = ["src/**/*.py"]
+stale_when = ["src/**/*.py"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.route_memory(target=target, files=["src/service/api.py"])
+
+    assert any(
+        action.path == target / "docs" / "api.md"
+        and action.kind == "required"
+        and "canonical doc takes precedence" in action.detail
+        for action in result.actions
+    )
+    assert any(
+        action.path == target / "memory" / "domains" / "api.md"
+        and action.kind == "recommended"
+        and "fallback context only" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_audit_flags_core_docs_that_depend_on_memory_when_policy_enabled(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory").mkdir(parents=True)
+    (target / "docs").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "memory" / "system" / "VERSION.md").write_text(
+        "Version: 30\n", encoding="utf-8"
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[rules]
+forbid_core_docs_depend_on_memory = true
+core_doc_globs = ["README.md", "docs/**/*.md"]
+core_doc_exclude_globs = ["memory/**/*.md", "AGENTS.md"]
+
+[notes."memory/index.md"]
+note_type = "routing"
+canonical_home = "memory/index.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (target / "README.md").write_text(
+        "See `memory/runbooks/deploy.md` for the stable deployment procedure.\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.path == target / "README.md"
+        and action.kind == "manual review"
+        and "core doc depends on memory" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_strict_doc_ownership_forces_audit_without_manifest_opt_in(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory").mkdir(parents=True)
+    (target / "docs").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "memory" / "system" / "VERSION.md").write_text(
+        "Version: 30\n", encoding="utf-8"
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[rules]
+core_doc_globs = ["README.md"]
+core_doc_exclude_globs = ["memory/**/*.md", "AGENTS.md"]
+forbid_core_docs_depend_on_memory = false
+
+[notes."memory/index.md"]
+note_type = "routing"
+canonical_home = "memory/index.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (target / "README.md").write_text(
+        "See memory/runbooks/deploy.md for deployment steps.\n", encoding="utf-8"
+    )
+
+    result = installer.doctor_bootstrap(target=target, strict_doc_ownership=True)
+
+    assert any(
+        action.path == target / "README.md"
+        and "core doc depends on memory" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_validates_manifest_canonicality_values(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "memory" / "system" / "VERSION.md").write_text(
+        "Version: 30\n", encoding="utf-8"
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/api.md"]
+note_type = "domain"
+canonical_home = "memory/domains/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "wrong"
+task_relevance = "sometimes"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.path == target / "memory" / "domains" / "api.md"
+        and "manifest canonicality must be one of" in action.detail
+        for action in result.actions
+    )
+    assert any(
+        action.path == target / "memory" / "domains" / "api.md"
+        and "manifest task_relevance must be required or optional" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_rejects_canonical_elsewhere_targets_inside_memory(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "memory" / "system" / "VERSION.md").write_text(
+        "Version: 30\n", encoding="utf-8"
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/api.md"]
+note_type = "domain"
+canonical_home = "memory/invariants/api.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "canonical_elsewhere"
+task_relevance = "optional"
+surfaces = ["api"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    doctor = installer.doctor_bootstrap(target=target)
+    routed = installer.route_memory(target=target, surfaces=["api"])
+
+    assert any(
+        action.path == target / "memory" / "domains" / "api.md"
+        and "canonical_elsewhere notes must point canonical_home" in action.detail
+        for action in doctor.actions
+    )
+    assert not any(
+        action.path == target / "memory" / "invariants" / "api.md"
+        and action.kind == "required"
+        for action in routed.actions
+    )
+
+
+def test_promotion_report_finds_candidate_notes_from_manifest(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "memory" / "domains" / "api.md").write_text(
+        "# API\n\nStable policy draft.\n", encoding="utf-8"
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/api.md"]
+note_type = "domain"
+canonical_home = "docs/api.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "candidate_for_promotion"
+task_relevance = "optional"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.promotion_report(target=target)
+
+    assert any(
+        action.path == target / "memory" / "domains" / "api.md"
+        and action.kind == "candidate"
+        and "suggested canonical doc docs/api.md" in action.detail
+        for action in result.actions
+    )
+
+
+def test_promotion_report_supports_explicit_notes_without_manifest_metadata(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "runbooks").mkdir(parents=True)
+    (target / "memory" / "runbooks" / "deploy.md").write_text(
+        "# Deploy\n\nProcedure.\n", encoding="utf-8"
+    )
+
+    result = installer.promotion_report(
+        target=target, notes=["memory/runbooks/deploy.md"]
+    )
+
+    assert any(
+        action.path == target / "memory" / "runbooks" / "deploy.md"
+        and "docs/runbooks/deploy.md" in action.detail
+        for action in result.actions
+    )
+
+
+def test_promotion_report_marks_missing_explicit_notes_for_manual_review(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory").mkdir(parents=True)
+
+    result = installer.promotion_report(
+        target=target, notes=["memory/runbooks/deply.md"]
+    )
+
+    assert any(
+        action.path == target / "memory" / "runbooks" / "deply.md"
+        and action.kind == "manual review"
+        and "file does not exist" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_shadow_doc_detection_flags_overlap(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "docs").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "memory" / "system" / "VERSION.md").write_text(
+        "Version: 30\n", encoding="utf-8"
+    )
+    shared_text = (
+        "deployment rollback procedure staging production release verification "
+        "service health incident operator checklist observability\n"
+    )
+    (target / "memory" / "domains" / "deploy.md").write_text(
+        shared_text, encoding="utf-8"
+    )
+    (target / "docs" / "deploy.md").write_text(shared_text, encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[rules]
+forbid_core_docs_depend_on_memory = true
+core_doc_globs = ["docs/**/*.md"]
+core_doc_exclude_globs = ["memory/**/*.md", "AGENTS.md"]
+
+[notes."memory/domains/deploy.md"]
+note_type = "domain"
+canonical_home = "memory/domains/deploy.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.path == target / "memory" / "domains" / "deploy.md"
+        and action.role == "shadow-doc-audit"
+        and "shadow-doc overlap" in action.detail
+        for action in result.actions
+    )

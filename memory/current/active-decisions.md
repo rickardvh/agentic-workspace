@@ -81,6 +81,7 @@ Active
 - The base memory system must remain understandable and usable even when skills are unavailable.
 - The default always-read surface should stay as close as possible to `AGENTS.md` plus `memory/index.md`, with workflow and current-context docs loaded only when needed.
 - Machine-readable memory metadata should live in `memory/manifest.toml` as an optional companion to `memory/index.md`, not as a replacement for the human-readable routing layer.
+- The product should distinguish canonical checked-in docs from assistive memory explicitly, with manifest metadata and audits making that boundary enforceable instead of purely conventional.
 - Bundled product skills should stay limited to bootstrap lifecycle work; shared day-to-day memory workflows should ship as checked-in skills under `memory/skills/`, with repo-specific sibling skills added there when needed.
 - Temporary bootstrap lifecycle completion can live in a bootstrap-managed `memory/bootstrap/` workspace for install and populate work, which should be removed after that work is complete.
 - Conservative bootstrap removal should use a real CLI uninstall path, with any remaining repo-local memory content handled as manual review rather than blind deletion.

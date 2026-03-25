@@ -17,7 +17,9 @@ It is intended to be copied into an existing repository to provide:
 - an advisory memory freshness audit
 - optional workflow fragments for common contribution flows
 
-The packaged files are the durable state and knowledge layer. Repeatable workflow-like actions should live in optional skills rather than expanding the mandatory payload indefinitely.
+The packaged files are the durable memory layer, not the repository's full canonical documentation layer. Stable human-facing policies and procedures should live in normal checked-in docs outside `memory/`, with memory kept as assistive residue, routing help, or short stubs when needed.
+
+Repeatable workflow-like actions should live in optional skills rather than expanding the mandatory payload indefinitely.
 
 Temporary bootstrap workspace files are part of the payload so install and adopt can hand off to repo-local lifecycle skills. They are meant to be removed after bootstrap work is complete.
 
@@ -25,6 +27,8 @@ The CLI around this payload can also inspect the current-memory surface, suggest
 
 Treat the packaged memory notes as a starting cache of reusable operating knowledge, not an archive to expand without limit.
 Use them when they save rediscovery cost; avoid adding notes that merely restate code or transient task chatter.
+If a memory note stabilises into canonical repo guidance, promote it into checked-in docs and leave a short replacement note instead of duplicate truth.
+Prefer compact residue-oriented notes: pitfalls, routing hints, traps, operator context, and short fallback summaries.
 
 When maintaining this repository, treat `bootstrap/` as the source of truth for installed files. The packaged wheel payload is built from this directory.
 
@@ -77,6 +81,7 @@ Bundled product skills should stay limited to bootstrap lifecycle operations. Re
 `memory/current/project-state.md` should stay aggressively summary-shaped: current focus, recent meaningful progress, blockers, and a few high-value notes are usually enough. If it starts reading like a ledger, backlog, tranche history, or changelog, compress it.
 
 Small routing layers work better than summary-heavy indexes. A good `memory/index.md` points to a few likely-relevant notes rather than trying to restate them.
+When `memory/manifest.toml` marks a note as `canonical_elsewhere`, routing should prefer the canonical checked-in doc and keep the memory note as optional fallback context.
 
 Common task bundles:
 
@@ -110,6 +115,8 @@ Prefer this flow for existing or older installs:
 Upgrade is normally triggered through the checked-in `memory-upgrade` skill under `memory/skills/`, which runs the packaged upgrade implementation using the resolved source record in `memory/system/UPGRADE-SOURCE.toml`. Temporary bootstrap workspace files are for install and adopt lifecycle completion, not the primary upgrade path.
 
 Use `agentic-memory-bootstrap list-files` to preview the packaged files that the installer exposes.
+Use `agentic-memory-bootstrap promotion-report --target <repo>` to identify notes that should likely be promoted into canonical docs.
+Use `agentic-memory-bootstrap doctor --strict-doc-ownership --target <repo>` to force doc-ownership and shadow-doc audits before adopting stricter repo policy.
 
 ## Automation notes
 
@@ -121,3 +128,4 @@ A later automation script should:
 - avoid overwriting existing repo-specific memory notes blindly
 - treat `memory/system/VERSION.md` as the installed system version marker
 - run the freshness audit after installation
+- optionally enforce repo-local policy that core docs must not depend on memory

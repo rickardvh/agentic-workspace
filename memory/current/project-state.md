@@ -32,6 +32,7 @@ Active
 ## Current focus
 
 - Keep the always-read surface small: `AGENTS.md` plus `memory/index.md` by default, with other docs loaded on demand.
+- Harden the product boundary between canonical checked-in docs and assistive memory so stable guidance does not drift into shadow documentation.
 
 ## Recent meaningful progress
 
@@ -40,6 +41,7 @@ Active
 - Clarified that closed work should only move into durable notes when the detail is still hard to recover from code, docs, or tooling.
 - Added a permanent checked-in `memory-upgrade` core skill under `memory/skills/` as the stable repo-local entrypoint for "upgrade memory".
 - Repositioned bundled `bootstrap-upgrade` as the packaged implementation behind that checked-in entrypoint instead of the only normal upgrade surface.
+- Added manifest-level canonicality and task-relevance metadata plus an opt-in doctor audit for core-doc ownership boundaries.
 
 ## Blockers
 
@@ -77,4 +79,4 @@ Active
 
 ## Last confirmed
 
-2026-03-24 during current-state guidance tightening and checked-in upgrade-skill hardening
+2026-03-25 during canonical-doc boundary hardening

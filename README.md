@@ -119,7 +119,24 @@ Use checked-in memory when it saves repeated rediscovery cost:
 - good fits: boundaries, invariants, operator procedures, recurring failures, routing hints
 - poor fits: one-off task chatter or code that is easier to inspect directly
 
+Treat canonical repo docs and memory as separate lanes:
+
+- keep stable human-facing engineering guidance in `README.md`, `docs/`, or equivalent checked-in docs
+- use memory as assistive residue by default
+- if a note stabilises into canonical guidance, promote it into docs and leave memory as a stub, backlink, or short fallback note
+
 Keep the default working set small. Memory is a token saver only when the notes you load are cheaper than rediscovering the same facts from code and docs.
+
+`memory/manifest.toml` can now mark:
+
+- `canonicality` as `agent_only`, `candidate_for_promotion`, `canonical_elsewhere`, or `deprecated`
+- `task_relevance` as `required` or `optional`
+- `forbid_core_docs_depend_on_memory = true` to make `doctor` flag core docs that depend on memory
+
+Compact memory notes work better than quasi-doc pages:
+
+- good residue: pitfalls, routing hints, boundary clarifications, operator gotchas, short fallback context
+- promote instead: stable onboarding guidance, normal engineering policy, human-facing procedures, broad architecture docs
 
 Use note types deliberately:
 
@@ -188,6 +205,7 @@ Main commands:
 - `bootstrap-cleanup` to remove the temporary bootstrap workspace when install or adopt created it
 - `current show|check` to inspect current-memory notes
 - `route` and `sync-memory` to review likely relevant memory notes
+- `promotion-report` to suggest notes that should graduate into canonical checked-in docs
 - `verify-payload` to validate the packaged bootstrap contract
 
 Common arguments:
@@ -197,6 +215,8 @@ Common arguments:
 - `--project-name`, `--project-purpose`, `--key-repo-docs`, `--key-subsystems`, `--primary-build-command`, `--primary-test-command`, `--other-key-commands` fill starter placeholders explicitly
 
 `install` and `adopt` are conservative by default: missing files are copied, existing `AGENTS.md` and `memory/` files are left alone, and optional fragments are appended only when the fragment is not already present.
+
+`doctor --strict-doc-ownership` forces the doc-ownership and shadow-doc audits even if the repository manifest has not opted in yet.
 
 ## Developing This Repository
 

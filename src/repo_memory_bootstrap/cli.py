@@ -16,6 +16,7 @@ from repo_memory_bootstrap.installer import (
     install_bootstrap,
     list_bundled_skills,
     list_payload_files,
+    promotion_report,
     route_memory,
     show_current_memory,
     sync_memory,
@@ -98,6 +99,11 @@ def build_parser() -> argparse.ArgumentParser:
         "doctor", help="Diagnose bootstrap state and recommended remediation."
     )
     _add_target_arguments(doctor_parser)
+    doctor_parser.add_argument(
+        "--strict-doc-ownership",
+        action="store_true",
+        help="Enforce doc-ownership audits even when the repo manifest has not enabled them.",
+    )
     _add_project_metadata_arguments(doctor_parser)
     _add_format_argument(doctor_parser)
 
@@ -190,6 +196,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--notes", nargs="*", default=[], help="Explicit memory notes to review."
     )
     _add_format_argument(sync_parser)
+
+    promotion_parser = subparsers.add_parser(
+        "promotion-report",
+        help="Suggest memory notes that should be promoted into canonical checked-in docs.",
+    )
+    _add_target_arguments(promotion_parser)
+    promotion_parser.add_argument(
+        "--notes",
+        nargs="*",
+        default=[],
+        help="Explicit memory notes to inspect.",
+    )
+    _add_format_argument(promotion_parser)
 
     verify_parser = subparsers.add_parser(
         "verify-payload", help="Verify the packaged bootstrap payload contract."
@@ -340,6 +359,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "doctor":
             result = doctor_bootstrap(
                 target=args.target,
+                strict_doc_ownership=args.strict_doc_ownership,
                 project_name=args.project_name,
                 project_purpose=args.project_purpose,
                 key_repo_docs=args.key_repo_docs,
@@ -391,6 +411,11 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "sync-memory":
             result = sync_memory(target=args.target, files=args.files, notes=args.notes)
+            _emit_result(result, output_format=args.format)
+            return 0
+
+        if args.command == "promotion-report":
+            result = promotion_report(target=args.target, notes=args.notes)
             _emit_result(result, output_format=args.format)
             return 0
 
