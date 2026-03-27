@@ -11,7 +11,8 @@ Keep it concise, repo-agnostic, and non-procedural.
 - `AGENTS.md` = local bootstrap contract
 - task system = external to this bootstrap
 - built-in agent planning = short-horizon planning and execution
-- `/memory` = durable, shared technical knowledge
+- checked-in docs outside `/memory` = canonical repo docs and user-facing engineering guidance
+- `/memory` = assistive durable technical knowledge and lightweight shared context
 - `memory/current/project-state.md` = lightweight repo overview
 - `memory/current/task-context.md` = optional checked-in current-task compression
 - skills = optional repeatable procedures over checked-in knowledge
@@ -30,6 +31,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 
 - Update a note when its primary home is still correct and the guidance is still valuable.
 - Prune a note when it is obsolete, duplicated, low-value, or easier to recover directly from code or tooling.
+- Move closed work into a durable note only when the detail remains hard to recover from code, docs, or tooling.
 - Move procedure-heavy prose into a skill when the durable fact should stay in files but the repeated workflow should become optional execution guidance.
 - Prefer one primary home for the durable fact and a short cross-reference elsewhere rather than parallel note copies.
 
@@ -39,14 +41,22 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Use statuses such as `Stable`, `Active`, `Needs verification`, and `Deprecated`.
 - Use ISO dates for `Last confirmed`.
 - Prefer `memory/manifest.toml` for machine-readable note typing, routing, and freshness triggers when the repository maintains that file.
+- Use manifest fields such as `canonicality` and `task_relevance` to distinguish agent-only residue from promotion candidates and to mark what is required for task correctness versus optional convenience.
+
+## Canonical-doc boundary
+
+- Prefer checked-in canonical docs first and memory second when stable policies, procedures, or engineering guidance already have a natural home in `README.md`, `docs/`, or equivalent repo docs.
+- Treat memory as assistive residue by default: short lessons, pitfalls, routing hints, operator context, and compact shared state.
+- If a memory note becomes stable guidance for humans, mark it as a promotion candidate, move the canonical truth into checked-in docs, then leave a short memory stub or fallback note instead of duplicate prose.
+- Do not make core repo docs depend on memory unless the repository explicitly chooses that policy boundary.
 
 ## Current-context files
 
 - `memory/current/project-state.md` is a short overview only.
 - `memory/current/task-context.md` is short current-context compression only.
-- Neither file should become a task list, detailed plan, journal, or duplicated memory summary.
-- A good `project-state.md` normally covers current focus, recent meaningful progress, blockers, and a few high-level notes.
-- Keep `project-state.md` summary-shaped rather than chronological; if it starts reading like a changelog, compress it.
+- Neither file should become a task list, detailed plan, journal, backlog, ledger, tranche history, or duplicated memory summary.
+- A good `project-state.md` normally covers current focus, recent meaningful progress, blockers, and a few high-value notes only.
+- Keep `project-state.md` aggressively summary-shaped; if it starts reading like a changelog, history log, or backlog, compress it.
 
 ## Ownership boundary
 
@@ -68,6 +78,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 ## Stale-note pressure
 
 - Review notes not only by age, but also when they become large, frequently touched, cross-domain, or hard to route cleanly.
+- Pay extra attention to oversized or stale current-state surfaces such as `memory/current/project-state.md` and `memory/current/task-context.md`.
 - If a note keeps growing through unrelated edits, split it by primary home or move repeated procedure into a skill.
 
 ## Local notes

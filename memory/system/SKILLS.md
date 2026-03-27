@@ -9,7 +9,7 @@ This document defines the boundary between checked-in memory, checked-in repo sk
 Use three layers inside a repo:
 
 - checked-in files = durable shared knowledge and lightweight shared context
-- temporary bootstrap workspace under `memory/bootstrap/` = bootstrap-managed lifecycle workspace during install or upgrade
+- temporary bootstrap workspace under `memory/bootstrap/` = bootstrap-managed lifecycle workspace during install or adopt
 - checked-in repo skills under `memory/skills/` = repo-visible repeatable procedures whose primary purpose is operating on checked-in memory or maintaining the repo's memory system
 - bundled product skills = bootstrap lifecycle help such as adoption, populate, and upgrade
 - runtime-local mirrored skill copies = disposable caches for runtimes that copy or mirror skills locally
@@ -36,6 +36,7 @@ The payload ships these checked-in core memory skills under `memory/skills/`:
 
 - `memory-hygiene`
 - `memory-capture`
+- `memory-upgrade`
 - `memory-refresh`
 - `memory-router`
 
@@ -60,6 +61,7 @@ Use a repo-specific skill when the behaviour is:
 - too detailed for the core repo contract
 
 If something is a repeatable workflow over checked-in memory files, it is a strong skill candidate.
+If the prose is mostly reusable steps, refresh cadence, or maintenance choreography, it probably belongs in a skill rather than in a runbook or note.
 
 Good repo-specific fits:
 
@@ -81,7 +83,7 @@ When both a checked-in repo skill and a runtime-local mirrored copy exist, treat
 
 ## Temporary bootstrap workspace
 
-The payload may create a temporary bootstrap workspace under `memory/bootstrap/` during install or upgrade.
+The payload may create a temporary bootstrap workspace under `memory/bootstrap/` during install or adopt.
 
 - use it for bootstrap lifecycle completion only
 - do not store durable repo knowledge there
@@ -97,6 +99,8 @@ Bundled product skills should stay limited to bootstrap lifecycle operations:
 - `bootstrap-upgrade`
 - `bootstrap-uninstall`
 
+Use the checked-in `memory-upgrade` skill as the normal repo-local entrypoint for "upgrade memory".
+Treat bundled `bootstrap-upgrade` as the packaged upgrade implementation behind that stable entrypoint.
 Do not use bundled product skills as the main place for day-to-day repo memory behaviour.
 
 ## Avoid first

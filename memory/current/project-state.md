@@ -32,41 +32,16 @@ Active
 ## Current focus
 
 - Keep the always-read surface small: `AGENTS.md` plus `memory/index.md` by default, with other docs loaded on demand.
+- Harden the product boundary between canonical checked-in docs and assistive memory so stable guidance does not drift into shadow documentation.
 
 ## Recent meaningful progress
 
-- Removed task-management guidance from the core payload and installer.
-- Repositioned `memory/current/project-state.md` as the overview note rather than a planning surface.
-- Shipped the first bundled product skill set for memory and bootstrap workflows.
-- Removed repo-local Beads and task-tracking expectations from this source repository.
-- Promoted `memory/current/task-context.md` as the checked-in current-work compression note.
-- Added agent-facing memory ergonomics to the CLI for current-memory inspection, routing, sync suggestions, and payload verification.
-- Clarified that the base system must remain understandable and maintainable even when skills are unavailable.
-- Clarified that `skills/` should be limited to bundled bootstrap-lifecycle skills.
-- Added checked-in core memory skills under `memory/skills/` so repo-local memory operations ship in the payload rather than only in the bundled product skill catalogue.
-- Added `bootstrap-populate` as the conservative post-adoption skill for filling new current-memory files from repo evidence.
-- Shifted the product model toward bundled auto-discoverable skills, with manual installation only as fallback guidance.
-- Trimmed `AGENTS.md`, `memory/system/WORKFLOW.md`, and `memory/index.md` toward a lower-token, skill-first operating surface.
-- Hardened bootstrap adoption so fresh current-memory seed notes are audit-clean immediately.
-- Added `agentic-memory-bootstrap prompt populate` and made the post-adoption populate handoff explicit in the CLI and skill docs.
-- Tightened AGENTS patch guidance and optional `check-memory` append messaging.
-- Trimmed the always-read contract further so installed agents start from `AGENTS.md` plus `memory/index.md`, with workflow policy loaded only on demand.
-- Tightened the local contract to prefer targeted CLI checks over broad file re-reading when they answer the question faster.
-- Clarified that package version bumps are required for Git-based tool installs to receive updates via `uv tool upgrade`.
-- Added first-class `memory/manifest.toml` support so routing and freshness checks can use typed note metadata and file-trigger hints.
-- Switched the recommended bootstrap entry path from installed-product-first prompts to `uvx` no-install execution, with bundled skills treated as optional when already visible in the runtime.
-- Added a temporary `memory/bootstrap/` workspace with local install, populate, upgrade, and cleanup skills so prompt-driven lifecycle work can hand off to repo-local skills and then remove the workspace.
-- Hardened the freshness audit so temporary `memory/bootstrap/` files are ignored and the recurring-failures starter note is audit-clean on install.
-- Added `bootstrap-cleanup` as the preferred executable cleanup path, and tightened the temporary bootstrap skill docs around that command.
-- Added conservative uninstall support with a real `uninstall` command, a `bootstrap-uninstall` bundled skill, and uninstall prompt/docs coverage.
-- Removed the obsolete checked-in `memory/system/UPGRADE.md` runbook from the payload contract and taught doctor and upgrade to treat it as a legacy file to remove.
-- Tightened prompt emission so the generated no-install command prefers `uvx` when available and otherwise falls back to `pipx run`.
-- Hardened the ownership guidance so agents are told explicitly that `memory/system/` and the shipped core skill directories are product-managed and may be overwritten on upgrade, while repo-specific knowledge and procedures should live elsewhere.
-- Swept the remaining boundary docs so `memory/skills/`, bundled `skills/`, and `memory/bootstrap/` all state the same scope explicitly: memory workflows under `memory/skills/`, bootstrap lifecycle work under bundled or temporary bootstrap skills, and no general non-memory skills in those memory-facing surfaces.
-- Removed stale empty `skills/memory-*` source directories so the top-level bundled `skills/` tree now matches its documented bootstrap-only scope.
-- Synced the payload version marker, installed repo version marker, and installer bootstrap version, and taught `verify-payload` to flag future mismatches.
-- Added explicit shared guidance for note maintenance, memory value, token-efficiency tradeoffs, skill precedence, and stale-note pressure.
-- Added compact examples and optional patterns for routing layers, current-state notes, task-board versus roadmap separation, and operational verification.
+- Repositioned `memory/current/project-state.md` as a compact overview note rather than a planning surface.
+- Tightened the shared workflow guidance so current-state notes stay aggressively summary-shaped instead of ledger-like.
+- Clarified that closed work should only move into durable notes when the detail is still hard to recover from code, docs, or tooling.
+- Added a permanent checked-in `memory-upgrade` core skill under `memory/skills/` as the stable repo-local entrypoint for "upgrade memory".
+- Repositioned bundled `bootstrap-upgrade` as the packaged implementation behind that checked-in entrypoint instead of the only normal upgrade surface.
+- Added manifest-level canonicality and task-relevance metadata plus an opt-in doctor audit for core-doc ownership boundaries.
 
 ## Blockers
 
@@ -76,17 +51,15 @@ Active
 
 - Optional local scratch conventions are outside the core bootstrap contract.
 - `memory/current/project-state.md` is the overview note; `memory/current/task-context.md` is the current-work compression note.
-- Skills are the execution layer for repeatable memory workflows, not the storage layer for durable repo knowledge.
-- The bundled skill catalogue is now intended for bootstrap lifecycle work, while `memory/skills/` carries the shared day-to-day memory-operation skills.
-- `memory/bootstrap/` is temporary lifecycle workspace only and should not accumulate day-to-day workflows or durable knowledge.
-- The installed `memory/` tree currently differs from payload only where expected: the temporary bootstrap workspace is absent after cleanup and `memory/current/active-decisions.md` remains a repo-owned extra note.
+- Current-state notes should stay short: current focus, recent meaningful progress, blockers, and a few high-value notes only.
+- Closed transitions and operational residue belong in durable notes only when they still add hard-to-recover value.
 - `memory/system/WORKFLOW.md` is now a compact policy shim rather than a workflow handbook.
-- `memory/manifest.toml` is the emerging machine-readable companion to `memory/index.md` for typed note metadata, routing hints, and freshness triggers.
-- Skill manifests remain a future-direction topic only until the tool has a concrete consumer for them.
+- Normal upgrade intent should route through the checked-in `memory-upgrade` skill, which stays minimal and stable while the bundled implementation can evolve.
 
 ## Failure signals
 
 - The overview becomes a task list instead of a short current-state note.
+- The note starts to read like a ledger, backlog, tranche history, or changelog.
 - Shared workflow guidance drifts back into `AGENTS.md` instead of `memory/system/WORKFLOW.md`.
 
 ## Verify
@@ -106,4 +79,4 @@ Active
 
 ## Last confirmed
 
-2026-03-20 during core-guidance hardening and optional-pattern documentation
+2026-03-25 during canonical-doc boundary hardening

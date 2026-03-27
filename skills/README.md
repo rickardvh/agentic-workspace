@@ -16,7 +16,9 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
   - populate new current-memory files conservatively after adoption
   - leave `task-context.md` minimal when there is no clear active work worth preserving
 - `bootstrap-upgrade`
-  - upgrade an installed bootstrap safely without flattening local customisation
+  - upgrade memory for an already bootstrapped repository safely
+  - determine the installation source automatically
+  - acts as the packaged implementation behind the checked-in `memory-upgrade` skill
 - `bootstrap-uninstall`
   - finish bootstrap removal conservatively after the CLI removes safe bootstrap-managed files
 

@@ -3,42 +3,27 @@
 ## Purpose
 
 - `/memory` is the durable repository memory layer.
+- Checked-in repo docs remain the canonical documentation layer.
 - Read this file after identifying the work from the repo's task system or the user's request.
 - Load only the notes relevant to the task at hand.
 - If `memory/manifest.toml` exists, use it as the machine-readable routing and freshness companion to this file.
 - Use checked-in files for durable facts and lightweight shared context.
 - Use skills for repeatable workflow operations on that knowledge.
 
+## Common task bundles
+
+- current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` when needed
+- live decision review: `memory/current/active-decisions.md` plus `memory/decisions/README.md`
+- runtime or deployment change: `memory/domains/<runtime-or-deployment-note>.md` plus `memory/runbooks/<relevant-operator-runbook>.md`
+- API or interface change: `memory/domains/<api-or-interface-note>.md` plus `memory/invariants/<response-or-contract-note>.md`
+- retrieval or search change: `memory/domains/<retrieval-or-search-note>.md` plus `memory/invariants/<retrieval-contract-note>.md` plus `memory/mistakes/recurring-failures.md`
+- tests or validation work: `memory/domains/<testing-or-validation-note>.md` plus `memory/mistakes/recurring-failures.md`
+- architecture or data-model work: `memory/domains/<data-model-or-architecture-note>.md` plus `memory/invariants/<relevant-invariant-note>.md` plus `memory/decisions/README.md`
+
 ## Task routing
 
-### If touching runtime or deployment
-
-- `memory/domains/<runtime-or-deployment-note>.md`
-- `memory/runbooks/<relevant-operator-runbook>.md`
-
-### If touching API contracts or tool behaviour
-
-- `memory/domains/<api-or-interface-note>.md`
-- `memory/invariants/<response-or-contract-note>.md`
-
-### If touching retrieval or search
-
-- `memory/domains/<retrieval-or-search-note>.md`
-- `memory/invariants/<retrieval-contract-note>.md`
-- `memory/mistakes/recurring-failures.md`
-
-### If touching tests or validation
-
-- `memory/domains/<testing-or-validation-note>.md`
-- `memory/mistakes/recurring-failures.md`
-
-### If touching data model or architecture
-
-- `memory/domains/<data-model-or-architecture-note>.md`
-- `memory/invariants/<relevant-invariant-note>.md`
-- `memory/decisions/README.md`
-
 Delete unused routing examples once the repository has concrete notes.
+Prefer the smallest bundle that still covers the task surface.
 
 ## Loading rule
 
@@ -67,6 +52,7 @@ Good candidates:
 
 High-value memory tends to capture boundaries, invariants, operator sequences, recurring failures, or routing hints that are expensive to reconstruct.
 Low-value memory tends to restate code that is easy to inspect directly or to preserve one-off task details.
+If guidance is stabilising into normal repo documentation, promote it there and leave memory as a short pointer, stub, or residue note.
 
 Do not add memory for:
 
@@ -110,6 +96,12 @@ Large memory files degrade selective loading and retrieval quality.
 - Memory is likely overhead when it merely restates code, repeats task chatter, or forces broad re-reading.
 - Keep the working set small enough that reading the notes is cheaper than re-deriving the same facts.
 
+## Canonicality rule
+
+- Prefer checked-in docs first when a note says the canonical truth lives elsewhere.
+- Use `memory/manifest.toml` metadata such as `canonicality`, `canonical_home`, and `task_relevance` to distinguish required task-correctness docs from optional memory context.
+- If the repository enables the doc-ownership audit, core docs should not depend on memory for stable policy or procedure.
+
 ## Small routing examples
 
 Example: API contract work
@@ -117,7 +109,7 @@ Example: API contract work
 - `memory/domains/api.md`
 - `memory/invariants/response-contracts.md`
 
-Example: deployment incident
+Example: deployment recovery
 
 - `memory/runbooks/deploy-recovery.md`
 - `memory/domains/runtime.md`

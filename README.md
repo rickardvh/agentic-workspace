@@ -13,7 +13,7 @@ Requires Python 3.11 or newer.
 - `memory/current/` for lightweight overview and optional current-work context
 - `memory/skills/` for checked-in core memory skills
 
-Install and upgrade flows also create a temporary `memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace.
+Install and adopt flows may create a temporary `memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace. Upgrade should normally route through the checked-in `memory-upgrade` skill and no longer depends on that workspace as part of the primary model.
 
 ## Install
 
@@ -26,7 +26,7 @@ uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstr
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
 ```
 
-Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. Prompt output prefers `uvx` when it is available and otherwise falls back to `pipx run`. It runs the CLI, then hands off to the local skills under `/path/to/repo/memory/bootstrap/skills`, and finishes with `bootstrap-cleanup`.
+Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. Prompt output prefers `uvx` when it is available and otherwise falls back to `pipx run`. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but normal upgrades should route through the checked-in `memory-upgrade` skill under `memory/skills/`, which runs the packaged upgrade flow using `memory/system/UPGRADE-SOURCE.toml`.
 
 ### Manual alternative
 
@@ -57,7 +57,7 @@ Print a ready-to-paste prompt:
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
 ```
 
-That prompt prefers `uvx` when it is available and otherwise falls back to `pipx run`. It runs the CLI, then hands off to the local skills under `/path/to/repo/memory/bootstrap/skills`, and finishes with `bootstrap-cleanup`.
+That prompt prefers `uvx` when it is available and otherwise falls back to `pipx run`. It tells the agent to use the checked-in `memory-upgrade` skill as the single repo-local upgrade entrypoint; the skill then runs the packaged upgrade flow using `memory/system/UPGRADE-SOURCE.toml`.
 
 ### Manual alternative
 
@@ -98,6 +98,7 @@ Checked-in core memory skills:
 
 - `memory-hygiene`
 - `memory-capture`
+- `memory-upgrade`
 - `memory-refresh`
 - `memory-router`
 
@@ -118,7 +119,24 @@ Use checked-in memory when it saves repeated rediscovery cost:
 - good fits: boundaries, invariants, operator procedures, recurring failures, routing hints
 - poor fits: one-off task chatter or code that is easier to inspect directly
 
+Treat canonical repo docs and memory as separate lanes:
+
+- keep stable human-facing engineering guidance in `README.md`, `docs/`, or equivalent checked-in docs
+- use memory as assistive residue by default
+- if a note stabilises into canonical guidance, promote it into docs and leave memory as a stub, backlink, or short fallback note
+
 Keep the default working set small. Memory is a token saver only when the notes you load are cheaper than rediscovering the same facts from code and docs.
+
+`memory/manifest.toml` can now mark:
+
+- `canonicality` as `agent_only`, `candidate_for_promotion`, `canonical_elsewhere`, or `deprecated`
+- `task_relevance` as `required` or `optional`
+- `forbid_core_docs_depend_on_memory = true` to make `doctor` flag core docs that depend on memory
+
+Compact memory notes work better than quasi-doc pages:
+
+- good residue: pitfalls, routing hints, boundary clarifications, operator gotchas, short fallback context
+- promote instead: stable onboarding guidance, normal engineering policy, human-facing procedures, broad architecture docs
 
 Use note types deliberately:
 
@@ -130,8 +148,10 @@ Use note types deliberately:
 
 Small routing layers work better than summary-heavy indexes. A good routing slice is often only 2-3 note links for the current task surface.
 
-Example routing slices:
+Common task bundles:
 
+- current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` when needed
+- live decision review: `memory/current/active-decisions.md` plus `memory/decisions/README.md`
 - API contract change: `memory/domains/api.md` plus `memory/invariants/response-contracts.md`
 - deployment recovery: `memory/runbooks/deploy-recovery.md` plus `memory/domains/runtime.md`
 - architecture trade-off review: `memory/decisions/README.md` plus the relevant domain note
@@ -141,9 +161,9 @@ Compact `project-state.md` shape:
 - current focus
 - recent meaningful progress
 - blockers
-- a few high-level notes
+- a few high-value notes
 
-If it starts reading like a dated changelog, compress it.
+If it starts reading like a ledger, backlog, tranche history, or changelog, compress it.
 
 ## Optional Repo Patterns
 
@@ -161,6 +181,12 @@ Operational verification:
 - add a short verification checklist or expected-state section near the procedure when deploy-state confirmation matters
 - keep environment-specific deploy status outside the generic bootstrap payload unless the repo intentionally owns that note
 
+Current decisions:
+
+- keep `memory/current/active-decisions.md` for live architectural or cross-cutting decisions only
+- move a decision into `memory/decisions/` once it no longer changes implementation choices and is only worth keeping as durable rationale
+- do not keep completed transitions or operational residue in the current decision note
+
 ## Future Direction
 
 If skill manifests are added in future, they should only be introduced for concrete tool consumers such as routing, verification, or freshness checks. A new machine-readable surface without an immediate consumer would add contract weight without enough payoff.
@@ -176,9 +202,10 @@ Main commands:
 - `uninstall` for conservative bootstrap removal
 - `prompt install|adopt|populate|upgrade` to print canonical agent prompts
 - `prompt uninstall` to print the canonical uninstall prompt
-- `bootstrap-cleanup` to remove the temporary bootstrap workspace
+- `bootstrap-cleanup` to remove the temporary bootstrap workspace when install or adopt created it
 - `current show|check` to inspect current-memory notes
 - `route` and `sync-memory` to review likely relevant memory notes
+- `promotion-report` to suggest notes that should graduate into canonical checked-in docs
 - `verify-payload` to validate the packaged bootstrap contract
 
 Common arguments:
@@ -187,7 +214,9 @@ Common arguments:
 - `--format text|json` selects output format
 - `--project-name`, `--project-purpose`, `--key-repo-docs`, `--key-subsystems`, `--primary-build-command`, `--primary-test-command`, `--other-key-commands` fill starter placeholders explicitly
 
-`install` and `adopt` are conservative by default: missing files are copied, existing `AGENTS.md` and `memory/` files are left alone, and optional fragments are appended only when appropriate.
+`install` and `adopt` are conservative by default: missing files are copied, existing `AGENTS.md` and `memory/` files are left alone, and optional fragments are appended only when the fragment is not already present.
+
+`doctor --strict-doc-ownership` forces the doc-ownership and shadow-doc audits even if the repository manifest has not opted in yet.
 
 ## Developing This Repository
 

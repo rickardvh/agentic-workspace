@@ -244,9 +244,7 @@ def main() -> int:
         if _render_path(scan.path) not in manifest_notes
     )
     manifest_records_for_missing_notes = sorted(
-        note_path
-        for note_path in manifest_notes
-        if not Path(note_path).exists()
+        note_path for note_path in manifest_notes if not Path(note_path).exists()
     )
     canonical_home_map: dict[str, list[str]] = defaultdict(list)
     for note_path, raw in manifest_notes.items():
@@ -273,7 +271,9 @@ def main() -> int:
     _print_section("Oversized files", oversized_files)
     _print_section("Duplicate titles", duplicate_titles)
     _print_section("Missing manifest entries", missing_manifest_entries)
-    _print_section("Manifest records for missing notes", manifest_records_for_missing_notes)
+    _print_section(
+        "Manifest records for missing notes", manifest_records_for_missing_notes
+    )
     _print_section("Shared canonical homes", shared_canonical_homes)
     return 0
 
