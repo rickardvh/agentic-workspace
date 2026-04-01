@@ -917,6 +917,9 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
     assert "Optimise for deletion and consolidation" in text
     assert "does not replace checking code, tests, or canonical docs" in text
     assert "user-specific preferences" in text
+    assert "Memory is also a pressure layer" in text
+    assert "## Improvement pressure" in text
+    assert "## Remediation paths" in text
 
 
 def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() -> None:
@@ -950,6 +953,9 @@ def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -
     assert "Good memory systems should help an agent read less, not more." in text
     assert "Memory is a reasoning aid" in text
     assert "mixing user-specific memory with repo-specific technical truth" in text
+    assert "durable truth" in text
+    assert "improvement signal" in text
+    assert "## Improvement Paths" in text
 
 
 def test_bootstrap_task_context_starter_is_continuation_only() -> None:
@@ -980,6 +986,133 @@ def test_project_state_staleness_reason_mentions_active_plan_residue() -> None:
 
     assert reason is not None
     assert "active-plan residue" in reason
+
+
+def test_doctor_emits_improvement_pressure_suggestions_from_manifest(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "mistakes").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "memory" / "system" / "VERSION.md").write_text(
+        "Version: 32\n", encoding="utf-8"
+    )
+    (target / "memory" / "mistakes" / "recurring-failures.md").write_text(
+        "# Recurring failures\n\n- This keeps happening.\n", encoding="utf-8"
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/mistakes/recurring-failures.md"]
+note_type = "recurring-failures"
+canonical_home = "memory/mistakes/recurring-failures.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+memory_role = "improvement_signal"
+preferred_remediation = "test"
+improvement_candidate = true
+elimination_target = "shrink"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.path == target / "memory" / "mistakes" / "recurring-failures.md"
+        and action.kind == "consider"
+        and "regression test" in action.detail
+        for action in result.actions
+    )
+
+
+def test_sync_memory_appends_improvement_hint_from_manifest(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "mistakes").mkdir(parents=True)
+    (target / "memory" / "mistakes" / "recurring-failures.md").write_text(
+        "# Recurring failures\n\n- Guard this.\n", encoding="utf-8"
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/mistakes/recurring-failures.md"]
+note_type = "recurring-failures"
+canonical_home = "memory/mistakes/recurring-failures.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+stale_when = ["tests/**/*.py"]
+memory_role = "improvement_signal"
+preferred_remediation = "test"
+improvement_candidate = true
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.sync_memory(target=target, files=["tests/test_api.py"])
+
+    assert any(
+        action.path == target / "memory" / "mistakes" / "recurring-failures.md"
+        and action.kind in {"review", "update"}
+        and "consider a regression test" in action.detail
+        for action in result.actions
+    )
+
+
+def test_path_match_pattern_treats_double_star_as_zero_or_more_directories() -> None:
+    assert installer._path_matches_pattern("tests/test_api.py", "tests/**/*.py")
+    assert installer._path_matches_pattern(
+        "tests/unit/test_api.py", "tests/**/*.py"
+    )
+
+
+def test_promotion_report_supports_improvement_candidates_without_docs_promotion(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "runbooks").mkdir(parents=True)
+    (target / "memory" / "runbooks" / "deploy.md").write_text(
+        "# Deploy\n\n1. Run command A.\n2. Run command B.\n3. Verify status.\n",
+        encoding="utf-8",
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/runbooks/deploy.md"]
+note_type = "runbook"
+canonical_home = "memory/runbooks/deploy.md"
+authority = "canonical"
+audience = "human_operator"
+canonicality = "agent_only"
+task_relevance = "optional"
+memory_role = "improvement_signal"
+preferred_remediation = "script"
+improvement_candidate = true
+elimination_target = "automate"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.promotion_report(target=target)
+
+    assert any(
+        action.path == target / "memory" / "runbooks" / "deploy.md"
+        and action.kind == "candidate"
+        and "improvement candidate" in action.detail
+        and "repo-owned script or command" in action.detail
+        for action in result.actions
+    )
 
 
 def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(

@@ -41,6 +41,8 @@ Active
 - Tightened capture-threshold and anti-pattern guidance around deletion, consolidation, one-home ownership, and keeping user-specific memory out of repo memory.
 - Strengthened current-context and active-decision guidance so continuation notes stay temporary and decisions preserve consequence rather than meeting history.
 - Tightened stale-note messaging so oversized or old current-state notes explicitly point at semantic drift and planning/status spillover.
+- Added a first-class “memory as improvement pressure” model so the package can suggest docs, tests, skills, scripts, or refactor review when memory is compensating for repo friction.
+- Added optional manifest hints and soft `doctor`/`sync-memory`/`promotion-report` suggestions for improvement candidates without making the package intrusive in adopting repos.
 
 ## Blockers
 
@@ -53,6 +55,7 @@ Active
 - Current-state notes should stay short: current focus, recent meaningful progress, blockers, and a few high-value notes only.
 - Durable facts should have one primary home, with short cross-references instead of duplicated summaries.
 - Routing is the primary integration point between planning and memory: planning identifies touched surfaces and memory returns the smallest durable note set.
+- Memory should either preserve irreducible durable truth or help the agent suggest upstream repo improvements that make the note smaller.
 
 ## Failure signals
 
@@ -77,4 +80,4 @@ Active
 
 ## Last confirmed
 
-2026-04-01 during planner-agnostic interoperability and memory-discipline hardening
+2026-04-01 during planner-agnostic interoperability and improvement-pressure hardening

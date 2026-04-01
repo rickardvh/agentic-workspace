@@ -17,7 +17,7 @@ AGENTS_PATH = Path("AGENTS.md")
 MANIFEST_PATH = Path("memory/manifest.toml")
 UPGRADE_SOURCE_PATH = Path("memory/system/UPGRADE-SOURCE.toml")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 32
+BOOTSTRAP_VERSION = 33
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
 
@@ -266,6 +266,12 @@ class MemoryNoteRecord:
     related_validations: tuple[str, ...] = ()
     routing_only: bool = False
     high_level: bool = False
+    memory_role: str = ""
+    symptom_of: str = ""
+    preferred_remediation: str = ""
+    improvement_candidate: bool = False
+    improvement_note: str = ""
+    elimination_target: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -547,6 +553,7 @@ def doctor_bootstrap(
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     source_root = payload_root()
+    manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
     substitutions = build_substitutions(
         target_root=target_root,
         project_name=project_name,
@@ -579,6 +586,7 @@ def doctor_bootstrap(
         result=result,
         force_enforcement=strict_doc_ownership,
     )
+    _emit_improvement_pressure(target_root=target_root, manifest=manifest, result=result)
     return result
 
 
@@ -840,15 +848,24 @@ def sync_memory(
         note_path = target_root / Path(note)
         note_exists = note_path.exists()
         note_text = note_path.read_text(encoding="utf-8") if note_exists else ""
+        manifest_note = _lookup_manifest_note(manifest, Path(note))
         recommendation = "review"
         if not note_exists or _has_placeholders(note_text):
             recommendation = "update"
         if note_path.name == "index.md":
             recommendation = "update index"
+        detail = (
+            f"{reason}; manifest staleness trigger matched {', '.join(changed_files) if changed_files else 'explicit input'}"
+        )
+        improvement_hint = _first_improvement_hint(
+            manifest_note, note_path, note_text, for_report=False
+        )
+        if improvement_hint:
+            detail = f"{detail}; consider {improvement_hint}"
         result.add(
             recommendation,
             note_path,
-            f"{reason}; manifest staleness trigger matched {', '.join(changed_files) if changed_files else 'explicit input'}",
+            detail,
             role="memory-sync",
             safety="manual",
             source=note,
@@ -865,15 +882,29 @@ def sync_memory(
             continue
         note_exists = note_path.exists()
         note_text = note_path.read_text(encoding="utf-8") if note_exists else ""
+        relative_note = (
+            note_path.relative_to(target_root)
+            if note_path.is_relative_to(target_root)
+            else note_path
+        )
+        manifest_note = _lookup_manifest_note(manifest, relative_note)
         recommendation = "review"
         if not note_exists or _has_placeholders(note_text):
             recommendation = "update"
         if note_path.name == "index.md":
             recommendation = "update index"
+        detail = (
+            f"{action.detail}; suggested by changed files {', '.join(changed_files) if changed_files else 'explicit input'}"
+        )
+        improvement_hint = _first_improvement_hint(
+            manifest_note, note_path, note_text, for_report=False
+        )
+        if improvement_hint:
+            detail = f"{detail}; consider {improvement_hint}"
         result.add(
             recommendation,
             note_path,
-            f"{action.detail}; suggested by changed files {', '.join(changed_files) if changed_files else 'explicit input'}",
+            detail,
             role="memory-sync",
             safety="manual",
             source=action.source,
@@ -898,7 +929,11 @@ def promotion_report(
     notes: list[str] | None = None,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
-    result = _new_result(target_root, dry_run=True, message="Promotion report")
+    result = _new_result(
+        target_root,
+        dry_run=True,
+        message="Promotion and elimination report",
+    )
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
 
     requested = {Path(note) for note in (notes or [])}
@@ -911,7 +946,7 @@ def promotion_report(
         result.add(
             "manual review",
             target_root / MANIFEST_PATH,
-            "no promotion candidates found; mark notes candidate_for_promotion or pass --notes to inspect specific memory notes",
+            "no promotion or elimination candidates found; mark notes candidate_for_promotion, improvement_candidate, or pass --notes to inspect specific memory notes",
             role="promotion-report",
             safety="manual",
             source=MANIFEST_PATH.as_posix(),
@@ -2011,6 +2046,8 @@ def _infer_action_category(
         return "safe-update"
     if kind == "manual review":
         return "manual-review"
+    if kind == "consider":
+        return "manual-review"
     if safety == "safe":
         return "safe-update"
     return ""
@@ -2175,6 +2212,12 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
                 related_validations=tuple(_string_list(raw.get("related_validations"))),
                 routing_only=bool(raw.get("routing_only", False)),
                 high_level=bool(raw.get("high_level", False)),
+                memory_role=str(raw.get("memory_role", "") or "").strip(),
+                symptom_of=str(raw.get("symptom_of", "") or "").strip(),
+                preferred_remediation=str(raw.get("preferred_remediation", "") or "").strip(),
+                improvement_candidate=bool(raw.get("improvement_candidate", False)),
+                improvement_note=str(raw.get("improvement_note", "") or "").strip(),
+                elimination_target=str(raw.get("elimination_target", "") or "").strip(),
             )
         )
 
@@ -2357,7 +2400,7 @@ def _iter_promotion_candidates(
             if note.canonicality not in {
                 "candidate_for_promotion",
                 "canonical_elsewhere",
-            }:
+            } and not note.improvement_candidate:
                 continue
             if note.canonicality == "candidate_for_promotion":
                 destination = (
@@ -2370,10 +2413,20 @@ def _iter_promotion_candidates(
                     "Promote stable guidance there, then leave this memory note as a short stub, backlink, or fallback summary."
                 )
             else:
-                detail = (
-                    f"canonical truth should live in {note.canonical_home.as_posix()}. "
-                    "Keep this memory note compact and non-authoritative."
-                )
+                if note.canonicality == "canonical_elsewhere":
+                    detail = (
+                        f"canonical truth should live in {note.canonical_home.as_posix()}. "
+                        "Keep this memory note compact and non-authoritative."
+                    )
+                else:
+                    detail = (
+                        "improvement candidate; this note looks like a signal that the repo may need an upstream change rather than more memory."
+                    )
+            improvement_hint = _first_improvement_hint(
+                note, note_path, note_path.read_text(encoding="utf-8") if note_path.exists() else "", for_report=True
+            )
+            if improvement_hint:
+                detail = f"{detail} Also consider {improvement_hint}."
             candidates.append((note_path, note, detail))
 
     for requested_note in requested:
@@ -2388,9 +2441,172 @@ def _iter_promotion_candidates(
             f"explicit note supplied; suggested canonical doc {_suggest_canonical_doc_path(requested_note).as_posix()}. "
             "Review whether the stable parts should be promoted out of memory."
         )
+        improvement_hint = _first_improvement_hint(
+            _lookup_manifest_note(manifest, requested_note),
+            requested_path,
+            requested_path.read_text(encoding="utf-8") if requested_path.exists() else "",
+            for_report=True,
+        )
+        if improvement_hint:
+            detail = f"{detail} Also consider {improvement_hint}."
         candidates.append((requested_path, None, detail))
 
     return candidates
+
+
+def _lookup_manifest_note(
+    manifest: MemoryManifest | None, note_path: Path
+) -> MemoryNoteRecord | None:
+    if manifest is None:
+        return None
+    for note in manifest.notes:
+        if note.path == note_path:
+            return note
+    return None
+
+
+def _first_improvement_hint(
+    note: MemoryNoteRecord | None,
+    note_path: Path,
+    text: str,
+    *,
+    for_report: bool,
+) -> str:
+    hints = _collect_improvement_hints(note, note_path, text, for_report=for_report)
+    return hints[0] if hints else ""
+
+
+def _collect_improvement_hints(
+    note: MemoryNoteRecord | None,
+    note_path: Path,
+    text: str,
+    *,
+    for_report: bool,
+) -> list[str]:
+    hints: list[str] = []
+    relative = note.path if note is not None else note_path
+    relative_str = relative.as_posix()
+    lines = text.splitlines()
+    line_count = len(lines)
+    imperative_lines = sum(
+        1
+        for line in lines
+        if re.match(r"^\s*(?:-|\*|\d+\.)\s+", line)
+        or line.strip().startswith("`")
+    )
+
+    if note is not None:
+        manifest_hint = _manifest_improvement_hint(note)
+        if manifest_hint:
+            hints.append(manifest_hint)
+
+    if "memory/mistakes/" in relative_str:
+        hints.append(
+            "a regression test, validation, or lint rule if the recurring failure remains active"
+        )
+    if "memory/runbooks/" in relative_str and line_count >= 35 and imperative_lines >= 6:
+        hints.append(
+            "a checked-in skill first, then a repo-owned script or command if the workflow stays mechanical"
+        )
+    if "memory/domains/" in relative_str and line_count >= 140:
+        hints.append(
+            "clearer canonical docs or refactor review if this note keeps compensating for a high-discovery-cost subsystem"
+        )
+    if relative_str.endswith("memory/index.md") and line_count >= 120:
+        hints.append(
+            "clearer repo boundaries or note consolidation if routing keeps expanding to explain one awkward area"
+        )
+    if "memory/current/" in relative_str and line_count >= 80 and not for_report:
+        hints.append(
+            "shrinking planning/status spillover or unresolved structure friction before growing current-memory notes further"
+        )
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for hint in hints:
+        if hint in seen:
+            continue
+        seen.add(hint)
+        deduped.append(hint)
+    return deduped
+
+
+def _manifest_improvement_hint(note: MemoryNoteRecord) -> str:
+    remediation_map = {
+        "docs": "promoting the stable parts into canonical docs",
+        "skill": "a checked-in skill for the repeated workflow",
+        "script": "a repo-owned script or command if the workflow is stable and mechanical",
+        "test": "a regression test that removes the need to remember this failure mode manually",
+        "validation": "stronger validation or linting so the note stops compensating for missing guardrails",
+        "refactor": "refactor review or clearer ownership boundaries in the underlying subsystem",
+        "code": "encoding the constraint directly in the implementation",
+    }
+    elimination_map = {
+        "shrink": "shrinking the note after the upstream improvement lands",
+        "promote": "promoting the durable human-facing parts and leaving only a short stub",
+        "automate": "automating the repeated mechanics so the note can stay minimal",
+        "refactor_away": "refactoring the underlying friction away so the note becomes unnecessary",
+    }
+
+    parts: list[str] = []
+    if note.improvement_candidate and note.preferred_remediation:
+        parts.append(
+            remediation_map.get(
+                note.preferred_remediation,
+                f"{note.preferred_remediation} as the preferred remediation target",
+            )
+        )
+    elif note.preferred_remediation:
+        parts.append(
+            remediation_map.get(
+                note.preferred_remediation,
+                f"{note.preferred_remediation} as the preferred remediation target",
+            )
+        )
+
+    if note.elimination_target:
+        parts.append(
+            elimination_map.get(
+                note.elimination_target,
+                f"{note.elimination_target} as the intended elimination path",
+            )
+        )
+
+    if note.improvement_note:
+        parts.append(note.improvement_note.rstrip("."))
+
+    if note.memory_role == "improvement_signal" and not parts:
+        parts.append(
+            "an upstream repo improvement rather than treating the memory note as the long-term endpoint"
+        )
+
+    return "; ".join(parts)
+
+
+def _emit_improvement_pressure(
+    *,
+    target_root: Path,
+    manifest: MemoryManifest | None,
+    result: InstallResult,
+) -> None:
+    if manifest is None:
+        return
+
+    for note in manifest.notes:
+        note_path = target_root / note.path
+        if not note_path.exists():
+            continue
+        text = note_path.read_text(encoding="utf-8")
+        for hint in _collect_improvement_hints(note, note_path, text, for_report=False):
+            result.add(
+                "consider",
+                note_path,
+                f"improvement candidate: consider {hint}",
+                role="improvement-pressure",
+                safety="advisory",
+                source=note.path.as_posix(),
+                category="manual-review",
+            )
 
 
 def _suggest_canonical_doc_path(note_path: Path) -> Path:
@@ -2543,7 +2759,11 @@ def _path_matches_pattern(raw_path: str, pattern: str) -> bool:
     normalised_pattern = pattern.replace("\\", "/").strip()
     if not normalised_path or not normalised_pattern:
         return False
-    return Path(normalised_path).match(normalised_pattern)
+    path = Path(normalised_path)
+    patterns = [normalised_pattern]
+    if "/**/" in normalised_pattern:
+        patterns.append(normalised_pattern.replace("/**/", "/"))
+    return any(path.match(candidate) for candidate in patterns)
 
 
 def _parse_route_sections(index_path: Path) -> list[tuple[str, list[str]]]:

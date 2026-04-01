@@ -19,6 +19,14 @@ forbid_core_docs_depend_on_memory = false
 # - human_operator
 # - shared_invariant
 # Existing repos may keep their current audience values; these labels are guidance only.
+# Optional improvement-pressure fields:
+# - memory_role = "durable_truth" | "improvement_signal"
+# - symptom_of = "workflow_friction" | "guidance_drift" | "missing_guardrail" | "architecture_friction" | "operator_complexity"
+# - preferred_remediation = "docs" | "skill" | "script" | "test" | "validation" | "refactor" | "code"
+# - improvement_candidate = true
+# - improvement_note = "short advisory hint"
+# - elimination_target = "shrink" | "promote" | "automate" | "refactor_away"
+# These fields are advisory only; existing manifests remain valid without them.
 
 [notes."memory/index.md"]
 note_type = "routing"
@@ -45,6 +53,7 @@ subsystems = ["current-context"]
 surfaces = ["decision", "architecture"]
 routes_from = ["README.md", "memory/system/**/*.md", "bootstrap/**/*.md"]
 stale_when = ["README.md", "memory/system/**/*.md", "bootstrap/**/*.md"]
+memory_role = "durable_truth"
 
 [notes."memory/current/task-context.md"]
 note_type = "current-context"
@@ -72,6 +81,7 @@ surfaces = ["decision", "architecture"]
 routes_from = ["AGENTS.md", "memory/index.md"]
 stale_when = ["AGENTS.md", "memory/index.md", "bootstrap/AGENTS.md"]
 related_validations = ["python scripts/check/check_memory_freshness.py"]
+memory_role = "durable_truth"
 
 [notes."memory/system/VERSION.md"]
 note_type = "version-marker"
@@ -97,3 +107,9 @@ surfaces = ["tests", "architecture"]
 routes_from = ["tests/**/*.py", "scripts/check/**/*.py"]
 stale_when = ["tests/**/*.py", "scripts/check/**/*.py"]
 related_validations = ["python scripts/check/check_memory_freshness.py"]
+memory_role = "improvement_signal"
+symptom_of = "missing_guardrail"
+preferred_remediation = "test"
+improvement_candidate = true
+improvement_note = "If recurring failures persist, consider a regression test, validation, or lint rule before growing the note."
+elimination_target = "shrink"

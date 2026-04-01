@@ -31,6 +31,7 @@ It operates on checked-in memory files. It does not replace them.
    - edit existing notes before creating new ones
    - merge or delete stale notes instead of accumulating near-duplicates
    - keep the overview and task-context notes short and avoid turning current-memory files into task trackers
+   - ask whether a repeated note should instead become canonical docs, a skill, a script suggestion, a regression test suggestion, or a refactor suggestion
 6. If note names, roles, or routing changed, update `memory/index.md` and `memory/manifest.toml` in the same change when used.
 7. Before finishing, rerun the audit or explain why it could not be run.
 
@@ -41,6 +42,7 @@ It operates on checked-in memory files. It does not replace them.
 - Preserve useful current guidance; remove only what no longer helps the next contributor.
 - Do not move durable technical knowledge into task tooling.
 - Mark uncertain notes `Needs verification` instead of guessing.
+- If memory keeps compensating for the same awkward subsystem or workflow, suggest the upstream improvement instead of only expanding the note.
 
 ## Typical outputs
 

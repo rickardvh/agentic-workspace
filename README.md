@@ -17,6 +17,7 @@ Install and adopt flows may create a temporary `memory/bootstrap/` workspace so 
 
 Memory owns durable repo knowledge. The repository's active planning/status surface owns active intent and sequencing. Memory complements planning by preserving durable lessons and reducing re-orientation cost, but it must never compete with the planning surface for ownership of active work.
 Good memory systems should help an agent read less, not more.
+Memory is also a pressure layer: if a note exists because the repo is awkward to understand or operate, the note should help the agent suggest the code, docs, tests, tooling, or refactor that would let the note shrink, move, or disappear.
 
 ## Install
 
@@ -132,6 +133,13 @@ Keep the default working set small. Memory is a token saver only when the notes 
 Optimise for deletion and consolidation, not just capture.
 Memory is a reasoning aid and constraint layer; it does not replace checking the codebase when the codebase is the source of truth.
 
+Use memory in two modes:
+
+- durable truth: invariants, authority boundaries, recurring traps, operator constraints, and other hard-to-rediscover facts that should stay visible
+- improvement signal: notes that exist because the repo still needs clearer docs, stronger tests, better tooling, better automation, or simpler structure
+
+Preserve the first kind. Use the second kind to suggest upstream repo improvements instead of growing memory indefinitely.
+
 When to write to memory:
 
 - invariants and authority boundaries
@@ -149,6 +157,8 @@ When not to write to memory:
 - execution logs
 - plan content that already belongs to the repository's active planning/status surface
 - user-specific preferences, collaboration habits, or stylistic defaults unless they are shared technical policy
+
+Ask one more question before expanding a note: what repo change would let this note shrink, move, or disappear?
 
 `memory/manifest.toml` can now mark:
 
@@ -178,6 +188,7 @@ Use note types deliberately:
 - `current/task-context.md` for optional continuation compression: active goal, touched surfaces, blocking assumptions, and next validation only
 
 Small routing layers work better than summary-heavy indexes. A good routing slice is often only 2-3 note links for the current task surface.
+If the same note keeps being routed for safe work on one subsystem, that is often a cue to suggest clearer docs, stronger validation, or refactor review.
 
 Common task bundles:
 
@@ -188,6 +199,7 @@ Common task bundles:
 - architecture trade-off review: `memory/decisions/README.md` plus the relevant domain note
 
 Routing is the primary integration point with planning: the planning/status surface identifies touched paths or surfaces, and `route` or `sync-memory` returns the smallest relevant durable note set.
+Those commands should also help the agent notice when a note looks like a candidate for docs promotion, skill extraction, scripting, testing, or refactor review.
 
 Compact `project-state.md` shape:
 
@@ -220,12 +232,27 @@ Operational verification:
 - add a short verification checklist or expected-state section near the procedure when deploy-state confirmation matters
 - keep environment-specific deploy status outside the generic bootstrap payload unless the repo intentionally owns that note
 
+Improvement paths:
+
+- recurring mistake -> consider a regression test, validation, or lint rule
+- prose-heavy runbook -> consider a checked-in skill first, then a repo-owned script or command if the workflow stays mechanical
+- stable human-facing guidance -> consider promoting it into canonical docs and leaving memory as a stub or backlink
+- note that repeatedly explains one hard subsystem -> consider refactor review or clearer module boundaries
+- routing crutch used for one awkward area -> consider naming, structure, or ownership cleanup in the repo
+
 ## Current Decisions
 
 - keep `memory/current/active-decisions.md` for live architectural or cross-cutting decisions only
 - move a decision into `memory/decisions/` once it no longer changes implementation choices and is only worth keeping as durable rationale
 - preserve decisions at the level of consequence or still-relevant rejected-path boundaries, not meeting history
 - do not keep completed transitions or operational residue in the current decision note
+
+## Improvement Questions
+
+- Is this note preserving durable truth or compensating for repo friction?
+- Why is this not encoded in code, tests, tooling, or canonical docs?
+- What repo change would let this note shrink by half?
+- Should this become canonical docs, a skill, a script, a test, a validation, or a refactor candidate instead?
 
 ## Anti-patterns
 
@@ -235,6 +262,7 @@ Operational verification:
 - coupling freshness checks to a specific planner or planning file
 - forcing repositories to adopt the memory taxonomy in their planning system
 - mixing user-specific memory with repo-specific technical truth
+- treating memory as the endpoint when it is really signalling missing docs, missing tests, weak tooling, or awkward architecture
 
 ## Minimal Adoption Checklist
 
@@ -246,7 +274,7 @@ Operational verification:
 
 ## Future Direction
 
-If skill manifests are added in future, they should only be introduced for concrete tool consumers such as routing, verification, or freshness checks. A new machine-readable surface without an immediate consumer would add contract weight without enough payoff.
+Skill manifests should only exist for concrete tool consumers such as routing, verification, or freshness checks. A new machine-readable surface without an immediate consumer would add contract weight without enough payoff.
 
 ## Command Summary
 
@@ -262,7 +290,7 @@ Main commands:
 - `bootstrap-cleanup` to remove the temporary bootstrap workspace when install or adopt created it
 - `current show|check` to inspect current-memory notes
 - `route` and `sync-memory` to review likely relevant memory notes
-- `promotion-report` to suggest notes that should graduate into canonical checked-in docs
+- `promotion-report` to suggest notes that should graduate into canonical checked-in docs or become elimination candidates for skills, scripts, tests, or refactors
 - `verify-payload` to validate the packaged bootstrap contract
 
 Common arguments:

@@ -187,7 +187,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_format_argument(route_parser)
 
     sync_parser = subparsers.add_parser(
-        "sync-memory", help="Suggest memory updates for changed work."
+        "sync-memory", help="Suggest memory updates for changed work and surface compact upstream improvement candidates."
     )
     _add_target_arguments(sync_parser)
     sync_parser.add_argument(
@@ -200,7 +200,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     promotion_parser = subparsers.add_parser(
         "promotion-report",
-        help="Suggest memory notes that should be promoted into canonical checked-in docs.",
+        help="Suggest memory notes that should be promoted into canonical docs or considered for elimination through skills, scripts, tests, or refactors.",
     )
     _add_target_arguments(promotion_parser)
     promotion_parser.add_argument(

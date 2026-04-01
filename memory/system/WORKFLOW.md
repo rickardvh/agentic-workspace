@@ -24,6 +24,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - The repository's active planning/status surface owns active intent and sequencing: current goal, next action, done criteria, milestone status, and backlog state.
 - Memory may keep a small continuation note for interrupted multi-session work, but that note is only re-orientation support for the next session.
 - Memory complements planning by reducing re-orientation cost and preserving durable lessons; it must never compete with the planning system for ownership of active work.
+- Memory is also a pressure layer: if a note exists because the repo is awkward to understand, operate, or change safely, use the note to suggest the code, docs, tooling, test, or refactor change that would let the note shrink, move, or disappear.
 
 ## Core rules
 
@@ -43,6 +44,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Move closed work into a durable note only when the detail remains hard to recover from code, docs, or tooling.
 - Move procedure-heavy prose into a skill when the durable fact should stay in files but the repeated workflow should become optional execution guidance.
 - Prefer one primary home for the durable fact and a short cross-reference elsewhere rather than parallel note copies.
+- Ask what repo change would eliminate or shrink the note: canonical docs, stronger tests, validation, a script, a skill, or a clearer design boundary.
 
 ## Metadata
 
@@ -51,6 +53,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Use ISO dates for `Last confirmed`.
 - Prefer `memory/manifest.toml` for machine-readable note typing, routing, and freshness triggers when the repository maintains that file.
 - Use manifest fields such as `audience`, `canonicality`, `task_relevance`, `routes_from`, and `stale_when` to distinguish note classes, promotion candidates, routing relevance, and freshness pressure.
+- Optional manifest fields such as `memory_role`, `symptom_of`, `preferred_remediation`, `improvement_candidate`, `improvement_note`, and `elimination_target` can capture why a note exists and what kind of upstream improvement it may be pointing toward.
 
 ## Canonical-doc boundary
 
@@ -99,6 +102,22 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Good memory captures include invariants, authority boundaries, recurring failure modes, routing hints, operator runbooks, durable consequences, and still-relevant rejected-path boundaries.
 - Do not store milestone status, next-step checklists, backlog state, or execution logs in memory; those belong in the planning/status surface.
 - Keep user-specific preferences, collaboration habits, and stylistic defaults out of repo memory unless they are explicitly adopted as shared technical policy.
+
+## Improvement pressure
+
+- Treat durable truth and improvement signals differently.
+- Durable truth should remain visible in memory when it is genuinely expensive to rediscover and not better owned elsewhere.
+- Improvement signals are notes that exist because the repo still needs clearer docs, better tests, stronger validation, better tooling, cleaner automation, or simpler design.
+- Do not let improvement-signal notes become permanent substitutes for repo improvements when those improvements are feasible.
+- If the same note keeps being needed for safe work on one subsystem, consider whether the repo needs docs promotion, a skill, a script, a regression test, stronger validation, or refactor review.
+
+## Remediation paths
+
+- recurring mistakes -> consider regression tests, validation, or lint rules
+- prose-heavy procedures -> consider a checked-in skill first, then a repo-owned script or command if the workflow remains mechanical
+- stable human-facing guidance -> consider canonical docs, with memory left as a stub or backlink
+- large orientation notes for one code area -> consider refactor review or clearer boundaries
+- repeated routing crutches for one awkward area -> consider naming, structure, or ownership cleanup
 
 ## Anti-patterns
 

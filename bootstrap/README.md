@@ -4,6 +4,7 @@ This package is a repo-agnostic bootstrap for agent memory and lightweight check
 
 Memory owns durable repo knowledge. The repository's active planning/status surface owns active intent and sequencing. Memory complements planning by preserving durable lessons and reducing re-orientation cost, but it must never compete with the planning surface for ownership of active work.
 Good memory systems should help an agent read less, not more.
+Memory is also a pressure layer: if a note exists because the repo is awkward to understand or operate, the note should help the agent suggest the code, docs, tests, tooling, or refactor that would let the note shrink, move, or disappear.
 
 It is intended to be copied into an existing repository to provide:
 
@@ -34,6 +35,12 @@ Optimise for deletion and consolidation, not just capture.
 If a memory note stabilises into canonical repo guidance, promote it into checked-in docs and leave a short replacement note instead of duplicate truth.
 Prefer compact residue-oriented notes: pitfalls, routing hints, traps, operator context, and short fallback summaries.
 Memory is a reasoning aid and constraint layer; it does not replace checking the codebase when the codebase is the source of truth.
+Use memory in two modes:
+
+- durable truth: invariants, authority boundaries, recurring traps, operator constraints, and other hard-to-rediscover facts that should stay visible
+- improvement signal: notes that exist because the repo still needs clearer docs, stronger tests, better tooling, better automation, or simpler structure
+
+Preserve the first kind. Use the second kind to suggest upstream repo improvements instead of growing memory indefinitely.
 
 When maintaining this repository, treat `bootstrap/` as the source of truth for installed files. The packaged wheel payload is built from this directory.
 
@@ -88,6 +95,7 @@ Bundled product skills should stay limited to bootstrap lifecycle operations. Re
 Small routing layers work better than summary-heavy indexes. A good `memory/index.md` points to a few likely-relevant notes rather than trying to restate them.
 When `memory/manifest.toml` marks a note as `canonical_elsewhere`, routing should prefer the canonical checked-in doc and keep the memory note as optional fallback context.
 Planning/status surfaces identify touched paths or surfaces; memory routing returns the smallest relevant durable note set.
+If the same note keeps being routed for safe work on one subsystem, that is often a cue to suggest clearer docs, stronger validation, or refactor review.
 
 Common task bundles:
 
@@ -114,6 +122,14 @@ Interoperability pattern catalogue:
 - preserve decisions at the level of consequence or still-relevant rejected-path boundaries, not meeting history
 - do not keep completed transitions or operational residue in the current decision note
 
+## Improvement Paths
+
+- recurring mistake -> consider a regression test, validation, or lint rule
+- prose-heavy runbook -> consider a checked-in skill first, then a repo-owned script or command if the workflow stays mechanical
+- stable human-facing guidance -> consider promoting it into canonical docs and leaving memory as a stub or backlink
+- note that repeatedly explains one hard subsystem -> consider refactor review or clearer module boundaries
+- routing crutch used for one awkward area -> consider naming, structure, or ownership cleanup in the repo
+
 ## When to write to memory
 
 - store: invariants, authority boundaries, recurring failure modes, routing hints, operator runbooks, and other facts that are hard to recover quickly from code, tests, tooling, or the planning/status surface
@@ -124,6 +140,8 @@ Interoperability pattern catalogue:
 - do not store: milestone status, next-step checklists, backlog state, execution logs, or plan content already owned by the planning/status surface
 - do not store: user-specific preferences, collaboration habits, or stylistic defaults unless they are shared technical policy
 
+Ask one more question before expanding a note: what repo change would let this note shrink, move, or disappear?
+
 ## Anti-patterns
 
 - turning memory into a task tracker
@@ -132,6 +150,7 @@ Interoperability pattern catalogue:
 - coupling freshness checks to a specific planner or planning file
 - forcing repositories to adopt the memory taxonomy in their planning system
 - mixing user-specific memory with repo-specific technical truth
+- treating memory as the endpoint when it is really signalling missing docs, missing tests, weak tooling, or awkward architecture
 
 ## Minimal Adoption Checklist
 
