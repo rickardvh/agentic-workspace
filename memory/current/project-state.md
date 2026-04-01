@@ -45,6 +45,7 @@ Active
 - Added optional manifest hints and soft `doctor`/`sync-memory`/`promotion-report` suggestions for improvement candidates without making the package intrusive in adopting repos.
 - Hardened the upgrade skill so it no longer assumes a globally installed `agentic-memory-bootstrap` executable and can fall back to the packaged module entrypoint from a local checkout.
 - Realigned the upgrade skill and generated prompt with the recorded-source runner model so fallback prefers `uvx` or `pipx run` from the resolved source instead of assuming a local checkout.
+- Fixed package-level hygiene issues: the module version now follows installed package metadata, the CLI exposes `--version`, git change detection times out with a warning, and the repo now has basic CI plus CLI smoke coverage.
 
 ## Blockers
 

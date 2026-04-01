@@ -4,22 +4,38 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-memory-bootstrap"
-version = "0.2.25"
+version = "0.2.26"
 description = "Install the agentic memory bootstrap into an existing repository."
 readme = "README.md"
 requires-python = ">=3.11"
+keywords = ["agents", "bootstrap", "developer-tools", "memory", "repository"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Build Tools",
+  "Topic :: Software Development :: Quality Assurance",
+]
 authors = [
   { name = "Rickard von Haugwitz" },
   { name = "OpenAI Codex" },
 ]
 dependencies = []
 
+[project.urls]
+Homepage = "https://github.com/Tenfifty/agentic-memory"
+Repository = "https://github.com/Tenfifty/agentic-memory"
+Issues = "https://github.com/Tenfifty/agentic-memory/issues"
+
 [project.scripts]
 agentic-memory-bootstrap = "repo_memory_bootstrap.cli:main"
 
 [dependency-groups]
 dev = [
-  "pyyaml",
+  "pytest-cov",
   "pytest",
   "ruff",
   "ty",
@@ -41,12 +57,23 @@ include = [
 ]
 
 [tool.pytest.ini_options]
+addopts = [
+  "--cov=repo_memory_bootstrap",
+  "--cov-report=term-missing:skip-covered",
+]
 testpaths = ["tests"]
 
 [tool.ruff]
+line-length = 140
 target-version = "py311"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
-ignore = ["E501"]
+
+[tool.coverage.run]
+source = ["repo_memory_bootstrap"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

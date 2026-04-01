@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import shutil
 
+from repo_memory_bootstrap import __version__
 from repo_memory_bootstrap.installer import (
     BOOTSTRAP_WORKSPACE_ROOT,
     RepoDetectionError,
@@ -17,11 +18,11 @@ from repo_memory_bootstrap.installer import (
     list_bundled_skills,
     list_payload_files,
     promotion_report,
+    resolve_upgrade_source,
     route_memory,
     show_current_memory,
     sync_memory,
     uninstall_bootstrap,
-    resolve_upgrade_source,
     upgrade_bootstrap,
     verify_payload,
 )
@@ -33,6 +34,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="agentic-memory-bootstrap",
         description="Install and upgrade a repository memory and lightweight coordination bootstrap.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -200,7 +206,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     promotion_parser = subparsers.add_parser(
         "promotion-report",
-        help="Suggest memory notes that should be promoted into canonical docs or considered for elimination through skills, scripts, tests, or refactors.",
+        help=(
+            "Suggest memory notes that should be promoted into canonical docs or "
+            "considered for elimination through skills, scripts, tests, or refactors."
+        ),
     )
     _add_target_arguments(promotion_parser)
     promotion_parser.add_argument(
@@ -284,157 +293,194 @@ def _add_format_argument(command_parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _install_kwargs(args: argparse.Namespace) -> dict[str, object]:
+    return {
+        "target": getattr(args, "target", None),
+        "dry_run": getattr(args, "dry_run", False),
+        "force": getattr(args, "force", False),
+        "project_name": getattr(args, "project_name", None),
+        "project_purpose": getattr(args, "project_purpose", None),
+        "key_repo_docs": getattr(args, "key_repo_docs", None),
+        "key_subsystems": getattr(args, "key_subsystems", None),
+        "primary_build_command": getattr(args, "primary_build_command", None),
+        "primary_test_command": getattr(args, "primary_test_command", None),
+        "other_key_commands": getattr(args, "other_key_commands", None),
+    }
+
+
+def _handle_install(args: argparse.Namespace) -> int:
+    result = install_bootstrap(**_install_kwargs(args))
+    _emit_result(result, output_format=args.format, include_install_summary=True)
+    return 0
+
+
+def _handle_adopt(args: argparse.Namespace) -> int:
+    result = adopt_bootstrap(
+        target=args.target,
+        dry_run=args.dry_run,
+        apply_local_entrypoint=args.apply_local_entrypoint,
+        project_name=args.project_name,
+        project_purpose=args.project_purpose,
+        key_repo_docs=args.key_repo_docs,
+        key_subsystems=args.key_subsystems,
+        primary_build_command=args.primary_build_command,
+        primary_test_command=args.primary_test_command,
+        other_key_commands=args.other_key_commands,
+    )
+    _emit_result(result, output_format=args.format, include_install_summary=True)
+    return 0
+
+
+def _handle_upgrade(args: argparse.Namespace) -> int:
+    result = upgrade_bootstrap(
+        target=args.target,
+        dry_run=args.dry_run,
+        force=args.force,
+        apply_local_entrypoint=args.apply_local_entrypoint,
+        project_name=args.project_name,
+        project_purpose=args.project_purpose,
+        key_repo_docs=args.key_repo_docs,
+        key_subsystems=args.key_subsystems,
+        primary_build_command=args.primary_build_command,
+        primary_test_command=args.primary_test_command,
+        other_key_commands=args.other_key_commands,
+    )
+    _emit_result(result, output_format=args.format)
+    return 0
+
+
+def _handle_uninstall(args: argparse.Namespace) -> int:
+    result = uninstall_bootstrap(
+        target=args.target,
+        dry_run=args.dry_run,
+        project_name=args.project_name,
+        project_purpose=args.project_purpose,
+        key_repo_docs=args.key_repo_docs,
+        key_subsystems=args.key_subsystems,
+        primary_build_command=args.primary_build_command,
+        primary_test_command=args.primary_test_command,
+        other_key_commands=args.other_key_commands,
+    )
+    _emit_result(result, output_format=args.format)
+    return 0
+
+
+def _handle_doctor(args: argparse.Namespace) -> int:
+    result = doctor_bootstrap(
+        target=args.target,
+        strict_doc_ownership=args.strict_doc_ownership,
+        project_name=args.project_name,
+        project_purpose=args.project_purpose,
+        key_repo_docs=args.key_repo_docs,
+        key_subsystems=args.key_subsystems,
+        primary_build_command=args.primary_build_command,
+        primary_test_command=args.primary_test_command,
+        other_key_commands=args.other_key_commands,
+    )
+    _emit_result(result, output_format=args.format)
+    return 0
+
+
+def _handle_status(args: argparse.Namespace) -> int:
+    _emit_result(collect_status(target=args.target), output_format=args.format)
+    return 0
+
+
+def _handle_list_files(args: argparse.Namespace) -> int:
+    _emit_result(list_payload_files(target=args.target), output_format=args.format)
+    return 0
+
+
+def _handle_list_skills(args: argparse.Namespace) -> int:
+    _emit_result(list_bundled_skills(), output_format=args.format)
+    return 0
+
+
+def _handle_prompt(args: argparse.Namespace) -> int:
+    print(_build_agent_prompt(args.prompt_command, target=args.target))
+    return 0
+
+
+def _handle_current_show(args: argparse.Namespace) -> int:
+    _emit_current_view(show_current_memory(target=args.target), output_format=args.format)
+    return 0
+
+
+def _handle_current_check(args: argparse.Namespace) -> int:
+    _emit_result(check_current_memory(target=args.target), output_format=args.format)
+    return 0
+
+
+def _handle_route(args: argparse.Namespace) -> int:
+    _emit_result(
+        route_memory(target=args.target, files=args.files, surfaces=args.surfaces),
+        output_format=args.format,
+    )
+    return 0
+
+
+def _handle_sync_memory(args: argparse.Namespace) -> int:
+    _emit_result(
+        sync_memory(target=args.target, files=args.files, notes=args.notes),
+        output_format=args.format,
+    )
+    return 0
+
+
+def _handle_promotion_report(args: argparse.Namespace) -> int:
+    _emit_result(promotion_report(target=args.target, notes=args.notes), output_format=args.format)
+    return 0
+
+
+def _handle_verify_payload(args: argparse.Namespace) -> int:
+    _emit_result(verify_payload(target=args.target), output_format=args.format)
+    return 0
+
+
+def _handle_bootstrap_cleanup(args: argparse.Namespace) -> int:
+    _emit_result(cleanup_bootstrap_workspace(target=args.target), output_format=args.format)
+    return 0
+
+
+COMMAND_HANDLERS = {
+    "install": _handle_install,
+    "init": _handle_install,
+    "adopt": _handle_adopt,
+    "upgrade": _handle_upgrade,
+    "uninstall": _handle_uninstall,
+    "doctor": _handle_doctor,
+    "status": _handle_status,
+    "list-files": _handle_list_files,
+    "list-skills": _handle_list_skills,
+    "prompt": _handle_prompt,
+    "current:show": _handle_current_show,
+    "current:check": _handle_current_check,
+    "route": _handle_route,
+    "sync-memory": _handle_sync_memory,
+    "promotion-report": _handle_promotion_report,
+    "verify-payload": _handle_verify_payload,
+    "bootstrap-cleanup": _handle_bootstrap_cleanup,
+}
+
+
+def _command_key(args: argparse.Namespace) -> str:
+    if args.command == "current":
+        return f"current:{args.current_command}"
+    return args.command
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
     try:
-        if args.command in {"install", "init"}:
-            result = install_bootstrap(
-                target=getattr(args, "target", None),
-                dry_run=getattr(args, "dry_run", False),
-                force=getattr(args, "force", False),
-                project_name=getattr(args, "project_name", None),
-                project_purpose=getattr(args, "project_purpose", None),
-                key_repo_docs=getattr(args, "key_repo_docs", None),
-                key_subsystems=getattr(args, "key_subsystems", None),
-                primary_build_command=getattr(args, "primary_build_command", None),
-                primary_test_command=getattr(args, "primary_test_command", None),
-                other_key_commands=getattr(args, "other_key_commands", None),
-            )
-            _emit_result(
-                result, output_format=args.format, include_install_summary=True
-            )
-            return 0
-
-        if args.command == "adopt":
-            result = adopt_bootstrap(
-                target=args.target,
-                dry_run=args.dry_run,
-                apply_local_entrypoint=args.apply_local_entrypoint,
-                project_name=args.project_name,
-                project_purpose=args.project_purpose,
-                key_repo_docs=args.key_repo_docs,
-                key_subsystems=args.key_subsystems,
-                primary_build_command=args.primary_build_command,
-                primary_test_command=args.primary_test_command,
-                other_key_commands=args.other_key_commands,
-            )
-            _emit_result(
-                result, output_format=args.format, include_install_summary=True
-            )
-            return 0
-
-        if args.command == "upgrade":
-            result = upgrade_bootstrap(
-                target=args.target,
-                dry_run=args.dry_run,
-                force=args.force,
-                apply_local_entrypoint=args.apply_local_entrypoint,
-                project_name=args.project_name,
-                project_purpose=args.project_purpose,
-                key_repo_docs=args.key_repo_docs,
-                key_subsystems=args.key_subsystems,
-                primary_build_command=args.primary_build_command,
-                primary_test_command=args.primary_test_command,
-                other_key_commands=args.other_key_commands,
-            )
-            _emit_result(result, output_format=args.format)
-            return 0
-
-        if args.command == "uninstall":
-            result = uninstall_bootstrap(
-                target=args.target,
-                dry_run=args.dry_run,
-                project_name=args.project_name,
-                project_purpose=args.project_purpose,
-                key_repo_docs=args.key_repo_docs,
-                key_subsystems=args.key_subsystems,
-                primary_build_command=args.primary_build_command,
-                primary_test_command=args.primary_test_command,
-                other_key_commands=args.other_key_commands,
-            )
-            _emit_result(result, output_format=args.format)
-            return 0
-
-        if args.command == "doctor":
-            result = doctor_bootstrap(
-                target=args.target,
-                strict_doc_ownership=args.strict_doc_ownership,
-                project_name=args.project_name,
-                project_purpose=args.project_purpose,
-                key_repo_docs=args.key_repo_docs,
-                key_subsystems=args.key_subsystems,
-                primary_build_command=args.primary_build_command,
-                primary_test_command=args.primary_test_command,
-                other_key_commands=args.other_key_commands,
-            )
-            _emit_result(result, output_format=args.format)
-            return 0
-
-        if args.command == "status":
-            result = collect_status(target=args.target)
-            _emit_result(result, output_format=args.format)
-            return 0
-
-        if args.command == "list-files":
-            result = list_payload_files(target=args.target)
-            _emit_result(result, output_format=args.format)
-            return 0
-
-        if args.command == "list-skills":
-            result = list_bundled_skills()
-            _emit_result(result, output_format=args.format)
-            return 0
-
-        if args.command == "prompt":
-            print(_build_agent_prompt(args.prompt_command, target=args.target))
-            return 0
-
-        if args.command == "current":
-            if args.current_command == "show":
-                _emit_current_view(
-                    show_current_memory(target=args.target), output_format=args.format
-                )
-                return 0
-            if args.current_command == "check":
-                _emit_result(
-                    check_current_memory(target=args.target), output_format=args.format
-                )
-                return 0
-
-        if args.command == "route":
-            result = route_memory(
-                target=args.target, files=args.files, surfaces=args.surfaces
-            )
-            _emit_result(result, output_format=args.format)
-            return 0
-
-        if args.command == "sync-memory":
-            result = sync_memory(target=args.target, files=args.files, notes=args.notes)
-            _emit_result(result, output_format=args.format)
-            return 0
-
-        if args.command == "promotion-report":
-            result = promotion_report(target=args.target, notes=args.notes)
-            _emit_result(result, output_format=args.format)
-            return 0
-
-        if args.command == "verify-payload":
-            result = verify_payload(target=args.target)
-            _emit_result(result, output_format=args.format)
-            return 0
-
-        if args.command == "bootstrap-cleanup":
-            result = cleanup_bootstrap_workspace(target=args.target)
-            _emit_result(result, output_format=args.format)
-            return 0
+        handler = COMMAND_HANDLERS.get(_command_key(args))
+        if handler is None:
+            parser.error(f"Unknown command: {args.command}")
+        return handler(args)
     except RepoDetectionError as exc:
         print(f"Error: {exc}")
         return 2
-
-    parser.error(f"Unknown command: {args.command}")
-    return 2
 
 
 def _emit_result(
@@ -488,23 +534,28 @@ def _print_install_summary(result) -> None:
         "- Review repository-specific details in AGENTS.md and the current-memory notes."
     )
     print(
-        f"- Use the temporary bootstrap skills under {bootstrap_skills_path} to finish install or adopt lifecycle work, then run `agentic-memory-bootstrap bootstrap-cleanup --target <repo>` when that work is complete."
+        f"- Use the temporary bootstrap skills under {bootstrap_skills_path} to finish install "
+        "or adopt lifecycle work, then run `agentic-memory-bootstrap bootstrap-cleanup --target "
+        "<repo>` when that work is complete."
     )
     print(
-        "- Review the checked-in core memory skills under memory/skills/ and add repo-specific sibling skills there when a local memory workflow is worth reusing."
+        "- Review the checked-in core memory skills under memory/skills/ and add repo-specific "
+        "sibling skills there when a local memory workflow is worth reusing."
     )
     print(
         "- Keep memory/current/project-state.md as a short overview note, not a task list."
     )
     print(
-        "- Populate memory/current/task-context.md only when active work would benefit from short checked-in continuation compression, not a shadow planner."
+        "- Populate memory/current/task-context.md only when active work would benefit from "
+        "short checked-in continuation compression, not a shadow planner."
     )
     print(
         "- Confirm the repo's active planning/status surface separately; this bootstrap does not install one."
     )
     if _created_current_memory_notes(result):
         print(
-            f"- If current-memory files were created, use the `populate` skill under {bootstrap_skills_path} to fill them conservatively before cleanup."
+            f"- If current-memory files were created, use the `populate` skill under "
+            f"{bootstrap_skills_path} to fill them conservatively before cleanup."
         )
     print(
         "- Run agentic-memory-bootstrap doctor --target <repo> before upgrading an older install."
@@ -543,25 +594,31 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             f"Run `{runner} init{target_args}`. "
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
-            f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out the checked-in core memory skills under `{target_root}/memory/skills`."
+            f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out "
+            f"the checked-in core memory skills under `{target_root}/memory/skills`."
         )
     if command == "adopt":
         return (
             f"Run `{runner} adopt{target_args}`. "
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
-            f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out the checked-in core memory skills under `{target_root}/memory/skills`."
+            f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out "
+            f"the checked-in core memory skills under `{target_root}/memory/skills`."
         )
     if command == "populate":
         return (
             f"Run `{runner} current show{target_args}`. "
-            f"Next, use the `populate` skill at `{bootstrap_skills}` to fill the current-memory notes conservatively from existing repo docs and visible repo state. "
-            "Populate `memory/current/task-context.md` only when there is clearly active work worth preserving across sessions as brief continuation compression."
+            f"Next, use the `populate` skill at `{bootstrap_skills}` to fill the current-memory notes "
+            "conservatively from existing repo docs and visible repo state. "
+            "Populate `memory/current/task-context.md` only when there is clearly active work worth "
+            "preserving across sessions as brief continuation compression."
         )
     if command == "upgrade":
         return (
             f"Use the checked-in `memory-upgrade` skill under `{target_root}/memory/skills/`. "
-            f"It should use the recorded upgrade source automatically, run the packaged upgrade flow for this repo, prefer the installed `agentic-memory-bootstrap` CLI when available, otherwise fall back to `{upgrade_runner} upgrade --target <repo>`, and report any conservative manual-review items."
+            "It should use the recorded upgrade source automatically, run the packaged upgrade flow for this "
+            "repo, prefer the installed `agentic-memory-bootstrap` CLI when available, otherwise fall back to "
+            f"`{upgrade_runner} upgrade --target <repo>`, and report any conservative manual-review items."
         )
     if command == "uninstall":
         return (

@@ -4,6 +4,50 @@ Small CLI for adding durable repository memory to an existing repo.
 
 Requires Python 3.11 or newer.
 
+## Quick Start
+
+Agent workflow for an existing repository:
+
+```bash
+uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
+```
+
+Manual workflow for an existing repository:
+
+```bash
+uv tool install --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap
+agentic-memory-bootstrap doctor --target /path/to/repo
+agentic-memory-bootstrap adopt --target /path/to/repo
+```
+
+If you are starting from a clean repo bootstrap case, use `prompt install` or `install` instead of `adopt`.
+
+## Table Of Contents
+
+- [agentic-memory-bootstrap](#agentic-memory-bootstrap)
+  - [Quick Start](#quick-start)
+  - [Table Of Contents](#table-of-contents)
+  - [What It Does](#what-it-does)
+  - [Install](#install)
+    - [Agent workflow](#agent-workflow)
+    - [Manual alternative](#manual-alternative)
+  - [Upgrade](#upgrade)
+    - [Agent workflow](#agent-workflow-1)
+    - [Manual alternative](#manual-alternative-1)
+  - [Uninstall](#uninstall)
+    - [Agent workflow](#agent-workflow-2)
+    - [Manual alternative](#manual-alternative-2)
+  - [Skills](#skills)
+  - [Memory Guidance](#memory-guidance)
+  - [Optional Repo Patterns](#optional-repo-patterns)
+  - [Current Decisions](#current-decisions)
+  - [Improvement Questions](#improvement-questions)
+  - [Anti-patterns](#anti-patterns)
+  - [Minimal Adoption Checklist](#minimal-adoption-checklist)
+  - [Future Direction](#future-direction)
+  - [Command Summary](#command-summary)
+  - [Developing This Repository](#developing-this-repository)
+
 ## What It Does
 
 `agentic-memory-bootstrap` adds a small checked-in memory system for agent-assisted work:

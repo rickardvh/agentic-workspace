@@ -1,362 +1,152 @@
 from __future__ import annotations
 
-import json
-import re
 import subprocess
-import tomllib
-from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Iterable
 
-PROJECT_MARKERS = ("pyproject.toml", "package.json", "Cargo.toml", ".hg")
-AGENT_ROOT_MARKERS = (Path("AGENTS.md"), Path("memory"))
-VERSION_PATH = Path("memory/system/VERSION.md")
-WORKFLOW_PATH = Path("memory/system/WORKFLOW.md")
-AGENTS_PATH = Path("AGENTS.md")
-MANIFEST_PATH = Path("memory/manifest.toml")
-UPGRADE_SOURCE_PATH = Path("memory/system/UPGRADE-SOURCE.toml")
-AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 36
-BUNDLED_SKILLS_ROOT = Path("skills")
-BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
-
-CURRENT_MEMORY_BASELINE = (
-    Path("memory/current/project-state.md"),
-    Path("memory/current/task-context.md"),
+from repo_memory_bootstrap._installer_memory import (
+    _audit_memory_doc_ownership,
+    _emit_improvement_pressure,
+    _find_manifest_matches,
+    _git_changed_files,
+    _infer_surfaces_from_paths,
+    _iter_promotion_candidates,
+    _load_memory_manifest,
+    _lookup_manifest_note,
+    _normalise_surface_name,
+    _parse_route_sections,
+    _path_matches_pattern,
 )
-BOOTSTRAP_WORKSPACE_FILES = (
-    Path("memory/bootstrap/README.md"),
-    Path("memory/bootstrap/skills/install/SKILL.md"),
-    Path("memory/bootstrap/skills/install/agents/openai.yaml"),
-    Path("memory/bootstrap/skills/populate/SKILL.md"),
-    Path("memory/bootstrap/skills/populate/agents/openai.yaml"),
-    Path("memory/bootstrap/skills/cleanup/SKILL.md"),
-    Path("memory/bootstrap/skills/cleanup/agents/openai.yaml"),
+from repo_memory_bootstrap._installer_output import (
+    _current_task_staleness_reason,
+    _has_placeholders,
+    _new_result,
+    _patch_agents_workflow_block,
+    _project_state_staleness_reason,
+    _read_installed_version,
+    _validate_upgrade_source_record,
+    build_substitutions,
+    detect_install_mode,
+    format_actions,
+    format_result_json,
+    resolve_upgrade_source,
 )
-CORE_PAYLOAD_SKILL_FILES = (
-    Path("memory/skills/README.md"),
-    Path("memory/skills/memory-capture/SKILL.md"),
-    Path("memory/skills/memory-capture/agents/openai.yaml"),
-    Path("memory/skills/memory-hygiene/SKILL.md"),
-    Path("memory/skills/memory-hygiene/agents/openai.yaml"),
-    Path("memory/skills/memory-upgrade/SKILL.md"),
-    Path("memory/skills/memory-upgrade/agents/openai.yaml"),
-    Path("memory/skills/memory-refresh/SKILL.md"),
-    Path("memory/skills/memory-refresh/agents/openai.yaml"),
-    Path("memory/skills/memory-router/SKILL.md"),
-    Path("memory/skills/memory-router/agents/openai.yaml"),
+from repo_memory_bootstrap._installer_paths import (
+    _record_repo_context_warnings,
+    payload_root,
+    resolve_target_root,
+    skills_root,
 )
-PAYLOAD_REQUIRED_FILES = (
+from repo_memory_bootstrap._installer_payload import (
+    _equivalent_optional_fragment_detail,
+    _extract_make_targets,
+    _payload_entries,
+    _plan_from_entries,
+    _plan_obsolete_shared_files,
+    _plan_optional_appends,
+    _plan_optional_fragment_removals,
+    _prune_empty_parents,
+    _render_text,
+    _report_remaining_repo_local_memory,
+    _write_payload_file,
+)
+from repo_memory_bootstrap._installer_shared import (
     AGENTS_PATH,
-    Path("memory/index.md"),
-    MANIFEST_PATH,
-    Path("memory/system/SKILLS.md"),
-    Path("memory/system/WORKFLOW.md"),
-    Path("memory/system/UPGRADE-SOURCE.toml"),
-    Path("memory/current/project-state.md"),
-    Path("memory/current/task-context.md"),
-    Path("memory/domains/README.md"),
-    Path("memory/invariants/README.md"),
-    Path("memory/runbooks/README.md"),
-    Path("memory/mistakes/recurring-failures.md"),
-    Path("memory/decisions/README.md"),
     AUDIT_SCRIPT_PATH,
-    *BOOTSTRAP_WORKSPACE_FILES,
-    *CORE_PAYLOAD_SKILL_FILES,
+    BOOTSTRAP_VERSION,
+    BOOTSTRAP_WORKSPACE_ROOT,
+    CORE_PAYLOAD_SKILL_FILES,
+    CURRENT_MEMORY_BASELINE,
+    CURRENT_PROJECT_STATE_MAX_LINES,
+    CURRENT_TASK_MAX_LINES,
+    FORBIDDEN_PAYLOAD_FILES,
+    FORBIDDEN_PAYLOAD_PREFIXES,
+    MANIFEST_PATH,
+    OBSOLETE_SHARED_FILES,
+    OPTIONAL_APPEND_TARGETS,
+    PAYLOAD_REQUIRED_FILES,
+    UPGRADE_SOURCE_PATH,
+    VERSION_PATH,
+    WORKFLOW_POINTER_BLOCK,
+    Action,
+    CurrentNoteView,
+    CurrentViewResult,
+    InstallResult,
+    RepoDetectionError,
 )
-FORBIDDEN_PAYLOAD_FILES = (
-    Path("TODO.md"),
-    Path("memory/current/active-decisions.md"),
-    Path("memory/system/UPGRADE.md"),
-)
-OBSOLETE_SHARED_FILES = (Path("memory/system/UPGRADE.md"),)
-FORBIDDEN_PAYLOAD_PREFIXES = (".agent-work/",)
-CURRENT_TASK_STALE_DAYS = 30
-CURRENT_TASK_MAX_LINES = 120
-CURRENT_PROJECT_STATE_STALE_DAYS = 45
-CURRENT_PROJECT_STATE_MAX_LINES = 140
 
-WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
-WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
-WORKFLOW_POINTER_BLOCK = (
-    f"{WORKFLOW_MARKER_START}\n"
-    "Read `memory/system/WORKFLOW.md` for shared workflow rules.\n"
-    f"{WORKFLOW_MARKER_END}"
-)
-EMBEDDED_WORKFLOW_HEADINGS = (
-    "## Task system boundary",
-    "## Memory discipline",
-    "## Memory admission rule",
-    "## Memory freshness rule",
-    "## Memory routing",
-    "## Overview file",
-    "## Task-context file",
-    "## Local working notes (optional)",
-)
-PLACEHOLDER_RE = re.compile(r"<[A-Z0-9_/-]+>")
-DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\b")
-VERSION_RE = re.compile(r"^\s*Version:\s*(\d+)\s*$", re.MULTILINE)
-MEMORY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_.-])memory/[A-Za-z0-9_./-]+")
-MARKDOWN_MEMORY_LINK_RE = re.compile(r"\[[^\]]+\]\((?!https?://)([^)]*memory/[^)]*)\)")
-
-DEFAULT_CORE_DOC_GLOBS = (
-    "README.md",
-    "docs/**/*.md",
-    "CONTRIBUTING.md",
-    ".github/**/*.md",
-)
-DEFAULT_CORE_DOC_EXCLUDE_GLOBS = (
-    "AGENTS.md",
-    "memory/**/*.md",
-    "memory/bootstrap/**/*.md",
-)
-VALID_CANONICALITY_VALUES = {
-    "agent_only",
-    "candidate_for_promotion",
-    "canonical_elsewhere",
-    "deprecated",
-}
-VALID_TASK_RELEVANCE_VALUES = {"required", "optional"}
-VALID_MEMORY_ROLE_VALUES = {"durable_truth", "improvement_signal"}
-VALID_SYMPTOM_OF_VALUES = {
-    "workflow_friction",
-    "guidance_drift",
-    "missing_guardrail",
-    "architecture_friction",
-    "operator_complexity",
-}
-VALID_PREFERRED_REMEDIATION_VALUES = {
-    "docs",
-    "skill",
-    "script",
-    "test",
-    "validation",
-    "refactor",
-    "code",
-}
-VALID_ELIMINATION_TARGET_VALUES = {"shrink", "promote", "automate", "refactor_away"}
-SHADOW_DOC_MIN_SHARED_TERMS = 6
-
-OPTIONAL_APPEND_TARGETS = {
-    Path("Makefile"): Path("optional/Makefile.fragment.mk"),
-    Path("CONTRIBUTING.md"): Path("optional/CONTRIBUTING.fragment.md"),
-    Path(".github/pull_request_template.md"): Path(
-        "optional/pull_request_template.fragment.md"
-    ),
-}
-
-
-@dataclass(slots=True)
-class Action:
-    kind: str
-    path: Path
-    detail: str = ""
-    role: str = ""
-    safety: str = ""
-    source: str = ""
-    category: str = ""
-
-    def to_dict(self, target_root: Path) -> dict[str, str]:
-        relative_path = (
-            self.path.relative_to(target_root)
-            if self.path.is_relative_to(target_root)
-            else self.path
-        )
-        return {
-            "kind": self.kind,
-            "path": relative_path.as_posix()
-            if isinstance(relative_path, Path)
-            else str(relative_path),
-            "detail": self.detail,
-            "role": self.role,
-            "safety": self.safety,
-            "source": self.source,
-            "category": self.category,
-        }
-
-
-@dataclass(slots=True)
-class InstallResult:
-    target_root: Path
-    dry_run: bool
-    mode: str = "augment"
-    message: str = ""
-    actions: list[Action] = field(default_factory=list)
-    detected_version: int | None = None
-    bootstrap_version: int = BOOTSTRAP_VERSION
-
-    def add(
-        self,
-        kind: str,
-        path: Path,
-        detail: str = "",
-        *,
-        role: str = "",
-        safety: str = "",
-        source: str = "",
-        category: str = "",
-    ) -> None:
-        self.actions.append(
-            Action(
-                kind=kind,
-                path=path,
-                detail=detail,
-                role=role,
-                safety=safety,
-                source=source,
-                category=category
-                or _infer_action_category(
-                    kind=kind, path=path, detail=detail, role=role, safety=safety
-                ),
-            )
-        )
-
-    def counts(self) -> dict[str, int]:
-        counts: dict[str, int] = {}
-        for action in self.actions:
-            counts[action.kind] = counts.get(action.kind, 0) + 1
-        return counts
-
-    def to_dict(self) -> dict[str, object]:
-        return {
-            "target_root": str(self.target_root),
-            "dry_run": self.dry_run,
-            "mode": self.mode,
-            "message": self.message,
-            "detected_version": self.detected_version,
-            "bootstrap_version": self.bootstrap_version,
-            "actions": [action.to_dict(self.target_root) for action in self.actions],
-        }
-
-
-@dataclass(frozen=True, slots=True)
-class PayloadEntry:
-    relative_path: Path
-    role: str
-    strategy: str
-    source_path: Path
-
-
-@dataclass(frozen=True, slots=True)
-class CurrentNoteView:
-    path: Path
-    exists: bool
-    content: str
-
-
-@dataclass(slots=True)
-class CurrentViewResult:
-    target_root: Path
-    detected_version: int | None = None
-    bootstrap_version: int = BOOTSTRAP_VERSION
-    notes: list[CurrentNoteView] = field(default_factory=list)
-
-    def to_dict(self) -> dict[str, object]:
-        return {
-            "target_root": str(self.target_root),
-            "detected_version": self.detected_version,
-            "bootstrap_version": self.bootstrap_version,
-            "notes": [
-                {
-                    "path": note.path.as_posix(),
-                    "exists": note.exists,
-                    "content": note.content,
-                }
-                for note in self.notes
-            ],
-        }
-
-
-@dataclass(frozen=True, slots=True)
-class MemoryNoteRecord:
-    path: Path
-    note_type: str
-    canonical_home: Path
-    authority: str
-    audience: str
-    canonicality: str = "agent_only"
-    task_relevance: str = "optional"
-    subsystems: tuple[str, ...] = ()
-    surfaces: tuple[str, ...] = ()
-    routes_from: tuple[str, ...] = ()
-    stale_when: tuple[str, ...] = ()
-    related_validations: tuple[str, ...] = ()
-    routing_only: bool = False
-    high_level: bool = False
-    memory_role: str = ""
-    symptom_of: str = ""
-    preferred_remediation: str = ""
-    improvement_candidate: bool = False
-    improvement_note: str = ""
-    elimination_target: str = ""
-
-
-@dataclass(frozen=True, slots=True)
-class MemoryManifest:
-    path: Path
-    version: int
-    notes: tuple[MemoryNoteRecord, ...]
-    routing_only: tuple[Path, ...] = ()
-    high_level: tuple[Path, ...] = ()
-    canonical_dirs: tuple[Path, ...] = ()
-    task_board_globs: tuple[str, ...] = ()
-    core_doc_globs: tuple[str, ...] = ()
-    core_doc_exclude_globs: tuple[str, ...] = ()
-    forbid_core_docs_depend_on_memory: bool = False
-
-
-class RepoDetectionError(ValueError):
-    """Raised when the installer cannot safely determine the target root."""
-
-
-def resolve_target_root(target: str | Path | None) -> Path:
-    explicit_target = target is not None
-    start = Path(target or Path.cwd()).resolve()
-    if not start.exists():
-        raise RepoDetectionError(f"Target does not exist: {start}")
-    if start.is_file():
-        raise RepoDetectionError(f"Target must be a directory: {start}")
-    if explicit_target:
-        return start
-
-    candidates = _find_repo_candidates(start)
-    if not candidates:
-        raise RepoDetectionError(
-            "Could not find a repository root from the current directory. Pass --target explicitly."
-        )
-    if len(candidates) > 1:
-        roots = ", ".join(str(path) for path in candidates)
-        raise RepoDetectionError(
-            f"Ambiguous repository root detected ({roots}). Pass --target explicitly."
-        )
-    return candidates[0]
-
-
-def payload_root() -> Path:
-    package_root = Path(__file__).resolve().parent
-    packaged = package_root / "_payload"
-    if packaged.exists():
-        return packaged
-
-    dev_payload = package_root.parents[1] / "bootstrap"
-    if dev_payload.exists():
-        return dev_payload
-
-    raise FileNotFoundError("Bootstrap payload directory is not available.")
-
-
-def skills_root() -> Path:
-    package_root = Path(__file__).resolve().parent
-    packaged = package_root / "_skills"
-    if packaged.exists():
-        return packaged
-
-    dev_skills = package_root.parents[1] / "skills"
-    if dev_skills.exists():
-        return dev_skills
-
-    raise FileNotFoundError("Bundled skills directory is not available.")
+__all__ = [
+    "subprocess",
+    "AGENTS_PATH",
+    "AUDIT_SCRIPT_PATH",
+    "BOOTSTRAP_VERSION",
+    "BOOTSTRAP_WORKSPACE_ROOT",
+    "CORE_PAYLOAD_SKILL_FILES",
+    "CURRENT_MEMORY_BASELINE",
+    "CURRENT_PROJECT_STATE_MAX_LINES",
+    "CURRENT_TASK_MAX_LINES",
+    "FORBIDDEN_PAYLOAD_FILES",
+    "FORBIDDEN_PAYLOAD_PREFIXES",
+    "MANIFEST_PATH",
+    "OBSOLETE_SHARED_FILES",
+    "OPTIONAL_APPEND_TARGETS",
+    "PAYLOAD_REQUIRED_FILES",
+    "UPGRADE_SOURCE_PATH",
+    "VERSION_PATH",
+    "WORKFLOW_POINTER_BLOCK",
+    "Action",
+    "CurrentNoteView",
+    "CurrentViewResult",
+    "InstallResult",
+    "RepoDetectionError",
+    "build_substitutions",
+    "cleanup_bootstrap_workspace",
+    "collect_status",
+    "detect_install_mode",
+    "doctor_bootstrap",
+    "format_actions",
+    "format_result_json",
+    "install_bootstrap",
+    "list_bundled_skills",
+    "list_payload_files",
+    "payload_root",
+    "promotion_report",
+    "resolve_target_root",
+    "resolve_upgrade_source",
+    "route_memory",
+    "show_current_memory",
+    "skills_root",
+    "sync_memory",
+    "uninstall_bootstrap",
+    "upgrade_bootstrap",
+    "verify_payload",
+    "_audit_memory_doc_ownership",
+    "_current_task_staleness_reason",
+    "_equivalent_optional_fragment_detail",
+    "_extract_make_targets",
+    "_find_manifest_matches",
+    "_git_changed_files",
+    "_has_placeholders",
+    "_infer_surfaces_from_paths",
+    "_iter_promotion_candidates",
+    "_load_memory_manifest",
+    "_lookup_manifest_note",
+    "_new_result",
+    "_normalise_surface_name",
+    "_parse_route_sections",
+    "_patch_agents_workflow_block",
+    "_path_matches_pattern",
+    "_payload_entries",
+    "_plan_from_entries",
+    "_plan_obsolete_shared_files",
+    "_plan_optional_appends",
+    "_plan_optional_fragment_removals",
+    "_project_state_staleness_reason",
+    "_prune_empty_parents",
+    "_read_installed_version",
+    "_render_text",
+    "_report_remaining_repo_local_memory",
+    "_validate_upgrade_source_record",
+]
 
 
 def install_bootstrap(
@@ -519,24 +309,14 @@ def collect_status(target: str | Path | None = None) -> InstallResult:
 
     for entry in _payload_entries(payload_root(), include_bootstrap_workspace=False):
         destination = target_root / entry.relative_path
-        if destination.exists():
-            result.add(
-                "present",
-                destination,
-                "file exists",
-                role=entry.role,
-                safety="safe",
-                source=str(entry.relative_path),
-            )
-        else:
-            result.add(
-                "missing",
-                destination,
-                "file missing",
-                role=entry.role,
-                safety="safe",
-                source=str(entry.relative_path),
-            )
+        result.add(
+            "present" if destination.exists() else "missing",
+            destination,
+            "file exists" if destination.exists() else "file missing",
+            role=entry.role,
+            safety="safe",
+            source=str(entry.relative_path),
+        )
 
     for obsolete in OBSOLETE_SHARED_FILES:
         destination = target_root / obsolete
@@ -648,8 +428,7 @@ def list_bundled_skills() -> InstallResult:
     result.detected_version = None
 
     for skill_dir in sorted(path for path in skills_dir.iterdir() if path.is_dir()):
-        skill_file = skill_dir / "SKILL.md"
-        if not skill_file.exists():
+        if not (skill_dir / "SKILL.md").exists():
             continue
         result.add(
             "bundled skill",
@@ -670,18 +449,13 @@ def show_current_memory(target: str | Path | None = None) -> CurrentViewResult:
     )
     for relative_path in CURRENT_MEMORY_BASELINE:
         note_path = target_root / relative_path
-        if note_path.exists():
-            result.notes.append(
-                CurrentNoteView(
-                    path=relative_path,
-                    exists=True,
-                    content=note_path.read_text(encoding="utf-8"),
-                )
+        result.notes.append(
+            CurrentNoteView(
+                path=relative_path,
+                exists=note_path.exists(),
+                content=note_path.read_text(encoding="utf-8") if note_path.exists() else "",
             )
-        else:
-            result.notes.append(
-                CurrentNoteView(path=relative_path, exists=False, content="")
-            )
+        )
     return result
 
 
@@ -702,50 +476,35 @@ def check_current_memory(target: str | Path | None = None) -> InstallResult:
             )
             continue
         text = note_path.read_text(encoding="utf-8")
-        if _has_placeholders(text):
+        has_placeholders = _has_placeholders(text)
+        result.add(
+            "manual review" if has_placeholders else "current",
+            note_path,
+            "current-memory note still contains placeholders"
+            if has_placeholders
+            else "current-memory note present",
+            role="current-memory",
+            safety="manual" if has_placeholders else "safe",
+            source=relative_path.as_posix(),
+            category="placeholder-review" if has_placeholders else "safe-update",
+        )
+        stale_reason = (
+            _current_task_staleness_reason(text)
+            if relative_path == Path("memory/current/task-context.md")
+            else _project_state_staleness_reason(text)
+            if relative_path == Path("memory/current/project-state.md")
+            else None
+        )
+        if stale_reason is not None:
             result.add(
                 "manual review",
                 note_path,
-                "current-memory note still contains placeholders",
+                stale_reason,
                 role="current-memory",
                 safety="manual",
                 source=relative_path.as_posix(),
-                category="placeholder-review",
+                category="current-memory-review",
             )
-        else:
-            result.add(
-                "current",
-                note_path,
-                "current-memory note present",
-                role="current-memory",
-                safety="safe",
-                source=relative_path.as_posix(),
-                category="safe-update",
-            )
-        if relative_path == Path("memory/current/task-context.md"):
-            stale_reason = _current_task_staleness_reason(text)
-            if stale_reason is not None:
-                result.add(
-                    "manual review",
-                    note_path,
-                    stale_reason,
-                    role="current-memory",
-                    safety="manual",
-                    source=relative_path.as_posix(),
-                    category="current-memory-review",
-                )
-        elif relative_path == Path("memory/current/project-state.md"):
-            stale_reason = _project_state_staleness_reason(text)
-            if stale_reason is not None:
-                result.add(
-                    "manual review",
-                    note_path,
-                    stale_reason,
-                    role="current-memory",
-                    safety="manual",
-                    source=relative_path.as_posix(),
-                    category="current-memory-review",
-                )
     return result
 
 
@@ -789,9 +548,7 @@ def route_memory(
             use_staleness=False,
         )
     )
-    for section_surface, notes in _parse_route_sections(
-        target_root / "memory" / "index.md"
-    ):
+    for section_surface, notes in _parse_route_sections(target_root / "memory" / "index.md"):
         if section_surface in selected_surfaces:
             for note in notes:
                 suggestions.append(
@@ -814,9 +571,7 @@ def route_memory(
             category="safe-update",
         )
 
-    if files and all(
-        key.startswith("recommended:memory/current/") for key in seen
-    ):
+    if files and all(key.startswith("recommended:memory/current/") for key in seen):
         result.add(
             "manual review",
             target_root / Path("memory/index.md"),
@@ -836,9 +591,7 @@ def sync_memory(
     notes: list[str] | None = None,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
-    changed_files = list(files or [])
-    if not changed_files:
-        changed_files = _git_changed_files(target_root)
+    changed_files = list(files or []) or _git_changed_files(target_root)
 
     result = _new_result(target_root, dry_run=True, message="Memory sync suggestions")
     if not changed_files and not notes:
@@ -853,6 +606,8 @@ def sync_memory(
         )
         return result
 
+    from repo_memory_bootstrap._installer_memory import _first_improvement_hint
+
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
     manifest_suggestions = _find_manifest_matches(
         manifest,
@@ -864,11 +619,10 @@ def sync_memory(
     seen_sync_paths: set[Path] = set()
     for _, note, reason in manifest_suggestions:
         note_path = target_root / Path(note)
-        note_exists = note_path.exists()
-        note_text = note_path.read_text(encoding="utf-8") if note_exists else ""
+        note_text = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
         manifest_note = _lookup_manifest_note(manifest, Path(note))
         recommendation = "review"
-        if not note_exists or _has_placeholders(note_text):
+        if not note_path.exists() or _has_placeholders(note_text):
             recommendation = "update"
         if note_path.name == "index.md":
             recommendation = "update index"
@@ -893,13 +647,10 @@ def sync_memory(
 
     routed = route_memory(target=target_root, files=changed_files)
     for action in routed.actions:
-        if action.kind not in {"recommended", "required"}:
+        if action.kind not in {"recommended", "required"} or action.path in seen_sync_paths:
             continue
         note_path = action.path
-        if note_path in seen_sync_paths:
-            continue
-        note_exists = note_path.exists()
-        note_text = note_path.read_text(encoding="utf-8") if note_exists else ""
+        note_text = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
         relative_note = (
             note_path.relative_to(target_root)
             if note_path.is_relative_to(target_root)
@@ -907,7 +658,7 @@ def sync_memory(
         )
         manifest_note = _lookup_manifest_note(manifest, relative_note)
         recommendation = "review"
-        if not note_exists or _has_placeholders(note_text):
+        if not note_path.exists() or _has_placeholders(note_text):
             recommendation = "update"
         if note_path.name == "index.md":
             recommendation = "update index"
@@ -964,7 +715,10 @@ def promotion_report(
         result.add(
             "manual review",
             target_root / MANIFEST_PATH,
-            "no promotion or elimination candidates found; mark notes candidate_for_promotion, improvement_candidate, or pass --notes to inspect specific memory notes",
+            (
+                "no promotion or elimination candidates found; mark notes candidate_for_promotion, "
+                "improvement_candidate, or pass --notes to inspect specific memory notes"
+            ),
             role="promotion-report",
             safety="manual",
             source=MANIFEST_PATH.as_posix(),
@@ -973,16 +727,15 @@ def promotion_report(
         return result
 
     for note_path, note, detail in records:
-        action_kind = "candidate"
-        if note is None and not note_path.exists():
-            action_kind = "manual review"
         result.add(
-            action_kind,
+            "candidate" if note is not None or note_path.exists() else "manual review",
             note_path,
             detail,
             role="promotion-report",
             safety="manual",
-            source=note.path.as_posix() if note is not None else note_path.relative_to(target_root).as_posix(),
+            source=note.path.as_posix()
+            if note is not None
+            else note_path.relative_to(target_root).as_posix(),
             category="manual-review",
         )
     return result
@@ -1032,26 +785,16 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
         )
 
     for required in PAYLOAD_REQUIRED_FILES:
-        if required in payload_paths:
-            result.add(
-                "current",
-                target_root / required,
-                "required payload file present",
-                role="payload-contract",
-                safety="safe",
-                source=required.as_posix(),
-                category="safe-update",
-            )
-        else:
-            result.add(
-                "manual review",
-                target_root / required,
-                "required payload file missing",
-                role="payload-contract",
-                safety="manual",
-                source=required.as_posix(),
-                category="contract-drift",
-            )
+        present = required in payload_paths
+        result.add(
+            "current" if present else "manual review",
+            target_root / required,
+            "required payload file present" if present else "required payload file missing",
+            role="payload-contract",
+            safety="safe" if present else "manual",
+            source=required.as_posix(),
+            category="safe-update" if present else "contract-drift",
+        )
 
     current_payload = {
         path for path in payload_paths if path.as_posix().startswith("memory/current/")
@@ -1089,10 +832,7 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
                 category="contract-drift",
             )
     for payload_path in payload_paths:
-        if any(
-            payload_path.as_posix().startswith(prefix)
-            for prefix in FORBIDDEN_PAYLOAD_PREFIXES
-        ):
+        if any(payload_path.as_posix().startswith(prefix) for prefix in FORBIDDEN_PAYLOAD_PREFIXES):
             result.add(
                 "manual review",
                 target_root / payload_path,
@@ -1258,1788 +998,3 @@ def uninstall_bootstrap(
         result=result,
     )
     return result
-
-
-def build_substitutions(
-    *,
-    target_root: Path,
-    project_name: str | None,
-    project_purpose: str | None = None,
-    key_repo_docs: str | None = None,
-    key_subsystems: str | None = None,
-    primary_build_command: str | None = None,
-    primary_test_command: str | None = None,
-    other_key_commands: str | None = None,
-) -> dict[str, str]:
-    substitutions = {
-        "<PROJECT_NAME>": project_name or target_root.name,
-        "<LAST_CONFIRMED_DATE>": datetime.now(UTC).date().isoformat(),
-    }
-    optional_values = {
-        "<PROJECT_PURPOSE>": project_purpose,
-        "<KEY_REPO_DOCS>": key_repo_docs,
-        "<KEY_SUBSYSTEMS>": key_subsystems,
-        "<PRIMARY_BUILD_COMMAND>": primary_build_command,
-        "<PRIMARY_TEST_COMMAND>": primary_test_command,
-        "<OTHER_KEY_COMMANDS>": other_key_commands,
-    }
-    for placeholder, value in optional_values.items():
-        if value:
-            substitutions[placeholder] = value
-    return substitutions
-
-
-def detect_install_mode(target_root: Path) -> str:
-    present_count = sum(
-        1 for marker in AGENT_ROOT_MARKERS if (target_root / marker).exists()
-    )
-    if present_count == 0:
-        return "bootstrap"
-    if present_count == len(AGENT_ROOT_MARKERS):
-        return "full"
-    return "augment"
-
-
-def format_actions(actions: Iterable[Action], target_root: Path) -> list[str]:
-    lines: list[str] = []
-    for action in actions:
-        relative_path = (
-            action.path.relative_to(target_root)
-            if action.path.is_relative_to(target_root)
-            else action.path
-        )
-        details: list[str] = []
-        if action.detail:
-            details.append(action.detail)
-        if action.role:
-            details.append(f"role={action.role}")
-        if action.safety:
-            details.append(f"safety={action.safety}")
-        if action.category:
-            details.append(f"category={action.category}")
-        detail = f" ({'; '.join(details)})" if details else ""
-        lines.append(f"{action.kind}: {relative_path}{detail}")
-    return lines
-
-
-def format_result_json(result) -> str:
-    return json.dumps(result.to_dict(), indent=2)
-
-
-def _new_result(target_root: Path, *, dry_run: bool, message: str) -> InstallResult:
-    result = InstallResult(target_root=target_root, dry_run=dry_run)
-    result.mode = detect_install_mode(target_root)
-    result.detected_version = _read_installed_version(target_root / VERSION_PATH)
-    result.message = message
-    return result
-
-
-def _payload_entries(
-    source_root: Path, *, include_bootstrap_workspace: bool = True
-) -> list[PayloadEntry]:
-    entries: list[PayloadEntry] = []
-    file_roots = [AGENTS_PATH, AUDIT_SCRIPT_PATH, Path("memory")]
-    for relative_root in file_roots:
-        source_path = source_root / relative_root
-        if not source_path.exists():
-            continue
-        if source_path.is_file():
-            relative_path = source_path.relative_to(source_root)
-            role = _classify_role(relative_path)
-            entries.append(
-                PayloadEntry(
-                    relative_path=relative_path,
-                    role=role,
-                    strategy=_strategy_for_role(role),
-                    source_path=source_path,
-                )
-            )
-            continue
-        for child in sorted(source_path.rglob("*")):
-            if child.is_dir():
-                continue
-            relative_path = child.relative_to(source_root)
-            if not include_bootstrap_workspace and relative_path.as_posix().startswith(
-                "memory/bootstrap/"
-            ):
-                continue
-            role = _classify_role(relative_path)
-            entries.append(
-                PayloadEntry(
-                    relative_path=relative_path,
-                    role=role,
-                    strategy=_strategy_for_role(role),
-                    source_path=child,
-                )
-            )
-
-    return entries
-
-
-def _classify_role(relative_path: Path) -> str:
-    path_str = relative_path.as_posix()
-    if relative_path == AGENTS_PATH:
-        return "local-entrypoint"
-    if relative_path == AUDIT_SCRIPT_PATH:
-        return "shared-replaceable"
-    if path_str.startswith("memory/system/"):
-        return "shared-replaceable"
-    if path_str.startswith("memory/bootstrap/"):
-        return "shared-replaceable"
-    if path_str.startswith("memory/skills/"):
-        return "shared-replaceable"
-    if path_str.startswith("memory/templates/"):
-        return "shared-template"
-    if path_str == "memory/index.md":
-        return "seed-note"
-    if path_str.startswith("memory/current/"):
-        return "seed-note"
-    if path_str == "memory/mistakes/recurring-failures.md":
-        return "seed-note"
-    if path_str.endswith("/README.md"):
-        return "seed-note"
-    return "managed-file"
-
-
-def _strategy_for_role(role: str) -> str:
-    return {
-        "local-entrypoint": "patch-or-review",
-        "shared-replaceable": "replace",
-        "shared-template": "replace",
-        "seed-note": "seed",
-        "managed-file": "create-only",
-        "current-memory": "seed",
-        "memory-route": "analyze",
-        "memory-sync": "analyze",
-        "payload-contract": "analyze",
-    }[role]
-
-
-def _plan_from_entries(
-    *,
-    source_root: Path,
-    target_root: Path,
-    substitutions: dict[str, str],
-    result: InstallResult,
-    mode: str,
-    apply: bool,
-    apply_local_entrypoint: bool,
-    force: bool,
-    include_bootstrap_workspace: bool,
-) -> None:
-    for entry in _payload_entries(
-        source_root, include_bootstrap_workspace=include_bootstrap_workspace
-    ):
-        destination = target_root / entry.relative_path
-        rendered = _render_text(entry.source_path, substitutions)
-        existing = (
-            destination.read_text(encoding="utf-8") if destination.exists() else None
-        )
-
-        if not destination.exists():
-            _write_payload_file(
-                entry=entry,
-                destination=destination,
-                substitutions=substitutions,
-                result=result,
-                action_kind="created",
-                dry_kind="would create",
-            )
-            continue
-
-        if mode == "adopt":
-            _plan_existing_file_for_adopt(
-                entry=entry,
-                destination=destination,
-                existing=existing or "",
-                rendered=rendered,
-                result=result,
-                apply=apply,
-                apply_local_entrypoint=apply_local_entrypoint,
-            )
-            continue
-
-        if mode in {"upgrade", "doctor"}:
-            _plan_existing_file_for_upgrade(
-                entry=entry,
-                destination=destination,
-                existing=existing or "",
-                rendered=rendered,
-                result=result,
-                apply=apply,
-                apply_local_entrypoint=apply_local_entrypoint,
-                force=force,
-                doctor_mode=(mode == "doctor"),
-            )
-            continue
-
-        raise ValueError(f"Unknown planning mode: {mode}")
-
-
-def _plan_obsolete_shared_files(
-    *, target_root: Path, result: InstallResult, apply: bool
-) -> None:
-    for relative_path in OBSOLETE_SHARED_FILES:
-        destination = target_root / relative_path
-        if not destination.exists():
-            continue
-        if apply:
-            destination.unlink()
-            result.add(
-                "removed",
-                destination,
-                "obsolete shared file removed during upgrade",
-                role="shared-replaceable",
-                safety="safe",
-                source=relative_path.as_posix(),
-                category="obsolete-managed-file",
-            )
-            _prune_empty_parents(destination.parent, stop=target_root)
-        else:
-            result.add(
-                "would remove",
-                destination,
-                "obsolete shared file is no longer part of the payload contract",
-                role="shared-replaceable",
-                safety="safe",
-                source=relative_path.as_posix(),
-                category="obsolete-managed-file",
-            )
-
-
-def _plan_existing_file_for_adopt(
-    *,
-    entry: PayloadEntry,
-    destination: Path,
-    existing: str,
-    rendered: str,
-    result: InstallResult,
-    apply: bool,
-    apply_local_entrypoint: bool,
-) -> None:
-    if entry.role == "local-entrypoint":
-        _plan_agents_entrypoint(
-            destination=destination,
-            existing=existing,
-            result=result,
-            apply=apply,
-            apply_local_entrypoint=apply_local_entrypoint,
-            doctor_mode=False,
-        )
-        return
-
-    if rendered == existing:
-        result.add(
-            "current",
-            destination,
-            "already matches payload",
-            role=entry.role,
-            safety="safe",
-            source=str(entry.relative_path),
-        )
-        return
-
-    if entry.role in {"shared-replaceable", "shared-template"}:
-        result.add(
-            "manual review",
-            destination,
-            "shared file differs; adoption leaves existing file untouched because it is repo-owned and may be customised",
-            role=entry.role,
-            safety="manual",
-            source=str(entry.relative_path),
-        )
-        return
-
-    result.add(
-        "skipped",
-        destination,
-        "repo-owned file left untouched during adoption; safe to keep as-is unless you want to replace it with the packaged payload",
-        role=entry.role,
-        safety="safe",
-        source=str(entry.relative_path),
-    )
-
-
-def _plan_existing_file_for_upgrade(
-    *,
-    entry: PayloadEntry,
-    destination: Path,
-    existing: str,
-    rendered: str,
-    result: InstallResult,
-    apply: bool,
-    apply_local_entrypoint: bool,
-    force: bool,
-    doctor_mode: bool,
-) -> None:
-    if entry.relative_path == UPGRADE_SOURCE_PATH:
-        if _is_valid_upgrade_source_text(existing):
-            result.add(
-                "current",
-                destination,
-                "upgrade source metadata already recorded; preserving repo-local source selection",
-                role=entry.role,
-                safety="safe",
-                source=str(entry.relative_path),
-            )
-            return
-        _write_text(
-            destination,
-            rendered,
-            result,
-            "replaced",
-            "would replace",
-            role=entry.role,
-            source=str(entry.relative_path),
-            detail="upgrade source metadata missing or invalid; refreshing with packaged default",
-        )
-        return
-
-    if rendered == existing:
-        result.add(
-            "current",
-            destination,
-            "already matches payload",
-            role=entry.role,
-            safety="safe",
-            source=str(entry.relative_path),
-        )
-        return
-
-    if entry.role == "local-entrypoint":
-        _plan_agents_entrypoint(
-            destination=destination,
-            existing=existing,
-            result=result,
-            apply=apply,
-            apply_local_entrypoint=apply_local_entrypoint,
-            doctor_mode=doctor_mode,
-        )
-        return
-
-    if entry.role in {"shared-replaceable", "shared-template"}:
-        _write_text(
-            destination,
-            rendered,
-            result,
-            "replaced",
-            "would replace",
-            role=entry.role,
-            source=str(entry.relative_path),
-        )
-        return
-
-    if entry.role == "seed-note":
-        if _has_placeholders(existing) or force:
-            detail = (
-                "seed note still contains placeholders"
-                if _has_placeholders(existing)
-                else "forced replacement"
-            )
-            _write_text(
-                destination,
-                rendered,
-                result,
-                "replaced",
-                "would replace",
-                role=entry.role,
-                source=str(entry.relative_path),
-                detail=detail,
-            )
-        elif doctor_mode:
-            result.add(
-                "customised",
-                destination,
-                "starter note differs from payload; this is expected if the repository has localised the seed note",
-                role=entry.role,
-                safety="safe",
-                source=str(entry.relative_path),
-                category="customisation-present",
-            )
-        else:
-            result.add(
-                "manual review",
-                destination,
-                "starter note looks customised; keep as-is if the localised content is intentional, or replace it only after review",
-                role=entry.role,
-                safety="manual",
-                source=str(entry.relative_path),
-            )
-        return
-
-    result.add(
-        "skipped",
-        destination,
-        "repo-owned file left untouched because it is already sufficient for the current install state",
-        role=entry.role,
-        safety="safe",
-        source=str(entry.relative_path),
-    )
-
-
-def _plan_agents_entrypoint(
-    *,
-    destination: Path,
-    existing: str,
-    result: InstallResult,
-    apply: bool,
-    apply_local_entrypoint: bool,
-    doctor_mode: bool,
-) -> None:
-    has_reference = "memory/system/WORKFLOW.md" in existing
-    embeds_shared_rules = _embeds_shared_workflow_rules(existing)
-
-    if has_reference and WORKFLOW_MARKER_START in existing and not embeds_shared_rules:
-        result.add(
-            "current",
-            destination,
-            "workflow pointer block already present",
-            role="local-entrypoint",
-            safety="safe",
-            source=str(AGENTS_PATH),
-        )
-        return
-
-    patched = _patch_agents_workflow_block(existing)
-    if apply_local_entrypoint and not doctor_mode:
-        _write_text(
-            destination,
-            patched,
-            result,
-            "patched",
-            "would patch",
-            role="local-entrypoint",
-            source=str(AGENTS_PATH),
-            detail="added or refreshed the canonical workflow pointer block near the top of AGENTS.md",
-        )
-        if embeds_shared_rules:
-            result.add(
-                "manual review",
-                destination,
-                "older AGENTS.md still embeds shared workflow rules; --apply-local-entrypoint can patch the workflow pointer block, but copied shared rules still need manual slimming",
-                role="local-entrypoint",
-                safety="manual",
-                source=str(AGENTS_PATH),
-            )
-        return
-
-    detail = "missing canonical workflow pointer block near the top of AGENTS.md; use --apply-local-entrypoint to add or refresh it safely"
-    if embeds_shared_rules:
-        detail = "older AGENTS.md still embeds shared workflow rules; --apply-local-entrypoint can patch the workflow pointer block, but copied shared rules still need manual slimming"
-    result.add(
-        "manual review",
-        destination,
-        detail,
-        role="local-entrypoint",
-        safety="manual",
-        source=str(AGENTS_PATH),
-    )
-
-
-def _write_payload_file(
-    *,
-    entry: PayloadEntry,
-    destination: Path,
-    substitutions: dict[str, str],
-    result: InstallResult,
-    action_kind: str,
-    dry_kind: str,
-) -> None:
-    rendered = _render_text(entry.source_path, substitutions)
-    _write_text(
-        destination,
-        rendered,
-        result,
-        action_kind,
-        dry_kind,
-        role=entry.role,
-        source=str(entry.relative_path),
-    )
-
-
-def _write_text(
-    destination: Path,
-    rendered: str,
-    result: InstallResult,
-    action_kind: str,
-    dry_kind: str,
-    *,
-    role: str,
-    source: str,
-    detail: str = "",
-) -> None:
-    if result.dry_run:
-        result.add(
-            dry_kind,
-            destination,
-            detail or "planned change",
-            role=role,
-            safety="safe",
-            source=source,
-        )
-        return
-
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(rendered, encoding="utf-8")
-    result.add(
-        action_kind,
-        destination,
-        detail or "applied",
-        role=role,
-        safety="safe",
-        source=source,
-    )
-
-
-def _plan_optional_appends(
-    source_root: Path,
-    target_root: Path,
-    result: InstallResult,
-    *,
-    apply: bool,
-    status_only: bool = False,
-) -> None:
-    for target_file, fragment_path in OPTIONAL_APPEND_TARGETS.items():
-        destination = target_root / target_file
-        fragment = (source_root / fragment_path).read_text(encoding="utf-8").strip()
-        fragment_description = OPTIONAL_APPEND_DESCRIPTIONS.get(
-            target_file, f"optional fragment from {fragment_path.name}"
-        )
-        if not destination.exists():
-            result.add(
-                "skipped" if not status_only else "missing",
-                destination,
-                "target file not present",
-                role="append-target",
-                safety="safe",
-                source=str(fragment_path),
-            )
-            continue
-
-        existing = destination.read_text(encoding="utf-8")
-        if fragment in existing:
-            result.add(
-                "current" if status_only else "skipped",
-                destination,
-                "fragment already present",
-                role="append-target",
-                safety="safe",
-                source=str(fragment_path),
-            )
-            continue
-
-        equivalent_detail = _equivalent_optional_fragment_detail(
-            target_file=target_file, existing=existing, fragment=fragment
-        )
-        if equivalent_detail is not None:
-            result.add(
-                "current" if status_only else "skipped",
-                destination,
-                equivalent_detail,
-                role="append-target",
-                safety="safe",
-                source=str(fragment_path),
-            )
-            continue
-
-        if status_only or not apply:
-            result.add(
-                "would append",
-                destination,
-                fragment_description,
-                role="append-target",
-                safety="safe",
-                source=str(fragment_path),
-            )
-            continue
-
-        destination.write_text(_append_text(existing, fragment), encoding="utf-8")
-        result.add(
-            "appended",
-            destination,
-            fragment_description,
-            role="append-target",
-            safety="safe",
-            source=str(fragment_path),
-        )
-
-
-def _plan_optional_fragment_removals(
-    *,
-    source_root: Path,
-    target_root: Path,
-    result: InstallResult,
-    apply: bool,
-) -> None:
-    for target_file, fragment_path in OPTIONAL_APPEND_TARGETS.items():
-        destination = target_root / target_file
-        if not destination.exists():
-            continue
-
-        fragment = (source_root / fragment_path).read_text(encoding="utf-8").strip()
-        existing = destination.read_text(encoding="utf-8")
-        if fragment not in existing:
-            continue
-
-        updated = _remove_appended_fragment(existing, fragment)
-        if not apply:
-            result.add(
-                "would patch",
-                destination,
-                "remove bootstrap optional fragment",
-                role="append-target",
-                safety="safe",
-                source=str(fragment_path),
-                category="safe-update",
-            )
-            continue
-
-        destination.write_text(updated, encoding="utf-8")
-        result.add(
-            "patched",
-            destination,
-            "removed bootstrap optional fragment",
-            role="append-target",
-            safety="safe",
-            source=str(fragment_path),
-            category="safe-update",
-        )
-
-
-def _append_text(existing: str, fragment: str) -> str:
-    normalized = existing.rstrip()
-    if not normalized:
-        return f"{fragment}\n"
-    return f"{normalized}\n\n{fragment}\n"
-
-
-def _remove_appended_fragment(existing: str, fragment: str) -> str:
-    lines = existing.splitlines()
-    fragment_lines = fragment.splitlines()
-    for index in range(len(lines) - len(fragment_lines) + 1):
-        if lines[index : index + len(fragment_lines)] != fragment_lines:
-            continue
-        before = lines[:index]
-        after = lines[index + len(fragment_lines) :]
-        while before and not before[-1].strip():
-            before.pop()
-        while after and not after[0].strip():
-            after.pop(0)
-        updated = before + ([""] if before and after else []) + after
-        return "\n".join(updated).rstrip() + ("\n" if updated else "")
-    return existing
-
-
-def _report_remaining_repo_local_memory(
-    *,
-    target_root: Path,
-    managed_paths: set[Path],
-    removable_paths: set[Path],
-    result: InstallResult,
-) -> None:
-    memory_root = target_root / "memory"
-    if not memory_root.exists():
-        return
-
-    remaining: list[Path] = []
-    for path in sorted(memory_root.rglob("*")):
-        if path.is_dir():
-            continue
-        if path in managed_paths and path not in removable_paths:
-            continue
-        if path in removable_paths:
-            continue
-        remaining.append(path)
-
-    for path in remaining:
-        result.add(
-            "skipped",
-            path,
-            "repo-local memory file remains after uninstall; safe to keep if the repository still owns that note, remove it only if you are fully retiring memory for this repo",
-            role="repo-local-memory",
-            safety="safe",
-            source=path.relative_to(target_root).as_posix(),
-            category="safe-update",
-        )
-
-
-def _prune_empty_parents(start: Path, *, stop: Path) -> None:
-    current = start
-    while current != stop and current.exists():
-        try:
-            current.rmdir()
-        except OSError:
-            break
-        current = current.parent
-
-
-def _equivalent_optional_fragment_detail(
-    *, target_file: Path, existing: str, fragment: str
-) -> str | None:
-    if target_file != Path("Makefile"):
-        return None
-
-    targets = _extract_make_targets(fragment)
-    if not targets:
-        return None
-
-    existing_targets = _extract_make_targets(existing)
-    if not targets.issubset(existing_targets):
-        return None
-
-    joined = ", ".join(sorted(targets))
-    plural = "s" if len(targets) != 1 else ""
-    return f"equivalent optional Makefile convenience target{plural} already present ({joined})"
-
-
-def _extract_make_targets(text: str) -> set[str]:
-    targets: set[str] = set()
-    for raw_line in text.splitlines():
-        line = raw_line.strip()
-        if (
-            not line
-            or line.startswith("\t")
-            or line.startswith("#")
-            or "=" in line.split(":", 1)[0]
-        ):
-            continue
-        match = re.match(r"^([A-Za-z0-9_.-]+(?:\s+[A-Za-z0-9_.-]+)*)\s*:(?![=])", line)
-        if not match:
-            continue
-        for target in match.group(1).split():
-            targets.add(target)
-    return targets
-
-
-def _render_text(source: Path, substitutions: dict[str, str]) -> str:
-    text = source.read_text(encoding="utf-8")
-    for placeholder, replacement in substitutions.items():
-        text = text.replace(placeholder, replacement)
-    return text
-
-
-def _read_installed_version(path: Path) -> int | None:
-    if not path.exists():
-        return None
-    match = VERSION_RE.search(path.read_text(encoding="utf-8"))
-    if not match:
-        return None
-    return int(match.group(1))
-
-
-def _has_placeholders(text: str) -> bool:
-    return bool(PLACEHOLDER_RE.search(text))
-
-
-def _infer_action_category(
-    *, kind: str, path: Path, detail: str, role: str, safety: str
-) -> str:
-    detail_lower = detail.lower()
-    path_str = path.as_posix()
-    if kind == "customised":
-        return "customisation-present"
-    if "placeholder" in detail_lower:
-        return "placeholder-review"
-    if any(
-        path_str.endswith(current_path.as_posix())
-        for current_path in CURRENT_MEMORY_BASELINE
-    ):
-        if kind in {"missing", "manual review"}:
-            return "current-memory-review"
-    if role in {"payload-contract", "local-entrypoint"} or role.startswith("shared-"):
-        if kind in {"manual review", "missing"}:
-            return "contract-drift"
-    if kind in {
-        "would create",
-        "would copy",
-        "would replace",
-        "created",
-        "copied",
-        "replaced",
-        "current",
-        "present",
-        "recommended",
-        "required",
-    }:
-        return "safe-update"
-    if kind == "manual review":
-        return "manual-review"
-    if kind == "consider":
-        return "manual-review"
-    if safety == "safe":
-        return "safe-update"
-    return ""
-
-
-def _current_task_staleness_reason(text: str) -> str | None:
-    lines = text.splitlines()
-    if len(lines) > CURRENT_TASK_MAX_LINES:
-        return f"task-context note is oversized ({len(lines)} lines); compress it back to continuation-only context and remove planning/status spillover"
-    for idx, line in enumerate(lines):
-        if line.strip().lower() == "## last confirmed":
-            for follow in lines[idx + 1 :]:
-                stripped = follow.strip()
-                if not stripped:
-                    continue
-                date_match = DATE_RE.match(stripped)
-                if date_match:
-                    confirmed = datetime.strptime(
-                        date_match.group(1), "%Y-%m-%d"
-                    ).replace(tzinfo=UTC)
-                    if confirmed < datetime.now(UTC) - timedelta(
-                        days=CURRENT_TASK_STALE_DAYS
-                    ):
-                        return f"task-context note has not been confirmed in over {CURRENT_TASK_STALE_DAYS} days; check whether the active goal, touched surfaces, assumptions, next validation, or linked code and interfaces have drifted"
-                break
-    return None
-
-
-def _is_valid_upgrade_source_text(text: str) -> bool:
-    try:
-        data = tomllib.loads(text)
-    except tomllib.TOMLDecodeError:
-        return False
-
-    source_type = str(data.get("source_type", "")).strip()
-    source_ref = str(data.get("source_ref", "")).strip()
-    return source_type in {"git", "local"} and bool(source_ref)
-
-
-def _validate_upgrade_source_record(path: Path, result: InstallResult) -> None:
-    try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError:
-        result.add(
-            "manual review",
-            path,
-            "upgrade source metadata is not valid TOML",
-            role="payload-contract",
-            safety="manual",
-            source=UPGRADE_SOURCE_PATH.as_posix(),
-            category="contract-drift",
-        )
-        return
-
-    source_type = str(data.get("source_type", "")).strip()
-    source_ref = str(data.get("source_ref", "")).strip()
-    if source_type not in {"git", "local"}:
-        result.add(
-            "manual review",
-            path,
-            "upgrade source metadata must declare source_type as git or local",
-            role="payload-contract",
-            safety="manual",
-            source=UPGRADE_SOURCE_PATH.as_posix(),
-            category="contract-drift",
-        )
-        return
-    if not source_ref:
-        result.add(
-            "manual review",
-            path,
-            "upgrade source metadata is missing source_ref",
-            role="payload-contract",
-            safety="manual",
-            source=UPGRADE_SOURCE_PATH.as_posix(),
-            category="contract-drift",
-        )
-
-
-def resolve_upgrade_source(target: str | Path | None = None) -> dict[str, str]:
-    target_root = Path(target or Path.cwd()).resolve()
-    path = target_root / UPGRADE_SOURCE_PATH
-    if not target_root.exists() or not path.exists():
-        return {
-            "source_type": "git",
-            "source_ref": "git+https://github.com/Tenfifty/agentic-memory",
-        }
-
-    try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError:
-        return {
-            "source_type": "git",
-            "source_ref": "git+https://github.com/Tenfifty/agentic-memory",
-        }
-
-    source_type = str(data.get("source_type", "")).strip()
-    source_ref = str(data.get("source_ref", "")).strip()
-    if source_type not in {"git", "local"} or not source_ref:
-        return {
-            "source_type": "git",
-            "source_ref": "git+https://github.com/Tenfifty/agentic-memory",
-        }
-    return {"source_type": source_type, "source_ref": source_ref}
-
-
-def _project_state_staleness_reason(text: str) -> str | None:
-    lines = text.splitlines()
-    if len(lines) > CURRENT_PROJECT_STATE_MAX_LINES:
-        return f"project-state note is oversized ({len(lines)} lines); compress stale history, remove active-plan residue, and keep only current operating facts"
-    for idx, line in enumerate(lines):
-        if line.strip().lower() == "## last confirmed":
-            for follow in lines[idx + 1 :]:
-                stripped = follow.strip()
-                if not stripped:
-                    continue
-                date_match = DATE_RE.match(stripped)
-                if date_match:
-                    confirmed = datetime.strptime(
-                        date_match.group(1), "%Y-%m-%d"
-                    ).replace(tzinfo=UTC)
-                    if confirmed < datetime.now(UTC) - timedelta(
-                        days=CURRENT_PROJECT_STATE_STALE_DAYS
-                    ):
-                        return f"project-state note has not been confirmed in over {CURRENT_PROJECT_STATE_STALE_DAYS} days; check whether linked code, commands, or authority boundaries have materially changed"
-                break
-    return None
-
-
-def _load_memory_manifest(path: Path) -> MemoryManifest | None:
-    if not path.exists():
-        return None
-
-    try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError:
-        return None
-    notes_table = data.get("notes", {})
-    rules_table = data.get("rules", {})
-    version = int(data.get("version", 1))
-
-    notes: list[MemoryNoteRecord] = []
-    for note_path, raw in notes_table.items():
-        if not isinstance(raw, dict):
-            continue
-        notes.append(
-            MemoryNoteRecord(
-                path=Path(note_path),
-                note_type=str(raw.get("note_type", "memory-note")),
-                canonical_home=Path(str(raw.get("canonical_home", note_path))),
-                authority=str(raw.get("authority", "supporting")),
-                audience=str(raw.get("audience", "human+agent")),
-                canonicality=str(raw.get("canonicality", "agent_only")),
-                task_relevance=str(raw.get("task_relevance", "optional")),
-                subsystems=tuple(_string_list(raw.get("subsystems"))),
-                surfaces=tuple(
-                    _normalise_surface_name(value)
-                    for value in _string_list(raw.get("surfaces"))
-                ),
-                routes_from=tuple(_string_list(raw.get("routes_from"))),
-                stale_when=tuple(_string_list(raw.get("stale_when"))),
-                related_validations=tuple(_string_list(raw.get("related_validations"))),
-                routing_only=bool(raw.get("routing_only", False)),
-                high_level=bool(raw.get("high_level", False)),
-                memory_role=str(raw.get("memory_role", "") or "").strip(),
-                symptom_of=str(raw.get("symptom_of", "") or "").strip(),
-                preferred_remediation=str(raw.get("preferred_remediation", "") or "").strip(),
-                improvement_candidate=bool(raw.get("improvement_candidate", False)),
-                improvement_note=str(raw.get("improvement_note", "") or "").strip(),
-                elimination_target=str(raw.get("elimination_target", "") or "").strip(),
-            )
-        )
-
-    return MemoryManifest(
-        path=path,
-        version=version,
-        notes=tuple(notes),
-        routing_only=tuple(
-            Path(value) for value in _string_list(rules_table.get("routing_only"))
-        ),
-        high_level=tuple(
-            Path(value) for value in _string_list(rules_table.get("high_level"))
-        ),
-        canonical_dirs=tuple(
-            Path(value) for value in _string_list(rules_table.get("canonical_dirs"))
-        ),
-        task_board_globs=tuple(_string_list(rules_table.get("task_board_globs"))),
-        core_doc_globs=tuple(
-            _string_list(rules_table.get("core_doc_globs"))
-            or list(DEFAULT_CORE_DOC_GLOBS)
-        ),
-        core_doc_exclude_globs=tuple(
-            _string_list(rules_table.get("core_doc_exclude_globs"))
-            or list(DEFAULT_CORE_DOC_EXCLUDE_GLOBS)
-        ),
-        forbid_core_docs_depend_on_memory=bool(
-            rules_table.get("forbid_core_docs_depend_on_memory", False)
-        ),
-    )
-
-
-def _string_list(value: object) -> list[str]:
-    if isinstance(value, list):
-        return [str(item) for item in value if str(item).strip()]
-    if isinstance(value, str) and value.strip():
-        return [value]
-    return []
-
-
-def _routes_to_canonical_doc(note: MemoryNoteRecord) -> bool:
-    if note.canonicality != "canonical_elsewhere":
-        return False
-    return _is_non_memory_canonical_home(note.canonical_home, note.path)
-
-
-def _is_non_memory_canonical_home(canonical_home: Path, note_path: Path) -> bool:
-    if canonical_home == note_path:
-        return False
-    return canonical_home.parts[:1] != ("memory",)
-
-
-def _audit_memory_doc_ownership(
-    *, target_root: Path, result: InstallResult, force_enforcement: bool = False
-) -> None:
-    manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
-    if manifest is None:
-        return
-
-    for note in manifest.notes:
-        if note.canonicality not in VALID_CANONICALITY_VALUES:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "manifest canonicality must be one of: agent_only, candidate_for_promotion, canonical_elsewhere, deprecated",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.task_relevance not in VALID_TASK_RELEVANCE_VALUES:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "manifest task_relevance must be required or optional",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.memory_role and note.memory_role not in VALID_MEMORY_ROLE_VALUES:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "manifest memory_role must be durable_truth or improvement_signal when present",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.symptom_of and note.symptom_of not in VALID_SYMPTOM_OF_VALUES:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "manifest symptom_of must be one of: workflow_friction, guidance_drift, missing_guardrail, architecture_friction, operator_complexity",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if (
-            note.preferred_remediation
-            and note.preferred_remediation not in VALID_PREFERRED_REMEDIATION_VALUES
-        ):
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "manifest preferred_remediation must be one of: docs, skill, script, test, validation, refactor, code",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if (
-            note.elimination_target
-            and note.elimination_target not in VALID_ELIMINATION_TARGET_VALUES
-        ):
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "manifest elimination_target must be one of: shrink, promote, automate, refactor_away",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.canonicality == "canonical_elsewhere" and not _is_non_memory_canonical_home(
-            note.canonical_home, note.path
-        ):
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "canonical_elsewhere notes must point canonical_home at a checked-in canonical doc outside memory/",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-
-    if not manifest.forbid_core_docs_depend_on_memory and not force_enforcement:
-        return
-
-    core_docs = tuple(
-        _iter_core_docs(
-            target_root=target_root,
-            include_globs=manifest.core_doc_globs,
-            exclude_globs=manifest.core_doc_exclude_globs,
-        )
-    )
-
-    for doc_path in core_docs:
-        matches = _extract_memory_references(doc_path.read_text(encoding="utf-8"))
-        if not matches:
-            continue
-        detail = ", ".join(matches[:3])
-        if len(matches) > 3:
-            detail = f"{detail}, ..."
-        result.add(
-            "manual review",
-            doc_path,
-            f"core doc depends on memory ({detail}); promote stable guidance into checked-in canonical docs and leave memory as assistive residue or stubs",
-            role="doc-ownership-audit",
-            safety="manual",
-            source=doc_path.relative_to(target_root).as_posix(),
-            category="manual-review",
-        )
-
-    for note in manifest.notes:
-        note_path = target_root / note.path
-        if not note_path.exists():
-            continue
-        overlaps = _find_shadow_doc_matches(
-            note_path=note_path,
-            canonical_home=target_root / note.canonical_home,
-            core_docs=core_docs,
-            target_root=target_root,
-        )
-        for canonical_doc, shared_terms in overlaps:
-            result.add(
-                "manual review",
-                note_path,
-                f"shadow-doc overlap with {canonical_doc.relative_to(target_root).as_posix()} ({', '.join(shared_terms[:8])}); consolidate stable guidance into canonical docs and leave memory as residue or a stub",
-                role="shadow-doc-audit",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="manual-review",
-            )
-
-
-def _iter_core_docs(
-    *, target_root: Path, include_globs: tuple[str, ...], exclude_globs: tuple[str, ...]
-) -> Iterable[Path]:
-    seen: set[Path] = set()
-    for pattern in include_globs:
-        for path in target_root.glob(pattern):
-            if not path.is_file():
-                continue
-            relative = path.relative_to(target_root)
-            relative_str = relative.as_posix()
-            if any(_path_matches_pattern(relative_str, glob) for glob in exclude_globs):
-                continue
-            if path in seen:
-                continue
-            seen.add(path)
-            yield path
-
-
-def _extract_memory_references(text: str) -> list[str]:
-    matches = {match.group(0) for match in MEMORY_PATH_RE.finditer(text)}
-    matches.update(match.group(1) for match in MARKDOWN_MEMORY_LINK_RE.finditer(text))
-    return sorted(match.rstrip(").,`") for match in matches if match.strip())
-
-
-def _iter_promotion_candidates(
-    *,
-    target_root: Path,
-    manifest: MemoryManifest | None,
-    requested: set[Path],
-) -> list[tuple[Path, MemoryNoteRecord | None, str]]:
-    candidates: list[tuple[Path, MemoryNoteRecord | None, str]] = []
-
-    if manifest is not None:
-        for note in manifest.notes:
-            note_path = target_root / note.path
-            if requested and note.path not in requested:
-                continue
-            if note.canonicality not in {
-                "candidate_for_promotion",
-                "canonical_elsewhere",
-            } and not note.improvement_candidate:
-                continue
-            if note.canonicality == "candidate_for_promotion":
-                destination = (
-                    note.canonical_home.as_posix()
-                    if note.canonical_home != note.path
-                    else _suggest_canonical_doc_path(note.path).as_posix()
-                )
-                detail = (
-                    f"promotion candidate; suggested canonical doc {destination}. "
-                    "Promote stable guidance there, then leave this memory note as a short stub, backlink, or fallback summary."
-                )
-            else:
-                if note.canonicality == "canonical_elsewhere":
-                    detail = (
-                        f"canonical truth should live in {note.canonical_home.as_posix()}. "
-                        "Keep this memory note compact and non-authoritative."
-                    )
-                else:
-                    detail = (
-                        "improvement candidate; this note looks like a signal that the repo may need an upstream change rather than more memory."
-                    )
-            improvement_hint = _first_improvement_hint(
-                note, note_path, note_path.read_text(encoding="utf-8") if note_path.exists() else "", for_report=True
-            )
-            if improvement_hint:
-                detail = f"{detail} Also consider {improvement_hint}."
-            candidates.append((note_path, note, detail))
-
-    for requested_note in requested:
-        if any(candidate[0] == target_root / requested_note for candidate in candidates):
-            continue
-        requested_path = target_root / requested_note
-        if not requested_path.exists():
-            detail = "explicit note supplied for promotion review, but the file does not exist"
-            candidates.append((requested_path, None, detail))
-            continue
-        detail = _explicit_note_review_detail(requested_note)
-        improvement_hint = _first_improvement_hint(
-            _lookup_manifest_note(manifest, requested_note),
-            requested_path,
-            requested_path.read_text(encoding="utf-8") if requested_path.exists() else "",
-            for_report=True,
-        )
-        if improvement_hint:
-            detail = f"{detail} Also consider {improvement_hint}."
-        candidates.append((requested_path, None, detail))
-
-    return candidates
-
-
-def _lookup_manifest_note(
-    manifest: MemoryManifest | None, note_path: Path
-) -> MemoryNoteRecord | None:
-    if manifest is None:
-        return None
-    for note in manifest.notes:
-        if note.path == note_path:
-            return note
-    return None
-
-
-def _explicit_note_review_detail(requested_note: Path) -> str:
-    requested_str = requested_note.as_posix()
-    if requested_str.startswith("memory/runbooks/"):
-        return (
-            "explicit note supplied; review whether the durable facts should stay in memory, the repeated workflow should become a checked-in skill, or the mechanics now justify a repo-owned script or command."
-        )
-    if requested_str.startswith("memory/mistakes/"):
-        return (
-            "explicit note supplied; review whether the recurring failure should stay documented in memory or now justify a regression test, validation, or lint rule."
-        )
-    if requested_str.startswith("memory/domains/"):
-        return (
-            "explicit note supplied; review whether the stable parts belong in canonical docs or whether the note is signalling a refactor or clearer boundary need."
-        )
-    if requested_str.startswith("memory/invariants/"):
-        return (
-            "explicit note supplied; review whether the invariant should stay in memory, move into canonical docs, or be enforced more directly in code or validation."
-        )
-    if requested_str.startswith("memory/decisions/"):
-        return (
-            "explicit note supplied; review whether the durable rationale should stay in memory, move into canonical docs, or be reduced after the underlying boundary becomes clearer."
-        )
-    return (
-        f"explicit note supplied; review whether the stable parts belong in canonical docs ({_suggest_canonical_doc_path(requested_note).as_posix()}), whether the note should stay compact in memory, or whether it is signalling a better target such as a skill, script, test, validation, or refactor review."
-    )
-
-
-def _first_improvement_hint(
-    note: MemoryNoteRecord | None,
-    note_path: Path,
-    text: str,
-    *,
-    for_report: bool,
-) -> str:
-    hints = _collect_improvement_hints(note, note_path, text, for_report=for_report)
-    return hints[0] if hints else ""
-
-
-def _collect_improvement_hints(
-    note: MemoryNoteRecord | None,
-    note_path: Path,
-    text: str,
-    *,
-    for_report: bool,
-) -> list[str]:
-    hints: list[str] = []
-    relative = note.path if note is not None else note_path
-    relative_str = relative.as_posix()
-    lines = text.splitlines()
-    line_count = len(lines)
-    imperative_lines = sum(
-        1
-        for line in lines
-        if re.match(r"^\s*(?:-|\*|\d+\.)\s+", line)
-        or line.strip().startswith("`")
-    )
-
-    if note is not None:
-        manifest_hint = _manifest_improvement_hint(note)
-        if manifest_hint:
-            hints.append(manifest_hint)
-
-    if "memory/mistakes/" in relative_str:
-        hints.append(
-            "a regression test, validation, or lint rule if the recurring failure remains active"
-        )
-    if "memory/runbooks/" in relative_str and line_count >= 35 and imperative_lines >= 6:
-        hints.append(
-            "a checked-in skill first, then a repo-owned script or command if the workflow stays mechanical"
-        )
-    if "memory/domains/" in relative_str and line_count >= 140:
-        hints.append(
-            "clearer canonical docs or refactor review if this note keeps compensating for a high-discovery-cost subsystem"
-        )
-    if relative_str.endswith("memory/index.md") and line_count >= 120:
-        hints.append(
-            "clearer repo boundaries or note consolidation if routing keeps expanding to explain one awkward area"
-        )
-    if "memory/current/" in relative_str and line_count >= 80 and not for_report:
-        hints.append(
-            "shrinking planning/status spillover or unresolved structure friction before growing current-memory notes further"
-        )
-
-    deduped: list[str] = []
-    seen: set[str] = set()
-    for hint in hints:
-        if hint in seen:
-            continue
-        seen.add(hint)
-        deduped.append(hint)
-    return deduped
-
-
-def _manifest_improvement_hint(note: MemoryNoteRecord) -> str:
-    remediation_map = {
-        "docs": "promoting the stable parts into canonical docs",
-        "skill": "a checked-in skill for the repeated workflow",
-        "script": "a repo-owned script or command if the workflow is stable and mechanical",
-        "test": "a regression test that removes the need to remember this failure mode manually",
-        "validation": "stronger validation or linting so the note stops compensating for missing guardrails",
-        "refactor": "refactor review or clearer ownership boundaries in the underlying subsystem",
-        "code": "encoding the constraint directly in the implementation",
-    }
-    elimination_map = {
-        "shrink": "shrinking the note after the upstream improvement lands",
-        "promote": "promoting the durable human-facing parts and leaving only a short stub",
-        "automate": "automating the repeated mechanics so the note can stay minimal",
-        "refactor_away": "refactoring the underlying friction away so the note becomes unnecessary",
-    }
-
-    parts: list[str] = []
-    if note.improvement_candidate and note.preferred_remediation:
-        parts.append(
-            remediation_map.get(
-                note.preferred_remediation,
-                f"{note.preferred_remediation} as the preferred remediation target",
-            )
-        )
-    elif note.preferred_remediation:
-        parts.append(
-            remediation_map.get(
-                note.preferred_remediation,
-                f"{note.preferred_remediation} as the preferred remediation target",
-            )
-        )
-
-    if note.elimination_target:
-        parts.append(
-            elimination_map.get(
-                note.elimination_target,
-                f"{note.elimination_target} as the intended elimination path",
-            )
-        )
-
-    if note.improvement_note:
-        parts.append(note.improvement_note.rstrip("."))
-
-    if note.memory_role == "improvement_signal" and not parts:
-        parts.append(
-            "an upstream repo improvement rather than treating the memory note as the long-term endpoint"
-        )
-
-    return "; ".join(parts)
-
-
-def _emit_improvement_pressure(
-    *,
-    target_root: Path,
-    manifest: MemoryManifest | None,
-    result: InstallResult,
-) -> None:
-    if manifest is None:
-        return
-
-    for note in manifest.notes:
-        note_path = target_root / note.path
-        if not note_path.exists():
-            continue
-        text = note_path.read_text(encoding="utf-8")
-        for hint in _collect_improvement_hints(note, note_path, text, for_report=False):
-            result.add(
-                "consider",
-                note_path,
-                f"improvement candidate: consider {hint}",
-                role="improvement-pressure",
-                safety="advisory",
-                source=note.path.as_posix(),
-                category="manual-review",
-            )
-
-
-def _suggest_canonical_doc_path(note_path: Path) -> Path:
-    if note_path.parts[:2] == ("memory", "runbooks") and len(note_path.parts) >= 3:
-        return Path("docs/runbooks") / note_path.name
-    if note_path.parts[:2] == ("memory", "domains") and len(note_path.parts) >= 3:
-        return Path("docs") / note_path.name
-    if note_path.parts[:2] == ("memory", "invariants") and len(note_path.parts) >= 3:
-        return Path("docs/invariants") / note_path.name
-    if note_path.parts[:2] == ("memory", "decisions") and len(note_path.parts) >= 3:
-        return Path("docs/decisions") / note_path.name
-    return Path("docs") / note_path.name
-
-
-def _find_shadow_doc_matches(
-    *,
-    note_path: Path,
-    canonical_home: Path,
-    core_docs: tuple[Path, ...],
-    target_root: Path,
-) -> list[tuple[Path, list[str]]]:
-    note_tokens = _significant_terms(note_path.read_text(encoding="utf-8"))
-    if len(note_tokens) < SHADOW_DOC_MIN_SHARED_TERMS:
-        return []
-
-    overlaps: list[tuple[Path, list[str]]] = []
-    for doc_path in core_docs:
-        if doc_path == note_path:
-            continue
-        if canonical_home.exists() and doc_path == canonical_home:
-            continue
-        if not _shadow_doc_paths_related(note_path, doc_path):
-            continue
-        shared_terms = sorted(
-            note_tokens & _significant_terms(doc_path.read_text(encoding="utf-8"))
-        )
-        if len(shared_terms) >= SHADOW_DOC_MIN_SHARED_TERMS:
-            overlaps.append((doc_path, shared_terms))
-    return overlaps
-
-
-def _significant_terms(text: str) -> set[str]:
-    words = re.findall(r"[A-Za-z][A-Za-z0-9_-]{3,}", text.lower())
-    stop_words = {
-        "this",
-        "that",
-        "with",
-        "from",
-        "when",
-        "where",
-        "should",
-        "would",
-        "there",
-        "their",
-        "into",
-        "only",
-        "keep",
-        "note",
-        "memory",
-        "docs",
-        "repo",
-        "repository",
-        "stable",
-        "guidance",
-        "canonical",
-        "review",
-        "using",
-        "used",
-        "than",
-        "then",
-        "them",
-        "have",
-        "will",
-        "what",
-        "which",
-        "while",
-        "task",
-        "tasks",
-    }
-    return {word for word in words if word not in stop_words}
-
-
-def _shadow_doc_paths_related(note_path: Path, doc_path: Path) -> bool:
-    note_stem = note_path.stem.lower()
-    doc_stem = doc_path.stem.lower()
-    if note_stem == doc_stem:
-        return True
-    return note_stem in doc_stem or doc_stem in note_stem
-
-
-def _find_manifest_matches(
-    manifest: MemoryManifest | None,
-    *,
-    files: list[str],
-    surfaces: set[str],
-    use_staleness: bool,
-) -> list[tuple[str, str, str]]:
-    if manifest is None:
-        return []
-
-    suggestions: list[tuple[str, str, str]] = []
-    for note in manifest.notes:
-        reasons: list[str] = []
-        if surfaces and any(surface in surfaces for surface in note.surfaces):
-            matched = ", ".join(
-                sorted({surface for surface in note.surfaces if surface in surfaces})
-            )
-            reasons.append(f"manifest surface match ({matched})")
-
-        globs = note.stale_when if use_staleness else note.routes_from
-        if files and globs:
-            matched_globs = sorted(
-                {
-                    pattern
-                    for pattern in globs
-                    if any(_path_matches_pattern(path, pattern) for path in files)
-                }
-                )
-            if matched_globs:
-                reasons.append(f"manifest path match ({', '.join(matched_globs)})")
-
-        if reasons:
-            reason = "; ".join(reasons)
-            if _routes_to_canonical_doc(note):
-                suggestions.append(
-                    (
-                        "required",
-                        note.canonical_home.as_posix(),
-                        f"{reason}; canonical doc takes precedence over memory",
-                    )
-                )
-                suggestions.append(
-                    (
-                        "recommended",
-                        note.path.as_posix(),
-                        f"{reason}; memory note is fallback context only",
-                    )
-                )
-                continue
-
-            recommendation = (
-                "required" if note.task_relevance == "required" else "recommended"
-            )
-            suggestions.append((recommendation, note.path.as_posix(), reason))
-    return suggestions
-
-
-def _path_matches_pattern(raw_path: str, pattern: str) -> bool:
-    normalised_path = raw_path.replace("\\", "/").strip("./")
-    normalised_pattern = pattern.replace("\\", "/").strip()
-    if not normalised_path or not normalised_pattern:
-        return False
-    path = Path(normalised_path)
-    patterns = [normalised_pattern]
-    if "/**/" in normalised_pattern:
-        patterns.append(normalised_pattern.replace("/**/", "/"))
-    return any(path.match(candidate) for candidate in patterns)
-
-
-def _parse_route_sections(index_path: Path) -> list[tuple[str, list[str]]]:
-    if not index_path.exists():
-        return []
-    sections: list[tuple[str, list[str]]] = []
-    current_heading: str | None = None
-    current_notes: list[str] = []
-    in_task_routing = False
-    for raw_line in index_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if line == "## Task routing":
-            in_task_routing = True
-            continue
-        if in_task_routing and line.startswith("## "):
-            break
-        if not in_task_routing:
-            continue
-        if line.startswith("### "):
-            if current_heading is not None:
-                sections.append(
-                    (_normalise_surface_name(current_heading), current_notes)
-                )
-            current_heading = line.removeprefix("### ").strip()
-            current_notes = []
-            continue
-        if line.startswith("- `") and line.endswith("`"):
-            current_notes.append(line[3:-1])
-    if current_heading is not None:
-        sections.append((_normalise_surface_name(current_heading), current_notes))
-    return sections
-
-
-def _normalise_surface_name(text: str) -> str:
-    lowered = text.lower()
-    if "runtime" in lowered or "deployment" in lowered:
-        return "runtime"
-    if "api" in lowered or "interface" in lowered or "tool behaviour" in lowered:
-        return "api"
-    if "retrieval" in lowered or "search" in lowered:
-        return "retrieval"
-    if "test" in lowered or "validation" in lowered:
-        return "tests"
-    if "data model" in lowered or "architecture" in lowered:
-        return "architecture"
-    if "choosing an approach" in lowered or "multiple subsystems" in lowered:
-        return "decision"
-    return lowered
-
-
-def _infer_surfaces_from_paths(paths: list[str]) -> set[str]:
-    surfaces: set[str] = set()
-    for raw_path in paths:
-        path = raw_path.replace("\\", "/").lower()
-        if any(token in path for token in ("test", "/tests/", "_test.", "spec.")):
-            surfaces.add("tests")
-        if any(
-            token in path
-            for token in ("deploy", "infra", "docker", "k8s", "terraform", "compose")
-        ):
-            surfaces.add("runtime")
-        if any(
-            token in path for token in ("api", "route", "contract", "interface", "cli")
-        ):
-            surfaces.add("api")
-        if any(token in path for token in ("search", "retriev", "vector", "index")):
-            surfaces.add("retrieval")
-        if any(
-            token in path
-            for token in ("schema", "model", "architect", "design", "invariant")
-        ):
-            surfaces.add("architecture")
-    return surfaces
-
-
-def _git_changed_files(target_root: Path) -> list[str]:
-    if not (target_root / ".git").exists():
-        return []
-    try:
-        completed = subprocess.run(
-            ["git", "status", "--short", "--porcelain"],
-            cwd=target_root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return []
-
-    files: list[str] = []
-    for line in completed.stdout.splitlines():
-        if len(line) < 4:
-            continue
-        candidate = line[3:]
-        if " -> " in candidate:
-            candidate = candidate.split(" -> ", 1)[1]
-        files.append(candidate)
-    return files
-
-
-def _embeds_shared_workflow_rules(text: str) -> bool:
-    matches = {heading for heading in EMBEDDED_WORKFLOW_HEADINGS if heading in text}
-    return "## Task system boundary" in matches or len(matches) >= 2
-
-
-def _patch_agents_workflow_block(existing: str) -> str:
-    if WORKFLOW_MARKER_START in existing and WORKFLOW_MARKER_END in existing:
-        pattern = re.compile(
-            re.escape(WORKFLOW_MARKER_START) + r".*?" + re.escape(WORKFLOW_MARKER_END),
-            re.DOTALL,
-        )
-        return pattern.sub(WORKFLOW_POINTER_BLOCK, existing, count=1)
-
-    lines = existing.splitlines()
-    if lines and lines[0].startswith("#"):
-        rest_index = 1
-        while rest_index < len(lines) and not lines[rest_index].strip():
-            rest_index += 1
-        rest = lines[rest_index:]
-        body = "\n".join(rest).lstrip("\n")
-        if body:
-            return f"{lines[0]}\n\n{WORKFLOW_POINTER_BLOCK}\n\n{body.rstrip()}\n"
-        return f"{lines[0]}\n\n{WORKFLOW_POINTER_BLOCK}\n"
-
-    return f"{WORKFLOW_POINTER_BLOCK}\n\n{existing.lstrip()}"
-
-
-def _record_repo_context_warnings(target_root: Path, result: InstallResult) -> None:
-    parent_repo = _find_parent_repo_root(target_root)
-    if parent_repo is not None:
-        result.add(
-            "warning",
-            target_root,
-            f"target is inside parent repository {parent_repo}; --target is being treated as authoritative",
-            role="target-context",
-            safety="safe",
-        )
-
-    for nested_repo in _find_nested_repo_roots(target_root):
-        result.add(
-            "warning",
-            nested_repo,
-            "nested repository detected under target; installer will not recurse into repo roots automatically",
-            role="target-context",
-            safety="safe",
-        )
-
-
-def _find_repo_candidates(start: Path) -> list[Path]:
-    candidates: list[Path] = []
-    for candidate in [start, *start.parents]:
-        git_dir = candidate / ".git"
-        if git_dir.is_dir() or git_dir.is_file():
-            candidates.append(candidate)
-            continue
-        if any((candidate / marker).exists() for marker in PROJECT_MARKERS):
-            candidates.append(candidate)
-    return candidates
-
-
-def _find_parent_repo_root(target_root: Path) -> Path | None:
-    for candidate in target_root.parents:
-        git_dir = candidate / ".git"
-        if git_dir.is_dir() or git_dir.is_file():
-            return candidate
-        if any((candidate / marker).exists() for marker in PROJECT_MARKERS):
-            return candidate
-    return None
-
-
-def _find_nested_repo_roots(target_root: Path) -> list[Path]:
-    nested: list[Path] = []
-    seen: set[Path] = set()
-    for candidate in target_root.rglob(".git"):
-        repo_root = candidate.parent
-        if repo_root == target_root or repo_root in seen:
-            continue
-        nested.append(repo_root)
-        seen.add(repo_root)
-    return sorted(nested)
-
-
-OPTIONAL_APPEND_DESCRIPTIONS = {
-    Path(
-        "Makefile"
-    ): "optional convenience target for running the memory freshness audit locally or in CI",
-    Path("CONTRIBUTING.md"): "optional contributor guidance fragment",
-    Path(
-        ".github/pull_request_template.md"
-    ): "optional pull request checklist fragment",
-}

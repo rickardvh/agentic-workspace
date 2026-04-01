@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from repo_memory_bootstrap import cli, installer
 
 
@@ -877,6 +879,63 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     assert promotion_args.command == "promotion-report"
     assert verify_args.command == "verify-payload"
     assert install_args.project_purpose == "purpose"
+
+
+def test_cli_version_flag_prints_package_version(capsys) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["--version"])
+
+    assert excinfo.value.code == 0
+    assert "agentic-memory-bootstrap" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("argv", "setup_installed_repo"),
+    [
+        (["list-files", "--target", ".", "--format", "json"], False),
+        (["list-skills", "--format", "json"], False),
+        (["prompt", "upgrade", "--target", "C:/repo"], False),
+        (["install", "--target", ".", "--dry-run", "--format", "json"], False),
+        (["adopt", "--target", ".", "--dry-run", "--format", "json"], False),
+        (["status", "--target", ".", "--format", "json"], False),
+        (["verify-payload", "--target", ".", "--format", "json"], False),
+        (["doctor", "--target", ".", "--format", "json"], True),
+        (["current", "show", "--target", ".", "--format", "json"], True),
+        (["current", "check", "--target", ".", "--format", "json"], True),
+        (["route", "--target", ".", "--files", "src/app.py", "--format", "json"], True),
+        (["sync-memory", "--target", ".", "--files", "src/app.py", "--format", "json"], True),
+        (["promotion-report", "--target", ".", "--notes", "memory/index.md", "--format", "json"], True),
+        (["upgrade", "--target", ".", "--dry-run", "--format", "json"], True),
+        (["uninstall", "--target", ".", "--dry-run", "--format", "json"], True),
+        (["bootstrap-cleanup", "--target", ".", "--format", "json"], True),
+    ],
+)
+def test_cli_main_smoke_commands_return_zero(
+    tmp_path: Path, argv: list[str], setup_installed_repo: bool
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    if setup_installed_repo:
+        installer.install_bootstrap(target=target)
+
+    completed = cli.main([arg if arg != "." else str(target) for arg in argv])
+
+    assert completed == 0
+
+
+def test_git_changed_files_times_out_with_warning(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    def _raise_timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd=["git", "status"], timeout=30)
+
+    monkeypatch.setattr(installer.subprocess, "run", _raise_timeout)
+
+    assert installer._git_changed_files(target) == []
+    assert "Warning: git change detection failed" in capsys.readouterr().err
 
 
 def test_verify_payload_reports_version_mismatch(tmp_path: Path, monkeypatch) -> None:

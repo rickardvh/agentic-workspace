@@ -1,0 +1,318 @@
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
+
+PROJECT_MARKERS = ("pyproject.toml", "package.json", "Cargo.toml", ".hg")
+AGENT_ROOT_MARKERS = (Path("AGENTS.md"), Path("memory"))
+VERSION_PATH = Path("memory/system/VERSION.md")
+WORKFLOW_PATH = Path("memory/system/WORKFLOW.md")
+AGENTS_PATH = Path("AGENTS.md")
+MANIFEST_PATH = Path("memory/manifest.toml")
+UPGRADE_SOURCE_PATH = Path("memory/system/UPGRADE-SOURCE.toml")
+AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
+BOOTSTRAP_VERSION = 36
+BUNDLED_SKILLS_ROOT = Path("skills")
+BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
+
+CURRENT_MEMORY_BASELINE = (
+    Path("memory/current/project-state.md"),
+    Path("memory/current/task-context.md"),
+)
+BOOTSTRAP_WORKSPACE_FILES = (
+    Path("memory/bootstrap/README.md"),
+    Path("memory/bootstrap/skills/install/SKILL.md"),
+    Path("memory/bootstrap/skills/install/agents/openai.yaml"),
+    Path("memory/bootstrap/skills/populate/SKILL.md"),
+    Path("memory/bootstrap/skills/populate/agents/openai.yaml"),
+    Path("memory/bootstrap/skills/cleanup/SKILL.md"),
+    Path("memory/bootstrap/skills/cleanup/agents/openai.yaml"),
+)
+CORE_PAYLOAD_SKILL_FILES = (
+    Path("memory/skills/README.md"),
+    Path("memory/skills/memory-capture/SKILL.md"),
+    Path("memory/skills/memory-capture/agents/openai.yaml"),
+    Path("memory/skills/memory-hygiene/SKILL.md"),
+    Path("memory/skills/memory-hygiene/agents/openai.yaml"),
+    Path("memory/skills/memory-upgrade/SKILL.md"),
+    Path("memory/skills/memory-upgrade/agents/openai.yaml"),
+    Path("memory/skills/memory-refresh/SKILL.md"),
+    Path("memory/skills/memory-refresh/agents/openai.yaml"),
+    Path("memory/skills/memory-router/SKILL.md"),
+    Path("memory/skills/memory-router/agents/openai.yaml"),
+)
+PAYLOAD_REQUIRED_FILES = (
+    AGENTS_PATH,
+    Path("memory/index.md"),
+    MANIFEST_PATH,
+    Path("memory/system/SKILLS.md"),
+    Path("memory/system/WORKFLOW.md"),
+    Path("memory/system/UPGRADE-SOURCE.toml"),
+    Path("memory/current/project-state.md"),
+    Path("memory/current/task-context.md"),
+    Path("memory/domains/README.md"),
+    Path("memory/invariants/README.md"),
+    Path("memory/runbooks/README.md"),
+    Path("memory/mistakes/recurring-failures.md"),
+    Path("memory/decisions/README.md"),
+    AUDIT_SCRIPT_PATH,
+    *BOOTSTRAP_WORKSPACE_FILES,
+    *CORE_PAYLOAD_SKILL_FILES,
+)
+FORBIDDEN_PAYLOAD_FILES = (
+    Path("TODO.md"),
+    Path("memory/current/active-decisions.md"),
+    Path("memory/system/UPGRADE.md"),
+)
+OBSOLETE_SHARED_FILES = (Path("memory/system/UPGRADE.md"),)
+FORBIDDEN_PAYLOAD_PREFIXES = (".agent-work/",)
+CURRENT_TASK_STALE_DAYS = 30
+CURRENT_TASK_MAX_LINES = 120
+CURRENT_PROJECT_STATE_STALE_DAYS = 45
+CURRENT_PROJECT_STATE_MAX_LINES = 140
+
+WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
+WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
+WORKFLOW_POINTER_BLOCK = (
+    f"{WORKFLOW_MARKER_START}\n"
+    "Read `memory/system/WORKFLOW.md` for shared workflow rules.\n"
+    f"{WORKFLOW_MARKER_END}"
+)
+EMBEDDED_WORKFLOW_HEADINGS = (
+    "## Task system boundary",
+    "## Memory discipline",
+    "## Memory admission rule",
+    "## Memory freshness rule",
+    "## Memory routing",
+    "## Overview file",
+    "## Task-context file",
+    "## Local working notes (optional)",
+)
+PLACEHOLDER_RE = re.compile(r"<[A-Z0-9_/-]+>")
+DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\b")
+VERSION_RE = re.compile(r"^\s*Version:\s*(\d+)\s*$", re.MULTILINE)
+MEMORY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_.-])memory/[A-Za-z0-9_./-]+")
+MARKDOWN_MEMORY_LINK_RE = re.compile(r"\[[^\]]+\]\((?!https?://)([^)]*memory/[^)]*)\)")
+
+DEFAULT_CORE_DOC_GLOBS = (
+    "README.md",
+    "docs/**/*.md",
+    "CONTRIBUTING.md",
+    ".github/**/*.md",
+)
+DEFAULT_CORE_DOC_EXCLUDE_GLOBS = (
+    "AGENTS.md",
+    "memory/**/*.md",
+    "memory/bootstrap/**/*.md",
+)
+VALID_CANONICALITY_VALUES = {
+    "agent_only",
+    "candidate_for_promotion",
+    "canonical_elsewhere",
+    "deprecated",
+}
+VALID_TASK_RELEVANCE_VALUES = {"required", "optional"}
+VALID_MEMORY_ROLE_VALUES = {"durable_truth", "improvement_signal"}
+VALID_SYMPTOM_OF_VALUES = {
+    "workflow_friction",
+    "guidance_drift",
+    "missing_guardrail",
+    "architecture_friction",
+    "operator_complexity",
+}
+VALID_PREFERRED_REMEDIATION_VALUES = {
+    "docs",
+    "skill",
+    "script",
+    "test",
+    "validation",
+    "refactor",
+    "code",
+}
+VALID_ELIMINATION_TARGET_VALUES = {"shrink", "promote", "automate", "refactor_away"}
+# Six shared terms is a conservative floor that avoids flagging incidental overlap
+# while still surfacing likely shadow-doc drift between memory and canonical docs.
+SHADOW_DOC_MIN_SHARED_TERMS = 6
+
+OPTIONAL_APPEND_TARGETS = {
+    Path("Makefile"): Path("optional/Makefile.fragment.mk"),
+    Path("CONTRIBUTING.md"): Path("optional/CONTRIBUTING.fragment.md"),
+    Path(".github/pull_request_template.md"): Path(
+        "optional/pull_request_template.fragment.md"
+    ),
+}
+OPTIONAL_APPEND_DESCRIPTIONS = {
+    Path(
+        "Makefile"
+    ): "optional convenience target for running the memory freshness audit locally or in CI",
+    Path("CONTRIBUTING.md"): "optional contributor guidance fragment",
+    Path(
+        ".github/pull_request_template.md"
+    ): "optional pull request checklist fragment",
+}
+
+
+@dataclass(slots=True)
+class Action:
+    kind: str
+    path: Path
+    detail: str = ""
+    role: str = ""
+    safety: str = ""
+    source: str = ""
+    category: str = ""
+
+    def to_dict(self, target_root: Path) -> dict[str, str]:
+        relative_path = (
+            self.path.relative_to(target_root)
+            if self.path.is_relative_to(target_root)
+            else self.path
+        )
+        return {
+            "kind": self.kind,
+            "path": relative_path.as_posix()
+            if isinstance(relative_path, Path)
+            else str(relative_path),
+            "detail": self.detail,
+            "role": self.role,
+            "safety": self.safety,
+            "source": self.source,
+            "category": self.category,
+        }
+
+
+@dataclass(slots=True)
+class InstallResult:
+    target_root: Path
+    dry_run: bool
+    mode: str = "augment"
+    message: str = ""
+    actions: list[Action] = field(default_factory=list)
+    detected_version: int | None = None
+    bootstrap_version: int = BOOTSTRAP_VERSION
+
+    def add(
+        self,
+        kind: str,
+        path: Path,
+        detail: str = "",
+        *,
+        role: str = "",
+        safety: str = "",
+        source: str = "",
+        category: str = "",
+    ) -> None:
+        from repo_memory_bootstrap._installer_output import _infer_action_category
+
+        self.actions.append(
+            Action(
+                kind=kind,
+                path=path,
+                detail=detail,
+                role=role,
+                safety=safety,
+                source=source,
+                category=category
+                or _infer_action_category(
+                    kind=kind, path=path, detail=detail, role=role, safety=safety
+                ),
+            )
+        )
+
+    def counts(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for action in self.actions:
+            counts[action.kind] = counts.get(action.kind, 0) + 1
+        return counts
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "target_root": str(self.target_root),
+            "dry_run": self.dry_run,
+            "mode": self.mode,
+            "message": self.message,
+            "detected_version": self.detected_version,
+            "bootstrap_version": self.bootstrap_version,
+            "actions": [action.to_dict(self.target_root) for action in self.actions],
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class PayloadEntry:
+    relative_path: Path
+    role: str
+    strategy: str
+    source_path: Path
+
+
+@dataclass(frozen=True, slots=True)
+class CurrentNoteView:
+    path: Path
+    exists: bool
+    content: str
+
+
+@dataclass(slots=True)
+class CurrentViewResult:
+    target_root: Path
+    detected_version: int | None = None
+    bootstrap_version: int = BOOTSTRAP_VERSION
+    notes: list[CurrentNoteView] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "target_root": str(self.target_root),
+            "detected_version": self.detected_version,
+            "bootstrap_version": self.bootstrap_version,
+            "notes": [
+                {
+                    "path": note.path.as_posix(),
+                    "exists": note.exists,
+                    "content": note.content,
+                }
+                for note in self.notes
+            ],
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class MemoryNoteRecord:
+    path: Path
+    note_type: str
+    canonical_home: Path
+    authority: str
+    audience: str
+    canonicality: str = "agent_only"
+    task_relevance: str = "optional"
+    subsystems: tuple[str, ...] = ()
+    surfaces: tuple[str, ...] = ()
+    routes_from: tuple[str, ...] = ()
+    stale_when: tuple[str, ...] = ()
+    related_validations: tuple[str, ...] = ()
+    routing_only: bool = False
+    high_level: bool = False
+    memory_role: str = ""
+    symptom_of: str = ""
+    preferred_remediation: str = ""
+    improvement_candidate: bool = False
+    improvement_note: str = ""
+    elimination_target: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class MemoryManifest:
+    path: Path
+    version: int
+    notes: tuple[MemoryNoteRecord, ...]
+    routing_only: tuple[Path, ...] = ()
+    high_level: tuple[Path, ...] = ()
+    canonical_dirs: tuple[Path, ...] = ()
+    task_board_globs: tuple[str, ...] = ()
+    core_doc_globs: tuple[str, ...] = ()
+    core_doc_exclude_globs: tuple[str, ...] = ()
+    forbid_core_docs_depend_on_memory: bool = False
+
+
+class RepoDetectionError(ValueError):
+    """Raised when the installer cannot safely determine the target root."""
