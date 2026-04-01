@@ -2,6 +2,9 @@
 
 This package is a repo-agnostic bootstrap for agent memory and lightweight checked-in coordination notes.
 
+Memory owns durable repo knowledge. The repository's active planning/status surface owns active intent and sequencing. Memory complements planning by preserving durable lessons and reducing re-orientation cost, but it must never compete with the planning surface for ownership of active work.
+Good memory systems should help an agent read less, not more.
+
 It is intended to be copied into an existing repository to provide:
 
 - `AGENTS.md` as the slim local bootstrap entrypoint
@@ -13,7 +16,7 @@ It is intended to be copied into an existing repository to provide:
 - `memory/system/SKILLS.md` as the shared skill-boundary guidance
 - `memory/system/VERSION.md` as the installed bootstrap version marker
 - `memory/current/project-state.md` as a short human-readable overview
-- `memory/current/task-context.md` as optional checked-in current-task compression
+- `memory/current/task-context.md` as optional checked-in continuation compression
 - an advisory memory freshness audit
 - optional workflow fragments for common contribution flows
 
@@ -27,8 +30,10 @@ The CLI around this payload can also inspect the current-memory surface, suggest
 
 Treat the packaged memory notes as a starting cache of reusable operating knowledge, not an archive to expand without limit.
 Use them when they save rediscovery cost; avoid adding notes that merely restate code or transient task chatter.
+Optimise for deletion and consolidation, not just capture.
 If a memory note stabilises into canonical repo guidance, promote it into checked-in docs and leave a short replacement note instead of duplicate truth.
 Prefer compact residue-oriented notes: pitfalls, routing hints, traps, operator context, and short fallback summaries.
+Memory is a reasoning aid and constraint layer; it does not replace checking the codebase when the codebase is the source of truth.
 
 When maintaining this repository, treat `bootstrap/` as the source of truth for installed files. The packaged wheel payload is built from this directory.
 
@@ -74,7 +79,7 @@ Delete unused routing examples once the target repository has concrete notes.
 
 `AGENTS.md` should stay short and point to `memory/system/WORKFLOW.md` for the shared operating model.
 
-This bootstrap is task-system agnostic. `/memory` owns durable technical knowledge, `memory/current/project-state.md` is the overview note, `memory/current/task-context.md` is optional checked-in current-work compression, `memory/skills/` holds the checked-in core memory skills that repos can extend with their own sibling memory skills, and `memory/bootstrap/` is a temporary bootstrap workspace for install and adopt lifecycle completion only.
+This bootstrap is planning-system agnostic. `/memory` owns durable technical knowledge, `memory/current/project-state.md` is the overview note, `memory/current/task-context.md` is optional checked-in continuation compression, `memory/skills/` holds the checked-in core memory skills that repos can extend with their own sibling memory skills, and `memory/bootstrap/` is a temporary bootstrap workspace for install and adopt lifecycle completion only.
 
 Bundled product skills should stay limited to bootstrap lifecycle operations. Repo-local memory procedures should live in checked-in `memory/skills/`. General non-memory skills should not.
 
@@ -82,6 +87,7 @@ Bundled product skills should stay limited to bootstrap lifecycle operations. Re
 
 Small routing layers work better than summary-heavy indexes. A good `memory/index.md` points to a few likely-relevant notes rather than trying to restate them.
 When `memory/manifest.toml` marks a note as `canonical_elsewhere`, routing should prefer the canonical checked-in doc and keep the memory note as optional fallback context.
+Planning/status surfaces identify touched paths or surfaces; memory routing returns the smallest relevant durable note set.
 
 Common task bundles:
 
@@ -93,13 +99,47 @@ Common task bundles:
 - tests or validation work: `memory/domains/<testing-or-validation-note>.md` plus `memory/mistakes/recurring-failures.md`
 - architecture or data-model work: `memory/domains/<data-model-or-architecture-note>.md` plus `memory/invariants/<relevant-invariant-note>.md` plus `memory/decisions/README.md`
 
-Optional repo pattern only: keep short-horizon task execution in the repo's chosen task system, keep long-horizon roadmap or epic planning separate, and use checked-in current-context notes only for concise re-orientation.
+Optional repo pattern only: keep short-horizon task execution in the repo's chosen planning/status surface, keep long-horizon roadmap or epic planning separate, and use checked-in current-context notes only for concise re-orientation.
 
-Current decisions:
+Interoperability pattern catalogue:
+
+- loose coupling: planner first, memory routed on demand
+- handoff compression: planner primary, memory holds minimal cross-session continuation context
+- durable capture on close: planner closes work, memory updates only if durable knowledge changed
+
+## Current Decisions
 
 - keep `memory/current/active-decisions.md` for live architectural or cross-cutting decisions only
 - move a decision into `memory/decisions/` once it no longer changes implementation choices and is only worth keeping as durable rationale
+- preserve decisions at the level of consequence or still-relevant rejected-path boundaries, not meeting history
 - do not keep completed transitions or operational residue in the current decision note
+
+## When to write to memory
+
+- store: invariants, authority boundaries, recurring failure modes, routing hints, operator runbooks, and other facts that are hard to recover quickly from code, tests, tooling, or the planning/status surface
+- store: durable consequences and still-relevant rejected-path boundaries when they still constrain future choices
+
+## When not to write to memory
+
+- do not store: milestone status, next-step checklists, backlog state, execution logs, or plan content already owned by the planning/status surface
+- do not store: user-specific preferences, collaboration habits, or stylistic defaults unless they are shared technical policy
+
+## Anti-patterns
+
+- turning memory into a task tracker
+- copying plan content into durable notes
+- storing rediscoverable facts
+- coupling freshness checks to a specific planner or planning file
+- forcing repositories to adopt the memory taxonomy in their planning system
+- mixing user-specific memory with repo-specific technical truth
+
+## Minimal Adoption Checklist
+
+- choose the active planning/status surface
+- decide whether current-context compression is used
+- decide how memory freshness is checked
+- decide who updates memory when durable knowledge changes
+- decide which routing metadata fields the repo will maintain
 
 `memory/system/VERSION.md` is the machine-readable version marker used for deterministic upgrades.
 

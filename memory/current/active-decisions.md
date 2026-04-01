@@ -38,6 +38,7 @@ Active
 
 - Record only live decisions that materially affect implementation choices right now.
 - Move a decision into `memory/decisions/` once it no longer changes implementation choices and is only worth keeping as durable rationale.
+- Preserve decisions at the level of consequence or still-relevant rejected-path boundaries, not meeting history.
 - Keep repo-local scope and guardrails in `AGENTS.md`; keep reusable operating rules in `memory/system/WORKFLOW.md`.
 - Keep skills optional and specialised; the core operating model must remain usable from checked-in docs alone.
 

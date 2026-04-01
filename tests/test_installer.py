@@ -451,7 +451,10 @@ def test_current_check_flags_placeholder_and_stale_task_context(tmp_path: Path) 
     result = installer.check_current_memory(target=target)
 
     assert any(action.category == "placeholder-review" for action in result.actions)
-    assert any("not been confirmed" in action.detail for action in result.actions)
+    assert any(
+        "not been confirmed" in action.detail and "active goal" in action.detail
+        for action in result.actions
+    )
 
 
 def test_current_check_flags_stale_project_state(tmp_path: Path) -> None:
@@ -473,6 +476,7 @@ def test_current_check_flags_stale_project_state(tmp_path: Path) -> None:
         action.path == target / "memory" / "current" / "project-state.md"
         and action.kind == "manual review"
         and "project-state note has not been confirmed" in action.detail
+        and "authority boundaries" in action.detail
         for action in result.actions
     )
 
@@ -906,6 +910,13 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
     assert "## Stale-note pressure" in text
     assert "## Canonical-doc boundary" in text
     assert "Treat memory as assistive residue by default" in text
+    assert "## Interoperability contract" in text
+    assert "active planning/status surface owns active intent and sequencing" in text
+    assert "## Capture threshold" in text
+    assert "## Anti-patterns" in text
+    assert "Optimise for deletion and consolidation" in text
+    assert "does not replace checking code, tests, or canonical docs" in text
+    assert "user-specific preferences" in text
 
 
 def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() -> None:
@@ -919,6 +930,11 @@ def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() 
     assert "Example: deployment recovery" in text
     assert "## Canonicality rule" in text
     assert "core docs should not depend on memory" in text
+    assert "## Interoperability patterns" in text
+    assert "## Integration checklist" in text
+    assert "Planning identifies touched paths or surfaces" in text
+    assert "help an agent read less, not more" in text
+    assert "Prefer durable consequences, constraints, exceptions, and recurring traps" in text
 
 
 def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -> None:
@@ -926,6 +942,44 @@ def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -
 
     assert "Optional repo pattern only" in text
     assert "current focus, recent meaningful progress, blockers" in text
+    assert "Memory owns durable repo knowledge" in text
+    assert "When to write to memory" in text
+    assert "When not to write to memory" in text
+    assert "## Anti-patterns" in text
+    assert "## Minimal Adoption Checklist" in text
+    assert "Good memory systems should help an agent read less, not more." in text
+    assert "Memory is a reasoning aid" in text
+    assert "mixing user-specific memory with repo-specific technical truth" in text
+
+
+def test_bootstrap_task_context_starter_is_continuation_only() -> None:
+    text = (installer.payload_root() / "memory" / "current" / "task-context.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Optional checked-in continuation compression" in text
+    assert "## Active goal" in text
+    assert "## Blocking assumptions" in text
+    assert "## Next validation" in text
+    assert "Do not turn it into a task list, backlog, execution log, or sequencing surface." in text
+
+
+def test_current_task_staleness_reason_mentions_planning_spillover() -> None:
+    text = "\n".join(["line"] * (installer.CURRENT_TASK_MAX_LINES + 1))
+
+    reason = installer._current_task_staleness_reason(text)
+
+    assert reason is not None
+    assert "planning/status spillover" in reason
+
+
+def test_project_state_staleness_reason_mentions_active_plan_residue() -> None:
+    text = "\n".join(["line"] * (installer.CURRENT_PROJECT_STATE_MAX_LINES + 1))
+
+    reason = installer._project_state_staleness_reason(text)
+
+    assert reason is not None
+    assert "active-plan residue" in reason
 
 
 def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(

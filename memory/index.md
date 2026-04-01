@@ -4,11 +4,19 @@
 
 - `/memory` is the durable repository memory layer.
 - Checked-in repo docs remain the canonical documentation layer.
-- Read this file after identifying the work from the repo's task system or the user's request.
+- Read this file after identifying the work from the repository's active planning/status surface or the user's request.
 - Load only the notes relevant to the task at hand.
 - If `memory/manifest.toml` exists, use it as the machine-readable routing and freshness companion to this file.
 - Use checked-in files for durable facts and lightweight shared context.
 - Use skills for repeatable workflow operations on that knowledge.
+- Planning identifies touched paths or surfaces; routing returns the smallest relevant durable note set.
+- Routing quality matters more than memory volume: good memory systems should help an agent read less, not more.
+
+## Interoperability patterns
+
+- loose coupling: planning/status surface is primary, memory is routed on demand from touched files or surfaces
+- handoff compression: planning/status surface stays primary, memory keeps only minimal cross-session continuation context
+- durable capture on close: planning/status surface closes the work, memory updates only if durable knowledge changed
 
 ## Common task bundles
 
@@ -79,13 +87,21 @@ Good candidates:
 
 High-value memory tends to capture boundaries, invariants, operator sequences, recurring failures, or routing hints that are expensive to reconstruct.
 Low-value memory tends to restate code that is easy to inspect directly or to preserve one-off task details.
+Prefer durable consequences, constraints, exceptions, and recurring traps over merely recent state.
 If guidance is stabilising into normal repo documentation, promote it there and leave memory as a short pointer, stub, or residue note.
+
+Store example: `Firestore sync is explicit and not implied by local rebuilds.`
+Do not store example: `Milestone 2 requires rerunning the publish step tomorrow.`
 
 Do not add memory for:
 
 - one-off discoveries
 - temporary task details
 - implementation steps specific to a single task
+- milestone status
+- next-step checklists
+- backlog state
+- execution logs
 
 If a recurring procedure is reusable but not itself durable repo knowledge, prefer a skill over a new memory note.
 
@@ -97,10 +113,20 @@ Each durable idea must have one primary home.
 - `invariants/` for things that must remain true
 - `runbooks/` for procedures
 - `mistakes/` for recurring failures
-- the external task system or explicit user request for task state and dependencies
+- the external planning/status surface or explicit user request for task state and dependencies
 
 Do not duplicate the same guidance across multiple files.  
 Use short references instead.
+
+## Integration checklist
+
+An adopting repo should decide:
+
+- what its active planning/status surface is
+- whether `memory/current/task-context.md` is used for optional continuation compression
+- how memory freshness is checked
+- who updates memory when durable knowledge changes
+- which manifest routing metadata fields it will maintain
 
 ## Pruning rule
 
@@ -122,6 +148,7 @@ Large memory files degrade selective loading and retrieval quality.
 - Memory is a net token saver when it prevents repeated rediscovery of boundaries, invariants, operator steps, or routing context.
 - Memory is likely overhead when it merely restates code, repeats task chatter, or forces broad re-reading.
 - Keep the working set small enough that reading the notes is cheaper than re-deriving the same facts.
+- Favour smaller, sharper routing packets over broad bundles of possibly relevant notes.
 
 ## Canonicality rule
 

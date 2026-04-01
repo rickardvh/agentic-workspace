@@ -18,13 +18,14 @@ The bootstrap contract remains the always-on minimal file structure that keeps t
 
 ## Keep in checked-in docs
 
-Keep these in `AGENTS.md`, the repo's chosen task system, or `/memory`:
+Keep these in `AGENTS.md`, the repository's active planning/status surface, or `/memory`:
 
 - repo purpose
 - local constraints and guardrails
 - architecture facts and invariants
-- milestone or task state
-- lightweight current-task context that should stay visible in checked-in memory
+- lightweight continuation context that should stay visible in checked-in memory
+
+Keep milestone status, backlog state, and next-step sequencing in the repository's active planning/status surface rather than in durable memory.
 
 If something is a durable fact about the repo, store it in files.
 

@@ -15,6 +15,9 @@ Requires Python 3.11 or newer.
 
 Install and adopt flows may create a temporary `memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace. Upgrade should normally route through the checked-in `memory-upgrade` skill and no longer depends on that workspace as part of the primary model.
 
+Memory owns durable repo knowledge. The repository's active planning/status surface owns active intent and sequencing. Memory complements planning by preserving durable lessons and reducing re-orientation cost, but it must never compete with the planning surface for ownership of active work.
+Good memory systems should help an agent read less, not more.
+
 ## Install
 
 ### Agent workflow
@@ -126,12 +129,40 @@ Treat canonical repo docs and memory as separate lanes:
 - if a note stabilises into canonical guidance, promote it into docs and leave memory as a stub, backlink, or short fallback note
 
 Keep the default working set small. Memory is a token saver only when the notes you load are cheaper than rediscovering the same facts from code and docs.
+Optimise for deletion and consolidation, not just capture.
+Memory is a reasoning aid and constraint layer; it does not replace checking the codebase when the codebase is the source of truth.
+
+When to write to memory:
+
+- invariants and authority boundaries
+- recurring failure modes
+- routing hints
+- operator runbooks
+- durable consequences and still-relevant rejected-path boundaries
+- facts that are hard to recover quickly from code, tests, tooling, or the repository's active planning/status surface
+
+When not to write to memory:
+
+- milestone status
+- next-step checklists
+- backlog state
+- execution logs
+- plan content that already belongs to the repository's active planning/status surface
+- user-specific preferences, collaboration habits, or stylistic defaults unless they are shared technical policy
 
 `memory/manifest.toml` can now mark:
 
 - `canonicality` as `agent_only`, `candidate_for_promotion`, `canonical_elsewhere`, or `deprecated`
 - `task_relevance` as `required` or `optional`
 - `forbid_core_docs_depend_on_memory = true` to make `doctor` flag core docs that depend on memory
+
+Recommended audience conventions for planner-agnostic routing:
+
+- `agent_bootstrap` for bootstrap-only agent guidance
+- `human_operator` for operator-facing procedures
+- `shared_invariant` for shared technical constraints
+
+These are recommended conventions only in this pass. Existing manifests remain valid.
 
 Compact memory notes work better than quasi-doc pages:
 
@@ -144,7 +175,7 @@ Use note types deliberately:
 - `decisions/` for lasting rationale and trade-offs
 - `runbooks/` for repeatable procedures and verification sequences
 - `current/project-state.md` for a short overview, not a changelog
-- `current/task-context.md` for short active-work compression, not a backlog
+- `current/task-context.md` for optional continuation compression: active goal, touched surfaces, blocking assumptions, and next validation only
 
 Small routing layers work better than summary-heavy indexes. A good routing slice is often only 2-3 note links for the current task surface.
 
@@ -155,6 +186,8 @@ Common task bundles:
 - API contract change: `memory/domains/api.md` plus `memory/invariants/response-contracts.md`
 - deployment recovery: `memory/runbooks/deploy-recovery.md` plus `memory/domains/runtime.md`
 - architecture trade-off review: `memory/decisions/README.md` plus the relevant domain note
+
+Routing is the primary integration point with planning: the planning/status surface identifies touched paths or surfaces, and `route` or `sync-memory` returns the smallest relevant durable note set.
 
 Compact `project-state.md` shape:
 
@@ -169,9 +202,15 @@ If it starts reading like a ledger, backlog, tranche history, or changelog, comp
 
 These are recommended patterns, not part of the mandatory bootstrap contract.
 
+Interoperability pattern catalogue:
+
+- loose coupling: planner first, memory routed on demand
+- handoff compression: planner primary, memory holds only minimal cross-session continuation context
+- durable capture on close: planner closes work, memory updates only if durable knowledge changed
+
 Short-horizon task tracking versus long-horizon planning:
 
-- keep the active task board in the repo's chosen task system or TODO surface
+- keep the active task board in the repo's chosen planning/status surface
 - keep roadmap or epic planning separate so `task-context.md` does not become a backlog
 - promote a roadmap item into active execution only when it has a clear next owner and next action
 
@@ -181,11 +220,29 @@ Operational verification:
 - add a short verification checklist or expected-state section near the procedure when deploy-state confirmation matters
 - keep environment-specific deploy status outside the generic bootstrap payload unless the repo intentionally owns that note
 
-Current decisions:
+## Current Decisions
 
 - keep `memory/current/active-decisions.md` for live architectural or cross-cutting decisions only
 - move a decision into `memory/decisions/` once it no longer changes implementation choices and is only worth keeping as durable rationale
+- preserve decisions at the level of consequence or still-relevant rejected-path boundaries, not meeting history
 - do not keep completed transitions or operational residue in the current decision note
+
+## Anti-patterns
+
+- turning memory into a task tracker
+- copying plan content into durable notes
+- storing rediscoverable facts that are easier to inspect directly
+- coupling freshness checks to a specific planner or planning file
+- forcing repositories to adopt the memory taxonomy in their planning system
+- mixing user-specific memory with repo-specific technical truth
+
+## Minimal Adoption Checklist
+
+- choose the repository's active planning/status surface
+- decide whether `memory/current/task-context.md` will be used for optional continuation compression
+- decide how memory freshness is checked
+- decide who updates memory when durable knowledge changes
+- decide which routing metadata fields the repo will maintain
 
 ## Future Direction
 

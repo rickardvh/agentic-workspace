@@ -6,7 +6,7 @@ Active
 
 ## Scope
 
-- Lightweight checked-in current-task context compression for `<PROJECT_NAME>`.
+- Optional checked-in continuation compression for `<PROJECT_NAME>`.
 
 ## Applies to
 
@@ -27,9 +27,21 @@ Active
 
 - No active cross-session task context captured yet.
 
+## Active goal
+
+- Add the one active goal that the next session needs to resume.
+
 ## Active surfaces
 
 - Add files, modules, interfaces, or commands here only when they materially help the next session continue quickly.
+
+## Blocking assumptions
+
+- Add only assumptions or open constraints that the next session must keep in mind.
+
+## Next validation
+
+- Add the next validation, check, or confirmation that the next session should perform.
 
 ## Key constraints
 
@@ -43,11 +55,12 @@ Active
 
 - This note is optional.
 - Populate it only when there is active work worth preserving across sessions.
-- Do not turn it into a task list, detailed plan, or historical log.
+- Keep it to active goal, touched surfaces, blocking assumptions, and next validation.
+- Do not turn it into a task list, backlog, execution log, or sequencing surface.
 
 ## Failure signals
 
-- The note becomes a task list, detailed implementation plan, or historical log.
+- The note becomes a task list, backlog, detailed implementation plan, execution log, or historical log.
 - The note grows beyond short re-orientation context.
 
 ## Verify

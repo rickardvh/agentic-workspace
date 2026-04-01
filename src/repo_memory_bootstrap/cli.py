@@ -170,7 +170,8 @@ def build_parser() -> argparse.ArgumentParser:
     _add_format_argument(current_check_parser)
 
     route_parser = subparsers.add_parser(
-        "route", help="Suggest relevant memory notes for touched files or surfaces."
+        "route",
+        help="Suggest the smallest relevant durable note set for touched files or surfaces so the agent can read less, not more.",
     )
     _add_target_arguments(route_parser)
     route_parser.add_argument(
@@ -496,10 +497,10 @@ def _print_install_summary(result) -> None:
         "- Keep memory/current/project-state.md as a short overview note, not a task list."
     )
     print(
-        "- Populate memory/current/task-context.md only when active work would benefit from a short checked-in continuation note."
+        "- Populate memory/current/task-context.md only when active work would benefit from short checked-in continuation compression, not a shadow planner."
     )
     print(
-        "- Confirm the repo's chosen task system separately; this bootstrap does not install one."
+        "- Confirm the repo's active planning/status surface separately; this bootstrap does not install one."
     )
     if _created_current_memory_notes(result):
         print(
@@ -555,7 +556,7 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
         return (
             f"Run `{runner} current show{target_args}`. "
             f"Next, use the `populate` skill at `{bootstrap_skills}` to fill the current-memory notes conservatively from existing repo docs and visible repo state. "
-            "Populate `memory/current/task-context.md` only when there is clearly active work worth preserving across sessions."
+            "Populate `memory/current/task-context.md` only when there is clearly active work worth preserving across sessions as brief continuation compression."
         )
     if command == "upgrade":
         return (

@@ -14,6 +14,11 @@ task_board_globs = ["TODO.md", "tasks/**", ".github/issues/**"]
 core_doc_globs = ["README.md", "docs/**/*.md", "CONTRIBUTING.md", ".github/**/*.md"]
 core_doc_exclude_globs = ["AGENTS.md", "memory/**/*.md", "memory/bootstrap/**/*.md"]
 forbid_core_docs_depend_on_memory = false
+# Recommended audience conventions for planner-agnostic routing:
+# - agent_bootstrap
+# - human_operator
+# - shared_invariant
+# Existing repos may keep their current audience values; these labels are guidance only.
 
 [notes."memory/index.md"]
 note_type = "routing"
@@ -52,6 +57,8 @@ subsystems = ["current-context"]
 surfaces = ["decision", "api", "tests", "architecture"]
 routes_from = []
 stale_when = []
+# Use this note only for optional continuation compression:
+# active goal, touched surfaces, blocking assumptions, and next validation.
 
 [notes."memory/current/active-decisions.md"]
 note_type = "current-decisions"

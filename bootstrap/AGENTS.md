@@ -11,7 +11,7 @@ Read `memory/system/WORKFLOW.md` for shared workflow rules.
 ## Before doing work
 
 1. Read `memory/index.md`.
-2. Consult the repository's chosen task system or the user's request for what to work on next.
+2. Consult the repository's active planning/status surface or the user's request for what to work on next.
 3. Load only the memory files routed by `memory/index.md` that are relevant to the task.
 4. Read `memory/system/WORKFLOW.md` only when the shared policy boundary is unclear.
 5. Read any repository docs referenced by those files.
@@ -48,7 +48,7 @@ This section should remain short and high-level.
 ## Task-system boundary
 
 - This bootstrap does not install or define a task system.
-- Use the repository's chosen task system or explicit user request to decide what to work on.
+- Use the repository's active planning/status surface or explicit user request to decide what to work on.
 - Use built-in agent planning to execute the current task.
 
 ## Optional working notes

@@ -32,16 +32,15 @@ Active
 ## Current focus
 
 - Keep the always-read surface small: `AGENTS.md` plus `memory/index.md` by default, with other docs loaded on demand.
-- Harden the product boundary between canonical checked-in docs and assistive memory so stable guidance does not drift into shadow documentation.
+- Keep planner-agnostic interoperability explicit so memory owns durable repo knowledge and planning/status surfaces own active execution state.
+- Tighten note ownership, routing sharpness, and current-context discipline so memory helps agents read less, not more.
 
 ## Recent meaningful progress
 
-- Repositioned `memory/current/project-state.md` as a compact overview note rather than a planning surface.
-- Tightened the shared workflow guidance so current-state notes stay aggressively summary-shaped instead of ledger-like.
-- Clarified that closed work should only move into durable notes when the detail is still hard to recover from code, docs, or tooling.
-- Added a permanent checked-in `memory-upgrade` core skill under `memory/skills/` as the stable repo-local entrypoint for "upgrade memory".
-- Repositioned bundled `bootstrap-upgrade` as the packaged implementation behind that checked-in entrypoint instead of the only normal upgrade surface.
-- Added manifest-level canonicality and task-relevance metadata plus an opt-in doctor audit for core-doc ownership boundaries.
+- Added planner-agnostic interoperability guidance across the shared workflow docs, package READMEs, and routing docs.
+- Tightened capture-threshold and anti-pattern guidance around deletion, consolidation, one-home ownership, and keeping user-specific memory out of repo memory.
+- Strengthened current-context and active-decision guidance so continuation notes stay temporary and decisions preserve consequence rather than meeting history.
+- Tightened stale-note messaging so oversized or old current-state notes explicitly point at semantic drift and planning/status spillover.
 
 ## Blockers
 
@@ -50,11 +49,10 @@ Active
 ## High-level notes
 
 - Optional local scratch conventions are outside the core bootstrap contract.
-- `memory/current/project-state.md` is the overview note; `memory/current/task-context.md` is the current-work compression note.
+- `memory/current/project-state.md` is the overview note; `memory/current/task-context.md` is optional continuation compression only.
 - Current-state notes should stay short: current focus, recent meaningful progress, blockers, and a few high-value notes only.
-- Closed transitions and operational residue belong in durable notes only when they still add hard-to-recover value.
-- `memory/system/WORKFLOW.md` is now a compact policy shim rather than a workflow handbook.
-- Normal upgrade intent should route through the checked-in `memory-upgrade` skill, which stays minimal and stable while the bundled implementation can evolve.
+- Durable facts should have one primary home, with short cross-references instead of duplicated summaries.
+- Routing is the primary integration point between planning and memory: planning identifies touched surfaces and memory returns the smallest durable note set.
 
 ## Failure signals
 
@@ -79,4 +77,4 @@ Active
 
 ## Last confirmed
 
-2026-03-25 during canonical-doc boundary hardening
+2026-04-01 during planner-agnostic interoperability and memory-discipline hardening

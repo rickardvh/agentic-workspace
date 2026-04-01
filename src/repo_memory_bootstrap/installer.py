@@ -17,7 +17,7 @@ AGENTS_PATH = Path("AGENTS.md")
 MANIFEST_PATH = Path("memory/manifest.toml")
 UPGRADE_SOURCE_PATH = Path("memory/system/UPGRADE-SOURCE.toml")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 30
+BOOTSTRAP_VERSION = 32
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
 
@@ -2019,7 +2019,7 @@ def _infer_action_category(
 def _current_task_staleness_reason(text: str) -> str | None:
     lines = text.splitlines()
     if len(lines) > CURRENT_TASK_MAX_LINES:
-        return f"task-context note is oversized ({len(lines)} lines)"
+        return f"task-context note is oversized ({len(lines)} lines); compress it back to continuation-only context and remove planning/status spillover"
     for idx, line in enumerate(lines):
         if line.strip().lower() == "## last confirmed":
             for follow in lines[idx + 1 :]:
@@ -2034,7 +2034,7 @@ def _current_task_staleness_reason(text: str) -> str | None:
                     if confirmed < datetime.now(UTC) - timedelta(
                         days=CURRENT_TASK_STALE_DAYS
                     ):
-                        return f"task-context note has not been confirmed in over {CURRENT_TASK_STALE_DAYS} days"
+                        return f"task-context note has not been confirmed in over {CURRENT_TASK_STALE_DAYS} days; check whether the active goal, touched surfaces, assumptions, next validation, or linked code and interfaces have drifted"
                 break
     return None
 
@@ -2120,7 +2120,7 @@ def resolve_upgrade_source(target: str | Path | None = None) -> dict[str, str]:
 def _project_state_staleness_reason(text: str) -> str | None:
     lines = text.splitlines()
     if len(lines) > CURRENT_PROJECT_STATE_MAX_LINES:
-        return f"project-state note is oversized ({len(lines)} lines)"
+        return f"project-state note is oversized ({len(lines)} lines); compress stale history, remove active-plan residue, and keep only current operating facts"
     for idx, line in enumerate(lines):
         if line.strip().lower() == "## last confirmed":
             for follow in lines[idx + 1 :]:
@@ -2135,7 +2135,7 @@ def _project_state_staleness_reason(text: str) -> str | None:
                     if confirmed < datetime.now(UTC) - timedelta(
                         days=CURRENT_PROJECT_STATE_STALE_DAYS
                     ):
-                        return f"project-state note has not been confirmed in over {CURRENT_PROJECT_STATE_STALE_DAYS} days"
+                        return f"project-state note has not been confirmed in over {CURRENT_PROJECT_STATE_STALE_DAYS} days; check whether linked code, commands, or authority boundaries have materially changed"
                 break
     return None
 
