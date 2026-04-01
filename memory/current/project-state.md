@@ -41,7 +41,7 @@ Active
 - Tightened capture-threshold and anti-pattern guidance around deletion, consolidation, one-home ownership, and keeping user-specific memory out of repo memory.
 - Strengthened current-context and active-decision guidance so continuation notes stay temporary and decisions preserve consequence rather than meeting history.
 - Tightened stale-note messaging so oversized or old current-state notes explicitly point at semantic drift and planning/status spillover.
-- Added a first-class “memory as improvement pressure” model so the package can suggest docs, tests, skills, scripts, or refactor review when memory is compensating for repo friction.
+- Added a first-class "memory as improvement pressure" model so the package can suggest docs, tests, skills, scripts, or refactor review when memory is compensating for repo friction.
 - Added optional manifest hints and soft `doctor`/`sync-memory`/`promotion-report` suggestions for improvement candidates without making the package intrusive in adopting repos.
 
 ## Blockers

@@ -21,7 +21,7 @@
 ## Common task bundles
 
 - current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` when needed
-- live decision review: `memory/current/active-decisions.md` plus `memory/decisions/README.md`
+- live decision review: optional repo-owned `memory/current/active-decisions.md` when the repo keeps one, plus `memory/decisions/README.md`
 - runtime or deployment change: `memory/domains/<runtime-or-deployment-note>.md` plus `memory/runbooks/<relevant-operator-runbook>.md`
 - API or interface change: `memory/domains/<api-or-interface-note>.md` plus `memory/invariants/<response-or-contract-note>.md`
 - retrieval or search change: `memory/domains/<retrieval-or-search-note>.md` plus `memory/invariants/<retrieval-contract-note>.md` plus `memory/mistakes/recurring-failures.md`

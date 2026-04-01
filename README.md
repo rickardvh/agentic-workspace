@@ -193,7 +193,7 @@ If the same note keeps being routed for safe work on one subsystem, that is ofte
 Common task bundles:
 
 - current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` when needed
-- live decision review: `memory/current/active-decisions.md` plus `memory/decisions/README.md`
+- live decision review: optional repo-owned `memory/current/active-decisions.md` when the repo keeps one, plus `memory/decisions/README.md`
 - API contract change: `memory/domains/api.md` plus `memory/invariants/response-contracts.md`
 - deployment recovery: `memory/runbooks/deploy-recovery.md` plus `memory/domains/runtime.md`
 - architecture trade-off review: `memory/decisions/README.md` plus the relevant domain note
@@ -242,7 +242,7 @@ Improvement paths:
 
 ## Current Decisions
 
-- keep `memory/current/active-decisions.md` for live architectural or cross-cutting decisions only
+- if the repo keeps `memory/current/active-decisions.md`, use it for live architectural or cross-cutting decisions only
 - move a decision into `memory/decisions/` once it no longer changes implementation choices and is only worth keeping as durable rationale
 - preserve decisions at the level of consequence or still-relevant rejected-path boundaries, not meeting history
 - do not keep completed transitions or operational residue in the current decision note

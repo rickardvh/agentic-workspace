@@ -938,6 +938,7 @@ def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() 
     assert "Planning identifies touched paths or surfaces" in text
     assert "help an agent read less, not more" in text
     assert "Prefer durable consequences, constraints, exceptions, and recurring traps" in text
+    assert "optional repo-owned `memory/current/active-decisions.md`" in text
 
 
 def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -> None:
@@ -956,6 +957,7 @@ def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -
     assert "durable truth" in text
     assert "improvement signal" in text
     assert "## Improvement Paths" in text
+    assert "optional repo-owned `memory/current/active-decisions.md`" in text
 
 
 def test_bootstrap_task_context_starter_is_continuation_only() -> None:
@@ -1551,6 +1553,43 @@ task_relevance = "sometimes"
     )
 
 
+def test_doctor_validates_optional_improvement_manifest_values(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "memory" / "system" / "VERSION.md").write_text(
+        "Version: 33\n", encoding="utf-8"
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/api.md"]
+note_type = "domain"
+canonical_home = "memory/domains/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+memory_role = "weird"
+symptom_of = "bad"
+preferred_remediation = "robot"
+elimination_target = "gone"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any("manifest memory_role must be durable_truth or improvement_signal" in action.detail for action in result.actions)
+    assert any("manifest symptom_of must be one of" in action.detail for action in result.actions)
+    assert any("manifest preferred_remediation must be one of" in action.detail for action in result.actions)
+    assert any("manifest elimination_target must be one of" in action.detail for action in result.actions)
+
+
 def test_doctor_rejects_canonical_elsewhere_targets_inside_memory(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
@@ -1641,7 +1680,7 @@ def test_promotion_report_supports_explicit_notes_without_manifest_metadata(
 
     assert any(
         action.path == target / "memory" / "runbooks" / "deploy.md"
-        and "docs/runbooks/deploy.md" in action.detail
+        and "checked-in skill" in action.detail
         for action in result.actions
     )
 

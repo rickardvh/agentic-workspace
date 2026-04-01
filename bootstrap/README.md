@@ -100,7 +100,7 @@ If the same note keeps being routed for safe work on one subsystem, that is ofte
 Common task bundles:
 
 - current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` when needed
-- live decision review: `memory/current/active-decisions.md` plus `memory/decisions/README.md`
+- live decision review: optional repo-owned `memory/current/active-decisions.md` when the repo keeps one, plus `memory/decisions/README.md`
 - runtime or deployment change: `memory/domains/<runtime-or-deployment-note>.md` plus `memory/runbooks/<relevant-operator-runbook>.md`
 - API or interface change: `memory/domains/<api-or-interface-note>.md` plus `memory/invariants/<response-or-contract-note>.md`
 - retrieval or search change: `memory/domains/<retrieval-or-search-note>.md` plus `memory/invariants/<retrieval-contract-note>.md` plus `memory/mistakes/recurring-failures.md`
@@ -117,7 +117,7 @@ Interoperability pattern catalogue:
 
 ## Current Decisions
 
-- keep `memory/current/active-decisions.md` for live architectural or cross-cutting decisions only
+- if the repo keeps `memory/current/active-decisions.md`, use it for live architectural or cross-cutting decisions only
 - move a decision into `memory/decisions/` once it no longer changes implementation choices and is only worth keeping as durable rationale
 - preserve decisions at the level of consequence or still-relevant rejected-path boundaries, not meeting history
 - do not keep completed transitions or operational residue in the current decision note
@@ -174,7 +174,7 @@ Prefer this flow for existing or older installs:
 Upgrade is normally triggered through the checked-in `memory-upgrade` skill under `memory/skills/`, which runs the packaged upgrade implementation using the resolved source record in `memory/system/UPGRADE-SOURCE.toml`. Temporary bootstrap workspace files are for install and adopt lifecycle completion, not the primary upgrade path.
 
 Use `agentic-memory-bootstrap list-files` to preview the packaged files that the installer exposes.
-Use `agentic-memory-bootstrap promotion-report --target <repo>` to identify notes that should likely be promoted into canonical docs.
+Use `agentic-memory-bootstrap promotion-report --target <repo>` to identify notes that should likely be promoted into canonical docs or reviewed as elimination candidates.
 Use `agentic-memory-bootstrap doctor --strict-doc-ownership --target <repo>` to force doc-ownership and shadow-doc audits before adopting stricter repo policy.
 
 ## Automation notes

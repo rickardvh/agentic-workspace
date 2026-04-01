@@ -17,7 +17,7 @@ AGENTS_PATH = Path("AGENTS.md")
 MANIFEST_PATH = Path("memory/manifest.toml")
 UPGRADE_SOURCE_PATH = Path("memory/system/UPGRADE-SOURCE.toml")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 33
+BOOTSTRAP_VERSION = 34
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
 
@@ -118,6 +118,24 @@ VALID_CANONICALITY_VALUES = {
     "deprecated",
 }
 VALID_TASK_RELEVANCE_VALUES = {"required", "optional"}
+VALID_MEMORY_ROLE_VALUES = {"durable_truth", "improvement_signal"}
+VALID_SYMPTOM_OF_VALUES = {
+    "workflow_friction",
+    "guidance_drift",
+    "missing_guardrail",
+    "architecture_friction",
+    "operator_complexity",
+}
+VALID_PREFERRED_REMEDIATION_VALUES = {
+    "docs",
+    "skill",
+    "script",
+    "test",
+    "validation",
+    "refactor",
+    "code",
+}
+VALID_ELIMINATION_TARGET_VALUES = {"shrink", "promote", "automate", "refactor_away"}
 SHADOW_DOC_MIN_SHARED_TERMS = 6
 
 OPTIONAL_APPEND_TARGETS = {
@@ -2297,6 +2315,52 @@ def _audit_memory_doc_ownership(
                 source=note.path.as_posix(),
                 category="contract-drift",
             )
+        if note.memory_role and note.memory_role not in VALID_MEMORY_ROLE_VALUES:
+            result.add(
+                "manual review",
+                target_root / note.path,
+                "manifest memory_role must be durable_truth or improvement_signal when present",
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
+        if note.symptom_of and note.symptom_of not in VALID_SYMPTOM_OF_VALUES:
+            result.add(
+                "manual review",
+                target_root / note.path,
+                "manifest symptom_of must be one of: workflow_friction, guidance_drift, missing_guardrail, architecture_friction, operator_complexity",
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
+        if (
+            note.preferred_remediation
+            and note.preferred_remediation not in VALID_PREFERRED_REMEDIATION_VALUES
+        ):
+            result.add(
+                "manual review",
+                target_root / note.path,
+                "manifest preferred_remediation must be one of: docs, skill, script, test, validation, refactor, code",
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
+        if (
+            note.elimination_target
+            and note.elimination_target not in VALID_ELIMINATION_TARGET_VALUES
+        ):
+            result.add(
+                "manual review",
+                target_root / note.path,
+                "manifest elimination_target must be one of: shrink, promote, automate, refactor_away",
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
         if note.canonicality == "canonical_elsewhere" and not _is_non_memory_canonical_home(
             note.canonical_home, note.path
         ):
@@ -2437,10 +2501,7 @@ def _iter_promotion_candidates(
             detail = "explicit note supplied for promotion review, but the file does not exist"
             candidates.append((requested_path, None, detail))
             continue
-        detail = (
-            f"explicit note supplied; suggested canonical doc {_suggest_canonical_doc_path(requested_note).as_posix()}. "
-            "Review whether the stable parts should be promoted out of memory."
-        )
+        detail = _explicit_note_review_detail(requested_note)
         improvement_hint = _first_improvement_hint(
             _lookup_manifest_note(manifest, requested_note),
             requested_path,
@@ -2463,6 +2524,33 @@ def _lookup_manifest_note(
         if note.path == note_path:
             return note
     return None
+
+
+def _explicit_note_review_detail(requested_note: Path) -> str:
+    requested_str = requested_note.as_posix()
+    if requested_str.startswith("memory/runbooks/"):
+        return (
+            "explicit note supplied; review whether the durable facts should stay in memory, the repeated workflow should become a checked-in skill, or the mechanics now justify a repo-owned script or command."
+        )
+    if requested_str.startswith("memory/mistakes/"):
+        return (
+            "explicit note supplied; review whether the recurring failure should stay documented in memory or now justify a regression test, validation, or lint rule."
+        )
+    if requested_str.startswith("memory/domains/"):
+        return (
+            "explicit note supplied; review whether the stable parts belong in canonical docs or whether the note is signalling a refactor or clearer boundary need."
+        )
+    if requested_str.startswith("memory/invariants/"):
+        return (
+            "explicit note supplied; review whether the invariant should stay in memory, move into canonical docs, or be enforced more directly in code or validation."
+        )
+    if requested_str.startswith("memory/decisions/"):
+        return (
+            "explicit note supplied; review whether the durable rationale should stay in memory, move into canonical docs, or be reduced after the underlying boundary becomes clearer."
+        )
+    return (
+        f"explicit note supplied; review whether the stable parts belong in canonical docs ({_suggest_canonical_doc_path(requested_note).as_posix()}), whether the note should stay compact in memory, or whether it is signalling a better target such as a skill, script, test, validation, or refactor review."
+    )
 
 
 def _first_improvement_hint(
