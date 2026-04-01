@@ -9,11 +9,14 @@ This is a checked-in core skill shipped with the payload. Keep it minimal and st
 
 Use this skill as the repo-local entrypoint for "upgrade memory".
 
-When invoked, run the packaged `agentic-memory-bootstrap upgrade` flow for the current repo and stop there unless the tool reports specific manual-review items.
+When invoked, run the packaged upgrade flow for the current repo and stop there unless the tool reports specific manual-review items.
 
 ## Workflow
 
-1. Run `agentic-memory-bootstrap upgrade --target <repo>` for the current repository.
+1. Run the packaged upgrade flow for the current repository:
+   - prefer `agentic-memory-bootstrap upgrade --target <repo>` when the CLI is already installed and on `PATH`
+   - otherwise, use the recorded source with a runner such as `uvx --from <recorded-source> agentic-memory-bootstrap upgrade --target <repo>`
+   - if `uvx` is unavailable, fall back to `pipx run --spec <recorded-source> agentic-memory-bootstrap upgrade --target <repo>`
 2. Let the tool resolve the installation source from `memory/system/UPGRADE-SOURCE.toml`.
 3. Report manual-review items only when the tool leaves repo-owned files untouched.
 4. Verify with the packaged checks that are relevant to the repo.
@@ -22,6 +25,7 @@ When invoked, run the packaged `agentic-memory-bootstrap upgrade` flow for the c
 
 - Do not rewrite repo-owned notes such as `memory/current/project-state.md` or `memory/current/task-context.md` unless the user explicitly asks for that follow-up.
 - Do not broaden the task into package-manager investigation when the repo already has an installed memory scaffold.
+- Do not stop only because the global CLI is unavailable; prefer a runner command from the recorded source before considering any local-checkout-specific fallback.
 - Preserve repo-local customisation in `AGENTS.md` and other repo-owned files.
 - Do not turn upgrade into a general memory refresh or note-maintenance task.
 

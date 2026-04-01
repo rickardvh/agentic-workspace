@@ -43,6 +43,8 @@ Active
 - Tightened stale-note messaging so oversized or old current-state notes explicitly point at semantic drift and planning/status spillover.
 - Added a first-class "memory as improvement pressure" model so the package can suggest docs, tests, skills, scripts, or refactor review when memory is compensating for repo friction.
 - Added optional manifest hints and soft `doctor`/`sync-memory`/`promotion-report` suggestions for improvement candidates without making the package intrusive in adopting repos.
+- Hardened the upgrade skill so it no longer assumes a globally installed `agentic-memory-bootstrap` executable and can fall back to the packaged module entrypoint from a local checkout.
+- Realigned the upgrade skill and generated prompt with the recorded-source runner model so fallback prefers `uvx` or `pipx run` from the resolved source instead of assuming a local checkout.
 
 ## Blockers
 

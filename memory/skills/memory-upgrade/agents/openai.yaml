@@ -1,4 +1,4 @@
 interface:
   display_name: "Memory Upgrade"
   short_description: "Upgrade the checked-in memory scaffold for this repo."
-  default_prompt: "Use $memory-upgrade to upgrade memory for the current repository. Run `agentic-memory-bootstrap upgrade --target <repo>` for this repo, use the recorded upgrade source automatically, and do not rewrite repo-owned notes unless explicitly asked."
+  default_prompt: "Use $memory-upgrade to upgrade memory for the current repository. Prefer `agentic-memory-bootstrap upgrade --target <repo>` when the CLI is on PATH; otherwise use the recorded source with `uvx --from <recorded-source> agentic-memory-bootstrap upgrade --target <repo>`, or `pipx run --spec <recorded-source> agentic-memory-bootstrap upgrade --target <repo>` if `uvx` is unavailable. Do not rewrite repo-owned notes unless explicitly asked."

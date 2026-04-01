@@ -17,7 +17,7 @@ AGENTS_PATH = Path("AGENTS.md")
 MANIFEST_PATH = Path("memory/manifest.toml")
 UPGRADE_SOURCE_PATH = Path("memory/system/UPGRADE-SOURCE.toml")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 34
+BOOTSTRAP_VERSION = 36
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
 

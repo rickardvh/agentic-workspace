@@ -561,7 +561,7 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
     if command == "upgrade":
         return (
             f"Use the checked-in `memory-upgrade` skill under `{target_root}/memory/skills/`. "
-            "It should use the recorded upgrade source automatically, run the packaged upgrade flow for this repo, and report any conservative manual-review items."
+            f"It should use the recorded upgrade source automatically, run the packaged upgrade flow for this repo, prefer the installed `agentic-memory-bootstrap` CLI when available, otherwise fall back to `{upgrade_runner} upgrade --target <repo>`, and report any conservative manual-review items."
         )
     if command == "uninstall":
         return (

@@ -1169,6 +1169,8 @@ def test_build_upgrade_prompt_mentions_local_bootstrap_skills(monkeypatch) -> No
     assert "C:/repo/memory/skills/" in prompt
     assert "recorded upgrade source automatically" in prompt
     assert "packaged upgrade flow for this repo" in prompt
+    assert "prefer the installed `agentic-memory-bootstrap` CLI when available" in prompt
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target <repo>" in prompt
     assert "bootstrap-cleanup --target C:/repo" not in prompt
     assert not prompt.startswith("Run `")
 
@@ -1190,6 +1192,7 @@ def test_build_upgrade_prompt_uses_local_source_when_recorded(
     assert prompt.startswith("Use the checked-in `memory-upgrade` skill")
     assert "recorded upgrade source automatically" in prompt
     assert "packaged upgrade flow for this repo" in prompt
+    assert "uvx --from C:/src/agentic-memory agentic-memory-bootstrap upgrade --target <repo>" in prompt
     assert "git+https://github.com/Tenfifty/agentic-memory" not in prompt
 
 
@@ -1214,8 +1217,19 @@ def test_build_prompt_falls_back_to_pipx_when_uvx_is_missing(monkeypatch) -> Non
     assert prompt.startswith("Use the checked-in `memory-upgrade` skill")
     assert "C:/repo/memory/skills/" in prompt
     assert "recorded upgrade source automatically" in prompt
+    assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target <repo>" in prompt
     assert "uvx --from" not in prompt
-    assert "pipx run --spec" not in prompt
+
+
+def test_memory_upgrade_skill_includes_module_fallback() -> None:
+    text = (
+        installer.payload_root() / "memory" / "skills" / "memory-upgrade" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+
+    assert "agentic-memory-bootstrap upgrade --target <repo>" in text
+    assert "uvx --from <recorded-source> agentic-memory-bootstrap upgrade --target <repo>" in text
+    assert "pipx run --spec <recorded-source> agentic-memory-bootstrap upgrade --target <repo>" in text
+    assert "prefer a runner command from the recorded source" in text
 
 
 def test_doctor_flags_legacy_upgrade_runbook_for_removal(tmp_path: Path) -> None:
