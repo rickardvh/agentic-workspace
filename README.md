@@ -6,21 +6,25 @@ Requires Python 3.11 or newer.
 
 ## Quick Start
 
-Agent workflow for an existing repository:
+Use `install` (or `prompt install`) when adding the bootstrap to a repo for the first time. Use `adopt` (or `prompt adopt`) when the repo already has local files such as `AGENTS.md` or `memory/` that should be preserved conservatively.
+
+Agent workflow:
 
 ```bash
+# First-time install
+uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt install --target /path/to/repo
+
+# Conservative adoption into an existing repo
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
 ```
 
-Manual workflow for an existing repository:
+Manual workflow:
 
 ```bash
 uv tool install --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap
 agentic-memory-bootstrap doctor --target /path/to/repo
 agentic-memory-bootstrap adopt --target /path/to/repo
 ```
-
-If you are starting from a clean repo bootstrap case, use `prompt install` or `install` instead of `adopt`.
 
 ## Table Of Contents
 
@@ -75,6 +79,10 @@ uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstr
 ```
 
 Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. Prompt output prefers `uvx` when it is available and otherwise falls back to `pipx run`. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but normal upgrades should route through the checked-in `memory-upgrade` skill under `memory/skills/`, which runs the packaged upgrade flow using `memory/system/UPGRADE-SOURCE.toml`.
+
+After the agent finishes install or adopt lifecycle work, run `agentic-memory-bootstrap bootstrap-cleanup --target /path/to/repo` (or let the agent run it) to remove the temporary `memory/bootstrap/` workspace.
+
+If you omit the placeholder flags (`--project-name`, `--project-purpose`, etc.), your `AGENTS.md` will contain unfilled placeholders. Run `doctor` after install to identify them.
 
 ### Manual alternative
 
@@ -154,7 +162,6 @@ Temporary bootstrap lifecycle skills:
 
 - `install`
 - `populate`
-- `upgrade`
 - `cleanup`
 
 Add repo-specific day-to-day memory skills as siblings under `memory/skills/`.
@@ -329,7 +336,7 @@ Main commands:
 - `doctor` to inspect state and recommended remediation
 - `upgrade` for deterministic upgrades
 - `uninstall` for conservative bootstrap removal
-- `prompt install|adopt|populate|upgrade` to print canonical agent prompts
+- `prompt <subcommand>` to print canonical agent prompts (subcommands: `install`, `adopt`, `populate`, `upgrade`)
 - `prompt uninstall` to print the canonical uninstall prompt
 - `bootstrap-cleanup` to remove the temporary bootstrap workspace when install or adopt created it
 - `current show|check` to inspect current-memory notes
