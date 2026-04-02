@@ -6,7 +6,8 @@ help:
 	@echo "  verify-payload  Verify the packaged payload contract."
 	@echo "  prompt-upgrade  Print the upgrade prompt for this repo."
 	@echo "  check-memory    Run the memory freshness audit."
-	@echo "  lint            Run Ruff and apply safe fixes."
+	@echo "  lint            Run Ruff and Markdown lint checks."
+	@echo "  markdownlint    Run Markdown lint checks."
 	@echo "  format          Run Ruff formatting."
 	@echo "  typecheck       Run ty type checking."
 
@@ -30,6 +31,10 @@ check-memory:
 
 lint:
 	uv run ruff check . --fix
+	uv run pymarkdown -d md013,md024 scan .
+
+markdownlint:
+	uv run pymarkdown -d md013,md024 scan .
 
 format:
 	uv run ruff format .

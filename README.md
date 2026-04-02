@@ -74,14 +74,23 @@ Install and adopt flows may create a temporary `.agentic-memory/bootstrap/` work
 
 ### Agent workflow
 
-Print a ready-to-paste prompt:
+If you want an agent to perform the setup and do not want to install the CLI locally, print a ready-to-paste prompt with one of these commands:
 
 ```bash
+# Preferred when uvx is available
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt install --target /path/to/repo
+
+# Fallback when pipx is available instead
+pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt install --target /path/to/repo
+
+# Conservative adoption into an existing repo
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
+
+# Fallback when pipx is available instead
+pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
 ```
 
-Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. Prompt output prefers `uvx` when it is available and otherwise falls back to `pipx run`. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but normal upgrades should route through the checked-in `memory-upgrade` skill under `.agentic-memory/skills/`, which runs the packaged upgrade flow using `.agentic-memory/UPGRADE-SOURCE.toml`.
+Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. The printed prompt is designed for an agent to execute the bootstrap flow without asking you to install or clone this repo first. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but normal upgrades should route through the checked-in `memory-upgrade` skill under `.agentic-memory/skills/`, which runs the packaged upgrade flow using `.agentic-memory/UPGRADE-SOURCE.toml`.
 
 Typical lifecycle for a fresh bootstrap:
 
@@ -95,11 +104,16 @@ If you omit the placeholder flags (`--project-name`, `--project-purpose`, etc.),
 
 ### Manual alternative
 
-Install the tool:
+If you want a local CLI installation instead, install the tool with one of these commands:
 
 ```bash
+# Choose one
 uv tool install --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap
+
+# Or
 pipx install git+https://github.com/Tenfifty/agentic-memory
+
+# Or
 python -m pip install git+https://github.com/Tenfifty/agentic-memory
 ```
 
@@ -121,13 +135,17 @@ If you are working from a local clone, replace the Git URL with `.`.
 
 ### Agent workflow
 
-Print a ready-to-paste prompt:
+If you want an agent to perform the upgrade without a local CLI install, print a ready-to-paste prompt with one of these commands:
 
 ```bash
+# Preferred when uvx is available
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
+
+# Fallback when pipx is available instead
+pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
 ```
 
-That prompt prefers `uvx` when it is available and otherwise falls back to `pipx run`. It is the preferred user-facing upgrade path when you want the agent to perform the work without asking for a local install or clone first. It tells the agent to use the checked-in `memory-upgrade` skill as the single repo-local upgrade entrypoint; the skill then runs the packaged upgrade flow using `.agentic-memory/UPGRADE-SOURCE.toml`.
+This is the preferred upgrade path for the primary agent-first workflow. The prompt tells the agent to use the checked-in `memory-upgrade` skill as the single repo-local upgrade entrypoint; the skill then runs the packaged upgrade flow using `.agentic-memory/UPGRADE-SOURCE.toml`.
 
 ### Manual alternative
 
@@ -143,13 +161,17 @@ agentic-memory-bootstrap upgrade --target /path/to/repo
 
 ### Agent workflow
 
-Print a ready-to-paste prompt:
+If you want an agent to perform the uninstall without a local CLI install, print a ready-to-paste prompt with one of these commands:
 
 ```bash
+# Preferred when uvx is available
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt uninstall --target /path/to/repo
+
+# Fallback when pipx is available instead
+pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt uninstall --target /path/to/repo
 ```
 
-That prompt prefers `uvx` when it is available and otherwise falls back to `pipx run`. It runs the CLI uninstall conservatively and points to the bundled `bootstrap-uninstall` skill when manual-review items remain.
+This runs the uninstall flow conservatively and points the agent to the bundled `bootstrap-uninstall` skill when manual-review items remain.
 
 ### Manual alternative
 
@@ -200,8 +222,7 @@ Main commands:
 - `doctor` to inspect state and recommended remediation
 - `upgrade` for deterministic upgrades
 - `uninstall` for conservative bootstrap removal
-- `prompt <subcommand>` to print ready-to-paste no-install agent prompts (subcommands: `install`, `adopt`, `populate`, `upgrade`)
-- `prompt uninstall` to print the canonical uninstall prompt
+- `prompt <subcommand>` to print ready-to-paste no-install agent prompts (subcommands: `install`, `adopt`, `populate`, `upgrade`, `uninstall`)
 - `bootstrap-cleanup` to remove the temporary bootstrap workspace when install or adopt created it
 - `current show|check` to inspect current-memory notes
 - `route` and `sync-memory` to review likely relevant memory notes

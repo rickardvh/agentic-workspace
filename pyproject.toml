@@ -21,7 +21,6 @@ classifiers = [
 ]
 authors = [
   { name = "Rickard von Haugwitz" },
-  { name = "OpenAI Codex" },
 ]
 dependencies = []
 
@@ -39,6 +38,7 @@ dev = [
   "pytest",
   "ruff",
   "ty",
+  "pymarkdownlnt",
 ]
 
 [tool.hatch.build.targets.wheel]
