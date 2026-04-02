@@ -1,43 +1,38 @@
 # agentic-memory-bootstrap
 
-Small CLI for adding durable repository memory to an existing repo.
+A small CLI that adds a checked-in, route-indexed memory layer to any Git repository so AI coding agents retain durable context across sessions — without rediscovering the codebase from scratch each time.
 
-Requires Python 3.11 or newer.
+## Why
 
-## Quick Start
+Some AI agents (such as GitHub Copilot) have their own built-in memory, but that memory is typically per-user, per-machine, and invisible to the rest of the team. Checked-in repository memory complements those systems by providing a shared, version-controlled knowledge layer that:
 
-Use `install` (or `prompt install`) when adding the bootstrap to a repo for the first time. Use `adopt` (or `prompt adopt`) when the repo already has local files such as `AGENTS.md` or `memory/` that should be preserved conservatively.
+- **Survives agent and tool switches.** Developers move between Copilot, Cursor, Claude Code, custom agents, and others. Checked-in memory travels with the repo, not the tool.
+- **Works across machines and developers.** Built-in agent memory is local to one user's profile. Repository memory is shared through Git, so every contributor — and every agent session — starts from the same durable knowledge base.
+- **Captures knowledge that no single session owns.** Invariants, authority boundaries, recurring failure modes, and operator procedures accumulate across many sessions and many contributors. No individual agent memory is the right home for team-wide lessons.
+- **Stays auditable and reviewable.** Checked-in notes go through normal code review and version history, making it visible when knowledge changes and why.
 
-For agent-driven adoption and upgrade, prefer the no-install prompt commands. They print a ready-to-paste instruction for the agent and do not require a local clone of this repo or a preinstalled `agentic-memory-bootstrap` command.
+`agentic-memory-bootstrap` installs a lightweight `memory/` tree that agents load selectively on each task start, giving them the smallest useful slice of durable context without bulk-reading the codebase.
 
-Agent workflow:
+## How it works
 
-```bash
-# First-time install
-uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt install --target /path/to/repo
+- **Structured taxonomy.** Notes are split into `domains/` (subsystem orientation), `invariants/` (contracts and authority boundaries), `runbooks/` (operator procedures), `mistakes/` (recurring failure modes), `decisions/` (longer-lived rationale), and `current/` (lightweight project overview and optional task-continuation compression).
+- **Route-indexed, not bulk-loaded.** `memory/index.md` maps task types to minimal note bundles, and a machine-readable `manifest.toml` annotates every note with audience, authority, routing triggers (`routes_from`, `stale_when`), and task relevance — so agents read only what matters for the current change. Good memory helps an agent read *less*, not more.
+- **Clear ownership boundary.** Memory owns durable repo knowledge that is expensive to reconstruct from code alone: invariants, authority boundaries, recurring failure modes, operator sequences, and routing hints. The repository's active planning surface (`TODO.md`, issue trackers, etc.) keeps ownership of active intent and sequencing. Memory complements planning; it never competes with it.
+- **Self-pruning through improvement pressure.** Each note can declare whether it is *durable truth* or an *improvement signal* — something that exists because the repo still needs better tests, docs, validation, or design. Manifest fields like `preferred_remediation` and `elimination_target` let the `doctor` command, the freshness audit, and the sync workflow surface actionable suggestions that drive improvements into the codebase and shrink the memory layer over time.
+- **Freshness and hygiene tooling.** A bundled audit script checks for missing metadata, stale confirmations, oversized notes, and manifest/note mismatches. `stale_when` globs catch semantic drift from code changes, not just calendar age.
+- **Skills layer.** Repeatable memory operations (capture, hygiene, refresh, routing, upgrade) ship as upgrade-replaceable skills under `.agentic-memory/skills/`. Repos can add their own memory-specific skills under `memory/skills/` without modifying the core set.
+- **Language-agnostic.** The installed memory system is plain Markdown and TOML — it works in any repository regardless of language or framework. Only the bootstrap CLI itself requires Python; once installed, the memory layer has no runtime dependencies.
 
-# Conservative adoption into an existing repo
-uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
-```
+### Bootstrap CLI requirements
 
-Manual workflow:
-
-```bash
-uv tool install --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap
-
-# First-time install
-agentic-memory-bootstrap doctor --target /path/to/repo
-agentic-memory-bootstrap install --target /path/to/repo
-
-# Conservative adoption into an existing repo
-agentic-memory-bootstrap doctor --target /path/to/repo
-agentic-memory-bootstrap adopt --target /path/to/repo
-```
+Python 3.11 or newer (only needed to run the installer, not at runtime in the target repo).
 
 ## Table Of Contents
 
 - [agentic-memory-bootstrap](#agentic-memory-bootstrap)
-  - [Quick Start](#quick-start)
+  - [Why](#why)
+  - [How it works](#how-it-works)
+    - [Bootstrap CLI requirements](#bootstrap-cli-requirements)
   - [Table Of Contents](#table-of-contents)
   - [What It Does](#what-it-does)
   - [Install](#install)
@@ -51,30 +46,29 @@ agentic-memory-bootstrap adopt --target /path/to/repo
     - [Manual alternative](#manual-alternative-2)
   - [Skills](#skills)
   - [Memory Guidance](#memory-guidance)
-  - [Optional Repo Patterns](#optional-repo-patterns)
-  - [Current Decisions](#current-decisions)
-  - [Improvement Questions](#improvement-questions)
-  - [Anti-patterns](#anti-patterns)
-  - [Minimal Adoption Checklist](#minimal-adoption-checklist)
-  - [Future Direction](#future-direction)
   - [Command Summary](#command-summary)
   - [Developing This Repository](#developing-this-repository)
 
 ## What It Does
 
-`agentic-memory-bootstrap` adds a small checked-in memory system for agent-assisted work:
+Running `install` or `adopt` adds the following to your repository:
 
-- `AGENTS.md` for the repo-local agent contract
-- `memory/` for durable notes
-- `memory/current/` for lightweight overview and optional current-work context
-- `.agentic-memory/skills/` for bootstrap-managed shared memory skills
-- `memory/skills/` for optional repo-owned memory skills
+| Path | Purpose |
+|------|---------|
+| `AGENTS.md` | Repo-local agent contract and bootstrap entry point |
+| `memory/index.md` | Route-indexed entry point — maps tasks to minimal note bundles |
+| `memory/manifest.toml` | Machine-readable note metadata, routing triggers, and improvement-pressure fields |
+| `memory/domains/` | Subsystem orientation notes |
+| `memory/invariants/` | Contracts and authority boundaries |
+| `memory/runbooks/` | Repeatable operator procedures |
+| `memory/mistakes/` | Recurring failure modes |
+| `memory/decisions/` | Longer-lived rationale and trade-offs |
+| `memory/current/` | Lightweight project overview and optional task-continuation compression |
+| `.agentic-memory/skills/` | Bootstrap-managed shared memory skills (upgrade-replaceable) |
+| `memory/skills/` | Optional repo-owned memory skills |
+| `scripts/check/` | Advisory freshness audit script |
 
 Install and adopt flows may create a temporary `.agentic-memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace. Upgrade should normally route through the checked-in `memory-upgrade` skill and no longer depends on that workspace as part of the primary model.
-
-Memory owns durable repo knowledge. The repository's active planning/status surface owns active intent and sequencing. Memory complements planning by preserving durable lessons and reducing re-orientation cost, but it must never compete with the planning surface for ownership of active work.
-Good memory systems should help an agent read less, not more.
-Memory is also a pressure layer: if a note exists because the repo is awkward to understand or operate, the note should help the agent suggest the code, docs, tests, tooling, or refactor that would let the note shrink, move, or disappear.
 
 ## Install
 
@@ -189,163 +183,13 @@ Do not put general non-memory skills there.
 
 ## Memory Guidance
 
-Use checked-in memory when it saves repeated rediscovery cost:
+The installed `WORKFLOW.md` (under `.agentic-memory/`) is the full reference for memory conventions, note types, improvement pressure, anti-patterns, and interoperability with planning surfaces. Key principles:
 
-- good fits: boundaries, invariants, operator procedures, recurring failures, routing hints
-- poor fits: one-off task chatter or code that is easier to inspect directly
-
-Treat canonical repo docs and memory as separate lanes:
-
-- keep stable human-facing engineering guidance in `README.md`, `docs/`, or equivalent checked-in docs
-- use memory as assistive residue by default
-- if a note stabilises into canonical guidance, promote it into docs and leave memory as a stub, backlink, or short fallback note
-
-Keep the default working set small. Memory is a token saver only when the notes you load are cheaper than rediscovering the same facts from code and docs.
-Optimise for deletion and consolidation, not just capture.
-Memory is a reasoning aid and constraint layer; it does not replace checking the codebase when the codebase is the source of truth.
-
-Use memory in two modes:
-
-- durable truth: invariants, authority boundaries, recurring traps, operator constraints, and other hard-to-rediscover facts that should stay visible
-- improvement signal: notes that exist because the repo still needs clearer docs, stronger tests, better tooling, better automation, or simpler structure
-
-Preserve the first kind. Use the second kind to suggest upstream repo improvements instead of growing memory indefinitely.
-
-When to write to memory:
-
-- invariants and authority boundaries
-- recurring failure modes
-- routing hints
-- operator runbooks
-- durable consequences and still-relevant rejected-path boundaries
-- facts that are hard to recover quickly from code, tests, tooling, or the repository's active planning/status surface
-
-When not to write to memory:
-
-- milestone status
-- next-step checklists
-- backlog state
-- execution logs
-- plan content that already belongs to the repository's active planning/status surface
-- user-specific preferences, collaboration habits, or stylistic defaults unless they are shared technical policy
-
-Ask one more question before expanding a note: what repo change would let this note shrink, move, or disappear?
-
-`memory/manifest.toml` can now mark:
-
-- `canonicality` as `agent_only`, `candidate_for_promotion`, `canonical_elsewhere`, or `deprecated`
-- `task_relevance` as `required` or `optional`
-- `forbid_core_docs_depend_on_memory = true` to make `doctor` flag core docs that depend on memory
-
-Recommended audience conventions for planner-agnostic routing:
-
-- `agent_bootstrap` for bootstrap-only agent guidance
-- `human_operator` for operator-facing procedures
-- `shared_invariant` for shared technical constraints
-
-These are recommended conventions only in this pass. Existing manifests remain valid.
-
-Compact memory notes work better than quasi-doc pages:
-
-- good residue: pitfalls, routing hints, boundary clarifications, operator gotchas, short fallback context
-- promote instead: stable onboarding guidance, normal engineering policy, human-facing procedures, broad architecture docs
-
-Use note types deliberately:
-
-- `domains/` for subsystem orientation
-- `decisions/` for lasting rationale and trade-offs
-- `runbooks/` for repeatable procedures and verification sequences
-- `current/project-state.md` for a short overview, not a changelog
-- `current/task-context.md` for optional continuation compression: active goal, touched surfaces, blocking assumptions, and next validation only
-
-Small routing layers work better than summary-heavy indexes. A good routing slice is often only 2-3 note links for the current task surface.
-If the same note keeps being routed for safe work on one subsystem, that is often a cue to suggest clearer docs, stronger validation, or refactor review.
-
-Common task bundles:
-
-- current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` when needed
-- live decision review: optional repo-owned `memory/current/active-decisions.md` when the repo keeps one, plus `memory/decisions/README.md`
-- API contract change: `memory/domains/api.md` plus `memory/invariants/response-contracts.md`
-- deployment recovery: `memory/runbooks/deploy-recovery.md` plus `memory/domains/runtime.md`
-- architecture trade-off review: `memory/decisions/README.md` plus the relevant domain note
-
-Routing is the primary integration point with planning: the planning/status surface identifies touched paths or surfaces, and `route` or `sync-memory` returns the smallest relevant durable note set.
-Those commands should also help the agent notice when a note looks like a candidate for docs promotion, skill extraction, scripting, testing, or refactor review.
-
-Compact `project-state.md` shape:
-
-- current focus
-- recent meaningful progress
-- blockers
-- a few high-value notes
-
-If it starts reading like a ledger, backlog, tranche history, or changelog, compress it.
-
-## Optional Repo Patterns
-
-These are recommended patterns, not part of the mandatory bootstrap contract.
-
-Interoperability pattern catalogue:
-
-- loose coupling: planner first, memory routed on demand
-- handoff compression: planner primary, memory holds only minimal cross-session continuation context
-- durable capture on close: planner closes work, memory updates only if durable knowledge changed
-
-Short-horizon task tracking versus long-horizon planning:
-
-- keep the active task board in the repo's chosen planning/status surface
-- keep roadmap or epic planning separate so `task-context.md` does not become a backlog
-- promote a roadmap item into active execution only when it has a clear next owner and next action
-
-Operational verification:
-
-- keep the operational procedure in a runbook
-- add a short verification checklist or expected-state section near the procedure when deploy-state confirmation matters
-- keep environment-specific deploy status outside the generic bootstrap payload unless the repo intentionally owns that note
-
-Improvement paths:
-
-- recurring mistake -> consider a regression test, validation, or lint rule
-- prose-heavy runbook -> consider a checked-in skill first, then a repo-owned script or command if the workflow stays mechanical
-- stable human-facing guidance -> consider promoting it into canonical docs and leaving memory as a stub or backlink
-- note that repeatedly explains one hard subsystem -> consider refactor review or clearer module boundaries
-- routing crutch used for one awkward area -> consider naming, structure, or ownership cleanup in the repo
-
-## Current Decisions
-
-- if the repo keeps `memory/current/active-decisions.md`, use it for live architectural or cross-cutting decisions only
-- move a decision into `memory/decisions/` once it no longer changes implementation choices and is only worth keeping as durable rationale
-- preserve decisions at the level of consequence or still-relevant rejected-path boundaries, not meeting history
-- do not keep completed transitions or operational residue in the current decision note
-
-## Improvement Questions
-
-- Is this note preserving durable truth or compensating for repo friction?
-- Why is this not encoded in code, tests, tooling, or canonical docs?
-- What repo change would let this note shrink by half?
-- Should this become canonical docs, a skill, a script, a test, a validation, or a refactor candidate instead?
-
-## Anti-patterns
-
-- turning memory into a task tracker
-- copying plan content into durable notes
-- storing rediscoverable facts that are easier to inspect directly
-- coupling freshness checks to a specific planner or planning file
-- forcing repositories to adopt the memory taxonomy in their planning system
-- mixing user-specific memory with repo-specific technical truth
-- treating memory as the endpoint when it is really signalling missing docs, missing tests, weak tooling, or awkward architecture
-
-## Minimal Adoption Checklist
-
-- choose the repository's active planning/status surface
-- decide whether `memory/current/task-context.md` will be used for optional continuation compression
-- decide how memory freshness is checked
-- decide who updates memory when durable knowledge changes
-- decide which routing metadata fields the repo will maintain
-
-## Future Direction
-
-Skill manifests should only exist for concrete tool consumers such as routing, verification, or freshness checks. A new machine-readable surface without an immediate consumer would add contract weight without enough payoff.
+- **Write to memory** when the fact is expensive to rediscover from code alone: invariants, authority boundaries, recurring failure modes, operator procedures, routing hints.
+- **Don't write to memory** for milestone status, backlog state, execution logs, or anything the repo's planning surface already owns.
+- **Optimise for deletion.** Ask what repo change — better docs, a test, a script, a refactor — would let a note shrink or disappear.
+- **Keep the working set small.** Memory saves tokens only when the notes you load are cheaper than rediscovering the same facts from code.
+- **Promote when stable.** If a note matures into general guidance, move it into canonical docs and leave memory as a stub.
 
 ## Command Summary
 
