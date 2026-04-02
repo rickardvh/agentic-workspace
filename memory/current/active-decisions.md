@@ -81,6 +81,7 @@ Active
 - Skills are bundled product assets for specialised procedures and should stay outside the mandatory bootstrap payload.
 - The base memory system must remain understandable and usable even when skills are unavailable.
 - The default always-read surface should stay as close as possible to `AGENTS.md` plus `memory/index.md`, with workflow and current-context docs loaded only when needed.
+- Repositories that have checked-in `memory/skills/` should tell agents to scan that directory during setup and use a matching skill before inventing a new memory procedure.
 - Machine-readable memory metadata should live in `memory/manifest.toml` as an optional companion to `memory/index.md`, not as a replacement for the human-readable routing layer.
 - The product should distinguish canonical checked-in docs from assistive memory explicitly, with manifest metadata and audits making that boundary enforceable instead of purely conventional.
 - Bundled product skills should stay limited to bootstrap lifecycle work; shared day-to-day memory workflows should ship as checked-in skills under `memory/skills/`, with repo-specific sibling skills added there when needed.
@@ -92,4 +93,4 @@ Active
 
 ## Last confirmed
 
-2026-03-19 during ownership-boundary hardening
+2026-04-02 during checked-in memory-skill discovery hardening

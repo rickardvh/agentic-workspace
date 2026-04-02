@@ -12,11 +12,12 @@ Read `memory/system/WORKFLOW.md` for shared workflow rules.
 
 1. Read `memory/index.md`.
 2. Use the user's request to determine what to work on next.
-3. Read only the memory files routed by `memory/index.md` that are relevant to the subsystem you will touch.
-4. Read `memory/system/WORKFLOW.md` only when the policy boundary is unclear.
-5. Read repo docs only when routed memory points to them.
-6. Prefer targeted tool checks over broad re-reading when they answer the question faster.
-7. Use local scratch notes only when they help; they are optional support, not part of the system.
+3. Check `memory/skills/README.md` and the skill directories under `memory/skills/` for a checked-in memory skill whose name or description matches the task.
+4. Use the matching checked-in skill when it fits; otherwise read only the memory files routed by `memory/index.md` that are relevant to the subsystem you will touch.
+5. Read `memory/system/WORKFLOW.md` only when the policy boundary is unclear.
+6. Read repo docs only when routed memory points to them.
+7. Prefer targeted tool checks over broad re-reading when they answer the question faster.
+8. Use local scratch notes only when they help; they are optional support, not part of the system.
 
 Do not rely on transient chat context when the same knowledge should exist in checked-in files.
 
@@ -25,6 +26,7 @@ Do not rely on transient chat context when the same knowledge should exist in ch
 `memory/system/SKILLS.md` defines how checked-in `memory/skills/` and bundled bootstrap skills should coexist.
 
 For day-to-day memory work, use the checked-in skills under `memory/skills/` as the shared repo-local building blocks.
+Treat a quick `memory/skills/` scan as part of setup in repos that have checked-in memory skills so repeatable procedures are easy to detect and reuse.
 If a repeatable repo-specific memory procedure is needed, add a new sibling skill under `memory/skills/` instead of editing the shared core skills in place.
 `memory/skills/` is only for skills whose primary purpose is operating on checked-in memory or maintaining the repo's memory system; general non-memory skills do not belong there.
 Treat `memory/system/` and the shipped core skills under `memory/skills/` as agentic-memory-managed files that may be replaced on upgrade; keep repo-specific durable knowledge in other `/memory` notes and repo-specific memory procedures in added sibling skills under `memory/skills/`.

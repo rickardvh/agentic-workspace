@@ -991,6 +991,8 @@ def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(
     assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap init --target C:/repo" in prompt
     assert "`install` skill at `C:/repo/memory/bootstrap/skills`" in prompt
     assert "bootstrap-cleanup --target C:/repo" in prompt
+    assert "scan the checked-in memory skills under `C:/repo/memory/skills`" in prompt
+    assert "use any matching checked-in skill during setup" in prompt
 
 
 def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
@@ -1004,6 +1006,8 @@ def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
     assert "`install` skill at `C:/repo/memory/bootstrap/skills`" in prompt
     assert "`populate` from the same path" in prompt
     assert "bootstrap-cleanup --target C:/repo" in prompt
+    assert "scan the checked-in memory skills under `C:/repo/memory/skills`" in prompt
+    assert "use any matching checked-in skill during setup" in prompt
     assert "C:/repo" in prompt
 
 
@@ -1194,6 +1198,7 @@ def test_install_summary_mentions_populate_next_step_when_current_notes_created(
     assert "bootstrap-cleanup" in output
     assert "install or upgrade review" not in output
     assert "`populate` skill" in output
+    assert "Scan the checked-in memory skills under memory/skills/" in output
 
 
 def test_install_summary_skips_populate_next_step_when_no_current_notes_created(capsys, tmp_path: Path) -> None:
