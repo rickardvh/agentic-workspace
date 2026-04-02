@@ -6,7 +6,7 @@ Active
 
 ## Scope
 
-- Optional checked-in continuation compression for active cross-session work when it materially reduces re-orientation cost.
+- Optional checked-in continuation compression only when it materially reduces re-orientation cost.
 
 ## Applies to
 
@@ -34,18 +34,10 @@ Active
 
 - No active cross-session task context captured.
 
-## Active surfaces
-
-- Add files, modules, interfaces, or commands here only when there is real interrupted work to resume.
-
 ## Key constraints
 
 - `task-context.md` is continuation compression only, not a task list, backlog, execution log, or sequencing surface.
 - Keep this file empty or near-empty unless it clearly helps the next session continue faster.
-
-## Relevant memory
-
-- Add only the memory notes that materially help the interrupted work resume.
 
 ## Notes
 

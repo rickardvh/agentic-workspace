@@ -17,7 +17,7 @@ MANIFEST_PATH = Path("memory/manifest.toml")
 UPGRADE_SOURCE_PATH = MANAGED_ROOT / "UPGRADE-SOURCE.toml"
 LEGACY_UPGRADE_SOURCE_PATH = LEGACY_SYSTEM_ROOT / "UPGRADE-SOURCE.toml"
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 40
+BOOTSTRAP_VERSION = 41
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = MANAGED_ROOT / "bootstrap"
 LEGACY_BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
@@ -28,6 +28,7 @@ CURRENT_MEMORY_BASELINE = (
     Path("memory/current/project-state.md"),
     Path("memory/current/task-context.md"),
 )
+ROUTING_BASELINE = (Path("memory/index.md"),)
 BOOTSTRAP_WORKSPACE_FILES = (
     BOOTSTRAP_WORKSPACE_ROOT / "README.md",
     BOOTSTRAP_WORKSPACE_ROOT / "skills/install/SKILL.md",
@@ -72,9 +73,9 @@ FORBIDDEN_PAYLOAD_FILES = (Path("TODO.md"), Path("memory/current/active-decision
 OBSOLETE_SHARED_FILES = (LEGACY_SYSTEM_ROOT / "UPGRADE.md",)
 FORBIDDEN_PAYLOAD_PREFIXES = (".agent-work/",)
 CURRENT_TASK_STALE_DAYS = 30
-CURRENT_TASK_MAX_LINES = 120
+CURRENT_TASK_MAX_LINES = 80
 CURRENT_PROJECT_STATE_STALE_DAYS = 45
-CURRENT_PROJECT_STATE_MAX_LINES = 140
+CURRENT_PROJECT_STATE_MAX_LINES = 100
 
 WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
 WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"

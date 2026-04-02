@@ -16,24 +16,23 @@ It operates on checked-in memory files. It does not replace them.
 1. Read the repo's local contract:
    - `AGENTS.md`
    - `memory/index.md`
-   - `.agentic-memory/WORKFLOW.md`
    - `.agentic-memory/SKILLS.md` when deciding whether a repo-specific skill should be created
-   - `memory/current/project-state.md` if the repo uses it as an overview note
-   - `memory/current/task-context.md` if the repo uses it as checked-in current-task compression
 2. Load only the memory notes relevant to the files, commands, or behaviours that changed.
-3. Run the memory freshness audit if the repo has one.
-4. Inspect the affected notes for:
+3. Treat `.agentic-memory/WORKFLOW.md` as reference policy only when the cleanup touches the memory contract or policy boundary.
+4. Pull in current-state notes only when they genuinely need compression or shared-orientation cleanup.
+5. Run the memory freshness audit if the repo has one.
+6. Inspect the affected notes for:
    - contradicted behaviour
    - duplicate or overlapping guidance
    - stale placeholders
    - oversized history or narrative that no longer affects future work
-5. Update the smallest set of files needed:
+7. Update the smallest set of files needed:
    - edit existing notes before creating new ones
    - merge or delete stale notes instead of accumulating near-duplicates
    - keep the overview and task-context notes short and avoid turning current-memory files into task trackers
    - ask whether a repeated note should instead become canonical docs, a skill, a script suggestion, a regression test suggestion, or a refactor suggestion
-6. If note names, roles, or routing changed, update `memory/index.md` and `memory/manifest.toml` in the same change when used.
-7. Before finishing, rerun the audit or explain why it could not be run.
+8. If note names, roles, or routing changed, update `memory/index.md` and `memory/manifest.toml` in the same change when used.
+9. Before finishing, rerun the audit or explain why it could not be run.
 
 ## Guardrails
 

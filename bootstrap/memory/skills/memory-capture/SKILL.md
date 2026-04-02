@@ -16,10 +16,7 @@ It operates on durable memory files. It does not create a separate storage layer
 1. Read the repo's local contract:
    - `AGENTS.md`
    - `memory/index.md`
-   - `.agentic-memory/WORKFLOW.md`
    - `.agentic-memory/SKILLS.md` when deciding whether a repo-specific skill should be created
-   - `memory/current/project-state.md` if present
-   - `memory/current/task-context.md` if present
 2. Identify the durable lesson:
    - what fact should survive this task
    - why it is likely to matter again
@@ -44,7 +41,8 @@ It operates on durable memory files. It does not create a separate storage layer
    - `memory/manifest.toml` when used
 7. If the note set changed materially, update `memory/index.md`.
 8. If the repeated procedure is repo-specific rather than a durable fact, create a new repo-specific checked-in skill under `memory/skills/` instead of growing this core skill.
-9. Update `memory/current/project-state.md` or `memory/current/task-context.md` only when the new memory changes current shared orientation.
+9. Treat `.agentic-memory/WORKFLOW.md` as reference policy only when the capture touches the memory contract or policy boundary.
+10. Update `memory/current/project-state.md` or `memory/current/task-context.md` only when the new memory changes current shared orientation.
 
 ## Capture test
 

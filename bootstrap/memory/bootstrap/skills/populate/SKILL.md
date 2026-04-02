@@ -12,7 +12,7 @@ Use this skill after bootstrap installation when `memory/current/project-state.m
 1. Read:
    - `AGENTS.md`
    - `memory/index.md`
-   - `.agentic-memory/WORKFLOW.md`
+   - `.agentic-memory/WORKFLOW.md` only when the policy boundary is unclear
 2. Inspect existing repo evidence:
    - top-level README or equivalent orientation docs
    - visible repo structure
@@ -27,7 +27,7 @@ Use this skill after bootstrap installation when `memory/current/project-state.m
 - Use only existing repo docs and visible repo state.
 - Do not invent subsystem notes, invariants, or runbooks with weak evidence.
 - Do not turn `project-state.md` into a task list.
-- Do not turn `task-context.md` into a plan, journal, or backlog.
+- Do not turn `task-context.md` into a plan, journal, backlog, or execution log.
 
 ## Typical outputs
 

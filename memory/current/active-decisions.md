@@ -65,9 +65,10 @@ Active
 - Durable shared knowledge must stay in checked-in files; repeatable bounded workflows over that knowledge should be implemented as skills.
 - `upgrade` may replace shared repo-agnostic files automatically, but must continue to treat `AGENTS.md` and customised starter notes conservatively.
 - The default always-read surface should stay as close as possible to `AGENTS.md` plus `memory/index.md`, with workflow and current-context docs loaded only when needed.
+- `.agentic-memory/WORKFLOW.md` should behave as reference policy for memory-boundary work, not default setup for unrelated repo tasks.
 - Shared guidance should stay in a dedicated bootstrap-managed `.agentic-memory/` surface; `AGENTS.md` should only carry the managed workflow pointer plus repo-local contract text.
 - Machine-readable memory metadata should live in `memory/manifest.toml` as an optional companion to `memory/index.md`, not as a replacement for the human-readable routing layer.
-- Shared day-to-day memory workflows should ship under `.agentic-memory/skills/`, while repo-specific memory procedures can live under `memory/skills/`.
+- Shared day-to-day memory workflows should ship under `.agentic-memory/skills/` and be the default operational interface, while repo-specific memory procedures can live under `memory/skills/`.
 - `.agentic-memory/` and the shipped core skill directories under `.agentic-memory/skills/` are product-managed and upgrade-replaceable; repo-specific durable knowledge and reusable local procedures should live outside those files.
 - `upgrade` should migrate legacy `memory/system/`, `memory/bootstrap/`, and shipped `memory/skills/` installs into `.agentic-memory/` by default so the legacy layout can be retired cleanly.
 

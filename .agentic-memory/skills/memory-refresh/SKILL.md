@@ -16,10 +16,7 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
 1. Read the repo's local contract:
    - `AGENTS.md`
    - `memory/index.md`
-   - `.agentic-memory/WORKFLOW.md`
    - `.agentic-memory/SKILLS.md` when deciding whether a repo-specific skill should be created
-   - `memory/current/project-state.md` if present
-   - `memory/current/task-context.md` if present
 2. Identify the changed surfaces:
    - explicit changed files from the task
    - or repo changes discovered from version control
@@ -27,17 +24,19 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
    - run `agentic-memory-bootstrap sync-memory --files <paths...>` when available
    - run `agentic-memory-bootstrap route --files <paths...>` when useful for note selection
    - when `memory/manifest.toml` exists, prefer manifest-triggered note matches as the first stale-memory candidates
+   - treat `.agentic-memory/WORKFLOW.md` as reference policy only when the task touches the memory contract or policy boundary
 4. Load only the affected notes.
-5. For each affected note, decide the smallest correct action:
+5. Pull in `memory/current/project-state.md` or `memory/current/task-context.md` only when the change materially affects shared orientation or active continuation context.
+6. For each affected note, decide the smallest correct action:
    - `review` if the note should be checked manually
    - `update` if it is now partly wrong or incomplete
    - `mark needs verification` if the change is plausible but not yet confirmed
    - `deprecate/remove` if the note no longer applies
    - `update index` if routing changed
-6. Apply the minimal checked-in edits needed.
-7. If current shared orientation changed, refresh `memory/current/project-state.md` or `memory/current/task-context.md`.
-8. If the repeated procedure is repository-specific, create a new sibling skill under `memory/skills/` instead of expanding this shared core skill.
-9. Run the memory freshness audit when available.
+7. Apply the minimal checked-in edits needed.
+8. If current shared orientation changed, refresh `memory/current/project-state.md` or `memory/current/task-context.md`.
+9. If the repeated procedure is repository-specific, create a new sibling skill under `memory/skills/` instead of expanding this shared core skill.
+10. Run the memory freshness audit when available.
 
 ## Decision rules
 

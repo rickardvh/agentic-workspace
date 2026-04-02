@@ -14,7 +14,7 @@ It populates checked-in overview/context notes from existing repo evidence. It d
 1. Read the target repo's local contract:
    - `AGENTS.md`
    - `memory/index.md`
-   - `memory/system/WORKFLOW.md`
+   - `.agentic-memory/WORKFLOW.md` only when the policy boundary is unclear
 2. Inspect existing repo evidence:
    - top-level README or equivalent orientation docs
    - visible repo structure
@@ -36,7 +36,7 @@ It populates checked-in overview/context notes from existing repo evidence. It d
 - Use only existing repo docs and visible repo state.
 - Do not invent subsystem notes, invariants, or runbooks with weak evidence.
 - Do not turn `project-state.md` into a task list.
-- Do not turn `task-context.md` into a plan, journal, or backlog.
+- Do not turn `task-context.md` into a plan, journal, backlog, or execution log.
 - Leave the audit-clean starter note in place when there is no clear active work to capture.
 - Prefer leaving a field brief over filling it with speculation.
 

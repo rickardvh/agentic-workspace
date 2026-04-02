@@ -483,7 +483,7 @@ def _print_install_summary(result) -> None:
     print(f"Summary: {summary}")
     bootstrap_skills_path = result.target_root / BOOTSTRAP_WORKSPACE_ROOT / "skills"
     print("Next steps:")
-    print("- Review repository-specific details in AGENTS.md and the current-memory notes.")
+    print("- Review repository-specific details in AGENTS.md, then use `.agentic-memory/skills/memory-router/` for day-to-day note selection.")
     print(
         f"- Use the temporary bootstrap skills under {bootstrap_skills_path} to finish install "
         "or adopt lifecycle work, then run `agentic-memory-bootstrap bootstrap-cleanup --target "
@@ -495,6 +495,7 @@ def _print_install_summary(result) -> None:
         "- Populate memory/current/task-context.md only when active work would benefit from "
         "short checked-in continuation compression, not a shadow planner."
     )
+    print("- Use `.agentic-memory/skills/memory-refresh/` after code or docs changes that may have shifted durable memory.")
     print("- Confirm the repo's active planning/status surface separately; this bootstrap does not install one.")
     if _created_current_memory_notes(result):
         print(
@@ -553,7 +554,8 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
         return (
             f"Run `{runner} current show{target_args}`. "
             f"Next, use the `populate` skill at `{bootstrap_skills}` to fill the current-memory notes "
-            "conservatively from existing repo docs and visible repo state. "
+            "conservatively from existing repo docs and visible repo state. Keep `memory/current/project-state.md` as "
+            "an overview note only, and treat `memory/current/task-context.md` as optional continuation compression. "
             "Populate `memory/current/task-context.md` only when there is clearly active work worth "
             "preserving across sessions as brief continuation compression."
         )

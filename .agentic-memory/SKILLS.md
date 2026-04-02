@@ -41,12 +41,13 @@ The payload ships these bootstrap-managed core memory skills under `.agentic-mem
 - `memory-refresh`
 - `memory-router`
 
-Treat them as shared repo-local building blocks.
+Treat them as the default operational interface for day-to-day memory work.
 
 - Keep them repo-agnostic and conservative.
 - Upgrade may replace them as part of the shared payload.
 - Do not put repo-specific facts into these core skills.
 - Do not customise these directories in place for repo-local behaviour you expect to preserve across upgrades.
+- Prefer starting with these skills before inventing a one-off memory procedure or broad memory reread.
 
 ## Repo-specific skills
 
@@ -117,8 +118,8 @@ Do not start with fuzzy skills that overlap heavily with built-in agent behaviou
 For now:
 
 - keep bootstrap lifecycle skills bundled with the product under `skills/`
-- ship day-to-day memory skills as repo-owned skills under `memory/skills/`
-- treat checked-in `memory/skills/` files as the source of truth for repo-local memory workflows
+- ship day-to-day memory skills in the checked-in bootstrap-managed `.agentic-memory/skills/` surface
+- treat repo-added sibling skills under `memory/skills/` as the source of truth for repo-local extensions to those shared workflows
 - treat any runtime-local mirrored copies as disposable caches
 - keep the mandatory bootstrap payload understandable and useful without any skill runtime support
 - during development, treat the repo's checked-in files as canonical and any packaged or mirrored copies as potentially stale until explicitly refreshed

@@ -71,6 +71,7 @@ from repo_memory_bootstrap._installer_shared import (
     OBSOLETE_SHARED_FILES,
     OPTIONAL_APPEND_TARGETS,
     PAYLOAD_REQUIRED_FILES,
+    ROUTING_BASELINE,
     UPGRADE_SOURCE_PATH,
     VERSION_PATH,
     WORKFLOW_POINTER_BLOCK,
@@ -566,22 +567,31 @@ def route_memory(
     selected_surfaces = {_normalise_surface_name(surface) for surface in (surfaces or [])}
     selected_surfaces.update(_infer_surfaces_from_paths(files or []))
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
-
+    routing_baseline = manifest.routing_only if manifest and manifest.routing_only else ROUTING_BASELINE
     suggestions: list[tuple[str, str, str]] = [
-        ("recommended", path.as_posix(), "always relevant current-memory note") for path in CURRENT_MEMORY_BASELINE
+        ("required", path.as_posix(), "always-read routing note")
+        for path in routing_baseline
     ]
-    suggestions.extend(
-        _find_manifest_matches(
-            manifest,
-            files=files or [],
-            surfaces=selected_surfaces,
-            use_staleness=False,
-        )
+    manifest_suggestions = _find_manifest_matches(
+        manifest,
+        files=files or [],
+        surfaces=selected_surfaces,
+        use_staleness=False,
     )
+    suggestions.extend(manifest_suggestions)
+    covered_surfaces = _covered_manifest_surfaces(manifest, manifest_suggestions, selected_surfaces)
     for section_surface, notes in _parse_route_sections(target_root / "memory" / "index.md"):
-        if section_surface in selected_surfaces:
+        if section_surface in selected_surfaces and section_surface not in covered_surfaces:
             for note in notes:
-                suggestions.append(("recommended", note, f"matched route surface '{section_surface}'"))
+                suggestions.append(("recommended", note, f"matched route surface '{section_surface}' from memory/index.md"))
+    if _should_suggest_project_state(files=files or [], surfaces=selected_surfaces, manifest_suggestions=manifest_suggestions):
+        suggestions.append(
+            ("recommended", "memory/current/project-state.md", "high-level repo re-orientation is likely useful for this task")
+        )
+    if _should_suggest_task_context(files=files or []):
+        suggestions.append(
+            ("recommended", "memory/current/task-context.md", "explicit current-context input suggests checking continuation state")
+        )
 
     seen: set[str] = set()
     for recommendation, note, reason in suggestions:
@@ -613,7 +623,10 @@ def route_memory(
                 category="manual-review",
             )
 
-    if files and all(key.startswith("recommended:memory/current/") for key in seen):
+    if files and not any(
+        action.role == "memory-route" and action.kind in {"recommended", "required"} and action.source != "memory/index.md"
+        for action in result.actions
+    ):
         result.add(
             "manual review",
             target_root / Path("memory/index.md"),
@@ -692,8 +705,10 @@ def sync_memory(
         seen_sync_paths.add(note_path)
 
     routed = route_memory(target=target_root, files=changed_files)
+    routing_baseline = manifest.routing_only if manifest and manifest.routing_only else ROUTING_BASELINE
+    baseline_paths = {target_root / path for path in routing_baseline}
     for action in routed.actions:
-        if action.kind not in {"recommended", "required"} or action.path in seen_sync_paths:
+        if action.kind not in {"recommended", "required"} or action.path in seen_sync_paths or action.path in baseline_paths:
             continue
         note_path = action.path
         note_text = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
@@ -736,8 +751,47 @@ def sync_memory(
             safety="manual",
             source=note,
             category="manual-review",
-        )
+            )
     return result
+
+
+def _covered_manifest_surfaces(
+    manifest,
+    suggestions: list[tuple[str, str, str]],
+    selected_surfaces: set[str],
+) -> set[str]:
+    covered: set[str] = set()
+    for _, note, _ in suggestions:
+        if Path(note) in ROUTING_BASELINE:
+            continue
+        manifest_note = _lookup_manifest_note(manifest, Path(note))
+        if manifest_note is None:
+            continue
+        covered.update(surface for surface in manifest_note.surfaces if surface in selected_surfaces)
+    return covered
+
+
+def _should_suggest_project_state(
+    *,
+    files: list[str],
+    surfaces: set[str],
+    manifest_suggestions: list[tuple[str, str, str]],
+) -> bool:
+    if any(Path(note) == Path("memory/current/project-state.md") for _, note, _ in manifest_suggestions):
+        return True
+    if any(Path(path).as_posix() == "memory/current/project-state.md" for path in files):
+        return True
+    if surfaces.intersection({"decision", "architecture"}):
+        return True
+    return any(
+        _path_matches_pattern(path, pattern)
+        for path in files
+        for pattern in ("README.md", "docs/**/*.md", ".agentic-memory/**/*.md", "bootstrap/**/*.md")
+    )
+
+
+def _should_suggest_task_context(*, files: list[str]) -> bool:
+    return any(Path(path).as_posix() == "memory/current/task-context.md" for path in files)
 
 
 def promotion_report(

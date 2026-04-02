@@ -2,10 +2,10 @@
 
 This directory contains checked-in core memory skills installed by the bootstrap payload.
 
-When a repository has checked-in memory skills, treat this directory as part of normal task setup:
+When a repository has checked-in memory skills, treat this directory as the default operational interface for memory work:
 
 - scan this file and the sibling skill directories for a name or description that matches the task
-- use the matching checked-in skill before inventing an ad hoc memory procedure
+- use the matching checked-in skill before broad memory rereads or ad hoc memory procedures
 - fall back to normal routed note reading when no skill fits
 
 The shipped core skills are:

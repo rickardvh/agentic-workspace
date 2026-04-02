@@ -6,7 +6,7 @@ Active
 
 ## Scope
 
-- Optional checked-in continuation compression for `<PROJECT_NAME>`.
+- Optional checked-in continuation compression only.
 
 ## Applies to
 
@@ -27,29 +27,9 @@ Active
 
 - No active cross-session task context captured yet.
 
-## Active goal
-
-- Add the one active goal that the next session needs to resume.
-
-## Active surfaces
-
-- Add files, modules, interfaces, or commands here only when they materially help the next session continue quickly.
-
-## Blocking assumptions
-
-- Add only assumptions or open constraints that the next session must keep in mind.
-
-## Next validation
-
-- Add the next validation, check, or confirmation that the next session should perform.
-
 ## Key constraints
 
 - Leave this brief unless there is clearly active work worth preserving between sessions.
-
-## Relevant memory
-
-- Add only the memory notes that matter for the active work.
 
 ## Notes
 

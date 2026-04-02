@@ -27,7 +27,7 @@ Repeatable workflow-like actions should live in optional skills rather than expa
 
 Temporary bootstrap workspace files are part of the payload so install and adopt can hand off to repo-local lifecycle skills. They are meant to be removed after bootstrap work is complete.
 
-The CLI around this payload can also inspect the current-memory surface, suggest relevant notes for touched files, use manifest-aware routing when `memory/manifest.toml` is present, resolve upgrade source from the product-managed `.agentic-memory/UPGRADE-SOURCE.toml` record, and verify payload consistency for maintainers and agent workflows.
+The CLI around this payload can also inspect the current-memory surface, route through manifest metadata and the shipped memory skills, resolve upgrade source from the product-managed `.agentic-memory/UPGRADE-SOURCE.toml` record, and verify payload consistency for maintainers and agent workflows.
 
 Treat the packaged memory notes as a starting cache of reusable operating knowledge, not an archive to expand without limit.
 Use them when they save rediscovery cost; avoid adding notes that merely restate code or transient task chatter.
@@ -96,16 +96,17 @@ Ownership split:
 - bootstrap-managed and upgrade-replaceable: the workflow pointer block in `AGENTS.md`, `.agentic-memory/`, and other shared replaceable payload files
 - repo-owned and expected to diverge: `AGENTS.md` content outside the managed pointer block, repo-added sibling skills under `memory/skills/`, and ordinary notes outside the product-managed shared directories
 
-`memory/current/project-state.md` should stay aggressively summary-shaped: current focus, recent meaningful progress, blockers, and a few high-value notes are usually enough. If it starts reading like a ledger, backlog, tranche history, or changelog, compress it.
+`memory/current/project-state.md` should stay aggressively summary-shaped: current focus, recent meaningful progress, blockers, and a few high-value notes are usually enough. If it starts reading like a planner, ledger, backlog, or changelog, compress it.
 
 Small routing layers work better than summary-heavy indexes. A good `memory/index.md` points to a few likely-relevant notes rather than trying to restate them.
+Treat `.agentic-memory/skills/memory-router/` as the normal entrypoint for day-to-day note selection, with `memory/index.md` and `memory/manifest.toml` providing the visible routing contract behind it.
 When `memory/manifest.toml` marks a note as `canonical_elsewhere`, routing should prefer the canonical checked-in doc and keep the memory note as optional fallback context.
 Planning/status surfaces identify touched paths or surfaces; memory routing returns the smallest relevant durable note set.
 If the same note keeps being routed for safe work on one subsystem, that is often a cue to suggest clearer docs, stronger validation, or refactor review.
 
 Common task bundles:
 
-- current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` when needed
+- current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` only when active continuation context is genuinely needed
 - live decision review: optional repo-owned `memory/current/active-decisions.md` when the repo keeps one, plus `memory/decisions/README.md`
 - runtime or deployment change: `memory/domains/<runtime-or-deployment-note>.md` plus `memory/runbooks/<relevant-operator-runbook>.md`
 - API or interface change: `memory/domains/<api-or-interface-note>.md` plus `memory/invariants/<response-or-contract-note>.md`

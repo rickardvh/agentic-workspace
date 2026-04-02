@@ -32,8 +32,8 @@ Active
 ## Current focus
 
 - Keep the always-read surface small: `AGENTS.md` plus `memory/index.md` by default, with other docs loaded on demand.
+- Make `memory/manifest.toml` plus the shipped memory skills the default routing and maintenance interface.
 - Keep the managed `.agentic-memory/` surface clearly separate from repo-owned `memory/`.
-- Keep routing and current-context notes tight enough that memory reduces reading instead of creating extra review work.
 
 ## Recent meaningful progress
 
@@ -50,7 +50,7 @@ Active
 
 - `memory/current/project-state.md` is the overview note; `memory/current/task-context.md` is optional continuation compression only.
 - Durable facts should have one primary home, with short references instead of repeated summaries.
-- Routing is the main interface between planning and memory: planning identifies touched surfaces and memory returns the smallest durable note set.
+- Route through `memory/index.md`, `memory/manifest.toml`, and the shipped memory skills before broad note reading.
 
 ## Failure signals
 

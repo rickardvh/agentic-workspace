@@ -159,8 +159,8 @@ def _current_task_staleness_reason(text: str) -> str | None:
     if len(lines) > CURRENT_TASK_MAX_LINES:
         return (
             f"task-context note is oversized ({len(lines)} lines); "
-            "compress it back to continuation-only context "
-            "and remove planning/status spillover"
+            "compress it back to optional continuation-only context "
+            "and remove planner, backlog, or execution-log spillover"
         )
     for idx, line in enumerate(lines):
         if line.strip().lower() == "## last confirmed":
@@ -188,7 +188,7 @@ def _project_state_staleness_reason(text: str) -> str | None:
     if len(lines) > CURRENT_PROJECT_STATE_MAX_LINES:
         return (
             f"project-state note is oversized ({len(lines)} lines); compress stale history, remove "
-            "active-plan residue, and keep only current operating facts"
+            "planner residue, and keep only current overview facts"
         )
     for idx, line in enumerate(lines):
         if line.strip().lower() == "## last confirmed":

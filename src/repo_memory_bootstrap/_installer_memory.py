@@ -105,6 +105,27 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
     if manifest is None:
         return
 
+    if manifest.routing_only and tuple(manifest.routing_only) != (Path("memory/index.md"),):
+        result.add(
+            "manual review",
+            target_root / MANIFEST_PATH,
+            "rules.routing_only should contain only memory/index.md so the always-read surface stays small",
+            role="memory-manifest",
+            safety="manual",
+            source=MANIFEST_PATH.as_posix(),
+            category="contract-drift",
+        )
+    if Path("memory/current/task-context.md") in manifest.high_level:
+        result.add(
+            "manual review",
+            target_root / MANIFEST_PATH,
+            "rules.high_level should not include memory/current/task-context.md; keep continuation notes opt-in",
+            role="memory-manifest",
+            safety="manual",
+            source=MANIFEST_PATH.as_posix(),
+            category="contract-drift",
+        )
+
     for note in manifest.notes:
         if note.canonicality not in VALID_CANONICALITY_VALUES:
             result.add(
@@ -180,6 +201,47 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 source=note.path.as_posix(),
                 category="contract-drift",
             )
+        if note.path == Path(".agentic-memory/WORKFLOW.md") and note.task_relevance == "required":
+            result.add(
+                "manual review",
+                target_root / note.path,
+                "WORKFLOW.md should remain reference policy, not default required reading for every task",
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
+        if note.path == Path("memory/current/project-state.md") and note.task_relevance != "optional":
+            result.add(
+                "manual review",
+                target_root / note.path,
+                "project-state should stay optional high-level context rather than required task setup",
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
+        if note.path == Path("memory/current/task-context.md"):
+            if note.task_relevance != "optional":
+                result.add(
+                    "manual review",
+                    target_root / note.path,
+                    "task-context should stay optional continuation compression rather than required task setup",
+                    role="memory-manifest",
+                    safety="manual",
+                    source=note.path.as_posix(),
+                    category="contract-drift",
+                )
+            if note.surfaces or note.routes_from:
+                result.add(
+                    "manual review",
+                    target_root / note.path,
+                    "task-context should not advertise broad routing metadata; load it only when active continuation context is genuinely needed",
+                    role="memory-manifest",
+                    safety="manual",
+                    source=note.path.as_posix(),
+                    category="contract-drift",
+                )
 
     if not manifest.forbid_core_docs_depend_on_memory and not force_enforcement:
         return
