@@ -51,10 +51,7 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
                 canonicality=str(raw.get("canonicality", "agent_only")),
                 task_relevance=str(raw.get("task_relevance", "optional")),
                 subsystems=tuple(_string_list(raw.get("subsystems"))),
-                surfaces=tuple(
-                    _normalise_surface_name(value)
-                    for value in _string_list(raw.get("surfaces"))
-                ),
+                surfaces=tuple(_normalise_surface_name(value) for value in _string_list(raw.get("surfaces"))),
                 routes_from=tuple(_string_list(raw.get("routes_from"))),
                 stale_when=tuple(_string_list(raw.get("stale_when"))),
                 related_validations=tuple(_string_list(raw.get("related_validations"))),
@@ -73,27 +70,13 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
         path=path,
         version=version,
         notes=tuple(notes),
-        routing_only=tuple(
-            Path(value) for value in _string_list(rules_table.get("routing_only"))
-        ),
-        high_level=tuple(
-            Path(value) for value in _string_list(rules_table.get("high_level"))
-        ),
-        canonical_dirs=tuple(
-            Path(value) for value in _string_list(rules_table.get("canonical_dirs"))
-        ),
+        routing_only=tuple(Path(value) for value in _string_list(rules_table.get("routing_only"))),
+        high_level=tuple(Path(value) for value in _string_list(rules_table.get("high_level"))),
+        canonical_dirs=tuple(Path(value) for value in _string_list(rules_table.get("canonical_dirs"))),
         task_board_globs=tuple(_string_list(rules_table.get("task_board_globs"))),
-        core_doc_globs=tuple(
-            _string_list(rules_table.get("core_doc_globs"))
-            or list(DEFAULT_CORE_DOC_GLOBS)
-        ),
-        core_doc_exclude_globs=tuple(
-            _string_list(rules_table.get("core_doc_exclude_globs"))
-            or list(DEFAULT_CORE_DOC_EXCLUDE_GLOBS)
-        ),
-        forbid_core_docs_depend_on_memory=bool(
-            rules_table.get("forbid_core_docs_depend_on_memory", False)
-        ),
+        core_doc_globs=tuple(_string_list(rules_table.get("core_doc_globs")) or list(DEFAULT_CORE_DOC_GLOBS)),
+        core_doc_exclude_globs=tuple(_string_list(rules_table.get("core_doc_exclude_globs")) or list(DEFAULT_CORE_DOC_EXCLUDE_GLOBS)),
+        forbid_core_docs_depend_on_memory=bool(rules_table.get("forbid_core_docs_depend_on_memory", False)),
     )
 
 
@@ -117,9 +100,7 @@ def _is_non_memory_canonical_home(canonical_home: Path, note_path: Path) -> bool
     return canonical_home.parts[:1] != ("memory",)
 
 
-def _audit_memory_doc_ownership(
-    *, target_root: Path, result, force_enforcement: bool = False
-) -> None:
+def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement: bool = False) -> None:
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
     if manifest is None:
         return
@@ -129,10 +110,7 @@ def _audit_memory_doc_ownership(
             result.add(
                 "manual review",
                 target_root / note.path,
-                (
-                    "manifest canonicality must be one of: agent_only, "
-                    "candidate_for_promotion, canonical_elsewhere, deprecated"
-                ),
+                ("manifest canonicality must be one of: agent_only, candidate_for_promotion, canonical_elsewhere, deprecated"),
                 role="memory-manifest",
                 safety="manual",
                 source=note.path.as_posix(),
@@ -172,10 +150,7 @@ def _audit_memory_doc_ownership(
                 source=note.path.as_posix(),
                 category="contract-drift",
             )
-        if (
-            note.preferred_remediation
-            and note.preferred_remediation not in VALID_PREFERRED_REMEDIATION_VALUES
-        ):
+        if note.preferred_remediation and note.preferred_remediation not in VALID_PREFERRED_REMEDIATION_VALUES:
             result.add(
                 "manual review",
                 target_root / note.path,
@@ -185,10 +160,7 @@ def _audit_memory_doc_ownership(
                 source=note.path.as_posix(),
                 category="contract-drift",
             )
-        if (
-            note.elimination_target
-            and note.elimination_target not in VALID_ELIMINATION_TARGET_VALUES
-        ):
+        if note.elimination_target and note.elimination_target not in VALID_ELIMINATION_TARGET_VALUES:
             result.add(
                 "manual review",
                 target_root / note.path,
@@ -198,9 +170,7 @@ def _audit_memory_doc_ownership(
                 source=note.path.as_posix(),
                 category="contract-drift",
             )
-        if note.canonicality == "canonical_elsewhere" and not _is_non_memory_canonical_home(
-            note.canonical_home, note.path
-        ):
+        if note.canonicality == "canonical_elsewhere" and not _is_non_memory_canonical_home(note.canonical_home, note.path):
             result.add(
                 "manual review",
                 target_root / note.path,
@@ -268,9 +238,7 @@ def _audit_memory_doc_ownership(
             )
 
 
-def _iter_core_docs(
-    *, target_root: Path, include_globs: tuple[str, ...], exclude_globs: tuple[str, ...]
-) -> Iterable[Path]:
+def _iter_core_docs(*, target_root: Path, include_globs: tuple[str, ...], exclude_globs: tuple[str, ...]) -> Iterable[Path]:
     seen: set[Path] = set()
     for pattern in include_globs:
         for path in target_root.glob(pattern):
@@ -305,10 +273,14 @@ def _iter_promotion_candidates(
             note_path = target_root / note.path
             if requested and note.path not in requested:
                 continue
-            if note.canonicality not in {
-                "candidate_for_promotion",
-                "canonical_elsewhere",
-            } and not note.improvement_candidate:
+            if (
+                note.canonicality
+                not in {
+                    "candidate_for_promotion",
+                    "canonical_elsewhere",
+                }
+                and not note.improvement_candidate
+            ):
                 continue
             if note.canonicality == "candidate_for_promotion":
                 destination = (
@@ -369,9 +341,7 @@ def _iter_promotion_candidates(
     return candidates
 
 
-def _lookup_manifest_note(
-    manifest: MemoryManifest | None, note_path: Path
-) -> MemoryNoteRecord | None:
+def _lookup_manifest_note(manifest: MemoryManifest | None, note_path: Path) -> MemoryNoteRecord | None:
     if manifest is None:
         return None
     for note in manifest.notes:
@@ -439,47 +409,24 @@ def _collect_improvement_hints(
     relative_str = relative.as_posix()
     lines = text.splitlines()
     line_count = len(lines)
-    imperative_lines = sum(
-        1
-        for line in lines
-        if re.match(r"^\s*(?:-|\*|\d+\.)\s+", line)
-        or line.strip().startswith("`")
-    )
+    imperative_lines = sum(1 for line in lines if re.match(r"^\s*(?:-|\*|\d+\.)\s+", line) or line.strip().startswith("`"))
+    has_failure_entries = _has_concrete_failure_entries(text)
 
     if note is not None:
-        manifest_hint = _manifest_improvement_hint(note)
+        manifest_hint = _manifest_improvement_hint(note, has_failure_entries=has_failure_entries)
         if manifest_hint:
             hints.append(manifest_hint)
 
-    if "memory/mistakes/" in relative_str:
-        hints.append(
-            "a regression test, validation, or lint rule if the recurring failure remains active"
-        )
+    if "memory/mistakes/" in relative_str and has_failure_entries:
+        hints.append("a regression test, validation, or lint rule if the recurring failure remains active")
     if "memory/runbooks/" in relative_str and line_count >= 35 and imperative_lines >= 6:
-        hints.append(
-            "a checked-in skill first, then a repo-owned script or command if the workflow stays mechanical"
-        )
+        hints.append("a checked-in skill first, then a repo-owned script or command if the workflow stays mechanical")
     if "memory/domains/" in relative_str and line_count >= 140:
-        hints.append(
-            (
-                "clearer canonical docs or refactor review if this note keeps "
-                "compensating for a high-discovery-cost subsystem"
-            )
-        )
+        hints.append(("clearer canonical docs or refactor review if this note keeps compensating for a high-discovery-cost subsystem"))
     if relative_str.endswith("memory/index.md") and line_count >= 120:
-        hints.append(
-            (
-                "clearer repo boundaries or note consolidation if routing keeps "
-                "expanding to explain one awkward area"
-            )
-        )
+        hints.append(("clearer repo boundaries or note consolidation if routing keeps expanding to explain one awkward area"))
     if "memory/current/" in relative_str and line_count >= 80 and not for_report:
-        hints.append(
-            (
-                "shrinking planning/status spillover or unresolved structure friction "
-                "before growing current-memory notes further"
-            )
-        )
+        hints.append(("shrinking planning/status spillover or unresolved structure friction before growing current-memory notes further"))
 
     deduped: list[str] = []
     seen: set[str] = set()
@@ -491,16 +438,17 @@ def _collect_improvement_hints(
     return deduped
 
 
-def _manifest_improvement_hint(note: MemoryNoteRecord) -> str:
+def _manifest_improvement_hint(
+    note: MemoryNoteRecord,
+    *,
+    has_failure_entries: bool = True,
+) -> str:
     remediation_map = {
         "docs": "promoting the stable parts into canonical docs",
         "skill": "a checked-in skill for the repeated workflow",
         "script": "a repo-owned script or command if the workflow is stable and mechanical",
         "test": "a regression test that removes the need to remember this failure mode manually",
-        "validation": (
-            "stronger validation or linting so the note stops compensating for "
-            "missing guardrails"
-        ),
+        "validation": ("stronger validation or linting so the note stops compensating for missing guardrails"),
         "refactor": "refactor review or clearer ownership boundaries in the underlying subsystem",
         "code": "encoding the constraint directly in the implementation",
     }
@@ -512,6 +460,9 @@ def _manifest_improvement_hint(note: MemoryNoteRecord) -> str:
     }
 
     parts: list[str] = []
+    if "memory/mistakes/" in note.path.as_posix() and not has_failure_entries:
+        return ""
+
     if note.preferred_remediation:
         parts.append(
             remediation_map.get(
@@ -532,14 +483,20 @@ def _manifest_improvement_hint(note: MemoryNoteRecord) -> str:
         parts.append(note.improvement_note.rstrip("."))
 
     if note.memory_role == "improvement_signal" and not parts:
-        parts.append(
-            (
-                "an upstream repo improvement rather than treating the memory note as "
-                "the long-term endpoint"
-            )
-        )
+        parts.append(("an upstream repo improvement rather than treating the memory note as the long-term endpoint"))
 
     return "; ".join(parts)
+
+
+def _has_concrete_failure_entries(text: str) -> bool:
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("### Failure:"):
+            continue
+        if "<short symptom-first label>" in stripped:
+            continue
+        return True
+    return False
 
 
 def _emit_improvement_pressure(
@@ -599,9 +556,7 @@ def _find_shadow_doc_matches(
             continue
         if not _shadow_doc_paths_related(note_path, doc_path):
             continue
-        shared_terms = sorted(
-            note_tokens & _significant_terms(doc_path.read_text(encoding="utf-8"))
-        )
+        shared_terms = sorted(note_tokens & _significant_terms(doc_path.read_text(encoding="utf-8")))
         if len(shared_terms) >= SHADOW_DOC_MIN_SHARED_TERMS:
             overlaps.append((doc_path, shared_terms))
     return overlaps
@@ -670,20 +625,12 @@ def _find_manifest_matches(
     for note in manifest.notes:
         reasons: list[str] = []
         if surfaces and any(surface in surfaces for surface in note.surfaces):
-            matched = ", ".join(
-                sorted({surface for surface in note.surfaces if surface in surfaces})
-            )
+            matched = ", ".join(sorted({surface for surface in note.surfaces if surface in surfaces}))
             reasons.append(f"manifest surface match ({matched})")
 
         globs = note.stale_when if use_staleness else note.routes_from
         if files and globs:
-            matched_globs = sorted(
-                {
-                    pattern
-                    for pattern in globs
-                    if any(_path_matches_pattern(path, pattern) for path in files)
-                }
-            )
+            matched_globs = sorted({pattern for pattern in globs if any(_path_matches_pattern(path, pattern) for path in files)})
             if matched_globs:
                 reasons.append(f"manifest path match ({', '.join(matched_globs)})")
 
@@ -706,9 +653,7 @@ def _find_manifest_matches(
                 )
                 continue
 
-            recommendation = (
-                "required" if note.task_relevance == "required" else "recommended"
-            )
+            recommendation = "required" if note.task_relevance == "required" else "recommended"
             suggestions.append((recommendation, note.path.as_posix(), reason))
     return suggestions
 
@@ -777,21 +722,13 @@ def _infer_surfaces_from_paths(paths: list[str]) -> set[str]:
         path = raw_path.replace("\\", "/").lower()
         if any(token in path for token in ("test", "/tests/", "_test.", "spec.")):
             surfaces.add("tests")
-        if any(
-            token in path
-            for token in ("deploy", "infra", "docker", "k8s", "terraform", "compose")
-        ):
+        if any(token in path for token in ("deploy", "infra", "docker", "k8s", "terraform", "compose")):
             surfaces.add("runtime")
-        if any(
-            token in path for token in ("api", "route", "contract", "interface", "cli")
-        ):
+        if any(token in path for token in ("api", "route", "contract", "interface", "cli")):
             surfaces.add("api")
         if any(token in path for token in ("search", "retriev", "vector", "index")):
             surfaces.add("retrieval")
-        if any(
-            token in path
-            for token in ("schema", "model", "architect", "design", "invariant")
-        ):
+        if any(token in path for token in ("schema", "model", "architect", "design", "invariant")):
             surfaces.add("architecture")
     return surfaces
 

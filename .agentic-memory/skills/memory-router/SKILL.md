@@ -5,7 +5,7 @@ description: Route to the smallest relevant set of checked-in memory notes for t
 
 # Memory Router
 
-This is a checked-in core skill shipped with the payload. Add repo-specific sibling skills under `memory/skills/` instead of customising this core skill unless the shared reusable procedure itself changed.
+This is a bootstrap-managed core skill shipped with the payload under `.agentic-memory/skills/`. Add repo-specific sibling skills under `memory/skills/` instead of customising this core skill unless the shared reusable procedure itself changed.
 
 Use this skill to select the smallest relevant working set of memory notes before or during implementation.
 
@@ -16,8 +16,8 @@ It helps the agent load memory selectively instead of scanning the whole reposit
 1. Read the routing contract:
    - `AGENTS.md`
    - `memory/index.md`
-   - `memory/system/WORKFLOW.md`
-   - `memory/system/SKILLS.md` when deciding whether a repo-specific skill should be created
+   - `.agentic-memory/WORKFLOW.md`
+   - `.agentic-memory/SKILLS.md` when deciding whether a repo-specific skill should be created
 2. Start with the always-relevant current-memory notes:
    - `memory/current/project-state.md`
    - `memory/current/task-context.md` if present and useful

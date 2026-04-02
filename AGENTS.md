@@ -5,7 +5,7 @@ This file is the local bootstrap contract for agents working in this repository.
 Keep it short, stable, and repo-specific.
 
 <!-- agentic-memory:workflow:start -->
-Read `memory/system/WORKFLOW.md` for shared workflow rules.
+Read `.agentic-memory/WORKFLOW.md` for shared workflow rules.
 <!-- agentic-memory:workflow:end -->
 
 ## Before doing any work
@@ -13,7 +13,7 @@ Read `memory/system/WORKFLOW.md` for shared workflow rules.
 1. Read `memory/index.md`.
 2. Use the user's request to determine what to work on next.
 3. Read only the memory files routed by `memory/index.md` that are relevant to the subsystem you will touch.
-4. Read `memory/system/WORKFLOW.md` only when the policy boundary is unclear.
+4. Read `.agentic-memory/WORKFLOW.md` only when the policy boundary is unclear.
 5. Read repo docs only when routed memory points to them.
 6. Prefer targeted tool checks over broad re-reading when they answer the question faster.
 7. Use local scratch notes only when they help; they are optional support, not part of the system.
@@ -21,13 +21,13 @@ Read `memory/system/WORKFLOW.md` for shared workflow rules.
 Do not rely on transient chat context when the same knowledge should exist in checked-in files.
 
 `memory/index.md` is the routing layer for task-relevant durable knowledge.  
-`memory/system/WORKFLOW.md` is a compact policy shim for the shared operating model.
-`memory/system/SKILLS.md` defines how checked-in `memory/skills/` and bundled bootstrap skills should coexist.
+`.agentic-memory/WORKFLOW.md` is a compact policy shim for the shared operating model.
+`.agentic-memory/SKILLS.md` defines how repo-owned `memory/skills/` and bundled bootstrap skills should coexist.
 
-For day-to-day memory work, use the checked-in skills under `memory/skills/` as the shared repo-local building blocks.
-If a repeatable repo-specific memory procedure is needed, add a new sibling skill under `memory/skills/` instead of editing the shared core skills in place.
-`memory/skills/` is only for skills whose primary purpose is operating on checked-in memory or maintaining the repo's memory system; general non-memory skills do not belong there.
-Treat `memory/system/` and the shipped core skills under `memory/skills/` as agentic-memory-managed files that may be replaced on upgrade; keep repo-specific durable knowledge in other `/memory` notes and repo-specific memory procedures in added sibling skills under `memory/skills/`.
+For day-to-day memory work, use repo-owned skills under `memory/skills/` when present and bundled bootstrap skills under `.agentic-memory/skills/` when the task matches them.
+If a repeatable repo-specific memory procedure is needed, add a new sibling skill under `memory/skills/` instead of editing the bundled core skills in place.
+`memory/skills/` is only for repo-specific skills whose primary purpose is operating on checked-in memory or maintaining the repo's memory system; general non-memory skills do not belong there.
+Treat `.agentic-memory/` and the shipped core skills under `.agentic-memory/skills/` as agentic-memory-managed files that may be replaced on upgrade; keep repo-specific durable knowledge in `/memory` notes and repo-specific memory procedures in added sibling skills under `memory/skills/`.
 
 For this repo, prefer command-targeted checks like `agentic-memory-bootstrap current`, `route`, `sync-memory`, `doctor`, and `verify-payload` when they reduce file reading.
 
@@ -89,7 +89,7 @@ When developing this bootstrap tool in this repository:
 - treat `skills/` in this repo as the source of truth for product skills during development
 - do not assume a bundled installed copy matches the repo; reinstall the package only when intentionally testing the packaged skill path
 - validate and edit skills from the repo paths first, and treat bundled installed copies as potentially stale test artefacts
-- when a change affects the repo's installed memory or workflow contract, update this repo's own `memory/system/VERSION.md` as part of the change rather than leaving the source repo behind the payload
+- when a change affects the repo's installed memory or workflow contract, update this repo's own `.agentic-memory/VERSION.md` as part of the change rather than leaving the source repo behind the payload
 - when a change affects the packaged tool itself, bump the package version in `pyproject.toml` so Git-based installs can pick it up via `uv tool upgrade`
 - after changing the installed payload contract, exercise the installed behavior against this repo itself with the bootstrap tool, not just by editing checked-in source files directly
 - treat `agentic-memory-bootstrap doctor --target .` and the relevant install or upgrade path on this repo as required production testing when the payload or installer behavior changes
@@ -101,6 +101,6 @@ When developing this bootstrap tool in this repository:
 2. Check whether your changes affected any existing memory notes or workflow docs.
 3. Update, deprecate, or remove those notes as needed.
 4. Keep durable notes concise, factual, and de-duplicated.
-5. When a change affects the repo's installed memory or workflow contract, update this repo's own `memory/system/VERSION.md` in the same change.
+5. When a change affects the repo's installed memory or workflow contract, update this repo's own `.agentic-memory/VERSION.md` in the same change.
 6. When a change affects the packaged tool, update `pyproject.toml` in the same change so tool upgrades are visible to package managers.
 7. When the payload or installer behavior changed, run the bootstrap tool against this repo itself as part of verification rather than relying only on direct source-file edits.

@@ -17,9 +17,7 @@ from pathlib import Path
 RE_HEADING = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*$")
 RE_H1 = re.compile(r"^\s{0,3}#\s+(.+?)\s*$")
 RE_LAST_CONFIRMED_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2})\b")
-RE_STATUS_VALUE = re.compile(
-    r"^(Stable|Active|Needs verification|Deprecated)\s*$", re.IGNORECASE
-)
+RE_STATUS_VALUE = re.compile(r"^(Stable|Active|Needs verification|Deprecated)\s*$", re.IGNORECASE)
 
 MEMORY_ROOT = Path("memory")
 MANIFEST_PATH = MEMORY_ROOT / "manifest.toml"
@@ -120,11 +118,7 @@ def _scan_note(path: Path) -> NoteScan:
                 match = RE_LAST_CONFIRMED_DATE.match(stripped)
                 if match:
                     has_valid_last_confirmed_date = True
-                    dates.append(
-                        datetime.strptime(match.group(1), "%Y-%m-%d").replace(
-                            tzinfo=UTC
-                        )
-                    )
+                    dates.append(datetime.strptime(match.group(1), "%Y-%m-%d").replace(tzinfo=UTC))
                 break
 
         if _label_match(line, "verify") or _label_match(line, "verification"):
@@ -146,8 +140,7 @@ def _scan_note(path: Path) -> NoteScan:
         has_load_when=has_load_when,
         has_review_when=has_review_when,
         has_failure_signals=has_failure_signals,
-        has_needs_verification=(status_value or "").strip().lower()
-        == "needs verification",
+        has_needs_verification=(status_value or "").strip().lower() == "needs verification",
         newest_confirmed_date=max(dates) if dates else None,
     )
 
@@ -186,77 +179,37 @@ def main() -> int:
     manifest_notes = _load_manifest_note_entries(MANIFEST_PATH)
     stale_before = datetime.now(UTC) - timedelta(days=STALE_DAYS)
 
-    missing_last_confirmed = sorted(
-        _render_path(scan.path) for scan in scans if not scan.has_last_confirmed
-    )
+    missing_last_confirmed = sorted(_render_path(scan.path) for scan in scans if not scan.has_last_confirmed)
     invalid_last_confirmed = sorted(
-        _render_path(scan.path)
-        for scan in scans
-        if scan.has_last_confirmed and not scan.has_valid_last_confirmed_date
+        _render_path(scan.path) for scan in scans if scan.has_last_confirmed and not scan.has_valid_last_confirmed_date
     )
-    missing_verify = sorted(
-        _render_path(scan.path) for scan in scans if not scan.has_verify
-    )
-    missing_load = sorted(
-        _render_path(scan.path) for scan in scans if not scan.has_load_when
-    )
-    missing_review = sorted(
-        _render_path(scan.path) for scan in scans if not scan.has_review_when
-    )
-    missing_failure = sorted(
-        _render_path(scan.path) for scan in scans if not scan.has_failure_signals
-    )
+    missing_verify = sorted(_render_path(scan.path) for scan in scans if not scan.has_verify)
+    missing_load = sorted(_render_path(scan.path) for scan in scans if not scan.has_load_when)
+    missing_review = sorted(_render_path(scan.path) for scan in scans if not scan.has_review_when)
+    missing_failure = sorted(_render_path(scan.path) for scan in scans if not scan.has_failure_signals)
     missing_trigger = sorted(
-        {
-            _render_path(scan.path)
-            for scan in scans
-            if not (
-                scan.has_load_when and scan.has_review_when and scan.has_failure_signals
-            )
-        }
+        {_render_path(scan.path) for scan in scans if not (scan.has_load_when and scan.has_review_when and scan.has_failure_signals)}
     )
-    needs_verification = sorted(
-        _render_path(scan.path) for scan in scans if scan.has_needs_verification
-    )
+    needs_verification = sorted(_render_path(scan.path) for scan in scans if scan.has_needs_verification)
     old_confirmations = sorted(
-        _render_path(scan.path)
-        for scan in scans
-        if scan.newest_confirmed_date and scan.newest_confirmed_date < stale_before
+        _render_path(scan.path) for scan in scans if scan.newest_confirmed_date and scan.newest_confirmed_date < stale_before
     )
-    oversized_files = sorted(
-        f"{_render_path(scan.path)} ({scan.line_count} lines)"
-        for scan in scans
-        if scan.line_count > MAX_LINES
-    )
+    oversized_files = sorted(f"{_render_path(scan.path)} ({scan.line_count} lines)" for scan in scans if scan.line_count > MAX_LINES)
 
     title_map: dict[str, list[str]] = defaultdict(list)
     for scan in scans:
         if scan.title:
             title_map[scan.title.lower()].append(_render_path(scan.path))
-    duplicate_titles = sorted(
-        f"{paths[0]} (and {len(paths) - 1} more)"
-        for paths in title_map.values()
-        if len(paths) > 1
-    )
-    missing_manifest_entries = sorted(
-        _render_path(scan.path)
-        for scan in scans
-        if _render_path(scan.path) not in manifest_notes
-    )
-    manifest_records_for_missing_notes = sorted(
-        note_path for note_path in manifest_notes if not Path(note_path).exists()
-    )
+    duplicate_titles = sorted(f"{paths[0]} (and {len(paths) - 1} more)" for paths in title_map.values() if len(paths) > 1)
+    missing_manifest_entries = sorted(_render_path(scan.path) for scan in scans if _render_path(scan.path) not in manifest_notes)
+    manifest_records_for_missing_notes = sorted(note_path for note_path in manifest_notes if not Path(note_path).exists())
     canonical_home_map: dict[str, list[str]] = defaultdict(list)
     for note_path, raw in manifest_notes.items():
         if not isinstance(raw, dict):
             continue
         canonical_home = str(raw.get("canonical_home", note_path))
         canonical_home_map[canonical_home].append(note_path)
-    shared_canonical_homes = sorted(
-        f"{home} <- {', '.join(paths)}"
-        for home, paths in canonical_home_map.items()
-        if len(paths) > 1
-    )
+    shared_canonical_homes = sorted(f"{home} <- {', '.join(paths)}" for home, paths in canonical_home_map.items() if len(paths) > 1)
 
     print("Memory freshness report")
     _print_section("Needs verification", needs_verification)
@@ -271,9 +224,7 @@ def main() -> int:
     _print_section("Oversized files", oversized_files)
     _print_section("Duplicate titles", duplicate_titles)
     _print_section("Missing manifest entries", missing_manifest_entries)
-    _print_section(
-        "Manifest records for missing notes", manifest_records_for_missing_notes
-    )
+    _print_section("Manifest records for missing notes", manifest_records_for_missing_notes)
     _print_section("Shared canonical homes", shared_canonical_homes)
     return 0
 

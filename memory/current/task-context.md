@@ -14,8 +14,8 @@ Active
 - `README.md`
 - `memory/current/project-state.md`
 - `memory/index.md`
-- `memory/system/WORKFLOW.md`
-- `memory/system/VERSION.md`
+- `.agentic-memory/WORKFLOW.md`
+- `.agentic-memory/VERSION.md`
 - `bootstrap/AGENTS.md`
 - `bootstrap/README.md`
 

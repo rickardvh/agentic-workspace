@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from repo_memory_bootstrap._installer_output import (
+    _agents_has_current_workflow_pointer,
     _embeds_shared_workflow_rules,
     _has_legacy_bootstrap_agents_prose,
     _has_placeholders,
@@ -13,16 +14,22 @@ from repo_memory_bootstrap._installer_output import (
 from repo_memory_bootstrap._installer_shared import (
     AGENTS_PATH,
     AUDIT_SCRIPT_PATH,
+    BOOTSTRAP_WORKSPACE_ROOT,
+    LEGACY_BOOTSTRAP_WORKSPACE_ROOT,
+    LEGACY_SHIPPED_SKILLS_ROOT,
+    LEGACY_SYSTEM_ROOT,
+    LEGACY_UPGRADE_SOURCE_PATH,
     OBSOLETE_SHARED_FILES,
     OPTIONAL_APPEND_DESCRIPTIONS,
     OPTIONAL_APPEND_TARGETS,
+    SHIPPED_SKILLS_ROOT,
     UPGRADE_SOURCE_PATH,
     PayloadEntry,
 )
 
 
 def _payload_entries(
-    source_root: Path, *, include_bootstrap_workspace: bool = True
+    source_root: Path, *, include_bootstrap_workspace: bool = True, target_layout: str = "managed-root"
 ) -> list[PayloadEntry]:
     entries: list[PayloadEntry] = []
     file_roots = [AGENTS_PATH, AUDIT_SCRIPT_PATH, Path("memory")]
@@ -45,10 +52,9 @@ def _payload_entries(
         for child in sorted(source_path.rglob("*")):
             if child.is_dir():
                 continue
-            relative_path = child.relative_to(source_root)
-            if not include_bootstrap_workspace and relative_path.as_posix().startswith(
-                "memory/bootstrap/"
-            ):
+            relative_path = _target_relative_path(child.relative_to(source_root), target_layout=target_layout)
+            workspace_root = BOOTSTRAP_WORKSPACE_ROOT if target_layout != "legacy" else LEGACY_BOOTSTRAP_WORKSPACE_ROOT
+            if not include_bootstrap_workspace and relative_path.as_posix().startswith(workspace_root.as_posix()):
                 continue
             role = _classify_role(relative_path)
             entries.append(
@@ -63,17 +69,30 @@ def _payload_entries(
     return entries
 
 
+def _target_relative_path(relative_path: Path, *, target_layout: str) -> Path:
+    if target_layout == "legacy":
+        return relative_path
+    path_str = relative_path.as_posix()
+    if path_str.startswith("memory/system/"):
+        return Path(".agentic-memory") / relative_path.relative_to(LEGACY_SYSTEM_ROOT)
+    if path_str.startswith("memory/bootstrap/"):
+        return Path(".agentic-memory/bootstrap") / relative_path.relative_to(LEGACY_BOOTSTRAP_WORKSPACE_ROOT)
+    if path_str.startswith("memory/skills/"):
+        return Path(".agentic-memory/skills") / relative_path.relative_to(LEGACY_SHIPPED_SKILLS_ROOT)
+    return relative_path
+
+
 def _classify_role(relative_path: Path) -> str:
     path_str = relative_path.as_posix()
     if relative_path == AGENTS_PATH:
         return "local-entrypoint"
     if relative_path == AUDIT_SCRIPT_PATH:
         return "shared-replaceable"
-    if path_str.startswith("memory/system/"):
+    if path_str.startswith(".agentic-memory/"):
         return "shared-replaceable"
-    if path_str.startswith("memory/bootstrap/"):
+    if path_str.startswith(BOOTSTRAP_WORKSPACE_ROOT.as_posix()):
         return "shared-replaceable"
-    if path_str.startswith("memory/skills/"):
+    if path_str.startswith(SHIPPED_SKILLS_ROOT.as_posix()):
         return "shared-replaceable"
     if path_str.startswith("memory/templates/"):
         return "shared-template"
@@ -113,15 +132,16 @@ def _plan_from_entries(
     apply_local_entrypoint: bool,
     force: bool,
     include_bootstrap_workspace: bool,
+    target_layout: str,
 ) -> None:
     for entry in _payload_entries(
-        source_root, include_bootstrap_workspace=include_bootstrap_workspace
+        source_root,
+        include_bootstrap_workspace=include_bootstrap_workspace,
+        target_layout=target_layout,
     ):
         destination = target_root / entry.relative_path
         rendered = _render_text(entry.source_path, substitutions)
-        existing = (
-            destination.read_text(encoding="utf-8") if destination.exists() else None
-        )
+        existing = destination.read_text(encoding="utf-8") if destination.exists() else None
 
         if not destination.exists():
             _write_payload_file(
@@ -143,6 +163,7 @@ def _plan_from_entries(
                 result=result,
                 apply=apply,
                 apply_local_entrypoint=apply_local_entrypoint,
+                target_layout=target_layout,
             )
             continue
 
@@ -157,6 +178,7 @@ def _plan_from_entries(
                 apply_local_entrypoint=apply_local_entrypoint,
                 force=force,
                 doctor_mode=(mode == "doctor"),
+                target_layout=target_layout,
             )
             continue
 
@@ -201,6 +223,7 @@ def _plan_existing_file_for_adopt(
     result,
     apply: bool,
     apply_local_entrypoint: bool,
+    target_layout: str,
 ) -> None:
     if entry.role == "local-entrypoint":
         _plan_agents_entrypoint(
@@ -210,6 +233,7 @@ def _plan_existing_file_for_adopt(
             apply=apply,
             apply_local_entrypoint=apply_local_entrypoint,
             doctor_mode=False,
+            target_layout=target_layout,
         )
         return
 
@@ -228,10 +252,7 @@ def _plan_existing_file_for_adopt(
         result.add(
             "manual review",
             destination,
-            (
-                "shared file differs; adoption leaves existing file untouched because "
-                "it is repo-owned and may be customised"
-            ),
+            ("shared file differs; adoption leaves existing file untouched because it is repo-owned and may be customised"),
             role=entry.role,
             safety="manual",
             source=str(entry.relative_path),
@@ -241,10 +262,7 @@ def _plan_existing_file_for_adopt(
     result.add(
         "skipped",
         destination,
-        (
-            "repo-owned file left untouched during adoption; safe to keep as-is "
-            "unless you want to replace it with the packaged payload"
-        ),
+        ("repo-owned file left untouched during adoption; safe to keep as-is unless you want to replace it with the packaged payload"),
         role=entry.role,
         safety="safe",
         source=str(entry.relative_path),
@@ -262,8 +280,10 @@ def _plan_existing_file_for_upgrade(
     apply_local_entrypoint: bool,
     force: bool,
     doctor_mode: bool,
+    target_layout: str,
 ) -> None:
-    if entry.relative_path == UPGRADE_SOURCE_PATH:
+    legacy_upgrade_source_path = _target_relative_path(LEGACY_UPGRADE_SOURCE_PATH, target_layout=target_layout)
+    if entry.relative_path == UPGRADE_SOURCE_PATH or entry.relative_path == legacy_upgrade_source_path:
         if _is_valid_upgrade_source_text(existing):
             result.add(
                 "current",
@@ -305,6 +325,7 @@ def _plan_existing_file_for_upgrade(
             apply=apply,
             apply_local_entrypoint=apply_local_entrypoint,
             doctor_mode=doctor_mode,
+            target_layout=target_layout,
         )
         return
 
@@ -322,11 +343,7 @@ def _plan_existing_file_for_upgrade(
 
     if entry.role == "seed-note":
         if _has_placeholders(existing) or force:
-            detail = (
-                "seed note still contains placeholders"
-                if _has_placeholders(existing)
-                else "forced replacement"
-            )
+            detail = "seed note still contains placeholders" if _has_placeholders(existing) else "forced replacement"
             _write_text(
                 destination,
                 rendered,
@@ -341,10 +358,7 @@ def _plan_existing_file_for_upgrade(
             result.add(
                 "customised",
                 destination,
-                (
-                    "starter note differs from payload; this is expected if the "
-                    "repository has localised the seed note"
-                ),
+                ("starter note differs from payload; this is expected if the repository has localised the seed note"),
                 role=entry.role,
                 safety="safe",
                 source=str(entry.relative_path),
@@ -354,10 +368,7 @@ def _plan_existing_file_for_upgrade(
             result.add(
                 "manual review",
                 destination,
-                (
-                    "starter note looks customised; keep as-is if the localised "
-                    "content is intentional, or replace it only after review"
-                ),
+                ("starter note looks customised; keep as-is if the localised content is intentional, or replace it only after review"),
                 role=entry.role,
                 safety="manual",
                 source=str(entry.relative_path),
@@ -367,10 +378,7 @@ def _plan_existing_file_for_upgrade(
     result.add(
         "skipped",
         destination,
-        (
-            "repo-owned file left untouched because it is already sufficient for the "
-            "current install state"
-        ),
+        ("repo-owned file left untouched because it is already sufficient for the current install state"),
         role=entry.role,
         safety="safe",
         source=str(entry.relative_path),
@@ -385,15 +393,11 @@ def _plan_agents_entrypoint(
     apply: bool,
     apply_local_entrypoint: bool,
     doctor_mode: bool,
+    target_layout: str,
 ) -> None:
-    has_reference = "memory/system/WORKFLOW.md" in existing
     embeds_shared_rules = _embeds_shared_workflow_rules(existing)
 
-    if (
-        has_reference
-        and "<!-- agentic-memory:workflow:start -->" in existing
-        and not embeds_shared_rules
-    ):
+    if _agents_has_current_workflow_pointer(existing) and "<!-- agentic-memory:workflow:start -->" in existing and not embeds_shared_rules:
         result.add(
             "current",
             destination,
@@ -426,10 +430,7 @@ def _plan_agents_entrypoint(
             "would patch",
             role="local-entrypoint",
             source=str(AGENTS_PATH),
-            detail=(
-                "added or refreshed the canonical workflow pointer block near the top "
-                "of AGENTS.md"
-            ),
+            detail=("added or refreshed the canonical workflow pointer block near the top of AGENTS.md"),
         )
         if embeds_shared_rules:
             result.add(
@@ -446,10 +447,7 @@ def _plan_agents_entrypoint(
             )
         return
 
-    detail = (
-        "missing canonical workflow pointer block near the top of AGENTS.md; "
-        "use --apply-local-entrypoint to add or refresh it safely"
-    )
+    detail = "missing canonical workflow pointer block near the top of AGENTS.md; use --apply-local-entrypoint to add or refresh it safely"
     if embeds_shared_rules:
         detail = (
             "older AGENTS.md still embeds shared workflow rules; "
@@ -532,9 +530,7 @@ def _plan_optional_appends(
     for target_file, fragment_path in OPTIONAL_APPEND_TARGETS.items():
         destination = target_root / target_file
         fragment = (source_root / fragment_path).read_text(encoding="utf-8").strip()
-        fragment_description = OPTIONAL_APPEND_DESCRIPTIONS.get(
-            target_file, f"optional fragment from {fragment_path.name}"
-        )
+        fragment_description = OPTIONAL_APPEND_DESCRIPTIONS.get(target_file, f"optional fragment from {fragment_path.name}")
         if not destination.exists():
             result.add(
                 "skipped" if not status_only else "missing",
@@ -558,9 +554,7 @@ def _plan_optional_appends(
             )
             continue
 
-        equivalent_detail = _equivalent_optional_fragment_detail(
-            target_file=target_file, existing=existing, fragment=fragment
-        )
+        equivalent_detail = _equivalent_optional_fragment_detail(target_file=target_file, existing=existing, fragment=fragment)
         if equivalent_detail is not None:
             result.add(
                 "current" if status_only else "skipped",
@@ -707,9 +701,7 @@ def _prune_empty_parents(start: Path, *, stop: Path) -> None:
         current = current.parent
 
 
-def _equivalent_optional_fragment_detail(
-    *, target_file: Path, existing: str, fragment: str
-) -> str | None:
+def _equivalent_optional_fragment_detail(*, target_file: Path, existing: str, fragment: str) -> str | None:
     if target_file != Path("Makefile"):
         return None
 
@@ -730,12 +722,7 @@ def _extract_make_targets(text: str) -> set[str]:
     targets: set[str] = set()
     for raw_line in text.splitlines():
         line = raw_line.strip()
-        if (
-            not line
-            or line.startswith("\t")
-            or line.startswith("#")
-            or "=" in line.split(":", 1)[0]
-        ):
+        if not line or line.startswith("\t") or line.startswith("#") or "=" in line.split(":", 1)[0]:
             continue
         match = re.match(r"^([A-Za-z0-9_.-]+(?:\s+[A-Za-z0-9_.-]+)*)\s*:(?![=])", line)
         if not match:

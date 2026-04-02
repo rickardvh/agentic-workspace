@@ -11,11 +11,11 @@ It is intended to be copied into an existing repository to provide:
 - `AGENTS.md` as the slim local bootstrap entrypoint
 - `memory/` as durable checked-in technical memory
 - `memory/manifest.toml` as optional machine-readable memory metadata
-- `memory/bootstrap/` as a temporary bootstrap workspace for install and adopt completion
-- `memory/skills/` as checked-in core memory skills for repo-local memory workflows
-- `memory/system/WORKFLOW.md` as the shared reusable memory workflow rules
-- `memory/system/SKILLS.md` as the shared skill-boundary guidance
-- `memory/system/VERSION.md` as the installed bootstrap version marker
+- `.agentic-memory/bootstrap/` as a temporary bootstrap workspace for install and adopt completion
+- `.agentic-memory/skills/` as bootstrap-managed shared memory skills
+- `.agentic-memory/WORKFLOW.md` as the shared reusable memory workflow rules
+- `.agentic-memory/SKILLS.md` as the shared skill-boundary guidance
+- `.agentic-memory/VERSION.md` as the installed bootstrap version marker
 - `memory/current/project-state.md` as a short human-readable overview
 - `memory/current/task-context.md` as optional checked-in continuation compression
 - an advisory memory freshness audit
@@ -27,7 +27,7 @@ Repeatable workflow-like actions should live in optional skills rather than expa
 
 Temporary bootstrap workspace files are part of the payload so install and adopt can hand off to repo-local lifecycle skills. They are meant to be removed after bootstrap work is complete.
 
-The CLI around this payload can also inspect the current-memory surface, suggest relevant notes for touched files, use manifest-aware routing when `memory/manifest.toml` is present, resolve upgrade source from the product-managed `memory/system/UPGRADE-SOURCE.toml` record, and verify payload consistency for maintainers and agent workflows.
+The CLI around this payload can also inspect the current-memory surface, suggest relevant notes for touched files, use manifest-aware routing when `memory/manifest.toml` is present, resolve upgrade source from the product-managed `.agentic-memory/UPGRADE-SOURCE.toml` record, and verify payload consistency for maintainers and agent workflows.
 
 Treat the packaged memory notes as a starting cache of reusable operating knowledge, not an archive to expand without limit.
 Use them when they save rediscovery cost; avoid adding notes that merely restate code or transient task chatter.
@@ -63,8 +63,8 @@ Do not install maintainer-only repo docs or implementation notes by default.
 ## Recommended installation order
 
 1. Copy `AGENTS.md`.
-2. Copy `memory/`, including `memory/system/WORKFLOW.md`, `memory/system/SKILLS.md`, `memory/current/project-state.md`, and `memory/current/task-context.md`.
-3. Copy `memory/skills/`.
+2. Copy `memory/`, including `memory/current/project-state.md` and `memory/current/task-context.md`.
+3. Copy `.agentic-memory/`.
 4. Optionally merge the workflow fragments.
 5. Run `scripts/check/check_memory_freshness.py`.
 
@@ -84,16 +84,16 @@ The installer can also fill these placeholders when you pass the matching explic
 
 Delete unused routing examples once the target repository has concrete notes.
 
-`AGENTS.md` should stay short and point to `memory/system/WORKFLOW.md` for the shared operating model.
+`AGENTS.md` should stay short and point to `.agentic-memory/WORKFLOW.md` for the shared operating model.
 Bootstrap should modify `AGENTS.md` only through the managed workflow pointer block. Repo-specific `AGENTS.md` prose outside that block is repo-owned and should not be treated as shared upgradeable guidance.
 
-This bootstrap is planning-system agnostic. `/memory` owns durable technical knowledge, `memory/current/project-state.md` is the overview note, `memory/current/task-context.md` is optional checked-in continuation compression, `memory/skills/` holds the checked-in core memory skills that repos can extend with their own sibling memory skills, and `memory/bootstrap/` is a temporary bootstrap workspace for install and adopt lifecycle completion only.
+This bootstrap is planning-system agnostic. `/memory` owns durable technical knowledge, `memory/current/project-state.md` is the overview note, `memory/current/task-context.md` is optional checked-in continuation compression, repo-owned memory skills can live under `memory/skills/`, and `.agentic-memory/` is the bootstrap-managed surface for shared workflow rules, shipped skills, and temporary bootstrap workspace files.
 
-Bundled product skills should stay limited to bootstrap lifecycle operations. Repo-local memory procedures should live in checked-in `memory/skills/`. General non-memory skills should not.
+Bundled product skills should stay limited to bootstrap lifecycle operations. Repo-local memory procedures should live in repo-owned `memory/skills/`. General non-memory skills should not.
 
 Ownership split:
 
-- bootstrap-managed and upgrade-replaceable: the workflow pointer block in `AGENTS.md`, `memory/system/`, the shipped core skill directories under `memory/skills/`, `memory/bootstrap/`, and other shared replaceable payload files
+- bootstrap-managed and upgrade-replaceable: the workflow pointer block in `AGENTS.md`, `.agentic-memory/`, and other shared replaceable payload files
 - repo-owned and expected to diverge: `AGENTS.md` content outside the managed pointer block, repo-added sibling skills under `memory/skills/`, and ordinary notes outside the product-managed shared directories
 
 `memory/current/project-state.md` should stay aggressively summary-shaped: current focus, recent meaningful progress, blockers, and a few high-value notes are usually enough. If it starts reading like a ledger, backlog, tranche history, or changelog, compress it.
@@ -166,7 +166,7 @@ Ask one more question before expanding a note: what repo change would let this n
 - decide who updates memory when durable knowledge changes
 - decide which routing metadata fields the repo will maintain
 
-`memory/system/VERSION.md` is the machine-readable version marker used for deterministic upgrades.
+`.agentic-memory/VERSION.md` is the machine-readable version marker used for deterministic upgrades.
 
 ## Upgrade model
 
@@ -177,7 +177,7 @@ Prefer this flow for existing or older installs:
 3. Apply the minimal-safe upgrade plan.
 4. Use `--apply-local-entrypoint` only when you want the installer to patch `AGENTS.md`.
 
-Upgrade is normally triggered through the checked-in `memory-upgrade` skill under `memory/skills/`, which runs the packaged upgrade implementation using the resolved source record in `memory/system/UPGRADE-SOURCE.toml`. Temporary bootstrap workspace files are for install and adopt lifecycle completion, not the primary upgrade path.
+Upgrade is normally triggered through the checked-in `memory-upgrade` skill under `.agentic-memory/skills/`, which runs the packaged upgrade implementation using the resolved source record in `.agentic-memory/UPGRADE-SOURCE.toml`. Temporary bootstrap workspace files are for install and adopt lifecycle completion, not the primary upgrade path.
 
 Use `agentic-memory-bootstrap list-files` to preview the packaged files that the installer exposes.
 Use `agentic-memory-bootstrap promotion-report --target <repo>` to identify notes that should likely be promoted into canonical docs or reviewed as elimination candidates.
@@ -191,6 +191,6 @@ A later automation script should:
 - merge append-only fragments into existing files
 - replace placeholders or leave them for a human to fill in
 - avoid overwriting existing repo-specific memory notes blindly
-- treat `memory/system/VERSION.md` as the installed system version marker
+- treat `.agentic-memory/VERSION.md` as the installed system version marker
 - run the freshness audit after installation
 - optionally enforce repo-local policy that core docs must not depend on memory

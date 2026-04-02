@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import shutil
+from pathlib import Path
 
 from repo_memory_bootstrap import __version__
 from repo_memory_bootstrap.installer import (
@@ -11,12 +12,14 @@ from repo_memory_bootstrap.installer import (
     check_current_memory,
     cleanup_bootstrap_workspace,
     collect_status,
+    detect_bootstrap_layout,
     doctor_bootstrap,
     format_actions,
     format_result_json,
     install_bootstrap,
     list_bundled_skills,
     list_payload_files,
+    migrate_layout,
     promotion_report,
     resolve_upgrade_source,
     route_memory,
@@ -80,6 +83,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_project_metadata_arguments(upgrade_parser)
     _add_format_argument(upgrade_parser)
+
+    migrate_parser = subparsers.add_parser(
+        "migrate-layout",
+        help="Move bootstrap-managed files from the legacy memory layout into `.agentic-memory/` conservatively.",
+    )
+    _add_target_arguments(migrate_parser)
+    migrate_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show the layout migration plan without writing files.",
+    )
+    _add_format_argument(migrate_parser)
 
     uninstall_parser = subparsers.add_parser("uninstall", help="Remove bootstrap-managed files conservatively.")
     _add_target_arguments(uninstall_parser)
@@ -235,23 +250,19 @@ def _add_format_argument(command_parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _install_kwargs(args: argparse.Namespace) -> dict[str, object]:
-    return {
-        "target": getattr(args, "target", None),
-        "dry_run": getattr(args, "dry_run", False),
-        "force": getattr(args, "force", False),
-        "project_name": getattr(args, "project_name", None),
-        "project_purpose": getattr(args, "project_purpose", None),
-        "key_repo_docs": getattr(args, "key_repo_docs", None),
-        "key_subsystems": getattr(args, "key_subsystems", None),
-        "primary_build_command": getattr(args, "primary_build_command", None),
-        "primary_test_command": getattr(args, "primary_test_command", None),
-        "other_key_commands": getattr(args, "other_key_commands", None),
-    }
-
-
 def _handle_install(args: argparse.Namespace) -> int:
-    result = install_bootstrap(**_install_kwargs(args))
+    result = install_bootstrap(
+        target=args.target,
+        dry_run=args.dry_run,
+        force=args.force,
+        project_name=args.project_name,
+        project_purpose=args.project_purpose,
+        key_repo_docs=args.key_repo_docs,
+        key_subsystems=args.key_subsystems,
+        primary_build_command=args.primary_build_command,
+        primary_test_command=args.primary_test_command,
+        other_key_commands=args.other_key_commands,
+    )
     _emit_result(result, output_format=args.format, include_install_summary=True)
     return 0
 
@@ -288,6 +299,11 @@ def _handle_upgrade(args: argparse.Namespace) -> int:
         other_key_commands=args.other_key_commands,
     )
     _emit_result(result, output_format=args.format)
+    return 0
+
+
+def _handle_migrate_layout(args: argparse.Namespace) -> int:
+    _emit_result(migrate_layout(target=args.target, dry_run=args.dry_run), output_format=args.format)
     return 0
 
 
@@ -389,6 +405,7 @@ COMMAND_HANDLERS = {
     "init": _handle_install,
     "adopt": _handle_adopt,
     "upgrade": _handle_upgrade,
+    "migrate-layout": _handle_migrate_layout,
     "uninstall": _handle_uninstall,
     "doctor": _handle_doctor,
     "status": _handle_status,
@@ -472,10 +489,7 @@ def _print_install_summary(result) -> None:
         "or adopt lifecycle work, then run `agentic-memory-bootstrap bootstrap-cleanup --target "
         "<repo>` when that work is complete."
     )
-    print(
-        "- Treat the shipped core skill directories under memory/skills/ as bootstrap-managed, "
-        "and add repo-specific sibling skills there when a local memory workflow is worth reusing."
-    )
+    print("- Treat `.agentic-memory/` as the bootstrap-managed surface, and keep repo-specific memory procedures outside it.")
     print("- Keep memory/current/project-state.md as a short overview note, not a task list.")
     print(
         "- Populate memory/current/task-context.md only when active work would benefit from "
@@ -522,8 +536,8 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
             f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out "
-            f"that the shipped core skill directories under `{target_root}/memory/skills` are "
-            "bootstrap-managed and repo-specific memory workflows should be added there as sibling skills."
+            f"that `{target_root}/.agentic-memory/` is the bootstrap-managed surface while repo-owned "
+            "memory notes stay under `memory/`."
         )
     if command == "adopt":
         return (
@@ -532,8 +546,8 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
             f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out "
-            f"that the shipped core skill directories under `{target_root}/memory/skills` are "
-            "bootstrap-managed and repo-specific memory workflows should be added there as sibling skills."
+            f"that `{target_root}/.agentic-memory/` is the bootstrap-managed surface while repo-owned "
+            "memory notes stay under `memory/`."
         )
     if command == "populate":
         return (
@@ -546,7 +560,7 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
     if command == "upgrade":
         return (
             "Do not ask the user to install or clone anything locally first. "
-            f"Use the checked-in `memory-upgrade` skill under `{target_root}/memory/skills/`. "
+            f"Use the checked-in `memory-upgrade` skill under `{_managed_skills_path(target)}/`. "
             "It should use the recorded upgrade source automatically, run the packaged upgrade flow for this "
             "repo, prefer the installed `agentic-memory-bootstrap` CLI when available, otherwise fall back to "
             f"`{upgrade_runner} upgrade --target <repo>`, and report any conservative manual-review items."
@@ -592,6 +606,14 @@ def _target_args(target: str | None) -> str:
 def _bootstrap_skills_path(target: str | None) -> str:
     target_root = target or "/path/to/repo"
     return f"{target_root}/{BOOTSTRAP_WORKSPACE_ROOT.as_posix()}/skills"
+
+
+def _managed_skills_path(target: str | None) -> str:
+    target_root = target or "/path/to/repo"
+    if target and Path(target).exists():
+        if detect_bootstrap_layout(Path(target).resolve()) == "legacy":
+            return f"{target_root}/memory/skills"
+    return f"{target_root}/.agentic-memory/skills"
 
 
 def _runner_command_for_local_source(source_ref: str) -> str:

@@ -26,7 +26,7 @@ Quick trigger guide:
 
 Use these as shared building blocks for repo-local memory work.
 
-When a repository needs a local memory workflow beyond these, add a new sibling skill under `memory/skills/` instead of editing the shared core skills unless the reusable shared procedure itself changed.
+These shipped shared skills are installed under `.agentic-memory/skills/`. When a repository needs a local memory workflow beyond these, add a repo-owned sibling skill under `memory/skills/` instead of editing the shared core skills unless the reusable shared procedure itself changed.
 
 Keep repo-specific skills procedural and concise. Put durable repo facts in `/memory`, then have the skill operate on those files.
 Only put memory-facing skills here. General non-memory skills belong elsewhere.

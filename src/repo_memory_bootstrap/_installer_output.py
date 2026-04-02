@@ -17,6 +17,9 @@ from repo_memory_bootstrap._installer_shared import (
     DATE_RE,
     EMBEDDED_WORKFLOW_HEADINGS,
     LEGACY_BOOTSTRAP_AGENTS_PHRASES,
+    LEGACY_UPGRADE_SOURCE_PATH,
+    LEGACY_VERSION_PATH,
+    LEGACY_WORKFLOW_PATH,
     PLACEHOLDER_RE,
     UPGRADE_SOURCE_PATH,
     VERSION_PATH,
@@ -57,9 +60,7 @@ def build_substitutions(
 
 
 def detect_install_mode(target_root: Path) -> str:
-    present_count = sum(
-        1 for marker in AGENT_ROOT_MARKERS if (target_root / marker).exists()
-    )
+    present_count = sum(1 for marker in AGENT_ROOT_MARKERS if (target_root / marker).exists())
     if present_count == 0:
         return "bootstrap"
     if present_count == len(AGENT_ROOT_MARKERS):
@@ -70,11 +71,7 @@ def detect_install_mode(target_root: Path) -> str:
 def format_actions(actions: Iterable, target_root: Path) -> list[str]:
     lines: list[str] = []
     for action in actions:
-        relative_path = (
-            action.path.relative_to(target_root)
-            if action.path.is_relative_to(target_root)
-            else action.path
-        )
+        relative_path = action.path.relative_to(target_root) if action.path.is_relative_to(target_root) else action.path
         details: list[str] = []
         if action.detail:
             details.append(action.detail)
@@ -98,9 +95,17 @@ def _new_result(target_root: Path, *, dry_run: bool, message: str):
 
     result = InstallResult(target_root=target_root, dry_run=dry_run)
     result.mode = detect_install_mode(target_root)
-    result.detected_version = _read_installed_version(target_root / VERSION_PATH)
+    result.detected_version = _read_installed_version(_existing_version_path(target_root))
     result.message = message
     return result
+
+
+def _existing_version_path(target_root: Path) -> Path:
+    preferred = target_root / VERSION_PATH
+    if preferred.exists():
+        return preferred
+    legacy = target_root / LEGACY_VERSION_PATH
+    return legacy if legacy.exists() else preferred
 
 
 def _read_installed_version(path: Path) -> int | None:
@@ -116,19 +121,14 @@ def _has_placeholders(text: str) -> bool:
     return bool(PLACEHOLDER_RE.search(text))
 
 
-def _infer_action_category(
-    *, kind: str, path: Path, detail: str, role: str, safety: str
-) -> str:
+def _infer_action_category(*, kind: str, path: Path, detail: str, role: str, safety: str) -> str:
     detail_lower = detail.lower()
     path_str = path.as_posix()
     if kind == "customised":
         return "customisation-present"
     if "placeholder" in detail_lower:
         return "placeholder-review"
-    if any(
-        path_str.endswith(current_path.as_posix())
-        for current_path in CURRENT_MEMORY_BASELINE
-    ):
+    if any(path_str.endswith(current_path.as_posix()) for current_path in CURRENT_MEMORY_BASELINE):
         if kind in {"missing", "manual review"}:
             return "current-memory-review"
     if role in {"payload-contract", "local-entrypoint"} or role.startswith("shared-"):
@@ -170,12 +170,8 @@ def _current_task_staleness_reason(text: str) -> str | None:
                     continue
                 date_match = DATE_RE.match(stripped)
                 if date_match:
-                    confirmed = datetime.strptime(
-                        date_match.group(1), "%Y-%m-%d"
-                    ).replace(tzinfo=UTC)
-                    if confirmed < datetime.now(UTC) - timedelta(
-                        days=CURRENT_TASK_STALE_DAYS
-                    ):
+                    confirmed = datetime.strptime(date_match.group(1), "%Y-%m-%d").replace(tzinfo=UTC)
+                    if confirmed < datetime.now(UTC) - timedelta(days=CURRENT_TASK_STALE_DAYS):
                         return (
                             f"task-context note has not been confirmed in over "
                             f"{CURRENT_TASK_STALE_DAYS} days; "
@@ -202,12 +198,8 @@ def _project_state_staleness_reason(text: str) -> str | None:
                     continue
                 date_match = DATE_RE.match(stripped)
                 if date_match:
-                    confirmed = datetime.strptime(
-                        date_match.group(1), "%Y-%m-%d"
-                    ).replace(tzinfo=UTC)
-                    if confirmed < datetime.now(UTC) - timedelta(
-                        days=CURRENT_PROJECT_STATE_STALE_DAYS
-                    ):
+                    confirmed = datetime.strptime(date_match.group(1), "%Y-%m-%d").replace(tzinfo=UTC)
+                    if confirmed < datetime.now(UTC) - timedelta(days=CURRENT_PROJECT_STATE_STALE_DAYS):
                         return (
                             f"project-state note has not been confirmed in over "
                             f"{CURRENT_PROJECT_STATE_STALE_DAYS} days; "
@@ -272,6 +264,10 @@ def _validate_upgrade_source_record(path: Path, result) -> None:
 def resolve_upgrade_source(target: str | Path | None = None) -> dict[str, str]:
     target_root = Path(target or Path.cwd()).resolve()
     path = target_root / UPGRADE_SOURCE_PATH
+    if not path.exists():
+        legacy = target_root / LEGACY_UPGRADE_SOURCE_PATH
+        if legacy.exists():
+            path = legacy
     default = {
         "source_type": "git",
         "source_ref": "git+https://github.com/Tenfifty/agentic-memory",
@@ -326,3 +322,11 @@ def _has_legacy_bootstrap_agents_prose(text: str) -> bool:
         )
         text = pattern.sub("", text, count=1)
     return any(phrase in text for phrase in LEGACY_BOOTSTRAP_AGENTS_PHRASES)
+
+
+def _agents_has_current_workflow_pointer(text: str) -> bool:
+    return WORKFLOW_POINTER_BLOCK in text
+
+
+def _agents_has_legacy_workflow_reference(text: str) -> bool:
+    return LEGACY_WORKFLOW_PATH.as_posix() in text

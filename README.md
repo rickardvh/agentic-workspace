@@ -67,9 +67,10 @@ agentic-memory-bootstrap adopt --target /path/to/repo
 - `AGENTS.md` for the repo-local agent contract
 - `memory/` for durable notes
 - `memory/current/` for lightweight overview and optional current-work context
-- `memory/skills/` for checked-in core memory skills
+- `.agentic-memory/skills/` for bootstrap-managed shared memory skills
+- `memory/skills/` for optional repo-owned memory skills
 
-Install and adopt flows may create a temporary `memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace. Upgrade should normally route through the checked-in `memory-upgrade` skill and no longer depends on that workspace as part of the primary model.
+Install and adopt flows may create a temporary `.agentic-memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace. Upgrade should normally route through the checked-in `memory-upgrade` skill and no longer depends on that workspace as part of the primary model.
 
 Memory owns durable repo knowledge. The repository's active planning/status surface owns active intent and sequencing. Memory complements planning by preserving durable lessons and reducing re-orientation cost, but it must never compete with the planning surface for ownership of active work.
 Good memory systems should help an agent read less, not more.
@@ -86,7 +87,7 @@ uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstr
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
 ```
 
-Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. Prompt output prefers `uvx` when it is available and otherwise falls back to `pipx run`. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but normal upgrades should route through the checked-in `memory-upgrade` skill under `memory/skills/`, which runs the packaged upgrade flow using `memory/system/UPGRADE-SOURCE.toml`.
+Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. Prompt output prefers `uvx` when it is available and otherwise falls back to `pipx run`. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but normal upgrades should route through the checked-in `memory-upgrade` skill under `.agentic-memory/skills/`, which runs the packaged upgrade flow using `.agentic-memory/UPGRADE-SOURCE.toml`.
 
 Typical lifecycle for a fresh bootstrap:
 
@@ -94,7 +95,7 @@ Typical lifecycle for a fresh bootstrap:
 2. If new current-memory files were created, populate them conservatively.
 3. Run `bootstrap-cleanup` when bootstrap lifecycle work is complete.
 
-After the agent finishes install or adopt lifecycle work, run `agentic-memory-bootstrap bootstrap-cleanup --target /path/to/repo` (or let the agent run it) to remove the temporary `memory/bootstrap/` workspace.
+After the agent finishes install or adopt lifecycle work, run `agentic-memory-bootstrap bootstrap-cleanup --target /path/to/repo` (or let the agent run it) to remove the temporary `.agentic-memory/bootstrap/` workspace.
 
 If you omit the placeholder flags (`--project-name`, `--project-purpose`, etc.), your `AGENTS.md` will contain unfilled placeholders. Run `doctor` after install to identify them.
 
@@ -132,7 +133,7 @@ Print a ready-to-paste prompt:
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
 ```
 
-That prompt prefers `uvx` when it is available and otherwise falls back to `pipx run`. It is the preferred user-facing upgrade path when you want the agent to perform the work without asking for a local install or clone first. It tells the agent to use the checked-in `memory-upgrade` skill as the single repo-local upgrade entrypoint; the skill then runs the packaged upgrade flow using `memory/system/UPGRADE-SOURCE.toml`.
+That prompt prefers `uvx` when it is available and otherwise falls back to `pipx run`. It is the preferred user-facing upgrade path when you want the agent to perform the work without asking for a local install or clone first. It tells the agent to use the checked-in `memory-upgrade` skill as the single repo-local upgrade entrypoint; the skill then runs the packaged upgrade flow using `.agentic-memory/UPGRADE-SOURCE.toml`.
 
 ### Manual alternative
 

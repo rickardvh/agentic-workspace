@@ -6,49 +6,57 @@ from pathlib import Path
 
 PROJECT_MARKERS = ("pyproject.toml", "package.json", "Cargo.toml", ".hg")
 AGENT_ROOT_MARKERS = (Path("AGENTS.md"), Path("memory"))
-VERSION_PATH = Path("memory/system/VERSION.md")
-WORKFLOW_PATH = Path("memory/system/WORKFLOW.md")
+MANAGED_ROOT = Path(".agentic-memory")
+LEGACY_SYSTEM_ROOT = Path("memory/system")
+VERSION_PATH = MANAGED_ROOT / "VERSION.md"
+LEGACY_VERSION_PATH = LEGACY_SYSTEM_ROOT / "VERSION.md"
+WORKFLOW_PATH = MANAGED_ROOT / "WORKFLOW.md"
+LEGACY_WORKFLOW_PATH = LEGACY_SYSTEM_ROOT / "WORKFLOW.md"
 AGENTS_PATH = Path("AGENTS.md")
 MANIFEST_PATH = Path("memory/manifest.toml")
-UPGRADE_SOURCE_PATH = Path("memory/system/UPGRADE-SOURCE.toml")
+UPGRADE_SOURCE_PATH = MANAGED_ROOT / "UPGRADE-SOURCE.toml"
+LEGACY_UPGRADE_SOURCE_PATH = LEGACY_SYSTEM_ROOT / "UPGRADE-SOURCE.toml"
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 38
+BOOTSTRAP_VERSION = 40
 BUNDLED_SKILLS_ROOT = Path("skills")
-BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
+BOOTSTRAP_WORKSPACE_ROOT = MANAGED_ROOT / "bootstrap"
+LEGACY_BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
+SHIPPED_SKILLS_ROOT = MANAGED_ROOT / "skills"
+LEGACY_SHIPPED_SKILLS_ROOT = Path("memory/skills")
 
 CURRENT_MEMORY_BASELINE = (
     Path("memory/current/project-state.md"),
     Path("memory/current/task-context.md"),
 )
 BOOTSTRAP_WORKSPACE_FILES = (
-    Path("memory/bootstrap/README.md"),
-    Path("memory/bootstrap/skills/install/SKILL.md"),
-    Path("memory/bootstrap/skills/install/agents/openai.yaml"),
-    Path("memory/bootstrap/skills/populate/SKILL.md"),
-    Path("memory/bootstrap/skills/populate/agents/openai.yaml"),
-    Path("memory/bootstrap/skills/cleanup/SKILL.md"),
-    Path("memory/bootstrap/skills/cleanup/agents/openai.yaml"),
+    BOOTSTRAP_WORKSPACE_ROOT / "README.md",
+    BOOTSTRAP_WORKSPACE_ROOT / "skills/install/SKILL.md",
+    BOOTSTRAP_WORKSPACE_ROOT / "skills/install/agents/openai.yaml",
+    BOOTSTRAP_WORKSPACE_ROOT / "skills/populate/SKILL.md",
+    BOOTSTRAP_WORKSPACE_ROOT / "skills/populate/agents/openai.yaml",
+    BOOTSTRAP_WORKSPACE_ROOT / "skills/cleanup/SKILL.md",
+    BOOTSTRAP_WORKSPACE_ROOT / "skills/cleanup/agents/openai.yaml",
 )
 CORE_PAYLOAD_SKILL_FILES = (
-    Path("memory/skills/README.md"),
-    Path("memory/skills/memory-capture/SKILL.md"),
-    Path("memory/skills/memory-capture/agents/openai.yaml"),
-    Path("memory/skills/memory-hygiene/SKILL.md"),
-    Path("memory/skills/memory-hygiene/agents/openai.yaml"),
-    Path("memory/skills/memory-upgrade/SKILL.md"),
-    Path("memory/skills/memory-upgrade/agents/openai.yaml"),
-    Path("memory/skills/memory-refresh/SKILL.md"),
-    Path("memory/skills/memory-refresh/agents/openai.yaml"),
-    Path("memory/skills/memory-router/SKILL.md"),
-    Path("memory/skills/memory-router/agents/openai.yaml"),
+    SHIPPED_SKILLS_ROOT / "README.md",
+    SHIPPED_SKILLS_ROOT / "memory-capture/SKILL.md",
+    SHIPPED_SKILLS_ROOT / "memory-capture/agents/openai.yaml",
+    SHIPPED_SKILLS_ROOT / "memory-hygiene/SKILL.md",
+    SHIPPED_SKILLS_ROOT / "memory-hygiene/agents/openai.yaml",
+    SHIPPED_SKILLS_ROOT / "memory-upgrade/SKILL.md",
+    SHIPPED_SKILLS_ROOT / "memory-upgrade/agents/openai.yaml",
+    SHIPPED_SKILLS_ROOT / "memory-refresh/SKILL.md",
+    SHIPPED_SKILLS_ROOT / "memory-refresh/agents/openai.yaml",
+    SHIPPED_SKILLS_ROOT / "memory-router/SKILL.md",
+    SHIPPED_SKILLS_ROOT / "memory-router/agents/openai.yaml",
 )
 PAYLOAD_REQUIRED_FILES = (
     AGENTS_PATH,
     Path("memory/index.md"),
     MANIFEST_PATH,
-    Path("memory/system/SKILLS.md"),
-    Path("memory/system/WORKFLOW.md"),
-    Path("memory/system/UPGRADE-SOURCE.toml"),
+    MANAGED_ROOT / "SKILLS.md",
+    WORKFLOW_PATH,
+    UPGRADE_SOURCE_PATH,
     Path("memory/current/project-state.md"),
     Path("memory/current/task-context.md"),
     Path("memory/domains/README.md"),
@@ -60,12 +68,8 @@ PAYLOAD_REQUIRED_FILES = (
     *BOOTSTRAP_WORKSPACE_FILES,
     *CORE_PAYLOAD_SKILL_FILES,
 )
-FORBIDDEN_PAYLOAD_FILES = (
-    Path("TODO.md"),
-    Path("memory/current/active-decisions.md"),
-    Path("memory/system/UPGRADE.md"),
-)
-OBSOLETE_SHARED_FILES = (Path("memory/system/UPGRADE.md"),)
+FORBIDDEN_PAYLOAD_FILES = (Path("TODO.md"), Path("memory/current/active-decisions.md"), LEGACY_SYSTEM_ROOT / "UPGRADE.md")
+OBSOLETE_SHARED_FILES = (LEGACY_SYSTEM_ROOT / "UPGRADE.md",)
 FORBIDDEN_PAYLOAD_PREFIXES = (".agent-work/",)
 CURRENT_TASK_STALE_DAYS = 30
 CURRENT_TASK_MAX_LINES = 120
@@ -74,11 +78,7 @@ CURRENT_PROJECT_STATE_MAX_LINES = 140
 
 WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
 WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
-WORKFLOW_POINTER_BLOCK = (
-    f"{WORKFLOW_MARKER_START}\n"
-    "Read `memory/system/WORKFLOW.md` for shared workflow rules.\n"
-    f"{WORKFLOW_MARKER_END}"
-)
+WORKFLOW_POINTER_BLOCK = f"{WORKFLOW_MARKER_START}\nRead `.agentic-memory/WORKFLOW.md` for shared workflow rules.\n{WORKFLOW_MARKER_END}"
 EMBEDDED_WORKFLOW_HEADINGS = (
     "## Task system boundary",
     "## Memory discipline",
@@ -95,11 +95,31 @@ VERSION_RE = re.compile(r"^\s*Version:\s*(\d+)\s*$", re.MULTILINE)
 MEMORY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_.-])memory/[A-Za-z0-9_./-]+")
 MARKDOWN_MEMORY_LINK_RE = re.compile(r"\[[^\]]+\]\((?!https?://)([^)]*memory/[^)]*)\)")
 LEGACY_BOOTSTRAP_AGENTS_PHRASES = (
-    "Check `memory/skills/README.md` and the skill directories under `memory/skills/` for a checked-in memory skill whose name or description matches the task.",
-    "Use the matching checked-in skill when it fits; otherwise load only the memory files routed by `memory/index.md` that are relevant to the task.",
-    "Use the matching checked-in skill when it fits; otherwise read only the memory files routed by `memory/index.md` that are relevant to the subsystem you will touch.",
-    "Treat a quick `memory/skills/` scan as part of setup in repos that have checked-in memory skills; this keeps repeatable memory workflows discoverable instead of implicit.",
-    "Treat a quick `memory/skills/` scan as part of setup in repos that have checked-in memory skills so repeatable procedures are easy to detect and reuse.",
+    (
+        "Check `memory/skills/README.md` and the skill directories under "
+        "`memory/skills/` for a checked-in memory skill whose name or "
+        "description matches the task."
+    ),
+    (
+        "Use the matching checked-in skill when it fits; otherwise load only "
+        "the memory files routed by `memory/index.md` that are relevant to "
+        "the task."
+    ),
+    (
+        "Use the matching checked-in skill when it fits; otherwise read only "
+        "the memory files routed by `memory/index.md` that are relevant to "
+        "the subsystem you will touch."
+    ),
+    (
+        "Treat a quick `memory/skills/` scan as part of setup in repos that "
+        "have checked-in memory skills; this keeps repeatable memory "
+        "workflows discoverable instead of implicit."
+    ),
+    (
+        "Treat a quick `memory/skills/` scan as part of setup in repos that "
+        "have checked-in memory skills so repeatable procedures are easy to "
+        "detect and reuse."
+    ),
 )
 
 DEFAULT_CORE_DOC_GLOBS = (
@@ -145,18 +165,12 @@ SHADOW_DOC_MIN_SHARED_TERMS = 6
 OPTIONAL_APPEND_TARGETS = {
     Path("Makefile"): Path("optional/Makefile.fragment.mk"),
     Path("CONTRIBUTING.md"): Path("optional/CONTRIBUTING.fragment.md"),
-    Path(".github/pull_request_template.md"): Path(
-        "optional/pull_request_template.fragment.md"
-    ),
+    Path(".github/pull_request_template.md"): Path("optional/pull_request_template.fragment.md"),
 }
 OPTIONAL_APPEND_DESCRIPTIONS = {
-    Path(
-        "Makefile"
-    ): "optional convenience target for running the memory freshness audit locally or in CI",
+    Path("Makefile"): "optional convenience target for running the memory freshness audit locally or in CI",
     Path("CONTRIBUTING.md"): "optional contributor guidance fragment",
-    Path(
-        ".github/pull_request_template.md"
-    ): "optional pull request checklist fragment",
+    Path(".github/pull_request_template.md"): "optional pull request checklist fragment",
 }
 
 
@@ -171,16 +185,10 @@ class Action:
     category: str = ""
 
     def to_dict(self, target_root: Path) -> dict[str, str]:
-        relative_path = (
-            self.path.relative_to(target_root)
-            if self.path.is_relative_to(target_root)
-            else self.path
-        )
+        relative_path = self.path.relative_to(target_root) if self.path.is_relative_to(target_root) else self.path
         return {
             "kind": self.kind,
-            "path": relative_path.as_posix()
-            if isinstance(relative_path, Path)
-            else str(relative_path),
+            "path": relative_path.as_posix() if isinstance(relative_path, Path) else str(relative_path),
             "detail": self.detail,
             "role": self.role,
             "safety": self.safety,
@@ -220,10 +228,7 @@ class InstallResult:
                 role=role,
                 safety=safety,
                 source=source,
-                category=category
-                or _infer_action_category(
-                    kind=kind, path=path, detail=detail, role=role, safety=safety
-                ),
+                category=category or _infer_action_category(kind=kind, path=path, detail=detail, role=role, safety=safety),
             )
         )
 

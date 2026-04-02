@@ -2,7 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from repo_memory_bootstrap._installer_shared import PROJECT_MARKERS, RepoDetectionError
+from repo_memory_bootstrap._installer_shared import (
+    BOOTSTRAP_WORKSPACE_ROOT,
+    LEGACY_BOOTSTRAP_WORKSPACE_ROOT,
+    LEGACY_SHIPPED_SKILLS_ROOT,
+    LEGACY_SYSTEM_ROOT,
+    MANAGED_ROOT,
+    PROJECT_MARKERS,
+    SHIPPED_SKILLS_ROOT,
+    RepoDetectionError,
+)
 
 
 def resolve_target_root(target: str | Path | None) -> Path:
@@ -17,14 +26,10 @@ def resolve_target_root(target: str | Path | None) -> Path:
 
     candidates = _find_repo_candidates(start)
     if not candidates:
-        raise RepoDetectionError(
-            "Could not find a repository root from the current directory. Pass --target explicitly."
-        )
+        raise RepoDetectionError("Could not find a repository root from the current directory. Pass --target explicitly.")
     if len(candidates) > 1:
         roots = ", ".join(str(path) for path in candidates)
-        raise RepoDetectionError(
-            f"Ambiguous repository root detected ({roots}). Pass --target explicitly."
-        )
+        raise RepoDetectionError(f"Ambiguous repository root detected ({roots}). Pass --target explicitly.")
     return candidates[0]
 
 
@@ -54,16 +59,39 @@ def skills_root() -> Path:
     raise FileNotFoundError("Bundled skills directory is not available.")
 
 
+def detect_bootstrap_layout(target_root: Path) -> str:
+    has_managed_root = any(
+        (target_root / path).exists()
+        for path in (
+            MANAGED_ROOT,
+            BOOTSTRAP_WORKSPACE_ROOT,
+            SHIPPED_SKILLS_ROOT,
+        )
+    )
+    has_legacy_root = any(
+        (target_root / path).exists()
+        for path in (
+            LEGACY_SYSTEM_ROOT,
+            LEGACY_BOOTSTRAP_WORKSPACE_ROOT,
+            LEGACY_SHIPPED_SKILLS_ROOT,
+        )
+    )
+    if has_managed_root and has_legacy_root:
+        return "mixed"
+    if has_managed_root:
+        return "managed-root"
+    if has_legacy_root:
+        return "legacy"
+    return "none"
+
+
 def _record_repo_context_warnings(target_root: Path, result) -> None:
     parent_repo = _find_parent_repo_root(target_root)
     if parent_repo is not None:
         result.add(
             "warning",
             target_root,
-            (
-                f"target is inside parent repository {parent_repo}; "
-                "--target is being treated as authoritative"
-            ),
+            (f"target is inside parent repository {parent_repo}; --target is being treated as authoritative"),
             role="target-context",
             safety="safe",
         )
@@ -72,10 +100,7 @@ def _record_repo_context_warnings(target_root: Path, result) -> None:
         result.add(
             "warning",
             nested_repo,
-            (
-                "nested repository detected under target; installer will not recurse "
-                "into repo roots automatically"
-            ),
+            ("nested repository detected under target; installer will not recurse into repo roots automatically"),
             role="target-context",
             safety="safe",
         )

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 from repo_memory_bootstrap._installer_memory import (
@@ -18,6 +20,7 @@ from repo_memory_bootstrap._installer_memory import (
 )
 from repo_memory_bootstrap._installer_output import (
     _current_task_staleness_reason,
+    _existing_version_path,
     _has_placeholders,
     _new_result,
     _patch_agents_workflow_block,
@@ -32,6 +35,7 @@ from repo_memory_bootstrap._installer_output import (
 )
 from repo_memory_bootstrap._installer_paths import (
     _record_repo_context_warnings,
+    detect_bootstrap_layout,
     payload_root,
     resolve_target_root,
     skills_root,
@@ -60,6 +64,8 @@ from repo_memory_bootstrap._installer_shared import (
     CURRENT_TASK_MAX_LINES,
     FORBIDDEN_PAYLOAD_FILES,
     FORBIDDEN_PAYLOAD_PREFIXES,
+    LEGACY_BOOTSTRAP_WORKSPACE_ROOT,
+    LEGACY_UPGRADE_SOURCE_PATH,
     MANIFEST_PATH,
     OBSOLETE_SHARED_FILES,
     OPTIONAL_APPEND_TARGETS,
@@ -102,6 +108,7 @@ __all__ = [
     "cleanup_bootstrap_workspace",
     "collect_status",
     "detect_install_mode",
+    "detect_bootstrap_layout",
     "doctor_bootstrap",
     "format_actions",
     "format_result_json",
@@ -116,6 +123,7 @@ __all__ = [
     "show_current_memory",
     "skills_root",
     "sync_memory",
+    "migrate_layout",
     "uninstall_bootstrap",
     "upgrade_bootstrap",
     "verify_payload",
@@ -177,7 +185,7 @@ def install_bootstrap(
     result = _new_result(target_root, dry_run=dry_run, message="Install plan")
     _record_repo_context_warnings(target_root, result)
 
-    for entry in _payload_entries(source_root):
+    for entry in _payload_entries(source_root, target_layout="managed-root"):
         destination = target_root / entry.relative_path
         if destination.exists() and not force:
             result.add(
@@ -227,9 +235,7 @@ def adopt_bootstrap(
         primary_test_command=primary_test_command,
         other_key_commands=other_key_commands,
     )
-    result = _new_result(
-        target_root, dry_run=dry_run, message="Adoption plan for existing repository"
-    )
+    result = _new_result(target_root, dry_run=dry_run, message="Adoption plan for existing repository")
     _record_repo_context_warnings(target_root, result)
     _plan_from_entries(
         source_root=source_root,
@@ -241,6 +247,7 @@ def adopt_bootstrap(
         apply_local_entrypoint=apply_local_entrypoint,
         force=False,
         include_bootstrap_workspace=True,
+        target_layout="managed-root",
     )
     _plan_optional_appends(source_root, target_root, result, apply=not dry_run)
     return result
@@ -274,16 +281,35 @@ def upgrade_bootstrap(
     )
     result = _new_result(target_root, dry_run=dry_run, message="Upgrade plan")
     _record_repo_context_warnings(target_root, result)
+    detected_layout = detect_bootstrap_layout(target_root)
     source_choice = resolve_upgrade_source(target_root)
+    upgrade_source_path = UPGRADE_SOURCE_PATH
     result.add(
         "current",
-        target_root / UPGRADE_SOURCE_PATH,
+        target_root / upgrade_source_path,
         f"upgrade source resolved to {source_choice['source_type']} ({source_choice['source_ref']})",
         role="payload-contract",
         safety="safe",
-        source=UPGRADE_SOURCE_PATH.as_posix(),
+        source=upgrade_source_path.as_posix(),
         category="safe-update",
     )
+    if detected_layout == "legacy":
+        migration_result = migrate_layout(target=target_root, dry_run=dry_run)
+        result.actions.extend(migration_result.actions)
+        if any(action.kind == "manual review" for action in migration_result.actions):
+            return result
+        if dry_run:
+            _plan_upgrade_against_migrated_layout(
+                source_root=source_root,
+                target_root=target_root,
+                substitutions=substitutions,
+                result=result,
+                apply_local_entrypoint=apply_local_entrypoint,
+                force=force,
+            )
+            _dedupe_agents_pointer_status(result, target_root=target_root)
+            return result
+    target_layout = "managed-root"
     _plan_from_entries(
         source_root=source_root,
         target_root=target_root,
@@ -294,11 +320,11 @@ def upgrade_bootstrap(
         apply_local_entrypoint=apply_local_entrypoint,
         force=force,
         include_bootstrap_workspace=False,
+        target_layout=target_layout,
     )
-    _plan_obsolete_shared_files(
-        target_root=target_root, result=result, apply=not dry_run
-    )
+    _plan_obsolete_shared_files(target_root=target_root, result=result, apply=not dry_run)
     _plan_optional_appends(source_root, target_root, result, apply=not dry_run)
+    _dedupe_agents_pointer_status(result, target_root=target_root)
     return result
 
 
@@ -306,8 +332,9 @@ def collect_status(target: str | Path | None = None) -> InstallResult:
     target_root = resolve_target_root(target)
     result = _new_result(target_root, dry_run=False, message="Status report")
     _record_repo_context_warnings(target_root, result)
+    target_layout = "legacy" if detect_bootstrap_layout(target_root) == "legacy" else "managed-root"
 
-    for entry in _payload_entries(payload_root(), include_bootstrap_workspace=False):
+    for entry in _payload_entries(payload_root(), include_bootstrap_workspace=False, target_layout=target_layout):
         destination = target_root / entry.relative_path
         result.add(
             "present" if destination.exists() else "missing",
@@ -331,9 +358,7 @@ def collect_status(target: str | Path | None = None) -> InstallResult:
                 category="obsolete-managed-file",
             )
 
-    _plan_optional_appends(
-        payload_root(), target_root, result, apply=False, status_only=True
-    )
+    _plan_optional_appends(payload_root(), target_root, result, apply=False, status_only=True)
     return result
 
 
@@ -364,6 +389,7 @@ def doctor_bootstrap(
     )
     result = _new_result(target_root, dry_run=True, message="Doctor report")
     _record_repo_context_warnings(target_root, result)
+    target_layout = "legacy" if detect_bootstrap_layout(target_root) == "legacy" else "managed-root"
     _plan_from_entries(
         source_root=source_root,
         target_root=target_root,
@@ -374,11 +400,25 @@ def doctor_bootstrap(
         apply_local_entrypoint=False,
         force=False,
         include_bootstrap_workspace=False,
+        target_layout=target_layout,
     )
+    if target_layout == "legacy":
+        result.add(
+            "current",
+            target_root / LEGACY_UPGRADE_SOURCE_PATH,
+            (
+                "legacy managed layout detected; the next "
+                "`agentic-memory-bootstrap upgrade --target <repo>` will "
+                "migrate bootstrap-managed files into `.agentic-memory/` "
+                "automatically"
+            ),
+            role="payload-contract",
+            safety="safe",
+            source=LEGACY_UPGRADE_SOURCE_PATH.as_posix(),
+            category="safe-update",
+        )
     _plan_obsolete_shared_files(target_root=target_root, result=result, apply=False)
-    _plan_optional_appends(
-        source_root, target_root, result, apply=False, status_only=True
-    )
+    _plan_optional_appends(source_root, target_root, result, apply=False, status_only=True)
     _audit_memory_doc_ownership(
         target_root=target_root,
         result=result,
@@ -391,12 +431,10 @@ def doctor_bootstrap(
 def list_payload_files(target: str | Path | None = None) -> InstallResult:
     target_root = resolve_target_root(target)
     source_root = payload_root()
-    result = _new_result(
-        target_root, dry_run=True, message="Packaged bootstrap file preview"
-    )
+    result = _new_result(target_root, dry_run=True, message="Packaged bootstrap file preview")
     _record_repo_context_warnings(target_root, result)
 
-    for entry in _payload_entries(source_root):
+    for entry in _payload_entries(source_root, target_layout="managed-root"):
         result.add(
             "managed file",
             target_root / entry.relative_path,
@@ -421,9 +459,7 @@ def list_payload_files(target: str | Path | None = None) -> InstallResult:
 
 def list_bundled_skills() -> InstallResult:
     skills_dir = skills_root()
-    result = InstallResult(
-        target_root=skills_dir, dry_run=True, message="Bundled skills"
-    )
+    result = InstallResult(target_root=skills_dir, dry_run=True, message="Bundled skills")
     result.mode = "skills"
     result.detected_version = None
 
@@ -445,7 +481,7 @@ def show_current_memory(target: str | Path | None = None) -> CurrentViewResult:
     target_root = resolve_target_root(target)
     result = CurrentViewResult(
         target_root=target_root,
-        detected_version=_read_installed_version(target_root / VERSION_PATH),
+        detected_version=_read_installed_version(_existing_version_path(target_root)),
     )
     for relative_path in CURRENT_MEMORY_BASELINE:
         note_path = target_root / relative_path
@@ -480,9 +516,7 @@ def check_current_memory(target: str | Path | None = None) -> InstallResult:
         result.add(
             "manual review" if has_placeholders else "current",
             note_path,
-            "current-memory note still contains placeholders"
-            if has_placeholders
-            else "current-memory note present",
+            "current-memory note still contains placeholders" if has_placeholders else "current-memory note present",
             role="current-memory",
             safety="manual" if has_placeholders else "safe",
             source=relative_path.as_posix(),
@@ -515,9 +549,7 @@ def route_memory(
     surfaces: list[str] | None = None,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
-    result = _new_result(
-        target_root, dry_run=True, message="Memory routing suggestions"
-    )
+    result = _new_result(target_root, dry_run=True, message="Memory routing suggestions")
     if not files and not surfaces:
         result.add(
             "manual review",
@@ -530,15 +562,12 @@ def route_memory(
         )
         return result
 
-    selected_surfaces = {
-        _normalise_surface_name(surface) for surface in (surfaces or [])
-    }
+    selected_surfaces = {_normalise_surface_name(surface) for surface in (surfaces or [])}
     selected_surfaces.update(_infer_surfaces_from_paths(files or []))
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
 
     suggestions: list[tuple[str, str, str]] = [
-        ("recommended", path.as_posix(), "always relevant current-memory note")
-        for path in CURRENT_MEMORY_BASELINE
+        ("recommended", path.as_posix(), "always relevant current-memory note") for path in CURRENT_MEMORY_BASELINE
     ]
     suggestions.extend(
         _find_manifest_matches(
@@ -551,9 +580,7 @@ def route_memory(
     for section_surface, notes in _parse_route_sections(target_root / "memory" / "index.md"):
         if section_surface in selected_surfaces:
             for note in notes:
-                suggestions.append(
-                    ("recommended", note, f"matched route surface '{section_surface}'")
-                )
+                suggestions.append(("recommended", note, f"matched route surface '{section_surface}'"))
 
     seen: set[str] = set()
     for recommendation, note, reason in suggestions:
@@ -626,12 +653,8 @@ def sync_memory(
             recommendation = "update"
         if note_path.name == "index.md":
             recommendation = "update index"
-        detail = (
-            f"{reason}; manifest staleness trigger matched {', '.join(changed_files) if changed_files else 'explicit input'}"
-        )
-        improvement_hint = _first_improvement_hint(
-            manifest_note, note_path, note_text, for_report=False
-        )
+        detail = f"{reason}; manifest staleness trigger matched {', '.join(changed_files) if changed_files else 'explicit input'}"
+        improvement_hint = _first_improvement_hint(manifest_note, note_path, note_text, for_report=False)
         if improvement_hint:
             detail = f"{detail}; consider {improvement_hint}"
         result.add(
@@ -651,23 +674,15 @@ def sync_memory(
             continue
         note_path = action.path
         note_text = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
-        relative_note = (
-            note_path.relative_to(target_root)
-            if note_path.is_relative_to(target_root)
-            else note_path
-        )
+        relative_note = note_path.relative_to(target_root) if note_path.is_relative_to(target_root) else note_path
         manifest_note = _lookup_manifest_note(manifest, relative_note)
         recommendation = "review"
         if not note_path.exists() or _has_placeholders(note_text):
             recommendation = "update"
         if note_path.name == "index.md":
             recommendation = "update index"
-        detail = (
-            f"{action.detail}; suggested by changed files {', '.join(changed_files) if changed_files else 'explicit input'}"
-        )
-        improvement_hint = _first_improvement_hint(
-            manifest_note, note_path, note_text, for_report=False
-        )
+        detail = f"{action.detail}; suggested by changed files {', '.join(changed_files) if changed_files else 'explicit input'}"
+        improvement_hint = _first_improvement_hint(manifest_note, note_path, note_text, for_report=False)
         if improvement_hint:
             detail = f"{detail}; consider {improvement_hint}"
         result.add(
@@ -733,9 +748,7 @@ def promotion_report(
             detail,
             role="promotion-report",
             safety="manual",
-            source=note.path.as_posix()
-            if note is not None
-            else note_path.relative_to(target_root).as_posix(),
+            source=note.path.as_posix() if note is not None else note_path.relative_to(target_root).as_posix(),
             category="manual-review",
         )
     return result
@@ -745,8 +758,8 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
     target_root = resolve_target_root(target)
     source_root = payload_root()
     result = _new_result(target_root, dry_run=True, message="Payload verification")
-    payload_paths = {entry.relative_path for entry in _payload_entries(source_root)}
-    payload_version = _read_installed_version(source_root / VERSION_PATH)
+    payload_paths = {entry.relative_path for entry in _payload_entries(source_root, target_layout="managed-root")}
+    payload_version = _read_installed_version(_existing_version_path(source_root))
     manifest = _load_memory_manifest(source_root / MANIFEST_PATH)
 
     if payload_version is None:
@@ -771,6 +784,8 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
         )
 
     upgrade_source_path = source_root / UPGRADE_SOURCE_PATH
+    if not upgrade_source_path.exists():
+        upgrade_source_path = source_root / LEGACY_UPGRADE_SOURCE_PATH
     if upgrade_source_path.exists():
         _validate_upgrade_source_record(upgrade_source_path, result)
     else:
@@ -796,9 +811,7 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
             category="safe-update" if present else "contract-drift",
         )
 
-    current_payload = {
-        path for path in payload_paths if path.as_posix().startswith("memory/current/")
-    }
+    current_payload = {path for path in payload_paths if path.as_posix().startswith("memory/current/")}
     expected_current = set(CURRENT_MEMORY_BASELINE)
     for extra in sorted(current_payload - expected_current):
         result.add(
@@ -855,12 +868,260 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
     return result
 
 
+def migrate_layout(
+    *,
+    target: str | Path | None = None,
+    dry_run: bool = False,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    source_root = payload_root()
+    result = _new_result(target_root, dry_run=dry_run, message="Managed layout migration plan")
+    _record_repo_context_warnings(target_root, result)
+    detected_layout = detect_bootstrap_layout(target_root)
+
+    if detected_layout == "managed-root":
+        result.add(
+            "current",
+            target_root / VERSION_PATH,
+            "bootstrap-managed files already use `.agentic-memory/`",
+            role="payload-contract",
+            safety="safe",
+            source=VERSION_PATH.as_posix(),
+        )
+        return result
+    if detected_layout == "none":
+        result.add(
+            "manual review",
+            target_root / VERSION_PATH,
+            "no bootstrap-managed layout detected; install or adopt the bootstrap before migrating layout",
+            role="payload-contract",
+            safety="manual",
+            source=VERSION_PATH.as_posix(),
+            category="manual-review",
+        )
+        return result
+
+    legacy_entries = _payload_entries(source_root, target_layout="legacy")
+    managed_entries = _payload_entries(source_root, target_layout="managed-root")
+    managed_by_source = {entry.source_path.relative_to(source_root): entry for entry in managed_entries}
+
+    for legacy_entry in legacy_entries:
+        source_key = legacy_entry.source_path.relative_to(source_root)
+        managed_entry = managed_by_source[source_key]
+        legacy_path = target_root / legacy_entry.relative_path
+        managed_path = target_root / managed_entry.relative_path
+        if managed_path == legacy_path:
+            continue
+        if not legacy_path.exists():
+            continue
+
+        if managed_path.exists():
+            legacy_text = legacy_path.read_text(encoding="utf-8")
+            managed_text = managed_path.read_text(encoding="utf-8")
+            if legacy_text == managed_text:
+                if dry_run:
+                    result.add(
+                        "would remove",
+                        legacy_path,
+                        "legacy managed file already duplicated at the new managed path",
+                        role=legacy_entry.role,
+                        safety="safe",
+                        source=legacy_entry.relative_path.as_posix(),
+                    )
+                else:
+                    legacy_path.unlink()
+                    result.add(
+                        "removed",
+                        legacy_path,
+                        "legacy managed file already duplicated at the new managed path",
+                        role=legacy_entry.role,
+                        safety="safe",
+                        source=legacy_entry.relative_path.as_posix(),
+                    )
+                    _prune_empty_parents(legacy_path.parent, stop=target_root)
+            else:
+                result.add(
+                    "manual review",
+                    legacy_path,
+                    "legacy and new managed files both exist with different content; review before removing the legacy copy",
+                    role=legacy_entry.role,
+                    safety="manual",
+                    source=legacy_entry.relative_path.as_posix(),
+                )
+            continue
+
+        if dry_run:
+            result.add(
+                "would move",
+                managed_path,
+                f"migrate legacy managed file from {legacy_entry.relative_path.as_posix()} to the new managed root",
+                role=managed_entry.role,
+                safety="safe",
+                source=legacy_entry.relative_path.as_posix(),
+            )
+        else:
+            managed_path.parent.mkdir(parents=True, exist_ok=True)
+            managed_path.write_text(legacy_path.read_text(encoding="utf-8"), encoding="utf-8")
+            legacy_path.unlink()
+            result.add(
+                "moved",
+                managed_path,
+                f"migrated legacy managed file from {legacy_entry.relative_path.as_posix()} to the new managed root",
+                role=managed_entry.role,
+                safety="safe",
+                source=legacy_entry.relative_path.as_posix(),
+            )
+            _prune_empty_parents(legacy_path.parent, stop=target_root)
+
+    agents_path = target_root / AGENTS_PATH
+    if agents_path.exists():
+        existing = agents_path.read_text(encoding="utf-8")
+        patched = _patch_agents_workflow_block(existing)
+        if patched != existing:
+            if dry_run:
+                result.add(
+                    "would patch",
+                    agents_path,
+                    "refresh AGENTS.md to point at `.agentic-memory/WORKFLOW.md`",
+                    role="local-entrypoint",
+                    safety="safe",
+                    source=AGENTS_PATH.as_posix(),
+                )
+            else:
+                agents_path.write_text(patched, encoding="utf-8")
+                result.add(
+                    "patched",
+                    agents_path,
+                    "refreshed AGENTS.md to point at `.agentic-memory/WORKFLOW.md`",
+                    role="local-entrypoint",
+                    safety="safe",
+                    source=AGENTS_PATH.as_posix(),
+                )
+
+    for legacy_entry in legacy_entries:
+        source_key = legacy_entry.source_path.relative_to(source_root)
+        managed_entry = managed_by_source[source_key]
+        legacy_path = target_root / legacy_entry.relative_path
+        managed_path = target_root / managed_entry.relative_path
+        if managed_path == legacy_path or not legacy_path.exists() or not managed_path.exists():
+            continue
+        legacy_text = legacy_path.read_text(encoding="utf-8")
+        managed_text = managed_path.read_text(encoding="utf-8")
+        if legacy_text != managed_text:
+            continue
+        if dry_run:
+            result.add(
+                "would remove",
+                legacy_path,
+                "legacy managed file matches the migrated managed copy",
+                role=legacy_entry.role,
+                safety="safe",
+                source=legacy_entry.relative_path.as_posix(),
+            )
+            continue
+        legacy_path.unlink()
+        result.add(
+            "removed",
+            legacy_path,
+            "legacy managed file matched the migrated managed copy",
+            role=legacy_entry.role,
+            safety="safe",
+            source=legacy_entry.relative_path.as_posix(),
+        )
+        _prune_empty_parents(legacy_path.parent, stop=target_root)
+    return result
+
+
+def _plan_upgrade_against_migrated_layout(
+    *,
+    source_root: Path,
+    target_root: Path,
+    substitutions: dict[str, str],
+    result: InstallResult,
+    apply_local_entrypoint: bool,
+    force: bool,
+) -> None:
+    legacy_entries = _payload_entries(source_root, include_bootstrap_workspace=False, target_layout="legacy")
+    managed_entries = _payload_entries(source_root, include_bootstrap_workspace=False, target_layout="managed-root")
+    mirror_relpaths = {
+        AGENTS_PATH,
+        *OPTIONAL_APPEND_TARGETS,
+        *(entry.relative_path for entry in legacy_entries),
+        *(entry.relative_path for entry in managed_entries),
+    }
+
+    with tempfile.TemporaryDirectory(prefix="agentic-memory-upgrade-") as temp_dir:
+        staging_root = Path(temp_dir)
+        (staging_root / ".git").mkdir(parents=True, exist_ok=True)
+        for relative_path in sorted(mirror_relpaths):
+            source_path = target_root / relative_path
+            if not source_path.exists() or not source_path.is_file():
+                continue
+            destination = staging_root / relative_path
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, destination)
+
+        migrate_layout(target=staging_root, dry_run=False)
+        staging_result = _new_result(staging_root, dry_run=True, message="Staged upgrade plan")
+        _plan_from_entries(
+            source_root=source_root,
+            target_root=staging_root,
+            substitutions=substitutions,
+            result=staging_result,
+            mode="upgrade",
+            apply=False,
+            apply_local_entrypoint=apply_local_entrypoint,
+            force=force,
+            include_bootstrap_workspace=False,
+            target_layout="managed-root",
+        )
+        _plan_obsolete_shared_files(target_root=staging_root, result=staging_result, apply=False)
+        _plan_optional_appends(source_root, staging_root, staging_result, apply=False)
+        _rebase_result_actions(source=staging_result, destination=result, from_root=staging_root, to_root=target_root)
+
+
+def _rebase_result_actions(
+    *,
+    source: InstallResult,
+    destination: InstallResult,
+    from_root: Path,
+    to_root: Path,
+) -> None:
+    for action in source.actions:
+        try:
+            relative_path = action.path.relative_to(from_root)
+            rebased_path = to_root / relative_path
+        except ValueError:
+            rebased_path = action.path
+        destination.add(
+            action.kind,
+            rebased_path,
+            action.detail,
+            role=action.role,
+            safety=action.safety,
+            source=action.source,
+            category=action.category,
+        )
+
+
+def _dedupe_agents_pointer_status(result: InstallResult, *, target_root: Path) -> None:
+    agents_path = target_root / AGENTS_PATH
+    patched_kinds = {"patched", "would patch"}
+    if not any(action.path == agents_path and action.kind in patched_kinds for action in result.actions):
+        return
+    result.actions = [
+        action
+        for action in result.actions
+        if not (action.path == agents_path and action.kind == "current" and "workflow pointer block already present" in action.detail)
+    ]
+
+
 def cleanup_bootstrap_workspace(target: str | Path | None = None) -> InstallResult:
     target_root = resolve_target_root(target)
-    workspace = target_root / BOOTSTRAP_WORKSPACE_ROOT
-    result = _new_result(
-        target_root, dry_run=False, message="Bootstrap workspace cleanup"
-    )
+    layout = detect_bootstrap_layout(target_root)
+    workspace_root = LEGACY_BOOTSTRAP_WORKSPACE_ROOT if layout == "legacy" else BOOTSTRAP_WORKSPACE_ROOT
+    workspace = target_root / workspace_root
+    result = _new_result(target_root, dry_run=False, message="Bootstrap workspace cleanup")
 
     if not workspace.exists():
         result.add(
@@ -869,7 +1130,7 @@ def cleanup_bootstrap_workspace(target: str | Path | None = None) -> InstallResu
             "temporary bootstrap workspace is already absent",
             role="bootstrap-workspace",
             safety="safe",
-            source=BOOTSTRAP_WORKSPACE_ROOT.as_posix(),
+            source=workspace_root.as_posix(),
             category="safe-update",
         )
         return result
@@ -891,7 +1152,7 @@ def cleanup_bootstrap_workspace(target: str | Path | None = None) -> InstallResu
         f"removed temporary bootstrap workspace ({removed_files} files, {removed_dirs} directories)",
         role="bootstrap-workspace",
         safety="safe",
-        source=BOOTSTRAP_WORKSPACE_ROOT.as_posix(),
+        source=workspace_root.as_posix(),
         category="safe-update",
     )
     return result
@@ -924,7 +1185,9 @@ def uninstall_bootstrap(
     result = _new_result(target_root, dry_run=dry_run, message="Uninstall plan")
     _record_repo_context_warnings(target_root, result)
 
-    workspace = target_root / BOOTSTRAP_WORKSPACE_ROOT
+    target_layout = "legacy" if detect_bootstrap_layout(target_root) == "legacy" else "managed-root"
+    workspace_root = LEGACY_BOOTSTRAP_WORKSPACE_ROOT if target_layout == "legacy" else BOOTSTRAP_WORKSPACE_ROOT
+    workspace = target_root / workspace_root
     if workspace.exists():
         if dry_run:
             result.add(
@@ -933,7 +1196,7 @@ def uninstall_bootstrap(
                 "temporary bootstrap workspace",
                 role="bootstrap-workspace",
                 safety="safe",
-                source=BOOTSTRAP_WORKSPACE_ROOT.as_posix(),
+                source=workspace_root.as_posix(),
                 category="safe-update",
             )
         else:
@@ -942,7 +1205,7 @@ def uninstall_bootstrap(
 
     managed_paths: set[Path] = set()
     removable_paths: set[Path] = set()
-    for entry in _payload_entries(source_root, include_bootstrap_workspace=False):
+    for entry in _payload_entries(source_root, include_bootstrap_workspace=False, target_layout=target_layout):
         destination = target_root / entry.relative_path
         managed_paths.add(destination)
         if not destination.exists():

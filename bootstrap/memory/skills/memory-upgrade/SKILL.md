@@ -17,7 +17,7 @@ When invoked, run the packaged upgrade flow for the current repo and stop there 
    - prefer `agentic-memory-bootstrap upgrade --target <repo>` when the CLI is already installed and on `PATH`
    - otherwise, use the recorded source with a runner such as `uvx --from <recorded-source> agentic-memory-bootstrap upgrade --target <repo>`
    - if `uvx` is unavailable, fall back to `pipx run --spec <recorded-source> agentic-memory-bootstrap upgrade --target <repo>`
-2. Let the tool resolve the installation source from `memory/system/UPGRADE-SOURCE.toml`.
+2. Let the tool resolve the installation source from `.agentic-memory/UPGRADE-SOURCE.toml`.
 3. Report manual-review items only when the tool leaves repo-owned files untouched.
 4. Verify with the packaged checks that are relevant to the repo.
 

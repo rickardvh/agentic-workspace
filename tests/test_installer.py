@@ -25,14 +25,14 @@ def test_payload_entries_do_not_include_todo_stub() -> None:
     assert all(entry.relative_path != Path("memory/current/active-decisions.md") for entry in entries)
     assert any(entry.relative_path == Path("memory/current/task-context.md") for entry in entries)
     assert any(entry.relative_path == Path("memory/manifest.toml") for entry in entries)
-    assert any(entry.relative_path == Path("memory/system/SKILLS.md") for entry in entries)
-    assert any(entry.relative_path == Path("memory/system/UPGRADE-SOURCE.toml") for entry in entries)
-    assert any(entry.relative_path == Path("memory/bootstrap/README.md") for entry in entries)
-    assert any(entry.relative_path == Path("memory/bootstrap/skills/install/SKILL.md") for entry in entries)
-    assert any(entry.relative_path == Path("memory/skills/memory-router/SKILL.md") for entry in entries)
-    assert any(entry.relative_path == Path("memory/skills/memory-upgrade/SKILL.md") for entry in entries)
-    assert all(entry.relative_path != Path("memory/bootstrap/skills/upgrade/SKILL.md") for entry in entries)
-    assert all(entry.relative_path != Path("memory/bootstrap/skills/upgrade/agents/openai.yaml") for entry in entries)
+    assert any(entry.relative_path == Path(".agentic-memory/SKILLS.md") for entry in entries)
+    assert any(entry.relative_path == Path(".agentic-memory/UPGRADE-SOURCE.toml") for entry in entries)
+    assert any(entry.relative_path == Path(".agentic-memory/bootstrap/README.md") for entry in entries)
+    assert any(entry.relative_path == Path(".agentic-memory/bootstrap/skills/install/SKILL.md") for entry in entries)
+    assert any(entry.relative_path == Path(".agentic-memory/skills/memory-router/SKILL.md") for entry in entries)
+    assert any(entry.relative_path == Path(".agentic-memory/skills/memory-upgrade/SKILL.md") for entry in entries)
+    assert all(entry.relative_path != Path(".agentic-memory/bootstrap/skills/upgrade/SKILL.md") for entry in entries)
+    assert all(entry.relative_path != Path(".agentic-memory/bootstrap/skills/upgrade/agents/openai.yaml") for entry in entries)
 
 
 def test_payload_current_baseline_is_project_state_and_task_context_only() -> None:
@@ -216,7 +216,18 @@ def test_upgrade_replaces_shared_files_without_todo_manual_review(
     result = installer.doctor_bootstrap(target=target)
 
     assert all(action.path != target / "TODO.md" for action in result.actions)
-    assert any(action.path == target / "memory" / "system" / "WORKFLOW.md" and action.kind == "would replace" for action in result.actions)
+    assert any(
+        action.path == target / "memory" / "system" / "WORKFLOW.md"
+        and action.kind == "skipped"
+        and "repo-owned file left untouched" in action.detail
+        for action in result.actions
+    )
+    assert any(
+        action.path == target / "memory" / "system" / "UPGRADE-SOURCE.toml"
+        and action.kind == "current"
+        and "next `agentic-memory-bootstrap upgrade --target <repo>` will migrate" in action.detail
+        for action in result.actions
+    )
     assert any(
         action.path == target / "memory" / "current" / "task-context.md" and action.kind == "would replace" for action in result.actions
     )
@@ -262,7 +273,7 @@ def test_install_dry_run_includes_current_memory_baseline(tmp_path: Path) -> Non
 
     assert "memory/current/project-state.md" in planned_copies
     assert "memory/current/task-context.md" in planned_copies
-    assert "memory/bootstrap/README.md" in planned_copies
+    assert ".agentic-memory/bootstrap/README.md" in planned_copies
     assert "memory/current/active-decisions.md" not in planned_copies
 
 
@@ -300,7 +311,7 @@ def test_install_writes_upgrade_source_metadata(tmp_path: Path) -> None:
 
     installer.install_bootstrap(target=target)
 
-    text = (target / "memory" / "system" / "UPGRADE-SOURCE.toml").read_text(encoding="utf-8")
+    text = (target / ".agentic-memory" / "UPGRADE-SOURCE.toml").read_text(encoding="utf-8")
     assert 'source_type = "git"' in text
     assert "git+https://github.com/Tenfifty/agentic-memory" in text
 
@@ -313,7 +324,7 @@ def test_adopt_writes_upgrade_source_metadata(tmp_path: Path) -> None:
 
     installer.adopt_bootstrap(target=target)
 
-    text = (target / "memory" / "system" / "UPGRADE-SOURCE.toml").read_text(encoding="utf-8")
+    text = (target / ".agentic-memory" / "UPGRADE-SOURCE.toml").read_text(encoding="utf-8")
     assert 'source_type = "git"' in text
 
 
@@ -416,7 +427,7 @@ def test_upgrade_reports_resolved_source(tmp_path: Path) -> None:
     result = installer.upgrade_bootstrap(target=target, dry_run=True)
 
     assert any(
-        action.path == target / "memory" / "system" / "UPGRADE-SOURCE.toml"
+        action.path == target / ".agentic-memory" / "UPGRADE-SOURCE.toml"
         and action.kind == "current"
         and "upgrade source resolved to git" in action.detail
         for action in result.actions
@@ -427,7 +438,7 @@ def test_upgrade_preserves_existing_local_source_metadata(tmp_path: Path) -> Non
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     installer.install_bootstrap(target=target)
-    source_path = target / "memory" / "system" / "UPGRADE-SOURCE.toml"
+    source_path = target / ".agentic-memory" / "UPGRADE-SOURCE.toml"
     source_path.write_text(
         'source_type = "local"\nsource_ref = "C:/src/agentic-memory"\n',
         encoding="utf-8",
@@ -452,7 +463,7 @@ def test_upgrade_dry_run_does_not_include_bootstrap_workspace_files(
     result = installer.upgrade_bootstrap(target=target, dry_run=True)
     planned = {action.path.relative_to(target).as_posix() for action in result.actions}
 
-    assert all(not path.startswith("memory/bootstrap/") for path in planned)
+    assert all(not path.startswith(".agentic-memory/bootstrap/") for path in planned)
 
 
 def test_route_memory_adds_baseline_and_runtime_suggestions(tmp_path: Path) -> None:
@@ -596,7 +607,7 @@ def test_memory_freshness_audit_ignores_bootstrap_workspace(tmp_path: Path) -> N
         text=True,
     )
 
-    assert "memory/bootstrap/" not in completed.stdout
+    assert ".agentic-memory/bootstrap/" not in completed.stdout
 
 
 def test_verify_payload_flags_forbidden_current_note(monkeypatch, tmp_path: Path) -> None:
@@ -662,7 +673,6 @@ def test_doctor_agents_guidance_mentions_apply_local_entrypoint(tmp_path: Path) 
 def test_doctor_flags_legacy_bootstrap_agents_prose_outside_managed_block(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
-    (target / "memory" / "system").mkdir(parents=True)
     (target / "AGENTS.md").write_text(
         "# Agent instructions\n\n"
         f"{installer.WORKFLOW_POINTER_BLOCK}\n\n"
@@ -670,7 +680,8 @@ def test_doctor_flags_legacy_bootstrap_agents_prose_outside_managed_block(tmp_pa
         "for a checked-in memory skill whose name or description matches the task.\n",
         encoding="utf-8",
     )
-    (target / "memory" / "system" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
+    (target / ".agentic-memory").mkdir(parents=True)
+    (target / ".agentic-memory" / "VERSION.md").write_text("Version: 39\n", encoding="utf-8")
 
     result = installer.doctor_bootstrap(target=target)
 
@@ -685,19 +696,109 @@ def test_doctor_flags_legacy_bootstrap_agents_prose_outside_managed_block(tmp_pa
 def test_upgrade_keeps_agents_current_when_workflow_pointer_is_current(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
-    (target / "memory" / "system").mkdir(parents=True)
     (target / "AGENTS.md").write_text(
-        "# Agent instructions\n\n"
-        f"{installer.WORKFLOW_POINTER_BLOCK}\n\n"
-        "Local repo instructions.\n",
+        f"# Agent instructions\n\n{installer.WORKFLOW_POINTER_BLOCK}\n\nLocal repo instructions.\n",
         encoding="utf-8",
     )
-    (target / "memory" / "system" / "VERSION.md").write_text("Version: 36\n", encoding="utf-8")
+    (target / ".agentic-memory").mkdir(parents=True)
+    (target / ".agentic-memory" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
 
     result = installer.upgrade_bootstrap(target=target, dry_run=True)
 
     assert any(action.path == target / "AGENTS.md" and action.kind == "current" for action in result.actions)
     assert not any(action.path == target / "AGENTS.md" and action.kind == "manual review" for action in result.actions)
+
+
+def test_upgrade_migrates_legacy_layout_by_default(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "memory" / "bootstrap").mkdir(parents=True)
+    (target / "memory" / "skills" / "memory-router").mkdir(parents=True)
+    (target / "memory" / "system" / "WORKFLOW.md").write_text("legacy workflow\n", encoding="utf-8")
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
+    (target / "memory" / "system" / "UPGRADE-SOURCE.toml").write_text(
+        'source_type = "local"\nsource_ref = "C:/src/agentic-memory"\n',
+        encoding="utf-8",
+    )
+    (target / "memory" / "bootstrap" / "README.md").write_text("legacy bootstrap\n", encoding="utf-8")
+    (target / "memory" / "skills" / "memory-router" / "SKILL.md").write_text("legacy router\n", encoding="utf-8")
+    (target / "AGENTS.md").write_text(
+        "# Agent instructions\n\n"
+        "<!-- agentic-memory:workflow:start -->\n"
+        "Read `memory/system/WORKFLOW.md` for shared workflow rules.\n"
+        "<!-- agentic-memory:workflow:end -->\n",
+        encoding="utf-8",
+    )
+
+    result = installer.upgrade_bootstrap(target=target)
+
+    assert (target / ".agentic-memory" / "WORKFLOW.md").exists()
+    assert (target / ".agentic-memory" / "UPGRADE-SOURCE.toml").read_text(encoding="utf-8").startswith('source_type = "local"')
+    assert not (target / "memory" / "system").exists()
+    assert not (target / "memory" / "skills").exists()
+    assert "Read `.agentic-memory/WORKFLOW.md` for shared workflow rules." in (target / "AGENTS.md").read_text(encoding="utf-8")
+    assert any(action.kind == "moved" for action in result.actions)
+    assert not any(action.kind == "manual review" and "legacy managed layout detected" in action.detail for action in result.actions)
+
+
+def test_upgrade_dry_run_simulates_default_migration_for_legacy_layout(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "memory" / "system" / "WORKFLOW.md").write_text("legacy workflow\n", encoding="utf-8")
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
+    (target / "memory" / "system" / "UPGRADE-SOURCE.toml").write_text(
+        'source_type = "local"\nsource_ref = "C:/src/agentic-memory"\n',
+        encoding="utf-8",
+    )
+    (target / "AGENTS.md").write_text(
+        "# Agent instructions\n\n"
+        "<!-- agentic-memory:workflow:start -->\n"
+        "Read `memory/system/WORKFLOW.md` for shared workflow rules.\n"
+        "<!-- agentic-memory:workflow:end -->\n",
+        encoding="utf-8",
+    )
+
+    result = installer.upgrade_bootstrap(target=target, dry_run=True)
+
+    assert not (target / ".agentic-memory").exists()
+    assert any(action.kind == "would move" and action.path == target / ".agentic-memory" / "WORKFLOW.md" for action in result.actions)
+    assert any(action.kind == "would patch" and action.path == target / "AGENTS.md" for action in result.actions)
+
+
+def test_migrate_layout_moves_legacy_managed_files_into_agentic_memory_root(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "memory" / "bootstrap").mkdir(parents=True)
+    (target / "memory" / "skills" / "memory-router").mkdir(parents=True)
+    (target / "memory" / "system" / "WORKFLOW.md").write_text("workflow\n", encoding="utf-8")
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
+    (target / "memory" / "system" / "UPGRADE-SOURCE.toml").write_text(
+        'source_type = "local"\nsource_ref = "C:/src/agentic-memory"\n',
+        encoding="utf-8",
+    )
+    (target / "memory" / "bootstrap" / "README.md").write_text("bootstrap\n", encoding="utf-8")
+    (target / "memory" / "skills" / "memory-router" / "SKILL.md").write_text("router\n", encoding="utf-8")
+    (target / "AGENTS.md").write_text(
+        "# Agent instructions\n\n"
+        "<!-- agentic-memory:workflow:start -->\n"
+        "Read `memory/system/WORKFLOW.md` for shared workflow rules.\n"
+        "<!-- agentic-memory:workflow:end -->\n",
+        encoding="utf-8",
+    )
+
+    result = installer.migrate_layout(target=target)
+
+    assert (target / ".agentic-memory" / "WORKFLOW.md").read_text(encoding="utf-8") == "workflow\n"
+    assert (target / ".agentic-memory" / "VERSION.md").read_text(encoding="utf-8") == "Version: 38\n"
+    assert (target / ".agentic-memory" / "UPGRADE-SOURCE.toml").read_text(encoding="utf-8").startswith('source_type = "local"')
+    assert (target / ".agentic-memory" / "bootstrap" / "README.md").read_text(encoding="utf-8") == "bootstrap\n"
+    assert (target / ".agentic-memory" / "skills" / "memory-router" / "SKILL.md").read_text(encoding="utf-8") == "router\n"
+    assert not (target / "memory" / "system" / "WORKFLOW.md").exists()
+    assert "Read `.agentic-memory/WORKFLOW.md` for shared workflow rules." in (target / "AGENTS.md").read_text(encoding="utf-8")
+    assert any(action.kind == "moved" for action in result.actions)
 
 
 def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
@@ -706,6 +807,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     current_args = parser.parse_args(["current", "check", "--target", "."])
     list_skills_args = parser.parse_args(["list-skills", "--format", "json"])
     cleanup_args = parser.parse_args(["bootstrap-cleanup", "--target", ".", "--format", "json"])
+    migrate_args = parser.parse_args(["migrate-layout", "--target", ".", "--dry-run", "--format", "json"])
     uninstall_args = parser.parse_args(["uninstall", "--target", ".", "--dry-run", "--format", "json"])
     doctor_args = parser.parse_args(["doctor", "--target", ".", "--strict-doc-ownership"])
     prompt_install_args = parser.parse_args(["prompt", "install", "--target", "C:/repo"])
@@ -733,6 +835,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     assert current_args.command == "current"
     assert list_skills_args.command == "list-skills"
     assert cleanup_args.command == "bootstrap-cleanup"
+    assert migrate_args.command == "migrate-layout"
     assert uninstall_args.command == "uninstall"
     assert doctor_args.strict_doc_ownership is True
     assert prompt_install_args.prompt_command == "install"
@@ -802,14 +905,14 @@ def test_git_changed_files_times_out_with_warning(tmp_path: Path, monkeypatch, c
 
 def test_verify_payload_reports_version_mismatch(tmp_path: Path, monkeypatch) -> None:
     payload = tmp_path / "payload"
-    (payload / "memory" / "system").mkdir(parents=True)
-    (payload / "memory" / "system" / "VERSION.md").write_text("Version: 21\n", encoding="utf-8")
+    (payload / ".agentic-memory").mkdir(parents=True)
+    (payload / ".agentic-memory" / "VERSION.md").write_text("Version: 21\n", encoding="utf-8")
     monkeypatch.setattr(installer, "payload_root", lambda: payload)
 
     result = installer.verify_payload(target=payload)
 
     assert any(
-        action.path == payload / "memory" / "system" / "VERSION.md"
+        action.path == payload / ".agentic-memory" / "VERSION.md"
         and action.kind == "manual review"
         and "does not match installer bootstrap version" in action.detail
         for action in result.actions
@@ -1030,10 +1133,10 @@ def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(
 
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
     assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap init --target C:/repo" in prompt
-    assert "`install` skill at `C:/repo/memory/bootstrap/skills`" in prompt
+    assert "`install` skill at `C:/repo/.agentic-memory/bootstrap/skills`" in prompt
     assert "bootstrap-cleanup --target C:/repo" in prompt
-    assert "bootstrap-managed" in prompt
-    assert "sibling skills" in prompt
+    assert ".agentic-memory/" in prompt
+    assert "memory notes stay under `memory/`" in prompt
 
 
 def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
@@ -1044,11 +1147,11 @@ def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
 
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
     assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap adopt --target C:/repo" in prompt
-    assert "`install` skill at `C:/repo/memory/bootstrap/skills`" in prompt
+    assert "`install` skill at `C:/repo/.agentic-memory/bootstrap/skills`" in prompt
     assert "`populate` from the same path" in prompt
     assert "bootstrap-cleanup --target C:/repo" in prompt
-    assert "bootstrap-managed" in prompt
-    assert "sibling skills" in prompt
+    assert ".agentic-memory/" in prompt
+    assert "memory notes stay under `memory/`" in prompt
     assert "C:/repo" in prompt
 
 
@@ -1057,7 +1160,7 @@ def test_build_populate_prompt_mentions_task_context_heuristic(monkeypatch) -> N
     prompt = cli._build_agent_prompt("populate", target="C:/repo")
 
     assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap current show --target C:/repo" in prompt
-    assert "`populate` skill at `C:/repo/memory/bootstrap/skills`" in prompt
+    assert "`populate` skill at `C:/repo/.agentic-memory/bootstrap/skills`" in prompt
     assert "task-context.md" in prompt
     assert "C:/repo" in prompt
 
@@ -1069,7 +1172,7 @@ def test_build_upgrade_prompt_mentions_local_bootstrap_skills(monkeypatch) -> No
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
     assert "Use the checked-in `memory-upgrade` skill" in prompt
     assert "memory-upgrade" in prompt
-    assert "C:/repo/memory/skills/" in prompt
+    assert "C:/repo/.agentic-memory/skills/" in prompt
     assert "recorded upgrade source automatically" in prompt
     assert "packaged upgrade flow for this repo" in prompt
     assert "prefer the installed `agentic-memory-bootstrap` CLI when available" in prompt
@@ -1083,7 +1186,7 @@ def test_build_upgrade_prompt_uses_local_source_when_recorded(monkeypatch, tmp_p
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     installer.install_bootstrap(target=target)
-    (target / "memory" / "system" / "UPGRADE-SOURCE.toml").write_text(
+    (target / ".agentic-memory" / "UPGRADE-SOURCE.toml").write_text(
         'source_type = "local"\nsource_ref = "C:/src/agentic-memory"\n',
         encoding="utf-8",
     )
@@ -1113,7 +1216,7 @@ def test_build_prompt_falls_back_to_pipx_when_uvx_is_missing(monkeypatch) -> Non
 
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
     assert "Use the checked-in `memory-upgrade` skill" in prompt
-    assert "C:/repo/memory/skills/" in prompt
+    assert "C:/repo/.agentic-memory/skills/" in prompt
     assert "recorded upgrade source automatically" in prompt
     assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target <repo>" in prompt
     assert "uvx --from" not in prompt
@@ -1134,6 +1237,7 @@ def test_doctor_flags_legacy_upgrade_runbook_for_removal(tmp_path: Path) -> None
 
     installer.install_bootstrap(target=target)
     legacy = target / "memory" / "system" / "UPGRADE.md"
+    legacy.parent.mkdir(parents=True, exist_ok=True)
     legacy.write_text("# legacy\n", encoding="utf-8")
 
     result = installer.doctor_bootstrap(target=target)
@@ -1149,6 +1253,7 @@ def test_upgrade_removes_legacy_upgrade_runbook(tmp_path: Path) -> None:
 
     installer.install_bootstrap(target=target)
     legacy = target / "memory" / "system" / "UPGRADE.md"
+    legacy.parent.mkdir(parents=True, exist_ok=True)
     legacy.write_text("# legacy\n", encoding="utf-8")
 
     result = installer.upgrade_bootstrap(target=target)
@@ -1164,7 +1269,7 @@ def test_bootstrap_cleanup_removes_workspace(tmp_path: Path) -> None:
     (target / ".git").mkdir(parents=True)
 
     installer.install_bootstrap(target=target)
-    workspace = target / "memory" / "bootstrap"
+    workspace = target / ".agentic-memory" / "bootstrap"
     assert workspace.exists()
 
     result = installer.cleanup_bootstrap_workspace(target=target)

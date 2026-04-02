@@ -12,7 +12,7 @@ canonical_dirs = [
 ]
 task_board_globs = ["TODO.md", "tasks/**", ".github/issues/**"]
 core_doc_globs = ["README.md", "docs/**/*.md", "CONTRIBUTING.md", ".github/**/*.md"]
-core_doc_exclude_globs = ["AGENTS.md", "memory/**/*.md", "memory/bootstrap/**/*.md"]
+core_doc_exclude_globs = ["AGENTS.md", "memory/**/*.md", ".agentic-memory/**/*.md"]
 forbid_core_docs_depend_on_memory = false
 # Recommended audience conventions for planner-agnostic routing:
 # - agent_bootstrap
@@ -51,8 +51,8 @@ canonicality = "agent_only"
 task_relevance = "optional"
 subsystems = ["current-context"]
 surfaces = ["decision", "architecture"]
-routes_from = ["README.md", "memory/system/**/*.md", "bootstrap/**/*.md"]
-stale_when = ["README.md", "memory/system/**/*.md", "bootstrap/**/*.md"]
+routes_from = ["README.md", ".agentic-memory/**/*.md", "bootstrap/**/*.md"]
+stale_when = ["README.md", ".agentic-memory/**/*.md", "bootstrap/**/*.md"]
 memory_role = "durable_truth"
 
 [notes."memory/current/task-context.md"]
@@ -79,11 +79,11 @@ task_relevance = "required"
 subsystems = ["memory-system", "product"]
 surfaces = ["decision", "architecture", "api"]
 routes_from = ["src/**/*.py", "bootstrap/**/*.md", "README.md"]
-stale_when = ["src/**/*.py", "bootstrap/**/*.md", "README.md", "memory/system/**/*.md"]
+stale_when = ["src/**/*.py", "bootstrap/**/*.md", "README.md", ".agentic-memory/**/*.md"]
 
-[notes."memory/system/WORKFLOW.md"]
+[notes.".agentic-memory/WORKFLOW.md"]
 note_type = "workflow-policy"
-canonical_home = "memory/system/WORKFLOW.md"
+canonical_home = ".agentic-memory/WORKFLOW.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -95,9 +95,9 @@ stale_when = ["AGENTS.md", "memory/index.md", "bootstrap/AGENTS.md"]
 related_validations = ["python scripts/check/check_memory_freshness.py"]
 memory_role = "durable_truth"
 
-[notes."memory/system/VERSION.md"]
+[notes.".agentic-memory/VERSION.md"]
 note_type = "version-marker"
-canonical_home = "memory/system/VERSION.md"
+canonical_home = ".agentic-memory/VERSION.md"
 authority = "canonical"
 audience = "agent"
 canonicality = "agent_only"

@@ -5,7 +5,7 @@ description: Refresh checked-in memory after code, docs, tests, commands, or beh
 
 # Memory Refresh
 
-This is a checked-in core skill shipped with the payload. Add repo-specific sibling skills under `memory/skills/` instead of customising this core skill unless the shared reusable procedure itself changed.
+This is a bootstrap-managed core skill shipped with the payload under `.agentic-memory/skills/`. Add repo-specific sibling skills under `memory/skills/` instead of customising this core skill unless the shared reusable procedure itself changed.
 
 Use this skill to inspect changed work and update the affected memory notes without over-editing the rest of the memory tree.
 
@@ -16,8 +16,8 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
 1. Read the repo's local contract:
    - `AGENTS.md`
    - `memory/index.md`
-   - `memory/system/WORKFLOW.md`
-   - `memory/system/SKILLS.md` when deciding whether a repo-specific skill should be created
+   - `.agentic-memory/WORKFLOW.md`
+   - `.agentic-memory/SKILLS.md` when deciding whether a repo-specific skill should be created
    - `memory/current/project-state.md` if present
    - `memory/current/task-context.md` if present
 2. Identify the changed surfaces:
