@@ -114,6 +114,8 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Improvement signals are notes that exist because the repo still needs clearer docs, better tests, stronger validation, better tooling, cleaner automation, or simpler design.
 - Do not let improvement-signal notes become permanent substitutes for repo improvements when those improvements are feasible.
 - If the same note keeps being needed for safe work on one subsystem, consider whether the repo needs docs promotion, a skill, a script, a regression test, stronger validation, or refactor review.
+- Apply that pressure during normal task work, not only during explicit maintenance passes.
+- When routing or syncing memory exposes repeated friction, note sprawl, or recurring workarounds, propose or make the smallest upstream improvement that would reduce the note when it is safe and in scope.
 
 ## Remediation paths
 

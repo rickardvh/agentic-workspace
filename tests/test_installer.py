@@ -524,6 +524,37 @@ stale_when = ["src/**/*.py"]
     )
 
 
+def test_route_memory_emits_improvement_pressure_for_matched_note(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "memory" / "domains" / "deploy.md").write_text(("# Deploy\n\n" + "boundary detail\n") * 80, encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/deploy.md"]
+note_type = "domain"
+canonical_home = "memory/domains/deploy.md"
+authority = "canonical"
+audience = "human+agent"
+routes_from = ["deploy/**/*.yaml"]
+stale_when = ["deploy/**/*.yaml"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.route_memory(target=target, files=["deploy/prod/service.yaml"])
+
+    assert any(
+        action.path == target / "memory" / "domains" / "deploy.md"
+        and action.kind == "consider"
+        and "clearer canonical docs or refactor review" in action.detail
+        for action in result.actions
+    )
+
+
 def test_sync_memory_without_input_returns_guidance(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
@@ -577,6 +608,37 @@ related_validations = ["uv run pytest"]
         action.path == target / "memory" / "domains" / "cli.md"
         and action.kind == "review"
         and "manifest staleness trigger matched" in action.detail
+        for action in result.actions
+    )
+
+
+def test_sync_memory_emits_improvement_pressure_for_stale_note(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "memory" / "domains" / "deploy.md").write_text(("# Deploy\n\n" + "boundary detail\n") * 80, encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/deploy.md"]
+note_type = "domain"
+canonical_home = "memory/domains/deploy.md"
+authority = "canonical"
+audience = "human+agent"
+routes_from = ["src/**/*.py"]
+stale_when = ["src/**/*.py"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.sync_memory(target=target, files=["src/repo_memory_bootstrap/installer.py"])
+
+    assert any(
+        action.path == target / "memory" / "domains" / "deploy.md"
+        and action.kind == "consider"
+        and "clearer canonical docs or refactor review" in action.detail
         for action in result.actions
     )
 

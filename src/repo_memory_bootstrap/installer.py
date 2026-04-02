@@ -9,6 +9,7 @@ from repo_memory_bootstrap._installer_memory import (
     _audit_memory_doc_ownership,
     _emit_improvement_pressure,
     _find_manifest_matches,
+    _first_improvement_hint,
     _git_changed_files,
     _infer_surfaces_from_paths,
     _iter_promotion_candidates,
@@ -597,6 +598,20 @@ def route_memory(
             source=note,
             category="safe-update",
         )
+        note_path = target_root / Path(note)
+        manifest_note = _lookup_manifest_note(manifest, Path(note))
+        note_text = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
+        improvement_hint = _first_improvement_hint(manifest_note, note_path, note_text, for_report=False)
+        if improvement_hint:
+            result.add(
+                "consider",
+                note_path,
+                f"improvement candidate: consider {improvement_hint}",
+                role="improvement-pressure",
+                safety="advisory",
+                source=note,
+                category="manual-review",
+            )
 
     if files and all(key.startswith("recommended:memory/current/") for key in seen):
         result.add(
@@ -633,8 +648,6 @@ def sync_memory(
         )
         return result
 
-    from repo_memory_bootstrap._installer_memory import _first_improvement_hint
-
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
     manifest_suggestions = _find_manifest_matches(
         manifest,
@@ -666,6 +679,16 @@ def sync_memory(
             source=note,
             category="manual-review",
         )
+        if improvement_hint:
+            result.add(
+                "consider",
+                note_path,
+                f"improvement candidate: consider {improvement_hint}",
+                role="improvement-pressure",
+                safety="advisory",
+                source=note,
+                category="manual-review",
+            )
         seen_sync_paths.add(note_path)
 
     routed = route_memory(target=target_root, files=changed_files)
@@ -694,6 +717,16 @@ def sync_memory(
             source=action.source,
             category="manual-review",
         )
+        if improvement_hint:
+            result.add(
+                "consider",
+                note_path,
+                f"improvement candidate: consider {improvement_hint}",
+                role="improvement-pressure",
+                safety="advisory",
+                source=action.source,
+                category="manual-review",
+            )
     for note in notes or []:
         result.add(
             "review",
