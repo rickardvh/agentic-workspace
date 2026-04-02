@@ -8,6 +8,8 @@ Requires Python 3.11 or newer.
 
 Use `install` (or `prompt install`) when adding the bootstrap to a repo for the first time. Use `adopt` (or `prompt adopt`) when the repo already has local files such as `AGENTS.md` or `memory/` that should be preserved conservatively.
 
+For agent-driven adoption and upgrade, prefer the no-install prompt commands. They print a ready-to-paste instruction for the agent and do not require a local clone of this repo or a preinstalled `agentic-memory-bootstrap` command.
+
 Agent workflow:
 
 ```bash
@@ -22,6 +24,12 @@ Manual workflow:
 
 ```bash
 uv tool install --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap
+
+# First-time install
+agentic-memory-bootstrap doctor --target /path/to/repo
+agentic-memory-bootstrap install --target /path/to/repo
+
+# Conservative adoption into an existing repo
 agentic-memory-bootstrap doctor --target /path/to/repo
 agentic-memory-bootstrap adopt --target /path/to/repo
 ```
@@ -80,6 +88,12 @@ uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstr
 
 Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. Prompt output prefers `uvx` when it is available and otherwise falls back to `pipx run`. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but normal upgrades should route through the checked-in `memory-upgrade` skill under `memory/skills/`, which runs the packaged upgrade flow using `memory/system/UPGRADE-SOURCE.toml`.
 
+Typical lifecycle for a fresh bootstrap:
+
+1. Run `prompt install` or `install`.
+2. If new current-memory files were created, populate them conservatively.
+3. Run `bootstrap-cleanup` when bootstrap lifecycle work is complete.
+
 After the agent finishes install or adopt lifecycle work, run `agentic-memory-bootstrap bootstrap-cleanup --target /path/to/repo` (or let the agent run it) to remove the temporary `memory/bootstrap/` workspace.
 
 If you omit the placeholder flags (`--project-name`, `--project-purpose`, etc.), your `AGENTS.md` will contain unfilled placeholders. Run `doctor` after install to identify them.
@@ -97,6 +111,11 @@ python -m pip install git+https://github.com/Tenfifty/agentic-memory
 Then run:
 
 ```bash
+# First-time install
+agentic-memory-bootstrap doctor --target /path/to/repo
+agentic-memory-bootstrap install --target /path/to/repo
+
+# Conservative adoption into an existing repo
 agentic-memory-bootstrap doctor --target /path/to/repo
 agentic-memory-bootstrap adopt --target /path/to/repo
 ```
@@ -113,7 +132,7 @@ Print a ready-to-paste prompt:
 uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
 ```
 
-That prompt prefers `uvx` when it is available and otherwise falls back to `pipx run`. It tells the agent to use the checked-in `memory-upgrade` skill as the single repo-local upgrade entrypoint; the skill then runs the packaged upgrade flow using `memory/system/UPGRADE-SOURCE.toml`.
+That prompt prefers `uvx` when it is available and otherwise falls back to `pipx run`. It is the preferred user-facing upgrade path when you want the agent to perform the work without asking for a local install or clone first. It tells the agent to use the checked-in `memory-upgrade` skill as the single repo-local upgrade entrypoint; the skill then runs the packaged upgrade flow using `memory/system/UPGRADE-SOURCE.toml`.
 
 ### Manual alternative
 
@@ -336,7 +355,7 @@ Main commands:
 - `doctor` to inspect state and recommended remediation
 - `upgrade` for deterministic upgrades
 - `uninstall` for conservative bootstrap removal
-- `prompt <subcommand>` to print canonical agent prompts (subcommands: `install`, `adopt`, `populate`, `upgrade`)
+- `prompt <subcommand>` to print ready-to-paste no-install agent prompts (subcommands: `install`, `adopt`, `populate`, `upgrade`)
 - `prompt uninstall` to print the canonical uninstall prompt
 - `bootstrap-cleanup` to remove the temporary bootstrap workspace when install or adopt created it
 - `current show|check` to inspect current-memory notes

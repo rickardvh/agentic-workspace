@@ -42,13 +42,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    install_parser = subparsers.add_parser(
-        "install", help="Install bootstrap files into a repository."
-    )
+    install_parser = subparsers.add_parser("install", help="Install bootstrap files into a repository.")
     _add_install_arguments(install_parser)
-    init_parser = subparsers.add_parser(
-        "init", help="Alias for install, intended for clean bootstrap cases."
-    )
+    init_parser = subparsers.add_parser("init", help="Alias for install, intended for clean bootstrap cases.")
     _add_install_arguments(init_parser)
 
     adopt_parser = subparsers.add_parser(
@@ -69,18 +65,14 @@ def build_parser() -> argparse.ArgumentParser:
     _add_project_metadata_arguments(adopt_parser)
     _add_format_argument(adopt_parser)
 
-    upgrade_parser = subparsers.add_parser(
-        "upgrade", help="Upgrade an existing bootstrap install."
-    )
+    upgrade_parser = subparsers.add_parser("upgrade", help="Upgrade an existing bootstrap install.")
     _add_target_arguments(upgrade_parser)
     upgrade_parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Show the upgrade plan without writing files.",
     )
-    upgrade_parser.add_argument(
-        "--force", action="store_true", help="Allow replacing customised starter files."
-    )
+    upgrade_parser.add_argument("--force", action="store_true", help="Allow replacing customised starter files.")
     upgrade_parser.add_argument(
         "--apply-local-entrypoint",
         action="store_true",
@@ -89,9 +81,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_project_metadata_arguments(upgrade_parser)
     _add_format_argument(upgrade_parser)
 
-    uninstall_parser = subparsers.add_parser(
-        "uninstall", help="Remove bootstrap-managed files conservatively."
-    )
+    uninstall_parser = subparsers.add_parser("uninstall", help="Remove bootstrap-managed files conservatively.")
     _add_target_arguments(uninstall_parser)
     uninstall_parser.add_argument(
         "--dry-run",
@@ -101,9 +91,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_project_metadata_arguments(uninstall_parser)
     _add_format_argument(uninstall_parser)
 
-    doctor_parser = subparsers.add_parser(
-        "doctor", help="Diagnose bootstrap state and recommended remediation."
-    )
+    doctor_parser = subparsers.add_parser("doctor", help="Diagnose bootstrap state and recommended remediation.")
     _add_target_arguments(doctor_parser)
     doctor_parser.add_argument(
         "--strict-doc-ownership",
@@ -113,65 +101,39 @@ def build_parser() -> argparse.ArgumentParser:
     _add_project_metadata_arguments(doctor_parser)
     _add_format_argument(doctor_parser)
 
-    status_parser = subparsers.add_parser(
-        "status", help="Report whether bootstrap files are present."
-    )
+    status_parser = subparsers.add_parser("status", help="Report whether bootstrap files are present.")
     _add_target_arguments(status_parser)
     _add_format_argument(status_parser)
 
-    list_files_parser = subparsers.add_parser(
-        "list-files", help="Preview packaged bootstrap files."
-    )
+    list_files_parser = subparsers.add_parser("list-files", help="Preview packaged bootstrap files.")
     _add_target_arguments(list_files_parser)
     _add_format_argument(list_files_parser)
 
-    list_skills_parser = subparsers.add_parser(
-        "list-skills", help="List bundled bootstrap-lifecycle skills."
-    )
+    list_skills_parser = subparsers.add_parser("list-skills", help="List bundled bootstrap-lifecycle skills.")
     _add_format_argument(list_skills_parser)
 
     prompt_parser = subparsers.add_parser(
         "prompt",
         help="Print a canonical agent prompt for install, adopt, populate, upgrade, or uninstall.",
     )
-    prompt_subparsers = prompt_parser.add_subparsers(
-        dest="prompt_command", required=True
-    )
-    prompt_install_parser = prompt_subparsers.add_parser(
-        "install", help="Print the canonical install prompt."
-    )
+    prompt_subparsers = prompt_parser.add_subparsers(dest="prompt_command", required=True)
+    prompt_install_parser = prompt_subparsers.add_parser("install", help="Print the canonical install prompt.")
     _add_target_arguments(prompt_install_parser)
-    prompt_adopt_parser = prompt_subparsers.add_parser(
-        "adopt", help="Print the canonical adoption prompt."
-    )
+    prompt_adopt_parser = prompt_subparsers.add_parser("adopt", help="Print the canonical adoption prompt.")
     _add_target_arguments(prompt_adopt_parser)
-    prompt_populate_parser = prompt_subparsers.add_parser(
-        "populate", help="Print the canonical populate prompt."
-    )
+    prompt_populate_parser = prompt_subparsers.add_parser("populate", help="Print the canonical populate prompt.")
     _add_target_arguments(prompt_populate_parser)
-    prompt_upgrade_parser = prompt_subparsers.add_parser(
-        "upgrade", help="Print the canonical upgrade prompt."
-    )
+    prompt_upgrade_parser = prompt_subparsers.add_parser("upgrade", help="Print the canonical upgrade prompt.")
     _add_target_arguments(prompt_upgrade_parser)
-    prompt_uninstall_parser = prompt_subparsers.add_parser(
-        "uninstall", help="Print the canonical uninstall prompt."
-    )
+    prompt_uninstall_parser = prompt_subparsers.add_parser("uninstall", help="Print the canonical uninstall prompt.")
     _add_target_arguments(prompt_uninstall_parser)
 
-    current_parser = subparsers.add_parser(
-        "current", help="Inspect or check the current-memory surface."
-    )
-    current_subparsers = current_parser.add_subparsers(
-        dest="current_command", required=True
-    )
-    current_show_parser = current_subparsers.add_parser(
-        "show", help="Show current-memory notes."
-    )
+    current_parser = subparsers.add_parser("current", help="Inspect or check the current-memory surface.")
+    current_subparsers = current_parser.add_subparsers(dest="current_command", required=True)
+    current_show_parser = current_subparsers.add_parser("show", help="Show current-memory notes.")
     _add_target_arguments(current_show_parser)
     _add_format_argument(current_show_parser)
-    current_check_parser = current_subparsers.add_parser(
-        "check", help="Check current-memory notes."
-    )
+    current_check_parser = current_subparsers.add_parser("check", help="Check current-memory notes.")
     _add_target_arguments(current_check_parser)
     _add_format_argument(current_check_parser)
 
@@ -180,9 +142,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Suggest the smallest relevant durable note set for touched files or surfaces so the agent can read less, not more.",
     )
     _add_target_arguments(route_parser)
-    route_parser.add_argument(
-        "--files", nargs="*", default=[], help="Touched file paths to route from."
-    )
+    route_parser.add_argument("--files", nargs="*", default=[], help="Touched file paths to route from.")
     route_parser.add_argument(
         "--surface",
         dest="surfaces",
@@ -196,12 +156,8 @@ def build_parser() -> argparse.ArgumentParser:
         "sync-memory", help="Suggest memory updates for changed work and surface compact upstream improvement candidates."
     )
     _add_target_arguments(sync_parser)
-    sync_parser.add_argument(
-        "--files", nargs="*", default=[], help="Changed file paths to inspect."
-    )
-    sync_parser.add_argument(
-        "--notes", nargs="*", default=[], help="Explicit memory notes to review."
-    )
+    sync_parser.add_argument("--files", nargs="*", default=[], help="Changed file paths to inspect.")
+    sync_parser.add_argument("--notes", nargs="*", default=[], help="Explicit memory notes to review.")
     _add_format_argument(sync_parser)
 
     promotion_parser = subparsers.add_parser(
@@ -220,15 +176,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_format_argument(promotion_parser)
 
-    verify_parser = subparsers.add_parser(
-        "verify-payload", help="Verify the packaged bootstrap payload contract."
-    )
+    verify_parser = subparsers.add_parser("verify-payload", help="Verify the packaged bootstrap payload contract.")
     _add_target_arguments(verify_parser)
     _add_format_argument(verify_parser)
 
-    cleanup_parser = subparsers.add_parser(
-        "bootstrap-cleanup", help="Remove the temporary bootstrap workspace."
-    )
+    cleanup_parser = subparsers.add_parser("bootstrap-cleanup", help="Remove the temporary bootstrap workspace.")
     _add_target_arguments(cleanup_parser)
     _add_format_argument(cleanup_parser)
 
@@ -236,9 +188,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _add_target_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        "--target", help="Target repository path. Defaults to the current directory."
-    )
+    parser.add_argument("--target", help="Target repository path. Defaults to the current directory.")
 
 
 def _add_install_arguments(command_parser: argparse.ArgumentParser) -> None:
@@ -258,18 +208,10 @@ def _add_install_arguments(command_parser: argparse.ArgumentParser) -> None:
 
 
 def _add_project_metadata_arguments(command_parser: argparse.ArgumentParser) -> None:
-    command_parser.add_argument(
-        "--project-name", help="Value used for the <PROJECT_NAME> placeholder."
-    )
-    command_parser.add_argument(
-        "--project-purpose", help="Value used for the <PROJECT_PURPOSE> placeholder."
-    )
-    command_parser.add_argument(
-        "--key-repo-docs", help="Value used for the <KEY_REPO_DOCS> placeholder."
-    )
-    command_parser.add_argument(
-        "--key-subsystems", help="Value used for the <KEY_SUBSYSTEMS> placeholder."
-    )
+    command_parser.add_argument("--project-name", help="Value used for the <PROJECT_NAME> placeholder.")
+    command_parser.add_argument("--project-purpose", help="Value used for the <PROJECT_PURPOSE> placeholder.")
+    command_parser.add_argument("--key-repo-docs", help="Value used for the <KEY_REPO_DOCS> placeholder.")
+    command_parser.add_argument("--key-subsystems", help="Value used for the <KEY_SUBSYSTEMS> placeholder.")
     command_parser.add_argument(
         "--primary-build-command",
         help="Value used for the <PRIMARY_BUILD_COMMAND> placeholder.",
@@ -483,9 +425,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
 
-def _emit_result(
-    result, *, output_format: str, include_install_summary: bool = False
-) -> None:
+def _emit_result(result, *, output_format: str, include_install_summary: bool = False) -> None:
     if output_format == "json":
         print(format_result_json(result))
         return
@@ -495,9 +435,7 @@ def _emit_result(
     if result.detected_version is None:
         print(f"Detected version: none (payload version {result.bootstrap_version})")
     else:
-        print(
-            f"Detected version: {result.detected_version} (payload version {result.bootstrap_version})"
-        )
+        print(f"Detected version: {result.detected_version} (payload version {result.bootstrap_version})")
     for line in format_actions(result.actions, result.target_root):
         print(f"- {line}")
     if include_install_summary:
@@ -513,9 +451,7 @@ def _emit_current_view(result, *, output_format: str) -> None:
     if result.detected_version is None:
         print(f"Detected version: none (payload version {result.bootstrap_version})")
     else:
-        print(
-            f"Detected version: {result.detected_version} (payload version {result.bootstrap_version})"
-        )
+        print(f"Detected version: {result.detected_version} (payload version {result.bootstrap_version})")
     for note in result.notes:
         print(f"\n[{note.path.as_posix()}]")
         if not note.exists:
@@ -530,9 +466,7 @@ def _print_install_summary(result) -> None:
     print(f"Summary: {summary}")
     bootstrap_skills_path = result.target_root / BOOTSTRAP_WORKSPACE_ROOT / "skills"
     print("Next steps:")
-    print(
-        "- Review repository-specific details in AGENTS.md and the current-memory notes."
-    )
+    print("- Review repository-specific details in AGENTS.md and the current-memory notes.")
     print(
         f"- Use the temporary bootstrap skills under {bootstrap_skills_path} to finish install "
         "or adopt lifecycle work, then run `agentic-memory-bootstrap bootstrap-cleanup --target "
@@ -542,27 +476,19 @@ def _print_install_summary(result) -> None:
         "- Review the checked-in core memory skills under memory/skills/ and add repo-specific "
         "sibling skills there when a local memory workflow is worth reusing."
     )
-    print(
-        "- Keep memory/current/project-state.md as a short overview note, not a task list."
-    )
+    print("- Keep memory/current/project-state.md as a short overview note, not a task list.")
     print(
         "- Populate memory/current/task-context.md only when active work would benefit from "
         "short checked-in continuation compression, not a shadow planner."
     )
-    print(
-        "- Confirm the repo's active planning/status surface separately; this bootstrap does not install one."
-    )
+    print("- Confirm the repo's active planning/status surface separately; this bootstrap does not install one.")
     if _created_current_memory_notes(result):
         print(
             f"- If current-memory files were created, use the `populate` skill under "
             f"{bootstrap_skills_path} to fill them conservatively before cleanup."
         )
-    print(
-        "- Run agentic-memory-bootstrap doctor --target <repo> before upgrading an older install."
-    )
-    print(
-        "- Run python scripts/check/check_memory_freshness.py after customising memory notes."
-    )
+    print("- Run agentic-memory-bootstrap doctor --target <repo> before upgrading an older install.")
+    print("- Run python scripts/check/check_memory_freshness.py after customising memory notes.")
 
 
 def _created_current_memory_notes(result) -> bool:
@@ -591,6 +517,7 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
 
     if command == "install":
         return (
+            "Do not ask the user to install or clone anything locally first. "
             f"Run `{runner} init{target_args}`. "
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
@@ -599,6 +526,7 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
         )
     if command == "adopt":
         return (
+            "Do not ask the user to install or clone anything locally first. "
             f"Run `{runner} adopt{target_args}`. "
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
@@ -615,6 +543,7 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
         )
     if command == "upgrade":
         return (
+            "Do not ask the user to install or clone anything locally first. "
             f"Use the checked-in `memory-upgrade` skill under `{target_root}/memory/skills/`. "
             "It should use the recorded upgrade source automatically, run the packaged upgrade flow for this "
             "repo, prefer the installed `agentic-memory-bootstrap` CLI when available, otherwise fall back to "

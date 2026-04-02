@@ -22,56 +22,23 @@ def test_payload_entries_do_not_include_todo_stub() -> None:
 
     assert all(entry.relative_path != Path("TODO.md") for entry in entries)
     assert all(".agent-work" not in entry.relative_path.as_posix() for entry in entries)
-    assert all(
-        entry.relative_path != Path("memory/current/active-decisions.md")
-        for entry in entries
-    )
-    assert any(
-        entry.relative_path == Path("memory/current/task-context.md")
-        for entry in entries
-    )
+    assert all(entry.relative_path != Path("memory/current/active-decisions.md") for entry in entries)
+    assert any(entry.relative_path == Path("memory/current/task-context.md") for entry in entries)
     assert any(entry.relative_path == Path("memory/manifest.toml") for entry in entries)
-    assert any(
-        entry.relative_path == Path("memory/system/SKILLS.md") for entry in entries
-    )
-    assert any(
-        entry.relative_path == Path("memory/system/UPGRADE-SOURCE.toml")
-        for entry in entries
-    )
-    assert any(
-        entry.relative_path == Path("memory/bootstrap/README.md") for entry in entries
-    )
-    assert any(
-        entry.relative_path == Path("memory/bootstrap/skills/install/SKILL.md")
-        for entry in entries
-    )
-    assert any(
-        entry.relative_path == Path("memory/skills/memory-router/SKILL.md")
-        for entry in entries
-    )
-    assert any(
-        entry.relative_path == Path("memory/skills/memory-upgrade/SKILL.md")
-        for entry in entries
-    )
-    assert all(
-        entry.relative_path != Path("memory/bootstrap/skills/upgrade/SKILL.md")
-        for entry in entries
-    )
-    assert all(
-        entry.relative_path
-        != Path("memory/bootstrap/skills/upgrade/agents/openai.yaml")
-        for entry in entries
-    )
+    assert any(entry.relative_path == Path("memory/system/SKILLS.md") for entry in entries)
+    assert any(entry.relative_path == Path("memory/system/UPGRADE-SOURCE.toml") for entry in entries)
+    assert any(entry.relative_path == Path("memory/bootstrap/README.md") for entry in entries)
+    assert any(entry.relative_path == Path("memory/bootstrap/skills/install/SKILL.md") for entry in entries)
+    assert any(entry.relative_path == Path("memory/skills/memory-router/SKILL.md") for entry in entries)
+    assert any(entry.relative_path == Path("memory/skills/memory-upgrade/SKILL.md") for entry in entries)
+    assert all(entry.relative_path != Path("memory/bootstrap/skills/upgrade/SKILL.md") for entry in entries)
+    assert all(entry.relative_path != Path("memory/bootstrap/skills/upgrade/agents/openai.yaml") for entry in entries)
 
 
 def test_payload_current_baseline_is_project_state_and_task_context_only() -> None:
     entries = installer._payload_entries(installer.payload_root())
 
-    current_paths = {
-        entry.relative_path.as_posix()
-        for entry in entries
-        if entry.relative_path.as_posix().startswith("memory/current/")
-    }
+    current_paths = {entry.relative_path.as_posix() for entry in entries if entry.relative_path.as_posix().startswith("memory/current/")}
 
     assert current_paths == {
         "memory/current/project-state.md",
@@ -82,9 +49,7 @@ def test_payload_current_baseline_is_project_state_and_task_context_only() -> No
 def test_list_bundled_skills_only_includes_bootstrap_skills() -> None:
     result = installer.list_bundled_skills()
 
-    bundled = {
-        action.path.name for action in result.actions if action.kind == "bundled skill"
-    }
+    bundled = {action.path.name for action in result.actions if action.kind == "bundled skill"}
 
     assert bundled == {
         "bootstrap-adoption",
@@ -97,11 +62,7 @@ def test_list_bundled_skills_only_includes_bootstrap_skills() -> None:
 def test_dev_bundled_skills_tree_only_contains_bootstrap_skill_directories() -> None:
     skills_dir = installer.skills_root()
 
-    skill_dirs = {
-        path.name
-        for path in skills_dir.iterdir()
-        if path.is_dir() and (path / "SKILL.md").exists()
-    }
+    skill_dirs = {path.name for path in skills_dir.iterdir() if path.is_dir() and (path / "SKILL.md").exists()}
 
     assert skill_dirs == {
         "bootstrap-adoption",
@@ -147,10 +108,7 @@ def test_equivalent_optional_fragment_detail_detects_existing_makefile_target() 
         fragment=fragment,
     )
 
-    assert (
-        detail
-        == "equivalent optional Makefile convenience target already present (check-memory)"
-    )
+    assert detail == "equivalent optional Makefile convenience target already present (check-memory)"
 
 
 def test_equivalent_optional_fragment_detail_requires_matching_targets() -> None:
@@ -172,15 +130,9 @@ def test_plan_optional_appends_skips_equivalent_makefile_target(tmp_path: Path) 
     fragment = "check-memory:\n\tpython scripts/check/check_memory_freshness.py\n"
     makefile = "check-memory:\n\t$(PYTHON) scripts/check/check_memory_freshness.py\n"
 
-    (source_root / "optional" / "Makefile.fragment.mk").write_text(
-        fragment, encoding="utf-8"
-    )
-    (source_root / "optional" / "CONTRIBUTING.fragment.md").write_text(
-        "Contributing fragment\n", encoding="utf-8"
-    )
-    (source_root / "optional" / "pull_request_template.fragment.md").write_text(
-        "PR fragment\n", encoding="utf-8"
-    )
+    (source_root / "optional" / "Makefile.fragment.mk").write_text(fragment, encoding="utf-8")
+    (source_root / "optional" / "CONTRIBUTING.fragment.md").write_text("Contributing fragment\n", encoding="utf-8")
+    (source_root / "optional" / "pull_request_template.fragment.md").write_text("PR fragment\n", encoding="utf-8")
     (target_root / "Makefile").write_text(makefile, encoding="utf-8")
 
     result = installer.InstallResult(target_root=target_root, dry_run=False)
@@ -193,15 +145,10 @@ def test_plan_optional_appends_skips_equivalent_makefile_target(tmp_path: Path) 
     )
 
     assert (target_root / "Makefile").read_text(encoding="utf-8") == makefile
-    makefile_actions = [
-        action for action in result.actions if action.path == target_root / "Makefile"
-    ]
+    makefile_actions = [action for action in result.actions if action.path == target_root / "Makefile"]
     assert len(makefile_actions) == 1
     assert makefile_actions[0].kind == "skipped"
-    assert (
-        makefile_actions[0].detail
-        == "equivalent optional Makefile convenience target already present (check-memory)"
-    )
+    assert makefile_actions[0].detail == "equivalent optional Makefile convenience target already present (check-memory)"
 
 
 def test_install_does_not_duplicate_existing_optional_fragment(tmp_path: Path) -> None:
@@ -227,11 +174,7 @@ def test_patch_agents_workflow_block_inserts_pointer_after_heading() -> None:
 
     patched = installer._patch_agents_workflow_block(existing)
 
-    assert patched == (
-        "# Agent Instructions\n\n"
-        f"{installer.WORKFLOW_POINTER_BLOCK}\n\n"
-        "Repo-local rules live here.\n"
-    )
+    assert patched == (f"# Agent Instructions\n\n{installer.WORKFLOW_POINTER_BLOCK}\n\nRepo-local rules live here.\n")
 
 
 def test_doctor_flags_agents_that_embed_current_shared_workflow_sections(
@@ -249,16 +192,12 @@ def test_doctor_flags_agents_that_embed_current_shared_workflow_sections(
         "- copied shared rule\n",
         encoding="utf-8",
     )
-    (target / "memory" / "system" / "VERSION.md").write_text(
-        "Version: 8\n", encoding="utf-8"
-    )
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 8\n", encoding="utf-8")
 
     result = installer.doctor_bootstrap(target=target)
 
     assert any(
-        action.path == target / "AGENTS.md"
-        and action.kind == "manual review"
-        and "embeds shared workflow rules" in action.detail
+        action.path == target / "AGENTS.md" and action.kind == "manual review" and "embeds shared workflow rules" in action.detail
         for action in result.actions
     )
 
@@ -270,28 +209,16 @@ def test_upgrade_replaces_shared_files_without_todo_manual_review(
     (target / "memory" / "system").mkdir(parents=True)
     (target / "memory" / "current").mkdir(parents=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "system" / "VERSION.md").write_text(
-        "Version: 7\n", encoding="utf-8"
-    )
-    (target / "memory" / "system" / "WORKFLOW.md").write_text(
-        "old workflow\n", encoding="utf-8"
-    )
-    (target / "memory" / "current" / "task-context.md").write_text(
-        "# Task Context\n\n<CURRENT_FOCUS>\n", encoding="utf-8"
-    )
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 7\n", encoding="utf-8")
+    (target / "memory" / "system" / "WORKFLOW.md").write_text("old workflow\n", encoding="utf-8")
+    (target / "memory" / "current" / "task-context.md").write_text("# Task Context\n\n<CURRENT_FOCUS>\n", encoding="utf-8")
 
     result = installer.doctor_bootstrap(target=target)
 
     assert all(action.path != target / "TODO.md" for action in result.actions)
+    assert any(action.path == target / "memory" / "system" / "WORKFLOW.md" and action.kind == "would replace" for action in result.actions)
     assert any(
-        action.path == target / "memory" / "system" / "WORKFLOW.md"
-        and action.kind == "would replace"
-        for action in result.actions
-    )
-    assert any(
-        action.path == target / "memory" / "current" / "task-context.md"
-        and action.kind == "would replace"
-        for action in result.actions
+        action.path == target / "memory" / "current" / "task-context.md" and action.kind == "would replace" for action in result.actions
     )
 
 
@@ -307,10 +234,7 @@ def test_doctor_reports_customised_seed_notes_as_expected_customisation(
     result = installer.doctor_bootstrap(target=target)
 
     assert any(
-        action.path == note_path
-        and action.kind == "customised"
-        and action.category == "customisation-present"
-        for action in result.actions
+        action.path == note_path and action.kind == "customised" and action.category == "customisation-present" for action in result.actions
     )
 
 
@@ -325,10 +249,7 @@ def test_list_payload_files_excludes_agent_work_templates_and_gitignore_append(
 
     assert all(action.path != target / ".gitignore" for action in result.actions)
     assert all(".agent-work" not in action.path.as_posix() for action in result.actions)
-    assert all(
-        action.path != target / "memory" / "current" / "active-decisions.md"
-        for action in result.actions
-    )
+    assert all(action.path != target / "memory" / "current" / "active-decisions.md" for action in result.actions)
 
 
 def test_install_dry_run_includes_current_memory_baseline(tmp_path: Path) -> None:
@@ -337,11 +258,7 @@ def test_install_dry_run_includes_current_memory_baseline(tmp_path: Path) -> Non
 
     result = installer.install_bootstrap(target=target, dry_run=True)
 
-    planned_copies = {
-        action.path.relative_to(target).as_posix()
-        for action in result.actions
-        if action.kind == "would copy"
-    }
+    planned_copies = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "would copy"}
 
     assert "memory/current/project-state.md" in planned_copies
     assert "memory/current/task-context.md" in planned_copies
@@ -372,9 +289,7 @@ def test_install_writes_audit_clean_recurring_failures_seed_date(
 
     installer.install_bootstrap(target=target)
 
-    text = (target / "memory" / "mistakes" / "recurring-failures.md").read_text(
-        encoding="utf-8"
-    )
+    text = (target / "memory" / "mistakes" / "recurring-failures.md").read_text(encoding="utf-8")
     assert "<LAST_CONFIRMED_DATE>" not in text
     assert "## Last confirmed\n\n20" in text
 
@@ -385,9 +300,7 @@ def test_install_writes_upgrade_source_metadata(tmp_path: Path) -> None:
 
     installer.install_bootstrap(target=target)
 
-    text = (target / "memory" / "system" / "UPGRADE-SOURCE.toml").read_text(
-        encoding="utf-8"
-    )
+    text = (target / "memory" / "system" / "UPGRADE-SOURCE.toml").read_text(encoding="utf-8")
     assert 'source_type = "git"' in text
     assert "git+https://github.com/Tenfifty/agentic-memory" in text
 
@@ -400,9 +313,7 @@ def test_adopt_writes_upgrade_source_metadata(tmp_path: Path) -> None:
 
     installer.adopt_bootstrap(target=target)
 
-    text = (target / "memory" / "system" / "UPGRADE-SOURCE.toml").read_text(
-        encoding="utf-8"
-    )
+    text = (target / "memory" / "system" / "UPGRADE-SOURCE.toml").read_text(encoding="utf-8")
     assert 'source_type = "git"' in text
 
 
@@ -442,9 +353,7 @@ def test_current_check_flags_placeholder_and_stale_task_context(tmp_path: Path) 
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory" / "current").mkdir(parents=True)
-    (target / "memory" / "current" / "project-state.md").write_text(
-        "# Project State\n\nok\n", encoding="utf-8"
-    )
+    (target / "memory" / "current" / "project-state.md").write_text("# Project State\n\nok\n", encoding="utf-8")
     (target / "memory" / "current" / "task-context.md").write_text(
         "# Task Context\n\n<CURRENT_FOCUS>\n\n## Last confirmed\n\n2026-01-01\n",
         encoding="utf-8",
@@ -453,10 +362,7 @@ def test_current_check_flags_placeholder_and_stale_task_context(tmp_path: Path) 
     result = installer.check_current_memory(target=target)
 
     assert any(action.category == "placeholder-review" for action in result.actions)
-    assert any(
-        "not been confirmed" in action.detail and "active goal" in action.detail
-        for action in result.actions
-    )
+    assert any("not been confirmed" in action.detail and "active goal" in action.detail for action in result.actions)
 
 
 def test_current_check_flags_stale_project_state(tmp_path: Path) -> None:
@@ -484,9 +390,7 @@ def test_current_check_flags_stale_project_state(tmp_path: Path) -> None:
 
 
 def test_build_substitutions_include_last_confirmed_date(tmp_path: Path) -> None:
-    substitutions = installer.build_substitutions(
-        target_root=tmp_path, project_name="demo"
-    )
+    substitutions = installer.build_substitutions(target_root=tmp_path, project_name="demo")
 
     assert substitutions["<LAST_CONFIRMED_DATE>"].count("-") == 2
 
@@ -531,13 +435,9 @@ def test_upgrade_preserves_existing_local_source_metadata(tmp_path: Path) -> Non
 
     result = installer.upgrade_bootstrap(target=target, dry_run=True)
 
-    assert source_path.read_text(encoding="utf-8") == (
-        'source_type = "local"\nsource_ref = "C:/src/agentic-memory"\n'
-    )
+    assert source_path.read_text(encoding="utf-8") == ('source_type = "local"\nsource_ref = "C:/src/agentic-memory"\n')
     assert any(
-        action.path == source_path
-        and action.kind == "current"
-        and "preserving repo-local source selection" in action.detail
+        action.path == source_path and action.kind == "current" and "preserving repo-local source selection" in action.detail
         for action in result.actions
     )
 
@@ -559,16 +459,10 @@ def test_route_memory_adds_baseline_and_runtime_suggestions(tmp_path: Path) -> N
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text(
-        (Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8"
-    )
+    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
 
     result = installer.route_memory(target=target, files=["deploy/k8s/service.yaml"])
-    suggested = {
-        action.path.relative_to(target).as_posix()
-        for action in result.actions
-        if action.kind == "recommended"
-    }
+    suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "recommended"}
 
     assert "memory/current/project-state.md" in suggested
     assert "memory/current/task-context.md" in suggested
@@ -580,16 +474,10 @@ def test_route_memory_adds_architecture_suggestions(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text(
-        (Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8"
-    )
+    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
 
     result = installer.route_memory(target=target, files=["src/architecture/schema.py"])
-    suggested = {
-        action.path.relative_to(target).as_posix()
-        for action in result.actions
-        if action.kind == "recommended"
-    }
+    suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "recommended"}
 
     assert "memory/invariants/<relevant-invariant-note>.md" in suggested
     assert "memory/decisions/README.md" in suggested
@@ -615,9 +503,7 @@ stale_when = ["src/**/*.py"]
         encoding="utf-8",
     )
 
-    result = installer.route_memory(
-        target=target, files=["src/repo_memory_bootstrap/cli.py"]
-    )
+    result = installer.route_memory(target=target, files=["src/repo_memory_bootstrap/cli.py"])
 
     assert any(
         action.kind == "recommended"
@@ -644,15 +530,11 @@ def test_sync_memory_with_explicit_file_produces_recommendations(
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text(
-        (Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8"
-    )
+    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
 
     result = installer.sync_memory(target=target, files=["tests/test_cli.py"])
 
-    assert any(
-        action.kind in {"review", "update", "update index"} for action in result.actions
-    )
+    assert any(action.kind in {"review", "update", "update index"} for action in result.actions)
 
 
 def test_sync_memory_uses_manifest_staleness_triggers(tmp_path: Path) -> None:
@@ -678,9 +560,7 @@ related_validations = ["uv run pytest"]
         encoding="utf-8",
     )
 
-    result = installer.sync_memory(
-        target=target, files=["src/repo_memory_bootstrap/installer.py"]
-    )
+    result = installer.sync_memory(target=target, files=["src/repo_memory_bootstrap/installer.py"])
 
     assert any(
         action.path == target / "memory" / "domains" / "cli.md"
@@ -708,12 +588,7 @@ def test_memory_freshness_audit_ignores_bootstrap_workspace(tmp_path: Path) -> N
     completed = subprocess.run(
         [
             sys.executable,
-            str(
-                installer.payload_root()
-                / "scripts"
-                / "check"
-                / "check_memory_freshness.py"
-            ),
+            str(installer.payload_root() / "scripts" / "check" / "check_memory_freshness.py"),
         ],
         cwd=target,
         check=True,
@@ -724,9 +599,7 @@ def test_memory_freshness_audit_ignores_bootstrap_workspace(tmp_path: Path) -> N
     assert "memory/bootstrap/" not in completed.stdout
 
 
-def test_verify_payload_flags_forbidden_current_note(
-    monkeypatch, tmp_path: Path
-) -> None:
+def test_verify_payload_flags_forbidden_current_note(monkeypatch, tmp_path: Path) -> None:
     payload = tmp_path / "payload"
     (payload / "memory" / "current").mkdir(parents=True)
     (payload / "memory" / "system").mkdir(parents=True)
@@ -738,36 +611,16 @@ def test_verify_payload_flags_forbidden_current_note(
     (payload / "scripts" / "check").mkdir(parents=True)
     (payload / "AGENTS.md").write_text("# Agent Instructions\n", encoding="utf-8")
     (payload / "memory" / "index.md").write_text("# Memory Index\n", encoding="utf-8")
-    (payload / "memory" / "system" / "WORKFLOW.md").write_text(
-        "# Workflow Rules\n", encoding="utf-8"
-    )
-    (payload / "memory" / "current" / "project-state.md").write_text(
-        "# Project State\n", encoding="utf-8"
-    )
-    (payload / "memory" / "current" / "task-context.md").write_text(
-        "# Task Context\n", encoding="utf-8"
-    )
-    (payload / "memory" / "current" / "active-decisions.md").write_text(
-        "# Active Decisions\n", encoding="utf-8"
-    )
-    (payload / "memory" / "domains" / "README.md").write_text(
-        "# Domains\n", encoding="utf-8"
-    )
-    (payload / "memory" / "invariants" / "README.md").write_text(
-        "# Invariants\n", encoding="utf-8"
-    )
-    (payload / "memory" / "runbooks" / "README.md").write_text(
-        "# Runbooks\n", encoding="utf-8"
-    )
-    (payload / "memory" / "mistakes" / "recurring-failures.md").write_text(
-        "# Recurring Failures\n", encoding="utf-8"
-    )
-    (payload / "memory" / "decisions" / "README.md").write_text(
-        "# Decisions\n", encoding="utf-8"
-    )
-    (payload / "scripts" / "check" / "check_memory_freshness.py").write_text(
-        "print('ok')\n", encoding="utf-8"
-    )
+    (payload / "memory" / "system" / "WORKFLOW.md").write_text("# Workflow Rules\n", encoding="utf-8")
+    (payload / "memory" / "current" / "project-state.md").write_text("# Project State\n", encoding="utf-8")
+    (payload / "memory" / "current" / "task-context.md").write_text("# Task Context\n", encoding="utf-8")
+    (payload / "memory" / "current" / "active-decisions.md").write_text("# Active Decisions\n", encoding="utf-8")
+    (payload / "memory" / "domains" / "README.md").write_text("# Domains\n", encoding="utf-8")
+    (payload / "memory" / "invariants" / "README.md").write_text("# Invariants\n", encoding="utf-8")
+    (payload / "memory" / "runbooks" / "README.md").write_text("# Runbooks\n", encoding="utf-8")
+    (payload / "memory" / "mistakes" / "recurring-failures.md").write_text("# Recurring Failures\n", encoding="utf-8")
+    (payload / "memory" / "decisions" / "README.md").write_text("# Decisions\n", encoding="utf-8")
+    (payload / "scripts" / "check" / "check_memory_freshness.py").write_text("print('ok')\n", encoding="utf-8")
     monkeypatch.setattr(installer, "payload_root", lambda: payload)
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
@@ -775,9 +628,7 @@ def test_verify_payload_flags_forbidden_current_note(
     result = installer.verify_payload(target=target)
 
     assert any(
-        action.path.relative_to(target).as_posix()
-        == "memory/current/active-decisions.md"
-        and action.category == "contract-drift"
+        action.path.relative_to(target).as_posix() == "memory/current/active-decisions.md" and action.category == "contract-drift"
         for action in result.actions
     )
 
@@ -787,15 +638,9 @@ def test_doctor_reports_placeholder_review_category(tmp_path: Path) -> None:
     (target / "memory" / "current").mkdir(parents=True)
     (target / "memory" / "system").mkdir(parents=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "system" / "VERSION.md").write_text(
-        "Version: 8\n", encoding="utf-8"
-    )
-    (target / "memory" / "system" / "WORKFLOW.md").write_text(
-        "old workflow\n", encoding="utf-8"
-    )
-    (target / "memory" / "current" / "task-context.md").write_text(
-        "# Task Context\n\n<CURRENT_FOCUS>\n", encoding="utf-8"
-    )
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 8\n", encoding="utf-8")
+    (target / "memory" / "system" / "WORKFLOW.md").write_text("old workflow\n", encoding="utf-8")
+    (target / "memory" / "current" / "task-context.md").write_text("# Task Context\n\n<CURRENT_FOCUS>\n", encoding="utf-8")
 
     result = installer.doctor_bootstrap(target=target)
 
@@ -807,17 +652,11 @@ def test_doctor_agents_guidance_mentions_apply_local_entrypoint(tmp_path: Path) 
     (target / ".git").mkdir(parents=True)
     (target / "memory" / "system").mkdir(parents=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "system" / "VERSION.md").write_text(
-        "Version: 10\n", encoding="utf-8"
-    )
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 10\n", encoding="utf-8")
 
     result = installer.doctor_bootstrap(target=target)
 
-    assert any(
-        action.path == target / "AGENTS.md"
-        and "--apply-local-entrypoint" in action.detail
-        for action in result.actions
-    )
+    assert any(action.path == target / "AGENTS.md" and "--apply-local-entrypoint" in action.detail for action in result.actions)
 
 
 def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
@@ -825,30 +664,16 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
 
     current_args = parser.parse_args(["current", "check", "--target", "."])
     list_skills_args = parser.parse_args(["list-skills", "--format", "json"])
-    cleanup_args = parser.parse_args(
-        ["bootstrap-cleanup", "--target", ".", "--format", "json"]
-    )
-    uninstall_args = parser.parse_args(
-        ["uninstall", "--target", ".", "--dry-run", "--format", "json"]
-    )
-    doctor_args = parser.parse_args(
-        ["doctor", "--target", ".", "--strict-doc-ownership"]
-    )
-    prompt_install_args = parser.parse_args(
-        ["prompt", "install", "--target", "C:/repo"]
-    )
+    cleanup_args = parser.parse_args(["bootstrap-cleanup", "--target", ".", "--format", "json"])
+    uninstall_args = parser.parse_args(["uninstall", "--target", ".", "--dry-run", "--format", "json"])
+    doctor_args = parser.parse_args(["doctor", "--target", ".", "--strict-doc-ownership"])
+    prompt_install_args = parser.parse_args(["prompt", "install", "--target", "C:/repo"])
     prompt_args = parser.parse_args(["prompt", "adopt", "--target", "C:/repo"])
-    prompt_populate_args = parser.parse_args(
-        ["prompt", "populate", "--target", "C:/repo"]
-    )
-    prompt_uninstall_args = parser.parse_args(
-        ["prompt", "uninstall", "--target", "C:/repo"]
-    )
+    prompt_populate_args = parser.parse_args(["prompt", "populate", "--target", "C:/repo"])
+    prompt_uninstall_args = parser.parse_args(["prompt", "uninstall", "--target", "C:/repo"])
     route_args = parser.parse_args(["route", "--files", "src/app.py"])
     sync_args = parser.parse_args(["sync-memory", "--notes", "memory/index.md"])
-    promotion_args = parser.parse_args(
-        ["promotion-report", "--notes", "memory/domains/api.md"]
-    )
+    promotion_args = parser.parse_args(["promotion-report", "--notes", "memory/domains/api.md"])
     verify_args = parser.parse_args(["verify-payload", "--format", "json"])
     install_args = parser.parse_args(
         [
@@ -910,9 +735,7 @@ def test_cli_version_flag_prints_package_version(capsys) -> None:
         (["bootstrap-cleanup", "--target", ".", "--format", "json"], True),
     ],
 )
-def test_cli_main_smoke_commands_return_zero(
-    tmp_path: Path, argv: list[str], setup_installed_repo: bool
-) -> None:
+def test_cli_main_smoke_commands_return_zero(tmp_path: Path, argv: list[str], setup_installed_repo: bool) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     if setup_installed_repo:
@@ -923,9 +746,7 @@ def test_cli_main_smoke_commands_return_zero(
     assert completed == 0
 
 
-def test_git_changed_files_times_out_with_warning(
-    tmp_path: Path, monkeypatch, capsys
-) -> None:
+def test_git_changed_files_times_out_with_warning(tmp_path: Path, monkeypatch, capsys) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
 
@@ -941,9 +762,7 @@ def test_git_changed_files_times_out_with_warning(
 def test_verify_payload_reports_version_mismatch(tmp_path: Path, monkeypatch) -> None:
     payload = tmp_path / "payload"
     (payload / "memory" / "system").mkdir(parents=True)
-    (payload / "memory" / "system" / "VERSION.md").write_text(
-        "Version: 21\n", encoding="utf-8"
-    )
+    (payload / "memory" / "system" / "VERSION.md").write_text("Version: 21\n", encoding="utf-8")
     monkeypatch.setattr(installer, "payload_root", lambda: payload)
 
     result = installer.verify_payload(target=payload)
@@ -956,12 +775,8 @@ def test_verify_payload_reports_version_mismatch(tmp_path: Path, monkeypatch) ->
     )
 
 
-def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_guidance() -> (
-    None
-):
-    text = (installer.payload_root() / "memory" / "system" / "WORKFLOW.md").read_text(
-        encoding="utf-8"
-    )
+def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_guidance() -> None:
+    text = (installer.payload_root() / "memory" / "system" / "WORKFLOW.md").read_text(encoding="utf-8")
 
     assert "## Note maintenance rule" in text
     assert "Update a note when its primary home is still correct" in text
@@ -982,9 +797,7 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
 
 
 def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() -> None:
-    text = (installer.payload_root() / "memory" / "index.md").read_text(
-        encoding="utf-8"
-    )
+    text = (installer.payload_root() / "memory" / "index.md").read_text(encoding="utf-8")
 
     assert "## Token-efficiency rule" in text
     assert "Memory is a net token saver" in text
@@ -1020,9 +833,7 @@ def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -
 
 
 def test_bootstrap_task_context_starter_is_continuation_only() -> None:
-    text = (installer.payload_root() / "memory" / "current" / "task-context.md").read_text(
-        encoding="utf-8"
-    )
+    text = (installer.payload_root() / "memory" / "current" / "task-context.md").read_text(encoding="utf-8")
 
     assert "Optional checked-in continuation compression" in text
     assert "## Active goal" in text
@@ -1055,9 +866,7 @@ def test_doctor_emits_improvement_pressure_suggestions_from_manifest(tmp_path: P
     (target / "memory" / "mistakes").mkdir(parents=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
     (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "system" / "VERSION.md").write_text(
-        "Version: 32\n", encoding="utf-8"
-    )
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 32\n", encoding="utf-8")
     (target / "memory" / "mistakes" / "recurring-failures.md").write_text(
         "# Recurring failures\n\n- This keeps happening.\n", encoding="utf-8"
     )
@@ -1095,9 +904,7 @@ def test_sync_memory_appends_improvement_hint_from_manifest(tmp_path: Path) -> N
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory" / "mistakes").mkdir(parents=True)
-    (target / "memory" / "mistakes" / "recurring-failures.md").write_text(
-        "# Recurring failures\n\n- Guard this.\n", encoding="utf-8"
-    )
+    (target / "memory" / "mistakes" / "recurring-failures.md").write_text("# Recurring failures\n\n- Guard this.\n", encoding="utf-8")
     (target / "memory" / "manifest.toml").write_text(
         """
 version = 1
@@ -1130,9 +937,7 @@ improvement_candidate = true
 
 def test_path_match_pattern_treats_double_star_as_zero_or_more_directories() -> None:
     assert installer._path_matches_pattern("tests/test_api.py", "tests/**/*.py")
-    assert installer._path_matches_pattern(
-        "tests/unit/test_api.py", "tests/**/*.py"
-    )
+    assert installer._path_matches_pattern("tests/unit/test_api.py", "tests/**/*.py")
 
 
 def test_promotion_report_supports_improvement_candidates_without_docs_promotion(
@@ -1182,10 +987,8 @@ def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(
     monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     prompt = cli._build_agent_prompt("install", target="C:/repo")
 
-    assert (
-        "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap init --target C:/repo"
-        in prompt
-    )
+    assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap init --target C:/repo" in prompt
     assert "`install` skill at `C:/repo/memory/bootstrap/skills`" in prompt
     assert "bootstrap-cleanup --target C:/repo" in prompt
 
@@ -1196,10 +999,8 @@ def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
     monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     prompt = cli._build_agent_prompt("adopt", target="C:/repo")
 
-    assert (
-        "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap adopt --target C:/repo"
-        in prompt
-    )
+    assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap adopt --target C:/repo" in prompt
     assert "`install` skill at `C:/repo/memory/bootstrap/skills`" in prompt
     assert "`populate` from the same path" in prompt
     assert "bootstrap-cleanup --target C:/repo" in prompt
@@ -1210,10 +1011,7 @@ def test_build_populate_prompt_mentions_task_context_heuristic(monkeypatch) -> N
     monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     prompt = cli._build_agent_prompt("populate", target="C:/repo")
 
-    assert (
-        "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap current show --target C:/repo"
-        in prompt
-    )
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap current show --target C:/repo" in prompt
     assert "`populate` skill at `C:/repo/memory/bootstrap/skills`" in prompt
     assert "task-context.md" in prompt
     assert "C:/repo" in prompt
@@ -1223,7 +1021,8 @@ def test_build_upgrade_prompt_mentions_local_bootstrap_skills(monkeypatch) -> No
     monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     prompt = cli._build_agent_prompt("upgrade", target="C:/repo")
 
-    assert prompt.startswith("Use the checked-in `memory-upgrade` skill")
+    assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
+    assert "Use the checked-in `memory-upgrade` skill" in prompt
     assert "memory-upgrade" in prompt
     assert "C:/repo/memory/skills/" in prompt
     assert "recorded upgrade source automatically" in prompt
@@ -1234,9 +1033,7 @@ def test_build_upgrade_prompt_mentions_local_bootstrap_skills(monkeypatch) -> No
     assert not prompt.startswith("Run `")
 
 
-def test_build_upgrade_prompt_uses_local_source_when_recorded(
-    monkeypatch, tmp_path: Path
-) -> None:
+def test_build_upgrade_prompt_uses_local_source_when_recorded(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
@@ -1248,7 +1045,8 @@ def test_build_upgrade_prompt_uses_local_source_when_recorded(
 
     prompt = cli._build_agent_prompt("upgrade", target=str(target))
 
-    assert prompt.startswith("Use the checked-in `memory-upgrade` skill")
+    assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
+    assert "Use the checked-in `memory-upgrade` skill" in prompt
     assert "recorded upgrade source automatically" in prompt
     assert "packaged upgrade flow for this repo" in prompt
     assert "uvx --from C:/src/agentic-memory agentic-memory-bootstrap upgrade --target <repo>" in prompt
@@ -1259,21 +1057,17 @@ def test_build_uninstall_prompt_mentions_bundled_skill(monkeypatch) -> None:
     monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     prompt = cli._build_agent_prompt("uninstall", target="C:/repo")
 
-    assert (
-        "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap uninstall --target C:/repo"
-        in prompt
-    )
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap uninstall --target C:/repo" in prompt
     assert "bootstrap-uninstall" in prompt
 
 
 def test_build_prompt_falls_back_to_pipx_when_uvx_is_missing(monkeypatch) -> None:
-    monkeypatch.setattr(
-        cli.shutil, "which", lambda name: None if name == "uvx" else "C:/tools/pipx.exe"
-    )
+    monkeypatch.setattr(cli.shutil, "which", lambda name: None if name == "uvx" else "C:/tools/pipx.exe")
 
     prompt = cli._build_agent_prompt("upgrade", target="C:/repo")
 
-    assert prompt.startswith("Use the checked-in `memory-upgrade` skill")
+    assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
+    assert "Use the checked-in `memory-upgrade` skill" in prompt
     assert "C:/repo/memory/skills/" in prompt
     assert "recorded upgrade source automatically" in prompt
     assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target <repo>" in prompt
@@ -1281,9 +1075,7 @@ def test_build_prompt_falls_back_to_pipx_when_uvx_is_missing(monkeypatch) -> Non
 
 
 def test_memory_upgrade_skill_includes_module_fallback() -> None:
-    text = (
-        installer.payload_root() / "memory" / "skills" / "memory-upgrade" / "SKILL.md"
-    ).read_text(encoding="utf-8")
+    text = (installer.payload_root() / "memory" / "skills" / "memory-upgrade" / "SKILL.md").read_text(encoding="utf-8")
 
     assert "agentic-memory-bootstrap upgrade --target <repo>" in text
     assert "uvx --from <recorded-source> agentic-memory-bootstrap upgrade --target <repo>" in text
@@ -1302,10 +1094,7 @@ def test_doctor_flags_legacy_upgrade_runbook_for_removal(tmp_path: Path) -> None
     result = installer.doctor_bootstrap(target=target)
 
     assert any(
-        action.path == legacy
-        and action.kind == "would remove"
-        and action.category == "obsolete-managed-file"
-        for action in result.actions
+        action.path == legacy and action.kind == "would remove" and action.category == "obsolete-managed-file" for action in result.actions
     )
 
 
@@ -1321,10 +1110,7 @@ def test_upgrade_removes_legacy_upgrade_runbook(tmp_path: Path) -> None:
 
     assert not legacy.exists()
     assert any(
-        action.path == legacy
-        and action.kind == "removed"
-        and action.category == "obsolete-managed-file"
-        for action in result.actions
+        action.path == legacy and action.kind == "removed" and action.category == "obsolete-managed-file" for action in result.actions
     )
 
 
@@ -1377,10 +1163,7 @@ def test_uninstall_flags_customised_seed_notes_for_manual_review(
 
     result = installer.uninstall_bootstrap(target=target, dry_run=True)
 
-    assert any(
-        action.path == note_path and action.kind == "manual review"
-        for action in result.actions
-    )
+    assert any(action.path == note_path and action.kind == "manual review" for action in result.actions)
 
 
 def test_uninstall_reports_remaining_repo_local_memory_as_safe_to_keep(
@@ -1396,17 +1179,10 @@ def test_uninstall_reports_remaining_repo_local_memory_as_safe_to_keep(
 
     result = installer.uninstall_bootstrap(target=target, dry_run=True)
 
-    assert any(
-        action.path == extra_note
-        and action.kind == "skipped"
-        and "safe to keep" in action.detail
-        for action in result.actions
-    )
+    assert any(action.path == extra_note and action.kind == "skipped" and "safe to keep" in action.detail for action in result.actions)
 
 
-def test_install_summary_mentions_populate_next_step_when_current_notes_created(
-    capsys, tmp_path: Path
-) -> None:
+def test_install_summary_mentions_populate_next_step_when_current_notes_created(capsys, tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     result = installer.install_bootstrap(target=target, dry_run=True)
@@ -1420,19 +1196,13 @@ def test_install_summary_mentions_populate_next_step_when_current_notes_created(
     assert "`populate` skill" in output
 
 
-def test_install_summary_skips_populate_next_step_when_no_current_notes_created(
-    capsys, tmp_path: Path
-) -> None:
+def test_install_summary_skips_populate_next_step_when_no_current_notes_created(capsys, tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
     (target / "memory" / "current").mkdir(parents=True)
-    (target / "memory" / "current" / "project-state.md").write_text(
-        "# Project State\n", encoding="utf-8"
-    )
-    (target / "memory" / "current" / "task-context.md").write_text(
-        "# Task Context\n", encoding="utf-8"
-    )
+    (target / "memory" / "current" / "project-state.md").write_text("# Project State\n", encoding="utf-8")
+    (target / "memory" / "current" / "task-context.md").write_text("# Task Context\n", encoding="utf-8")
     result = installer.adopt_bootstrap(target=target, dry_run=True)
 
     cli._print_install_summary(result)
@@ -1482,9 +1252,7 @@ stale_when = ["src/**/*.py"]
     result = installer.route_memory(target=target, files=["src/service/api.py"])
 
     assert any(
-        action.path == target / "docs" / "api.md"
-        and action.kind == "required"
-        and "canonical doc takes precedence" in action.detail
+        action.path == target / "docs" / "api.md" and action.kind == "required" and "canonical doc takes precedence" in action.detail
         for action in result.actions
     )
     assert any(
@@ -1504,9 +1272,7 @@ def test_doctor_audit_flags_core_docs_that_depend_on_memory_when_policy_enabled(
     (target / "docs").mkdir(parents=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
     (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "system" / "VERSION.md").write_text(
-        "Version: 30\n", encoding="utf-8"
-    )
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
     (target / "memory" / "manifest.toml").write_text(
         """
 version = 1
@@ -1535,9 +1301,7 @@ task_relevance = "required"
     result = installer.doctor_bootstrap(target=target)
 
     assert any(
-        action.path == target / "README.md"
-        and action.kind == "manual review"
-        and "core doc depends on memory" in action.detail
+        action.path == target / "README.md" and action.kind == "manual review" and "core doc depends on memory" in action.detail
         for action in result.actions
     )
 
@@ -1551,9 +1315,7 @@ def test_doctor_strict_doc_ownership_forces_audit_without_manifest_opt_in(
     (target / "docs").mkdir(parents=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
     (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "system" / "VERSION.md").write_text(
-        "Version: 30\n", encoding="utf-8"
-    )
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
     (target / "memory" / "manifest.toml").write_text(
         """
 version = 1
@@ -1574,17 +1336,11 @@ task_relevance = "required"
         + "\n",
         encoding="utf-8",
     )
-    (target / "README.md").write_text(
-        "See memory/runbooks/deploy.md for deployment steps.\n", encoding="utf-8"
-    )
+    (target / "README.md").write_text("See memory/runbooks/deploy.md for deployment steps.\n", encoding="utf-8")
 
     result = installer.doctor_bootstrap(target=target, strict_doc_ownership=True)
 
-    assert any(
-        action.path == target / "README.md"
-        and "core doc depends on memory" in action.detail
-        for action in result.actions
-    )
+    assert any(action.path == target / "README.md" and "core doc depends on memory" in action.detail for action in result.actions)
 
 
 def test_doctor_validates_manifest_canonicality_values(tmp_path: Path) -> None:
@@ -1593,9 +1349,7 @@ def test_doctor_validates_manifest_canonicality_values(tmp_path: Path) -> None:
     (target / "memory").mkdir(parents=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
     (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "system" / "VERSION.md").write_text(
-        "Version: 30\n", encoding="utf-8"
-    )
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
     (target / "memory" / "manifest.toml").write_text(
         """
 version = 1
@@ -1615,13 +1369,11 @@ task_relevance = "sometimes"
     result = installer.doctor_bootstrap(target=target)
 
     assert any(
-        action.path == target / "memory" / "domains" / "api.md"
-        and "manifest canonicality must be one of" in action.detail
+        action.path == target / "memory" / "domains" / "api.md" and "manifest canonicality must be one of" in action.detail
         for action in result.actions
     )
     assert any(
-        action.path == target / "memory" / "domains" / "api.md"
-        and "manifest task_relevance must be required or optional" in action.detail
+        action.path == target / "memory" / "domains" / "api.md" and "manifest task_relevance must be required or optional" in action.detail
         for action in result.actions
     )
 
@@ -1632,9 +1384,7 @@ def test_doctor_validates_optional_improvement_manifest_values(tmp_path: Path) -
     (target / "memory").mkdir(parents=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
     (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "system" / "VERSION.md").write_text(
-        "Version: 33\n", encoding="utf-8"
-    )
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 33\n", encoding="utf-8")
     (target / "memory" / "manifest.toml").write_text(
         """
 version = 1
@@ -1669,9 +1419,7 @@ def test_doctor_rejects_canonical_elsewhere_targets_inside_memory(tmp_path: Path
     (target / "memory" / "domains").mkdir(parents=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
     (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "system" / "VERSION.md").write_text(
-        "Version: 30\n", encoding="utf-8"
-    )
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
     (target / "memory" / "manifest.toml").write_text(
         """
 version = 1
@@ -1693,24 +1441,17 @@ surfaces = ["api"]
     routed = installer.route_memory(target=target, surfaces=["api"])
 
     assert any(
-        action.path == target / "memory" / "domains" / "api.md"
-        and "canonical_elsewhere notes must point canonical_home" in action.detail
+        action.path == target / "memory" / "domains" / "api.md" and "canonical_elsewhere notes must point canonical_home" in action.detail
         for action in doctor.actions
     )
-    assert not any(
-        action.path == target / "memory" / "invariants" / "api.md"
-        and action.kind == "required"
-        for action in routed.actions
-    )
+    assert not any(action.path == target / "memory" / "invariants" / "api.md" and action.kind == "required" for action in routed.actions)
 
 
 def test_promotion_report_finds_candidate_notes_from_manifest(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory" / "domains").mkdir(parents=True)
-    (target / "memory" / "domains" / "api.md").write_text(
-        "# API\n\nStable policy draft.\n", encoding="utf-8"
-    )
+    (target / "memory" / "domains" / "api.md").write_text("# API\n\nStable policy draft.\n", encoding="utf-8")
     (target / "memory" / "manifest.toml").write_text(
         """
 version = 1
@@ -1743,18 +1484,12 @@ def test_promotion_report_supports_explicit_notes_without_manifest_metadata(
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory" / "runbooks").mkdir(parents=True)
-    (target / "memory" / "runbooks" / "deploy.md").write_text(
-        "# Deploy\n\nProcedure.\n", encoding="utf-8"
-    )
+    (target / "memory" / "runbooks" / "deploy.md").write_text("# Deploy\n\nProcedure.\n", encoding="utf-8")
 
-    result = installer.promotion_report(
-        target=target, notes=["memory/runbooks/deploy.md"]
-    )
+    result = installer.promotion_report(target=target, notes=["memory/runbooks/deploy.md"])
 
     assert any(
-        action.path == target / "memory" / "runbooks" / "deploy.md"
-        and "checked-in skill" in action.detail
-        for action in result.actions
+        action.path == target / "memory" / "runbooks" / "deploy.md" and "checked-in skill" in action.detail for action in result.actions
     )
 
 
@@ -1765,9 +1500,7 @@ def test_promotion_report_marks_missing_explicit_notes_for_manual_review(
     (target / ".git").mkdir(parents=True)
     (target / "memory").mkdir(parents=True)
 
-    result = installer.promotion_report(
-        target=target, notes=["memory/runbooks/deply.md"]
-    )
+    result = installer.promotion_report(target=target, notes=["memory/runbooks/deply.md"])
 
     assert any(
         action.path == target / "memory" / "runbooks" / "deply.md"
@@ -1784,16 +1517,11 @@ def test_doctor_shadow_doc_detection_flags_overlap(tmp_path: Path) -> None:
     (target / "docs").mkdir(parents=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
     (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "system" / "VERSION.md").write_text(
-        "Version: 30\n", encoding="utf-8"
-    )
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
     shared_text = (
-        "deployment rollback procedure staging production release verification "
-        "service health incident operator checklist observability\n"
+        "deployment rollback procedure staging production release verification service health incident operator checklist observability\n"
     )
-    (target / "memory" / "domains" / "deploy.md").write_text(
-        shared_text, encoding="utf-8"
-    )
+    (target / "memory" / "domains" / "deploy.md").write_text(shared_text, encoding="utf-8")
     (target / "docs" / "deploy.md").write_text(shared_text, encoding="utf-8")
     (target / "memory" / "manifest.toml").write_text(
         """
