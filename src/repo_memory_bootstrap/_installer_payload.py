@@ -5,6 +5,7 @@ from pathlib import Path
 
 from repo_memory_bootstrap._installer_output import (
     _embeds_shared_workflow_rules,
+    _has_legacy_bootstrap_agents_prose,
     _has_placeholders,
     _is_valid_upgrade_source_text,
     _patch_agents_workflow_block,
@@ -401,18 +402,18 @@ def _plan_agents_entrypoint(
             safety="safe",
             source=str(AGENTS_PATH),
         )
-        result.add(
-            "manual review",
-            destination,
-            (
-                "payload AGENTS.md differs from the local entrypoint; upgrade leaves "
-                "AGENTS.md untouched once the workflow pointer block is already current, "
-                "so review manually if you want newer entrypoint guidance"
-            ),
-            role="local-entrypoint",
-            safety="manual",
-            source=str(AGENTS_PATH),
-        )
+        if doctor_mode and _has_legacy_bootstrap_agents_prose(existing):
+            result.add(
+                "manual review",
+                destination,
+                (
+                    "AGENTS.md still contains older bootstrap prose outside the managed "
+                    "workflow pointer block; review and remove stale shared wording manually"
+                ),
+                role="local-entrypoint",
+                safety="manual",
+                source=str(AGENTS_PATH),
+            )
         return
 
     patched = _patch_agents_workflow_block(existing)

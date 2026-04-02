@@ -12,7 +12,7 @@ AGENTS_PATH = Path("AGENTS.md")
 MANIFEST_PATH = Path("memory/manifest.toml")
 UPGRADE_SOURCE_PATH = Path("memory/system/UPGRADE-SOURCE.toml")
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 37
+BOOTSTRAP_VERSION = 38
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
 
@@ -94,6 +94,13 @@ DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\b")
 VERSION_RE = re.compile(r"^\s*Version:\s*(\d+)\s*$", re.MULTILINE)
 MEMORY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_.-])memory/[A-Za-z0-9_./-]+")
 MARKDOWN_MEMORY_LINK_RE = re.compile(r"\[[^\]]+\]\((?!https?://)([^)]*memory/[^)]*)\)")
+LEGACY_BOOTSTRAP_AGENTS_PHRASES = (
+    "Check `memory/skills/README.md` and the skill directories under `memory/skills/` for a checked-in memory skill whose name or description matches the task.",
+    "Use the matching checked-in skill when it fits; otherwise load only the memory files routed by `memory/index.md` that are relevant to the task.",
+    "Use the matching checked-in skill when it fits; otherwise read only the memory files routed by `memory/index.md` that are relevant to the subsystem you will touch.",
+    "Treat a quick `memory/skills/` scan as part of setup in repos that have checked-in memory skills; this keeps repeatable memory workflows discoverable instead of implicit.",
+    "Treat a quick `memory/skills/` scan as part of setup in repos that have checked-in memory skills so repeatable procedures are easy to detect and reuse.",
+)
 
 DEFAULT_CORE_DOC_GLOBS = (
     "README.md",

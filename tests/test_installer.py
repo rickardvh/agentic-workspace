@@ -659,7 +659,30 @@ def test_doctor_agents_guidance_mentions_apply_local_entrypoint(tmp_path: Path) 
     assert any(action.path == target / "AGENTS.md" and "--apply-local-entrypoint" in action.detail for action in result.actions)
 
 
-def test_upgrade_reports_agents_template_drift_even_when_workflow_pointer_is_current(tmp_path: Path) -> None:
+def test_doctor_flags_legacy_bootstrap_agents_prose_outside_managed_block(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "AGENTS.md").write_text(
+        "# Agent instructions\n\n"
+        f"{installer.WORKFLOW_POINTER_BLOCK}\n\n"
+        "Check `memory/skills/README.md` and the skill directories under `memory/skills/` "
+        "for a checked-in memory skill whose name or description matches the task.\n",
+        encoding="utf-8",
+    )
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.path == target / "AGENTS.md"
+        and action.kind == "manual review"
+        and "older bootstrap prose outside the managed workflow pointer block" in action.detail
+        for action in result.actions
+    )
+
+
+def test_upgrade_keeps_agents_current_when_workflow_pointer_is_current(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory" / "system").mkdir(parents=True)
@@ -673,12 +696,8 @@ def test_upgrade_reports_agents_template_drift_even_when_workflow_pointer_is_cur
 
     result = installer.upgrade_bootstrap(target=target, dry_run=True)
 
-    assert any(
-        action.path == target / "AGENTS.md"
-        and action.kind == "manual review"
-        and "payload AGENTS.md differs from the local entrypoint" in action.detail
-        for action in result.actions
-    )
+    assert any(action.path == target / "AGENTS.md" and action.kind == "current" for action in result.actions)
+    assert not any(action.path == target / "AGENTS.md" and action.kind == "manual review" for action in result.actions)
 
 
 def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
@@ -1013,8 +1032,8 @@ def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(
     assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap init --target C:/repo" in prompt
     assert "`install` skill at `C:/repo/memory/bootstrap/skills`" in prompt
     assert "bootstrap-cleanup --target C:/repo" in prompt
-    assert "scan the checked-in memory skills under `C:/repo/memory/skills`" in prompt
-    assert "use any matching checked-in skill during setup" in prompt
+    assert "bootstrap-managed" in prompt
+    assert "sibling skills" in prompt
 
 
 def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
@@ -1028,8 +1047,8 @@ def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
     assert "`install` skill at `C:/repo/memory/bootstrap/skills`" in prompt
     assert "`populate` from the same path" in prompt
     assert "bootstrap-cleanup --target C:/repo" in prompt
-    assert "scan the checked-in memory skills under `C:/repo/memory/skills`" in prompt
-    assert "use any matching checked-in skill during setup" in prompt
+    assert "bootstrap-managed" in prompt
+    assert "sibling skills" in prompt
     assert "C:/repo" in prompt
 
 
@@ -1220,7 +1239,7 @@ def test_install_summary_mentions_populate_next_step_when_current_notes_created(
     assert "bootstrap-cleanup" in output
     assert "install or upgrade review" not in output
     assert "`populate` skill" in output
-    assert "Scan the checked-in memory skills under memory/skills/" in output
+    assert "bootstrap-managed" in output
 
 
 def test_install_summary_skips_populate_next_step_when_no_current_notes_created(capsys, tmp_path: Path) -> None:

@@ -38,6 +38,7 @@ Prefer the smallest bundle that still covers the task surface.
 - Do not load all of `/memory` by default.
 - Start from the smallest useful working set.
 - Load `memory/current/project-state.md` or `memory/current/task-context.md` only when they will reduce re-orientation cost for the current task.
+- When a repository has checked-in memory skills, check `memory/skills/README.md` before inventing a new memory-operational procedure.
 - Use touched files, modules, commands, or surfaces to decide which notes to load first.
 
 ## Note type split

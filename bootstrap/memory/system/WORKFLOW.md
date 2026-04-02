@@ -74,17 +74,21 @@ Keep it concise, repo-agnostic, and non-procedural.
 
 ## Ownership boundary
 
+- bootstrap-managed surface in a repo = the workflow pointer block in `AGENTS.md`, `memory/system/`, the shipped core skill directories under `memory/skills/`, `memory/bootstrap/`, and other files the installer classifies as shared replaceable
+- repo-owned surface in a repo = customised `AGENTS.md` content outside the workflow pointer block, repo-added sibling skills under `memory/skills/`, and ordinary notes outside product-managed shared directories
 - `memory/system/` is product-managed shared guidance; treat it as upgrade-replaceable unless the repository is intentionally changing the shared bootstrap contract itself.
 - The shipped core skills under `memory/skills/` are also product-managed and may be replaced on upgrade.
 - Other checked-in `/memory` notes are repo-owned working knowledge and are expected to diverge from the starter payload over time.
 - Runtime-local or user-local mirrored skill copies are cache-only convenience copies, not a durable source of truth.
 - When a repo needs local procedure changes, add a new sibling skill under `memory/skills/` instead of customising the shipped core skills in place.
 - If a local note or skill is meant to survive upgrades unchanged, do not place that repo-specific content in `memory/system/` or in the shipped core skill directories.
+- Shared guidance about how to use memory skills belongs in product-managed memory files, not in repo-specific `AGENTS.md` prose outside the managed workflow pointer block.
 
 ## Skills boundary
 
 - Skills operate on memory; they do not replace it.
 - `memory/skills/` is reserved for skills whose primary purpose is operating on checked-in memory or maintaining the memory system, not for general repo workflows.
+- When a repository has checked-in memory skills, treat `memory/skills/README.md` as the discovery surface for those skills instead of expanding `AGENTS.md` with more shared trigger prose.
 - If prose starts describing a repeatable maintenance, routing, refresh, capture, hygiene, or upgrade workflow, that is usually a skill candidate.
 - Checked-in repo-local skills should take precedence over runtime-local mirrors or cached user copies when both exist.
 - The base memory system must remain understandable without skills.

@@ -16,6 +16,7 @@ from repo_memory_bootstrap._installer_shared import (
     CURRENT_TASK_STALE_DAYS,
     DATE_RE,
     EMBEDDED_WORKFLOW_HEADINGS,
+    LEGACY_BOOTSTRAP_AGENTS_PHRASES,
     PLACEHOLDER_RE,
     UPGRADE_SOURCE_PATH,
     VERSION_PATH,
@@ -315,3 +316,13 @@ def _patch_agents_workflow_block(existing: str) -> str:
         return f"{lines[0]}\n\n{WORKFLOW_POINTER_BLOCK}\n"
 
     return f"{WORKFLOW_POINTER_BLOCK}\n\n{existing.lstrip()}"
+
+
+def _has_legacy_bootstrap_agents_prose(text: str) -> bool:
+    if WORKFLOW_MARKER_START in text and WORKFLOW_MARKER_END in text:
+        pattern = re.compile(
+            re.escape(WORKFLOW_MARKER_START) + r".*?" + re.escape(WORKFLOW_MARKER_END),
+            re.DOTALL,
+        )
+        text = pattern.sub("", text, count=1)
+    return any(phrase in text for phrase in LEGACY_BOOTSTRAP_AGENTS_PHRASES)

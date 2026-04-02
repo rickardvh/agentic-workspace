@@ -34,11 +34,11 @@ Active
 - Keep the always-read surface small: `AGENTS.md` plus `memory/index.md` by default, with other docs loaded on demand.
 - Keep planner-agnostic interoperability explicit so memory owns durable repo knowledge and planning/status surfaces own active execution state.
 - Tighten note ownership, routing sharpness, and current-context discipline so memory helps agents read less, not more.
-- Make checked-in `memory/skills/` workflows easier for agents to detect and reuse during setup instead of leaving them implicit.
+- Keep bootstrap-managed shared guidance inside product-managed memory files and the workflow pointer block instead of expanding repo-specific `AGENTS.md` prose.
 
 ## Recent meaningful progress
 
-- Tightened the bootstrap contract so agents are told to scan `memory/skills/` during setup, and expanded the checked-in skills README into a lightweight trigger index.
+- Re-tightened the product boundary so shared skill-discovery guidance now lives in product-managed memory files rather than in upgrade-sensitive `AGENTS.md` prose outside the workflow pointer block.
 - Added planner-agnostic interoperability guidance across the shared workflow docs, package READMEs, and routing docs.
 - Tightened capture-threshold and anti-pattern guidance around deletion, consolidation, one-home ownership, and keeping user-specific memory out of repo memory.
 - Strengthened current-context and active-decision guidance so continuation notes stay temporary and decisions preserve consequence rather than meeting history.
@@ -85,4 +85,4 @@ Active
 
 ## Last confirmed
 
-2026-04-02 during checked-in memory-skill discovery hardening
+2026-04-02 during ownership-boundary hardening for bootstrap-managed files

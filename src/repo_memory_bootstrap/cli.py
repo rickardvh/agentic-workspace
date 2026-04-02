@@ -473,9 +473,8 @@ def _print_install_summary(result) -> None:
         "<repo>` when that work is complete."
     )
     print(
-        "- Scan the checked-in memory skills under memory/skills/ during setup, use the matching "
-        "skill before inventing an ad hoc procedure, and add repo-specific sibling skills there "
-        "when a local memory workflow is worth reusing."
+        "- Treat the shipped core skill directories under memory/skills/ as bootstrap-managed, "
+        "and add repo-specific sibling skills there when a local memory workflow is worth reusing."
     )
     print("- Keep memory/current/project-state.md as a short overview note, not a task list.")
     print(
@@ -523,9 +522,8 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
             f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out "
-            f"that the agent should scan the checked-in memory skills under `{target_root}/memory/skills`, "
-            "use any matching checked-in skill during setup, and add repo-specific sibling skills there "
-            "when a local memory workflow is worth reusing."
+            f"that the shipped core skill directories under `{target_root}/memory/skills` are "
+            "bootstrap-managed and repo-specific memory workflows should be added there as sibling skills."
         )
     if command == "adopt":
         return (
@@ -534,9 +532,8 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
             f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out "
-            f"that the agent should scan the checked-in memory skills under `{target_root}/memory/skills`, "
-            "use any matching checked-in skill during setup, and add repo-specific sibling skills there "
-            "when a local memory workflow is worth reusing."
+            f"that the shipped core skill directories under `{target_root}/memory/skills` are "
+            "bootstrap-managed and repo-specific memory workflows should be added there as sibling skills."
         )
     if command == "populate":
         return (

@@ -12,10 +12,9 @@ Read `memory/system/WORKFLOW.md` for shared workflow rules.
 
 1. Read `memory/index.md`.
 2. Consult the repository's active planning/status surface or the user's request for what to work on next.
-3. Check `memory/skills/README.md` and the skill directories under `memory/skills/` for a checked-in memory skill whose name or description matches the task.
-4. Use the matching checked-in skill when it fits; otherwise load only the memory files routed by `memory/index.md` that are relevant to the task.
-5. Read `memory/system/WORKFLOW.md` only when the shared policy boundary is unclear.
-6. Read any repository docs referenced by those files.
+3. Load only the memory files routed by `memory/index.md` that are relevant to the task.
+4. Read `memory/system/WORKFLOW.md` only when the shared policy boundary is unclear.
+5. Read any repository docs referenced by those files.
 
 Use built-in agent planning and memory for task execution.  
 Do not rely on transient chat context when the same knowledge should exist in checked-in files.
@@ -25,7 +24,6 @@ Do not rely on transient chat context when the same knowledge should exist in ch
 `memory/system/SKILLS.md` defines how checked-in `memory/skills/` and bundled bootstrap skills should coexist.
 
 Keep durable repo knowledge in checked-in files. Prefer skills for repeatable procedures that operate on that knowledge.
-Treat a quick `memory/skills/` scan as part of setup in repos that have checked-in memory skills; this keeps repeatable memory workflows discoverable instead of implicit.
 `memory/skills/` is only for skills whose primary purpose is operating on checked-in memory or maintaining the repo's memory system; general non-memory skills do not belong there.
 Treat `memory/system/` and the shipped core skills under `memory/skills/` as bootstrap-managed files that may be replaced on upgrade. Put repo-specific durable knowledge in other `/memory` notes and repo-specific memory procedures in added sibling skills under `memory/skills/`.
 

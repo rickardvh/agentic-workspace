@@ -85,10 +85,16 @@ The installer can also fill these placeholders when you pass the matching explic
 Delete unused routing examples once the target repository has concrete notes.
 
 `AGENTS.md` should stay short and point to `memory/system/WORKFLOW.md` for the shared operating model.
+Bootstrap should modify `AGENTS.md` only through the managed workflow pointer block. Repo-specific `AGENTS.md` prose outside that block is repo-owned and should not be treated as shared upgradeable guidance.
 
 This bootstrap is planning-system agnostic. `/memory` owns durable technical knowledge, `memory/current/project-state.md` is the overview note, `memory/current/task-context.md` is optional checked-in continuation compression, `memory/skills/` holds the checked-in core memory skills that repos can extend with their own sibling memory skills, and `memory/bootstrap/` is a temporary bootstrap workspace for install and adopt lifecycle completion only.
 
 Bundled product skills should stay limited to bootstrap lifecycle operations. Repo-local memory procedures should live in checked-in `memory/skills/`. General non-memory skills should not.
+
+Ownership split:
+
+- bootstrap-managed and upgrade-replaceable: the workflow pointer block in `AGENTS.md`, `memory/system/`, the shipped core skill directories under `memory/skills/`, `memory/bootstrap/`, and other shared replaceable payload files
+- repo-owned and expected to diverge: `AGENTS.md` content outside the managed pointer block, repo-added sibling skills under `memory/skills/`, and ordinary notes outside the product-managed shared directories
 
 `memory/current/project-state.md` should stay aggressively summary-shaped: current focus, recent meaningful progress, blockers, and a few high-value notes are usually enough. If it starts reading like a ledger, backlog, tranche history, or changelog, compress it.
 
