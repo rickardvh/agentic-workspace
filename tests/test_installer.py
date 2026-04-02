@@ -659,6 +659,28 @@ def test_doctor_agents_guidance_mentions_apply_local_entrypoint(tmp_path: Path) 
     assert any(action.path == target / "AGENTS.md" and "--apply-local-entrypoint" in action.detail for action in result.actions)
 
 
+def test_upgrade_reports_agents_template_drift_even_when_workflow_pointer_is_current(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "system").mkdir(parents=True)
+    (target / "AGENTS.md").write_text(
+        "# Agent instructions\n\n"
+        f"{installer.WORKFLOW_POINTER_BLOCK}\n\n"
+        "Local repo instructions.\n",
+        encoding="utf-8",
+    )
+    (target / "memory" / "system" / "VERSION.md").write_text("Version: 36\n", encoding="utf-8")
+
+    result = installer.upgrade_bootstrap(target=target, dry_run=True)
+
+    assert any(
+        action.path == target / "AGENTS.md"
+        and action.kind == "manual review"
+        and "payload AGENTS.md differs from the local entrypoint" in action.detail
+        for action in result.actions
+    )
+
+
 def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     parser = cli.build_parser()
 

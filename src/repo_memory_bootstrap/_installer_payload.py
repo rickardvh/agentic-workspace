@@ -401,6 +401,18 @@ def _plan_agents_entrypoint(
             safety="safe",
             source=str(AGENTS_PATH),
         )
+        result.add(
+            "manual review",
+            destination,
+            (
+                "payload AGENTS.md differs from the local entrypoint; upgrade leaves "
+                "AGENTS.md untouched once the workflow pointer block is already current, "
+                "so review manually if you want newer entrypoint guidance"
+            ),
+            role="local-entrypoint",
+            safety="manual",
+            source=str(AGENTS_PATH),
+        )
         return
 
     patched = _patch_agents_workflow_block(existing)
