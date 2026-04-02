@@ -489,6 +489,13 @@ def _manifest_improvement_hint(
 
 
 def _has_concrete_failure_entries(text: str) -> bool:
+    # Treat non-template recurring-failure notes with list entries as concrete
+    # signal, even when they do not yet follow the full "### Failure:" block.
+    if "<short symptom-first label>" not in text:
+        for line in text.splitlines():
+            if re.match(r"^\s*(?:-|\*|\d+\.)\s+\S", line):
+                return True
+
     for line in text.splitlines():
         stripped = line.strip()
         if not stripped.startswith("### Failure:"):
