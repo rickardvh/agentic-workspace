@@ -1,16 +1,19 @@
 {
   "name": "runtime-basic",
+  "case_type": "general",
   "files": ["deploy/k8s/service.yaml"],
-  "surfaces": [],
+  "surfaces": ["runtime"],
   "expected_required": ["memory/index.md"],
   "expected_optional": [
-    "memory/domains/<runtime-or-deployment-note>.md",
-    "memory/runbooks/<relevant-operator-runbook>.md"
+    "memory/domains/README.md",
+    "memory/runbooks/README.md"
   ],
   "unexpected_notes": [
     "memory/current/project-state.md",
-    "memory/current/task-context.md"
+    "memory/current/task-context.md",
+    "memory/current/active-decisions.md",
+    ".agentic-memory/VERSION.md"
   ],
   "missing_note_candidates": [],
-  "notes": "Runtime routing should stay limited to the runtime domain note and the relevant runbook."
+  "notes": "Runtime routing should stay on the concrete domain and runbook landing pages without pulling in current-context or version metadata."
 }

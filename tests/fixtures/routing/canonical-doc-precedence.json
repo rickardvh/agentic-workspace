@@ -1,16 +1,19 @@
 {
   "name": "canonical-doc-precedence",
+  "case_type": "general",
   "files": ["src/service/api.py"],
-  "surfaces": [],
-  "expected_required": [
-    "docs/api.md",
-    "memory/index.md"
+  "surfaces": ["api"],
+  "expected_required": ["memory/index.md"],
+  "expected_optional": [
+    "memory/domains/README.md",
+    "memory/invariants/README.md"
   ],
-  "expected_optional": ["memory/domains/api.md"],
   "unexpected_notes": [
     "memory/current/project-state.md",
-    "memory/current/task-context.md"
+    "memory/current/task-context.md",
+    "memory/current/active-decisions.md",
+    ".agentic-memory/VERSION.md"
   ],
   "missing_note_candidates": [],
-  "notes": "Canonical docs should take precedence when manifest metadata says the stable truth lives outside memory."
+  "notes": "API routing should prefer the real domain and invariant landing pages and suppress unrelated version metadata."
 }

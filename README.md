@@ -227,6 +227,8 @@ Main commands:
 - `bootstrap-cleanup` to remove the temporary bootstrap workspace when install or adopt created it
 - `current show|check` to inspect current-memory notes
 - `route` and `sync-memory` to review likely relevant memory notes
+- `route-review` to replay checked-in routing-feedback cases against current routing behaviour
+- `route-report` to summarise fixture-backed routing health, missed-note vs over-routing drift, and working-set/startup-cost pressure
 - `promotion-report` to suggest notes that should graduate into canonical checked-in docs or become elimination candidates for skills, scripts, tests, or refactors
 - `verify-payload` to validate the packaged bootstrap contract
 

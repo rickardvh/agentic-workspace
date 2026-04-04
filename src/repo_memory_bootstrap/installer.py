@@ -10,6 +10,7 @@ from repo_memory_bootstrap._installer_memory import (
     _audit_routing_feedback_note,
     _build_route_summary,
     _build_route_report_feedback_summary,
+    _build_route_report_case_type_summary,
     _build_route_review_cases,
     _dedupe_route_suggestions,
     _build_remediation_recommendation,
@@ -17,6 +18,7 @@ from repo_memory_bootstrap._installer_memory import (
     _emit_improvement_pressure,
     _emit_memory_shape_pressure,
     _find_manifest_matches,
+    _high_level_paths,
     _load_routing_feedback_cases,
     _load_route_report_fixtures,
     _first_route_match_source,
@@ -30,6 +32,7 @@ from repo_memory_bootstrap._installer_memory import (
     _normalise_surface_name,
     _parse_route_sections,
     _path_matches_pattern,
+    _routing_baseline_paths,
 )
 from repo_memory_bootstrap._installer_output import (
     _current_task_structure_findings,
@@ -632,7 +635,8 @@ def route_memory(
     selected_surfaces = {_normalise_surface_name(surface) for surface in (surfaces or [])}
     selected_surfaces.update(_infer_surfaces_from_paths(files or []))
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
-    routing_baseline = manifest.routing_only if manifest and manifest.routing_only else ROUTING_BASELINE
+    routing_baseline = _routing_baseline_paths(manifest)
+    high_level_paths = set(_high_level_paths(manifest))
     suggestions: list[tuple[str, str, str, str, int]] = [
         ("required", path.as_posix(), "always-read routing note", "routing-baseline", 0)
         for path in routing_baseline
@@ -649,7 +653,9 @@ def route_memory(
         if section_surface in selected_surfaces and section_surface not in covered_surfaces:
             for note in notes:
                 suggestions.append(("optional", note, f"matched route surface '{section_surface}' from memory/index.md", "index-fallback", 2))
-    if _should_suggest_project_state(files=files or [], surfaces=selected_surfaces, manifest_suggestions=manifest_suggestions):
+    if Path("memory/current/project-state.md") in high_level_paths and _should_suggest_project_state(
+        files=files or [], surfaces=selected_surfaces, manifest_suggestions=manifest_suggestions
+    ):
         suggestions.append(
             ("optional", "memory/current/project-state.md", "high-level repo re-orientation is likely useful for this task", "high-level-fallback", 4)
         )
@@ -905,11 +911,27 @@ def report_routes(*, target: str | Path | None = None) -> InstallResult:
     result.route_report_summary = {
         "feedback": feedback_summary,
         "fixtures": fixture_summary,
+        "missed_note": _build_route_report_case_type_summary(
+            fixture_results=fixture_results,
+            feedback_summary=feedback_summary,
+            case_type="missed_note",
+        ),
+        "over_routing": _build_route_report_case_type_summary(
+            fixture_results=fixture_results,
+            feedback_summary=feedback_summary,
+            case_type="over_routing",
+        ),
         "working_set": {
             "average_routed_note_count": fixture_summary["average_routed_note_count"],
+            "average_required_note_count": fixture_summary["average_required_note_count"],
+            "average_optional_note_count": fixture_summary["average_optional_note_count"],
             "max_routed_note_count": fixture_summary["max_routed_note_count"],
             "fixture_count_exceeding_target": fixture_summary["fixture_count_exceeding_target"],
             "fixture_count_exceeding_strong_warning": fixture_summary["fixture_count_exceeding_strong_warning"],
+        },
+        "startup_cost": {
+            "average_routed_line_count": fixture_summary["average_routed_line_count"],
+            "max_routed_line_count": fixture_summary["max_routed_line_count"],
         },
         "feedback_guidance": "" if feedback_cases else (
             "No parseable routing-feedback cases yet; record only concrete missed-note or over-routing examples worth revisiting."
@@ -1067,7 +1089,7 @@ def sync_memory(
         seen_sync_paths.add(note_path)
 
     routed = route_memory(target=target_root, files=changed_files)
-    routing_baseline = manifest.routing_only if manifest and manifest.routing_only else ROUTING_BASELINE
+    routing_baseline = _routing_baseline_paths(manifest)
     baseline_paths = {target_root / path for path in routing_baseline}
     for action in routed.actions:
         if action.kind not in {"optional", "required"} or action.path in seen_sync_paths or action.path in baseline_paths:

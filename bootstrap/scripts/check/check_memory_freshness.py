@@ -227,6 +227,16 @@ def _load_manifest_note_entries(path: Path) -> dict[str, dict[str, object]]:
     return notes if isinstance(notes, dict) else {}
 
 
+def _load_manifest_data(path: Path) -> dict[str, object]:
+    if not path.exists():
+        return {}
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def _note_type_for_path(path: Path) -> str:
     path_str = path.as_posix()
     if path_str.startswith("memory/invariants/"):
@@ -246,6 +256,28 @@ def _note_type_for_path(path: Path) -> str:
     if path_str == "memory/current/routing-feedback.md":
         return "routing-feedback"
     return "memory-note"
+
+
+def _manifest_note_type_expected(path_str: str) -> str | None:
+    if path_str == "memory/index.md":
+        return "routing"
+    if path_str == "memory/current/project-state.md":
+        return "current-overview"
+    if path_str == "memory/current/task-context.md":
+        return "current-context"
+    if path_str == "memory/current/routing-feedback.md":
+        return "routing-feedback"
+    if path_str.startswith("memory/domains/"):
+        return "domain"
+    if path_str.startswith("memory/invariants/"):
+        return "invariant"
+    if path_str.startswith("memory/runbooks/"):
+        return "runbook"
+    if path_str == "memory/mistakes/recurring-failures.md":
+        return "recurring-failures"
+    if path_str.startswith("memory/decisions/"):
+        return "decision"
+    return None
 
 
 def _suspicious_current_context(path: Path, lines: list[str], sections: set[str]) -> bool:
@@ -277,7 +309,11 @@ def main() -> int:
         return 0
 
     scans = [_scan_note(path) for path in _iter_notes(MEMORY_ROOT)]
-    manifest_notes = _load_manifest_note_entries(MANIFEST_PATH)
+    manifest_data = _load_manifest_data(MANIFEST_PATH)
+    manifest_notes = manifest_data.get("notes", {})
+    manifest_notes = manifest_notes if isinstance(manifest_notes, dict) else {}
+    manifest_rules = manifest_data.get("rules", {})
+    manifest_rules = manifest_rules if isinstance(manifest_rules, dict) else {}
     stale_before = datetime.now(UTC) - timedelta(days=STALE_DAYS)
 
     missing_last_confirmed = sorted(_render_path(scan.path) for scan in scans if not scan.has_last_confirmed)
@@ -352,6 +388,32 @@ def main() -> int:
         )
     )
     always_read_creep = _always_read_creep_items(manifest_notes, MANIFEST_PATH)
+    manifest_note_type_drift = sorted(
+        f"{note_path} should keep note_type = {expected}"
+        for note_path, raw in manifest_notes.items()
+        if isinstance(raw, dict)
+        and (expected := _manifest_note_type_expected(note_path))
+        and str(raw.get("note_type", "")).strip() != expected
+    )
+    canonical_dirs = [Path(item) for item in manifest_rules.get("canonical_dirs", []) if isinstance(item, str)]
+    canonical_dir_drift = sorted(
+        note_path
+        for note_path in manifest_notes
+        if note_path.startswith("memory/")
+        and note_path not in {"memory/index.md"}
+        and not note_path.startswith("memory/current/")
+        and not note_path.startswith("memory/templates/")
+        and canonical_dirs
+        and not any(Path(note_path) == directory or directory in Path(note_path).parents for directory in canonical_dirs)
+    )
+    task_board_globs = {item for item in manifest_rules.get("task_board_globs", []) if isinstance(item, str)}
+    task_board_dependence = sorted(
+        note_path
+        for note_path, raw in manifest_notes.items()
+        if isinstance(raw, dict)
+        and not note_path.startswith("memory/current/")
+        and task_board_globs.intersection(set(raw.get("routes_from", [])) | set(raw.get("stale_when", [])))
+    )
 
     print("Memory freshness report")
     _print_section("Needs verification", needs_verification)
@@ -367,6 +429,9 @@ def main() -> int:
     _print_section("Current-context drift signals", current_context_shape)
     _print_section("Incomplete improvement-signal lifecycle", incomplete_improvement_signals)
     _print_section("Always-read surface creep", always_read_creep)
+    _print_section("Manifest note-type drift", manifest_note_type_drift)
+    _print_section("Canonical-dir drift", canonical_dir_drift)
+    _print_section("Task-board dependence", task_board_dependence)
     _print_section("Duplicate titles", duplicate_titles)
     _print_section("Missing manifest entries", missing_manifest_entries)
     _print_section("Manifest records for missing notes", manifest_records_for_missing_notes)
@@ -391,9 +456,8 @@ def _missing_sections(scan: NoteScan) -> set[str]:
 def _always_read_creep_items(manifest_notes: dict[str, dict[str, object]], manifest_path: Path) -> list[str]:
     if not manifest_path.exists():
         return []
-    try:
-        data = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError:
+    data = _load_manifest_data(manifest_path)
+    if not data:
         return []
     rules = data.get("rules", {})
     items: list[str] = []

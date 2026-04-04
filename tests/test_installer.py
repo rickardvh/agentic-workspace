@@ -37,91 +37,215 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
     fixture = _load_routing_fixture(fixture_name)
     (target / ".git").mkdir(parents=True)
     _write_repo_file(target, "memory/index.md", Path("memory/index.md").read_text(encoding="utf-8"))
+    _write_repo_file(target, "memory/domains/README.md", "# Domains\n")
+    _write_repo_file(target, "memory/invariants/README.md", "# Invariants\n")
+    _write_repo_file(target, "memory/runbooks/README.md", "# Runbooks\n")
+    _write_repo_file(target, "memory/decisions/README.md", "# Decisions\n")
+    _write_repo_file(target, "memory/mistakes/recurring-failures.md", "# Recurring failures\n")
 
     if fixture_name == "canonical-doc-precedence.json":
-        _write_repo_file(target, "memory/domains/api.md", "# API memory\n")
-        _write_repo_file(target, "docs/api.md", "# API docs\n")
         _write_repo_file(
             target,
             "memory/manifest.toml",
             (
                 "version = 1\n\n"
-                '[notes."memory/domains/api.md"]\n'
-                'note_type = "domain"\n'
-                'canonical_home = "docs/api.md"\n'
-                'authority = "advisory"\n'
-                'audience = "human+agent"\n'
-                'canonicality = "canonical_elsewhere"\n'
-                'task_relevance = "optional"\n'
-                'surfaces = ["api"]\n'
-                'routes_from = ["src/**/*.py"]\n'
-                'stale_when = ["src/**/*.py"]\n'
-            ),
-        )
-    elif fixture_name == "optional-pressure.json":
-        _write_repo_file(target, "memory/invariants/api.md", "# API invariant\n")
-        _write_repo_file(target, "memory/domains/api.md", "# API domain\n")
-        _write_repo_file(
-            target,
-            "memory/manifest.toml",
-            (
-                "version = 1\n\n"
-                '[notes."memory/invariants/api.md"]\n'
-                'note_type = "invariant"\n'
-                'canonical_home = "memory/invariants/api.md"\n'
+                '[notes."memory/index.md"]\n'
+                'note_type = "routing"\n'
+                'canonical_home = "memory/index.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
                 'task_relevance = "required"\n'
-                'routes_from = ["README.md"]\n'
-                'stale_when = ["README.md"]\n\n'
-                '[notes."memory/domains/api.md"]\n'
+                'routing_only = true\n'
+                'high_level = true\n\n'
+                '[notes."memory/domains/README.md"]\n'
                 'note_type = "domain"\n'
-                'canonical_home = "memory/domains/api.md"\n'
+                'canonical_home = "memory/domains/README.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
                 'task_relevance = "optional"\n'
-                'routes_from = ["README.md"]\n'
-                'stale_when = ["README.md"]\n'
+                'surfaces = ["api"]\n'
+                'routes_from = []\n'
+                'stale_when = []\n\n'
+                '[notes."memory/invariants/README.md"]\n'
+                'note_type = "invariant"\n'
+                'canonical_home = "memory/invariants/README.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "optional"\n'
+                'surfaces = ["api"]\n'
+                'routes_from = []\n'
+                'stale_when = []\n'
+            ),
+        )
+    elif fixture_name == "optional-pressure.json":
+        _write_repo_file(
+            target,
+            "memory/manifest.toml",
+            (
+                "version = 1\n\n"
+                '[notes."memory/index.md"]\n'
+                'note_type = "routing"\n'
+                'canonical_home = "memory/index.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "required"\n'
+                'routing_only = true\n'
+                'high_level = true\n\n'
+                '[notes."memory/invariants/README.md"]\n'
+                'note_type = "invariant"\n'
+                'canonical_home = "memory/invariants/README.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "optional"\n'
+                'surfaces = ["api"]\n'
+                'routes_from = []\n'
+                'stale_when = []\n\n'
+                '[notes."memory/domains/README.md"]\n'
+                'note_type = "domain"\n'
+                'canonical_home = "memory/domains/README.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "optional"\n'
+                'surfaces = ["api"]\n'
+                'routes_from = []\n'
+                'stale_when = []\n'
             ),
         )
     elif fixture_name == "missed-note-regression.json":
-        _write_repo_file(target, "memory/domains/runtime.md", "# Runtime\n")
         _write_repo_file(
             target,
             "memory/manifest.toml",
             (
                 "version = 1\n\n"
-                '[notes."memory/domains/runtime.md"]\n'
+                '[notes."memory/index.md"]\n'
+                'note_type = "routing"\n'
+                'canonical_home = "memory/index.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "required"\n'
+                'routing_only = true\n'
+                'high_level = true\n\n'
+                '[notes."memory/domains/README.md"]\n'
                 'note_type = "domain"\n'
-                'canonical_home = "memory/domains/runtime.md"\n'
+                'canonical_home = "memory/domains/README.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
                 'task_relevance = "optional"\n'
-                'surfaces = ["runtime"]\n'
-                'routes_from = ["src/runtime/service.py"]\n'
-                'stale_when = ["src/runtime/service.py"]\n'
+                'surfaces = ["tests"]\n'
+                'routes_from = []\n'
+                'stale_when = []\n\n'
+                '[notes."memory/mistakes/recurring-failures.md"]\n'
+                'note_type = "recurring-failures"\n'
+                'canonical_home = "memory/mistakes/recurring-failures.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "optional"\n'
+                'surfaces = ["tests"]\n'
+                'routes_from = ["scripts/check/**/*.py"]\n'
+                'stale_when = ["scripts/check/**/*.py"]\n'
             ),
         )
     elif fixture_name == "over-routing-regression.json":
-        _write_repo_file(target, "memory/domains/runtime.md", "# Runtime\n")
         _write_repo_file(
             target,
             "memory/manifest.toml",
             (
                 "version = 1\n\n"
-                '[notes."memory/domains/runtime.md"]\n'
+                '[notes."memory/index.md"]\n'
+                'note_type = "routing"\n'
+                'canonical_home = "memory/index.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "required"\n'
+                'routing_only = true\n'
+                'high_level = true\n\n'
+                '[notes."memory/domains/README.md"]\n'
                 'note_type = "domain"\n'
-                'canonical_home = "memory/domains/runtime.md"\n'
+                'canonical_home = "memory/domains/README.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "optional"\n'
+                'surfaces = ["api"]\n'
+                'routes_from = []\n'
+                'stale_when = []\n\n'
+                '[notes."memory/invariants/README.md"]\n'
+                'note_type = "invariant"\n'
+                'canonical_home = "memory/invariants/README.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "optional"\n'
+                'surfaces = ["api"]\n'
+                'routes_from = []\n'
+                'stale_when = []\n'
+            ),
+        )
+    elif fixture_name in {"runtime-basic.json", "architecture-basic.json"}:
+        _write_repo_file(
+            target,
+            "memory/manifest.toml",
+            (
+                "version = 1\n\n"
+                '[notes."memory/index.md"]\n'
+                'note_type = "routing"\n'
+                'canonical_home = "memory/index.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "required"\n'
+                'routing_only = true\n'
+                'high_level = true\n\n'
+                '[notes."memory/domains/README.md"]\n'
+                'note_type = "domain"\n'
+                'canonical_home = "memory/domains/README.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "optional"\n'
+                'surfaces = ["runtime", "architecture"]\n'
+                'routes_from = []\n'
+                'stale_when = []\n\n'
+                '[notes."memory/runbooks/README.md"]\n'
+                'note_type = "runbook"\n'
+                'canonical_home = "memory/runbooks/README.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
                 'task_relevance = "optional"\n'
                 'surfaces = ["runtime"]\n'
-                'routes_from = ["src/runtime/**/*.py"]\n'
-                'stale_when = ["src/runtime/**/*.py"]\n'
+                'routes_from = []\n'
+                'stale_when = []\n\n'
+                '[notes."memory/invariants/README.md"]\n'
+                'note_type = "invariant"\n'
+                'canonical_home = "memory/invariants/README.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "optional"\n'
+                'surfaces = ["architecture"]\n'
+                'routes_from = []\n'
+                'stale_when = []\n\n'
+                '[notes."memory/decisions/README.md"]\n'
+                'note_type = "decision"\n'
+                'canonical_home = "memory/decisions/README.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "optional"\n'
+                'surfaces = ["architecture"]\n'
+                'routes_from = []\n'
+                'stale_when = []\n'
             ),
         )
 
@@ -751,8 +875,8 @@ def test_route_memory_does_not_treat_routing_baseline_as_surface_coverage(tmp_pa
     manual_reviews = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "manual review"}
 
     assert "memory/index.md" in required
-    assert "memory/domains/<runtime-or-deployment-note>.md" in suggested
-    assert "memory/runbooks/<relevant-operator-runbook>.md" in suggested
+    assert "memory/domains/README.md" in suggested
+    assert "memory/runbooks/README.md" in suggested
     assert "memory/index.md" not in manual_reviews
 
 
@@ -2017,17 +2141,17 @@ def test_route_review_reports_missed_note_case_that_now_passes(tmp_path: Path) -
                 "Task surface summary\n"
                 "- Runtime service work.\n"
                 "Files\n"
-                "- src/runtime/service.py\n"
+                "- scripts/check/check_memory_freshness.py\n"
                 "Surfaces\n"
-                "- runtime\n"
+                "- tests\n"
                 "Routed notes returned\n"
                 "- memory/index.md\n"
                 "Expected missing note\n"
-                "- memory/domains/runtime.md\n"
+                "- memory/mistakes/recurring-failures.md\n"
                 "Why it was needed\n"
-                "- Runtime guidance should be routed for this surface.\n"
+                "- Validation guidance should be routed for this surface.\n"
                 "Expected routing signal\n"
-                "- routes_from: src/runtime/service.py\n"
+                "- routes_from: scripts/check/check_memory_freshness.py\n"
                 "Status\n"
                 "- open"
             ]
@@ -2055,11 +2179,11 @@ def test_route_review_reports_missed_note_case_that_still_fails(tmp_path: Path) 
             missed_cases=[
                 "### Case: wrong-expected-note\n"
                 "Task surface summary\n"
-                "- Runtime service work.\n"
+                "- Validation work.\n"
                 "Files\n"
-                "- src/runtime/service.py\n"
+                "- scripts/check/check_memory_freshness.py\n"
                 "Surfaces\n"
-                "- runtime\n"
+                "- tests\n"
                 "Routed notes returned\n"
                 "- memory/index.md\n"
                 "Expected missing note\n"
@@ -2067,7 +2191,7 @@ def test_route_review_reports_missed_note_case_that_still_fails(tmp_path: Path) 
                 "Why it was needed\n"
                 "- Pretend this note should have been routed.\n"
                 "Expected routing signal\n"
-                "- routes_from: src/runtime/service.py\n"
+                "- routes_from: scripts/check/check_memory_freshness.py\n"
                 "Status\n"
                 "- open"
             ]
@@ -2167,17 +2291,17 @@ def test_route_review_json_includes_summary_and_cases(tmp_path: Path) -> None:
                 "Task surface summary\n"
                 "- Runtime service work.\n"
                 "Files\n"
-                "- src/runtime/service.py\n"
+                "- scripts/check/check_memory_freshness.py\n"
                 "Surfaces\n"
-                "- runtime\n"
+                "- tests\n"
                 "Routed notes returned\n"
                 "- memory/index.md\n"
                 "Expected missing note\n"
-                "- memory/domains/runtime.md\n"
+                "- memory/mistakes/recurring-failures.md\n"
                 "Why it was needed\n"
-                "- Runtime guidance should be routed for this surface.\n"
+                "- Validation guidance should be routed for this surface.\n"
                 "Expected routing signal\n"
-                "- routes_from: src/runtime/service.py\n"
+                "- routes_from: scripts/check/check_memory_freshness.py\n"
                 "Status\n"
                 "- open"
             ]
@@ -2212,19 +2336,19 @@ def test_route_report_supports_feedback_cases_only(tmp_path: Path) -> None:
             missed_cases=[
                 "### Case: runtime-domain\n"
                 "Task surface summary\n"
-                "- Runtime service work.\n"
+                "- Validation work.\n"
                 "Files\n"
-                "- src/runtime/service.py\n"
+                "- scripts/check/check_memory_freshness.py\n"
                 "Surfaces\n"
-                "- runtime\n"
+                "- tests\n"
                 "Routed notes returned\n"
                 "- memory/index.md\n"
                 "Expected missing note\n"
-                "- memory/domains/runtime.md\n"
+                "- memory/mistakes/recurring-failures.md\n"
                 "Why it was needed\n"
-                "- Runtime guidance should be routed for this surface.\n"
+                "- Validation guidance should be routed for this surface.\n"
                 "Expected routing signal\n"
-                "- routes_from: src/runtime/service.py\n"
+                "- routes_from: scripts/check/check_memory_freshness.py\n"
                 "Status\n"
                 "- open"
             ]
@@ -2264,17 +2388,17 @@ def test_route_report_supports_feedback_cases_and_fixtures(tmp_path: Path) -> No
                 "Task surface summary\n"
                 "- Runtime service work.\n"
                 "Files\n"
-                "- src/runtime/service.py\n"
+                "- scripts/check/check_memory_freshness.py\n"
                 "Surfaces\n"
-                "- runtime\n"
+                "- tests\n"
                 "Routed notes returned\n"
                 "- memory/index.md\n"
                 "Expected missing note\n"
-                "- memory/domains/runtime.md\n"
+                "- memory/mistakes/recurring-failures.md\n"
                 "Why it was needed\n"
-                "- Runtime guidance should be routed for this surface.\n"
+                "- Validation guidance should be routed for this surface.\n"
                 "Expected routing signal\n"
-                "- routes_from: src/runtime/service.py\n"
+                "- routes_from: scripts/check/check_memory_freshness.py\n"
                 "Status\n"
                 "- tuned"
             ]
@@ -2285,7 +2409,7 @@ def test_route_report_supports_feedback_cases_and_fixtures(tmp_path: Path) -> No
 
     assert result.route_report_summary["feedback"]["tuned_case_count"] == 1
     assert result.route_report_summary["fixtures"]["fixture_count"] == 1
-    assert result.route_report_summary["working_set"]["average_routed_note_count"] == 2.0
+    assert result.route_report_summary["working_set"]["average_routed_note_count"] == 3.0
 
 
 def test_route_report_json_includes_summary_feedback_cases_and_fixture_results(tmp_path: Path) -> None:
@@ -2298,6 +2422,9 @@ def test_route_report_json_includes_summary_feedback_cases_and_fixture_results(t
     assert "route_report_summary" in data
     assert "route_report_feedback_cases" in data
     assert "route_report_fixture_results" in data
+    assert "missed_note" in data["route_report_summary"]
+    assert "over_routing" in data["route_report_summary"]
+    assert "startup_cost" in data["route_report_summary"]
 
 
 def test_route_report_keeps_missed_and_over_routing_counts_separate(tmp_path: Path) -> None:
@@ -2312,9 +2439,9 @@ def test_route_report_keeps_missed_and_over_routing_counts_separate(tmp_path: Pa
                 "Task surface summary\n"
                 "- Runtime service work.\n"
                 "Files\n"
-                "- src/runtime/service.py\n"
+                "- scripts/check/check_memory_freshness.py\n"
                 "Surfaces\n"
-                "- runtime\n"
+                "- tests\n"
                 "Routed notes returned\n"
                 "- memory/index.md\n"
                 "Expected missing note\n"
@@ -2322,23 +2449,23 @@ def test_route_report_keeps_missed_and_over_routing_counts_separate(tmp_path: Pa
                 "Why it was needed\n"
                 "- Missing note case.\n"
                 "Expected routing signal\n"
-                "- routes_from: src/runtime/service.py\n"
+                "- routes_from: scripts/check/check_memory_freshness.py\n"
                 "Status\n"
                 "- open"
             ],
             over_cases=[
                 "### Case: over\n"
                 "Task surface summary\n"
-                "- Runtime service work.\n"
+                "- Validation work.\n"
                 "Files\n"
-                "- src/runtime/service.py\n"
+                "- scripts/check/check_memory_freshness.py\n"
                 "Surfaces\n"
-                "- runtime\n"
+                "- tests\n"
                 "Routed notes returned\n"
                 "- memory/index.md\n"
-                "- memory/domains/runtime.md\n"
+                "- memory/mistakes/recurring-failures.md\n"
                 "Unexpected notes\n"
-                "- memory/domains/runtime.md\n"
+                "- memory/mistakes/recurring-failures.md\n"
                 "Why they were unnecessary\n"
                 "- Over-routing case.\n"
                 "Status\n"
@@ -2386,9 +2513,13 @@ def test_route_report_fixture_counts_and_working_set_metrics_are_correct(tmp_pat
     assert summary["failing_fixture_count"] == 1
     assert summary["invalid_fixture_count"] == 0
     assert summary["average_routed_note_count"] == 3.33
+    assert summary["average_required_note_count"] == 1.0
+    assert summary["average_optional_note_count"] == 2.33
     assert summary["max_routed_note_count"] == 4
     assert summary["fixture_count_exceeding_target"] == 1
     assert summary["fixture_count_exceeding_strong_warning"] == 0
+    assert summary["average_routed_line_count"] > 0
+    assert summary["max_routed_line_count"] > 0
 
 
 def test_route_report_text_output_lists_only_failing_or_unresolved_items(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -2418,7 +2549,10 @@ def test_route_report_text_output_lists_only_failing_or_unresolved_items(tmp_pat
 
     assert "Feedback cases:" in output
     assert "Fixture coverage:" in output
+    assert "Missed-note summary:" in output
+    assert "Over-routing summary:" in output
     assert "Working-set pressure:" in output
+    assert "Startup cost:" in output
     assert "fixture 'failing' fails" in output
     assert "case 'unresolved' is unresolved" in output
     assert "fixture 'runtime-basic' fails" not in output
@@ -2743,6 +2877,79 @@ routes_from = ["src/**/*.py"]
     assert any("WORKFLOW.md should remain reference policy" in detail for detail in details)
     assert any("task-context should stay optional continuation compression" in detail for detail in details)
     assert any("task-context should not advertise broad routing metadata" in detail for detail in details)
+
+
+def test_doctor_flags_task_board_dependence_outside_current_notes(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "domains" / "api.md").write_text("# API\n", encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[rules]
+task_board_globs = ["TODO.md"]
+
+[notes."memory/domains/api.md"]
+note_type = "domain"
+canonical_home = "memory/domains/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+routes_from = ["TODO.md"]
+stale_when = ["TODO.md"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any("task-board globs should not drive durable memory routing" in action.detail for action in result.actions)
+
+
+def test_doctor_flags_canonical_dir_and_note_type_drift(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "misc").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "misc" / "api.md").write_text("# API\n", encoding="utf-8")
+    (target / "memory" / "domains" / "wrong.md").write_text("# Wrong\n", encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[rules]
+canonical_dirs = ["memory/domains", "memory/invariants", "memory/runbooks", "memory/mistakes", "memory/decisions"]
+
+[notes."memory/domains/wrong.md"]
+note_type = "invariant"
+canonical_home = "memory/domains/wrong.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+
+[notes."memory/misc/api.md"]
+note_type = "invariant"
+canonical_home = "memory/misc/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any("durable memory notes should live under rules.canonical_dirs" in action.detail for action in result.actions)
+    assert any("notes under memory/domains/ should keep note_type = domain" in action.detail for action in result.actions)
 
 
 def test_doctor_emits_note_type_specific_size_warning(tmp_path: Path) -> None:

@@ -168,121 +168,23 @@ Memory does **not** own:
 * sequencing
 * next-step plans
 
-## Phase A — Continue hardening note quality
+## Track 2 status
 
-### A1. Maintain note-shape discipline
+Completed in the close-out pass:
 
-Continue strengthening:
+* note-shape and current-context discipline
+* always-read surface discipline
+* `routing-feedback.md`, `route-review`, and fixture-backed calibration
+* `route-report` with missed-note vs over-routing summaries, working-set pressure, and startup-cost proxies
+* more operational `manifest.toml` use for routing, staleness pressure, high-level/routing-only compactness, canonical-dir checks, task-board boundary checks, and note-role enforcement
+* shipped memory skills as the main repeatable workflow surface: `memory-router`, `memory-refresh`, `memory-hygiene`, `memory-capture`, `memory-upgrade`
 
-* note-type-specific size pressure
-* current-context constraints
-* canonical-doc promotion pressure
-* improvement-signal lifecycle
-* one-home rule enforcement
-* overlap detection
+Keep watching rather than re-opening the track:
 
-### A2. Keep current-context files compressed
-
-Protect:
-
-* `memory/current/project-state.md`
-* `memory/current/task-context.md`
-
-These should remain:
-
-* overview-only
-* continuation-only
-* non-planner
-* non-journal
-
-### A3. Tighten always-read surface discipline
-
-Ensure the default read path stays minimal:
-
-* `AGENTS.md`
-* `memory/index.md`
-* routed notes only as needed
-
-Keep `.agentic-memory/WORKFLOW.md` and similar files out of the normal always-read path unless the task is about the memory system itself.
-
-## Phase B — Improve routing quality
-
-### B1. Working-set pressure
-
-Keep:
-
-* `<=3` default routed notes unless justified
-* warning bands above 3 and 5
-* required-vs-optional suppression
-* per-note route explanations
-
-### B2. Calibration
-
-Continue:
-
-* `routing-feedback.md`
-* `route-review`
-* fixtures under `tests/fixtures/routing/`
-
-### B3. Aggregate visibility
-
-Implement and refine:
-
-* `route-report`
-* fixture-backed working-set pressure summaries
-* separate missed-note vs over-routing summaries
-
-## Phase C — Improve the control plane
-
-### C1. Make `manifest.toml` increasingly operational
-
-Use it more actively for:
-
-* routing
-* staleness pressure
-* high-level/routing-only compactness
-* lifecycle warnings
-* note-role enforcement
-
-### C2. Keep docs minimal, move procedure into skills
-
-Continue shifting repeatable workflows into:
-
-* `memory-router`
-* `memory-refresh`
-* `memory-hygiene`
-* `memory-capture`
-* `memory-upgrade`
-
-Core docs should remain:
-
-* short
-* architectural
-* non-procedural
-
-## Phase D — Empirical validation
-
-Do this carefully, without runtime telemetry if possible.
-
-### D1. Routing-quality measurement
-
-Continue improving:
-
-* missed-note capture
-* over-routing examples
-* fixture coverage
-* aggregate summaries
-
-### D2. Token-efficiency benchmarks
-
-Build offline/repeatable evaluation:
-
-* resumed-task startup cost
-* notes loaded per task
-* working-set size
-* missed-note frequency in benchmark scenarios
-
-## Main risks to watch
+* routing precision drift as repos accumulate more concrete notes
+* current-context notes drifting back into planner or journal roles
+* manifest metadata expanding faster than the checks and routing logic that consume it
+* fixture coverage and offline benchmark summaries going stale`r`n`r`n## Main risks to watch
 
 * routing drift
 * note overlap
@@ -471,3 +373,4 @@ Do not:
 * **Planning-only development** should make planning independently strong.
 * **Memory-only development** should keep memory independently sharp and lightweight.
 * **Integration development** should define a thin, explicit interface so the two systems cooperate without becoming one system.
+

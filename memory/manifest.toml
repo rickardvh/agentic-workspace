@@ -84,17 +84,69 @@ stale_when = []
 # Use this note only for compact routing calibration:
 # concrete missed-note or over-routing cases worth revisiting after manifest or index changes.
 
+[notes."memory/domains/README.md"]
+note_type = "domain"
+canonical_home = "memory/domains/README.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+surfaces = ["runtime", "api", "retrieval", "tests", "architecture"]
+routes_from = []
+stale_when = []
+memory_role = "durable_truth"
+
+[notes."memory/invariants/README.md"]
+note_type = "invariant"
+canonical_home = "memory/invariants/README.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+surfaces = ["api", "retrieval", "architecture"]
+routes_from = []
+stale_when = []
+memory_role = "durable_truth"
+
+[notes."memory/runbooks/README.md"]
+note_type = "runbook"
+canonical_home = "memory/runbooks/README.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+surfaces = ["runtime"]
+routes_from = []
+stale_when = []
+memory_role = "durable_truth"
+
+[notes."memory/decisions/README.md"]
+note_type = "decision"
+canonical_home = "memory/decisions/README.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system", "product"]
+surfaces = ["decision", "architecture"]
+routes_from = []
+stale_when = []
+memory_role = "durable_truth"
+
 [notes."memory/current/active-decisions.md"]
 note_type = "current-decisions"
 canonical_home = "memory/current/active-decisions.md"
 authority = "canonical"
 audience = "agent"
 canonicality = "agent_only"
-task_relevance = "required"
+task_relevance = "optional"
 subsystems = ["memory-system", "product"]
-surfaces = ["decision", "architecture", "api"]
-routes_from = ["src/**/*.py", "bootstrap/**/*.md", "README.md"]
-stale_when = ["src/**/*.py", "bootstrap/**/*.md", "README.md", ".agentic-memory/**/*.md"]
+surfaces = []
+routes_from = ["TODO.md", "README.md", "bootstrap/**/*.md", ".agentic-memory/**/*.md"]
+stale_when = ["TODO.md", "README.md", "bootstrap/**/*.md", ".agentic-memory/**/*.md"]
 
 [notes.".agentic-memory/WORKFLOW.md"]
 note_type = "workflow-policy"
@@ -118,9 +170,9 @@ audience = "agent"
 canonicality = "agent_only"
 task_relevance = "optional"
 subsystems = ["installer", "payload"]
-surfaces = ["api"]
-routes_from = ["src/**/*.py", "pyproject.toml"]
-stale_when = ["src/**/*.py", "pyproject.toml", "bootstrap/memory/system/VERSION.md"]
+surfaces = []
+routes_from = ["pyproject.toml", ".agentic-memory/VERSION.md", "memory/system/VERSION.md", "bootstrap/memory/system/VERSION.md"]
+stale_when = ["pyproject.toml", ".agentic-memory/VERSION.md", "memory/system/VERSION.md", "bootstrap/memory/system/VERSION.md"]
 
 [notes."memory/mistakes/recurring-failures.md"]
 note_type = "recurring-failures"
@@ -130,7 +182,7 @@ audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "optional"
 subsystems = ["memory-system"]
-surfaces = ["tests", "architecture"]
+surfaces = ["tests"]
 routes_from = ["tests/**/*.py", "scripts/check/**/*.py"]
 stale_when = ["tests/**/*.py", "scripts/check/**/*.py"]
 related_validations = ["python scripts/check/check_memory_freshness.py"]

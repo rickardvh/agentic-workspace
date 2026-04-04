@@ -32,7 +32,7 @@ Active
 ## Current focus
 
 - Keep the always-read surface small: `AGENTS.md` plus `memory/index.md` by default, with other docs loaded on demand.
-- Make `memory/manifest.toml` plus the shipped memory skills the default routing and maintenance interface.
+- Make `memory/manifest.toml` plus the shipped memory skills the default routing, maintenance, and control-plane interface.
 - Keep the managed `.agentic-memory/` surface clearly separate from repo-owned `memory/`.
 
 ## Recent meaningful progress
@@ -45,6 +45,8 @@ Active
 - Added a first hardening pass for routing discipline, current-context shape checks, improvement-signal closure, note-type size warnings, and always-read surface creep detection.
 - Added a routing-calibration pass with an optional routing-feedback note, route-review support, and fixture-backed routing review cases for tuning manifest and index precision.
 - Added an aggregate `route-report` command that derives repo-level routing snapshots from checked-in feedback cases and routing fixtures without adding telemetry or another maintained note surface.
+- Tightened routing so repo-level fixtures now pass against real checked-in notes, while current-decision and version metadata stay out of ordinary routes.
+- Made `route-report`, `doctor`, and the freshness audit use more of the manifest contract directly, including canonical-dir, task-board, and note-type drift checks.
 
 ## Blockers
 
@@ -82,4 +84,4 @@ Active
 
 ## Last confirmed
 
-2026-04-04 during routing calibration pass 3
+2026-04-04 during Track 2 close-out

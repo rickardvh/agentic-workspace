@@ -1,17 +1,19 @@
 {
   "name": "architecture-basic",
+  "case_type": "general",
   "files": ["src/architecture/schema.py"],
-  "surfaces": [],
+  "surfaces": ["architecture"],
   "expected_required": ["memory/index.md"],
   "expected_optional": [
-    "memory/domains/<data-model-or-architecture-note>.md",
-    "memory/invariants/<relevant-invariant-note>.md",
+    "memory/domains/README.md",
+    "memory/invariants/README.md",
     "memory/decisions/README.md"
   ],
   "unexpected_notes": [
     "memory/current/project-state.md",
-    "memory/current/task-context.md"
+    "memory/current/task-context.md",
+    "memory/current/active-decisions.md"
   ],
   "missing_note_candidates": [],
-  "notes": "Architecture routing may exceed the default target, but it should stay limited to the explicit bundle in the index."
+  "notes": "Architecture routing may exceed the default target, but it should stay limited to the repo's real landing pages."
 }
