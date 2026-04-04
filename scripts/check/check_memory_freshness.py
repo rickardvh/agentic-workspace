@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
-"""Advisory memory freshness audit.
+"""Memory freshness audit.
 
 Scan durable memory notes for missing required metadata, stale confirmations,
-and growth signals. This is advisory and always exits with 0.
+and growth signals. By default this script is advisory and exits with 0.
+Pass --strict to fail the run when selected finding categories are present.
 """
 
 from __future__ import annotations
 
+import argparse
 import re
 import tomllib
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 RE_HEADING = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*$")
 RE_H1 = re.compile(r"^\s{0,3}#\s+(.+?)\s*$")
@@ -95,6 +98,45 @@ SKIP_DIRS = {
     MEMORY_ROOT / "templates",
     MEMORY_ROOT / "system",
 }
+
+DEFAULT_STRICT_CATEGORIES = {
+    "missing_trigger",
+    "missing_last_confirmed",
+    "invalid_last_confirmed",
+    "old_confirmations",
+    "missing_manifest_entries",
+    "manifest_records_for_missing_notes",
+    "always_read_creep",
+    "manifest_note_type_drift",
+    "canonical_dir_drift",
+    "task_board_dependence",
+}
+
+STRICT_CATEGORY_CHOICES = sorted(
+    {
+        "needs_verification",
+        "missing_trigger",
+        "missing_last_confirmed",
+        "invalid_last_confirmed",
+        "missing_verify",
+        "missing_load",
+        "missing_review",
+        "missing_failure",
+        "old_confirmations",
+        "oversized_files",
+        "current_context_shape",
+        "incomplete_improvement_signals",
+        "always_read_creep",
+        "manifest_note_type_drift",
+        "canonical_dir_drift",
+        "task_board_dependence",
+        "duplicate_titles",
+        "missing_manifest_entries",
+        "manifest_records_for_missing_notes",
+        "shared_canonical_homes",
+        "uncustomised_index_placeholders",
+    }
+)
 
 
 @dataclass
@@ -216,7 +258,7 @@ def _render_path(path: Path) -> str:
     return path.as_posix()
 
 
-def _load_manifest_note_entries(path: Path) -> dict[str, dict[str, object]]:
+def _load_manifest_note_entries(path: Path) -> dict[str, dict[str, Any]]:
     if not path.exists():
         return {}
     try:
@@ -227,7 +269,7 @@ def _load_manifest_note_entries(path: Path) -> dict[str, dict[str, object]]:
     return notes if isinstance(notes, dict) else {}
 
 
-def _load_manifest_data(path: Path) -> dict[str, object]:
+def _load_manifest_data(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
     try:
@@ -302,18 +344,37 @@ def _print_section(title: str, items: list[str]) -> None:
         print(f"- {item}")
 
 
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Audit memory freshness and structure.")
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Exit with status 1 when selected finding categories are present.",
+    )
+    parser.add_argument(
+        "--strict-categories",
+        nargs="*",
+        choices=STRICT_CATEGORY_CHOICES,
+        help=("Finding categories that should fail strict mode. Defaults to a conservative contract-focused subset."),
+    )
+    return parser.parse_args()
+
+
 def main() -> int:
+    args = _parse_args()
     if not MEMORY_ROOT.exists():
         print("Memory freshness report\n")
         print("Memory root not found: memory/")
-        return 0
+        return 1 if args.strict else 0
 
     scans = [_scan_note(path) for path in _iter_notes(MEMORY_ROOT)]
     manifest_data = _load_manifest_data(MANIFEST_PATH)
-    manifest_notes = manifest_data.get("notes", {})
-    manifest_notes = manifest_notes if isinstance(manifest_notes, dict) else {}
-    manifest_rules = manifest_data.get("rules", {})
-    manifest_rules = manifest_rules if isinstance(manifest_rules, dict) else {}
+    raw_manifest_notes = manifest_data.get("notes", {})
+    manifest_notes: dict[str, dict[str, Any]] = (
+        {str(k): v for k, v in raw_manifest_notes.items() if isinstance(v, dict)} if isinstance(raw_manifest_notes, dict) else {}
+    )
+    raw_manifest_rules = manifest_data.get("rules", {})
+    manifest_rules: dict[str, Any] = {str(k): v for k, v in raw_manifest_rules.items()} if isinstance(raw_manifest_rules, dict) else {}
     stale_before = datetime.now(UTC) - timedelta(days=STALE_DAYS)
 
     missing_last_confirmed = sorted(_render_path(scan.path) for scan in scans if not scan.has_last_confirmed)
@@ -326,7 +387,9 @@ def main() -> int:
     missing_verify = sorted(
         _render_path(scan.path) for scan in scans if not scan.has_verify and scan.note_type not in verification_optional_types
     )
-    missing_load = sorted(_render_path(scan.path) for scan in scans if not scan.has_load_when and scan.note_type not in trigger_optional_types)
+    missing_load = sorted(
+        _render_path(scan.path) for scan in scans if not scan.has_load_when and scan.note_type not in trigger_optional_types
+    )
     missing_review = sorted(
         _render_path(scan.path) for scan in scans if not scan.has_review_when and scan.note_type not in trigger_optional_types
     )
@@ -337,10 +400,7 @@ def main() -> int:
         {
             _render_path(scan.path)
             for scan in scans
-            if (
-                scan.note_type == "routing-feedback"
-                and not (scan.has_load_when and scan.has_review_when)
-            )
+            if (scan.note_type == "routing-feedback" and not (scan.has_load_when and scan.has_review_when))
             or (
                 scan.note_type not in trigger_optional_types | {"routing-feedback"}
                 and not (scan.has_load_when and scan.has_review_when and scan.has_failure_signals)
@@ -372,11 +432,7 @@ def main() -> int:
         for scan in scans
         if scan.line_count > _line_limit(scan.note_type)
     )
-    current_context_shape = sorted(
-        _render_path(scan.path)
-        for scan in scans
-        if _missing_sections(scan) or scan.suspicious_current_context
-    )
+    current_context_shape = sorted(_render_path(scan.path) for scan in scans if _missing_sections(scan) or scan.suspicious_current_context)
     incomplete_improvement_signals = sorted(
         note_path
         for note_path, raw in manifest_notes.items()
@@ -414,6 +470,7 @@ def main() -> int:
         and not note_path.startswith("memory/current/")
         and task_board_globs.intersection(set(raw.get("routes_from", [])) | set(raw.get("stale_when", [])))
     )
+    uncustomised_index_placeholders = _index_placeholder_findings(MEMORY_ROOT / "index.md")
 
     print("Memory freshness report")
     _print_section("Needs verification", needs_verification)
@@ -436,6 +493,34 @@ def main() -> int:
     _print_section("Missing manifest entries", missing_manifest_entries)
     _print_section("Manifest records for missing notes", manifest_records_for_missing_notes)
     _print_section("Shared canonical homes", shared_canonical_homes)
+    _print_section("Uncustomised routing placeholders", uncustomised_index_placeholders)
+
+    findings = {
+        "needs_verification": needs_verification,
+        "missing_trigger": missing_trigger,
+        "missing_last_confirmed": missing_last_confirmed,
+        "invalid_last_confirmed": invalid_last_confirmed,
+        "missing_verify": missing_verify,
+        "missing_load": missing_load,
+        "missing_review": missing_review,
+        "missing_failure": missing_failure,
+        "old_confirmations": old_confirmations,
+        "oversized_files": oversized_files,
+        "current_context_shape": current_context_shape,
+        "incomplete_improvement_signals": incomplete_improvement_signals,
+        "always_read_creep": always_read_creep,
+        "manifest_note_type_drift": manifest_note_type_drift,
+        "canonical_dir_drift": canonical_dir_drift,
+        "task_board_dependence": task_board_dependence,
+        "duplicate_titles": duplicate_titles,
+        "missing_manifest_entries": missing_manifest_entries,
+        "manifest_records_for_missing_notes": manifest_records_for_missing_notes,
+        "shared_canonical_homes": shared_canonical_homes,
+        "uncustomised_index_placeholders": uncustomised_index_placeholders,
+    }
+    strict_categories = set(args.strict_categories or DEFAULT_STRICT_CATEGORIES)
+    if args.strict and any(findings[name] for name in strict_categories):
+        return 1
     return 0
 
 
@@ -453,13 +538,14 @@ def _missing_sections(scan: NoteScan) -> set[str]:
     return set()
 
 
-def _always_read_creep_items(manifest_notes: dict[str, dict[str, object]], manifest_path: Path) -> list[str]:
+def _always_read_creep_items(manifest_notes: dict[str, dict[str, Any]], manifest_path: Path) -> list[str]:
     if not manifest_path.exists():
         return []
     data = _load_manifest_data(manifest_path)
     if not data:
         return []
-    rules = data.get("rules", {})
+    raw_rules = data.get("rules", {})
+    rules: dict[str, Any] = {str(k): v for k, v in raw_rules.items()} if isinstance(raw_rules, dict) else {}
     items: list[str] = []
     routing_only = rules.get("routing_only", [])
     high_level = rules.get("high_level", [])
@@ -470,9 +556,24 @@ def _always_read_creep_items(manifest_notes: dict[str, dict[str, object]], manif
     for note_path, raw in manifest_notes.items():
         if not isinstance(raw, dict):
             continue
-        if note_path in {"memory/current/project-state.md", "memory/current/task-context.md"} and str(raw.get("task_relevance", "")).strip() == "required":
+        if (
+            note_path in {"memory/current/project-state.md", "memory/current/task-context.md"}
+            and str(raw.get("task_relevance", "")).strip() == "required"
+        ):
             items.append(f"{note_path} should remain optional, not required")
     return sorted(set(items))
+
+
+def _index_placeholder_findings(index_path: Path) -> list[str]:
+    if not index_path.exists():
+        return []
+    text = index_path.read_text(encoding="utf-8")
+    findings: list[str] = []
+    if "Delete unused routing examples once the repository has concrete notes." in text:
+        findings.append("memory/index.md still includes the starter placeholder cleanup instruction")
+    if "<runtime-or-deployment-note>.md" in text or "<api-or-interface-note>.md" in text:
+        findings.append("memory/index.md still contains starter placeholder route examples")
+    return findings
 
 
 if __name__ == "__main__":

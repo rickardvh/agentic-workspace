@@ -18,6 +18,10 @@ from repo_memory_bootstrap._installer_shared import (
     MARKDOWN_MEMORY_LINK_RE,
     MEMORY_PATH_RE,
     NOTE_TYPE_LINE_LIMITS,
+    ROUTE_WORKING_SET_STRONG_WARNING,
+    ROUTE_WORKING_SET_TARGET,
+    ROUTING_FEEDBACK_MAX_LINES,
+    ROUTING_FEEDBACK_MAX_RESOLVED,
     SHADOW_DOC_MIN_SHARED_TERMS,
     VALID_CANONICALITY_VALUES,
     VALID_ELIMINATION_TARGET_VALUES,
@@ -25,13 +29,10 @@ from repo_memory_bootstrap._installer_shared import (
     VALID_PREFERRED_REMEDIATION_VALUES,
     VALID_SYMPTOM_OF_VALUES,
     VALID_TASK_RELEVANCE_VALUES,
+    InstallResult,
     MemoryManifest,
     MemoryNoteRecord,
     RemediationRecommendation,
-    ROUTE_WORKING_SET_STRONG_WARNING,
-    ROUTE_WORKING_SET_TARGET,
-    ROUTING_FEEDBACK_MAX_LINES,
-    ROUTING_FEEDBACK_MAX_RESOLVED,
 )
 
 H2_RE = re.compile(r"^\s{0,3}##\s+(.+?)\s*$")
@@ -232,7 +233,11 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
         result.add(
             "manual review",
             target_root / MANIFEST_PATH,
-            "rules.high_level is expanding beyond the intended compact always-read surface; keep only memory/index.md and optional project-state-level context there",
+            (
+                "rules.high_level is expanding beyond the intended compact always-read "
+                "surface; keep only memory/index.md and optional project-state-level "
+                "context there"
+            ),
             role="memory-manifest",
             safety="manual",
             source=MANIFEST_PATH.as_posix(),
@@ -311,7 +316,11 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 result.add(
                     "manual review",
                     target_root / note.path,
-                    "improvement-signal notes should declare either preferred_remediation plus improvement_note, or retention_justification explaining why the note should remain",
+                    (
+                        "improvement-signal notes should declare either "
+                        "preferred_remediation plus improvement_note, or "
+                        "retention_justification explaining why the note should remain"
+                    ),
                     role="memory-manifest",
                     safety="manual",
                     source=note.path.as_posix(),
@@ -321,7 +330,11 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 result.add(
                     "manual review",
                     target_root / note.path,
-                    "improvement-signal note is missing elimination_target; add one to clarify whether the note should shrink, promote, automate, or refactor away after remediation",
+                    (
+                        "improvement-signal note is missing elimination_target; add one "
+                        "to clarify whether the note should shrink, promote, automate, "
+                        "or refactor away after remediation"
+                    ),
                     role="memory-manifest",
                     safety="manual",
                     source=note.path.as_posix(),
@@ -372,7 +385,10 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 result.add(
                     "manual review",
                     target_root / note.path,
-                    "task-context should not advertise broad routing metadata; load it only when active continuation context is genuinely needed",
+                    (
+                        "task-context should not advertise broad routing metadata; load "
+                        "it only when active continuation context is genuinely needed"
+                    ),
                     role="memory-manifest",
                     safety="manual",
                     source=note.path.as_posix(),
@@ -709,13 +725,13 @@ def _size_warning_for_note(note: MemoryNoteRecord | None, note_path: Path, text:
         "recurring-failures": "convert repeated failure memory into tests, validation, or linting before growing the note further",
         "decision": "reduce historical detail and keep only durable consequences or still-relevant rejected paths",
         "current-overview": "reduce stale history and keep only a compact repo overview",
-        "current-context": "remove planner/log spillover and keep only active goal, touched surfaces, blocking assumptions, next validation, and resume cues",
+        "current-context": (
+            "remove planner/log spillover and keep only active goal, touched "
+            "surfaces, blocking assumptions, next validation, and resume cues"
+        ),
         "memory-note": "split by primary home or reduce stable guidance to a shorter residue note",
     }[note_type]
-    return (
-        f"{note_type} note is oversized ({line_count} lines, expected <= {limit}); "
-        f"{remediation}"
-    )
+    return f"{note_type} note is oversized ({line_count} lines, expected <= {limit}); {remediation}"
 
 
 def _explicit_note_review_detail(requested_note: Path) -> str:
@@ -817,7 +833,10 @@ def _build_remediation_recommendation(
         return RemediationRecommendation(
             kind="skill",
             target_path_hint=_infer_skill_target(note, note_path),
-            reason="This procedure is repeated operational choreography that should be executed through a checked-in skill before more prose is added.",
+            reason=(
+                "This procedure is repeated operational choreography that should be "
+                "executed through a checked-in skill before more prose is added."
+            ),
             confidence="medium",
             memory_action="automate",
         )
@@ -842,7 +861,10 @@ def _build_remediation_recommendation(
         return RemediationRecommendation(
             kind="refactor",
             target_path_hint="memory/ plus the awkward routed subsystem surface",
-            reason="The routing layer is compensating for friction that should usually be resolved through note consolidation or clearer repo boundaries.",
+            reason=(
+                "The routing layer is compensating for friction that should usually be "
+                "resolved through note consolidation or clearer repo boundaries."
+            ),
             confidence="low",
             memory_action="shrink",
         )
@@ -1149,7 +1171,10 @@ def _audit_routing_feedback_note(*, target_root: Path, result) -> None:
         result.add(
             "manual review",
             note_path,
-            f"routing-feedback note is oversized ({len(lines)} lines); keep routing calibration notes short and current rather than archival",
+            (
+                f"routing-feedback note is oversized ({len(lines)} lines); keep "
+                "routing calibration notes short and current rather than archival"
+            ),
             role="routing-feedback-audit",
             safety="manual",
             source=note_path.relative_to(target_root).as_posix(),
@@ -1245,7 +1270,9 @@ def _first_value(values: list[str]) -> str:
     return values[0].strip() if values else ""
 
 
-def _build_route_review_cases(*, target_root: Path, feedback_cases: list[RoutingFeedbackCase], routed_results: dict[str, object]) -> tuple[list[dict[str, object]], dict[str, int]]:
+def _build_route_review_cases(
+    *, target_root: Path, feedback_cases: list[RoutingFeedbackCase], routed_results: dict[str, InstallResult]
+) -> tuple[list[dict[str, object]], dict[str, int]]:
     review_cases: list[dict[str, object]] = []
     reviewed_case_count = 0
     still_missed_count = 0
@@ -1270,9 +1297,7 @@ def _build_route_review_cases(*, target_root: Path, feedback_cases: list[Routing
             continue
         reviewed_case_count += 1
         current_routed = [
-            action.path.relative_to(target_root).as_posix()
-            for action in routed.actions
-            if action.kind in {"required", "optional"}
+            action.path.relative_to(target_root).as_posix() for action in routed.actions if action.kind in {"required", "optional"}
         ]
         expected_set = set(case.expected_notes)
         current_set = set(current_routed)
@@ -1340,9 +1365,9 @@ def _build_route_report_case_type_summary(
         "fixture_case_count": fixture_count,
         "failing_fixture_count": len(failing_fixtures),
         "fixture_failure_rate": round(len(failing_fixtures) / fixture_count, 2) if fixture_count else 0.0,
-        "feedback_case_count": int(feedback_summary[f"{case_type}_case_count"]),
-        "still_failing_feedback_case_count": int(
-            feedback_summary["still_missed_count" if case_type == "missed_note" else "still_over_routed_count"]
+        "feedback_case_count": _int_value(feedback_summary.get(f"{case_type}_case_count")),
+        "still_failing_feedback_case_count": _int_value(
+            feedback_summary.get("still_missed_count" if case_type == "missed_note" else "still_over_routed_count")
         ),
     }
 
@@ -1475,12 +1500,12 @@ def _evaluate_route_report_fixtures(
     failing_count = sum(1 for item in valid_results if not item["passed"])
     invalid_count = sum(1 for item in results if not item["valid"])
     if valid_results:
-        average_routed = round(sum(int(item["routed_note_count"]) for item in valid_results) / len(valid_results), 2)
-        average_required = round(sum(int(item["required_note_count"]) for item in valid_results) / len(valid_results), 2)
-        average_optional = round(sum(int(item["optional_note_count"]) for item in valid_results) / len(valid_results), 2)
-        max_routed = max(int(item["routed_note_count"]) for item in valid_results)
-        average_lines = round(sum(int(item["routed_line_count"]) for item in valid_results) / len(valid_results), 2)
-        max_lines = max(int(item["routed_line_count"]) for item in valid_results)
+        average_routed = round(sum(_int_value(item.get("routed_note_count")) for item in valid_results) / len(valid_results), 2)
+        average_required = round(sum(_int_value(item.get("required_note_count")) for item in valid_results) / len(valid_results), 2)
+        average_optional = round(sum(_int_value(item.get("optional_note_count")) for item in valid_results) / len(valid_results), 2)
+        max_routed = max(_int_value(item.get("routed_note_count")) for item in valid_results)
+        average_lines = round(sum(_int_value(item.get("routed_line_count")) for item in valid_results) / len(valid_results), 2)
+        max_lines = max(_int_value(item.get("routed_line_count")) for item in valid_results)
         over_target = sum(1 for item in valid_results if item["exceeded_target"] == "yes")
         over_strong = sum(1 for item in valid_results if item["exceeded_strong_warning"] == "yes")
     else:
@@ -1511,22 +1536,18 @@ def _evaluate_route_report_fixtures(
 
 
 def _evaluate_route_fixture(*, target_root: Path, fixture: dict[str, object], route_memory_fn) -> dict[str, object]:
-    files = list(fixture["files"])
-    surfaces = list(fixture["surfaces"])
+    files = _string_sequence(fixture.get("files"))
+    surfaces = _string_sequence(fixture.get("surfaces"))
     result = route_memory_fn(target=target_root, files=files, surfaces=surfaces)
     current_required_notes = sorted(
-        action.path.relative_to(target_root).as_posix()
-        for action in result.actions
-        if action.kind == "required"
+        action.path.relative_to(target_root).as_posix() for action in result.actions if action.kind == "required"
     )
     current_optional_notes = sorted(
-        action.path.relative_to(target_root).as_posix()
-        for action in result.actions
-        if action.kind == "optional"
+        action.path.relative_to(target_root).as_posix() for action in result.actions if action.kind == "optional"
     )
-    expected_required = set(fixture["expected_required"])
-    expected_optional = set(fixture["expected_optional"])
-    unexpected_notes = set(fixture["unexpected_notes"])
+    expected_required = set(_string_sequence(fixture.get("expected_required")))
+    expected_optional = set(_string_sequence(fixture.get("expected_optional")))
+    unexpected_notes = set(_string_sequence(fixture.get("unexpected_notes")))
     current_required = set(current_required_notes)
     current_optional = set(current_optional_notes)
 
@@ -1562,6 +1583,27 @@ def _evaluate_route_fixture(*, target_root: Path, fixture: dict[str, object], ro
         "exceeded_target": "yes" if routed_note_count > ROUTE_WORKING_SET_TARGET else "no",
         "exceeded_strong_warning": "yes" if routed_note_count > ROUTE_WORKING_SET_STRONG_WARNING else "no",
     }
+
+
+def _string_sequence(value: object) -> list[str]:
+    if not isinstance(value, (list, tuple, set)):
+        return []
+    return [str(item) for item in value]
+
+
+def _int_value(value: object) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return 0
+    return 0
 
 
 def _suggest_canonical_doc_path(note_path: Path) -> Path:
@@ -1809,9 +1851,8 @@ def _build_route_summary(
     if routed_count > ROUTE_WORKING_SET_TARGET:
         sources = [match_source for _, _, _, match_source, _ in kept_suggestions if match_source]
         justification_bits = ", ".join(dict.fromkeys(sources[:3]))
-        summary["justification"] = (
-            "working set exceeds the default target because multiple direct routing matches were retained"
-            + (f" ({justification_bits})" if justification_bits else "")
+        summary["justification"] = "working set exceeds the default target because multiple direct routing matches were retained" + (
+            f" ({justification_bits})" if justification_bits else ""
         )
     if routed_count > ROUTE_WORKING_SET_STRONG_WARNING:
         summary["warning"] = "routing returned more than five notes; review routing precision and merge pressure"

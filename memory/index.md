@@ -13,29 +13,29 @@
 
 ### If touching runtime or deployment
 
-- `memory/domains/<runtime-or-deployment-note>.md`
-- `memory/runbooks/<relevant-operator-runbook>.md`
+- `memory/domains/README.md`
+- `memory/runbooks/README.md`
 
 ### If touching API contracts or tool behaviour
 
-- `memory/domains/<api-or-interface-note>.md`
-- `memory/invariants/<response-or-contract-note>.md`
+- `memory/domains/README.md`
+- `memory/invariants/README.md`
 
 ### If touching retrieval or search
 
-- `memory/domains/<retrieval-or-search-note>.md`
-- `memory/invariants/<retrieval-contract-note>.md`
+- `memory/domains/README.md`
+- `memory/invariants/README.md`
 - `memory/mistakes/recurring-failures.md`
 
 ### If touching tests or validation
 
-- `memory/domains/<testing-or-validation-note>.md`
+- `memory/domains/README.md`
 - `memory/mistakes/recurring-failures.md`
 
 ### If touching data model or architecture
 
-- `memory/domains/<data-model-or-architecture-note>.md`
-- `memory/invariants/<relevant-invariant-note>.md`
+- `memory/domains/README.md`
+- `memory/invariants/README.md`
 - `memory/decisions/README.md`
 
 ## Loading rule

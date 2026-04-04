@@ -28,9 +28,7 @@ CURRENT_MEMORY_BASELINE = (
     Path("memory/current/project-state.md"),
     Path("memory/current/task-context.md"),
 )
-OPTIONAL_CURRENT_MEMORY_FILES = (
-    Path("memory/current/routing-feedback.md"),
-)
+OPTIONAL_CURRENT_MEMORY_FILES = (Path("memory/current/routing-feedback.md"),)
 ROUTING_BASELINE = (Path("memory/index.md"),)
 BOOTSTRAP_WORKSPACE_FILES = (
     BOOTSTRAP_WORKSPACE_ROOT / "README.md",
@@ -146,9 +144,7 @@ NOTE_TYPE_LINE_LIMITS = {
     "current-context": CURRENT_TASK_MAX_LINES,
     "routing-feedback": ROUTING_FEEDBACK_MAX_LINES,
 }
-ALWAYS_READ_SURFACE = (
-    Path("memory/index.md"),
-)
+ALWAYS_READ_SURFACE = (Path("memory/index.md"),)
 ALLOWED_HIGH_LEVEL_NOTES = {
     Path("memory/index.md"),
     Path("memory/current/project-state.md"),

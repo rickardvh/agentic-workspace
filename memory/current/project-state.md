@@ -47,6 +47,7 @@ Active
 - Added an aggregate `route-report` command that derives repo-level routing snapshots from checked-in feedback cases and routing fixtures without adding telemetry or another maintained note surface.
 - Tightened routing so repo-level fixtures now pass against real checked-in notes, while current-decision and version metadata stay out of ordinary routes.
 - Made `route-report`, `doctor`, and the freshness audit use more of the manifest contract directly, including canonical-dir, task-board, and note-type drift checks.
+- Added optional strict-mode freshness enforcement (`scripts/check/check_memory_freshness.py --strict`) with configurable strict categories and starter-placeholder routing detection for CI-friendly policy checks.
 
 ## Blockers
 

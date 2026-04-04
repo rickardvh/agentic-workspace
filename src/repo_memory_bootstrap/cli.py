@@ -261,6 +261,12 @@ def _add_project_metadata_arguments(command_parser: argparse.ArgumentParser) -> 
         "--other-key-commands",
         help="Value used for the <OTHER_KEY_COMMANDS> placeholder.",
     )
+    command_parser.add_argument(
+        "--policy-profile",
+        choices=("default", "strict-doc-ownership"),
+        default="default",
+        help=("Installer policy preset. strict-doc-ownership enables forbid_core_docs_depend_on_memory in memory/manifest.toml."),
+    )
 
 
 def _add_format_argument(command_parser: argparse.ArgumentParser) -> None:
@@ -284,6 +290,7 @@ def _handle_install(args: argparse.Namespace) -> int:
         primary_build_command=args.primary_build_command,
         primary_test_command=args.primary_test_command,
         other_key_commands=args.other_key_commands,
+        policy_profile=args.policy_profile,
     )
     _emit_result(result, output_format=args.format, include_install_summary=True)
     return 0
@@ -301,6 +308,7 @@ def _handle_adopt(args: argparse.Namespace) -> int:
         primary_build_command=args.primary_build_command,
         primary_test_command=args.primary_test_command,
         other_key_commands=args.other_key_commands,
+        policy_profile=args.policy_profile,
     )
     _emit_result(result, output_format=args.format, include_install_summary=True)
     return 0
@@ -319,6 +327,7 @@ def _handle_upgrade(args: argparse.Namespace) -> int:
         primary_build_command=args.primary_build_command,
         primary_test_command=args.primary_test_command,
         other_key_commands=args.other_key_commands,
+        policy_profile=args.policy_profile,
     )
     _emit_result(result, output_format=args.format)
     return 0
@@ -563,8 +572,7 @@ def _emit_result(result, *, output_format: str, include_install_summary: bool = 
         )
         print("Startup cost:")
         print(
-            f"  average_lines={startup_cost.get('average_routed_line_count', 0)}, "
-            f"max_lines={startup_cost.get('max_routed_line_count', 0)}"
+            f"  average_lines={startup_cost.get('average_routed_line_count', 0)}, max_lines={startup_cost.get('max_routed_line_count', 0)}"
         )
     if result.detected_version is None:
         print(f"Detected version: none (payload version {result.bootstrap_version})")
@@ -600,7 +608,9 @@ def _print_install_summary(result) -> None:
     print(f"Summary: {summary}")
     bootstrap_skills_path = result.target_root / BOOTSTRAP_WORKSPACE_ROOT / "skills"
     print("Next steps:")
-    print("- Review repository-specific details in AGENTS.md, then use `.agentic-memory/skills/memory-router/` for day-to-day note selection.")
+    print(
+        "- Review repository-specific details in AGENTS.md, then use `.agentic-memory/skills/memory-router/` for day-to-day note selection."
+    )
     print(
         f"- Use the temporary bootstrap skills under {bootstrap_skills_path} to finish install "
         "or adopt lifecycle work, then run `agentic-memory-bootstrap bootstrap-cleanup --target "

@@ -9,7 +9,6 @@ import pytest
 
 from repo_memory_bootstrap import cli, installer
 
-
 FIXTURES_ROOT = Path("tests/fixtures/routing")
 
 
@@ -23,7 +22,9 @@ def _write_repo_file(target: Path, relative_path: str, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def _write_routing_fixture_file(target: Path, fixture_name: str, payload: dict[str, object] | None = None, raw_text: str | None = None) -> None:
+def _write_routing_fixture_file(
+    target: Path, fixture_name: str, payload: dict[str, object] | None = None, raw_text: str | None = None
+) -> None:
     fixture_path = target / "tests" / "fixtures" / "routing" / fixture_name
     fixture_path.parent.mkdir(parents=True, exist_ok=True)
     if raw_text is not None:
@@ -56,8 +57,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
                 'task_relevance = "required"\n'
-                'routing_only = true\n'
-                'high_level = true\n\n'
+                "routing_only = true\n"
+                "high_level = true\n\n"
                 '[notes."memory/domains/README.md"]\n'
                 'note_type = "domain"\n'
                 'canonical_home = "memory/domains/README.md"\n'
@@ -66,8 +67,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'canonicality = "agent_only"\n'
                 'task_relevance = "optional"\n'
                 'surfaces = ["api"]\n'
-                'routes_from = []\n'
-                'stale_when = []\n\n'
+                "routes_from = []\n"
+                "stale_when = []\n\n"
                 '[notes."memory/invariants/README.md"]\n'
                 'note_type = "invariant"\n'
                 'canonical_home = "memory/invariants/README.md"\n'
@@ -76,8 +77,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'canonicality = "agent_only"\n'
                 'task_relevance = "optional"\n'
                 'surfaces = ["api"]\n'
-                'routes_from = []\n'
-                'stale_when = []\n'
+                "routes_from = []\n"
+                "stale_when = []\n"
             ),
         )
     elif fixture_name == "optional-pressure.json":
@@ -93,8 +94,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
                 'task_relevance = "required"\n'
-                'routing_only = true\n'
-                'high_level = true\n\n'
+                "routing_only = true\n"
+                "high_level = true\n\n"
                 '[notes."memory/invariants/README.md"]\n'
                 'note_type = "invariant"\n'
                 'canonical_home = "memory/invariants/README.md"\n'
@@ -103,8 +104,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'canonicality = "agent_only"\n'
                 'task_relevance = "optional"\n'
                 'surfaces = ["api"]\n'
-                'routes_from = []\n'
-                'stale_when = []\n\n'
+                "routes_from = []\n"
+                "stale_when = []\n\n"
                 '[notes."memory/domains/README.md"]\n'
                 'note_type = "domain"\n'
                 'canonical_home = "memory/domains/README.md"\n'
@@ -113,8 +114,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'canonicality = "agent_only"\n'
                 'task_relevance = "optional"\n'
                 'surfaces = ["api"]\n'
-                'routes_from = []\n'
-                'stale_when = []\n'
+                "routes_from = []\n"
+                "stale_when = []\n"
             ),
         )
     elif fixture_name == "missed-note-regression.json":
@@ -130,8 +131,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
                 'task_relevance = "required"\n'
-                'routing_only = true\n'
-                'high_level = true\n\n'
+                "routing_only = true\n"
+                "high_level = true\n\n"
                 '[notes."memory/domains/README.md"]\n'
                 'note_type = "domain"\n'
                 'canonical_home = "memory/domains/README.md"\n'
@@ -140,8 +141,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'canonicality = "agent_only"\n'
                 'task_relevance = "optional"\n'
                 'surfaces = ["tests"]\n'
-                'routes_from = []\n'
-                'stale_when = []\n\n'
+                "routes_from = []\n"
+                "stale_when = []\n\n"
                 '[notes."memory/mistakes/recurring-failures.md"]\n'
                 'note_type = "recurring-failures"\n'
                 'canonical_home = "memory/mistakes/recurring-failures.md"\n'
@@ -167,8 +168,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
                 'task_relevance = "required"\n'
-                'routing_only = true\n'
-                'high_level = true\n\n'
+                "routing_only = true\n"
+                "high_level = true\n\n"
                 '[notes."memory/domains/README.md"]\n'
                 'note_type = "domain"\n'
                 'canonical_home = "memory/domains/README.md"\n'
@@ -177,8 +178,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'canonicality = "agent_only"\n'
                 'task_relevance = "optional"\n'
                 'surfaces = ["api"]\n'
-                'routes_from = []\n'
-                'stale_when = []\n\n'
+                "routes_from = []\n"
+                "stale_when = []\n\n"
                 '[notes."memory/invariants/README.md"]\n'
                 'note_type = "invariant"\n'
                 'canonical_home = "memory/invariants/README.md"\n'
@@ -187,8 +188,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'canonicality = "agent_only"\n'
                 'task_relevance = "optional"\n'
                 'surfaces = ["api"]\n'
-                'routes_from = []\n'
-                'stale_when = []\n'
+                "routes_from = []\n"
+                "stale_when = []\n"
             ),
         )
     elif fixture_name in {"runtime-basic.json", "architecture-basic.json"}:
@@ -204,8 +205,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
                 'task_relevance = "required"\n'
-                'routing_only = true\n'
-                'high_level = true\n\n'
+                "routing_only = true\n"
+                "high_level = true\n\n"
                 '[notes."memory/domains/README.md"]\n'
                 'note_type = "domain"\n'
                 'canonical_home = "memory/domains/README.md"\n'
@@ -214,8 +215,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'canonicality = "agent_only"\n'
                 'task_relevance = "optional"\n'
                 'surfaces = ["runtime", "architecture"]\n'
-                'routes_from = []\n'
-                'stale_when = []\n\n'
+                "routes_from = []\n"
+                "stale_when = []\n\n"
                 '[notes."memory/runbooks/README.md"]\n'
                 'note_type = "runbook"\n'
                 'canonical_home = "memory/runbooks/README.md"\n'
@@ -224,8 +225,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'canonicality = "agent_only"\n'
                 'task_relevance = "optional"\n'
                 'surfaces = ["runtime"]\n'
-                'routes_from = []\n'
-                'stale_when = []\n\n'
+                "routes_from = []\n"
+                "stale_when = []\n\n"
                 '[notes."memory/invariants/README.md"]\n'
                 'note_type = "invariant"\n'
                 'canonical_home = "memory/invariants/README.md"\n'
@@ -234,8 +235,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'canonicality = "agent_only"\n'
                 'task_relevance = "optional"\n'
                 'surfaces = ["architecture"]\n'
-                'routes_from = []\n'
-                'stale_when = []\n\n'
+                "routes_from = []\n"
+                "stale_when = []\n\n"
                 '[notes."memory/decisions/README.md"]\n'
                 'note_type = "decision"\n'
                 'canonical_home = "memory/decisions/README.md"\n'
@@ -244,8 +245,8 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'canonicality = "agent_only"\n'
                 'task_relevance = "optional"\n'
                 'surfaces = ["architecture"]\n'
-                'routes_from = []\n'
-                'stale_when = []\n'
+                "routes_from = []\n"
+                "stale_when = []\n"
             ),
         )
 
@@ -253,20 +254,14 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
 
 
 def _routed_note_sets(result: installer.InstallResult, target: Path) -> tuple[set[str], set[str]]:
-    required = {
-        action.path.relative_to(target).as_posix()
-        for action in result.actions
-        if action.kind == "required"
-    }
-    optional = {
-        action.path.relative_to(target).as_posix()
-        for action in result.actions
-        if action.kind == "optional"
-    }
+    required = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "required"}
+    optional = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "optional"}
     return required, optional
 
 
-def _routing_feedback_note(*, missed_cases: list[str] | None = None, over_cases: list[str] | None = None, last_confirmed: str = "2026-04-04") -> str:
+def _routing_feedback_note(
+    *, missed_cases: list[str] | None = None, over_cases: list[str] | None = None, last_confirmed: str = "2026-04-04"
+) -> str:
     missed_block = "\n\n".join(missed_cases or [])
     over_block = "\n\n".join(over_cases or [])
     return (
@@ -802,8 +797,8 @@ def test_route_memory_adds_routing_baseline_and_runtime_suggestions(tmp_path: Pa
     suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "optional"}
 
     assert "memory/index.md" in required
-    assert "memory/domains/<runtime-or-deployment-note>.md" in suggested
-    assert "memory/runbooks/<relevant-operator-runbook>.md" in suggested
+    assert "memory/domains/README.md" in suggested
+    assert "memory/runbooks/README.md" in suggested
     assert "memory/current/project-state.md" not in suggested
     assert "memory/current/task-context.md" not in suggested
     assert result.route_summary["routed_note_count"] == 3
@@ -822,7 +817,7 @@ def test_route_memory_adds_architecture_suggestions(tmp_path: Path) -> None:
     result = installer.route_memory(target=target, files=["src/architecture/schema.py"])
     suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "optional"}
 
-    assert "memory/invariants/<relevant-invariant-note>.md" in suggested
+    assert "memory/invariants/README.md" in suggested
     assert "memory/decisions/README.md" in suggested
     assert "memory/current/project-state.md" not in suggested
     assert "memory/current/task-context.md" not in suggested
@@ -855,8 +850,8 @@ stale_when = ["src/**/*.py"]
     result = installer.route_memory(target=target, files=["deploy/k8s/service.yaml"])
     suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "optional"}
 
-    assert "memory/domains/<runtime-or-deployment-note>.md" in suggested
-    assert "memory/runbooks/<relevant-operator-runbook>.md" in suggested
+    assert "memory/domains/README.md" in suggested
+    assert "memory/runbooks/README.md" in suggested
 
 
 def test_route_memory_does_not_treat_routing_baseline_as_surface_coverage(tmp_path: Path) -> None:
@@ -1031,7 +1026,8 @@ routes_from = ["src/**/*.py"]
 
     assert result.route_summary["routed_note_count"] == 7
     assert result.route_summary["exceeded_target"] == "yes"
-    assert "more than five notes" in result.route_summary["warning"]
+    warning = str(result.route_summary["warning"])
+    assert "more than five notes" in warning
 
 
 def test_sync_memory_without_input_returns_guidance(tmp_path: Path) -> None:
@@ -1370,6 +1366,8 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
             "README.md",
             "--primary-build-command",
             "uv run build",
+            "--policy-profile",
+            "strict-doc-ownership",
         ]
     )
 
@@ -1390,6 +1388,71 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     assert promotion_args.mode == "remediation"
     assert verify_args.command == "verify-payload"
     assert install_args.project_purpose == "purpose"
+    assert install_args.policy_profile == "strict-doc-ownership"
+
+
+def test_install_policy_profile_strict_doc_ownership_updates_manifest_rule(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    installer.install_bootstrap(target=target, policy_profile="strict-doc-ownership")
+
+    manifest_text = (target / "memory" / "manifest.toml").read_text(encoding="utf-8")
+    assert "forbid_core_docs_depend_on_memory = true" in manifest_text
+
+
+def test_install_policy_profile_strict_doc_ownership_reports_dry_run_update(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    result = installer.install_bootstrap(target=target, dry_run=True, policy_profile="strict-doc-ownership")
+
+    assert any(
+        action.path == target / "memory" / "manifest.toml" and action.kind == "would update" and "strict-doc-ownership" in action.detail
+        for action in result.actions
+    )
+
+
+def test_memory_freshness_strict_default_does_not_fail_on_bootstrap_placeholders(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+
+    result = subprocess.run(
+        [sys.executable, "scripts/check/check_memory_freshness.py", "--strict"],
+        cwd=target,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "Uncustomised routing placeholders:" in result.stdout
+    assert "starter placeholder route examples" in result.stdout
+
+
+def test_memory_freshness_strict_can_fail_on_bootstrap_placeholders_when_requested(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/check/check_memory_freshness.py",
+            "--strict",
+            "--strict-categories",
+            "uncustomised_index_placeholders",
+        ],
+        cwd=target,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert "Uncustomised routing placeholders:" in result.stdout
+    assert "starter placeholder route examples" in result.stdout
 
 
 def test_cli_version_flag_prints_package_version(capsys) -> None:
@@ -1739,7 +1802,9 @@ def test_promotion_report_remediation_mode_filters_low_confidence_candidates(tmp
 
     result = installer.promotion_report(target=target, notes=["memory/index.md"], mode="remediation")
 
-    assert any(action.kind == "manual review" and "no promotion or elimination candidates found" in action.detail for action in result.actions)
+    assert any(
+        action.kind == "manual review" and "no promotion or elimination candidates found" in action.detail for action in result.actions
+    )
 
 
 def test_promotion_report_prefers_skill_for_prose_heavy_runbook(tmp_path: Path) -> None:
@@ -2059,18 +2124,33 @@ def test_route_memory_matches_calibration_fixture_expectations(tmp_path: Path, f
     target = tmp_path / fixture_name.removesuffix(".json")
     fixture = _setup_routing_fixture_repo(target, fixture_name)
 
+    fixture_files = [str(item) for item in fixture["files"]] if isinstance(fixture.get("files"), list) else []
+    fixture_surfaces = [str(item) for item in fixture["surfaces"]] if isinstance(fixture.get("surfaces"), list) else []
+    expected_required = (
+        set(str(item) for item in fixture["expected_required"]) if isinstance(fixture.get("expected_required"), list) else set()
+    )
+    expected_optional = (
+        set(str(item) for item in fixture["expected_optional"]) if isinstance(fixture.get("expected_optional"), list) else set()
+    )
+    unexpected_notes = (
+        set(str(item) for item in fixture["unexpected_notes"]) if isinstance(fixture.get("unexpected_notes"), list) else set()
+    )
+    missing_note_candidates = (
+        set(str(item) for item in fixture["missing_note_candidates"]) if isinstance(fixture.get("missing_note_candidates"), list) else set()
+    )
+
     result = installer.route_memory(
         target=target,
-        files=list(fixture["files"]),
-        surfaces=list(fixture["surfaces"]),
+        files=fixture_files,
+        surfaces=fixture_surfaces,
     )
     required, optional = _routed_note_sets(result, target)
 
-    assert required == set(fixture["expected_required"])
-    assert optional == set(fixture["expected_optional"])
-    assert set(fixture["unexpected_notes"]).isdisjoint(required | optional)
-    if fixture["missing_note_candidates"]:
-        assert set(fixture["missing_note_candidates"]).issubset(required | optional)
+    assert required == expected_required
+    assert optional == expected_optional
+    assert unexpected_notes.isdisjoint(required | optional)
+    if missing_note_candidates:
+        assert missing_note_candidates.issubset(required | optional)
 
 
 def test_route_memory_prefers_canonical_doc_when_manifest_marks_note_canonical_elsewhere(
@@ -2108,9 +2188,7 @@ stale_when = ["src/**/*.py"]
         for action in result.actions
     )
     assert any(
-        action.path == target / "memory" / "domains" / "api.md"
-        and action.kind == "optional"
-        and "fallback context only" in action.detail
+        action.path == target / "memory" / "domains" / "api.md" and action.kind == "optional" and "fallback context only" in action.detail
         for action in result.actions
     )
 
@@ -2263,13 +2341,7 @@ def test_route_review_marks_incomplete_case_unresolved(tmp_path: Path) -> None:
         target,
         "memory/current/routing-feedback.md",
         _routing_feedback_note(
-            missed_cases=[
-                "### Case: incomplete\n"
-                "Task surface summary\n"
-                "- Missing explicit files and expected note.\n"
-                "Status\n"
-                "- open"
-            ]
+            missed_cases=["### Case: incomplete\nTask surface summary\n- Missing explicit files and expected note.\nStatus\n- open"]
         ),
     )
 
@@ -2534,13 +2606,7 @@ def test_route_report_text_output_lists_only_failing_or_unresolved_items(tmp_pat
         target,
         "memory/current/routing-feedback.md",
         _routing_feedback_note(
-            missed_cases=[
-                "### Case: unresolved\n"
-                "Task surface summary\n"
-                "- Missing explicit routing data.\n"
-                "Status\n"
-                "- open"
-            ]
+            missed_cases=["### Case: unresolved\nTask surface summary\n- Missing explicit routing data.\nStatus\n- open"]
         ),
     )
 
@@ -2977,9 +3043,7 @@ task_relevance = "optional"
     result = installer.doctor_bootstrap(target=target)
 
     assert any(
-        action.role == "memory-size-audit"
-        and "invariant note is oversized" in action.detail
-        and "expected <= 80" in action.detail
+        action.role == "memory-size-audit" and "invariant note is oversized" in action.detail and "expected <= 80" in action.detail
         for action in result.actions
     )
 
@@ -3123,9 +3187,7 @@ routes_from = ["src/**/*.py"]
     result = installer.doctor_bootstrap(target=target)
 
     assert any(
-        action.role == "memory-overlap-audit"
-        and "possible note overlap" in action.detail
-        and "recommend" in action.detail
+        action.role == "memory-overlap-audit" and "possible note overlap" in action.detail and "recommend" in action.detail
         for action in result.actions
     )
 
