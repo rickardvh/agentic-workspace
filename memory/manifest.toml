@@ -26,6 +26,7 @@ forbid_core_docs_depend_on_memory = false
 # - improvement_candidate = true
 # - improvement_note = "short advisory hint"
 # - elimination_target = "shrink" | "promote" | "automate" | "refactor_away"
+# - retention_justification = "short reason the note should remain despite being an improvement signal"
 # These fields are advisory only; existing manifests remain valid without them.
 
 [notes."memory/index.md"]

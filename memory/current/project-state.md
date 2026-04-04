@@ -42,6 +42,7 @@ Active
 - Tightened `doctor`, upgrade, and manifest behaviour so legacy-layout repos migrate cleanly and repo-owned notes stay separate.
 - Added a structured remediation recommendation layer so doctor, sync, route, and promotion-report can point at concrete upstream docs, skills, scripts, tests, validation, or refactor targets.
 - Made the scope boundary explicit: remediation stays advisory outside the managed bootstrap surface, with handoff into repo-owned work rather than package-owned mutation.
+- Added a first hardening pass for routing discipline, current-context shape checks, improvement-signal closure, note-type size warnings, and always-read surface creep detection.
 
 ## Blockers
 
@@ -79,4 +80,4 @@ Active
 
 ## Last confirmed
 
-2026-04-04 during remediation-layer implementation
+2026-04-04 during memory-system hardening pass 1

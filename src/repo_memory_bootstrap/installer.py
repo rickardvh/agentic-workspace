@@ -7,10 +7,15 @@ from pathlib import Path
 
 from repo_memory_bootstrap._installer_memory import (
     _audit_memory_doc_ownership,
+    _build_route_summary,
+    _dedupe_route_suggestions,
     _build_remediation_recommendation,
     _emit_improvement_pressure,
+    _emit_memory_shape_pressure,
     _find_manifest_matches,
+    _first_route_match_source,
     _first_improvement_hint,
+    _format_route_reason,
     _git_changed_files,
     _infer_surfaces_from_paths,
     _iter_promotion_candidates,
@@ -21,11 +26,13 @@ from repo_memory_bootstrap._installer_memory import (
     _path_matches_pattern,
 )
 from repo_memory_bootstrap._installer_output import (
+    _current_task_structure_findings,
     _current_task_staleness_reason,
     _existing_version_path,
     _has_placeholders,
     _new_result,
     _patch_agents_workflow_block,
+    _project_state_structure_findings,
     _project_state_staleness_reason,
     _read_installed_version,
     _validate_upgrade_source_record,
@@ -64,6 +71,7 @@ from repo_memory_bootstrap._installer_shared import (
     CURRENT_MEMORY_BASELINE,
     CURRENT_PROJECT_STATE_MAX_LINES,
     CURRENT_TASK_MAX_LINES,
+    ROUTE_WORKING_SET_TARGET,
     FORBIDDEN_PAYLOAD_FILES,
     FORBIDDEN_PAYLOAD_PREFIXES,
     LEGACY_BOOTSTRAP_WORKSPACE_ROOT,
@@ -427,6 +435,7 @@ def doctor_bootstrap(
         result=result,
         force_enforcement=strict_doc_ownership,
     )
+    _emit_memory_shape_pressure(target_root=target_root, manifest=manifest, result=result)
     _emit_improvement_pressure(target_root=target_root, manifest=manifest, result=result)
     return result
 
@@ -542,6 +551,23 @@ def check_current_memory(target: str | Path | None = None) -> InstallResult:
                 source=relative_path.as_posix(),
                 category="current-memory-review",
             )
+        structure_findings = (
+            _current_task_structure_findings(text)
+            if relative_path == Path("memory/current/task-context.md")
+            else _project_state_structure_findings(text)
+            if relative_path == Path("memory/current/project-state.md")
+            else []
+        )
+        for finding in structure_findings:
+            result.add(
+                "manual review",
+                note_path,
+                finding,
+                role="current-memory",
+                safety="manual",
+                source=relative_path.as_posix(),
+                category="current-memory-review",
+            )
     return result
 
 
@@ -569,8 +595,8 @@ def route_memory(
     selected_surfaces.update(_infer_surfaces_from_paths(files or []))
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
     routing_baseline = manifest.routing_only if manifest and manifest.routing_only else ROUTING_BASELINE
-    suggestions: list[tuple[str, str, str]] = [
-        ("required", path.as_posix(), "always-read routing note")
+    suggestions: list[tuple[str, str, str, str, int]] = [
+        ("required", path.as_posix(), "always-read routing note", "routing-baseline", 0)
         for path in routing_baseline
     ]
     manifest_suggestions = _find_manifest_matches(
@@ -579,35 +605,68 @@ def route_memory(
         surfaces=selected_surfaces,
         use_staleness=False,
     )
-    suggestions.extend(manifest_suggestions)
+    suggestions.extend((recommendation, note, reason, match_source, 1) for recommendation, note, reason, match_source in manifest_suggestions)
     covered_surfaces = _covered_manifest_surfaces(manifest, manifest_suggestions, selected_surfaces)
     for section_surface, notes in _parse_route_sections(target_root / "memory" / "index.md"):
         if section_surface in selected_surfaces and section_surface not in covered_surfaces:
             for note in notes:
-                suggestions.append(("recommended", note, f"matched route surface '{section_surface}' from memory/index.md"))
+                suggestions.append(("optional", note, f"matched route surface '{section_surface}' from memory/index.md", "index-fallback", 2))
     if _should_suggest_project_state(files=files or [], surfaces=selected_surfaces, manifest_suggestions=manifest_suggestions):
         suggestions.append(
-            ("recommended", "memory/current/project-state.md", "high-level repo re-orientation is likely useful for this task")
+            ("optional", "memory/current/project-state.md", "high-level repo re-orientation is likely useful for this task", "high-level-fallback", 4)
         )
     if _should_suggest_task_context(files=files or []):
         suggestions.append(
-            ("recommended", "memory/current/task-context.md", "explicit current-context input suggests checking continuation state")
+            ("optional", "memory/current/task-context.md", "explicit current-context input suggests checking continuation state", "explicit-current-context", 4)
         )
 
-    seen: set[str] = set()
-    for recommendation, note, reason in suggestions:
-        key = f"{recommendation}:{note}"
-        if key in seen:
+    deduped = _dedupe_route_suggestions(suggestions)
+    required = [item for item in deduped if item[0] == "required"]
+    optional = [item for item in deduped if item[0] == "optional"]
+    kept_optionals: list[tuple[str, str, str, str, int]] = []
+    for suggestion in optional:
+        _, _, _, match_source, priority = suggestion
+        if len(required) + len(kept_optionals) >= ROUTE_WORKING_SET_TARGET and priority >= 4:
             continue
-        seen.add(key)
+        kept_optionals.append(suggestion)
+
+    kept_suggestions = [*required, *kept_optionals]
+    result.route_summary = _build_route_summary(kept_suggestions)
+    result.missing_note_hint = "If routing missed something, record which note was missing."
+
+    if result.route_summary.get("warning"):
+        result.add(
+            "warning",
+            target_root / Path("memory/index.md"),
+            str(result.route_summary["warning"]),
+            role="memory-route",
+            safety="advisory",
+            source="memory/index.md",
+            category="manual-review",
+        )
+
+    if justification := result.route_summary.get("justification"):
+        result.add(
+            "current",
+            target_root / Path("memory/index.md"),
+            str(justification),
+            role="memory-route",
+            safety="safe",
+            source="memory/index.md",
+            category="safe-update",
+            match_source="routing-summary",
+        )
+
+    for recommendation, note, reason, match_source, _priority in kept_suggestions:
         result.add(
             recommendation,
             target_root / Path(note),
-            reason,
+            _format_route_reason(reason=reason, match_source=match_source),
             role="memory-route",
             safety="safe",
             source=note,
             category="safe-update",
+            match_source=_first_route_match_source(match_source),
         )
         note_path = target_root / Path(note)
         manifest_note = _lookup_manifest_note(manifest, Path(note))
@@ -631,7 +690,7 @@ def route_memory(
             )
 
     if files and not any(
-        action.role == "memory-route" and action.kind in {"recommended", "required"} and action.source != "memory/index.md"
+        action.role == "memory-route" and action.kind in {"optional", "required"} and action.source != "memory/index.md"
         for action in result.actions
     ):
         result.add(
@@ -643,6 +702,16 @@ def route_memory(
             source="memory/index.md",
             category="manual-review",
         )
+    result.add(
+        "current",
+        target_root / Path("memory/index.md"),
+        result.missing_note_hint,
+        role="memory-route",
+        safety="advisory",
+        source="memory/index.md",
+        category="safe-update",
+        match_source="missing-note-prompt",
+    )
     return result
 
 
@@ -677,7 +746,7 @@ def sync_memory(
     )
 
     seen_sync_paths: set[Path] = set()
-    for _, note, reason in manifest_suggestions:
+    for _, note, reason, _match_source in manifest_suggestions:
         note_path = target_root / Path(note)
         note_text = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
         manifest_note = _lookup_manifest_note(manifest, Path(note))
@@ -726,7 +795,7 @@ def sync_memory(
     routing_baseline = manifest.routing_only if manifest and manifest.routing_only else ROUTING_BASELINE
     baseline_paths = {target_root / path for path in routing_baseline}
     for action in routed.actions:
-        if action.kind not in {"recommended", "required"} or action.path in seen_sync_paths or action.path in baseline_paths:
+        if action.kind not in {"optional", "required"} or action.path in seen_sync_paths or action.path in baseline_paths:
             continue
         note_path = action.path
         note_text = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
@@ -786,11 +855,11 @@ def sync_memory(
 
 def _covered_manifest_surfaces(
     manifest,
-    suggestions: list[tuple[str, str, str]],
+    suggestions: list[tuple[str, str, str, str]],
     selected_surfaces: set[str],
 ) -> set[str]:
     covered: set[str] = set()
-    for _, note, _ in suggestions:
+    for _, note, _, _ in suggestions:
         if Path(note) in ROUTING_BASELINE:
             continue
         manifest_note = _lookup_manifest_note(manifest, Path(note))
@@ -804,9 +873,9 @@ def _should_suggest_project_state(
     *,
     files: list[str],
     surfaces: set[str],
-    manifest_suggestions: list[tuple[str, str, str]],
+    manifest_suggestions: list[tuple[str, str, str, str]],
 ) -> bool:
-    if any(Path(note) == Path("memory/current/project-state.md") for _, note, _ in manifest_suggestions):
+    if any(Path(note) == Path("memory/current/project-state.md") for _, note, _, _ in manifest_suggestions):
         return True
     if any(Path(path).as_posix() == "memory/current/project-state.md" for path in files):
         return True
@@ -886,6 +955,19 @@ def promotion_report(
             remediation_confidence=recommendation.confidence if recommendation else "",
             memory_action=recommendation.memory_action if recommendation else "",
         )
+        if note is not None and note.memory_role == "improvement_signal":
+            has_remediation = bool(note.preferred_remediation and note.improvement_note)
+            has_retention = bool(note.retention_justification)
+            if not has_remediation and not has_retention:
+                result.add(
+                    "manual review",
+                    note_path,
+                    "improvement-signal lifecycle is incomplete; add remediation metadata or retention_justification before treating this note as stable maintenance residue",
+                    role="promotion-report",
+                    safety="manual",
+                    source=note.path.as_posix(),
+                    category="manual-review",
+                )
     return result
 
 

@@ -10,9 +10,14 @@ from typing import Iterable
 from repo_memory_bootstrap._installer_shared import (
     AGENT_ROOT_MARKERS,
     CURRENT_MEMORY_BASELINE,
+    CURRENT_CONTEXT_CHRONOLOGY_RE,
+    CURRENT_CONTEXT_SUSPICIOUS_HEADINGS,
+    CURRENT_CONTEXT_SUSPICIOUS_SECTION_RE,
     CURRENT_PROJECT_STATE_MAX_LINES,
+    PROJECT_STATE_REQUIRED_SECTIONS,
     CURRENT_PROJECT_STATE_STALE_DAYS,
     CURRENT_TASK_MAX_LINES,
+    TASK_CONTEXT_REQUIRED_SECTIONS,
     CURRENT_TASK_STALE_DAYS,
     DATE_RE,
     EMBEDDED_WORKFLOW_HEADINGS,
@@ -28,6 +33,8 @@ from repo_memory_bootstrap._installer_shared import (
     WORKFLOW_MARKER_START,
     WORKFLOW_POINTER_BLOCK,
 )
+
+SECTION_HEADING_RE = re.compile(r"^\s{0,3}##\s+(.+?)\s*$")
 
 
 def build_substitutions(
@@ -89,6 +96,8 @@ def format_actions(actions: Iterable, target_root: Path) -> list[str]:
             details.append(f"confidence={action.remediation_confidence}")
         if action.memory_action:
             details.append(f"memory_action={action.memory_action}")
+        if action.match_source:
+            details.append(f"match_source={action.match_source}")
         detail = f" ({'; '.join(details)})" if details else ""
         lines.append(f"{action.kind}: {relative_path}{detail}")
     return lines
@@ -151,8 +160,9 @@ def _infer_action_category(*, kind: str, path: Path, detail: str, role: str, saf
         "replaced",
         "current",
         "present",
-        "recommended",
+        "optional",
         "required",
+        "warning",
     }:
         return "safe-update"
     if kind in {"manual review", "consider"}:
@@ -191,6 +201,14 @@ def _current_task_staleness_reason(text: str) -> str | None:
     return None
 
 
+def _current_task_structure_findings(text: str) -> list[str]:
+    return _current_note_structure_findings(
+        text=text,
+        expected_sections=TASK_CONTEXT_REQUIRED_SECTIONS,
+        note_name="task-context",
+    )
+
+
 def _project_state_staleness_reason(text: str) -> str | None:
     lines = text.splitlines()
     if len(lines) > CURRENT_PROJECT_STATE_MAX_LINES:
@@ -216,6 +234,54 @@ def _project_state_staleness_reason(text: str) -> str | None:
                         )
                 break
     return None
+
+
+def _project_state_structure_findings(text: str) -> list[str]:
+    return _current_note_structure_findings(
+        text=text,
+        expected_sections=PROJECT_STATE_REQUIRED_SECTIONS,
+        note_name="project-state",
+    )
+
+
+def _current_note_structure_findings(*, text: str, expected_sections: tuple[str, ...], note_name: str) -> list[str]:
+    sections = [match.group(1).strip() for line in text.splitlines() if (match := SECTION_HEADING_RE.match(line))]
+    findings: list[str] = []
+
+    missing = [section for section in expected_sections if section not in sections]
+    if missing:
+        findings.append(
+            f"{note_name} note is missing expected sections ({', '.join(missing)}); this looks like structure drift rather than compact continuation context"
+        )
+
+    suspicious_headings = [
+        section
+        for section in sections
+        if section.strip().lower() in CURRENT_CONTEXT_SUSPICIOUS_HEADINGS
+        or CURRENT_CONTEXT_SUSPICIOUS_SECTION_RE.match(f"## {section}")
+    ]
+    if suspicious_headings:
+        findings.append(
+            f"{note_name} note includes planner-like headings ({', '.join(sorted(set(suspicious_headings)))}); review for planner or log drift"
+        )
+
+    chronological_lines = sum(1 for line in text.splitlines() if CURRENT_CONTEXT_CHRONOLOGY_RE.match(line))
+    if chronological_lines >= 3:
+        findings.append(
+            f"{note_name} note includes chronological task-log style bullets ({chronological_lines} entries); review for execution-log drift"
+        )
+
+    suspicious_sections = [
+        section
+        for section in sections
+        if section.strip().lower() in {"todo", "to do", "done", "completed", "in progress", "history", "timeline"}
+    ]
+    if len(suspicious_sections) >= 2:
+        findings.append(
+            f"{note_name} note has multiple planner/log sections ({', '.join(suspicious_sections)}); keep current-memory notes brief and non-sequencing"
+        )
+
+    return findings
 
 
 def _is_valid_upgrade_source_text(text: str) -> bool:

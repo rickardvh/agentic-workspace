@@ -8,53 +8,28 @@ Active
 
 - Optional checked-in continuation compression only when it materially reduces re-orientation cost.
 
-## Applies to
-
-- `AGENTS.md`
-- `README.md`
-- `memory/current/project-state.md`
-- `memory/index.md`
-- `.agentic-memory/WORKFLOW.md`
-- `.agentic-memory/VERSION.md`
-- `bootstrap/AGENTS.md`
-- `bootstrap/README.md`
-
-## Load when
-
-- Continuing active work after a break.
-- Re-orienting on the current change without re-reading the whole repo.
-
-## Review when
-
-- The active work changes materially.
-- The active surfaces or key constraints change.
-- The note no longer reduces re-orientation cost.
-
-## Current focus
+## Active goal
 
 - No active cross-session task context captured.
 
-## Key constraints
+## Touched surfaces
 
-- `task-context.md` is continuation compression only, not a task list, backlog, execution log, or sequencing surface.
+- Add the smallest useful list of touched files, modules, commands, or memory notes only when active work is interrupted.
+
+## Blocking assumptions
+
+- Record only the active assumptions or constraints that would otherwise be expensive to re-derive next session.
+
+## Next validation
+
+- Note the next concrete validation step only when it will reduce restart cost.
+
+## Resume cues
+
+- `task-context.md` is continuation compression only, not a task list, backlog, execution log, roadmap, or sequencing surface.
 - Keep this file empty or near-empty unless it clearly helps the next session continue faster.
-
-## Notes
-
-- Populate this file only when there is active interrupted work worth preserving across sessions.
-- Keep it to active goal, touched surfaces, blocking assumptions, and next validation.
-- Remove stale detail once it no longer reduces re-orientation cost.
-
-## Failure signals
-
-- The note becomes a task list, backlog, detailed implementation plan, execution log, or historical log.
-- The note grows beyond short re-orientation context.
-
-## Verify
-
-- Confirm the listed active surfaces and relevant memory still match the interrupted work.
 - Remove or shrink stale detail once it no longer reduces re-orientation cost.
 
 ## Last confirmed
 
-2026-04-01 during planner-agnostic interoperability and memory-discipline hardening
+2026-04-04 during memory-system hardening pass 1

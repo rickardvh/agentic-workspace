@@ -42,6 +42,7 @@
 
 - Do not load all of `/memory` by default.
 - Start from the smallest useful working set.
+- Default to `memory/index.md` plus at most 2 additional notes unless the task clearly justifies more.
 - Load `memory/current/project-state.md` or `memory/current/task-context.md` only when they will reduce re-orientation cost for the current task.
 - Use touched files, modules, commands, or surfaces to decide which notes to load first.
 
@@ -90,7 +91,15 @@ Use short references instead.
 
 ## Memory size limits
 
-Memory files should normally stay under ~200 lines.
+Memory files should normally stay under ~200 lines, with tighter expectations for specific note types.
+
+- invariants: target <= 80 lines
+- domains: target <= 160 lines
+- runbooks: target <= 140 lines
+- recurring-failures: target <= 140 lines
+- decisions: target <= 160 lines
+- `memory/current/project-state.md`: target <= 100 lines
+- `memory/current/task-context.md`: target <= 80 lines
 
 Large memory files degrade selective loading and retrieval quality.
 

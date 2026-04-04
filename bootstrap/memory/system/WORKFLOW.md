@@ -32,6 +32,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Keep repeatable workflow-like actions in skills.
 - Use `memory/index.md` as the routing layer; do not bulk-load `/memory`.
 - Prefer the smallest useful working set.
+- Default to `memory/index.md` plus at most 2 additional notes unless the task clearly justifies more.
 - Optimise for deletion and consolidation, not just capture.
 - Prefer editing, merging, or removing existing notes over accumulating near-duplicates.
 - When referenced behaviour changes, update the note, mark it `Needs verification`, or remove it in the same change.
@@ -69,8 +70,9 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Neither file should become a task list, detailed plan, journal, backlog, ledger, tranche history, or duplicated memory summary.
 - A good `project-state.md` normally covers current focus, recent meaningful progress, blockers, and a few high-value notes only.
 - Keep `project-state.md` aggressively summary-shaped; if it starts reading like a changelog, history log, or backlog, compress it.
-- A good `task-context.md` normally covers the active goal, touched surfaces, blocking assumptions, and next validation only.
+- A good `task-context.md` normally covers status, scope, active goal, touched surfaces, blocking assumptions, next validation, resume cues, and last confirmed only.
 - Do not let `task-context.md` become a shadow task board, execution log, sequencing surface, or duplicate planner.
+- Treat planner-like headings such as backlog, roadmap, completed tasks, timeline, sprint, action items, or next steps as suspicion signals that the current note may be drifting.
 
 ## Ownership boundary
 
@@ -99,6 +101,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Pay extra attention to oversized or stale current-state surfaces such as `memory/current/project-state.md` and `memory/current/task-context.md`.
 - Freshness review should consider semantic drift as well as age: linked code, commands, authority boundaries, or expected routing surfaces may have changed even when metadata still looks current.
 - If a note keeps growing through unrelated edits, split it by primary home or move repeated procedure into a skill.
+- Use note-type-aware size pressure: keep invariants especially tight, keep runbooks procedural, and keep current-context files very small.
 
 ## Capture threshold
 
@@ -112,6 +115,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Treat durable truth and improvement signals differently.
 - Durable truth should remain visible in memory when it is genuinely expensive to rediscover and not better owned elsewhere.
 - Improvement signals are notes that exist because the repo still needs clearer docs, better tests, stronger validation, better tooling, cleaner automation, or simpler design.
+- Improvement-signal notes should declare either a remediation path or a short retention justification explaining why the note still belongs in memory.
 - Do not assume memory volume should trend downward across all repos or stages; some systems genuinely need more durable memory for a time.
 - Judge memory by whether it justifies its cost and reduces rediscovery, not by whether the note count falls.
 - Do not let improvement-signal notes become permanent substitutes for repo improvements when those improvements are feasible.

@@ -400,6 +400,48 @@ def test_current_check_flags_stale_project_state(tmp_path: Path) -> None:
     )
 
 
+def test_current_check_flags_task_context_structure_drift_and_planner_signals(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "current").mkdir(parents=True)
+    (target / "memory" / "current" / "project-state.md").write_text(
+        Path("memory/current/project-state.md").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (target / "memory" / "current" / "task-context.md").write_text(
+        "# Task Context\n\n"
+        "## Status\n\nActive\n\n"
+        "## Scope\n\n- Optional continuation context.\n\n"
+        "## Next steps\n\n- 2026-04-01 do this\n- 2026-04-02 do that\n- 2026-04-03 do more\n\n"
+        "## Last confirmed\n\n2026-04-04\n",
+        encoding="utf-8",
+    )
+
+    result = installer.check_current_memory(target=target)
+
+    assert any("missing expected sections" in action.detail for action in result.actions)
+    assert any("planner-like headings" in action.detail for action in result.actions)
+    assert any("task-log style bullets" in action.detail for action in result.actions)
+
+
+def test_current_check_allows_next_validation_heading(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "current").mkdir(parents=True)
+    (target / "memory" / "current" / "project-state.md").write_text(
+        Path("memory/current/project-state.md").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (target / "memory" / "current" / "task-context.md").write_text(
+        Path("memory/current/task-context.md").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    result = installer.check_current_memory(target=target)
+
+    assert not any("planner-like headings" in action.detail for action in result.actions)
+
+
 def test_build_substitutions_include_last_confirmed_date(tmp_path: Path) -> None:
     substitutions = installer.build_substitutions(target_root=tmp_path, project_name="demo")
 
@@ -474,13 +516,18 @@ def test_route_memory_adds_routing_baseline_and_runtime_suggestions(tmp_path: Pa
 
     result = installer.route_memory(target=target, files=["deploy/k8s/service.yaml"])
     required = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "required"}
-    suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "recommended"}
+    suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "optional"}
 
     assert "memory/index.md" in required
     assert "memory/domains/<runtime-or-deployment-note>.md" in suggested
     assert "memory/runbooks/<relevant-operator-runbook>.md" in suggested
     assert "memory/current/project-state.md" not in suggested
     assert "memory/current/task-context.md" not in suggested
+    assert result.route_summary["routed_note_count"] == 3
+    assert result.route_summary["required_count"] == 1
+    assert result.route_summary["optional_count"] == 2
+    assert result.route_summary["exceeded_target"] == "no"
+    assert result.missing_note_hint == "If routing missed something, record which note was missing."
 
 
 def test_route_memory_adds_architecture_suggestions(tmp_path: Path) -> None:
@@ -490,12 +537,14 @@ def test_route_memory_adds_architecture_suggestions(tmp_path: Path) -> None:
     (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
 
     result = installer.route_memory(target=target, files=["src/architecture/schema.py"])
-    suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "recommended"}
+    suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "optional"}
 
     assert "memory/invariants/<relevant-invariant-note>.md" in suggested
     assert "memory/decisions/README.md" in suggested
-    assert "memory/current/project-state.md" in suggested
+    assert "memory/current/project-state.md" not in suggested
     assert "memory/current/task-context.md" not in suggested
+    assert result.route_summary["exceeded_target"] == "yes"
+    assert "justification" in result.route_summary
 
 
 def test_route_memory_falls_back_to_index_when_manifest_is_incomplete(tmp_path: Path) -> None:
@@ -521,7 +570,7 @@ stale_when = ["src/**/*.py"]
     )
 
     result = installer.route_memory(target=target, files=["deploy/k8s/service.yaml"])
-    suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "recommended"}
+    suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "optional"}
 
     assert "memory/domains/<runtime-or-deployment-note>.md" in suggested
     assert "memory/runbooks/<relevant-operator-runbook>.md" in suggested
@@ -539,7 +588,7 @@ def test_route_memory_does_not_treat_routing_baseline_as_surface_coverage(tmp_pa
 
     result = installer.route_memory(target=target, files=["docker/compose.yml"])
     required = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "required"}
-    suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "recommended"}
+    suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "optional"}
     manual_reviews = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "manual review"}
 
     assert "memory/index.md" in required
@@ -557,7 +606,7 @@ def test_route_memory_only_suggests_task_context_on_explicit_input(tmp_path: Pat
     result = installer.route_memory(target=target, files=["memory/current/task-context.md"])
 
     assert any(
-        action.kind == "recommended"
+        action.kind == "optional"
         and action.path.relative_to(target).as_posix() == "memory/current/task-context.md"
         and "explicit current-context input" in action.detail
         for action in result.actions
@@ -587,9 +636,10 @@ stale_when = ["src/**/*.py"]
     result = installer.route_memory(target=target, files=["src/repo_memory_bootstrap/cli.py"])
 
     assert any(
-        action.kind == "recommended"
+        action.kind == "optional"
         and action.path.relative_to(target).as_posix() == "memory/domains/cli.md"
         and "manifest path match" in action.detail
+        and action.match_source == "file-path"
         for action in result.actions
     )
 
@@ -623,6 +673,82 @@ stale_when = ["deploy/**/*.yaml"]
         and "clearer canonical docs or refactor review" in action.detail
         for action in result.actions
     )
+
+
+def test_route_memory_emits_strong_warning_for_six_plus_direct_matches(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/index.md"]
+note_type = "routing"
+canonical_home = "memory/index.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+routing_only = true
+
+[notes."memory/domains/a.md"]
+note_type = "domain"
+canonical_home = "memory/domains/a.md"
+authority = "canonical"
+audience = "human+agent"
+task_relevance = "optional"
+routes_from = ["src/**/*.py"]
+
+[notes."memory/domains/b.md"]
+note_type = "domain"
+canonical_home = "memory/domains/b.md"
+authority = "canonical"
+audience = "human+agent"
+task_relevance = "optional"
+routes_from = ["src/**/*.py"]
+
+[notes."memory/domains/c.md"]
+note_type = "domain"
+canonical_home = "memory/domains/c.md"
+authority = "canonical"
+audience = "human+agent"
+task_relevance = "optional"
+routes_from = ["src/**/*.py"]
+
+[notes."memory/domains/d.md"]
+note_type = "domain"
+canonical_home = "memory/domains/d.md"
+authority = "canonical"
+audience = "human+agent"
+task_relevance = "optional"
+routes_from = ["src/**/*.py"]
+
+[notes."memory/domains/e.md"]
+note_type = "domain"
+canonical_home = "memory/domains/e.md"
+authority = "canonical"
+audience = "human+agent"
+task_relevance = "optional"
+routes_from = ["src/**/*.py"]
+
+[notes."memory/domains/f.md"]
+note_type = "domain"
+canonical_home = "memory/domains/f.md"
+authority = "canonical"
+audience = "human+agent"
+task_relevance = "optional"
+routes_from = ["src/**/*.py"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.route_memory(target=target, files=["src/service.py"])
+
+    assert result.route_summary["routed_note_count"] == 7
+    assert result.route_summary["exceeded_target"] == "yes"
+    assert "more than five notes" in result.route_summary["warning"]
 
 
 def test_sync_memory_without_input_returns_guidance(tmp_path: Path) -> None:
@@ -1131,9 +1257,9 @@ def test_bootstrap_task_context_starter_is_continuation_only() -> None:
     text = (installer.payload_root() / "memory" / "current" / "task-context.md").read_text(encoding="utf-8")
 
     assert "Optional checked-in continuation compression" in text
-    assert "## Key constraints" in text
-    assert "Populate it only when there is active work worth preserving across sessions." in text
-    assert "Do not turn it into a task list, backlog, execution log, or sequencing surface." in text
+    assert "## Blocking assumptions" in text
+    assert "## Resume cues" in text
+    assert "Do not turn it into a task list, backlog, execution log, roadmap, or sequencing surface." in text
 
 
 def test_current_task_staleness_reason_mentions_planner_spillover() -> None:
@@ -1620,6 +1746,21 @@ def test_current_view_json_shape(tmp_path: Path) -> None:
     assert data["notes"][0]["path"] == "memory/current/project-state.md"
 
 
+def test_route_memory_json_includes_summary_and_missing_note_hint(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory").mkdir(parents=True)
+    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
+
+    result = installer.route_memory(target=target, files=["deploy/k8s/service.yaml"])
+    data = json.loads(installer.format_result_json(result))
+
+    assert data["route_summary"]["routed_note_count"] == 3
+    assert data["route_summary"]["required_count"] == 1
+    assert data["route_summary"]["optional_count"] == 2
+    assert data["missing_note_hint"] == "If routing missed something, record which note was missing."
+
+
 def test_route_memory_prefers_canonical_doc_when_manifest_marks_note_canonical_elsewhere(
     tmp_path: Path,
 ) -> None:
@@ -1656,7 +1797,7 @@ stale_when = ["src/**/*.py"]
     )
     assert any(
         action.path == target / "memory" / "domains" / "api.md"
-        and action.kind == "recommended"
+        and action.kind == "optional"
         and "fallback context only" in action.detail
         for action in result.actions
     )
@@ -1812,6 +1953,65 @@ elimination_target = "gone"
     assert any("manifest elimination_target must be one of" in action.detail for action in result.actions)
 
 
+def test_doctor_flags_incomplete_improvement_signal_lifecycle(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "mistakes").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "mistakes" / "recurring-failures.md").write_text("# Recurring Failures\n", encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/mistakes/recurring-failures.md"]
+note_type = "recurring-failures"
+canonical_home = "memory/mistakes/recurring-failures.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+memory_role = "improvement_signal"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any("preferred_remediation plus improvement_note, or retention_justification" in action.detail for action in result.actions)
+    assert any("missing elimination_target" in action.detail for action in result.actions)
+
+
+def test_doctor_accepts_retention_justification_for_improvement_signal(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "mistakes").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "mistakes" / "recurring-failures.md").write_text("# Recurring Failures\n", encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/mistakes/recurring-failures.md"]
+note_type = "recurring-failures"
+canonical_home = "memory/mistakes/recurring-failures.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+memory_role = "improvement_signal"
+retention_justification = "The repo still lacks an executable replacement for this recurring operator trap."
+elimination_target = "shrink"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert not any("retention_justification" in action.detail for action in result.actions)
+
+
 def test_doctor_flags_manifest_routing_drift_for_small_default_surface(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
@@ -1855,6 +2055,38 @@ routes_from = ["src/**/*.py"]
     assert any("WORKFLOW.md should remain reference policy" in detail for detail in details)
     assert any("task-context should stay optional continuation compression" in detail for detail in details)
     assert any("task-context should not advertise broad routing metadata" in detail for detail in details)
+
+
+def test_doctor_emits_note_type_specific_size_warning(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "invariants").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "invariants" / "api.md").write_text(("# API invariant\n\n" + "detail\n") * 90, encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/invariants/api.md"]
+note_type = "invariant"
+canonical_home = "memory/invariants/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.role == "memory-size-audit"
+        and "invariant note is oversized" in action.detail
+        and "expected <= 80" in action.detail
+        for action in result.actions
+    )
 
 
 def test_doctor_rejects_canonical_elsewhere_targets_inside_memory(tmp_path: Path) -> None:
@@ -1950,6 +2182,55 @@ def test_promotion_report_marks_missing_explicit_notes_for_manual_review(
         action.path == target / "memory" / "runbooks" / "deply.md"
         and action.kind == "manual review"
         and "file does not exist" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_emits_advisory_note_overlap_warning(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "memory" / "invariants").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    shared_text = (
+        "service contract boundary request validation response schema compatibility migration rollback observability operator safety\n"
+    )
+    (target / "memory" / "domains" / "api.md").write_text(shared_text, encoding="utf-8")
+    (target / "memory" / "invariants" / "api.md").write_text(shared_text, encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/api.md"]
+note_type = "domain"
+canonical_home = "memory/domains/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+surfaces = ["api"]
+routes_from = ["src/**/*.py"]
+
+[notes."memory/invariants/api.md"]
+note_type = "invariant"
+canonical_home = "memory/invariants/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+surfaces = ["api"]
+routes_from = ["src/**/*.py"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.role == "memory-overlap-audit"
+        and "possible note overlap" in action.detail
+        and "recommend" in action.detail
         for action in result.actions
     )
 

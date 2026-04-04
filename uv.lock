@@ -4,7 +4,7 @@ requires-python = ">=3.11"
 
 [[package]]
 name = "agentic-memory-bootstrap"
-version = "0.3.1"
+version = "0.3.4"
 source = { editable = "." }
 
 [package.dev-dependencies]
@@ -20,7 +20,7 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pymarkdownlnt", specifier = ">=0.9.36" },
+    { name = "pymarkdownlnt" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },

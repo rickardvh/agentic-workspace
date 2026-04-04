@@ -455,6 +455,20 @@ def _emit_result(result, *, output_format: str, include_install_summary: bool = 
 
     print(f"Target: {result.target_root}")
     print(result.message)
+    if result.route_summary:
+        print(
+            "Route summary: "
+            f"notes={result.route_summary.get('routed_note_count', 0)}, "
+            f"required={result.route_summary.get('required_count', 0)}, "
+            f"optional={result.route_summary.get('optional_count', 0)}, "
+            f"exceeded_target={result.route_summary.get('exceeded_target', 'no')}"
+        )
+        if result.route_summary.get("justification"):
+            print(f"Route justification: {result.route_summary['justification']}")
+        if result.route_summary.get("warning"):
+            print(f"Route warning: {result.route_summary['warning']}")
+    if result.missing_note_hint:
+        print(f"Routing feedback: {result.missing_note_hint}")
     if result.detected_version is None:
         print(f"Detected version: none (payload version {result.bootstrap_version})")
     else:

@@ -18,11 +18,57 @@ RE_HEADING = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*$")
 RE_H1 = re.compile(r"^\s{0,3}#\s+(.+?)\s*$")
 RE_LAST_CONFIRMED_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2})\b")
 RE_STATUS_VALUE = re.compile(r"^(Stable|Active|Needs verification|Deprecated)\s*$", re.IGNORECASE)
+RE_SECTION = re.compile(r"^\s{0,3}##\s+(.+?)\s*$")
+RE_CHRONOLOGY = re.compile(r"^\s*(?:-|\*|\d+\.)\s+20\d{2}-\d{2}-\d{2}\b")
 
 MEMORY_ROOT = Path("memory")
 MANIFEST_PATH = MEMORY_ROOT / "manifest.toml"
 MAX_LINES = 200
 STALE_DAYS = 180
+TYPE_LIMITS = {
+    "invariant": 80,
+    "domain": 160,
+    "runbook": 140,
+    "recurring-failures": 140,
+    "decision": 160,
+    "project-state": 100,
+    "task-context": 80,
+}
+PROJECT_STATE_SECTIONS = {
+    "Status",
+    "Scope",
+    "Applies to",
+    "Load when",
+    "Review when",
+    "Current focus",
+    "Recent meaningful progress",
+    "Blockers",
+    "High-level notes",
+    "Failure signals",
+    "Verify",
+    "Verified against",
+    "Last confirmed",
+}
+TASK_CONTEXT_SECTIONS = {
+    "Status",
+    "Scope",
+    "Active goal",
+    "Touched surfaces",
+    "Blocking assumptions",
+    "Next validation",
+    "Resume cues",
+    "Last confirmed",
+}
+SUSPICIOUS_CURRENT_HEADINGS = {
+    "backlog",
+    "roadmap",
+    "done today",
+    "completed tasks",
+    "timeline",
+    "sprint",
+    "action items",
+    "next steps",
+}
 
 SKIP_FILES = {
     MEMORY_ROOT / "index.md",
@@ -53,6 +99,9 @@ class NoteScan:
     has_failure_signals: bool
     has_needs_verification: bool
     newest_confirmed_date: datetime | None
+    sections: set[str]
+    suspicious_current_context: bool
+    note_type: str
 
 
 def _normalise_label(text: str) -> str:
@@ -95,8 +144,12 @@ def _scan_note(path: Path) -> NoteScan:
     has_failure_signals = False
     status_value: str | None = None
     dates: list[datetime] = []
+    sections: set[str] = set()
 
     for idx, line in enumerate(lines):
+        section_match = RE_SECTION.match(line)
+        if section_match:
+            sections.add(section_match.group(1).strip())
         if _label_match(line, "status"):
             for follow in lines[idx + 1 :]:
                 stripped = follow.strip()
@@ -142,6 +195,9 @@ def _scan_note(path: Path) -> NoteScan:
         has_failure_signals=has_failure_signals,
         has_needs_verification=(status_value or "").strip().lower() == "needs verification",
         newest_confirmed_date=max(dates) if dates else None,
+        sections=sections,
+        suspicious_current_context=_suspicious_current_context(path, lines, sections),
+        note_type=_note_type_for_path(path),
     )
 
 
@@ -158,6 +214,37 @@ def _load_manifest_note_entries(path: Path) -> dict[str, dict[str, object]]:
         return {}
     notes = data.get("notes", {})
     return notes if isinstance(notes, dict) else {}
+
+
+def _note_type_for_path(path: Path) -> str:
+    path_str = path.as_posix()
+    if path_str.startswith("memory/invariants/"):
+        return "invariant"
+    if path_str.startswith("memory/domains/"):
+        return "domain"
+    if path_str.startswith("memory/runbooks/"):
+        return "runbook"
+    if path_str == "memory/mistakes/recurring-failures.md":
+        return "recurring-failures"
+    if path_str.startswith("memory/decisions/"):
+        return "decision"
+    if path_str == "memory/current/project-state.md":
+        return "project-state"
+    if path_str == "memory/current/task-context.md":
+        return "task-context"
+    return "memory-note"
+
+
+def _suspicious_current_context(path: Path, lines: list[str], sections: set[str]) -> bool:
+    if path.as_posix() not in {
+        "memory/current/project-state.md",
+        "memory/current/task-context.md",
+    }:
+        return False
+    lowered_sections = {section.lower() for section in sections}
+    if lowered_sections & SUSPICIOUS_CURRENT_HEADINGS:
+        return True
+    return sum(1 for line in lines if RE_CHRONOLOGY.match(line)) >= 3
 
 
 def _print_section(title: str, items: list[str]) -> None:
@@ -183,12 +270,16 @@ def main() -> int:
     invalid_last_confirmed = sorted(
         _render_path(scan.path) for scan in scans if scan.has_last_confirmed and not scan.has_valid_last_confirmed_date
     )
-    missing_verify = sorted(_render_path(scan.path) for scan in scans if not scan.has_verify)
-    missing_load = sorted(_render_path(scan.path) for scan in scans if not scan.has_load_when)
-    missing_review = sorted(_render_path(scan.path) for scan in scans if not scan.has_review_when)
-    missing_failure = sorted(_render_path(scan.path) for scan in scans if not scan.has_failure_signals)
+    missing_verify = sorted(_render_path(scan.path) for scan in scans if not scan.has_verify and scan.note_type != "task-context")
+    missing_load = sorted(_render_path(scan.path) for scan in scans if not scan.has_load_when and scan.note_type != "task-context")
+    missing_review = sorted(_render_path(scan.path) for scan in scans if not scan.has_review_when and scan.note_type != "task-context")
+    missing_failure = sorted(_render_path(scan.path) for scan in scans if not scan.has_failure_signals and scan.note_type != "task-context")
     missing_trigger = sorted(
-        {_render_path(scan.path) for scan in scans if not (scan.has_load_when and scan.has_review_when and scan.has_failure_signals)}
+        {
+            _render_path(scan.path)
+            for scan in scans
+            if scan.note_type != "task-context" and not (scan.has_load_when and scan.has_review_when and scan.has_failure_signals)
+        }
     )
     needs_verification = sorted(_render_path(scan.path) for scan in scans if scan.has_needs_verification)
     old_confirmations = sorted(
@@ -210,6 +301,27 @@ def main() -> int:
         canonical_home = str(raw.get("canonical_home", note_path))
         canonical_home_map[canonical_home].append(note_path)
     shared_canonical_homes = sorted(f"{home} <- {', '.join(paths)}" for home, paths in canonical_home_map.items() if len(paths) > 1)
+    oversized_files = sorted(
+        f"{_render_path(scan.path)} ({scan.line_count} lines > {_line_limit(scan.note_type)})"
+        for scan in scans
+        if scan.line_count > _line_limit(scan.note_type)
+    )
+    current_context_shape = sorted(
+        _render_path(scan.path)
+        for scan in scans
+        if _missing_sections(scan) or scan.suspicious_current_context
+    )
+    incomplete_improvement_signals = sorted(
+        note_path
+        for note_path, raw in manifest_notes.items()
+        if isinstance(raw, dict)
+        and str(raw.get("memory_role", "")).strip() == "improvement_signal"
+        and not (
+            (str(raw.get("preferred_remediation", "")).strip() and str(raw.get("improvement_note", "")).strip())
+            or str(raw.get("retention_justification", "")).strip()
+        )
+    )
+    always_read_creep = _always_read_creep_items(manifest_notes, MANIFEST_PATH)
 
     print("Memory freshness report")
     _print_section("Needs verification", needs_verification)
@@ -222,11 +334,49 @@ def main() -> int:
     _print_section("Missing Failure signals", missing_failure)
     _print_section(f"Old confirmations (>{STALE_DAYS} days)", old_confirmations)
     _print_section("Oversized files", oversized_files)
+    _print_section("Current-context drift signals", current_context_shape)
+    _print_section("Incomplete improvement-signal lifecycle", incomplete_improvement_signals)
+    _print_section("Always-read surface creep", always_read_creep)
     _print_section("Duplicate titles", duplicate_titles)
     _print_section("Missing manifest entries", missing_manifest_entries)
     _print_section("Manifest records for missing notes", manifest_records_for_missing_notes)
     _print_section("Shared canonical homes", shared_canonical_homes)
     return 0
+
+
+def _line_limit(note_type: str) -> int:
+    return TYPE_LIMITS.get(note_type, MAX_LINES)
+
+
+def _missing_sections(scan: NoteScan) -> set[str]:
+    if scan.note_type == "project-state":
+        return PROJECT_STATE_SECTIONS - scan.sections
+    if scan.note_type == "task-context":
+        return TASK_CONTEXT_SECTIONS - scan.sections
+    return set()
+
+
+def _always_read_creep_items(manifest_notes: dict[str, dict[str, object]], manifest_path: Path) -> list[str]:
+    if not manifest_path.exists():
+        return []
+    try:
+        data = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError:
+        return []
+    rules = data.get("rules", {})
+    items: list[str] = []
+    routing_only = rules.get("routing_only", [])
+    high_level = rules.get("high_level", [])
+    if routing_only and routing_only != ["memory/index.md"]:
+        items.append("rules.routing_only should stay limited to memory/index.md")
+    if len(high_level) > 2:
+        items.append("rules.high_level is expanding beyond the intended compact always-read surface")
+    for note_path, raw in manifest_notes.items():
+        if not isinstance(raw, dict):
+            continue
+        if note_path in {"memory/current/project-state.md", "memory/current/task-context.md"} and str(raw.get("task_relevance", "")).strip() == "required":
+            items.append(f"{note_path} should remain optional, not required")
+    return sorted(set(items))
 
 
 if __name__ == "__main__":

@@ -8,11 +8,14 @@ from pathlib import Path
 from typing import Iterable
 
 from repo_memory_bootstrap._installer_shared import (
+    ALLOWED_HIGH_LEVEL_NOTES,
+    ALWAYS_READ_SURFACE,
     DEFAULT_CORE_DOC_EXCLUDE_GLOBS,
     DEFAULT_CORE_DOC_GLOBS,
     MANIFEST_PATH,
     MARKDOWN_MEMORY_LINK_RE,
     MEMORY_PATH_RE,
+    NOTE_TYPE_LINE_LIMITS,
     SHADOW_DOC_MIN_SHARED_TERMS,
     VALID_CANONICALITY_VALUES,
     VALID_ELIMINATION_TARGET_VALUES,
@@ -23,6 +26,8 @@ from repo_memory_bootstrap._installer_shared import (
     MemoryManifest,
     MemoryNoteRecord,
     RemediationRecommendation,
+    ROUTE_WORKING_SET_STRONG_WARNING,
+    ROUTE_WORKING_SET_TARGET,
 )
 
 
@@ -64,6 +69,7 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
                 improvement_candidate=bool(raw.get("improvement_candidate", False)),
                 improvement_note=str(raw.get("improvement_note", "") or "").strip(),
                 elimination_target=str(raw.get("elimination_target", "") or "").strip(),
+                retention_justification=str(raw.get("retention_justification", "") or "").strip(),
             )
         )
 
@@ -106,7 +112,7 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
     if manifest is None:
         return
 
-    if manifest.routing_only and tuple(manifest.routing_only) != (Path("memory/index.md"),):
+    if manifest.routing_only and tuple(manifest.routing_only) != ALWAYS_READ_SURFACE:
         result.add(
             "manual review",
             target_root / MANIFEST_PATH,
@@ -121,6 +127,16 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
             "manual review",
             target_root / MANIFEST_PATH,
             "rules.high_level should not include memory/current/task-context.md; keep continuation notes opt-in",
+            role="memory-manifest",
+            safety="manual",
+            source=MANIFEST_PATH.as_posix(),
+            category="contract-drift",
+        )
+    if len(set(manifest.high_level)) > len(ALLOWED_HIGH_LEVEL_NOTES):
+        result.add(
+            "manual review",
+            target_root / MANIFEST_PATH,
+            "rules.high_level is expanding beyond the intended compact always-read surface; keep only memory/index.md and optional project-state-level context there",
             role="memory-manifest",
             safety="manual",
             source=MANIFEST_PATH.as_posix(),
@@ -192,6 +208,29 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 source=note.path.as_posix(),
                 category="contract-drift",
             )
+        if note.memory_role == "improvement_signal":
+            has_remediation = bool(note.preferred_remediation and note.improvement_note)
+            has_retention_justification = bool(note.retention_justification)
+            if not has_remediation and not has_retention_justification:
+                result.add(
+                    "manual review",
+                    target_root / note.path,
+                    "improvement-signal notes should declare either preferred_remediation plus improvement_note, or retention_justification explaining why the note should remain",
+                    role="memory-manifest",
+                    safety="manual",
+                    source=note.path.as_posix(),
+                    category="manual-review",
+                )
+            if not note.elimination_target:
+                result.add(
+                    "manual review",
+                    target_root / note.path,
+                    "improvement-signal note is missing elimination_target; add one to clarify whether the note should shrink, promote, automate, or refactor away after remediation",
+                    role="memory-manifest",
+                    safety="manual",
+                    source=note.path.as_posix(),
+                    category="manual-review",
+                )
         if note.canonicality == "canonical_elsewhere" and not _is_non_memory_canonical_home(note.canonical_home, note.path):
             result.add(
                 "manual review",
@@ -242,7 +281,26 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                     safety="manual",
                     source=note.path.as_posix(),
                     category="contract-drift",
-                )
+            )
+
+    required_high_level = [
+        note.path
+        for note in manifest.notes
+        if note.high_level and note.task_relevance == "required"
+    ]
+    if len(required_high_level) > len(ALLOWED_HIGH_LEVEL_NOTES):
+        result.add(
+            "manual review",
+            target_root / MANIFEST_PATH,
+            "too many notes are both high-level and required; keep the default read surface compact and route the rest on demand",
+            role="memory-manifest",
+            safety="manual",
+            source=MANIFEST_PATH.as_posix(),
+            category="contract-drift",
+        )
+
+    _audit_index_compactness(target_root=target_root, manifest=manifest, result=result)
+    _audit_note_overlap(target_root=target_root, manifest=manifest, result=result)
 
     if not manifest.forbid_core_docs_depend_on_memory and not force_enforcement:
         return
@@ -315,6 +373,71 @@ def _iter_core_docs(*, target_root: Path, include_globs: tuple[str, ...], exclud
                 continue
             seen.add(path)
             yield path
+
+
+def _audit_index_compactness(*, target_root: Path, manifest: MemoryManifest, result) -> None:
+    index_path = target_root / "memory/index.md"
+    if not index_path.exists():
+        return
+    lines = index_path.read_text(encoding="utf-8").splitlines()
+    if len(lines) > 140:
+        result.add(
+            "manual review",
+            index_path,
+            "memory/index.md is getting summary-heavy; keep it short, routing-shaped, and focused on the smallest useful note bundles",
+            role="memory-index-audit",
+            safety="manual",
+            source=index_path.relative_to(target_root).as_posix(),
+            category="manual-review",
+        )
+
+
+def _audit_note_overlap(*, target_root: Path, manifest: MemoryManifest, result) -> None:
+    adjacent_categories = {
+        ("domain", "invariant"),
+        ("runbook", "recurring-failures"),
+        ("domain", "decision"),
+    }
+    comparable_notes = [
+        note
+        for note in manifest.notes
+        if note.path.parts[:1] == ("memory",)
+        and "current" not in note.path.parts
+        and note.path.name != "index.md"
+        and (target_root / note.path).exists()
+    ]
+    for idx, left in enumerate(comparable_notes):
+        left_path = target_root / left.path
+        left_terms = _significant_terms(left_path.read_text(encoding="utf-8"))
+        if len(left_terms) < SHADOW_DOC_MIN_SHARED_TERMS:
+            continue
+        for right in comparable_notes[idx + 1 :]:
+            categories = tuple(sorted({left.note_type, right.note_type}))
+            same_family = left.path.parent == right.path.parent or categories in adjacent_categories
+            shared_surfaces = set(left.surfaces) & set(right.surfaces)
+            shared_subsystems = set(left.subsystems) & set(right.subsystems)
+            shared_routes = set(left.routes_from) & set(right.routes_from)
+            if not same_family and not shared_surfaces and not shared_subsystems and not shared_routes:
+                continue
+            right_path = target_root / right.path
+            shared_terms = sorted(left_terms & _significant_terms(right_path.read_text(encoding="utf-8")))
+            if len(shared_terms) < SHADOW_DOC_MIN_SHARED_TERMS + 2:
+                continue
+            recommendation = "reclassify" if left.note_type != right.note_type else "merge"
+            if shared_routes and not same_family:
+                recommendation = "keep separate with distinct primary homes"
+            result.add(
+                "manual review",
+                left_path,
+                (
+                    f"possible note overlap with {right.path.as_posix()} "
+                    f"({', '.join(shared_terms[:8])}); recommend {recommendation} or explicitly keeping distinct primary homes"
+                ),
+                role="memory-overlap-audit",
+                safety="manual",
+                source=left.path.as_posix(),
+                category="manual-review",
+            )
 
 
 def _extract_memory_references(text: str) -> list[str]:
@@ -428,6 +551,48 @@ def _lookup_manifest_note(manifest: MemoryManifest | None, note_path: Path) -> M
         if note.path == note_path:
             return note
     return None
+
+
+def _line_limit_for_note(note: MemoryNoteRecord | None, note_path: Path) -> tuple[str, int]:
+    if note is not None and note.note_type in NOTE_TYPE_LINE_LIMITS:
+        return note.note_type, NOTE_TYPE_LINE_LIMITS[note.note_type]
+    relative_str = note_path.as_posix()
+    if "memory/invariants/" in relative_str:
+        return "invariant", NOTE_TYPE_LINE_LIMITS["invariant"]
+    if "memory/domains/" in relative_str:
+        return "domain", NOTE_TYPE_LINE_LIMITS["domain"]
+    if "memory/runbooks/" in relative_str:
+        return "runbook", NOTE_TYPE_LINE_LIMITS["runbook"]
+    if relative_str.endswith("memory/mistakes/recurring-failures.md"):
+        return "recurring-failures", NOTE_TYPE_LINE_LIMITS["recurring-failures"]
+    if "memory/decisions/" in relative_str:
+        return "decision", NOTE_TYPE_LINE_LIMITS["decision"]
+    if relative_str.endswith("memory/current/project-state.md"):
+        return "current-overview", NOTE_TYPE_LINE_LIMITS["current-overview"]
+    if relative_str.endswith("memory/current/task-context.md"):
+        return "current-context", NOTE_TYPE_LINE_LIMITS["current-context"]
+    return "memory-note", 200
+
+
+def _size_warning_for_note(note: MemoryNoteRecord | None, note_path: Path, text: str) -> str | None:
+    note_type, limit = _line_limit_for_note(note, note_path)
+    line_count = len(text.splitlines())
+    if line_count <= limit:
+        return None
+    remediation = {
+        "invariant": "split by primary home or promote stable explanatory prose into canonical docs so the invariant stays tight",
+        "domain": "split by primary home, promote stable guidance into canonical docs, or review whether refactor pressure is accumulating",
+        "runbook": "move repeated mechanics into a checked-in skill and keep the runbook procedural only",
+        "recurring-failures": "convert repeated failure memory into tests, validation, or linting before growing the note further",
+        "decision": "reduce historical detail and keep only durable consequences or still-relevant rejected paths",
+        "current-overview": "reduce stale history and keep only a compact repo overview",
+        "current-context": "remove planner/log spillover and keep only active goal, touched surfaces, blocking assumptions, next validation, and resume cues",
+        "memory-note": "split by primary home or reduce stable guidance to a shorter residue note",
+    }[note_type]
+    return (
+        f"{note_type} note is oversized ({line_count} lines, expected <= {limit}); "
+        f"{remediation}"
+    )
 
 
 def _explicit_note_review_detail(requested_note: Path) -> str:
@@ -721,6 +886,8 @@ def _manifest_improvement_hint(
 
     if note.improvement_note:
         parts.append(note.improvement_note.rstrip("."))
+    if note.retention_justification:
+        parts.append(f"retention justification: {note.retention_justification.rstrip('.')}")
 
     if note.memory_role == "improvement_signal" and not parts:
         parts.append(("an upstream repo improvement rather than treating the memory note as the long-term endpoint"))
@@ -776,6 +943,36 @@ def _emit_improvement_pressure(
                 remediation_confidence=recommendation.confidence if recommendation else "",
                 memory_action=recommendation.memory_action if recommendation else "",
             )
+
+
+def _emit_memory_shape_pressure(
+    *,
+    target_root: Path,
+    manifest: MemoryManifest | None,
+    result,
+) -> None:
+    note_records = {note.path: note for note in manifest.notes} if manifest is not None else {}
+    for note_path in sorted(target_root.glob("memory/**/*.md")):
+        relative = note_path.relative_to(target_root)
+        if relative.as_posix().startswith("memory/templates/"):
+            continue
+        if relative == Path("memory/index.md"):
+            continue
+        if relative.name == "README.md" and relative.parts[1] in {"domains", "invariants", "runbooks", "decisions"}:
+            continue
+        text = note_path.read_text(encoding="utf-8")
+        warning = _size_warning_for_note(note_records.get(relative), note_path, text)
+        if not warning:
+            continue
+        result.add(
+            "manual review",
+            note_path,
+            warning,
+            role="memory-size-audit",
+            safety="manual",
+            source=relative.as_posix(),
+            category="manual-review",
+        )
 
 
 def _suggest_canonical_doc_path(note_path: Path) -> Path:
@@ -929,45 +1126,109 @@ def _find_manifest_matches(
     files: list[str],
     surfaces: set[str],
     use_staleness: bool,
-) -> list[tuple[str, str, str]]:
+) -> list[tuple[str, str, str, str]]:
     if manifest is None:
         return []
 
-    suggestions: list[tuple[str, str, str]] = []
+    suggestions: list[tuple[str, str, str, str]] = []
     for note in manifest.notes:
         reasons: list[str] = []
+        match_sources: list[str] = []
         if surfaces and any(surface in surfaces for surface in note.surfaces):
             matched = ", ".join(sorted({surface for surface in note.surfaces if surface in surfaces}))
             reasons.append(f"manifest surface match ({matched})")
+            match_sources.append("surface")
 
         globs = note.stale_when if use_staleness else note.routes_from
         if files and globs:
             matched_globs = sorted({pattern for pattern in globs if any(_path_matches_pattern(path, pattern) for path in files)})
             if matched_globs:
                 reasons.append(f"manifest path match ({', '.join(matched_globs)})")
+                match_sources.append("file-path")
 
         if reasons:
             reason = "; ".join(reasons)
+            match_source = ", ".join(dict.fromkeys(match_sources))
             if _routes_to_canonical_doc(note):
                 suggestions.append(
                     (
                         "required",
                         note.canonical_home.as_posix(),
                         f"{reason}; canonical doc takes precedence over memory",
+                        match_source,
                     )
                 )
                 suggestions.append(
                     (
-                        "recommended",
+                        "optional",
                         note.path.as_posix(),
                         f"{reason}; memory note is fallback context only",
+                        match_source,
                     )
                 )
                 continue
 
-            recommendation = "required" if note.task_relevance == "required" else "recommended"
-            suggestions.append((recommendation, note.path.as_posix(), reason))
+            recommendation = "required" if note.task_relevance == "required" else "optional"
+            suggestions.append((recommendation, note.path.as_posix(), reason, match_source))
     return suggestions
+
+
+def _dedupe_route_suggestions(
+    suggestions: Iterable[tuple[str, str, str, str, int]],
+) -> list[tuple[str, str, str, str, int]]:
+    by_note: dict[str, tuple[str, str, str, str, int]] = {}
+    for recommendation, note, reason, match_source, priority in suggestions:
+        current = by_note.get(note)
+        if current is None:
+            by_note[note] = (recommendation, note, reason, match_source, priority)
+            continue
+        current_required = current[0] == "required"
+        incoming_required = recommendation == "required"
+        if incoming_required and not current_required:
+            by_note[note] = (recommendation, note, reason, match_source, priority)
+            continue
+        if incoming_required == current_required and priority < current[4]:
+            by_note[note] = (recommendation, note, reason, match_source, priority)
+    return sorted(by_note.values(), key=lambda item: (0 if item[0] == "required" else 1, item[4], item[1]))
+
+
+def _format_route_reason(*, reason: str, match_source: str) -> str:
+    if not match_source:
+        return reason
+    return f"{reason}; match source: {match_source}"
+
+
+def _first_route_match_source(match_source: str) -> str:
+    if not match_source:
+        return ""
+    return match_source.split(",", 1)[0].strip()
+
+
+def _build_route_summary(
+    kept_suggestions: list[tuple[str, str, str, str, int]],
+) -> dict[str, object]:
+    required_count = sum(1 for recommendation, *_ in kept_suggestions if recommendation == "required")
+    optional_count = sum(1 for recommendation, *_ in kept_suggestions if recommendation == "optional")
+    routed_count = len(kept_suggestions)
+    exceeded = routed_count > ROUTE_WORKING_SET_TARGET
+    summary: dict[str, object] = {
+        "routed_note_count": routed_count,
+        "required_count": required_count,
+        "optional_count": optional_count,
+        "exceeded_target": "yes" if exceeded else "no",
+    }
+    if routed_count > ROUTE_WORKING_SET_TARGET:
+        sources = [match_source for _, _, _, match_source, _ in kept_suggestions if match_source]
+        justification_bits = ", ".join(dict.fromkeys(sources[:3]))
+        summary["justification"] = (
+            "working set exceeds the default target because multiple direct routing matches were retained"
+            + (f" ({justification_bits})" if justification_bits else "")
+        )
+    if routed_count > ROUTE_WORKING_SET_STRONG_WARNING:
+        summary["warning"] = "routing returned more than five notes; review routing precision and merge pressure"
+    elif routed_count > ROUTE_WORKING_SET_TARGET:
+        summary["warning"] = "routing exceeded the default three-note target; optional weak matches were trimmed first"
+    return summary
 
 
 def _path_matches_pattern(raw_path: str, pattern: str) -> bool:

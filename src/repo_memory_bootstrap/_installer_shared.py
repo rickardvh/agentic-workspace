@@ -17,7 +17,7 @@ MANIFEST_PATH = Path("memory/manifest.toml")
 UPGRADE_SOURCE_PATH = MANAGED_ROOT / "UPGRADE-SOURCE.toml"
 LEGACY_UPGRADE_SOURCE_PATH = LEGACY_SYSTEM_ROOT / "UPGRADE-SOURCE.toml"
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 42
+BOOTSTRAP_VERSION = 43
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = MANAGED_ROOT / "bootstrap"
 LEGACY_BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
@@ -76,6 +76,66 @@ CURRENT_TASK_STALE_DAYS = 30
 CURRENT_TASK_MAX_LINES = 80
 CURRENT_PROJECT_STATE_STALE_DAYS = 45
 CURRENT_PROJECT_STATE_MAX_LINES = 100
+ROUTE_WORKING_SET_TARGET = 3
+ROUTE_WORKING_SET_STRONG_WARNING = 5
+
+PROJECT_STATE_REQUIRED_SECTIONS = (
+    "Status",
+    "Scope",
+    "Applies to",
+    "Load when",
+    "Review when",
+    "Current focus",
+    "Recent meaningful progress",
+    "Blockers",
+    "High-level notes",
+    "Failure signals",
+    "Verify",
+    "Verified against",
+    "Last confirmed",
+)
+TASK_CONTEXT_REQUIRED_SECTIONS = (
+    "Status",
+    "Scope",
+    "Active goal",
+    "Touched surfaces",
+    "Blocking assumptions",
+    "Next validation",
+    "Resume cues",
+    "Last confirmed",
+)
+CURRENT_CONTEXT_SUSPICIOUS_HEADINGS = (
+    "backlog",
+    "roadmap",
+    "done today",
+    "completed tasks",
+    "timeline",
+    "sprint",
+    "action items",
+    "next steps",
+)
+CURRENT_CONTEXT_SUSPICIOUS_SECTION_RE = re.compile(
+    r"^\s{0,3}##\s+(?:done|todo|to do|in progress|completed|history|timeline)\b",
+    re.IGNORECASE,
+)
+CURRENT_CONTEXT_CHRONOLOGY_RE = re.compile(r"^\s*(?:-|\*|\d+\.)\s+20\d{2}-\d{2}-\d{2}\b")
+
+NOTE_TYPE_LINE_LIMITS = {
+    "invariant": 80,
+    "domain": 160,
+    "runbook": 140,
+    "recurring-failures": 140,
+    "decision": 160,
+    "current-overview": CURRENT_PROJECT_STATE_MAX_LINES,
+    "current-context": CURRENT_TASK_MAX_LINES,
+}
+ALWAYS_READ_SURFACE = (
+    Path("memory/index.md"),
+)
+ALLOWED_HIGH_LEVEL_NOTES = {
+    Path("memory/index.md"),
+    Path("memory/current/project-state.md"),
+}
 
 WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
 WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
@@ -189,6 +249,7 @@ class Action:
     remediation_reason: str = ""
     remediation_confidence: str = ""
     memory_action: str = ""
+    match_source: str = ""
 
     def to_dict(self, target_root: Path) -> dict[str, str]:
         relative_path = self.path.relative_to(target_root) if self.path.is_relative_to(target_root) else self.path
@@ -205,6 +266,7 @@ class Action:
             "remediation_reason": self.remediation_reason,
             "remediation_confidence": self.remediation_confidence,
             "memory_action": self.memory_action,
+            "match_source": self.match_source,
         }
 
 
@@ -217,6 +279,8 @@ class InstallResult:
     actions: list[Action] = field(default_factory=list)
     detected_version: int | None = None
     bootstrap_version: int = BOOTSTRAP_VERSION
+    route_summary: dict[str, object] = field(default_factory=dict)
+    missing_note_hint: str = ""
 
     def add(
         self,
@@ -233,6 +297,7 @@ class InstallResult:
         remediation_reason: str = "",
         remediation_confidence: str = "",
         memory_action: str = "",
+        match_source: str = "",
     ) -> None:
         from repo_memory_bootstrap._installer_output import _infer_action_category
 
@@ -250,6 +315,7 @@ class InstallResult:
                 remediation_reason=remediation_reason,
                 remediation_confidence=remediation_confidence,
                 memory_action=memory_action,
+                match_source=match_source,
             )
         )
 
@@ -268,6 +334,8 @@ class InstallResult:
             "detected_version": self.detected_version,
             "bootstrap_version": self.bootstrap_version,
             "actions": [action.to_dict(self.target_root) for action in self.actions],
+            "route_summary": self.route_summary,
+            "missing_note_hint": self.missing_note_hint,
         }
 
 
@@ -331,6 +399,7 @@ class MemoryNoteRecord:
     improvement_candidate: bool = False
     improvement_note: str = ""
     elimination_target: str = ""
+    retention_justification: str = ""
 
 
 @dataclass(frozen=True, slots=True)
