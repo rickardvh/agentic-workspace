@@ -112,12 +112,16 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Treat durable truth and improvement signals differently.
 - Durable truth should remain visible in memory when it is genuinely expensive to rediscover and not better owned elsewhere.
 - Improvement signals are notes that exist because the repo still needs clearer docs, better tests, stronger validation, better tooling, cleaner automation, or simpler design.
+- Do not assume memory volume should trend downward across all repos or stages; some systems genuinely need more durable memory for a time.
+- Judge memory by whether it justifies its cost and reduces rediscovery, not by whether the note count falls.
 - Do not let improvement-signal notes become permanent substitutes for repo improvements when those improvements are feasible.
 - If the same note keeps being needed for safe work on one subsystem, consider whether the repo needs docs promotion, a skill, a script, a regression test, stronger validation, or refactor review.
 - Apply that pressure during normal task work, not only during explicit maintenance passes.
 - When routing or syncing memory exposes repeated friction, note sprawl, or recurring workarounds, propose or make the smallest upstream improvement that would reduce the note when it is safe and in scope.
 - Prefer emitting a concrete remediation target over a vague hint: suggest where the docs, skill, script, test, validation, or refactor should land, then keep the memory note only as residue, a stub, or a short fallback summary.
 - Treat `promotion-report` as the main elimination workflow: use it to decide the upstream target and the intended post-remediation memory shape before expanding the note further.
+- Keep the package advisory outside managed bootstrap surfaces: it may diagnose, classify, prioritise, and suggest concrete repo-owned targets, but it must not autonomously rewrite repo-owned docs, tests, scripts, or code outside the managed bootstrap surface.
+- If remediation suggestions become too repo-shape-specific, prefer a clearer handoff into repo-owned work over making the bootstrap itself more invasive.
 
 ## Remediation paths
 

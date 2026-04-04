@@ -1072,6 +1072,10 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
     assert "## Improvement pressure" in text
     assert "## Remediation paths" in text
     assert "Treat `promotion-report` as the main elimination workflow" in text
+    assert "Do not assume memory volume should trend downward across all repos or stages" in text
+    assert "Judge memory by whether it justifies its cost and reduces rediscovery" in text
+    assert "must not autonomously rewrite repo-owned docs, tests, scripts, or code outside the managed bootstrap surface" in text
+    assert "prefer a clearer handoff into repo-owned work" in text
 
 
 def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() -> None:
@@ -1109,6 +1113,10 @@ def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -
     assert "## Improvement Paths" in text
     assert "optional repo-owned `memory/current/active-decisions.md`" in text
     assert "promotion-report --mode remediation" in text
+    assert "Do not assume memory volume should follow one universal trend" in text
+    assert "suggest upstream repo improvements instead of treating memory as the default answer to repo complexity" in text
+    assert "remain advisory outside the managed bootstrap surface" in text
+    assert "prefer a clearer handoff into repo-owned work" in text
 
 
 def test_memory_note_template_includes_improvement_signal_metadata() -> None:

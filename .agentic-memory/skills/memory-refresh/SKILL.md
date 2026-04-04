@@ -37,7 +37,7 @@ It operates on checked-in memory files and keeps them aligned with the codebase.
 8. If current shared orientation changed, refresh `memory/current/project-state.md` or `memory/current/task-context.md`.
 9. If the repeated procedure is repository-specific, create a new sibling skill under `memory/skills/` instead of expanding this shared core skill.
 10. Run the memory freshness audit when available.
-11. If a note is acting as an improvement signal, run `agentic-memory-bootstrap promotion-report --notes <note>` and prefer shrinking the note after the upstream remediation lands.
+11. If a note is acting as an improvement signal, run `agentic-memory-bootstrap promotion-report --notes <note>` and prefer the smallest justified post-remediation memory shape: keep the note only if it still saves rediscovery cost, otherwise shrink it to a stub or remove it.
 
 ## Decision rules
 

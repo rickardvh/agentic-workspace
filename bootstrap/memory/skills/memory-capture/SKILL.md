@@ -43,7 +43,7 @@ It operates on durable memory files. It does not create a separate storage layer
 8. If the repeated procedure is repo-specific rather than a durable fact, create a new repo-specific checked-in skill under `memory/skills/` instead of growing this core skill.
 9. Treat `.agentic-memory/WORKFLOW.md` as reference policy only when the capture touches the memory contract or policy boundary.
 10. Update `memory/current/project-state.md` or `memory/current/task-context.md` only when the new memory changes current shared orientation.
-11. If the lesson is better understood as friction than durable truth, record that with manifest metadata and prefer an upstream remediation target over a permanently growing note.
+11. If the lesson is better understood as friction than durable truth, record that with manifest metadata and prefer an upstream remediation target over training contributors to depend on an ever-growing note.
 
 ## Capture test
 

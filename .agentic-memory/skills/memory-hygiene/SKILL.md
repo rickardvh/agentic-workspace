@@ -43,6 +43,7 @@ It operates on checked-in memory files. It does not replace them.
 - Do not move durable technical knowledge into task tooling.
 - Mark uncertain notes `Needs verification` instead of guessing.
 - If memory keeps compensating for the same awkward subsystem or workflow, suggest the upstream improvement instead of only expanding the note.
+- Do not assume good hygiene means fewer notes in every repo; it means clearer, cheaper, better-justified notes and less dependence on memory for avoidable complexity.
 
 ## Typical outputs
 

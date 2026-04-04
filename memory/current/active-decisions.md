@@ -73,6 +73,8 @@ Active
 - `upgrade` should migrate legacy `memory/system/`, `memory/bootstrap/`, and shipped `memory/skills/` installs into `.agentic-memory/` by default so the legacy layout can be retired cleanly.
 - Improvement pressure should stay advisory but become more decision-complete: prefer structured remediation targets and intended post-remediation memory shape over vague "consider X" prose.
 - `promotion-report` should be the primary elimination workflow, with `--mode remediation` focusing on medium/high-confidence candidates only.
+- The package may recommend concrete repo-owned docs, tests, scripts, skill, validation, or refactor targets, but it should stay advisory outside the managed bootstrap surface rather than mutating repo-owned files itself.
+- The package should not assume that healthy repos always need less memory over time; it should encourage justified memory and upstream repo improvements instead of dependence on memory for avoidable complexity.
 
 ## Last confirmed
 

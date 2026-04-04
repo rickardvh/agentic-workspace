@@ -41,6 +41,7 @@ Active
 - Shifted upgrade, install, and adopt flows onto the same `.agentic-memory/` ownership model.
 - Tightened `doctor`, upgrade, and manifest behaviour so legacy-layout repos migrate cleanly and repo-owned notes stay separate.
 - Added a structured remediation recommendation layer so doctor, sync, route, and promotion-report can point at concrete upstream docs, skills, scripts, tests, validation, or refactor targets.
+- Made the scope boundary explicit: remediation stays advisory outside the managed bootstrap surface, with handoff into repo-owned work rather than package-owned mutation.
 
 ## Blockers
 
@@ -52,6 +53,8 @@ Active
 - Durable facts should have one primary home, with short references instead of repeated summaries.
 - Route through `memory/index.md`, `memory/manifest.toml`, and the shipped memory skills before broad note reading.
 - Use `promotion-report --mode remediation` as the main package-level workflow for turning improvement-signal memory into concrete upstream repo changes.
+- Keep remediation non-invasive: the package may suggest repo-owned targets, but it should not autonomously rewrite repo-owned docs, tests, scripts, or code.
+- Keep the package neutral about memory volume trends: the goal is justified memory and less avoidable dependence on notes, not a universal requirement that note count must fall over time.
 
 ## Failure signals
 
