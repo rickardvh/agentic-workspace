@@ -1,194 +1,473 @@
-# TODO
+# 1. Planning-only development
+
+This track assumes the planning system should become a strong standalone package or framework, independent of memory.
 
 ## Goal
 
-Evolve `agentic-memory-bootstrap` from a durable-memory package into a durable-memory plus improvement-pressure package.
+Make the planning system robust, low-drift, and independently useful for agent-centric execution without depending on the memory package.
 
-The package should stay unobtrusive inside third-party repos:
+## Product boundary
 
-- no direct edits to repo code, tests, docs, or tooling outside package-managed surfaces
-- no planner-specific coupling
-- no required new manifest schema
-- no hard enforcement of repo redesign choices
+Planning owns:
 
-The package should instead help agents:
+* activation
+* sequencing
+* execution contracts
+* candidate queue
+* promotion/readiness rules
+* archive discipline
 
-- notice when memory is compensating for weak code, weak docs, weak tooling, or poor structure
-- suggest upstream repo improvements to the user
-- choose better design responses themselves instead of writing more memory by default
+Planning does **not** own:
 
-## Phase 1: Shared Principle
+* durable technical residue
+* invariants as a knowledge system
+* recurring failures as long-lived memory
+* runbooks as durable technical context
 
-### Issue: Make improvement pressure a first-class design principle
+## Phase A — Harden the current planning model
 
-Problem:
-The package currently treats memory mainly as durable context. It should also treat some memory as a signal that the repo itself may need improvement.
+Focus on the current repo as the proving ground.
 
-Acceptance criteria:
-- shared docs say memory succeeds when it either preserves irreducible durable truth or creates pressure to shrink, move, or remove the note
-- docs state that memory should not become a permanent substitute for clear code, stable docs, safe tooling, or good repo structure
-- principle appears near the top of the shared package docs
+### A1. Tighten `TODO.md`
 
-### Issue: Distinguish durable truth from improvement signals
+Implement:
 
-Problem:
-Agents need a clear split between notes that should stay and notes that should create pressure toward repo improvement.
+* max 3 `Now` items warning
+* line-count warning
+* shape enforcement for `ID / Status / Surface / Why now`
+* warning when `Why now` becomes overloaded
+* warning when non-trivial in-progress work lacks an execplan
+* warning when completed detail remains inline
 
-Acceptance criteria:
-- docs distinguish `durable truth` from `improvement signal`
-- docs give examples of each
-- docs say to preserve the first kind and try to eliminate the second kind at the source
+### A2. Harden execplans
 
-## Phase 2: Note Maintenance and Promotion Paths
+Implement:
 
-### Issue: Add an explicit “what would eliminate this note?” rule
+* required-section checks
+* exactly one active milestone warning
+* exactly one immediate next action warning
+* drift-log compaction warnings
+* touched-path scope-guard warnings
+* invariant-section prose-bloat warnings
+* blocker-section narrative drift warnings
+* archive-over-accumulation warnings
 
-Problem:
-The maintenance model currently asks whether a note should exist, but not what repo change would make it unnecessary.
+### A3. Harden `ROADMAP.md`
 
-Acceptance criteria:
-- note-maintenance guidance asks what would shrink, move, automate, promote, or remove the note
-- docs encourage promotion to docs, move to skills, scripting, testing, validation, or refactoring where appropriate
-- guidance remains compact and repo-agnostic
+Implement:
 
-### Issue: Document canonical remediation paths
+* candidate-shape checks
+* warning when entries become execution-shaped
+* warning when promoted work still retains too much detail
+* warning when promotion/reopen signal is missing
+* pruning pressure for stale candidate residue
 
-Problem:
-Agents need a default mapping from memory symptom to likely upstream repo improvement.
+### A4. Add planning health checks
 
-Acceptance criteria:
-- docs map recurring mistakes to tests/validation/lint
-- docs map prose-heavy procedures to skills first, then scripts/tooling if still mechanical
-- docs map stable human-facing guidance to canonical docs
-- docs map high-discovery-cost explanatory notes to refactor review or clearer boundaries
+Add:
 
-### Issue: Strengthen the “skills are a bridge, not the endpoint” model
+* `plan-check`
+* possibly later `plan-report`
 
-Problem:
-Workflow prose often stops at “make a skill”, when the real target may be a repo-owned script or clearer implementation.
+This should warn on:
 
-Acceptance criteria:
-- docs describe the path: prose note -> skill -> script/tooling if stable and mechanical
-- docs say memory should shrink after the workflow is encoded elsewhere
-- no implication that the package itself should install or edit repo scripts automatically
+* activation overload
+* missing execplan linkage
+* multi-active-milestone execplans
+* roadmap execution drift
+* archive-over-accumulation
+* cross-surface duplication inside planning
 
-## Phase 3: Optional Metadata
+## Phase B — Improve planning semantics
 
-### Issue: Add optional manifest fields for improvement pressure
+Borrow good ideas from systems like Beads, without runtime dependencies.
 
-Problem:
-The manifest can already express routing and freshness, but not why a note exists or what it may want to become.
+### B1. Readiness model
 
-Acceptance criteria:
-- manifest docs support optional fields such as:
-  - `memory_role`
-  - `symptom_of`
-  - `preferred_remediation`
-  - `improvement_candidate`
-  - `improvement_note`
-  - `elimination_target`
-- existing manifests remain valid without these fields
-- docs frame them as advisory only
+Add lightweight fields such as:
 
-### Issue: Add note-class and audience guidance without forcing schema adoption
+* `Ready`
+* `Blocked`
+* optional dependency references
 
-Problem:
-The package should help agents reason about ownership and audience without requiring repos to adopt a rigid taxonomy.
+### B2. Promotion discipline
 
-Acceptance criteria:
-- docs show how optional metadata can distinguish durable truth, operator guidance, and improvement signals
-- docs make clear that repos may omit the fields entirely
-- examples remain lightweight
+Make activation more explicitly signal-driven:
 
-## Phase 4: Soft Tooling
+* clear promotion triggers
+* clear reopen conditions
+* no editorial drift
 
-### Issue: Teach `doctor` to emit improvement suggestions
+### B3. Startup discipline
 
-Problem:
-`doctor` currently reports state and memory hygiene issues, but it should also suggest upstream repo improvements when memory looks symptomatic.
+Define minimal execution startup:
 
-Acceptance criteria:
-- `doctor` can emit soft “consider” suggestions
-- suggestions may point to docs promotion, skills, scripting, testing, validation, or refactor review
-- output remains advisory and non-blocking
+1. read `TODO.md`
+2. read one referenced execplan
+3. do not read `ROADMAP.md` unless reprioritising/planning
 
-### Issue: Teach `sync-memory` to surface upstream-fix candidates
+## Phase C — Extract into a standalone planning package
 
-Problem:
-When work changes related memory, the command should also suggest whether the note indicates a repo improvement opportunity.
+Only do this once the model is stable in one repo.
 
-Acceptance criteria:
-- `sync-memory` can append compact improvement suggestions to review/update items
-- suggestions remain tied to the touched note or manifest metadata
-- command still focuses on memory maintenance first
+The package should ship:
 
-### Issue: Broaden `promotion-report` into promotion-or-elimination guidance
+* templates
+* checks
+* archive discipline
+* readiness/promotion rules
+* minimal workflow docs
 
-Problem:
-Some notes should be promoted into canonical docs, but others should become skills, tests, scripts, or refactor candidates.
+It should not ship:
 
-Acceptance criteria:
-- `promotion-report` can report notes as promotion or elimination candidates
-- docs and output still preserve the existing command name for compatibility
-- command can use manifest hints when present and heuristics otherwise
+* memory assumptions
+* memory taxonomy
+* hardcoded memory hooks
 
-## Phase 5: Heuristics
+## Main risks to watch
 
-### Issue: Add lightweight memory-debt heuristics
+* execplans becoming notebooks
+* roadmap becoming a strategic junk drawer
+* `TODO.md` becoming a compressed planner
+* too much startup overhead
+* coupling to one repo’s conventions too early
 
-Problem:
-Some notes are signals of repo friction even without explicit manifest metadata.
+---
 
-Acceptance criteria:
-- heuristics stay simple and soft
-- examples include:
-  - recurring-failure notes suggesting tests/validation
-  - prose-heavy runbooks suggesting skills/scripts
-  - very large domain/orientation notes suggesting refactor review or docs promotion
-  - repeated current-note growth suggesting planning bleed or unresolved structure problems
-- no hard scoring system is introduced
+# 2. Memory-only development
 
-## Phase 6: Examples and Skills
+This track assumes the memory system remains a standalone package and continues to evolve independently.
 
-### Issue: Add examples that show memory shrinking or moving
+## Goal
 
-Problem:
-The docs need concrete examples of memory leading to repo improvements rather than only note maintenance.
+Make the memory package sharper, more measurable, and harder to degrade, while preserving:
 
-Acceptance criteria:
-- examples cover docs promotion, skill extraction, script/tooling suggestion, regression-test suggestion, and refactor suggestion
-- examples remain concise
-- examples are package-scoped and planner-agnostic
+* no runtime dependency
+* no hidden state
+* small default read surface
+* file-first inspectability
 
-### Issue: Nudge shipped skills toward improvement thinking
+## Product boundary
 
-Problem:
-Skills such as memory hygiene should push agents to notice when memory is compensating for repo friction.
+Memory owns:
 
-Acceptance criteria:
-- shipped memory skills reinforce shrink/promote/automate/refactor review paths where relevant
-- skills do not become repo-specific or prescriptive outside package-owned surfaces
+* durable technical residue
+* invariants
+* authority boundaries
+* recurring failures
+* operator runbooks
+* routing hints
+* current technical context
+* memory skills
 
-## Phase 7: Guardrails and Verification
+Memory does **not** own:
 
-### Issue: Add regression coverage
+* tasks
+* backlog
+* milestone status
+* sequencing
+* next-step plans
 
-Problem:
-The new direction should be kept stable without overfitting tests to prose.
+## Phase A — Continue hardening note quality
 
-Acceptance criteria:
-- tests cover the new shared principle
-- tests cover optional manifest compatibility
-- tests cover soft improvement suggestions in doctor/sync/promotion-report
-- tests continue to accept old manifests that omit the new fields
+### A1. Maintain note-shape discipline
 
-### Issue: Verify against this repo
+Continue strengthening:
 
-Problem:
-Changes to docs, payload, and tooling need self-hosted verification.
+* note-type-specific size pressure
+* current-context constraints
+* canonical-doc promotion pressure
+* improvement-signal lifecycle
+* one-home rule enforcement
+* overlap detection
 
-Acceptance criteria:
-- run `uv run pytest`
-- run `uv run python -m repo_memory_bootstrap.cli verify-payload`
-- run `uv run python -m repo_memory_bootstrap.cli doctor --target .`
-- run `uv run python -m repo_memory_bootstrap.cli upgrade --dry-run --target .`
+### A2. Keep current-context files compressed
+
+Protect:
+
+* `memory/current/project-state.md`
+* `memory/current/task-context.md`
+
+These should remain:
+
+* overview-only
+* continuation-only
+* non-planner
+* non-journal
+
+### A3. Tighten always-read surface discipline
+
+Ensure the default read path stays minimal:
+
+* `AGENTS.md`
+* `memory/index.md`
+* routed notes only as needed
+
+Keep `.agentic-memory/WORKFLOW.md` and similar files out of the normal always-read path unless the task is about the memory system itself.
+
+## Phase B — Improve routing quality
+
+### B1. Working-set pressure
+
+Keep:
+
+* `<=3` default routed notes unless justified
+* warning bands above 3 and 5
+* required-vs-optional suppression
+* per-note route explanations
+
+### B2. Calibration
+
+Continue:
+
+* `routing-feedback.md`
+* `route-review`
+* fixtures under `tests/fixtures/routing/`
+
+### B3. Aggregate visibility
+
+Implement and refine:
+
+* `route-report`
+* fixture-backed working-set pressure summaries
+* separate missed-note vs over-routing summaries
+
+## Phase C — Improve the control plane
+
+### C1. Make `manifest.toml` increasingly operational
+
+Use it more actively for:
+
+* routing
+* staleness pressure
+* high-level/routing-only compactness
+* lifecycle warnings
+* note-role enforcement
+
+### C2. Keep docs minimal, move procedure into skills
+
+Continue shifting repeatable workflows into:
+
+* `memory-router`
+* `memory-refresh`
+* `memory-hygiene`
+* `memory-capture`
+* `memory-upgrade`
+
+Core docs should remain:
+
+* short
+* architectural
+* non-procedural
+
+## Phase D — Empirical validation
+
+Do this carefully, without runtime telemetry if possible.
+
+### D1. Routing-quality measurement
+
+Continue improving:
+
+* missed-note capture
+* over-routing examples
+* fixture coverage
+* aggregate summaries
+
+### D2. Token-efficiency benchmarks
+
+Build offline/repeatable evaluation:
+
+* resumed-task startup cost
+* notes loaded per task
+* working-set size
+* missed-note frequency in benchmark scenarios
+
+## Main risks to watch
+
+* routing drift
+* note overlap
+* current-context drift
+* too many “helpful” docs
+* metadata becoming richer than the control logic actually uses
+* false confidence from limited calibration coverage
+
+---
+
+# 3. Integration development touching both
+
+This track is about making planning and memory work well together without tightly coupling them.
+
+## Goal
+
+Define and strengthen the interface between the planning package and the memory package, while keeping each independently useful.
+
+## Guiding principle
+
+Use **loose coupling with explicit contracts**.
+
+Planning and memory should:
+
+* reference each other where useful
+* validate boundary blur
+* exchange small hints
+
+They should **not**:
+
+* duplicate ownership
+* require each other to function
+* mirror each other’s state
+
+## Integration boundary
+
+### Planning exports
+
+Potentially:
+
+* touched surfaces
+* touched paths
+* active subsystem hints
+* current execution focus
+
+### Memory consumes
+
+Potentially:
+
+* those hints for routing
+* promotion triggers for durable residue
+* boundary checks
+
+### Shared checks
+
+Warn when:
+
+* plans absorb durable technical knowledge
+* memory absorbs active task/sequence state
+
+## Phase A — Define interoperability contract
+
+Create a small, explicit contract covering:
+
+### A1. Planning → memory routing hook
+
+An active task or execplan may provide:
+
+* touched paths
+* surfaces
+* subsystem hints
+
+The memory system may use those to route notes.
+
+Important:
+
+* planning emits hints
+* memory decides routing
+
+### A2. Execution → durable-memory promotion
+
+When active work discovers:
+
+* invariants
+* recurring traps
+* operator sequences
+* durable architectural boundaries
+
+those should be promotable into memory.
+
+Important:
+
+* planning does not own the durable fact
+* memory does not own active execution state
+
+### A3. Boundary linting
+
+Add cross-system warnings for:
+
+* durable technical facts inside plans
+* active sequencing inside memory
+* duplicated guidance across planning and memory
+
+## Phase B — Keep startup path efficient
+
+Define the integrated startup flow for a repo that uses both:
+
+1. read the planning activation surface
+2. read one execution contract if needed
+3. route into memory from touched surfaces/paths
+4. read only the smallest useful memory bundle
+
+Avoid:
+
+* bulk-reading planning
+* bulk-reading memory
+* always reading roadmap + workflow + project-state + task-context by default
+
+## Phase C — Shared UX conventions
+
+Define consistent conventions for:
+
+* referencing memory notes from plans
+* referencing active work from memory only when truly needed
+* surfacing promotion opportunities
+* distinguishing active work from durable residue
+
+These should be:
+
+* links or references
+* not duplicated prose
+
+## Phase D — Integration checks
+
+Add optional checks or reports for:
+
+* active item without durable context where one seems needed
+* repeated promotion-worthy facts stuck in execplans
+* repeated memory notes pointing to the same active planning confusion
+* boundary blur between execution contract and durable knowledge
+
+These should stay advisory.
+
+## What not to do
+
+Do not:
+
+* make planning require memory
+* make memory require planning
+* force every plan item to map to memory
+* force every memory update to update planning
+* create a shared hidden state layer
+* unify both into one giant system
+
+## Main risks to watch
+
+* coupling by convenience
+* duplicated state
+* startup overhead
+* leaking planning semantics into the memory package
+* leaking memory taxonomy into the planning package
+
+---
+
+# Recommended execution order across all three tracks
+
+## First
+
+* finish stabilizing the memory package’s routing/hardening/calibration path
+* stabilize the planning model in the current repo
+
+## Second
+
+* define the interoperability contract between them
+* add boundary warnings and startup discipline
+
+## Third
+
+* extract planning into its own package if it proves stable
+* keep integration thin and explicit
+
+---
+
+# One-sentence summary
+
+* **Planning-only development** should make planning independently strong.
+* **Memory-only development** should keep memory independently sharp and lightweight.
+* **Integration development** should define a thin, explicit interface so the two systems cooperate without becoming one system.
