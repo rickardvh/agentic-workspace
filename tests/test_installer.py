@@ -23,6 +23,16 @@ def _write_repo_file(target: Path, relative_path: str, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _write_routing_fixture_file(target: Path, fixture_name: str, payload: dict[str, object] | None = None, raw_text: str | None = None) -> None:
+    fixture_path = target / "tests" / "fixtures" / "routing" / fixture_name
+    fixture_path.parent.mkdir(parents=True, exist_ok=True)
+    if raw_text is not None:
+        fixture_path.write_text(raw_text, encoding="utf-8")
+        return
+    content = payload if payload is not None else _load_routing_fixture(fixture_name)
+    fixture_path.write_text(json.dumps(content, indent=2) + "\n", encoding="utf-8")
+
+
 def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, object]:
     fixture = _load_routing_fixture(fixture_name)
     (target / ".git").mkdir(parents=True)
@@ -2178,6 +2188,251 @@ def test_route_review_json_includes_summary_and_cases(tmp_path: Path) -> None:
 
     assert data["review_summary"]["reviewed_case_count"] == 1
     assert data["review_cases"][0]["case_type"] == "missed_note"
+
+
+def test_route_report_handles_missing_feedback_and_fixture_inputs(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    result = installer.report_routes(target=target)
+
+    assert result.route_report_summary["feedback"]["total_feedback_case_count"] == 0
+    assert result.route_report_summary["fixtures"]["fixture_count"] == 0
+    assert "No parseable routing-feedback cases yet" in result.route_report_summary["feedback_guidance"]
+    assert "No routing fixtures found" in result.route_report_summary["fixture_guidance"]
+
+
+def test_route_report_supports_feedback_cases_only(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    _setup_routing_fixture_repo(target, "missed-note-regression.json")
+    _write_repo_file(
+        target,
+        "memory/current/routing-feedback.md",
+        _routing_feedback_note(
+            missed_cases=[
+                "### Case: runtime-domain\n"
+                "Task surface summary\n"
+                "- Runtime service work.\n"
+                "Files\n"
+                "- src/runtime/service.py\n"
+                "Surfaces\n"
+                "- runtime\n"
+                "Routed notes returned\n"
+                "- memory/index.md\n"
+                "Expected missing note\n"
+                "- memory/domains/runtime.md\n"
+                "Why it was needed\n"
+                "- Runtime guidance should be routed for this surface.\n"
+                "Expected routing signal\n"
+                "- routes_from: src/runtime/service.py\n"
+                "Status\n"
+                "- open"
+            ]
+        ),
+    )
+
+    result = installer.report_routes(target=target)
+
+    assert result.route_report_summary["feedback"]["total_feedback_case_count"] == 1
+    assert result.route_report_summary["fixtures"]["fixture_count"] == 0
+    assert result.route_report_feedback_cases[0]["matched"] is True
+
+
+def test_route_report_supports_fixtures_only(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    _setup_routing_fixture_repo(target, "runtime-basic.json")
+    _write_routing_fixture_file(target, "runtime-basic.json")
+    _write_routing_fixture_file(target, "architecture-basic.json")
+
+    result = installer.report_routes(target=target)
+
+    assert result.route_report_summary["feedback"]["total_feedback_case_count"] == 0
+    assert result.route_report_summary["fixtures"]["fixture_count"] == 2
+    assert result.route_report_summary["fixtures"]["passing_fixture_count"] == 2
+
+
+def test_route_report_supports_feedback_cases_and_fixtures(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    _setup_routing_fixture_repo(target, "missed-note-regression.json")
+    _write_routing_fixture_file(target, "missed-note-regression.json")
+    _write_repo_file(
+        target,
+        "memory/current/routing-feedback.md",
+        _routing_feedback_note(
+            missed_cases=[
+                "### Case: runtime-domain\n"
+                "Task surface summary\n"
+                "- Runtime service work.\n"
+                "Files\n"
+                "- src/runtime/service.py\n"
+                "Surfaces\n"
+                "- runtime\n"
+                "Routed notes returned\n"
+                "- memory/index.md\n"
+                "Expected missing note\n"
+                "- memory/domains/runtime.md\n"
+                "Why it was needed\n"
+                "- Runtime guidance should be routed for this surface.\n"
+                "Expected routing signal\n"
+                "- routes_from: src/runtime/service.py\n"
+                "Status\n"
+                "- tuned"
+            ]
+        ),
+    )
+
+    result = installer.report_routes(target=target)
+
+    assert result.route_report_summary["feedback"]["tuned_case_count"] == 1
+    assert result.route_report_summary["fixtures"]["fixture_count"] == 1
+    assert result.route_report_summary["working_set"]["average_routed_note_count"] == 2.0
+
+
+def test_route_report_json_includes_summary_feedback_cases_and_fixture_results(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    _setup_routing_fixture_repo(target, "runtime-basic.json")
+    _write_routing_fixture_file(target, "runtime-basic.json")
+
+    data = json.loads(installer.format_result_json(installer.report_routes(target=target)))
+
+    assert "route_report_summary" in data
+    assert "route_report_feedback_cases" in data
+    assert "route_report_fixture_results" in data
+
+
+def test_route_report_keeps_missed_and_over_routing_counts_separate(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    _setup_routing_fixture_repo(target, "missed-note-regression.json")
+    _write_repo_file(
+        target,
+        "memory/current/routing-feedback.md",
+        _routing_feedback_note(
+            missed_cases=[
+                "### Case: missed\n"
+                "Task surface summary\n"
+                "- Runtime service work.\n"
+                "Files\n"
+                "- src/runtime/service.py\n"
+                "Surfaces\n"
+                "- runtime\n"
+                "Routed notes returned\n"
+                "- memory/index.md\n"
+                "Expected missing note\n"
+                "- memory/runbooks/runtime.md\n"
+                "Why it was needed\n"
+                "- Missing note case.\n"
+                "Expected routing signal\n"
+                "- routes_from: src/runtime/service.py\n"
+                "Status\n"
+                "- open"
+            ],
+            over_cases=[
+                "### Case: over\n"
+                "Task surface summary\n"
+                "- Runtime service work.\n"
+                "Files\n"
+                "- src/runtime/service.py\n"
+                "Surfaces\n"
+                "- runtime\n"
+                "Routed notes returned\n"
+                "- memory/index.md\n"
+                "- memory/domains/runtime.md\n"
+                "Unexpected notes\n"
+                "- memory/domains/runtime.md\n"
+                "Why they were unnecessary\n"
+                "- Over-routing case.\n"
+                "Status\n"
+                "- open"
+            ],
+        ),
+    )
+
+    result = installer.report_routes(target=target)
+    feedback = result.route_report_summary["feedback"]
+
+    assert feedback["missed_note_case_count"] == 1
+    assert feedback["over_routing_case_count"] == 1
+    assert feedback["still_missed_count"] == 1
+    assert feedback["still_over_routed_count"] == 1
+
+
+def test_route_report_handles_invalid_fixture_without_crashing(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    _write_routing_fixture_file(target, "invalid.json", raw_text="{ not json }\n")
+
+    result = installer.report_routes(target=target)
+
+    assert result.route_report_summary["fixtures"]["invalid_fixture_count"] == 1
+    assert result.route_report_fixture_results[0]["valid"] is False
+    assert "invalid JSON" in result.route_report_fixture_results[0]["error"]
+
+
+def test_route_report_fixture_counts_and_working_set_metrics_are_correct(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    _setup_routing_fixture_repo(target, "runtime-basic.json")
+    _write_routing_fixture_file(target, "runtime-basic.json")
+    _write_routing_fixture_file(target, "architecture-basic.json")
+    failing = _load_routing_fixture("runtime-basic.json")
+    failing["name"] = "failing"
+    failing["expected_optional"] = ["memory/domains/wrong.md"]
+    _write_routing_fixture_file(target, "failing.json", payload=failing)
+
+    result = installer.report_routes(target=target)
+    summary = result.route_report_summary["fixtures"]
+
+    assert summary["fixture_count"] == 3
+    assert summary["passing_fixture_count"] == 2
+    assert summary["failing_fixture_count"] == 1
+    assert summary["invalid_fixture_count"] == 0
+    assert summary["average_routed_note_count"] == 3.33
+    assert summary["max_routed_note_count"] == 4
+    assert summary["fixture_count_exceeding_target"] == 1
+    assert summary["fixture_count_exceeding_strong_warning"] == 0
+
+
+def test_route_report_text_output_lists_only_failing_or_unresolved_items(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    target = tmp_path / "repo"
+    _setup_routing_fixture_repo(target, "runtime-basic.json")
+    _write_routing_fixture_file(target, "runtime-basic.json")
+    failing = _load_routing_fixture("runtime-basic.json")
+    failing["name"] = "failing"
+    failing["expected_optional"] = ["memory/domains/wrong.md"]
+    _write_routing_fixture_file(target, "failing.json", payload=failing)
+    _write_repo_file(
+        target,
+        "memory/current/routing-feedback.md",
+        _routing_feedback_note(
+            missed_cases=[
+                "### Case: unresolved\n"
+                "Task surface summary\n"
+                "- Missing explicit routing data.\n"
+                "Status\n"
+                "- open"
+            ]
+        ),
+    )
+
+    cli._emit_result(installer.report_routes(target=target), output_format="text")
+    output = capsys.readouterr().out
+
+    assert "Feedback cases:" in output
+    assert "Fixture coverage:" in output
+    assert "Working-set pressure:" in output
+    assert "fixture 'failing' fails" in output
+    assert "case 'unresolved' is unresolved" in output
+    assert "fixture 'runtime-basic' fails" not in output
+
+
+def test_route_report_does_not_emit_combined_routing_score(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    _setup_routing_fixture_repo(target, "runtime-basic.json")
+    _write_routing_fixture_file(target, "runtime-basic.json")
+
+    data = json.loads(installer.format_result_json(installer.report_routes(target=target)))
+
+    assert "routing_score" not in data
+    assert "routing_score" not in data["route_report_summary"]
 
 
 def test_doctor_audits_routing_feedback_hygiene(tmp_path: Path) -> None:

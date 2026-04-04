@@ -21,6 +21,7 @@ from repo_memory_bootstrap.installer import (
     list_payload_files,
     migrate_layout,
     promotion_report,
+    report_routes,
     resolve_upgrade_source,
     review_routes,
     route_memory,
@@ -174,6 +175,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_target_arguments(route_review_parser)
     _add_format_argument(route_review_parser)
+
+    route_report_parser = subparsers.add_parser(
+        "route-report",
+        help="Show a compact aggregate routing snapshot derived from checked-in feedback cases and fixtures.",
+    )
+    _add_target_arguments(route_report_parser)
+    _add_format_argument(route_report_parser)
 
     sync_parser = subparsers.add_parser(
         "sync-memory", help="Suggest memory updates for changed work and surface compact upstream improvement candidates."
@@ -404,6 +412,11 @@ def _handle_route_review(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_route_report(args: argparse.Namespace) -> int:
+    _emit_result(report_routes(target=args.target), output_format=args.format)
+    return 0
+
+
 def _handle_promotion_report(args: argparse.Namespace) -> int:
     _emit_result(promotion_report(target=args.target, notes=args.notes, mode=args.mode), output_format=args.format)
     return 0
@@ -435,6 +448,7 @@ COMMAND_HANDLERS = {
     "current:check": _handle_current_check,
     "route": _handle_route,
     "route-review": _handle_route_review,
+    "route-report": _handle_route_report,
     "sync-memory": _handle_sync_memory,
     "promotion-report": _handle_promotion_report,
     "verify-payload": _handle_verify_payload,
@@ -490,6 +504,41 @@ def _emit_result(result, *, output_format: str, include_install_summary: bool = 
             f"still_missed={result.review_summary.get('still_missed_count', 0)}, "
             f"still_over_routed={result.review_summary.get('still_over_routed_count', 0)}, "
             f"unresolved={result.review_summary.get('unresolved_case_count', 0)}"
+        )
+    if result.route_report_summary:
+        feedback = result.route_report_summary.get("feedback", {})
+        fixtures = result.route_report_summary.get("fixtures", {})
+        working_set = result.route_report_summary.get("working_set", {})
+        print("Feedback cases:")
+        print(
+            f"  total={feedback.get('total_feedback_case_count', 0)}, "
+            f"reviewed={feedback.get('reviewed_feedback_case_count', 0)}, "
+            f"unresolved={feedback.get('unresolved_feedback_case_count', 0)}, "
+            f"missed_note_cases={feedback.get('missed_note_case_count', 0)}, "
+            f"still_missed={feedback.get('still_missed_count', 0)}, "
+            f"over_routing_cases={feedback.get('over_routing_case_count', 0)}, "
+            f"still_over_routed={feedback.get('still_over_routed_count', 0)}, "
+            f"open={feedback.get('open_case_count', 0)}, "
+            f"tuned={feedback.get('tuned_case_count', 0)}, "
+            f"rejected={feedback.get('rejected_case_count', 0)}"
+        )
+        if result.route_report_summary.get("feedback_guidance"):
+            print(f"  note: {result.route_report_summary['feedback_guidance']}")
+        print("Fixture coverage:")
+        print(
+            f"  fixtures={fixtures.get('fixture_count', 0)}, "
+            f"passing={fixtures.get('passing_fixture_count', 0)}, "
+            f"failing={fixtures.get('failing_fixture_count', 0)}, "
+            f"invalid={fixtures.get('invalid_fixture_count', 0)}"
+        )
+        if result.route_report_summary.get("fixture_guidance"):
+            print(f"  note: {result.route_report_summary['fixture_guidance']}")
+        print("Working-set pressure:")
+        print(
+            f"  average={working_set.get('average_routed_note_count', 0)}, "
+            f"max={working_set.get('max_routed_note_count', 0)}, "
+            f"over_target={working_set.get('fixture_count_exceeding_target', 0)}, "
+            f"over_strong_warning={working_set.get('fixture_count_exceeding_strong_warning', 0)}"
         )
     if result.detected_version is None:
         print(f"Detected version: none (payload version {result.bootstrap_version})")

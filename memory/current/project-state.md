@@ -44,6 +44,7 @@ Active
 - Made the scope boundary explicit: remediation stays advisory outside the managed bootstrap surface, with handoff into repo-owned work rather than package-owned mutation.
 - Added a first hardening pass for routing discipline, current-context shape checks, improvement-signal closure, note-type size warnings, and always-read surface creep detection.
 - Added a routing-calibration pass with an optional routing-feedback note, route-review support, and fixture-backed routing review cases for tuning manifest and index precision.
+- Added an aggregate `route-report` command that derives repo-level routing snapshots from checked-in feedback cases and routing fixtures without adding telemetry or another maintained note surface.
 
 ## Blockers
 
@@ -81,4 +82,4 @@ Active
 
 ## Last confirmed
 
-2026-04-04 during routing calibration pass 1
+2026-04-04 during routing calibration pass 3

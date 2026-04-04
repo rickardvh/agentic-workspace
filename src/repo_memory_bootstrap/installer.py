@@ -9,13 +9,16 @@ from repo_memory_bootstrap._installer_memory import (
     _audit_memory_doc_ownership,
     _audit_routing_feedback_note,
     _build_route_summary,
+    _build_route_report_feedback_summary,
     _build_route_review_cases,
     _dedupe_route_suggestions,
     _build_remediation_recommendation,
+    _evaluate_route_report_fixtures,
     _emit_improvement_pressure,
     _emit_memory_shape_pressure,
     _find_manifest_matches,
     _load_routing_feedback_cases,
+    _load_route_report_fixtures,
     _first_route_match_source,
     _first_improvement_hint,
     _format_route_reason,
@@ -136,6 +139,7 @@ __all__ = [
     "list_payload_files",
     "payload_root",
     "promotion_report",
+    "report_routes",
     "review_routes",
     "resolve_target_root",
     "resolve_upgrade_source",
@@ -863,6 +867,126 @@ def review_routes(*, target: str | Path | None = None) -> InstallResult:
             source=feedback_path.relative_to(target_root).as_posix(),
             category="manual-review",
         )
+    return result
+
+
+def report_routes(*, target: str | Path | None = None) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = _new_result(target_root, dry_run=True, message="Routing report")
+    _record_repo_context_warnings(target_root, result)
+
+    feedback_path = target_root / "memory/current/routing-feedback.md"
+    feedback_cases = _load_routing_feedback_cases(feedback_path)
+    routed_results: dict[str, InstallResult] = {}
+    for case in feedback_cases:
+        if not case.expected_notes or (not case.files and not case.surfaces):
+            continue
+        routed_results[case.case_id] = route_memory(target=target_root, files=list(case.files), surfaces=list(case.surfaces))
+    review_cases, _review_summary = _build_route_review_cases(
+        target_root=target_root,
+        feedback_cases=feedback_cases,
+        routed_results=routed_results,
+    )
+    feedback_summary = _build_route_report_feedback_summary(
+        feedback_cases=feedback_cases,
+        review_cases=review_cases,
+    )
+
+    fixtures_root = target_root / "tests/fixtures/routing"
+    fixtures = _load_route_report_fixtures(fixtures_root)
+    fixture_results, fixture_summary = _evaluate_route_report_fixtures(
+        target_root=target_root,
+        fixtures=fixtures,
+        route_memory_fn=route_memory,
+    )
+
+    result.route_report_feedback_cases = review_cases
+    result.route_report_fixture_results = fixture_results
+    result.route_report_summary = {
+        "feedback": feedback_summary,
+        "fixtures": fixture_summary,
+        "working_set": {
+            "average_routed_note_count": fixture_summary["average_routed_note_count"],
+            "max_routed_note_count": fixture_summary["max_routed_note_count"],
+            "fixture_count_exceeding_target": fixture_summary["fixture_count_exceeding_target"],
+            "fixture_count_exceeding_strong_warning": fixture_summary["fixture_count_exceeding_strong_warning"],
+        },
+        "feedback_guidance": "" if feedback_cases else (
+            "No parseable routing-feedback cases yet; record only concrete missed-note or over-routing examples worth revisiting."
+        ),
+        "fixture_guidance": "" if fixtures else "No routing fixtures found under tests/fixtures/routing/.",
+    }
+
+    if not feedback_cases:
+        result.add(
+            "current",
+            feedback_path,
+            str(result.route_report_summary["feedback_guidance"]),
+            role="route-report",
+            safety="safe",
+            source=feedback_path.relative_to(target_root).as_posix(),
+            category="safe-update",
+        )
+
+    for case in review_cases:
+        if case.get("matched") and not case.get("unresolved"):
+            continue
+        if case.get("unresolved"):
+            detail = f"{case['case_type']} case '{case['case_id']}' is unresolved; add files or surfaces plus expected notes"
+        elif case["case_type"] == "missed_note":
+            detail = (
+                f"missed-note case '{case['case_id']}' still fails; "
+                f"expected {', '.join(case['expected_notes'])}; current routed set "
+                f"{', '.join(case['current_routed_notes']) if case['current_routed_notes'] else 'none'}"
+            )
+        else:
+            detail = (
+                f"over-routing case '{case['case_id']}' still fails; "
+                f"unexpected note(s) still returned: {', '.join(case['expected_notes'])}; current routed set "
+                f"{', '.join(case['current_routed_notes']) if case['current_routed_notes'] else 'none'}"
+            )
+        result.add(
+            "manual review",
+            feedback_path,
+            detail,
+            role="route-report",
+            safety="manual",
+            source=feedback_path.relative_to(target_root).as_posix(),
+            category="manual-review",
+        )
+
+    if not fixtures:
+        result.add(
+            "current",
+            fixtures_root,
+            str(result.route_report_summary["fixture_guidance"]),
+            role="route-report",
+            safety="safe",
+            source="tests/fixtures/routing",
+            category="safe-update",
+        )
+
+    for fixture in fixture_results:
+        if fixture["valid"] and fixture["passed"]:
+            continue
+        if not fixture["valid"]:
+            detail = f"fixture '{fixture['fixture_name']}' is invalid: {fixture['error']}"
+        else:
+            detail = (
+                f"fixture '{fixture['fixture_name']}' fails; missing expected: "
+                f"{', '.join(fixture['missing_expected_notes']) or 'none'}; unexpected returned: "
+                f"{', '.join(fixture['unexpected_returned_notes']) or 'none'}"
+            )
+        result.add(
+            "manual review" if not fixture["valid"] or not fixture["passed"] else "current",
+            fixtures_root / f"{fixture['fixture_name']}.json",
+            detail,
+            role="route-report",
+            safety="manual" if not fixture["valid"] or not fixture["passed"] else "safe",
+            source="tests/fixtures/routing",
+            category="manual-review" if not fixture["valid"] or not fixture["passed"] else "safe-update",
+        )
+
     return result
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
@@ -1198,6 +1199,223 @@ def _build_route_review_cases(*, target_root: Path, feedback_cases: list[Routing
         "still_missed_count": still_missed_count,
         "still_over_routed_count": still_over_routed_count,
         "unresolved_case_count": unresolved_case_count,
+    }
+
+
+def _build_route_report_feedback_summary(
+    *,
+    feedback_cases: list[RoutingFeedbackCase],
+    review_cases: list[dict[str, object]],
+) -> dict[str, object]:
+    return {
+        "total_feedback_case_count": len(feedback_cases),
+        "reviewed_feedback_case_count": sum(1 for case in review_cases if not case.get("unresolved")),
+        "unresolved_feedback_case_count": sum(1 for case in review_cases if case.get("unresolved")),
+        "missed_note_case_count": sum(1 for case in feedback_cases if case.case_type == "missed_note"),
+        "still_missed_count": sum(
+            1 for case in review_cases if case.get("case_type") == "missed_note" and not case.get("matched") and not case.get("unresolved")
+        ),
+        "over_routing_case_count": sum(1 for case in feedback_cases if case.case_type == "over_routing"),
+        "still_over_routed_count": sum(
+            1 for case in review_cases if case.get("case_type") == "over_routing" and not case.get("matched") and not case.get("unresolved")
+        ),
+        "open_case_count": sum(1 for case in feedback_cases if case.status == "open"),
+        "tuned_case_count": sum(1 for case in feedback_cases if case.status == "tuned"),
+        "rejected_case_count": sum(1 for case in feedback_cases if case.status == "rejected"),
+    }
+
+
+def _load_route_report_fixtures(fixtures_root: Path) -> list[dict[str, object]]:
+    if not fixtures_root.exists():
+        return []
+
+    results: list[dict[str, object]] = []
+    for path in sorted(fixtures_root.glob("*.json")):
+        result = _load_route_report_fixture(path)
+        results.append(result)
+    return results
+
+
+def _load_route_report_fixture(path: Path) -> dict[str, object]:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return {
+            "fixture_name": path.stem,
+            "path": path.as_posix(),
+            "valid": False,
+            "error": f"invalid JSON: {exc.msg}",
+        }
+    if not isinstance(raw, dict):
+        return {
+            "fixture_name": path.stem,
+            "path": path.as_posix(),
+            "valid": False,
+            "error": "fixture must be a JSON object",
+        }
+
+    required_fields = (
+        "name",
+        "files",
+        "surfaces",
+        "expected_required",
+        "expected_optional",
+        "unexpected_notes",
+        "missing_note_candidates",
+    )
+    missing_fields = [field for field in required_fields if field not in raw]
+    if missing_fields:
+        return {
+            "fixture_name": str(raw.get("name") or path.stem),
+            "path": path.as_posix(),
+            "valid": False,
+            "error": f"missing required fields: {', '.join(missing_fields)}",
+        }
+
+    name = raw.get("name")
+    if not isinstance(name, str) or not name.strip():
+        return {
+            "fixture_name": path.stem,
+            "path": path.as_posix(),
+            "valid": False,
+            "error": "fixture name must be a non-empty string",
+        }
+
+    list_fields = ("files", "surfaces", "expected_required", "expected_optional", "unexpected_notes", "missing_note_candidates")
+    for field in list_fields:
+        value = raw.get(field)
+        if not isinstance(value, list):
+            return {
+                "fixture_name": name,
+                "path": path.as_posix(),
+                "valid": False,
+                "error": f"{field} must be a list of strings",
+            }
+        if not all(isinstance(item, str) for item in value):
+            return {
+                "fixture_name": name,
+                "path": path.as_posix(),
+                "valid": False,
+                "error": f"{field} must contain only strings",
+            }
+
+    return {
+        "fixture_name": name.strip(),
+        "path": path.as_posix(),
+        "valid": True,
+        "files": list(raw["files"]),
+        "surfaces": list(raw["surfaces"]),
+        "expected_required": list(raw["expected_required"]),
+        "expected_optional": list(raw["expected_optional"]),
+        "unexpected_notes": list(raw["unexpected_notes"]),
+        "missing_note_candidates": list(raw["missing_note_candidates"]),
+    }
+
+
+def _evaluate_route_report_fixtures(
+    *,
+    target_root: Path,
+    fixtures: list[dict[str, object]],
+    route_memory_fn,
+) -> tuple[list[dict[str, object]], dict[str, object]]:
+    results: list[dict[str, object]] = []
+    valid_results: list[dict[str, object]] = []
+
+    for fixture in fixtures:
+        if not fixture.get("valid"):
+            results.append(
+                {
+                    "fixture_name": fixture["fixture_name"],
+                    "files": [],
+                    "surfaces": [],
+                    "passed": False,
+                    "valid": False,
+                    "error": fixture["error"],
+                    "missing_expected_notes": [],
+                    "unexpected_returned_notes": [],
+                    "current_required_notes": [],
+                    "current_optional_notes": [],
+                    "routed_note_count": 0,
+                    "exceeded_target": "no",
+                    "exceeded_strong_warning": "no",
+                }
+            )
+            continue
+
+        routed = _evaluate_route_fixture(target_root=target_root, fixture=fixture, route_memory_fn=route_memory_fn)
+        results.append(routed)
+        valid_results.append(routed)
+
+    fixture_count = len(fixtures)
+    passing_count = sum(1 for item in valid_results if item["passed"])
+    failing_count = sum(1 for item in valid_results if not item["passed"])
+    invalid_count = sum(1 for item in results if not item["valid"])
+    if valid_results:
+        average_routed = round(sum(int(item["routed_note_count"]) for item in valid_results) / len(valid_results), 2)
+        max_routed = max(int(item["routed_note_count"]) for item in valid_results)
+        over_target = sum(1 for item in valid_results if item["exceeded_target"] == "yes")
+        over_strong = sum(1 for item in valid_results if item["exceeded_strong_warning"] == "yes")
+    else:
+        average_routed = 0.0
+        max_routed = 0
+        over_target = 0
+        over_strong = 0
+
+    summary = {
+        "fixture_count": fixture_count,
+        "passing_fixture_count": passing_count,
+        "failing_fixture_count": failing_count,
+        "invalid_fixture_count": invalid_count,
+        "average_routed_note_count": average_routed,
+        "max_routed_note_count": max_routed,
+        "fixture_count_exceeding_target": over_target,
+        "fixture_count_exceeding_strong_warning": over_strong,
+    }
+    return results, summary
+
+
+def _evaluate_route_fixture(*, target_root: Path, fixture: dict[str, object], route_memory_fn) -> dict[str, object]:
+    files = list(fixture["files"])
+    surfaces = list(fixture["surfaces"])
+    result = route_memory_fn(target=target_root, files=files, surfaces=surfaces)
+    current_required_notes = sorted(
+        action.path.relative_to(target_root).as_posix()
+        for action in result.actions
+        if action.kind == "required"
+    )
+    current_optional_notes = sorted(
+        action.path.relative_to(target_root).as_posix()
+        for action in result.actions
+        if action.kind == "optional"
+    )
+    expected_required = set(fixture["expected_required"])
+    expected_optional = set(fixture["expected_optional"])
+    unexpected_notes = set(fixture["unexpected_notes"])
+    current_required = set(current_required_notes)
+    current_optional = set(current_optional_notes)
+
+    missing_expected = sorted((expected_required - current_required) | (expected_optional - current_optional))
+    unexpected_returned = sorted(
+        (current_required - expected_required)
+        | (current_optional - expected_optional)
+        | ((current_required | current_optional) & unexpected_notes)
+    )
+    passed = not missing_expected and not unexpected_returned
+    routed_note_count = len(current_required_notes) + len(current_optional_notes)
+    return {
+        "fixture_name": fixture["fixture_name"],
+        "files": files,
+        "surfaces": surfaces,
+        "passed": passed,
+        "valid": True,
+        "error": "",
+        "missing_expected_notes": missing_expected,
+        "unexpected_returned_notes": unexpected_returned,
+        "current_required_notes": current_required_notes,
+        "current_optional_notes": current_optional_notes,
+        "routed_note_count": routed_note_count,
+        "exceeded_target": "yes" if routed_note_count > ROUTE_WORKING_SET_TARGET else "no",
+        "exceeded_strong_warning": "yes" if routed_note_count > ROUTE_WORKING_SET_STRONG_WARNING else "no",
     }
 
 
