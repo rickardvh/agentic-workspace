@@ -227,13 +227,17 @@ Main commands:
 - `bootstrap-cleanup` to remove the temporary bootstrap workspace when install or adopt created it
 - `current show|check` to inspect current-memory notes
 - `route` and `sync-memory` to review likely relevant memory notes
+- `route-review` to replay checked-in routing-feedback cases against current routing behaviour
+- `route-report` to summarise fixture-backed routing health, missed-note vs over-routing drift, and working-set/startup-cost pressure
 - `promotion-report` to suggest notes that should graduate into canonical checked-in docs or become elimination candidates for skills, scripts, tests, or refactors
 - `verify-payload` to validate the packaged bootstrap contract
+- `scripts/check/check_memory_freshness.py --strict` to fail CI on selected freshness contract violations
 
 Common arguments:
 
 - `--target <path>` selects the repo
 - `--format text|json` selects output format
+- `--policy-profile default|strict-doc-ownership` applies installer policy presets for install, adopt, and upgrade
 - `--project-name`, `--project-purpose`, `--key-repo-docs`, `--key-subsystems`, `--primary-build-command`, `--primary-test-command`, and `--other-key-commands` fill starter placeholders explicitly
 
 `install` and `adopt` are conservative by default: missing files are copied, existing `AGENTS.md` and `memory/` files are left alone, and optional fragments are appended only when the fragment is not already present.

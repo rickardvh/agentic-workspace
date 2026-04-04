@@ -1,5 +1,5 @@
 # Bootstrap Version
 
-Version: 44
+Version: 45
 
 This file is the installed bootstrap version marker.

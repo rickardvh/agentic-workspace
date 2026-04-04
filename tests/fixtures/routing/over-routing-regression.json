@@ -1,17 +1,20 @@
 {
   "name": "over-routing-regression",
-  "files": ["docs/api.md"],
-  "surfaces": [],
+  "case_type": "over_routing",
+  "files": ["src/repo_memory_bootstrap/cli.py"],
+  "surfaces": ["api"],
   "expected_required": ["memory/index.md"],
   "expected_optional": [
-    "memory/domains/<api-or-interface-note>.md",
-    "memory/invariants/<response-or-contract-note>.md"
+    "memory/domains/README.md",
+    "memory/invariants/README.md"
   ],
   "unexpected_notes": [
     "memory/current/project-state.md",
     "memory/current/task-context.md",
-    "memory/domains/runtime.md"
+    "memory/current/active-decisions.md",
+    ".agentic-memory/VERSION.md",
+    "memory/mistakes/recurring-failures.md"
   ],
   "missing_note_candidates": [],
-  "notes": "Regression case: a broad runtime note should stay out of a docs-only route."
+  "notes": "Regression case: ordinary API-ish source work should not drag in current decisions, version metadata, or recurring failures."
 }

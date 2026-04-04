@@ -1,16 +1,19 @@
 {
   "name": "optional-pressure",
-  "files": ["README.md"],
-  "surfaces": [],
-  "expected_required": [
-    "memory/index.md",
-    "memory/invariants/api.md"
+  "case_type": "general",
+  "files": ["src/service/api.py"],
+  "surfaces": ["api"],
+  "expected_required": ["memory/index.md"],
+  "expected_optional": [
+    "memory/domains/README.md",
+    "memory/invariants/README.md"
   ],
-  "expected_optional": ["memory/domains/api.md"],
   "unexpected_notes": [
     "memory/current/project-state.md",
-    "memory/current/task-context.md"
+    "memory/current/task-context.md",
+    "memory/current/active-decisions.md",
+    ".agentic-memory/VERSION.md"
   ],
   "missing_note_candidates": [],
-  "notes": "Weak high-level fallbacks should be trimmed before direct required and optional matches."
+  "notes": "Weak high-level fallbacks should be trimmed before stable API landing pages."
 }

@@ -1,13 +1,18 @@
 {
   "name": "missed-note-regression",
-  "files": ["src/runtime/service.py"],
-  "surfaces": [],
+  "case_type": "missed_note",
+  "files": ["scripts/check/check_memory_freshness.py"],
+  "surfaces": ["tests"],
   "expected_required": ["memory/index.md"],
-  "expected_optional": ["memory/domains/runtime.md"],
+  "expected_optional": [
+    "memory/domains/README.md",
+    "memory/mistakes/recurring-failures.md"
+  ],
   "unexpected_notes": [
     "memory/current/project-state.md",
-    "memory/current/task-context.md"
+    "memory/current/task-context.md",
+    "memory/current/active-decisions.md"
   ],
-  "missing_note_candidates": ["memory/domains/runtime.md"],
-  "notes": "Regression case: a direct runtime note should now be routed instead of being missed."
+  "missing_note_candidates": ["memory/mistakes/recurring-failures.md"],
+  "notes": "Regression case: validation work should route recurring failures as durable context instead of missing it."
 }

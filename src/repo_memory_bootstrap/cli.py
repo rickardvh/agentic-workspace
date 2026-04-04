@@ -261,6 +261,12 @@ def _add_project_metadata_arguments(command_parser: argparse.ArgumentParser) -> 
         "--other-key-commands",
         help="Value used for the <OTHER_KEY_COMMANDS> placeholder.",
     )
+    command_parser.add_argument(
+        "--policy-profile",
+        choices=("default", "strict-doc-ownership"),
+        default="default",
+        help=("Installer policy preset. strict-doc-ownership enables forbid_core_docs_depend_on_memory in memory/manifest.toml."),
+    )
 
 
 def _add_format_argument(command_parser: argparse.ArgumentParser) -> None:
@@ -284,6 +290,7 @@ def _handle_install(args: argparse.Namespace) -> int:
         primary_build_command=args.primary_build_command,
         primary_test_command=args.primary_test_command,
         other_key_commands=args.other_key_commands,
+        policy_profile=args.policy_profile,
     )
     _emit_result(result, output_format=args.format, include_install_summary=True)
     return 0
@@ -301,6 +308,7 @@ def _handle_adopt(args: argparse.Namespace) -> int:
         primary_build_command=args.primary_build_command,
         primary_test_command=args.primary_test_command,
         other_key_commands=args.other_key_commands,
+        policy_profile=args.policy_profile,
     )
     _emit_result(result, output_format=args.format, include_install_summary=True)
     return 0
@@ -319,6 +327,7 @@ def _handle_upgrade(args: argparse.Namespace) -> int:
         primary_build_command=args.primary_build_command,
         primary_test_command=args.primary_test_command,
         other_key_commands=args.other_key_commands,
+        policy_profile=args.policy_profile,
     )
     _emit_result(result, output_format=args.format)
     return 0
@@ -508,7 +517,10 @@ def _emit_result(result, *, output_format: str, include_install_summary: bool = 
     if result.route_report_summary:
         feedback = result.route_report_summary.get("feedback", {})
         fixtures = result.route_report_summary.get("fixtures", {})
+        missed_note = result.route_report_summary.get("missed_note", {})
+        over_routing = result.route_report_summary.get("over_routing", {})
         working_set = result.route_report_summary.get("working_set", {})
+        startup_cost = result.route_report_summary.get("startup_cost", {})
         print("Feedback cases:")
         print(
             f"  total={feedback.get('total_feedback_case_count', 0)}, "
@@ -533,12 +545,34 @@ def _emit_result(result, *, output_format: str, include_install_summary: bool = 
         )
         if result.route_report_summary.get("fixture_guidance"):
             print(f"  note: {result.route_report_summary['fixture_guidance']}")
+        print("Missed-note summary:")
+        print(
+            f"  feedback_cases={missed_note.get('feedback_case_count', 0)}, "
+            f"still_failing_feedback={missed_note.get('still_failing_feedback_case_count', 0)}, "
+            f"fixtures={missed_note.get('fixture_case_count', 0)}, "
+            f"failing_fixtures={missed_note.get('failing_fixture_count', 0)}, "
+            f"fixture_failure_rate={missed_note.get('fixture_failure_rate', 0)}"
+        )
+        print("Over-routing summary:")
+        print(
+            f"  feedback_cases={over_routing.get('feedback_case_count', 0)}, "
+            f"still_failing_feedback={over_routing.get('still_failing_feedback_case_count', 0)}, "
+            f"fixtures={over_routing.get('fixture_case_count', 0)}, "
+            f"failing_fixtures={over_routing.get('failing_fixture_count', 0)}, "
+            f"fixture_failure_rate={over_routing.get('fixture_failure_rate', 0)}"
+        )
         print("Working-set pressure:")
         print(
             f"  average={working_set.get('average_routed_note_count', 0)}, "
+            f"average_required={working_set.get('average_required_note_count', 0)}, "
+            f"average_optional={working_set.get('average_optional_note_count', 0)}, "
             f"max={working_set.get('max_routed_note_count', 0)}, "
             f"over_target={working_set.get('fixture_count_exceeding_target', 0)}, "
             f"over_strong_warning={working_set.get('fixture_count_exceeding_strong_warning', 0)}"
+        )
+        print("Startup cost:")
+        print(
+            f"  average_lines={startup_cost.get('average_routed_line_count', 0)}, max_lines={startup_cost.get('max_routed_line_count', 0)}"
         )
     if result.detected_version is None:
         print(f"Detected version: none (payload version {result.bootstrap_version})")
@@ -574,7 +608,9 @@ def _print_install_summary(result) -> None:
     print(f"Summary: {summary}")
     bootstrap_skills_path = result.target_root / BOOTSTRAP_WORKSPACE_ROOT / "skills"
     print("Next steps:")
-    print("- Review repository-specific details in AGENTS.md, then use `.agentic-memory/skills/memory-router/` for day-to-day note selection.")
+    print(
+        "- Review repository-specific details in AGENTS.md, then use `.agentic-memory/skills/memory-router/` for day-to-day note selection."
+    )
     print(
         f"- Use the temporary bootstrap skills under {bootstrap_skills_path} to finish install "
         "or adopt lifecycle work, then run `agentic-memory-bootstrap bootstrap-cleanup --target "

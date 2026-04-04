@@ -6,6 +6,7 @@ help:
 	@echo "  verify-payload  Verify the packaged payload contract."
 	@echo "  prompt-upgrade  Print the upgrade prompt for this repo."
 	@echo "  check-memory    Run the memory freshness audit."
+	@echo "  check-memory-strict  Run freshness audit in strict mode."
 	@echo "  lint            Run Ruff and Markdown lint checks."
 	@echo "  markdownlint    Run Markdown lint checks."
 	@echo "  format          Run Ruff formatting."
@@ -29,15 +30,18 @@ prompt-upgrade:
 check-memory:
 	uv run python scripts/check/check_memory_freshness.py
 
+check-memory-strict:
+	uv run python scripts/check/check_memory_freshness.py --strict
+
 lint:
 	uv run ruff check . --fix
-	uv run pymarkdown -d md013,md024 scan .
+	uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap memory skills
 
 markdownlint:
-	uv run pymarkdown -d md013,md024 scan .
+	uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap memory skills
 
 format:
 	uv run ruff format .
 
 typecheck:
-	uv run ty check .
+	uv run ty check src

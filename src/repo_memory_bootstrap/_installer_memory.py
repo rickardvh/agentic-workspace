@@ -18,6 +18,10 @@ from repo_memory_bootstrap._installer_shared import (
     MARKDOWN_MEMORY_LINK_RE,
     MEMORY_PATH_RE,
     NOTE_TYPE_LINE_LIMITS,
+    ROUTE_WORKING_SET_STRONG_WARNING,
+    ROUTE_WORKING_SET_TARGET,
+    ROUTING_FEEDBACK_MAX_LINES,
+    ROUTING_FEEDBACK_MAX_RESOLVED,
     SHADOW_DOC_MIN_SHARED_TERMS,
     VALID_CANONICALITY_VALUES,
     VALID_ELIMINATION_TARGET_VALUES,
@@ -25,13 +29,10 @@ from repo_memory_bootstrap._installer_shared import (
     VALID_PREFERRED_REMEDIATION_VALUES,
     VALID_SYMPTOM_OF_VALUES,
     VALID_TASK_RELEVANCE_VALUES,
+    InstallResult,
     MemoryManifest,
     MemoryNoteRecord,
     RemediationRecommendation,
-    ROUTE_WORKING_SET_STRONG_WARNING,
-    ROUTE_WORKING_SET_TARGET,
-    ROUTING_FEEDBACK_MAX_LINES,
-    ROUTING_FEEDBACK_MAX_RESOLVED,
 )
 
 H2_RE = re.compile(r"^\s{0,3}##\s+(.+?)\s*$")
@@ -108,12 +109,35 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
     )
 
 
+def _routing_baseline_paths(manifest: MemoryManifest | None) -> tuple[Path, ...]:
+    if manifest is None:
+        return ALWAYS_READ_SURFACE
+    if manifest.routing_only:
+        return tuple(dict.fromkeys(manifest.routing_only))
+    flagged = tuple(note.path for note in manifest.notes if note.routing_only)
+    if flagged:
+        return tuple(dict.fromkeys(flagged))
+    return ALWAYS_READ_SURFACE
+
+
+def _high_level_paths(manifest: MemoryManifest | None) -> tuple[Path, ...]:
+    if manifest is None:
+        return ()
+    if manifest.high_level:
+        return tuple(dict.fromkeys(manifest.high_level))
+    return tuple(dict.fromkeys(note.path for note in manifest.notes if note.high_level))
+
+
 def _string_list(value: object) -> list[str]:
     if isinstance(value, list):
         return [str(item) for item in value if str(item).strip()]
     if isinstance(value, str) and value.strip():
         return [value]
     return []
+
+
+def _is_note_under_declared_canonical_dir(path: Path, canonical_dirs: tuple[Path, ...]) -> bool:
+    return any(path == canonical_dir or canonical_dir in path.parents for canonical_dir in canonical_dirs)
 
 
 def _routes_to_canonical_doc(note: MemoryNoteRecord) -> bool:
@@ -128,12 +152,64 @@ def _is_non_memory_canonical_home(canonical_home: Path, note_path: Path) -> bool
     return canonical_home.parts[:1] != ("memory",)
 
 
+def _manifest_note_path_family_warning(note: MemoryNoteRecord) -> str:
+    path_str = note.path.as_posix()
+    if path_str == "memory/index.md" and note.note_type != "routing":
+        return "memory/index.md should keep note_type = routing"
+    if path_str == "memory/current/project-state.md" and note.note_type != "current-overview":
+        return "memory/current/project-state.md should keep note_type = current-overview"
+    if path_str == "memory/current/task-context.md" and note.note_type != "current-context":
+        return "memory/current/task-context.md should keep note_type = current-context"
+    if path_str == "memory/current/routing-feedback.md" and note.note_type != "routing-feedback":
+        return "memory/current/routing-feedback.md should keep note_type = routing-feedback"
+    if path_str.startswith("memory/domains/") and note.note_type != "domain":
+        return "notes under memory/domains/ should keep note_type = domain"
+    if path_str.startswith("memory/invariants/") and note.note_type != "invariant":
+        return "notes under memory/invariants/ should keep note_type = invariant"
+    if path_str.startswith("memory/runbooks/") and note.note_type != "runbook":
+        return "notes under memory/runbooks/ should keep note_type = runbook"
+    if path_str == "memory/mistakes/recurring-failures.md" and note.note_type != "recurring-failures":
+        return "memory/mistakes/recurring-failures.md should keep note_type = recurring-failures"
+    if path_str.startswith("memory/decisions/") and note.note_type != "decision":
+        return "notes under memory/decisions/ should keep note_type = decision"
+    return ""
+
+
+def _canonical_dir_warning(*, note: MemoryNoteRecord, manifest: MemoryManifest) -> str:
+    if not manifest.canonical_dirs:
+        return ""
+    if note.path.parts[:1] != ("memory",):
+        return ""
+    if note.path == Path("memory/index.md") or "current" in note.path.parts or note.path.parts[:2] == ("memory", "templates"):
+        return ""
+    if not _is_note_under_declared_canonical_dir(note.path, manifest.canonical_dirs):
+        return "durable memory notes should live under rules.canonical_dirs or move out of memory/"
+    if note.canonical_home.parts[:1] == ("memory",) and note.canonical_home != note.path:
+        if not _is_note_under_declared_canonical_dir(note.canonical_home, manifest.canonical_dirs):
+            return "memory canonical_home should also remain inside rules.canonical_dirs"
+    return ""
+
+
+def _task_board_dependency_warning(*, note: MemoryNoteRecord, manifest: MemoryManifest) -> str:
+    if not manifest.task_board_globs:
+        return ""
+    if note.path.parts[:2] == ("memory", "current"):
+        return ""
+    route_patterns = set(note.routes_from) | set(note.stale_when)
+    if route_patterns & set(manifest.task_board_globs):
+        return "task-board globs should not drive durable memory routing or staleness outside memory/current/"
+    return ""
+
+
 def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement: bool = False) -> None:
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
     if manifest is None:
         return
 
-    if manifest.routing_only and tuple(manifest.routing_only) != ALWAYS_READ_SURFACE:
+    routing_only = _routing_baseline_paths(manifest)
+    high_level = _high_level_paths(manifest)
+
+    if routing_only and tuple(routing_only) != ALWAYS_READ_SURFACE:
         result.add(
             "manual review",
             target_root / MANIFEST_PATH,
@@ -143,7 +219,7 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
             source=MANIFEST_PATH.as_posix(),
             category="contract-drift",
         )
-    if Path("memory/current/task-context.md") in manifest.high_level:
+    if Path("memory/current/task-context.md") in high_level:
         result.add(
             "manual review",
             target_root / MANIFEST_PATH,
@@ -153,11 +229,15 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
             source=MANIFEST_PATH.as_posix(),
             category="contract-drift",
         )
-    if len(set(manifest.high_level)) > len(ALLOWED_HIGH_LEVEL_NOTES):
+    if len(set(high_level)) > len(ALLOWED_HIGH_LEVEL_NOTES):
         result.add(
             "manual review",
             target_root / MANIFEST_PATH,
-            "rules.high_level is expanding beyond the intended compact always-read surface; keep only memory/index.md and optional project-state-level context there",
+            (
+                "rules.high_level is expanding beyond the intended compact always-read "
+                "surface; keep only memory/index.md and optional project-state-level "
+                "context there"
+            ),
             role="memory-manifest",
             safety="manual",
             source=MANIFEST_PATH.as_posix(),
@@ -236,7 +316,11 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 result.add(
                     "manual review",
                     target_root / note.path,
-                    "improvement-signal notes should declare either preferred_remediation plus improvement_note, or retention_justification explaining why the note should remain",
+                    (
+                        "improvement-signal notes should declare either "
+                        "preferred_remediation plus improvement_note, or "
+                        "retention_justification explaining why the note should remain"
+                    ),
                     role="memory-manifest",
                     safety="manual",
                     source=note.path.as_posix(),
@@ -246,7 +330,11 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 result.add(
                     "manual review",
                     target_root / note.path,
-                    "improvement-signal note is missing elimination_target; add one to clarify whether the note should shrink, promote, automate, or refactor away after remediation",
+                    (
+                        "improvement-signal note is missing elimination_target; add one "
+                        "to clarify whether the note should shrink, promote, automate, "
+                        "or refactor away after remediation"
+                    ),
                     role="memory-manifest",
                     safety="manual",
                     source=note.path.as_posix(),
@@ -297,18 +385,47 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 result.add(
                     "manual review",
                     target_root / note.path,
-                    "task-context should not advertise broad routing metadata; load it only when active continuation context is genuinely needed",
+                    (
+                        "task-context should not advertise broad routing metadata; load "
+                        "it only when active continuation context is genuinely needed"
+                    ),
                     role="memory-manifest",
                     safety="manual",
                     source=note.path.as_posix(),
                     category="contract-drift",
+                )
+        if path_family_warning := _manifest_note_path_family_warning(note):
+            result.add(
+                "manual review",
+                target_root / note.path,
+                path_family_warning,
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
+        if canonical_dir_warning := _canonical_dir_warning(note=note, manifest=manifest):
+            result.add(
+                "manual review",
+                target_root / note.path,
+                canonical_dir_warning,
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
+        if task_board_warning := _task_board_dependency_warning(note=note, manifest=manifest):
+            result.add(
+                "manual review",
+                target_root / note.path,
+                task_board_warning,
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
             )
 
-    required_high_level = [
-        note.path
-        for note in manifest.notes
-        if note.high_level and note.task_relevance == "required"
-    ]
+    required_high_level = [note.path for note in manifest.notes if note.path in high_level and note.task_relevance == "required"]
     if len(required_high_level) > len(ALLOWED_HIGH_LEVEL_NOTES):
         result.add(
             "manual review",
@@ -425,6 +542,7 @@ def _audit_note_overlap(*, target_root: Path, manifest: MemoryManifest, result) 
         if note.path.parts[:1] == ("memory",)
         and "current" not in note.path.parts
         and note.path.name != "index.md"
+        and note.path.name != "README.md"
         and (target_root / note.path).exists()
     ]
     for idx, left in enumerate(comparable_notes):
@@ -607,13 +725,13 @@ def _size_warning_for_note(note: MemoryNoteRecord | None, note_path: Path, text:
         "recurring-failures": "convert repeated failure memory into tests, validation, or linting before growing the note further",
         "decision": "reduce historical detail and keep only durable consequences or still-relevant rejected paths",
         "current-overview": "reduce stale history and keep only a compact repo overview",
-        "current-context": "remove planner/log spillover and keep only active goal, touched surfaces, blocking assumptions, next validation, and resume cues",
+        "current-context": (
+            "remove planner/log spillover and keep only active goal, touched "
+            "surfaces, blocking assumptions, next validation, and resume cues"
+        ),
         "memory-note": "split by primary home or reduce stable guidance to a shorter residue note",
     }[note_type]
-    return (
-        f"{note_type} note is oversized ({line_count} lines, expected <= {limit}); "
-        f"{remediation}"
-    )
+    return f"{note_type} note is oversized ({line_count} lines, expected <= {limit}); {remediation}"
 
 
 def _explicit_note_review_detail(requested_note: Path) -> str:
@@ -715,7 +833,10 @@ def _build_remediation_recommendation(
         return RemediationRecommendation(
             kind="skill",
             target_path_hint=_infer_skill_target(note, note_path),
-            reason="This procedure is repeated operational choreography that should be executed through a checked-in skill before more prose is added.",
+            reason=(
+                "This procedure is repeated operational choreography that should be "
+                "executed through a checked-in skill before more prose is added."
+            ),
             confidence="medium",
             memory_action="automate",
         )
@@ -740,7 +861,10 @@ def _build_remediation_recommendation(
         return RemediationRecommendation(
             kind="refactor",
             target_path_hint="memory/ plus the awkward routed subsystem surface",
-            reason="The routing layer is compensating for friction that should usually be resolved through note consolidation or clearer repo boundaries.",
+            reason=(
+                "The routing layer is compensating for friction that should usually be "
+                "resolved through note consolidation or clearer repo boundaries."
+            ),
             confidence="low",
             memory_action="shrink",
         )
@@ -850,10 +974,6 @@ def _collect_improvement_hints(
     if "memory/current/" in relative_str and line_count >= 80 and not for_report:
         hints.append(("shrinking planning/status spillover or unresolved structure friction before growing current-memory notes further"))
 
-    recommendation = _build_remediation_recommendation(note, note_path, text, for_report=for_report)
-    if recommendation:
-        hints.append(f"{recommendation.kind} at {recommendation.target_path_hint}")
-
     deduped: list[str] = []
     seen: set[str] = set()
     for hint in hints:
@@ -949,7 +1069,11 @@ def _emit_improvement_pressure(
             continue
         text = note_path.read_text(encoding="utf-8")
         recommendation = _build_remediation_recommendation(note, note_path, text, for_report=False)
+        seen_hints: set[str] = set()
         for hint in _collect_improvement_hints(note, note_path, text, for_report=False):
+            if hint in seen_hints:
+                continue
+            seen_hints.add(hint)
             result.add(
                 "consider",
                 note_path,
@@ -1047,7 +1171,10 @@ def _audit_routing_feedback_note(*, target_root: Path, result) -> None:
         result.add(
             "manual review",
             note_path,
-            f"routing-feedback note is oversized ({len(lines)} lines); keep routing calibration notes short and current rather than archival",
+            (
+                f"routing-feedback note is oversized ({len(lines)} lines); keep "
+                "routing calibration notes short and current rather than archival"
+            ),
             role="routing-feedback-audit",
             safety="manual",
             source=note_path.relative_to(target_root).as_posix(),
@@ -1143,7 +1270,9 @@ def _first_value(values: list[str]) -> str:
     return values[0].strip() if values else ""
 
 
-def _build_route_review_cases(*, target_root: Path, feedback_cases: list[RoutingFeedbackCase], routed_results: dict[str, object]) -> tuple[list[dict[str, object]], dict[str, int]]:
+def _build_route_review_cases(
+    *, target_root: Path, feedback_cases: list[RoutingFeedbackCase], routed_results: dict[str, InstallResult]
+) -> tuple[list[dict[str, object]], dict[str, int]]:
     review_cases: list[dict[str, object]] = []
     reviewed_case_count = 0
     still_missed_count = 0
@@ -1168,9 +1297,7 @@ def _build_route_review_cases(*, target_root: Path, feedback_cases: list[Routing
             continue
         reviewed_case_count += 1
         current_routed = [
-            action.path.relative_to(target_root).as_posix()
-            for action in routed.actions
-            if action.kind in {"required", "optional"}
+            action.path.relative_to(target_root).as_posix() for action in routed.actions if action.kind in {"required", "optional"}
         ]
         expected_set = set(case.expected_notes)
         current_set = set(current_routed)
@@ -1222,6 +1349,26 @@ def _build_route_report_feedback_summary(
         "open_case_count": sum(1 for case in feedback_cases if case.status == "open"),
         "tuned_case_count": sum(1 for case in feedback_cases if case.status == "tuned"),
         "rejected_case_count": sum(1 for case in feedback_cases if case.status == "rejected"),
+    }
+
+
+def _build_route_report_case_type_summary(
+    *,
+    fixture_results: list[dict[str, object]],
+    feedback_summary: dict[str, object],
+    case_type: str,
+) -> dict[str, object]:
+    relevant_fixtures = [fixture for fixture in fixture_results if fixture.get("case_type") == case_type and fixture.get("valid")]
+    failing_fixtures = [fixture for fixture in relevant_fixtures if not fixture.get("passed")]
+    fixture_count = len(relevant_fixtures)
+    return {
+        "fixture_case_count": fixture_count,
+        "failing_fixture_count": len(failing_fixtures),
+        "fixture_failure_rate": round(len(failing_fixtures) / fixture_count, 2) if fixture_count else 0.0,
+        "feedback_case_count": _int_value(feedback_summary.get(f"{case_type}_case_count")),
+        "still_failing_feedback_case_count": _int_value(
+            feedback_summary.get("still_missed_count" if case_type == "missed_note" else "still_over_routed_count")
+        ),
     }
 
 
@@ -1303,6 +1450,7 @@ def _load_route_report_fixture(path: Path) -> dict[str, object]:
         "fixture_name": name.strip(),
         "path": path.as_posix(),
         "valid": True,
+        "case_type": str(raw.get("case_type", "general")).strip() or "general",
         "files": list(raw["files"]),
         "surfaces": list(raw["surfaces"]),
         "expected_required": list(raw["expected_required"]),
@@ -1326,6 +1474,7 @@ def _evaluate_route_report_fixtures(
             results.append(
                 {
                     "fixture_name": fixture["fixture_name"],
+                    "case_type": fixture.get("case_type", "general"),
                     "files": [],
                     "surfaces": [],
                     "passed": False,
@@ -1351,13 +1500,21 @@ def _evaluate_route_report_fixtures(
     failing_count = sum(1 for item in valid_results if not item["passed"])
     invalid_count = sum(1 for item in results if not item["valid"])
     if valid_results:
-        average_routed = round(sum(int(item["routed_note_count"]) for item in valid_results) / len(valid_results), 2)
-        max_routed = max(int(item["routed_note_count"]) for item in valid_results)
+        average_routed = round(sum(_int_value(item.get("routed_note_count")) for item in valid_results) / len(valid_results), 2)
+        average_required = round(sum(_int_value(item.get("required_note_count")) for item in valid_results) / len(valid_results), 2)
+        average_optional = round(sum(_int_value(item.get("optional_note_count")) for item in valid_results) / len(valid_results), 2)
+        max_routed = max(_int_value(item.get("routed_note_count")) for item in valid_results)
+        average_lines = round(sum(_int_value(item.get("routed_line_count")) for item in valid_results) / len(valid_results), 2)
+        max_lines = max(_int_value(item.get("routed_line_count")) for item in valid_results)
         over_target = sum(1 for item in valid_results if item["exceeded_target"] == "yes")
         over_strong = sum(1 for item in valid_results if item["exceeded_strong_warning"] == "yes")
     else:
         average_routed = 0.0
+        average_required = 0.0
+        average_optional = 0.0
         max_routed = 0
+        average_lines = 0.0
+        max_lines = 0
         over_target = 0
         over_strong = 0
 
@@ -1367,30 +1524,30 @@ def _evaluate_route_report_fixtures(
         "failing_fixture_count": failing_count,
         "invalid_fixture_count": invalid_count,
         "average_routed_note_count": average_routed,
+        "average_required_note_count": average_required,
+        "average_optional_note_count": average_optional,
         "max_routed_note_count": max_routed,
         "fixture_count_exceeding_target": over_target,
         "fixture_count_exceeding_strong_warning": over_strong,
+        "average_routed_line_count": average_lines,
+        "max_routed_line_count": max_lines,
     }
     return results, summary
 
 
 def _evaluate_route_fixture(*, target_root: Path, fixture: dict[str, object], route_memory_fn) -> dict[str, object]:
-    files = list(fixture["files"])
-    surfaces = list(fixture["surfaces"])
+    files = _string_sequence(fixture.get("files"))
+    surfaces = _string_sequence(fixture.get("surfaces"))
     result = route_memory_fn(target=target_root, files=files, surfaces=surfaces)
     current_required_notes = sorted(
-        action.path.relative_to(target_root).as_posix()
-        for action in result.actions
-        if action.kind == "required"
+        action.path.relative_to(target_root).as_posix() for action in result.actions if action.kind == "required"
     )
     current_optional_notes = sorted(
-        action.path.relative_to(target_root).as_posix()
-        for action in result.actions
-        if action.kind == "optional"
+        action.path.relative_to(target_root).as_posix() for action in result.actions if action.kind == "optional"
     )
-    expected_required = set(fixture["expected_required"])
-    expected_optional = set(fixture["expected_optional"])
-    unexpected_notes = set(fixture["unexpected_notes"])
+    expected_required = set(_string_sequence(fixture.get("expected_required")))
+    expected_optional = set(_string_sequence(fixture.get("expected_optional")))
+    unexpected_notes = set(_string_sequence(fixture.get("unexpected_notes")))
     current_required = set(current_required_notes)
     current_optional = set(current_optional_notes)
 
@@ -1402,8 +1559,14 @@ def _evaluate_route_fixture(*, target_root: Path, fixture: dict[str, object], ro
     )
     passed = not missing_expected and not unexpected_returned
     routed_note_count = len(current_required_notes) + len(current_optional_notes)
+    routed_paths = [target_root / Path(note) for note in [*current_required_notes, *current_optional_notes]]
+    routed_line_count = 0
+    for path in routed_paths:
+        if path.exists():
+            routed_line_count += len(path.read_text(encoding="utf-8").splitlines())
     return {
         "fixture_name": fixture["fixture_name"],
+        "case_type": fixture.get("case_type", "general"),
         "files": files,
         "surfaces": surfaces,
         "passed": passed,
@@ -1413,10 +1576,34 @@ def _evaluate_route_fixture(*, target_root: Path, fixture: dict[str, object], ro
         "unexpected_returned_notes": unexpected_returned,
         "current_required_notes": current_required_notes,
         "current_optional_notes": current_optional_notes,
+        "required_note_count": len(current_required_notes),
+        "optional_note_count": len(current_optional_notes),
         "routed_note_count": routed_note_count,
+        "routed_line_count": routed_line_count,
         "exceeded_target": "yes" if routed_note_count > ROUTE_WORKING_SET_TARGET else "no",
         "exceeded_strong_warning": "yes" if routed_note_count > ROUTE_WORKING_SET_STRONG_WARNING else "no",
     }
+
+
+def _string_sequence(value: object) -> list[str]:
+    if not isinstance(value, (list, tuple, set)):
+        return []
+    return [str(item) for item in value]
+
+
+def _int_value(value: object) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return 0
+    return 0
 
 
 def _suggest_canonical_doc_path(note_path: Path) -> Path:
@@ -1664,9 +1851,8 @@ def _build_route_summary(
     if routed_count > ROUTE_WORKING_SET_TARGET:
         sources = [match_source for _, _, _, match_source, _ in kept_suggestions if match_source]
         justification_bits = ", ".join(dict.fromkeys(sources[:3]))
-        summary["justification"] = (
-            "working set exceeds the default target because multiple direct routing matches were retained"
-            + (f" ({justification_bits})" if justification_bits else "")
+        summary["justification"] = "working set exceeds the default target because multiple direct routing matches were retained" + (
+            f" ({justification_bits})" if justification_bits else ""
         )
     if routed_count > ROUTE_WORKING_SET_STRONG_WARNING:
         summary["warning"] = "routing returned more than five notes; review routing precision and merge pressure"

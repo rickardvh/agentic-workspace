@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import tempfile
@@ -8,38 +9,41 @@ from pathlib import Path
 from repo_memory_bootstrap._installer_memory import (
     _audit_memory_doc_ownership,
     _audit_routing_feedback_note,
-    _build_route_summary,
+    _build_remediation_recommendation,
+    _build_route_report_case_type_summary,
     _build_route_report_feedback_summary,
     _build_route_review_cases,
+    _build_route_summary,
     _dedupe_route_suggestions,
-    _build_remediation_recommendation,
-    _evaluate_route_report_fixtures,
     _emit_improvement_pressure,
     _emit_memory_shape_pressure,
+    _evaluate_route_report_fixtures,
     _find_manifest_matches,
-    _load_routing_feedback_cases,
-    _load_route_report_fixtures,
-    _first_route_match_source,
     _first_improvement_hint,
+    _first_route_match_source,
     _format_route_reason,
     _git_changed_files,
+    _high_level_paths,
     _infer_surfaces_from_paths,
     _iter_promotion_candidates,
     _load_memory_manifest,
+    _load_route_report_fixtures,
+    _load_routing_feedback_cases,
     _lookup_manifest_note,
     _normalise_surface_name,
     _parse_route_sections,
     _path_matches_pattern,
+    _routing_baseline_paths,
 )
 from repo_memory_bootstrap._installer_output import (
-    _current_task_structure_findings,
     _current_task_staleness_reason,
+    _current_task_structure_findings,
     _existing_version_path,
     _has_placeholders,
     _new_result,
     _patch_agents_workflow_block,
-    _project_state_structure_findings,
     _project_state_staleness_reason,
+    _project_state_structure_findings,
     _read_installed_version,
     _routing_feedback_staleness_reason,
     _routing_feedback_structure_findings,
@@ -79,10 +83,6 @@ from repo_memory_bootstrap._installer_shared import (
     CURRENT_MEMORY_BASELINE,
     CURRENT_PROJECT_STATE_MAX_LINES,
     CURRENT_TASK_MAX_LINES,
-    OPTIONAL_CURRENT_MEMORY_FILES,
-    ROUTING_FEEDBACK_MAX_LINES,
-    ROUTING_FEEDBACK_MAX_RESOLVED,
-    ROUTE_WORKING_SET_TARGET,
     FORBIDDEN_PAYLOAD_FILES,
     FORBIDDEN_PAYLOAD_PREFIXES,
     LEGACY_BOOTSTRAP_WORKSPACE_ROOT,
@@ -90,8 +90,12 @@ from repo_memory_bootstrap._installer_shared import (
     MANIFEST_PATH,
     OBSOLETE_SHARED_FILES,
     OPTIONAL_APPEND_TARGETS,
+    OPTIONAL_CURRENT_MEMORY_FILES,
     PAYLOAD_REQUIRED_FILES,
+    ROUTE_WORKING_SET_TARGET,
     ROUTING_BASELINE,
+    ROUTING_FEEDBACK_MAX_LINES,
+    ROUTING_FEEDBACK_MAX_RESOLVED,
     UPGRADE_SOURCE_PATH,
     VERSION_PATH,
     WORKFLOW_POINTER_BLOCK,
@@ -194,6 +198,7 @@ def install_bootstrap(
     primary_build_command: str | None = None,
     primary_test_command: str | None = None,
     other_key_commands: str | None = None,
+    policy_profile: str = "default",
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     source_root = payload_root()
@@ -231,6 +236,12 @@ def install_bootstrap(
             dry_kind="would copy" if not destination.exists() else "would overwrite",
         )
 
+    _apply_policy_profile(
+        target_root=target_root,
+        result=result,
+        apply=not dry_run,
+        policy_profile=policy_profile,
+    )
     _plan_optional_appends(source_root, target_root, result, apply=not dry_run)
     return result
 
@@ -247,6 +258,7 @@ def adopt_bootstrap(
     primary_build_command: str | None = None,
     primary_test_command: str | None = None,
     other_key_commands: str | None = None,
+    policy_profile: str = "default",
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     source_root = payload_root()
@@ -274,6 +286,12 @@ def adopt_bootstrap(
         include_bootstrap_workspace=True,
         target_layout="managed-root",
     )
+    _apply_policy_profile(
+        target_root=target_root,
+        result=result,
+        apply=not dry_run,
+        policy_profile=policy_profile,
+    )
     _plan_optional_appends(source_root, target_root, result, apply=not dry_run)
     return result
 
@@ -291,6 +309,7 @@ def upgrade_bootstrap(
     primary_build_command: str | None = None,
     primary_test_command: str | None = None,
     other_key_commands: str | None = None,
+    policy_profile: str = "default",
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     source_root = payload_root()
@@ -332,6 +351,12 @@ def upgrade_bootstrap(
                 apply_local_entrypoint=apply_local_entrypoint,
                 force=force,
             )
+            _apply_policy_profile(
+                target_root=target_root,
+                result=result,
+                apply=not dry_run,
+                policy_profile=policy_profile,
+            )
             _dedupe_agents_pointer_status(result, target_root=target_root)
             return result
     target_layout = "managed-root"
@@ -348,9 +373,120 @@ def upgrade_bootstrap(
         target_layout=target_layout,
     )
     _plan_obsolete_shared_files(target_root=target_root, result=result, apply=not dry_run)
+    _apply_policy_profile(
+        target_root=target_root,
+        result=result,
+        apply=not dry_run,
+        policy_profile=policy_profile,
+    )
     _plan_optional_appends(source_root, target_root, result, apply=not dry_run)
     _dedupe_agents_pointer_status(result, target_root=target_root)
     return result
+
+
+def _apply_policy_profile(*, target_root: Path, result: InstallResult, apply: bool, policy_profile: str) -> None:
+    if policy_profile != "strict-doc-ownership":
+        return
+    _set_manifest_rule_boolean(
+        target_root=target_root,
+        result=result,
+        apply=apply,
+        key="forbid_core_docs_depend_on_memory",
+        desired_value=True,
+        detail="policy profile strict-doc-ownership enabled",
+    )
+
+
+def _set_manifest_rule_boolean(
+    *,
+    target_root: Path,
+    result: InstallResult,
+    apply: bool,
+    key: str,
+    desired_value: bool,
+    detail: str,
+) -> None:
+    manifest_path = target_root / MANIFEST_PATH
+    if not manifest_path.exists():
+        if not apply and any(
+            action.path == manifest_path and action.kind in {"created", "copied", "would create", "would copy"} for action in result.actions
+        ):
+            result.add(
+                "would update",
+                manifest_path,
+                detail,
+                role="memory-manifest",
+                safety="safe",
+                source=MANIFEST_PATH.as_posix(),
+                category="safe-update",
+            )
+            return
+        result.add(
+            "manual review",
+            manifest_path,
+            f"cannot apply policy profile because {MANIFEST_PATH.as_posix()} is missing",
+            role="memory-manifest",
+            safety="manual",
+            source=MANIFEST_PATH.as_posix(),
+            category="manual-review",
+        )
+        return
+
+    text = manifest_path.read_text(encoding="utf-8")
+    desired_text = "true" if desired_value else "false"
+    pattern = re.compile(rf"^\s*{re.escape(key)}\s*=\s*(true|false)\s*$", re.MULTILINE)
+    match = pattern.search(text)
+    if match:
+        if match.group(1) == desired_text:
+            result.add(
+                "current",
+                manifest_path,
+                detail,
+                role="memory-manifest",
+                safety="safe",
+                source=MANIFEST_PATH.as_posix(),
+                category="safe-update",
+            )
+            return
+        updated_text = pattern.sub(f"{key} = {desired_text}", text, count=1)
+    else:
+        rules_match = re.search(r"^\s*\[rules\]\s*$", text, flags=re.MULTILINE)
+        if not rules_match:
+            result.add(
+                "manual review",
+                manifest_path,
+                f"cannot apply policy profile because [rules] section was not found in {MANIFEST_PATH.as_posix()}",
+                role="memory-manifest",
+                safety="manual",
+                source=MANIFEST_PATH.as_posix(),
+                category="manual-review",
+            )
+            return
+        insert_at = rules_match.end()
+        updated_text = text[:insert_at] + f"\n{key} = {desired_text}" + text[insert_at:]
+
+    if apply:
+        manifest_path.write_text(updated_text, encoding="utf-8")
+        result.add(
+            "updated",
+            manifest_path,
+            detail,
+            role="memory-manifest",
+            safety="safe",
+            source=MANIFEST_PATH.as_posix(),
+            category="safe-update",
+        )
+        return
+
+    result.add(
+        "would update",
+        manifest_path,
+        detail,
+        role="memory-manifest",
+        safety="safe",
+        source=MANIFEST_PATH.as_posix(),
+        category="safe-update",
+    )
 
 
 def collect_status(target: str | Path | None = None) -> InstallResult:
@@ -632,10 +768,10 @@ def route_memory(
     selected_surfaces = {_normalise_surface_name(surface) for surface in (surfaces or [])}
     selected_surfaces.update(_infer_surfaces_from_paths(files or []))
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
-    routing_baseline = manifest.routing_only if manifest and manifest.routing_only else ROUTING_BASELINE
+    routing_baseline = _routing_baseline_paths(manifest)
+    high_level_paths = set(_high_level_paths(manifest))
     suggestions: list[tuple[str, str, str, str, int]] = [
-        ("required", path.as_posix(), "always-read routing note", "routing-baseline", 0)
-        for path in routing_baseline
+        ("required", path.as_posix(), "always-read routing note", "routing-baseline", 0) for path in routing_baseline
     ]
     manifest_suggestions = _find_manifest_matches(
         manifest,
@@ -643,19 +779,37 @@ def route_memory(
         surfaces=selected_surfaces,
         use_staleness=False,
     )
-    suggestions.extend((recommendation, note, reason, match_source, 1) for recommendation, note, reason, match_source in manifest_suggestions)
+    suggestions.extend(
+        (recommendation, note, reason, match_source, 1) for recommendation, note, reason, match_source in manifest_suggestions
+    )
     covered_surfaces = _covered_manifest_surfaces(manifest, manifest_suggestions, selected_surfaces)
     for section_surface, notes in _parse_route_sections(target_root / "memory" / "index.md"):
         if section_surface in selected_surfaces and section_surface not in covered_surfaces:
             for note in notes:
-                suggestions.append(("optional", note, f"matched route surface '{section_surface}' from memory/index.md", "index-fallback", 2))
-    if _should_suggest_project_state(files=files or [], surfaces=selected_surfaces, manifest_suggestions=manifest_suggestions):
+                suggestions.append(
+                    ("optional", note, f"matched route surface '{section_surface}' from memory/index.md", "index-fallback", 2)
+                )
+    if Path("memory/current/project-state.md") in high_level_paths and _should_suggest_project_state(
+        files=files or [], surfaces=selected_surfaces, manifest_suggestions=manifest_suggestions
+    ):
         suggestions.append(
-            ("optional", "memory/current/project-state.md", "high-level repo re-orientation is likely useful for this task", "high-level-fallback", 4)
+            (
+                "optional",
+                "memory/current/project-state.md",
+                "high-level repo re-orientation is likely useful for this task",
+                "high-level-fallback",
+                4,
+            )
         )
     if _should_suggest_task_context(files=files or []):
         suggestions.append(
-            ("optional", "memory/current/task-context.md", "explicit current-context input suggests checking continuation state", "explicit-current-context", 4)
+            (
+                "optional",
+                "memory/current/task-context.md",
+                "explicit current-context input suggests checking continuation state",
+                "explicit-current-context",
+                4,
+            )
         )
 
     deduped = _dedupe_route_suggestions(suggestions)
@@ -761,7 +915,11 @@ def review_routes(*, target: str | Path | None = None) -> InstallResult:
         result.add(
             "manual review",
             feedback_path,
-            "routing feedback note is absent; create memory/current/routing-feedback.md when you have concrete missed-note or over-routing cases to calibrate",
+            (
+                "routing feedback note is absent; create "
+                "memory/current/routing-feedback.md when you have concrete "
+                "missed-note or over-routing cases to calibrate"
+            ),
             role="route-review",
             safety="manual",
             source=feedback_path.relative_to(target_root).as_posix(),
@@ -799,6 +957,8 @@ def review_routes(*, target: str | Path | None = None) -> InstallResult:
 
     for case in cases:
         review_case = next(item for item in review_cases if item["case_id"] == case.case_id)
+        current_routed_notes = review_case.get("current_routed_notes")
+        current_routed_list = [str(item) for item in current_routed_notes] if isinstance(current_routed_notes, (list, tuple, set)) else []
         if review_case["unresolved"]:
             result.add(
                 "manual review",
@@ -817,7 +977,8 @@ def review_routes(*, target: str | Path | None = None) -> InstallResult:
                 f"{case.case_type} case '{case.case_id}' "
                 f"(status={case.status or 'unknown'}) -> matched={'yes' if review_case['matched'] else 'no'}; "
                 f"expected {', '.join(case.expected_notes)}; "
-                f"current routed set {', '.join(review_case['current_routed_notes']) if review_case['current_routed_notes'] else 'none'}"
+                f"current routed set "
+                f"{', '.join(current_routed_list) if current_routed_list else 'none'}"
             ),
             role="route-review",
             safety="manual" if not review_case["matched"] else "safe",
@@ -905,15 +1066,31 @@ def report_routes(*, target: str | Path | None = None) -> InstallResult:
     result.route_report_summary = {
         "feedback": feedback_summary,
         "fixtures": fixture_summary,
+        "missed_note": _build_route_report_case_type_summary(
+            fixture_results=fixture_results,
+            feedback_summary=feedback_summary,
+            case_type="missed_note",
+        ),
+        "over_routing": _build_route_report_case_type_summary(
+            fixture_results=fixture_results,
+            feedback_summary=feedback_summary,
+            case_type="over_routing",
+        ),
         "working_set": {
             "average_routed_note_count": fixture_summary["average_routed_note_count"],
+            "average_required_note_count": fixture_summary["average_required_note_count"],
+            "average_optional_note_count": fixture_summary["average_optional_note_count"],
             "max_routed_note_count": fixture_summary["max_routed_note_count"],
             "fixture_count_exceeding_target": fixture_summary["fixture_count_exceeding_target"],
             "fixture_count_exceeding_strong_warning": fixture_summary["fixture_count_exceeding_strong_warning"],
         },
-        "feedback_guidance": "" if feedback_cases else (
-            "No parseable routing-feedback cases yet; record only concrete missed-note or over-routing examples worth revisiting."
-        ),
+        "startup_cost": {
+            "average_routed_line_count": fixture_summary["average_routed_line_count"],
+            "max_routed_line_count": fixture_summary["max_routed_line_count"],
+        },
+        "feedback_guidance": ""
+        if feedback_cases
+        else ("No parseable routing-feedback cases yet; record only concrete missed-note or over-routing examples worth revisiting."),
         "fixture_guidance": "" if fixtures else "No routing fixtures found under tests/fixtures/routing/.",
     }
 
@@ -929,6 +1106,10 @@ def report_routes(*, target: str | Path | None = None) -> InstallResult:
         )
 
     for case in review_cases:
+        expected_notes_obj = case.get("expected_notes")
+        expected_notes = [str(item) for item in expected_notes_obj] if isinstance(expected_notes_obj, (list, tuple, set)) else []
+        current_notes_obj = case.get("current_routed_notes")
+        current_notes = [str(item) for item in current_notes_obj] if isinstance(current_notes_obj, (list, tuple, set)) else []
         if case.get("matched") and not case.get("unresolved"):
             continue
         if case.get("unresolved"):
@@ -936,14 +1117,14 @@ def report_routes(*, target: str | Path | None = None) -> InstallResult:
         elif case["case_type"] == "missed_note":
             detail = (
                 f"missed-note case '{case['case_id']}' still fails; "
-                f"expected {', '.join(case['expected_notes'])}; current routed set "
-                f"{', '.join(case['current_routed_notes']) if case['current_routed_notes'] else 'none'}"
+                f"expected {', '.join(expected_notes)}; current routed set "
+                f"{', '.join(current_notes) if current_notes else 'none'}"
             )
         else:
             detail = (
                 f"over-routing case '{case['case_id']}' still fails; "
-                f"unexpected note(s) still returned: {', '.join(case['expected_notes'])}; current routed set "
-                f"{', '.join(case['current_routed_notes']) if case['current_routed_notes'] else 'none'}"
+                f"unexpected note(s) still returned: {', '.join(expected_notes)}; current routed set "
+                f"{', '.join(current_notes) if current_notes else 'none'}"
             )
         result.add(
             "manual review",
@@ -972,10 +1153,16 @@ def report_routes(*, target: str | Path | None = None) -> InstallResult:
         if not fixture["valid"]:
             detail = f"fixture '{fixture['fixture_name']}' is invalid: {fixture['error']}"
         else:
+            missing_expected_obj = fixture.get("missing_expected_notes")
+            missing_expected = [str(item) for item in missing_expected_obj] if isinstance(missing_expected_obj, (list, tuple, set)) else []
+            unexpected_returned_obj = fixture.get("unexpected_returned_notes")
+            unexpected_returned = (
+                [str(item) for item in unexpected_returned_obj] if isinstance(unexpected_returned_obj, (list, tuple, set)) else []
+            )
             detail = (
                 f"fixture '{fixture['fixture_name']}' fails; missing expected: "
-                f"{', '.join(fixture['missing_expected_notes']) or 'none'}; unexpected returned: "
-                f"{', '.join(fixture['unexpected_returned_notes']) or 'none'}"
+                f"{', '.join(missing_expected) or 'none'}; unexpected returned: "
+                f"{', '.join(unexpected_returned) or 'none'}"
             )
         result.add(
             "manual review" if not fixture["valid"] or not fixture["passed"] else "current",
@@ -1067,7 +1254,7 @@ def sync_memory(
         seen_sync_paths.add(note_path)
 
     routed = route_memory(target=target_root, files=changed_files)
-    routing_baseline = manifest.routing_only if manifest and manifest.routing_only else ROUTING_BASELINE
+    routing_baseline = _routing_baseline_paths(manifest)
     baseline_paths = {target_root / path for path in routing_baseline}
     for action in routed.actions:
         if action.kind not in {"optional", "required"} or action.path in seen_sync_paths or action.path in baseline_paths:
@@ -1124,7 +1311,7 @@ def sync_memory(
             safety="manual",
             source=note,
             category="manual-review",
-            )
+        )
     return result
 
 
@@ -1188,11 +1375,7 @@ def promotion_report(
         requested=requested,
     )
     if mode == "remediation":
-        records = [
-            record
-            for record in records
-            if record[3] is not None and record[3].confidence in {"high", "medium"}
-        ]
+        records = [record for record in records if record[3] is not None and record[3].confidence in {"high", "medium"}]
     records.sort(
         key=lambda record: (
             record[3].kind if record[3] is not None else "zzz",
@@ -1237,7 +1420,11 @@ def promotion_report(
                 result.add(
                     "manual review",
                     note_path,
-                    "improvement-signal lifecycle is incomplete; add remediation metadata or retention_justification before treating this note as stable maintenance residue",
+                    (
+                        "improvement-signal lifecycle is incomplete; add "
+                        "remediation metadata or retention_justification before "
+                        "treating this note as stable maintenance residue"
+                    ),
                     role="promotion-report",
                     safety="manual",
                     source=note.path.as_posix(),

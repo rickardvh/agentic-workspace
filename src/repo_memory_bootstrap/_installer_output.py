@@ -9,17 +9,13 @@ from typing import Iterable
 
 from repo_memory_bootstrap._installer_shared import (
     AGENT_ROOT_MARKERS,
-    CURRENT_MEMORY_BASELINE,
     CURRENT_CONTEXT_CHRONOLOGY_RE,
     CURRENT_CONTEXT_SUSPICIOUS_HEADINGS,
     CURRENT_CONTEXT_SUSPICIOUS_SECTION_RE,
+    CURRENT_MEMORY_BASELINE,
     CURRENT_PROJECT_STATE_MAX_LINES,
-    PROJECT_STATE_REQUIRED_SECTIONS,
     CURRENT_PROJECT_STATE_STALE_DAYS,
-    ROUTING_FEEDBACK_REQUIRED_SECTIONS,
-    ROUTING_FEEDBACK_STALE_DAYS,
     CURRENT_TASK_MAX_LINES,
-    TASK_CONTEXT_REQUIRED_SECTIONS,
     CURRENT_TASK_STALE_DAYS,
     DATE_RE,
     EMBEDDED_WORKFLOW_HEADINGS,
@@ -28,6 +24,10 @@ from repo_memory_bootstrap._installer_shared import (
     LEGACY_VERSION_PATH,
     LEGACY_WORKFLOW_PATH,
     PLACEHOLDER_RE,
+    PROJECT_STATE_REQUIRED_SECTIONS,
+    ROUTING_FEEDBACK_REQUIRED_SECTIONS,
+    ROUTING_FEEDBACK_STALE_DAYS,
+    TASK_CONTEXT_REQUIRED_SECTIONS,
     UPGRADE_SOURCE_PATH,
     VERSION_PATH,
     VERSION_RE,
@@ -260,7 +260,9 @@ def _routing_feedback_staleness_reason(text: str) -> str | None:
                     if confirmed < datetime.now(UTC) - timedelta(days=ROUTING_FEEDBACK_STALE_DAYS):
                         return (
                             f"routing-feedback note has not been confirmed in over "
-                            f"{ROUTING_FEEDBACK_STALE_DAYS} days; review whether the recorded missed-note or over-routing cases still reflect current routing behaviour"
+                            f"{ROUTING_FEEDBACK_STALE_DAYS} days; review whether the "
+                            "recorded missed-note or over-routing cases still reflect "
+                            "current routing behaviour"
                         )
                     return None
                 break
@@ -281,25 +283,29 @@ def _current_note_structure_findings(*, text: str, expected_sections: tuple[str,
 
     missing = [section for section in expected_sections if section not in sections]
     if missing:
-        findings.append(
-            f"{note_name} note is missing expected sections ({', '.join(missing)}); this looks like structure drift"
-        )
+        findings.append(f"{note_name} note is missing expected sections ({', '.join(missing)}); this looks like structure drift")
 
     suspicious_headings = [
         section
         for section in sections
-        if section.strip().lower() in CURRENT_CONTEXT_SUSPICIOUS_HEADINGS
-        or CURRENT_CONTEXT_SUSPICIOUS_SECTION_RE.match(f"## {section}")
+        if section.strip().lower() in CURRENT_CONTEXT_SUSPICIOUS_HEADINGS or CURRENT_CONTEXT_SUSPICIOUS_SECTION_RE.match(f"## {section}")
     ]
     if suspicious_headings:
         findings.append(
-            f"{note_name} note includes planner-like headings ({', '.join(sorted(set(suspicious_headings)))}); review for planner or log drift"
+            (
+                f"{note_name} note includes planner-like headings "
+                f"({', '.join(sorted(set(suspicious_headings)))}); review for planner "
+                "or log drift"
+            )
         )
 
     chronological_lines = sum(1 for line in text.splitlines() if CURRENT_CONTEXT_CHRONOLOGY_RE.match(line))
     if chronological_lines >= 3:
         findings.append(
-            f"{note_name} note includes chronological task-log style bullets ({chronological_lines} entries); review for execution-log drift"
+            (
+                f"{note_name} note includes chronological task-log style bullets "
+                f"({chronological_lines} entries); review for execution-log drift"
+            )
         )
 
     suspicious_sections = [
@@ -309,7 +315,11 @@ def _current_note_structure_findings(*, text: str, expected_sections: tuple[str,
     ]
     if len(suspicious_sections) >= 2:
         findings.append(
-            f"{note_name} note has multiple planner/log sections ({', '.join(suspicious_sections)}); keep this note brief and non-sequencing"
+            (
+                f"{note_name} note has multiple planner/log sections "
+                f"({', '.join(suspicious_sections)}); keep this note brief and "
+                "non-sequencing"
+            )
         )
 
     return findings
