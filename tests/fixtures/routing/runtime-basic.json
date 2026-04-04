@@ -1,0 +1,16 @@
+{
+  "name": "runtime-basic",
+  "files": ["deploy/k8s/service.yaml"],
+  "surfaces": [],
+  "expected_required": ["memory/index.md"],
+  "expected_optional": [
+    "memory/domains/<runtime-or-deployment-note>.md",
+    "memory/runbooks/<relevant-operator-runbook>.md"
+  ],
+  "unexpected_notes": [
+    "memory/current/project-state.md",
+    "memory/current/task-context.md"
+  ],
+  "missing_note_candidates": [],
+  "notes": "Runtime routing should stay limited to the runtime domain note and the relevant runbook."
+}

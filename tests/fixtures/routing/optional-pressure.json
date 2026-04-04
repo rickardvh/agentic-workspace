@@ -1,0 +1,16 @@
+{
+  "name": "optional-pressure",
+  "files": ["README.md"],
+  "surfaces": [],
+  "expected_required": [
+    "memory/index.md",
+    "memory/invariants/api.md"
+  ],
+  "expected_optional": ["memory/domains/api.md"],
+  "unexpected_notes": [
+    "memory/current/project-state.md",
+    "memory/current/task-context.md"
+  ],
+  "missing_note_candidates": [],
+  "notes": "Weak high-level fallbacks should be trimmed before direct required and optional matches."
+}

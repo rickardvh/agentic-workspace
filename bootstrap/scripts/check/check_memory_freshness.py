@@ -33,6 +33,7 @@ TYPE_LIMITS = {
     "decision": 160,
     "project-state": 100,
     "task-context": 80,
+    "routing-feedback": 120,
 }
 PROJECT_STATE_SECTIONS = {
     "Status",
@@ -57,6 +58,16 @@ TASK_CONTEXT_SECTIONS = {
     "Blocking assumptions",
     "Next validation",
     "Resume cues",
+    "Last confirmed",
+}
+ROUTING_FEEDBACK_SECTIONS = {
+    "Status",
+    "Scope",
+    "Load when",
+    "Review when",
+    "Missed-note entries",
+    "Over-routing entries",
+    "Synthesis",
     "Last confirmed",
 }
 SUSPICIOUS_CURRENT_HEADINGS = {
@@ -232,6 +243,8 @@ def _note_type_for_path(path: Path) -> str:
         return "project-state"
     if path_str == "memory/current/task-context.md":
         return "task-context"
+    if path_str == "memory/current/routing-feedback.md":
+        return "routing-feedback"
     return "memory-note"
 
 
@@ -239,6 +252,7 @@ def _suspicious_current_context(path: Path, lines: list[str], sections: set[str]
     if path.as_posix() not in {
         "memory/current/project-state.md",
         "memory/current/task-context.md",
+        "memory/current/routing-feedback.md",
     }:
         return False
     lowered_sections = {section.lower() for section in sections}
@@ -270,15 +284,31 @@ def main() -> int:
     invalid_last_confirmed = sorted(
         _render_path(scan.path) for scan in scans if scan.has_last_confirmed and not scan.has_valid_last_confirmed_date
     )
-    missing_verify = sorted(_render_path(scan.path) for scan in scans if not scan.has_verify and scan.note_type != "task-context")
-    missing_load = sorted(_render_path(scan.path) for scan in scans if not scan.has_load_when and scan.note_type != "task-context")
-    missing_review = sorted(_render_path(scan.path) for scan in scans if not scan.has_review_when and scan.note_type != "task-context")
-    missing_failure = sorted(_render_path(scan.path) for scan in scans if not scan.has_failure_signals and scan.note_type != "task-context")
+    verification_optional_types = {"task-context", "routing-feedback"}
+    trigger_optional_types = {"task-context"}
+    failure_optional_types = {"task-context", "routing-feedback"}
+    missing_verify = sorted(
+        _render_path(scan.path) for scan in scans if not scan.has_verify and scan.note_type not in verification_optional_types
+    )
+    missing_load = sorted(_render_path(scan.path) for scan in scans if not scan.has_load_when and scan.note_type not in trigger_optional_types)
+    missing_review = sorted(
+        _render_path(scan.path) for scan in scans if not scan.has_review_when and scan.note_type not in trigger_optional_types
+    )
+    missing_failure = sorted(
+        _render_path(scan.path) for scan in scans if not scan.has_failure_signals and scan.note_type not in failure_optional_types
+    )
     missing_trigger = sorted(
         {
             _render_path(scan.path)
             for scan in scans
-            if scan.note_type != "task-context" and not (scan.has_load_when and scan.has_review_when and scan.has_failure_signals)
+            if (
+                scan.note_type == "routing-feedback"
+                and not (scan.has_load_when and scan.has_review_when)
+            )
+            or (
+                scan.note_type not in trigger_optional_types | {"routing-feedback"}
+                and not (scan.has_load_when and scan.has_review_when and scan.has_failure_signals)
+            )
         }
     )
     needs_verification = sorted(_render_path(scan.path) for scan in scans if scan.has_needs_verification)
@@ -353,6 +383,8 @@ def _missing_sections(scan: NoteScan) -> set[str]:
         return PROJECT_STATE_SECTIONS - scan.sections
     if scan.note_type == "task-context":
         return TASK_CONTEXT_SECTIONS - scan.sections
+    if scan.note_type == "routing-feedback":
+        return ROUTING_FEEDBACK_SECTIONS - scan.sections
     return set()
 
 

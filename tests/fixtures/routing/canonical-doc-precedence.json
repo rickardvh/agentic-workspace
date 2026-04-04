@@ -1,0 +1,16 @@
+{
+  "name": "canonical-doc-precedence",
+  "files": ["src/service/api.py"],
+  "surfaces": [],
+  "expected_required": [
+    "docs/api.md",
+    "memory/index.md"
+  ],
+  "expected_optional": ["memory/domains/api.md"],
+  "unexpected_notes": [
+    "memory/current/project-state.md",
+    "memory/current/task-context.md"
+  ],
+  "missing_note_candidates": [],
+  "notes": "Canonical docs should take precedence when manifest metadata says the stable truth lives outside memory."
+}

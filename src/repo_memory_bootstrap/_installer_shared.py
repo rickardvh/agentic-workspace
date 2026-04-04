@@ -17,7 +17,7 @@ MANIFEST_PATH = Path("memory/manifest.toml")
 UPGRADE_SOURCE_PATH = MANAGED_ROOT / "UPGRADE-SOURCE.toml"
 LEGACY_UPGRADE_SOURCE_PATH = LEGACY_SYSTEM_ROOT / "UPGRADE-SOURCE.toml"
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 43
+BOOTSTRAP_VERSION = 44
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = MANAGED_ROOT / "bootstrap"
 LEGACY_BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
@@ -27,6 +27,9 @@ LEGACY_SHIPPED_SKILLS_ROOT = Path("memory/skills")
 CURRENT_MEMORY_BASELINE = (
     Path("memory/current/project-state.md"),
     Path("memory/current/task-context.md"),
+)
+OPTIONAL_CURRENT_MEMORY_FILES = (
+    Path("memory/current/routing-feedback.md"),
 )
 ROUTING_BASELINE = (Path("memory/index.md"),)
 BOOTSTRAP_WORKSPACE_FILES = (
@@ -76,6 +79,9 @@ CURRENT_TASK_STALE_DAYS = 30
 CURRENT_TASK_MAX_LINES = 80
 CURRENT_PROJECT_STATE_STALE_DAYS = 45
 CURRENT_PROJECT_STATE_MAX_LINES = 100
+ROUTING_FEEDBACK_STALE_DAYS = 45
+ROUTING_FEEDBACK_MAX_LINES = 120
+ROUTING_FEEDBACK_MAX_RESOLVED = 3
 ROUTE_WORKING_SET_TARGET = 3
 ROUTE_WORKING_SET_STRONG_WARNING = 5
 
@@ -104,6 +110,16 @@ TASK_CONTEXT_REQUIRED_SECTIONS = (
     "Resume cues",
     "Last confirmed",
 )
+ROUTING_FEEDBACK_REQUIRED_SECTIONS = (
+    "Status",
+    "Scope",
+    "Load when",
+    "Review when",
+    "Missed-note entries",
+    "Over-routing entries",
+    "Synthesis",
+    "Last confirmed",
+)
 CURRENT_CONTEXT_SUSPICIOUS_HEADINGS = (
     "backlog",
     "roadmap",
@@ -128,6 +144,7 @@ NOTE_TYPE_LINE_LIMITS = {
     "decision": 160,
     "current-overview": CURRENT_PROJECT_STATE_MAX_LINES,
     "current-context": CURRENT_TASK_MAX_LINES,
+    "routing-feedback": ROUTING_FEEDBACK_MAX_LINES,
 }
 ALWAYS_READ_SURFACE = (
     Path("memory/index.md"),
@@ -281,6 +298,8 @@ class InstallResult:
     bootstrap_version: int = BOOTSTRAP_VERSION
     route_summary: dict[str, object] = field(default_factory=dict)
     missing_note_hint: str = ""
+    review_summary: dict[str, object] = field(default_factory=dict)
+    review_cases: list[dict[str, object]] = field(default_factory=list)
 
     def add(
         self,
@@ -336,6 +355,8 @@ class InstallResult:
             "actions": [action.to_dict(self.target_root) for action in self.actions],
             "route_summary": self.route_summary,
             "missing_note_hint": self.missing_note_hint,
+            "review_summary": self.review_summary,
+            "review_cases": self.review_cases,
         }
 
 

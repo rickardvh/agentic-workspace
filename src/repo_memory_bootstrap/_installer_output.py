@@ -16,6 +16,8 @@ from repo_memory_bootstrap._installer_shared import (
     CURRENT_PROJECT_STATE_MAX_LINES,
     PROJECT_STATE_REQUIRED_SECTIONS,
     CURRENT_PROJECT_STATE_STALE_DAYS,
+    ROUTING_FEEDBACK_REQUIRED_SECTIONS,
+    ROUTING_FEEDBACK_STALE_DAYS,
     CURRENT_TASK_MAX_LINES,
     TASK_CONTEXT_REQUIRED_SECTIONS,
     CURRENT_TASK_STALE_DAYS,
@@ -244,6 +246,35 @@ def _project_state_structure_findings(text: str) -> list[str]:
     )
 
 
+def _routing_feedback_staleness_reason(text: str) -> str | None:
+    lines = text.splitlines()
+    for idx, line in enumerate(lines):
+        if line.strip().lower() == "## last confirmed":
+            for follow in lines[idx + 1 :]:
+                stripped = follow.strip()
+                if not stripped:
+                    continue
+                date_match = DATE_RE.match(stripped)
+                if date_match:
+                    confirmed = datetime.strptime(date_match.group(1), "%Y-%m-%d").replace(tzinfo=UTC)
+                    if confirmed < datetime.now(UTC) - timedelta(days=ROUTING_FEEDBACK_STALE_DAYS):
+                        return (
+                            f"routing-feedback note has not been confirmed in over "
+                            f"{ROUTING_FEEDBACK_STALE_DAYS} days; review whether the recorded missed-note or over-routing cases still reflect current routing behaviour"
+                        )
+                    return None
+                break
+    return "routing-feedback note is missing Last confirmed; keep routing calibration notes reviewable and current"
+
+
+def _routing_feedback_structure_findings(text: str) -> list[str]:
+    return _current_note_structure_findings(
+        text=text,
+        expected_sections=ROUTING_FEEDBACK_REQUIRED_SECTIONS,
+        note_name="routing-feedback",
+    )
+
+
 def _current_note_structure_findings(*, text: str, expected_sections: tuple[str, ...], note_name: str) -> list[str]:
     sections = [match.group(1).strip() for line in text.splitlines() if (match := SECTION_HEADING_RE.match(line))]
     findings: list[str] = []
@@ -251,7 +282,7 @@ def _current_note_structure_findings(*, text: str, expected_sections: tuple[str,
     missing = [section for section in expected_sections if section not in sections]
     if missing:
         findings.append(
-            f"{note_name} note is missing expected sections ({', '.join(missing)}); this looks like structure drift rather than compact continuation context"
+            f"{note_name} note is missing expected sections ({', '.join(missing)}); this looks like structure drift"
         )
 
     suspicious_headings = [
@@ -278,7 +309,7 @@ def _current_note_structure_findings(*, text: str, expected_sections: tuple[str,
     ]
     if len(suspicious_sections) >= 2:
         findings.append(
-            f"{note_name} note has multiple planner/log sections ({', '.join(suspicious_sections)}); keep current-memory notes brief and non-sequencing"
+            f"{note_name} note has multiple planner/log sections ({', '.join(suspicious_sections)}); keep this note brief and non-sequencing"
         )
 
     return findings

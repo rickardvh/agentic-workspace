@@ -4,6 +4,7 @@ import re
 import subprocess
 import sys
 import tomllib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
@@ -28,7 +29,26 @@ from repo_memory_bootstrap._installer_shared import (
     RemediationRecommendation,
     ROUTE_WORKING_SET_STRONG_WARNING,
     ROUTE_WORKING_SET_TARGET,
+    ROUTING_FEEDBACK_MAX_LINES,
+    ROUTING_FEEDBACK_MAX_RESOLVED,
 )
+
+H2_RE = re.compile(r"^\s{0,3}##\s+(.+?)\s*$")
+H3_RE = re.compile(r"^\s{0,3}###\s+(?:Case:\s*)?(.+?)\s*$")
+
+
+@dataclass(frozen=True, slots=True)
+class RoutingFeedbackCase:
+    case_id: str
+    case_type: str
+    task_surface_summary: str
+    files: tuple[str, ...]
+    surfaces: tuple[str, ...]
+    routed_notes_returned: tuple[str, ...]
+    expected_notes: tuple[str, ...]
+    why_text: str
+    expected_routing_signal: str
+    status: str
 
 
 def _load_memory_manifest(path: Path) -> MemoryManifest | None:
@@ -973,6 +993,212 @@ def _emit_memory_shape_pressure(
             source=relative.as_posix(),
             category="manual-review",
         )
+
+
+def _load_routing_feedback_cases(path: Path) -> list[RoutingFeedbackCase]:
+    if not path.exists():
+        return []
+    lines = path.read_text(encoding="utf-8").splitlines()
+    current_h2 = ""
+    current_case_id: str | None = None
+    case_lines: list[str] = []
+    cases: list[RoutingFeedbackCase] = []
+
+    def flush_case() -> None:
+        nonlocal current_case_id, case_lines
+        if current_case_id is None:
+            return
+        case = _parse_routing_feedback_case(
+            case_id=current_case_id,
+            case_type="missed_note" if current_h2 == "Missed-note entries" else "over_routing",
+            lines=case_lines,
+        )
+        if case is not None:
+            cases.append(case)
+        current_case_id = None
+        case_lines = []
+
+    for line in lines:
+        h2_match = H2_RE.match(line)
+        if h2_match:
+            flush_case()
+            current_h2 = h2_match.group(1).strip()
+            continue
+        h3_match = H3_RE.match(line)
+        if h3_match and current_h2 in {"Missed-note entries", "Over-routing entries"}:
+            flush_case()
+            current_case_id = h3_match.group(1).strip()
+            case_lines = []
+            continue
+        if current_case_id is not None:
+            case_lines.append(line)
+    flush_case()
+    return cases
+
+
+def _audit_routing_feedback_note(*, target_root: Path, result) -> None:
+    note_path = target_root / "memory/current/routing-feedback.md"
+    if not note_path.exists():
+        return
+    text = note_path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    if len(lines) > ROUTING_FEEDBACK_MAX_LINES:
+        result.add(
+            "manual review",
+            note_path,
+            f"routing-feedback note is oversized ({len(lines)} lines); keep routing calibration notes short and current rather than archival",
+            role="routing-feedback-audit",
+            safety="manual",
+            source=note_path.relative_to(target_root).as_posix(),
+            category="manual-review",
+        )
+    cases = _load_routing_feedback_cases(note_path)
+    resolved = sum(1 for case in cases if case.status in {"tuned", "rejected"})
+    if resolved > ROUTING_FEEDBACK_MAX_RESOLVED:
+        result.add(
+            "manual review",
+            note_path,
+            "routing-feedback note contains too many resolved entries; compress tuned or rejected cases into synthesis or remove them",
+            role="routing-feedback-audit",
+            safety="manual",
+            source=note_path.relative_to(target_root).as_posix(),
+            category="manual-review",
+        )
+    for case in cases:
+        if not case.task_surface_summary:
+            result.add(
+                "manual review",
+                note_path,
+                f"routing-feedback case '{case.case_id}' is missing task surface summary",
+                role="routing-feedback-audit",
+                safety="manual",
+                source=note_path.relative_to(target_root).as_posix(),
+                category="manual-review",
+            )
+        if not case.expected_notes:
+            result.add(
+                "manual review",
+                note_path,
+                f"routing-feedback case '{case.case_id}' is missing expected missing/unexpected note entries",
+                role="routing-feedback-audit",
+                safety="manual",
+                source=note_path.relative_to(target_root).as_posix(),
+                category="manual-review",
+            )
+        if not case.status:
+            result.add(
+                "manual review",
+                note_path,
+                f"routing-feedback case '{case.case_id}' is missing status",
+                role="routing-feedback-audit",
+                safety="manual",
+                source=note_path.relative_to(target_root).as_posix(),
+                category="manual-review",
+            )
+
+
+def _parse_routing_feedback_case(*, case_id: str, case_type: str, lines: list[str]) -> RoutingFeedbackCase | None:
+    labels = _parse_labelled_sections(lines)
+    if not labels:
+        return None
+    expected_label = "Expected missing note" if case_type == "missed_note" else "Unexpected notes"
+    why_label = "Why it was needed" if case_type == "missed_note" else "Why they were unnecessary"
+    return RoutingFeedbackCase(
+        case_id=case_id,
+        case_type=case_type,
+        task_surface_summary=_first_value(labels.get("Task surface summary", [])),
+        files=tuple(labels.get("Files", [])),
+        surfaces=tuple(labels.get("Surfaces", [])),
+        routed_notes_returned=tuple(labels.get("Routed notes returned", [])),
+        expected_notes=tuple(labels.get(expected_label, [])),
+        why_text=_first_value(labels.get(why_label, [])),
+        expected_routing_signal=_first_value(labels.get("Expected routing signal", [])),
+        status=_first_value(labels.get("Status", [])).lower(),
+    )
+
+
+def _parse_labelled_sections(lines: list[str]) -> dict[str, list[str]]:
+    labels: dict[str, list[str]] = {}
+    current_label: str | None = None
+    for raw_line in lines:
+        line = raw_line.rstrip()
+        if not line.strip():
+            continue
+        if re.match(r"^[A-Za-z][A-Za-z0-9 \-]+$", line.strip()):
+            current_label = line.strip()
+            labels.setdefault(current_label, [])
+            continue
+        if current_label is None:
+            continue
+        stripped = line.strip()
+        if stripped.startswith("- "):
+            labels[current_label].append(stripped[2:].strip())
+        else:
+            labels[current_label].append(stripped)
+    return labels
+
+
+def _first_value(values: list[str]) -> str:
+    return values[0].strip() if values else ""
+
+
+def _build_route_review_cases(*, target_root: Path, feedback_cases: list[RoutingFeedbackCase], routed_results: dict[str, object]) -> tuple[list[dict[str, object]], dict[str, int]]:
+    review_cases: list[dict[str, object]] = []
+    reviewed_case_count = 0
+    still_missed_count = 0
+    still_over_routed_count = 0
+    unresolved_case_count = 0
+
+    for case in feedback_cases:
+        routed = routed_results.get(case.case_id)
+        if routed is None:
+            unresolved_case_count += 1
+            review_cases.append(
+                {
+                    "case_id": case.case_id,
+                    "case_type": case.case_type,
+                    "expected_notes": list(case.expected_notes),
+                    "current_routed_notes": [],
+                    "matched": False,
+                    "status": case.status or "unknown",
+                    "unresolved": True,
+                }
+            )
+            continue
+        reviewed_case_count += 1
+        current_routed = [
+            action.path.relative_to(target_root).as_posix()
+            for action in routed.actions
+            if action.kind in {"required", "optional"}
+        ]
+        expected_set = set(case.expected_notes)
+        current_set = set(current_routed)
+        if case.case_type == "missed_note":
+            matched = expected_set.issubset(current_set)
+            if not matched:
+                still_missed_count += 1
+        else:
+            matched = expected_set.isdisjoint(current_set)
+            if not matched:
+                still_over_routed_count += 1
+        review_cases.append(
+            {
+                "case_id": case.case_id,
+                "case_type": case.case_type,
+                "expected_notes": list(case.expected_notes),
+                "current_routed_notes": current_routed,
+                "matched": matched,
+                "status": case.status or "unknown",
+                "unresolved": False,
+            }
+        )
+
+    return review_cases, {
+        "reviewed_case_count": reviewed_case_count,
+        "still_missed_count": still_missed_count,
+        "still_over_routed_count": still_over_routed_count,
+        "unresolved_case_count": unresolved_case_count,
+    }
 
 
 def _suggest_canonical_doc_path(note_path: Path) -> Path:

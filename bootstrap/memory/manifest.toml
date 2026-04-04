@@ -70,6 +70,20 @@ stale_when = []
 # Use this note only for optional continuation compression:
 # active goal, touched surfaces, blocking assumptions, and next validation.
 
+[notes."memory/current/routing-feedback.md"]
+note_type = "routing-feedback"
+canonical_home = "memory/current/routing-feedback.md"
+authority = "canonical"
+audience = "agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system", "routing"]
+surfaces = []
+routes_from = []
+stale_when = []
+# Use this note only for compact routing calibration:
+# concrete missed-note or over-routing cases worth revisiting after manifest or index changes.
+
 [notes.".agentic-memory/WORKFLOW.md"]
 note_type = "workflow-policy"
 canonical_home = ".agentic-memory/WORKFLOW.md"

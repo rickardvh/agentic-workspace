@@ -15,6 +15,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - `/memory` = assistive durable technical knowledge and lightweight shared context
 - `memory/current/project-state.md` = lightweight repo overview
 - `memory/current/task-context.md` = optional checked-in continuation compression
+- `memory/current/routing-feedback.md` = optional routing calibration note for concrete missed-note or over-routing cases
 - skills = optional repeatable procedures over checked-in knowledge
 - local notes = optional scratch context only
 
@@ -67,11 +68,13 @@ Keep it concise, repo-agnostic, and non-procedural.
 
 - `memory/current/project-state.md` is a short overview only.
 - `memory/current/task-context.md` is optional continuation compression only.
+- `memory/current/routing-feedback.md` is optional routing calibration only.
 - Neither file should become a task list, detailed plan, journal, backlog, ledger, tranche history, or duplicated memory summary.
 - A good `project-state.md` normally covers current focus, recent meaningful progress, blockers, and a few high-value notes only.
 - Keep `project-state.md` aggressively summary-shaped; if it starts reading like a changelog, history log, or backlog, compress it.
 - A good `task-context.md` normally covers status, scope, active goal, touched surfaces, blocking assumptions, next validation, resume cues, and last confirmed only.
 - Do not let `task-context.md` become a shadow task board, execution log, sequencing surface, or duplicate planner.
+- Keep `routing-feedback.md` compact and review-shaped: record only concrete missed-note or over-routing cases, then compress or remove resolved entries.
 - Treat planner-like headings such as backlog, roadmap, completed tasks, timeline, sprint, action items, or next steps as suspicion signals that the current note may be drifting.
 
 ## Ownership boundary

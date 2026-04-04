@@ -7,12 +7,15 @@ from pathlib import Path
 
 from repo_memory_bootstrap._installer_memory import (
     _audit_memory_doc_ownership,
+    _audit_routing_feedback_note,
     _build_route_summary,
+    _build_route_review_cases,
     _dedupe_route_suggestions,
     _build_remediation_recommendation,
     _emit_improvement_pressure,
     _emit_memory_shape_pressure,
     _find_manifest_matches,
+    _load_routing_feedback_cases,
     _first_route_match_source,
     _first_improvement_hint,
     _format_route_reason,
@@ -35,6 +38,8 @@ from repo_memory_bootstrap._installer_output import (
     _project_state_structure_findings,
     _project_state_staleness_reason,
     _read_installed_version,
+    _routing_feedback_staleness_reason,
+    _routing_feedback_structure_findings,
     _validate_upgrade_source_record,
     build_substitutions,
     detect_install_mode,
@@ -71,6 +76,9 @@ from repo_memory_bootstrap._installer_shared import (
     CURRENT_MEMORY_BASELINE,
     CURRENT_PROJECT_STATE_MAX_LINES,
     CURRENT_TASK_MAX_LINES,
+    OPTIONAL_CURRENT_MEMORY_FILES,
+    ROUTING_FEEDBACK_MAX_LINES,
+    ROUTING_FEEDBACK_MAX_RESOLVED,
     ROUTE_WORKING_SET_TARGET,
     FORBIDDEN_PAYLOAD_FILES,
     FORBIDDEN_PAYLOAD_PREFIXES,
@@ -128,6 +136,7 @@ __all__ = [
     "list_payload_files",
     "payload_root",
     "promotion_report",
+    "review_routes",
     "resolve_target_root",
     "resolve_upgrade_source",
     "route_memory",
@@ -139,6 +148,7 @@ __all__ = [
     "upgrade_bootstrap",
     "verify_payload",
     "_audit_memory_doc_ownership",
+    "_audit_routing_feedback_note",
     "_current_task_staleness_reason",
     "_equivalent_optional_fragment_detail",
     "_extract_make_targets",
@@ -435,6 +445,30 @@ def doctor_bootstrap(
         result=result,
         force_enforcement=strict_doc_ownership,
     )
+    _audit_routing_feedback_note(target_root=target_root, result=result)
+    routing_feedback_path = target_root / "memory/current/routing-feedback.md"
+    if routing_feedback_path.exists():
+        routing_feedback_text = routing_feedback_path.read_text(encoding="utf-8")
+        for finding in _routing_feedback_structure_findings(routing_feedback_text):
+            result.add(
+                "manual review",
+                routing_feedback_path,
+                finding,
+                role="routing-feedback-audit",
+                safety="manual",
+                source=routing_feedback_path.relative_to(target_root).as_posix(),
+                category="manual-review",
+            )
+        if stale_reason := _routing_feedback_staleness_reason(routing_feedback_text):
+            result.add(
+                "manual review",
+                routing_feedback_path,
+                stale_reason,
+                role="routing-feedback-audit",
+                safety="manual",
+                source=routing_feedback_path.relative_to(target_root).as_posix(),
+                category="manual-review",
+            )
     _emit_memory_shape_pressure(target_root=target_root, manifest=manifest, result=result)
     _emit_improvement_pressure(target_root=target_root, manifest=manifest, result=result)
     return result
@@ -712,6 +746,123 @@ def route_memory(
         category="safe-update",
         match_source="missing-note-prompt",
     )
+    return result
+
+
+def review_routes(*, target: str | Path | None = None) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = _new_result(target_root, dry_run=True, message="Routing review")
+    feedback_path = target_root / "memory/current/routing-feedback.md"
+    if not feedback_path.exists():
+        result.add(
+            "manual review",
+            feedback_path,
+            "routing feedback note is absent; create memory/current/routing-feedback.md when you have concrete missed-note or over-routing cases to calibrate",
+            role="route-review",
+            safety="manual",
+            source=feedback_path.relative_to(target_root).as_posix(),
+            category="manual-review",
+        )
+        return result
+
+    text = feedback_path.read_text(encoding="utf-8")
+    cases = _load_routing_feedback_cases(feedback_path)
+    if not cases:
+        result.add(
+            "manual review",
+            feedback_path,
+            "routing feedback note has no parseable cases yet; record only concrete missed-note or over-routing examples worth revisiting",
+            role="route-review",
+            safety="manual",
+            source=feedback_path.relative_to(target_root).as_posix(),
+            category="manual-review",
+        )
+        return result
+
+    routed_results: dict[str, InstallResult] = {}
+    for case in cases:
+        if not case.expected_notes or (not case.files and not case.surfaces):
+            continue
+        routed_results[case.case_id] = route_memory(target=target_root, files=list(case.files), surfaces=list(case.surfaces))
+
+    review_cases, summary = _build_route_review_cases(
+        target_root=target_root,
+        feedback_cases=cases,
+        routed_results=routed_results,
+    )
+    result.review_cases = review_cases
+    result.review_summary = summary
+
+    for case in cases:
+        review_case = next(item for item in review_cases if item["case_id"] == case.case_id)
+        if review_case["unresolved"]:
+            result.add(
+                "manual review",
+                feedback_path,
+                f"routing-feedback case '{case.case_id}' lacks enough routing input or expected-note data to review",
+                role="route-review",
+                safety="manual",
+                source=feedback_path.relative_to(target_root).as_posix(),
+                category="manual-review",
+            )
+            continue
+        result.add(
+            "current" if review_case["matched"] else "manual review",
+            feedback_path,
+            (
+                f"{case.case_type} case '{case.case_id}' "
+                f"(status={case.status or 'unknown'}) -> matched={'yes' if review_case['matched'] else 'no'}; "
+                f"expected {', '.join(case.expected_notes)}; "
+                f"current routed set {', '.join(review_case['current_routed_notes']) if review_case['current_routed_notes'] else 'none'}"
+            ),
+            role="route-review",
+            safety="manual" if not review_case["matched"] else "safe",
+            source=feedback_path.relative_to(target_root).as_posix(),
+            category="manual-review" if not review_case["matched"] else "safe-update",
+        )
+
+    for finding in _routing_feedback_structure_findings(text):
+        result.add(
+            "manual review",
+            feedback_path,
+            finding,
+            role="route-review",
+            safety="manual",
+            source=feedback_path.relative_to(target_root).as_posix(),
+            category="manual-review",
+        )
+    stale_reason = _routing_feedback_staleness_reason(text)
+    if stale_reason:
+        result.add(
+            "manual review",
+            feedback_path,
+            stale_reason,
+            role="route-review",
+            safety="manual",
+            source=feedback_path.relative_to(target_root).as_posix(),
+            category="manual-review",
+        )
+    if len(text.splitlines()) > ROUTING_FEEDBACK_MAX_LINES:
+        result.add(
+            "manual review",
+            feedback_path,
+            f"routing feedback note is oversized ({len(text.splitlines())} lines); keep it short and review-shaped",
+            role="route-review",
+            safety="manual",
+            source=feedback_path.relative_to(target_root).as_posix(),
+            category="manual-review",
+        )
+    resolved_count = sum(1 for case in cases if case.status in {"tuned", "rejected"})
+    if resolved_count > ROUTING_FEEDBACK_MAX_RESOLVED:
+        result.add(
+            "manual review",
+            feedback_path,
+            "routing feedback note contains too many tuned or rejected entries; compress resolved cases into synthesis or remove them",
+            role="route-review",
+            safety="manual",
+            source=feedback_path.relative_to(target_root).as_posix(),
+            category="manual-review",
+        )
     return result
 
 
@@ -1029,8 +1180,9 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
         )
 
     current_payload = {path for path in payload_paths if path.as_posix().startswith("memory/current/")}
-    expected_current = set(CURRENT_MEMORY_BASELINE)
-    for extra in sorted(current_payload - expected_current):
+    required_current = set(CURRENT_MEMORY_BASELINE)
+    allowed_current = required_current | set(OPTIONAL_CURRENT_MEMORY_FILES)
+    for extra in sorted(current_payload - allowed_current):
         result.add(
             "manual review",
             target_root / extra,
@@ -1040,7 +1192,7 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
             source=extra.as_posix(),
             category="contract-drift",
         )
-    for missing in sorted(expected_current - current_payload):
+    for missing in sorted(required_current - current_payload):
         result.add(
             "manual review",
             target_root / missing,

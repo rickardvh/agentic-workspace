@@ -1,0 +1,17 @@
+{
+  "name": "over-routing-regression",
+  "files": ["docs/api.md"],
+  "surfaces": [],
+  "expected_required": ["memory/index.md"],
+  "expected_optional": [
+    "memory/domains/<api-or-interface-note>.md",
+    "memory/invariants/<response-or-contract-note>.md"
+  ],
+  "unexpected_notes": [
+    "memory/current/project-state.md",
+    "memory/current/task-context.md",
+    "memory/domains/runtime.md"
+  ],
+  "missing_note_candidates": [],
+  "notes": "Regression case: a broad runtime note should stay out of a docs-only route."
+}

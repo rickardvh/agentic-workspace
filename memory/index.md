@@ -44,6 +44,7 @@
 - Start from the smallest useful working set.
 - Default to `memory/index.md` plus at most 2 additional notes unless the task clearly justifies more.
 - Load `memory/current/project-state.md` or `memory/current/task-context.md` only when they will reduce re-orientation cost for the current task.
+- Load `memory/current/routing-feedback.md` only when calibrating routing against a concrete missed-note or over-routing case.
 - Use touched files, modules, commands, or surfaces to decide which notes to load first.
 
 ## Memory admission rule

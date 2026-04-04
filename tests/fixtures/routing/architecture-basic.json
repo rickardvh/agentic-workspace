@@ -1,0 +1,17 @@
+{
+  "name": "architecture-basic",
+  "files": ["src/architecture/schema.py"],
+  "surfaces": [],
+  "expected_required": ["memory/index.md"],
+  "expected_optional": [
+    "memory/domains/<data-model-or-architecture-note>.md",
+    "memory/invariants/<relevant-invariant-note>.md",
+    "memory/decisions/README.md"
+  ],
+  "unexpected_notes": [
+    "memory/current/project-state.md",
+    "memory/current/task-context.md"
+  ],
+  "missing_note_candidates": [],
+  "notes": "Architecture routing may exceed the default target, but it should stay limited to the explicit bundle in the index."
+}

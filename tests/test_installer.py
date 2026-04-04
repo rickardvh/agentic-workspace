@@ -10,6 +10,152 @@ import pytest
 from repo_memory_bootstrap import cli, installer
 
 
+FIXTURES_ROOT = Path("tests/fixtures/routing")
+
+
+def _load_routing_fixture(name: str) -> dict[str, object]:
+    return json.loads((FIXTURES_ROOT / name).read_text(encoding="utf-8"))
+
+
+def _write_repo_file(target: Path, relative_path: str, text: str) -> None:
+    path = target / relative_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, object]:
+    fixture = _load_routing_fixture(fixture_name)
+    (target / ".git").mkdir(parents=True)
+    _write_repo_file(target, "memory/index.md", Path("memory/index.md").read_text(encoding="utf-8"))
+
+    if fixture_name == "canonical-doc-precedence.json":
+        _write_repo_file(target, "memory/domains/api.md", "# API memory\n")
+        _write_repo_file(target, "docs/api.md", "# API docs\n")
+        _write_repo_file(
+            target,
+            "memory/manifest.toml",
+            (
+                "version = 1\n\n"
+                '[notes."memory/domains/api.md"]\n'
+                'note_type = "domain"\n'
+                'canonical_home = "docs/api.md"\n'
+                'authority = "advisory"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "canonical_elsewhere"\n'
+                'task_relevance = "optional"\n'
+                'surfaces = ["api"]\n'
+                'routes_from = ["src/**/*.py"]\n'
+                'stale_when = ["src/**/*.py"]\n'
+            ),
+        )
+    elif fixture_name == "optional-pressure.json":
+        _write_repo_file(target, "memory/invariants/api.md", "# API invariant\n")
+        _write_repo_file(target, "memory/domains/api.md", "# API domain\n")
+        _write_repo_file(
+            target,
+            "memory/manifest.toml",
+            (
+                "version = 1\n\n"
+                '[notes."memory/invariants/api.md"]\n'
+                'note_type = "invariant"\n'
+                'canonical_home = "memory/invariants/api.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "required"\n'
+                'routes_from = ["README.md"]\n'
+                'stale_when = ["README.md"]\n\n'
+                '[notes."memory/domains/api.md"]\n'
+                'note_type = "domain"\n'
+                'canonical_home = "memory/domains/api.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "optional"\n'
+                'routes_from = ["README.md"]\n'
+                'stale_when = ["README.md"]\n'
+            ),
+        )
+    elif fixture_name == "missed-note-regression.json":
+        _write_repo_file(target, "memory/domains/runtime.md", "# Runtime\n")
+        _write_repo_file(
+            target,
+            "memory/manifest.toml",
+            (
+                "version = 1\n\n"
+                '[notes."memory/domains/runtime.md"]\n'
+                'note_type = "domain"\n'
+                'canonical_home = "memory/domains/runtime.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "optional"\n'
+                'surfaces = ["runtime"]\n'
+                'routes_from = ["src/runtime/service.py"]\n'
+                'stale_when = ["src/runtime/service.py"]\n'
+            ),
+        )
+    elif fixture_name == "over-routing-regression.json":
+        _write_repo_file(target, "memory/domains/runtime.md", "# Runtime\n")
+        _write_repo_file(
+            target,
+            "memory/manifest.toml",
+            (
+                "version = 1\n\n"
+                '[notes."memory/domains/runtime.md"]\n'
+                'note_type = "domain"\n'
+                'canonical_home = "memory/domains/runtime.md"\n'
+                'authority = "canonical"\n'
+                'audience = "human+agent"\n'
+                'canonicality = "agent_only"\n'
+                'task_relevance = "optional"\n'
+                'surfaces = ["runtime"]\n'
+                'routes_from = ["src/runtime/**/*.py"]\n'
+                'stale_when = ["src/runtime/**/*.py"]\n'
+            ),
+        )
+
+    return fixture
+
+
+def _routed_note_sets(result: installer.InstallResult, target: Path) -> tuple[set[str], set[str]]:
+    required = {
+        action.path.relative_to(target).as_posix()
+        for action in result.actions
+        if action.kind == "required"
+    }
+    optional = {
+        action.path.relative_to(target).as_posix()
+        for action in result.actions
+        if action.kind == "optional"
+    }
+    return required, optional
+
+
+def _routing_feedback_note(*, missed_cases: list[str] | None = None, over_cases: list[str] | None = None, last_confirmed: str = "2026-04-04") -> str:
+    missed_block = "\n\n".join(missed_cases or [])
+    over_block = "\n\n".join(over_cases or [])
+    return (
+        "# Routing Feedback\n\n"
+        "## Status\n\n"
+        "Active\n\n"
+        "## Scope\n\n"
+        "- Compact routing calibration cases only.\n\n"
+        "## Load when\n\n"
+        "- Reviewing whether a recorded routing case still reproduces.\n\n"
+        "## Review when\n\n"
+        "- A recorded routing case is tuned, rejected, or no longer useful.\n\n"
+        "## Missed-note entries\n\n"
+        f"{missed_block}\n\n"
+        "## Over-routing entries\n\n"
+        f"{over_block}\n\n"
+        "## Synthesis\n\n"
+        "- Keep only concrete calibration cases.\n\n"
+        "## Last confirmed\n\n"
+        f"{last_confirmed}\n"
+    )
+
+
 def test_detect_install_mode_is_full_without_todo_file(tmp_path: Path) -> None:
     (tmp_path / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
     (tmp_path / "memory").mkdir()
@@ -35,13 +181,14 @@ def test_payload_entries_do_not_include_todo_stub() -> None:
     assert all(entry.relative_path != Path(".agentic-memory/bootstrap/skills/upgrade/agents/openai.yaml") for entry in entries)
 
 
-def test_payload_current_baseline_is_project_state_and_task_context_only() -> None:
+def test_payload_current_files_include_optional_routing_feedback() -> None:
     entries = installer._payload_entries(installer.payload_root())
 
     current_paths = {entry.relative_path.as_posix() for entry in entries if entry.relative_path.as_posix().startswith("memory/current/")}
 
     assert current_paths == {
         "memory/current/project-state.md",
+        "memory/current/routing-feedback.md",
         "memory/current/task-context.md",
     }
 
@@ -272,6 +419,7 @@ def test_install_dry_run_includes_current_memory_baseline(tmp_path: Path) -> Non
     planned_copies = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "would copy"}
 
     assert "memory/current/project-state.md" in planned_copies
+    assert "memory/current/routing-feedback.md" in planned_copies
     assert "memory/current/task-context.md" in planned_copies
     assert ".agentic-memory/bootstrap/README.md" in planned_copies
     assert "memory/current/active-decisions.md" not in planned_copies
@@ -285,6 +433,7 @@ def test_install_writes_audit_clean_current_memory_seed_dates(tmp_path: Path) ->
 
     for relative in (
         "memory/current/project-state.md",
+        "memory/current/routing-feedback.md",
         "memory/current/task-context.md",
     ):
         text = (target / relative).read_text(encoding="utf-8")
@@ -1761,6 +1910,35 @@ def test_route_memory_json_includes_summary_and_missing_note_hint(tmp_path: Path
     assert data["missing_note_hint"] == "If routing missed something, record which note was missing."
 
 
+@pytest.mark.parametrize(
+    "fixture_name",
+    [
+        "runtime-basic.json",
+        "architecture-basic.json",
+        "canonical-doc-precedence.json",
+        "optional-pressure.json",
+        "missed-note-regression.json",
+        "over-routing-regression.json",
+    ],
+)
+def test_route_memory_matches_calibration_fixture_expectations(tmp_path: Path, fixture_name: str) -> None:
+    target = tmp_path / fixture_name.removesuffix(".json")
+    fixture = _setup_routing_fixture_repo(target, fixture_name)
+
+    result = installer.route_memory(
+        target=target,
+        files=list(fixture["files"]),
+        surfaces=list(fixture["surfaces"]),
+    )
+    required, optional = _routed_note_sets(result, target)
+
+    assert required == set(fixture["expected_required"])
+    assert optional == set(fixture["expected_optional"])
+    assert set(fixture["unexpected_notes"]).isdisjoint(required | optional)
+    if fixture["missing_note_candidates"]:
+        assert set(fixture["missing_note_candidates"]).issubset(required | optional)
+
+
 def test_route_memory_prefers_canonical_doc_when_manifest_marks_note_canonical_elsewhere(
     tmp_path: Path,
 ) -> None:
@@ -1801,6 +1979,261 @@ stale_when = ["src/**/*.py"]
         and "fallback context only" in action.detail
         for action in result.actions
     )
+
+
+def test_route_review_handles_missing_feedback_note(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    result = installer.review_routes(target=target)
+
+    assert any(
+        action.path == target / "memory" / "current" / "routing-feedback.md"
+        and action.kind == "manual review"
+        and "routing feedback note is absent" in action.detail
+        for action in result.actions
+    )
+
+
+def test_route_review_reports_missed_note_case_that_now_passes(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    _setup_routing_fixture_repo(target, "missed-note-regression.json")
+    _write_repo_file(
+        target,
+        "memory/current/routing-feedback.md",
+        _routing_feedback_note(
+            missed_cases=[
+                "### Case: runtime-domain\n"
+                "Task surface summary\n"
+                "- Runtime service work.\n"
+                "Files\n"
+                "- src/runtime/service.py\n"
+                "Surfaces\n"
+                "- runtime\n"
+                "Routed notes returned\n"
+                "- memory/index.md\n"
+                "Expected missing note\n"
+                "- memory/domains/runtime.md\n"
+                "Why it was needed\n"
+                "- Runtime guidance should be routed for this surface.\n"
+                "Expected routing signal\n"
+                "- routes_from: src/runtime/service.py\n"
+                "Status\n"
+                "- open"
+            ]
+        ),
+    )
+
+    result = installer.review_routes(target=target)
+
+    assert result.review_summary == {
+        "reviewed_case_count": 1,
+        "still_missed_count": 0,
+        "still_over_routed_count": 0,
+        "unresolved_case_count": 0,
+    }
+    assert result.review_cases[0]["matched"] is True
+
+
+def test_route_review_reports_missed_note_case_that_still_fails(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    _setup_routing_fixture_repo(target, "missed-note-regression.json")
+    _write_repo_file(
+        target,
+        "memory/current/routing-feedback.md",
+        _routing_feedback_note(
+            missed_cases=[
+                "### Case: wrong-expected-note\n"
+                "Task surface summary\n"
+                "- Runtime service work.\n"
+                "Files\n"
+                "- src/runtime/service.py\n"
+                "Surfaces\n"
+                "- runtime\n"
+                "Routed notes returned\n"
+                "- memory/index.md\n"
+                "Expected missing note\n"
+                "- memory/runbooks/runtime.md\n"
+                "Why it was needed\n"
+                "- Pretend this note should have been routed.\n"
+                "Expected routing signal\n"
+                "- routes_from: src/runtime/service.py\n"
+                "Status\n"
+                "- open"
+            ]
+        ),
+    )
+
+    result = installer.review_routes(target=target)
+
+    assert result.review_summary["still_missed_count"] == 1
+    assert result.review_cases[0]["matched"] is False
+
+
+def test_route_review_reports_over_routing_case_that_still_fails(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    _write_repo_file(target, "memory/index.md", Path("memory/index.md").read_text(encoding="utf-8"))
+    _write_repo_file(target, "memory/domains/too-broad.md", "# Too broad\n")
+    _write_repo_file(
+        target,
+        "memory/manifest.toml",
+        (
+            "version = 1\n\n"
+            '[notes."memory/domains/too-broad.md"]\n'
+            'note_type = "domain"\n'
+            'canonical_home = "memory/domains/too-broad.md"\n'
+            'authority = "canonical"\n'
+            'audience = "human+agent"\n'
+            'canonicality = "agent_only"\n'
+            'task_relevance = "optional"\n'
+            'routes_from = ["src/**/*.py"]\n'
+            'stale_when = ["src/**/*.py"]\n'
+        ),
+    )
+    _write_repo_file(
+        target,
+        "memory/current/routing-feedback.md",
+        _routing_feedback_note(
+            over_cases=[
+                "### Case: too-broad-domain\n"
+                "Task surface summary\n"
+                "- Generic src python change.\n"
+                "Files\n"
+                "- src/service.py\n"
+                "Surfaces\n"
+                "- api\n"
+                "Routed notes returned\n"
+                "- memory/index.md\n"
+                "- memory/domains/too-broad.md\n"
+                "Unexpected notes\n"
+                "- memory/domains/too-broad.md\n"
+                "Why they were unnecessary\n"
+                "- The note is too broad for this route.\n"
+                "Status\n"
+                "- open"
+            ]
+        ),
+    )
+
+    result = installer.review_routes(target=target)
+
+    assert result.review_summary["still_over_routed_count"] == 1
+    assert result.review_cases[0]["matched"] is False
+
+
+def test_route_review_marks_incomplete_case_unresolved(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    _setup_routing_fixture_repo(target, "runtime-basic.json")
+    _write_repo_file(
+        target,
+        "memory/current/routing-feedback.md",
+        _routing_feedback_note(
+            missed_cases=[
+                "### Case: incomplete\n"
+                "Task surface summary\n"
+                "- Missing explicit files and expected note.\n"
+                "Status\n"
+                "- open"
+            ]
+        ),
+    )
+
+    result = installer.review_routes(target=target)
+
+    assert result.review_summary["unresolved_case_count"] == 1
+    assert result.review_cases[0]["unresolved"] is True
+
+
+def test_route_review_json_includes_summary_and_cases(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    _setup_routing_fixture_repo(target, "missed-note-regression.json")
+    _write_repo_file(
+        target,
+        "memory/current/routing-feedback.md",
+        _routing_feedback_note(
+            missed_cases=[
+                "### Case: runtime-domain\n"
+                "Task surface summary\n"
+                "- Runtime service work.\n"
+                "Files\n"
+                "- src/runtime/service.py\n"
+                "Surfaces\n"
+                "- runtime\n"
+                "Routed notes returned\n"
+                "- memory/index.md\n"
+                "Expected missing note\n"
+                "- memory/domains/runtime.md\n"
+                "Why it was needed\n"
+                "- Runtime guidance should be routed for this surface.\n"
+                "Expected routing signal\n"
+                "- routes_from: src/runtime/service.py\n"
+                "Status\n"
+                "- open"
+            ]
+        ),
+    )
+
+    data = json.loads(installer.format_result_json(installer.review_routes(target=target)))
+
+    assert data["review_summary"]["reviewed_case_count"] == 1
+    assert data["review_cases"][0]["case_type"] == "missed_note"
+
+
+def test_doctor_audits_routing_feedback_hygiene(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    _write_repo_file(target, "memory/index.md", Path("memory/index.md").read_text(encoding="utf-8"))
+    filler = "\n".join("- filler" for _ in range(110))
+    feedback_text = (
+        "# Routing Feedback\n\n"
+        "## Status\n\n"
+        "Active\n\n"
+        "## Scope\n\n"
+        "- Oversized routing feedback test.\n\n"
+        "## Load when\n\n"
+        "- Reviewing calibration cases.\n\n"
+        "## Review when\n\n"
+        "- Compressing stale cases.\n\n"
+        "## Missed-note entries\n\n"
+        "### Case: incomplete-a\n"
+        "Status\n"
+        "- tuned\n\n"
+        "### Case: resolved-b\n"
+        "Task surface summary\n"
+        "- Resolved case.\n"
+        "Expected missing note\n"
+        "- memory/domains/a.md\n"
+        "Status\n"
+        "- tuned\n\n"
+        "### Case: resolved-c\n"
+        "Task surface summary\n"
+        "- Resolved case.\n"
+        "Expected missing note\n"
+        "- memory/domains/b.md\n"
+        "Status\n"
+        "- rejected\n\n"
+        "### Case: resolved-d\n"
+        "Task surface summary\n"
+        "- Resolved case.\n"
+        "Expected missing note\n"
+        "- memory/domains/c.md\n"
+        "Status\n"
+        "- rejected\n\n"
+        "## Over-routing entries\n\n"
+        "## Synthesis\n\n"
+        f"{filler}\n"
+    )
+    _write_repo_file(target, "memory/current/routing-feedback.md", feedback_text)
+
+    result = installer.doctor_bootstrap(target=target)
+    details = [action.detail for action in result.actions if action.path == target / "memory/current/routing-feedback.md"]
+
+    assert any("missing Last confirmed" in detail for detail in details)
+    assert any("routing-feedback note is oversized" in detail for detail in details)
+    assert any("too many resolved entries" in detail for detail in details)
+    assert any("missing task surface summary" in detail for detail in details)
+    assert any("missing expected missing/unexpected note entries" in detail for detail in details)
 
 
 def test_doctor_audit_flags_core_docs_that_depend_on_memory_when_policy_enabled(

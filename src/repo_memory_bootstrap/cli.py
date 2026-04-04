@@ -22,6 +22,7 @@ from repo_memory_bootstrap.installer import (
     migrate_layout,
     promotion_report,
     resolve_upgrade_source,
+    review_routes,
     route_memory,
     show_current_memory,
     sync_memory,
@@ -166,6 +167,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Explicit routing surfaces.",
     )
     _add_format_argument(route_parser)
+
+    route_review_parser = subparsers.add_parser(
+        "route-review",
+        help="Review checked-in routing feedback cases against the current routing result.",
+    )
+    _add_target_arguments(route_review_parser)
+    _add_format_argument(route_review_parser)
 
     sync_parser = subparsers.add_parser(
         "sync-memory", help="Suggest memory updates for changed work and surface compact upstream improvement candidates."
@@ -391,6 +399,11 @@ def _handle_sync_memory(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_route_review(args: argparse.Namespace) -> int:
+    _emit_result(review_routes(target=args.target), output_format=args.format)
+    return 0
+
+
 def _handle_promotion_report(args: argparse.Namespace) -> int:
     _emit_result(promotion_report(target=args.target, notes=args.notes, mode=args.mode), output_format=args.format)
     return 0
@@ -421,6 +434,7 @@ COMMAND_HANDLERS = {
     "current:show": _handle_current_show,
     "current:check": _handle_current_check,
     "route": _handle_route,
+    "route-review": _handle_route_review,
     "sync-memory": _handle_sync_memory,
     "promotion-report": _handle_promotion_report,
     "verify-payload": _handle_verify_payload,
@@ -469,6 +483,14 @@ def _emit_result(result, *, output_format: str, include_install_summary: bool = 
             print(f"Route warning: {result.route_summary['warning']}")
     if result.missing_note_hint:
         print(f"Routing feedback: {result.missing_note_hint}")
+    if result.review_summary:
+        print(
+            "Route review: "
+            f"reviewed={result.review_summary.get('reviewed_case_count', 0)}, "
+            f"still_missed={result.review_summary.get('still_missed_count', 0)}, "
+            f"still_over_routed={result.review_summary.get('still_over_routed_count', 0)}, "
+            f"unresolved={result.review_summary.get('unresolved_case_count', 0)}"
+        )
     if result.detected_version is None:
         print(f"Detected version: none (payload version {result.bootstrap_version})")
     else:

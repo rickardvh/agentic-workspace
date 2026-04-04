@@ -43,6 +43,7 @@ Active
 - Added a structured remediation recommendation layer so doctor, sync, route, and promotion-report can point at concrete upstream docs, skills, scripts, tests, validation, or refactor targets.
 - Made the scope boundary explicit: remediation stays advisory outside the managed bootstrap surface, with handoff into repo-owned work rather than package-owned mutation.
 - Added a first hardening pass for routing discipline, current-context shape checks, improvement-signal closure, note-type size warnings, and always-read surface creep detection.
+- Added a routing-calibration pass with an optional routing-feedback note, route-review support, and fixture-backed routing review cases for tuning manifest and index precision.
 
 ## Blockers
 
@@ -80,4 +81,4 @@ Active
 
 ## Last confirmed
 
-2026-04-04 during memory-system hardening pass 1
+2026-04-04 during routing calibration pass 1

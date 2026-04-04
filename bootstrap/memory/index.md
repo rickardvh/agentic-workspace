@@ -39,6 +39,7 @@ Prefer the smallest bundle that still covers the task surface.
 - Start from the smallest useful working set.
 - Default to `memory/index.md` plus at most 2 additional notes unless the task clearly justifies more.
 - Load `memory/current/project-state.md` or `memory/current/task-context.md` only when they will reduce re-orientation cost for the current task.
+- Load `memory/current/routing-feedback.md` only when calibrating routing against a concrete missed-note or over-routing case.
 - When a repository has bootstrap-managed shared skills, check `.agentic-memory/skills/README.md` before inventing a new shared memory-operational procedure.
 - Use touched files, modules, commands, or surfaces to decide which notes to load first.
 
