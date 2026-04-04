@@ -948,7 +948,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     prompt_uninstall_args = parser.parse_args(["prompt", "uninstall", "--target", "C:/repo"])
     route_args = parser.parse_args(["route", "--files", "src/app.py"])
     sync_args = parser.parse_args(["sync-memory", "--notes", "memory/index.md"])
-    promotion_args = parser.parse_args(["promotion-report", "--notes", "memory/domains/api.md"])
+    promotion_args = parser.parse_args(["promotion-report", "--notes", "memory/domains/api.md", "--mode", "remediation"])
     verify_args = parser.parse_args(["verify-payload", "--format", "json"])
     install_args = parser.parse_args(
         [
@@ -978,6 +978,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     assert route_args.command == "route"
     assert sync_args.command == "sync-memory"
     assert promotion_args.command == "promotion-report"
+    assert promotion_args.mode == "remediation"
     assert verify_args.command == "verify-payload"
     assert install_args.project_purpose == "purpose"
 
@@ -1005,7 +1006,7 @@ def test_cli_version_flag_prints_package_version(capsys) -> None:
         (["current", "check", "--target", ".", "--format", "json"], True),
         (["route", "--target", ".", "--files", "src/app.py", "--format", "json"], True),
         (["sync-memory", "--target", ".", "--files", "src/app.py", "--format", "json"], True),
-        (["promotion-report", "--target", ".", "--notes", "memory/index.md", "--format", "json"], True),
+        (["promotion-report", "--target", ".", "--notes", "memory/index.md", "--mode", "remediation", "--format", "json"], True),
         (["upgrade", "--target", ".", "--dry-run", "--format", "json"], True),
         (["uninstall", "--target", ".", "--dry-run", "--format", "json"], True),
         (["bootstrap-cleanup", "--target", ".", "--format", "json"], True),
@@ -1070,6 +1071,7 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
     assert "Memory is also a pressure layer" in text
     assert "## Improvement pressure" in text
     assert "## Remediation paths" in text
+    assert "Treat `promotion-report` as the main elimination workflow" in text
 
 
 def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() -> None:
@@ -1106,6 +1108,15 @@ def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -
     assert "improvement signal" in text
     assert "## Improvement Paths" in text
     assert "optional repo-owned `memory/current/active-decisions.md`" in text
+    assert "promotion-report --mode remediation" in text
+
+
+def test_memory_note_template_includes_improvement_signal_metadata() -> None:
+    text = (installer.payload_root() / "memory" / "templates" / "memory-note-template.md").read_text(encoding="utf-8")
+
+    assert "## Improvement signal metadata" in text
+    assert "`preferred_remediation`" in text
+    assert "`elimination_target`" in text
 
 
 def test_bootstrap_task_context_starter_is_continuation_only() -> None:
@@ -1171,6 +1182,9 @@ elimination_target = "shrink"
         action.path == target / "memory" / "mistakes" / "recurring-failures.md"
         and action.kind == "consider"
         and "regression test" in action.detail
+        and action.remediation_kind == "test"
+        and action.remediation_target == "tests/test_recurring-failures.py"
+        and action.memory_action == "shrink"
         for action in result.actions
     )
 
@@ -1206,6 +1220,7 @@ improvement_candidate = true
         action.path == target / "memory" / "mistakes" / "recurring-failures.md"
         and action.kind in {"review", "update"}
         and "consider a regression test" in action.detail
+        and action.remediation_kind == "test"
         for action in result.actions
     )
 
@@ -1252,6 +1267,97 @@ elimination_target = "automate"
         and action.kind == "candidate"
         and "improvement candidate" in action.detail
         and "repo-owned script or command" in action.detail
+        and action.remediation_kind == "script"
+        and action.remediation_target == "scripts/deploy.py"
+        and action.memory_action == "automate"
+        for action in result.actions
+    )
+
+
+def test_promotion_report_groups_candidates_by_remediation_kind(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "memory" / "runbooks").mkdir(parents=True)
+    (target / "memory" / "domains" / "api.md").write_text("# API\n\nStable guidance.\n", encoding="utf-8")
+    (target / "memory" / "runbooks" / "deploy.md").write_text("# Deploy\n\n1. Run A.\n2. Run B.\n3. Run C.\n", encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/api.md"]
+note_type = "domain"
+canonical_home = "docs/api.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "candidate_for_promotion"
+task_relevance = "optional"
+
+[notes."memory/runbooks/deploy.md"]
+note_type = "runbook"
+canonical_home = "memory/runbooks/deploy.md"
+authority = "canonical"
+audience = "human_operator"
+canonicality = "agent_only"
+task_relevance = "optional"
+memory_role = "improvement_signal"
+preferred_remediation = "script"
+improvement_candidate = true
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.promotion_report(target=target, mode="remediation")
+    remediation_kinds = [action.remediation_kind for action in result.actions if action.kind == "candidate"]
+
+    assert remediation_kinds == ["docs", "script"]
+
+
+def test_promotion_report_remediation_mode_filters_low_confidence_candidates(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory").mkdir(parents=True)
+    (target / "memory" / "index.md").write_text("# Memory Index\n\n" + ("line\n" * 140), encoding="utf-8")
+
+    result = installer.promotion_report(target=target, notes=["memory/index.md"], mode="remediation")
+
+    assert any(action.kind == "manual review" and "no promotion or elimination candidates found" in action.detail for action in result.actions)
+
+
+def test_promotion_report_prefers_skill_for_prose_heavy_runbook(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "runbooks").mkdir(parents=True)
+    (target / "memory" / "runbooks" / "release.md").write_text(
+        "# Release\n\n" + "\n".join(f"{idx}. Step {idx}" for idx in range(1, 12)),
+        encoding="utf-8",
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/runbooks/release.md"]
+note_type = "runbook"
+canonical_home = "memory/runbooks/release.md"
+authority = "canonical"
+audience = "human_operator"
+canonicality = "agent_only"
+task_relevance = "optional"
+memory_role = "improvement_signal"
+improvement_candidate = true
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.promotion_report(target=target)
+
+    assert any(
+        action.path == target / "memory" / "runbooks" / "release.md"
+        and action.remediation_kind == "skill"
+        and action.remediation_target == "memory/skills/release/SKILL.md"
+        and action.memory_action == "automate"
         for action in result.actions
     )
 

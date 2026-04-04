@@ -33,6 +33,7 @@ It operates on checked-in memory files. It does not replace them.
    - ask whether a repeated note should instead become canonical docs, a skill, a script suggestion, a regression test suggestion, or a refactor suggestion
 8. If note names, roles, or routing changed, update `memory/index.md` and `memory/manifest.toml` in the same change when used.
 9. Before finishing, rerun the audit or explain why it could not be run.
+10. If a note still exists mainly because of friction, use `promotion-report` to choose the upstream target and the intended post-remediation memory shape before expanding the note further.
 
 ## Guardrails
 

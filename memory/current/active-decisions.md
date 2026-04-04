@@ -71,7 +71,9 @@ Active
 - Shared day-to-day memory workflows should ship under `.agentic-memory/skills/` and be the default operational interface, while repo-specific memory procedures can live under `memory/skills/`.
 - `.agentic-memory/` and the shipped core skill directories under `.agentic-memory/skills/` are product-managed and upgrade-replaceable; repo-specific durable knowledge and reusable local procedures should live outside those files.
 - `upgrade` should migrate legacy `memory/system/`, `memory/bootstrap/`, and shipped `memory/skills/` installs into `.agentic-memory/` by default so the legacy layout can be retired cleanly.
+- Improvement pressure should stay advisory but become more decision-complete: prefer structured remediation targets and intended post-remediation memory shape over vague "consider X" prose.
+- `promotion-report` should be the primary elimination workflow, with `--mode remediation` focusing on medium/high-confidence candidates only.
 
 ## Last confirmed
 
-2026-04-02 during managed-root migration work
+2026-04-04 during remediation-layer implementation

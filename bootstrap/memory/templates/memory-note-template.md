@@ -15,6 +15,17 @@ Use `candidate_for_promotion` when the note is stabilising into normal repo docs
 Use `canonical_elsewhere` when checked-in docs already own the truth and this note is only residue, routing help, or a stub.
 Keep the note short when it is `agent_only`: prefer lessons, pitfalls, and residue over full handbook prose.
 
+## Improvement signal metadata
+
+Optional when the note exists because of repo friction rather than durable truth:
+
+- `memory_role`: `durable_truth` or `improvement_signal`
+- `preferred_remediation`: `docs` | `skill` | `script` | `test` | `validation` | `refactor` | `code`
+- `elimination_target`: `shrink` | `promote` | `automate` | `refactor_away`
+
+Use these when you want the package to recommend an upstream improvement that should reduce the note later.
+Prefer a concrete remediation target and an explicit post-remediation memory shape over vague prose.
+
 ## Scope
 
 <files / subsystem / surface>

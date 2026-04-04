@@ -189,6 +189,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Explicit memory notes to inspect.",
     )
+    promotion_parser.add_argument(
+        "--mode",
+        choices=("all", "remediation"),
+        default="all",
+        help="Report all candidates or only medium/high-confidence remediation candidates.",
+    )
     _add_format_argument(promotion_parser)
 
     verify_parser = subparsers.add_parser("verify-payload", help="Verify the packaged bootstrap payload contract.")
@@ -386,7 +392,7 @@ def _handle_sync_memory(args: argparse.Namespace) -> int:
 
 
 def _handle_promotion_report(args: argparse.Namespace) -> int:
-    _emit_result(promotion_report(target=args.target, notes=args.notes), output_format=args.format)
+    _emit_result(promotion_report(target=args.target, notes=args.notes, mode=args.mode), output_format=args.format)
     return 0
 
 

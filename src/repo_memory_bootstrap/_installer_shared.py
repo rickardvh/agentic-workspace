@@ -17,7 +17,7 @@ MANIFEST_PATH = Path("memory/manifest.toml")
 UPGRADE_SOURCE_PATH = MANAGED_ROOT / "UPGRADE-SOURCE.toml"
 LEGACY_UPGRADE_SOURCE_PATH = LEGACY_SYSTEM_ROOT / "UPGRADE-SOURCE.toml"
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
-BOOTSTRAP_VERSION = 41
+BOOTSTRAP_VERSION = 42
 BUNDLED_SKILLS_ROOT = Path("skills")
 BOOTSTRAP_WORKSPACE_ROOT = MANAGED_ROOT / "bootstrap"
 LEGACY_BOOTSTRAP_WORKSPACE_ROOT = Path("memory/bootstrap")
@@ -184,6 +184,11 @@ class Action:
     safety: str = ""
     source: str = ""
     category: str = ""
+    remediation_kind: str = ""
+    remediation_target: str = ""
+    remediation_reason: str = ""
+    remediation_confidence: str = ""
+    memory_action: str = ""
 
     def to_dict(self, target_root: Path) -> dict[str, str]:
         relative_path = self.path.relative_to(target_root) if self.path.is_relative_to(target_root) else self.path
@@ -195,6 +200,11 @@ class Action:
             "safety": self.safety,
             "source": self.source,
             "category": self.category,
+            "remediation_kind": self.remediation_kind,
+            "remediation_target": self.remediation_target,
+            "remediation_reason": self.remediation_reason,
+            "remediation_confidence": self.remediation_confidence,
+            "memory_action": self.memory_action,
         }
 
 
@@ -218,6 +228,11 @@ class InstallResult:
         safety: str = "",
         source: str = "",
         category: str = "",
+        remediation_kind: str = "",
+        remediation_target: str = "",
+        remediation_reason: str = "",
+        remediation_confidence: str = "",
+        memory_action: str = "",
     ) -> None:
         from repo_memory_bootstrap._installer_output import _infer_action_category
 
@@ -230,6 +245,11 @@ class InstallResult:
                 safety=safety,
                 source=source,
                 category=category or _infer_action_category(kind=kind, path=path, detail=detail, role=role, safety=safety),
+                remediation_kind=remediation_kind,
+                remediation_target=remediation_target,
+                remediation_reason=remediation_reason,
+                remediation_confidence=remediation_confidence,
+                memory_action=memory_action,
             )
         )
 
@@ -325,6 +345,15 @@ class MemoryManifest:
     core_doc_globs: tuple[str, ...] = ()
     core_doc_exclude_globs: tuple[str, ...] = ()
     forbid_core_docs_depend_on_memory: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class RemediationRecommendation:
+    kind: str
+    target_path_hint: str
+    reason: str
+    confidence: str
+    memory_action: str
 
 
 class RepoDetectionError(ValueError):

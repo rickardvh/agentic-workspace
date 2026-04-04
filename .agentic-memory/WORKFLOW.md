@@ -116,6 +116,8 @@ Keep it concise, repo-agnostic, and non-procedural.
 - If the same note keeps being needed for safe work on one subsystem, consider whether the repo needs docs promotion, a skill, a script, a regression test, stronger validation, or refactor review.
 - Apply that pressure during normal task work, not only during explicit maintenance passes.
 - When routing or syncing memory exposes repeated friction, note sprawl, or recurring workarounds, propose or make the smallest upstream improvement that would reduce the note when it is safe and in scope.
+- Prefer emitting a concrete remediation target over a vague hint: suggest where the docs, skill, script, test, validation, or refactor should land, then keep the memory note only as residue, a stub, or a short fallback summary.
+- Treat `promotion-report` as the main elimination workflow: use it to decide the upstream target and the intended post-remediation memory shape before expanding the note further.
 
 ## Remediation paths
 

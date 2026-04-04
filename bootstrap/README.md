@@ -182,6 +182,7 @@ Upgrade is normally triggered through the checked-in `memory-upgrade` skill unde
 
 Use `agentic-memory-bootstrap list-files` to preview the packaged files that the installer exposes.
 Use `agentic-memory-bootstrap promotion-report --target <repo>` to identify notes that should likely be promoted into canonical docs or reviewed as elimination candidates.
+Use `agentic-memory-bootstrap promotion-report --mode remediation --target <repo>` to focus on medium/high-confidence remediation targets for shrinking or removing memory.
 Use `agentic-memory-bootstrap doctor --strict-doc-ownership --target <repo>` to force doc-ownership and shadow-doc audits before adopting stricter repo policy.
 
 ## Automation notes

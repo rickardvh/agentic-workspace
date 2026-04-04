@@ -81,6 +81,14 @@ def format_actions(actions: Iterable, target_root: Path) -> list[str]:
             details.append(f"safety={action.safety}")
         if action.category:
             details.append(f"category={action.category}")
+        if action.remediation_kind:
+            details.append(f"remediation={action.remediation_kind}")
+        if action.remediation_target:
+            details.append(f"target={action.remediation_target}")
+        if action.remediation_confidence:
+            details.append(f"confidence={action.remediation_confidence}")
+        if action.memory_action:
+            details.append(f"memory_action={action.memory_action}")
         detail = f" ({'; '.join(details)})" if details else ""
         lines.append(f"{action.kind}: {relative_path}{detail}")
     return lines

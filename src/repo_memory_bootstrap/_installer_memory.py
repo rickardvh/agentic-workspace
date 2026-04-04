@@ -22,6 +22,7 @@ from repo_memory_bootstrap._installer_shared import (
     VALID_TASK_RELEVANCE_VALUES,
     MemoryManifest,
     MemoryNoteRecord,
+    RemediationRecommendation,
 )
 
 
@@ -327,8 +328,8 @@ def _iter_promotion_candidates(
     target_root: Path,
     manifest: MemoryManifest | None,
     requested: set[Path],
-) -> list[tuple[Path, MemoryNoteRecord | None, str]]:
-    candidates: list[tuple[Path, MemoryNoteRecord | None, str]] = []
+) -> list[tuple[Path, MemoryNoteRecord | None, str, RemediationRecommendation | None]]:
+    candidates: list[tuple[Path, MemoryNoteRecord | None, str, RemediationRecommendation | None]] = []
 
     if manifest is not None:
         for note in manifest.notes:
@@ -372,9 +373,17 @@ def _iter_promotion_candidates(
                 note_path.read_text(encoding="utf-8") if note_path.exists() else "",
                 for_report=True,
             )
+            recommendation = _build_remediation_recommendation(
+                note,
+                note_path,
+                note_path.read_text(encoding="utf-8") if note_path.exists() else "",
+                for_report=True,
+            )
             if improvement_hint:
                 detail = f"{detail} Also consider {improvement_hint}."
-            candidates.append((note_path, note, detail))
+            if recommendation:
+                detail = f"{detail} Recommended remediation: {_format_remediation_detail(recommendation)}."
+            candidates.append((note_path, note, detail, recommendation))
 
     for requested_note in requested:
         if any(candidate[0] == target_root / requested_note for candidate in candidates):
@@ -386,10 +395,17 @@ def _iter_promotion_candidates(
                     requested_path,
                     None,
                     "explicit note supplied for promotion review, but the file does not exist",
+                    None,
                 )
             )
             continue
         detail = _explicit_note_review_detail(requested_note)
+        recommendation = _build_remediation_recommendation(
+            _lookup_manifest_note(manifest, requested_note),
+            requested_path,
+            requested_path.read_text(encoding="utf-8") if requested_path.exists() else "",
+            for_report=True,
+        )
         improvement_hint = _first_improvement_hint(
             _lookup_manifest_note(manifest, requested_note),
             requested_path,
@@ -398,7 +414,9 @@ def _iter_promotion_candidates(
         )
         if improvement_hint:
             detail = f"{detail} Also consider {improvement_hint}."
-        candidates.append((requested_path, None, detail))
+        if recommendation:
+            detail = f"{detail} Recommended remediation: {_format_remediation_detail(recommendation)}."
+        candidates.append((requested_path, None, detail, recommendation))
 
     return candidates
 
@@ -459,6 +477,162 @@ def _first_improvement_hint(
     return hints[0] if hints else ""
 
 
+def _format_remediation_detail(recommendation: RemediationRecommendation) -> str:
+    return (
+        f"{recommendation.kind} -> {recommendation.target_path_hint} "
+        f"({recommendation.confidence} confidence; then {recommendation.memory_action})"
+    )
+
+
+def _build_remediation_recommendation(
+    note: MemoryNoteRecord | None,
+    note_path: Path,
+    text: str,
+    *,
+    for_report: bool,
+) -> RemediationRecommendation | None:
+    relative = note.path if note is not None else note_path
+    relative_str = relative.as_posix()
+    lines = text.splitlines()
+    line_count = len(lines)
+    imperative_lines = sum(1 for line in lines if re.match(r"^\s*(?:-|\*|\d+\.)\s+", line) or line.strip().startswith("`"))
+    command_lines = sum(1 for line in lines if re.search(r"`[^`]+`", line) or re.match(r"^\s*(?:run|execute|call)\b", line.strip().lower()))
+    has_failure_entries = _has_concrete_failure_entries(text)
+
+    if note is not None:
+        explicit = _explicit_remediation_recommendation(
+            note,
+            note_path=note_path,
+            has_failure_entries=has_failure_entries,
+        )
+        if explicit is not None:
+            return explicit
+
+    if "memory/mistakes/" in relative_str and has_failure_entries:
+        return RemediationRecommendation(
+            kind="test",
+            target_path_hint=_infer_test_target(note, note_path),
+            reason="Recurring failures should usually be displaced by an executable guardrail.",
+            confidence="medium",
+            memory_action="shrink",
+        )
+
+    if "memory/runbooks/" in relative_str and line_count >= 12 and imperative_lines >= 6:
+        if command_lines >= 6 and line_count <= 90:
+            return RemediationRecommendation(
+                kind="script",
+                target_path_hint=_infer_script_target(note, note_path),
+                reason="This runbook is mechanical enough that a repo-owned script or command is likely a better long-term home.",
+                confidence="medium",
+                memory_action="automate",
+            )
+        return RemediationRecommendation(
+            kind="skill",
+            target_path_hint=_infer_skill_target(note, note_path),
+            reason="This procedure is repeated operational choreography that should be executed through a checked-in skill before more prose is added.",
+            confidence="medium",
+            memory_action="automate",
+        )
+
+    if "memory/domains/" in relative_str and line_count >= 140:
+        remediation_kind = "refactor"
+        target = _infer_code_target(note, note_path)
+        reason = "This domain note is compensating for a high-discovery-cost subsystem and likely needs clearer ownership or structure."
+        if note is not None and note.canonicality == "candidate_for_promotion":
+            remediation_kind = "docs"
+            target = _infer_docs_target(note, note_path)
+            reason = "This domain note appears to be stabilising into normal checked-in documentation."
+        return RemediationRecommendation(
+            kind=remediation_kind,
+            target_path_hint=target,
+            reason=reason,
+            confidence="medium",
+            memory_action="refactor_away" if remediation_kind == "refactor" else "promote",
+        )
+
+    if relative_str.endswith("memory/index.md") and line_count >= 120:
+        return RemediationRecommendation(
+            kind="refactor",
+            target_path_hint="memory/ plus the awkward routed subsystem surface",
+            reason="The routing layer is compensating for friction that should usually be resolved through note consolidation or clearer repo boundaries.",
+            confidence="low",
+            memory_action="shrink",
+        )
+
+    if "memory/current/" in relative_str and line_count >= 80 and not for_report:
+        return RemediationRecommendation(
+            kind="docs",
+            target_path_hint="the repo planning/status surface",
+            reason="The current-memory note is growing beyond re-orientation support and likely reflects planner or workflow spillover.",
+            confidence="low",
+            memory_action="shrink",
+        )
+    return None
+
+
+def _explicit_remediation_recommendation(
+    note: MemoryNoteRecord,
+    *,
+    note_path: Path,
+    has_failure_entries: bool,
+) -> RemediationRecommendation | None:
+    relative_str = note.path.as_posix()
+    confidence = "high"
+    memory_action = "shrink"
+
+    if note.canonicality == "candidate_for_promotion":
+        return RemediationRecommendation(
+            kind="docs",
+            target_path_hint=_infer_docs_target(note, note_path),
+            reason="This note is explicitly marked as a promotion candidate for canonical checked-in docs.",
+            confidence=confidence,
+            memory_action="promote",
+        )
+    if note.canonicality == "canonical_elsewhere":
+        return RemediationRecommendation(
+            kind="docs",
+            target_path_hint=_infer_docs_target(note, note_path),
+            reason="This note is explicitly marked as assistive residue while canonical truth lives elsewhere.",
+            confidence=confidence,
+            memory_action="keep_stub",
+        )
+
+    kind = note.preferred_remediation
+    if not kind and note.memory_role != "improvement_signal":
+        return None
+
+    if not kind:
+        return None
+
+    target_map = {
+        "docs": _infer_docs_target(note, note_path),
+        "skill": _infer_skill_target(note, note_path),
+        "script": _infer_script_target(note, note_path),
+        "test": _infer_test_target(note, note_path),
+        "validation": _infer_validation_target(note, note_path),
+        "refactor": _infer_code_target(note, note_path),
+        "code": _infer_code_target(note, note_path),
+    }
+    reason_map = {
+        "docs": "The manifest marks canonical checked-in docs as the preferred upstream home.",
+        "skill": "The manifest marks a checked-in skill as the preferred replacement for this repeated workflow.",
+        "script": "The manifest marks a repo-owned script or command as the preferred replacement for this repeated workflow.",
+        "test": "The manifest marks an executable regression test as the preferred replacement for this remembered failure mode.",
+        "validation": "The manifest marks validation or linting as the preferred replacement for this missing guardrail.",
+        "refactor": "The manifest marks refactor or ownership cleanup as the preferred way to remove this recurring friction.",
+        "code": "The manifest marks direct implementation enforcement as the preferred way to remove this recurring friction.",
+    }
+    if kind == "test" and "memory/mistakes/" in relative_str and not has_failure_entries:
+        return None
+    return RemediationRecommendation(
+        kind=kind,
+        target_path_hint=target_map[kind],
+        reason=reason_map[kind],
+        confidence=confidence,
+        memory_action=note.elimination_target or ("promote" if kind == "docs" else memory_action),
+    )
+
+
 def _collect_improvement_hints(
     note: MemoryNoteRecord | None,
     note_path: Path,
@@ -489,6 +663,10 @@ def _collect_improvement_hints(
         hints.append(("clearer repo boundaries or note consolidation if routing keeps expanding to explain one awkward area"))
     if "memory/current/" in relative_str and line_count >= 80 and not for_report:
         hints.append(("shrinking planning/status spillover or unresolved structure friction before growing current-memory notes further"))
+
+    recommendation = _build_remediation_recommendation(note, note_path, text, for_report=for_report)
+    if recommendation:
+        hints.append(f"{recommendation.kind} at {recommendation.target_path_hint}")
 
     deduped: list[str] = []
     seen: set[str] = set()
@@ -582,6 +760,7 @@ def _emit_improvement_pressure(
         if not note_path.exists():
             continue
         text = note_path.read_text(encoding="utf-8")
+        recommendation = _build_remediation_recommendation(note, note_path, text, for_report=False)
         for hint in _collect_improvement_hints(note, note_path, text, for_report=False):
             result.add(
                 "consider",
@@ -591,6 +770,11 @@ def _emit_improvement_pressure(
                 safety="advisory",
                 source=note.path.as_posix(),
                 category="manual-review",
+                remediation_kind=recommendation.kind if recommendation else "",
+                remediation_target=recommendation.target_path_hint if recommendation else "",
+                remediation_reason=recommendation.reason if recommendation else "",
+                remediation_confidence=recommendation.confidence if recommendation else "",
+                memory_action=recommendation.memory_action if recommendation else "",
             )
 
 
@@ -604,6 +788,65 @@ def _suggest_canonical_doc_path(note_path: Path) -> Path:
     if note_path.parts[:2] == ("memory", "decisions") and len(note_path.parts) >= 3:
         return Path("docs/decisions") / note_path.name
     return Path("docs") / note_path.name
+
+
+def _infer_docs_target(note: MemoryNoteRecord | None, note_path: Path) -> str:
+    if note is not None and note.canonical_home != note.path and note.canonical_home.parts[:1] != ("memory",):
+        return note.canonical_home.as_posix()
+    return _suggest_canonical_doc_path(note.path if note is not None else note_path).as_posix()
+
+
+def _infer_skill_target(note: MemoryNoteRecord | None, note_path: Path) -> str:
+    stem = (note.path if note is not None else note_path).stem.replace("_", "-")
+    return f"memory/skills/{stem}/SKILL.md"
+
+
+def _infer_script_target(note: MemoryNoteRecord | None, note_path: Path) -> str:
+    stem = (note.path if note is not None else note_path).stem.replace("_", "-")
+    if stem in {"readme", "index"}:
+        stem = "memory-workflow"
+    return f"scripts/{stem}.py"
+
+
+def _infer_test_target(note: MemoryNoteRecord | None, note_path: Path) -> str:
+    patterns = ()
+    if note is not None:
+        patterns = note.stale_when or note.routes_from
+    for pattern in patterns:
+        if pattern.startswith("tests/"):
+            return pattern
+        if pattern.startswith("scripts/check/"):
+            return pattern
+        if pattern.startswith("src/"):
+            stem = Path(pattern).stem.replace("*", "").replace("_", "-")
+            if stem:
+                return f"tests/test_{stem}.py"
+    stem = (note.path if note is not None else note_path).stem.replace("_", "-")
+    return f"tests/test_{stem}.py"
+
+
+def _infer_validation_target(note: MemoryNoteRecord | None, note_path: Path) -> str:
+    patterns = ()
+    if note is not None:
+        patterns = note.stale_when or note.routes_from
+    for pattern in patterns:
+        if pattern.startswith("scripts/check/"):
+            return pattern
+    stem = (note.path if note is not None else note_path).stem.replace("_", "-")
+    return f"scripts/check/check_{stem}.py"
+
+
+def _infer_code_target(note: MemoryNoteRecord | None, note_path: Path) -> str:
+    patterns = ()
+    if note is not None:
+        patterns = note.routes_from or note.stale_when
+    for pattern in patterns:
+        root = pattern.split("/")[0]
+        if root and root not in {"memory", "tests", "docs"}:
+            return f"{root}/"
+    if note_path.parts[:2] == ("memory", "domains"):
+        return "src/"
+    return "the affected repo-owned subsystem"
 
 
 def _find_shadow_doc_matches(

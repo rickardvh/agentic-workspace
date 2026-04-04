@@ -7,6 +7,7 @@ from pathlib import Path
 
 from repo_memory_bootstrap._installer_memory import (
     _audit_memory_doc_ownership,
+    _build_remediation_recommendation,
     _emit_improvement_pressure,
     _find_manifest_matches,
     _first_improvement_hint,
@@ -612,6 +613,7 @@ def route_memory(
         manifest_note = _lookup_manifest_note(manifest, Path(note))
         note_text = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
         improvement_hint = _first_improvement_hint(manifest_note, note_path, note_text, for_report=False)
+        recommendation = _build_remediation_recommendation(manifest_note, note_path, note_text, for_report=False)
         if improvement_hint:
             result.add(
                 "consider",
@@ -621,6 +623,11 @@ def route_memory(
                 safety="advisory",
                 source=note,
                 category="manual-review",
+                remediation_kind=recommendation.kind if recommendation else "",
+                remediation_target=recommendation.target_path_hint if recommendation else "",
+                remediation_reason=recommendation.reason if recommendation else "",
+                remediation_confidence=recommendation.confidence if recommendation else "",
+                memory_action=recommendation.memory_action if recommendation else "",
             )
 
     if files and not any(
@@ -674,23 +681,29 @@ def sync_memory(
         note_path = target_root / Path(note)
         note_text = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
         manifest_note = _lookup_manifest_note(manifest, Path(note))
-        recommendation = "review"
+        action_kind = "review"
         if not note_path.exists() or _has_placeholders(note_text):
-            recommendation = "update"
+            action_kind = "update"
         if note_path.name == "index.md":
-            recommendation = "update index"
+            action_kind = "update index"
         detail = f"{reason}; manifest staleness trigger matched {', '.join(changed_files) if changed_files else 'explicit input'}"
         improvement_hint = _first_improvement_hint(manifest_note, note_path, note_text, for_report=False)
+        remediation = _build_remediation_recommendation(manifest_note, note_path, note_text, for_report=False)
         if improvement_hint:
             detail = f"{detail}; consider {improvement_hint}"
         result.add(
-            recommendation,
+            action_kind,
             note_path,
             detail,
             role="memory-sync",
             safety="manual",
             source=note,
             category="manual-review",
+            remediation_kind=remediation.kind if remediation else "",
+            remediation_target=remediation.target_path_hint if remediation else "",
+            remediation_reason=remediation.reason if remediation else "",
+            remediation_confidence=remediation.confidence if remediation else "",
+            memory_action=remediation.memory_action if remediation else "",
         )
         if improvement_hint:
             result.add(
@@ -701,6 +714,11 @@ def sync_memory(
                 safety="advisory",
                 source=note,
                 category="manual-review",
+                remediation_kind=remediation.kind if remediation else "",
+                remediation_target=remediation.target_path_hint if remediation else "",
+                remediation_reason=remediation.reason if remediation else "",
+                remediation_confidence=remediation.confidence if remediation else "",
+                memory_action=remediation.memory_action if remediation else "",
             )
         seen_sync_paths.add(note_path)
 
@@ -714,23 +732,29 @@ def sync_memory(
         note_text = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
         relative_note = note_path.relative_to(target_root) if note_path.is_relative_to(target_root) else note_path
         manifest_note = _lookup_manifest_note(manifest, relative_note)
-        recommendation = "review"
+        action_kind = "review"
         if not note_path.exists() or _has_placeholders(note_text):
-            recommendation = "update"
+            action_kind = "update"
         if note_path.name == "index.md":
-            recommendation = "update index"
+            action_kind = "update index"
         detail = f"{action.detail}; suggested by changed files {', '.join(changed_files) if changed_files else 'explicit input'}"
         improvement_hint = _first_improvement_hint(manifest_note, note_path, note_text, for_report=False)
+        remediation = _build_remediation_recommendation(manifest_note, note_path, note_text, for_report=False)
         if improvement_hint:
             detail = f"{detail}; consider {improvement_hint}"
         result.add(
-            recommendation,
+            action_kind,
             note_path,
             detail,
             role="memory-sync",
             safety="manual",
             source=action.source,
             category="manual-review",
+            remediation_kind=remediation.kind if remediation else "",
+            remediation_target=remediation.target_path_hint if remediation else "",
+            remediation_reason=remediation.reason if remediation else "",
+            remediation_confidence=remediation.confidence if remediation else "",
+            memory_action=remediation.memory_action if remediation else "",
         )
         if improvement_hint:
             result.add(
@@ -741,6 +765,11 @@ def sync_memory(
                 safety="advisory",
                 source=action.source,
                 category="manual-review",
+                remediation_kind=remediation.kind if remediation else "",
+                remediation_target=remediation.target_path_hint if remediation else "",
+                remediation_reason=remediation.reason if remediation else "",
+                remediation_confidence=remediation.confidence if remediation else "",
+                memory_action=remediation.memory_action if remediation else "",
             )
     for note in notes or []:
         result.add(
@@ -798,6 +827,7 @@ def promotion_report(
     *,
     target: str | Path | None = None,
     notes: list[str] | None = None,
+    mode: str = "all",
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = _new_result(
@@ -812,6 +842,19 @@ def promotion_report(
         target_root=target_root,
         manifest=manifest,
         requested=requested,
+    )
+    if mode == "remediation":
+        records = [
+            record
+            for record in records
+            if record[3] is not None and record[3].confidence in {"high", "medium"}
+        ]
+    records.sort(
+        key=lambda record: (
+            record[3].kind if record[3] is not None else "zzz",
+            record[3].target_path_hint if record[3] is not None else record[0].as_posix(),
+            record[0].as_posix(),
+        )
     )
     if not records:
         result.add(
@@ -828,7 +871,7 @@ def promotion_report(
         )
         return result
 
-    for note_path, note, detail in records:
+    for note_path, note, detail, recommendation in records:
         result.add(
             "candidate" if note is not None or note_path.exists() else "manual review",
             note_path,
@@ -837,6 +880,11 @@ def promotion_report(
             safety="manual",
             source=note.path.as_posix() if note is not None else note_path.relative_to(target_root).as_posix(),
             category="manual-review",
+            remediation_kind=recommendation.kind if recommendation else "",
+            remediation_target=recommendation.target_path_hint if recommendation else "",
+            remediation_reason=recommendation.reason if recommendation else "",
+            remediation_confidence=recommendation.confidence if recommendation else "",
+            memory_action=recommendation.memory_action if recommendation else "",
         )
     return result
 

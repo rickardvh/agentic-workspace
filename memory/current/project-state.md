@@ -40,7 +40,7 @@ Active
 - Added a new `.agentic-memory/` managed-root model for bootstrap-managed files, plus explicit migration support for legacy installs.
 - Shifted upgrade, install, and adopt flows onto the same `.agentic-memory/` ownership model.
 - Tightened `doctor`, upgrade, and manifest behaviour so legacy-layout repos migrate cleanly and repo-owned notes stay separate.
-- Brought the repo’s own managed files and checks back into sync with the payload.
+- Added a structured remediation recommendation layer so doctor, sync, route, and promotion-report can point at concrete upstream docs, skills, scripts, tests, validation, or refactor targets.
 
 ## Blockers
 
@@ -51,6 +51,7 @@ Active
 - `memory/current/project-state.md` is the overview note; `memory/current/task-context.md` is optional continuation compression only.
 - Durable facts should have one primary home, with short references instead of repeated summaries.
 - Route through `memory/index.md`, `memory/manifest.toml`, and the shipped memory skills before broad note reading.
+- Use `promotion-report --mode remediation` as the main package-level workflow for turning improvement-signal memory into concrete upstream repo changes.
 
 ## Failure signals
 
@@ -75,4 +76,4 @@ Active
 
 ## Last confirmed
 
-2026-04-02 during managed-root migration work
+2026-04-04 during remediation-layer implementation
