@@ -88,6 +88,24 @@ PROMOTION_SIGNAL_HINTS = (
     "promotion",
 )
 
+PROMOTION_REASON_HINTS = (
+    "because",
+    "after",
+    "repeated",
+    "reported",
+    "report",
+    "feedback",
+    "dogfooding",
+    "surfaced",
+    "exposed",
+    "friction",
+    "false positive",
+    "false-positive",
+    "regression",
+    "failure",
+    "failed",
+)
+
 
 class PlanningWarning(NamedTuple):
     warning_class: str
@@ -424,17 +442,21 @@ def _check_promotion_linkage(
         why_now = (item.get("why_now", "") or "").lower()
         surface = item.get("surface", "") or ""
         has_signal_reason = any(hint in why_now for hint in signal_hints)
+        has_causal_reason = any(hint in why_now for hint in PROMOTION_REASON_HINTS)
         surface_tokens = _surface_basename_tokens(surface)
         has_surface_link = bool(
             surface_tokens and any(token in roadmap_text for token in surface_tokens)
         )
 
-        if not has_signal_reason and not has_surface_link:
+        if not has_signal_reason and not has_causal_reason and not has_surface_link:
             warnings.append(
                 PlanningWarning(
                     WARNING_PROMOTION_LINKAGE_DRIFT,
                     _render_path(roadmap_path),
-                    f"Active TODO item '{item_id}' lacks clear signal-driven linkage to ROADMAP framing.",
+                    (
+                        f"Active TODO item '{item_id}' lacks clear signal- or reason-driven "
+                        "linkage to ROADMAP framing."
+                    ),
                 )
             )
 

@@ -73,7 +73,11 @@ def resolve_target_root(target: str | Path | None) -> Path:
 
 def list_payload_files() -> list[str]:
     root = payload_root()
-    return [path.relative_to(root).as_posix() for path in sorted(root.rglob("*")) if path.is_file()]
+    return [
+        path.relative_to(root).as_posix()
+        for path in sorted(root.rglob("*"))
+        if _should_include_payload_path(path, root)
+    ]
 
 
 def install_bootstrap(*, target: str | Path | None = None, dry_run: bool = False, force: bool = False) -> InstallResult:
@@ -414,7 +418,7 @@ def format_summary_json(summary: dict[str, Any]) -> str:
 def _copy_payload(*, target_root: Path, result: InstallResult, conservative: bool, force: bool) -> None:
     root = payload_root()
     for source in sorted(root.rglob("*")):
-        if not source.is_file():
+        if not _should_include_payload_path(source, root):
             continue
         relative = source.relative_to(root)
         destination = target_root / relative
@@ -518,6 +522,15 @@ def _detect_adoption_mode(target_root: Path) -> str:
     if required_present >= len(REQUIRED_PAYLOAD_FILES) // 2:
         return "installed"
     return "partial"
+
+
+def _should_include_payload_path(path: Path, root: Path) -> bool:
+    if not path.is_file():
+        return False
+    relative_parts = path.relative_to(root).parts
+    if "__pycache__" in relative_parts:
+        return False
+    return path.suffix != ".pyc"
 
 
 def _read_lines(path: Path) -> list[str]:
@@ -721,7 +734,6 @@ def _plan_stem_tokens(plan_path: Path) -> list[str]:
 
 
 def _cleanup_roadmap_archive_followup(roadmap_path: Path, plan_path: Path) -> dict[str, Any]:
-    note = "ROADMAP still mentions this thread; compress any active-sounding residue into a candidate stub if needed."
     if not roadmap_path.exists():
         return {"changed": False, "text": None, "details": [], "note": None}
 
@@ -749,9 +761,6 @@ def _cleanup_roadmap_archive_followup(roadmap_path: Path, plan_path: Path) -> di
         active_handoff_lines.append(line)
 
     if not removed:
-        roadmap_text = "\n".join(lines).lower()
-        if tokens and any(token in roadmap_text for token in tokens):
-            return {"changed": False, "text": None, "details": [], "note": note}
         return {"changed": False, "text": None, "details": [], "note": None}
 
     replacement = [line for line in active_handoff_lines if line.strip()]

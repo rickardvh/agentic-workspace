@@ -53,6 +53,7 @@ Do not start coding from chat context alone when the same knowledge should live 
 - Key subsystems: `bootstrap/`, `src/repo_planning_bootstrap/`, `scripts/check/`, `tools/`.
 - Continually evaluate the planning system while using it in this repo. When execution friction, drift, ambiguity, or missing helper support shows up, record or suggest concrete improvements instead of treating the workflow as fixed.
 - Treat this repo as both implementation work and a real use case for testing the planning system; use that feedback loop to improve the package and the checked-in contract.
+- After completing a milestone in this self-hosted repo, run the canonical self-upgrade workflow against `.` to dogfood the latest packaged state. Until a dedicated `upgrade` command exists, use `uv run agentic-planning-bootstrap adopt --target .` as the conservative self-refresh workflow, then rerun the relevant validation.
 - Do not broaden migrations, refactors, or schema changes beyond the active task unless a required adjacent fix is necessary for correctness.
 - Prefer updating an existing plan over creating overlapping plan files for the same feature.
 - Do not turn the planning surfaces into a generic tracker, backlog database, or Jira replacement.

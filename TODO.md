@@ -23,4 +23,7 @@ When there is no active task, keep this file minimal.
 
 ## Next
 
-No active items right now.
+- ID: payload-hygiene
+  Status: in-progress
+  Surface: docs/execplans/payload-hygiene-2026-04-05.md
+  Why now: the canonical self-refresh run reported generated `__pycache__` residue in the packaged payload, which should be removed before the next milestone closes.

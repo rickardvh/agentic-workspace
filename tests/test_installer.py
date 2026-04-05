@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import repo_planning_bootstrap.installer as installer_mod
 from repo_planning_bootstrap.installer import (
     adopt_bootstrap,
     archive_execplan,
@@ -90,6 +91,22 @@ def test_status_reports_missing_and_present_files(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     result = collect_status(target=tmp_path)
     assert any(action.kind == "present" for action in result.actions)
+
+
+def test_payload_filters_generated_artifacts(tmp_path: Path, monkeypatch) -> None:
+    payload_root = tmp_path / "payload"
+    _write(payload_root / "AGENTS.md", "agents\n")
+    _write(payload_root / "scripts" / "render_agent_docs.py", "print('ok')\n")
+    _write(payload_root / "scripts" / "__pycache__" / "render_agent_docs.cpython-314.pyc", "junk\n")
+
+    monkeypatch.setattr(installer_mod, "payload_root", lambda: payload_root)
+
+    files = installer_mod.list_payload_files()
+    assert "scripts/__pycache__/render_agent_docs.cpython-314.pyc" not in files
+
+    result = install_bootstrap(target=tmp_path / "target")
+    assert not (tmp_path / "target" / "scripts" / "__pycache__").exists()
+    assert any(action.path == tmp_path / "target" / "AGENTS.md" for action in result.actions)
 
 
 def test_verify_payload_quickstart_matches_manifest() -> None:
@@ -225,6 +242,31 @@ def test_archive_execplan_without_cleanup_only_suggests_roadmap_followup(tmp_pat
 
     assert any(action.kind == "suggested fix" and action.path == tmp_path / "ROADMAP.md" for action in result.actions)
     assert any(warning["warning_class"] == "roadmap_archive_followup" for warning in result.warnings)
+
+
+def test_archive_execplan_ignores_generic_roadmap_language(tmp_path: Path) -> None:
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Active Handoff
+
+- The initial package pass is complete.
+
+## Promotion Rules
+
+- Promote an epic only when it is ready for active execution.
+""",
+    )
+    plan_path = tmp_path / "docs" / "execplans" / "promotion-linkage-tuning-2026-04-05.md"
+    _write(plan_path, _minimal_execplan(status="completed"))
+
+    result = archive_execplan("promotion-linkage-tuning-2026-04-05", target=tmp_path)
+
+    assert not any(action.kind == "suggested fix" and action.path == tmp_path / "ROADMAP.md" for action in result.actions)
+    assert not any(warning["warning_class"] == "roadmap_archive_followup" for warning in result.warnings)
 
 
 def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> None:

@@ -228,6 +228,74 @@ Long narrative status update line eleven.
     assert "execplan_notebook_drift" in classes
 
 
+def test_promotion_linkage_accepts_clear_causal_why_now(tmp_path: Path) -> None:
+    mod = _load_module(REPO_ROOT / "scripts" / "check" / "check_planning_surfaces.py", "planning_promotion_reason")
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: promotion-linkage-tuning
+  Status: in-progress
+  Surface: docs/execplans/promotion-linkage-tuning-2026-04-05.md
+  Why now: repeated self-hosted dogfooding exposed a false-positive case that should be tuned.
+""",
+    )
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Next Candidate Queue
+
+- Add upgrade and uninstall flows when repeated dogfooding shows the safe lifecycle boundaries clearly.
+
+## Reopen Conditions
+
+- Reopen when a queue or report signals new work.
+""",
+    )
+    _write(tmp_path / "docs" / "execplans" / "promotion-linkage-tuning-2026-04-05.md", _minimal_execplan())
+    classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
+    assert "promotion_linkage_drift" not in classes
+
+
+def test_promotion_linkage_still_warns_for_vague_activation(tmp_path: Path) -> None:
+    mod = _load_module(REPO_ROOT / "scripts" / "check" / "check_planning_surfaces.py", "planning_promotion_vague")
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: vague-thread
+  Status: in-progress
+  Surface: docs/execplans/vague-thread-2026-04-05.md
+  Why now: work on this next.
+""",
+    )
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Next Candidate Queue
+
+- Add upgrade and uninstall flows when repeated dogfooding shows the safe lifecycle boundaries clearly.
+
+## Reopen Conditions
+
+- Reopen when a queue or report signals new work.
+""",
+    )
+    _write(tmp_path / "docs" / "execplans" / "vague-thread-2026-04-05.md", _minimal_execplan())
+    classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
+    assert "promotion_linkage_drift" in classes
+
+
 def test_main_json_format_outputs_payload(tmp_path: Path, capsys) -> None:
     mod = _load_module(REPO_ROOT / "scripts" / "check" / "check_planning_surfaces.py", "planning_json")
     _write(tmp_path / "TODO.md", _baseline_todo())
