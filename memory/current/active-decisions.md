@@ -6,16 +6,16 @@ Active
 
 ## Scope
 
-Current high-impact decisions for monorepo migration and root orchestration.
+Current high-impact decisions for root orchestration and package boundaries.
 
 ## Load when
 
-- Updating root orchestration, CI routing, or migration contracts.
+- Updating root orchestration, CI routing, or ownership contracts.
 - Deciding whether package-level changes should run through root-owned systems.
 
 ## Review when
 
-- Migration milestones, root check entrypoints, or CI routing behavior changes.
+- Root check entrypoints or CI routing behavior changes.
 - Ownership boundaries between root and package systems are updated.
 
 ## Failure signals
@@ -26,14 +26,15 @@ Current high-impact decisions for monorepo migration and root orchestration.
 ## Current decisions
 
 - Root owns one installed memory system and one installed planning system.
-- Package-local installed systems in packages/memory and packages/planning are cleanup targets after root population.
+- Package-local fixtures or payload copies in packages/memory and packages/planning are not operational authorities.
 - Use merged root dependency sync for day-to-day work and package-scoped sync lanes for package validation.
-- Keep migration execution contract in docs/migration/monorepo-migration-plan.md until migration closes.
+- Keep the workspace-orchestrator contract and ownership ledger as the shared source for managed-surface rules.
 
 ## Verify
 
 - TODO.md
-- docs/migration/monorepo-migration-plan.md
+- .agentic-workspace/WORKFLOW.md
+- .agentic-workspace/OWNERSHIP.toml
 - Makefile
 - .github/workflows/ci.yml
 

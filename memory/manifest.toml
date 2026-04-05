@@ -91,10 +91,10 @@ authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "optional"
-subsystems = ["migration", "orchestration"]
+subsystems = ["orchestration", "validation"]
 surfaces = ["decision", "architecture"]
-routes_from = ["docs/migration/**/*.md", "AGENTS.md", "Makefile", ".github/workflows/**/*.yml"]
-stale_when = ["docs/migration/**/*.md", "AGENTS.md", "Makefile", ".github/workflows/**/*.yml"]
+routes_from = ["AGENTS.md", "Makefile", ".github/workflows/**/*.yml", ".agentic-workspace/**/*.md"]
+stale_when = ["AGENTS.md", "Makefile", ".github/workflows/**/*.yml", ".agentic-workspace/**/*.md"]
 memory_role = "durable_truth"
 
 [notes."memory/domains/memory-package-context.md"]
@@ -104,7 +104,7 @@ authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "optional"
-subsystems = ["memory-package", "migration"]
+subsystems = ["memory-package", "orchestration"]
 surfaces = ["architecture", "runtime"]
 routes_from = ["packages/memory/**", "packages/memory/README.md"]
 stale_when = ["packages/memory/**"]
@@ -117,10 +117,10 @@ authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "optional"
-subsystems = ["planning-package", "migration"]
+subsystems = ["planning-package", "orchestration"]
 surfaces = ["architecture", "decision"]
-routes_from = ["packages/planning/**", "packages/planning/README.md", "docs/execplans/archive/imported-planning-package/**"]
-stale_when = ["packages/planning/**", "docs/execplans/archive/imported-planning-package/**"]
+routes_from = ["packages/planning/**", "packages/planning/README.md"]
+stale_when = ["packages/planning/**"]
 memory_role = "durable_truth"
 
 [notes."memory/decisions/installed-system-consolidation-2026-04-05.md"]
@@ -130,10 +130,10 @@ authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "optional"
-subsystems = ["migration", "orchestration"]
+subsystems = ["orchestration", "validation"]
 surfaces = ["decision", "architecture"]
-routes_from = ["docs/migration/**/*.md", "AGENTS.md", "README.md"]
-stale_when = ["docs/migration/**/*.md", "README.md", "Makefile", ".github/workflows/**/*.yml"]
+routes_from = ["AGENTS.md", "README.md", "Makefile", ".github/workflows/**/*.yml"]
+stale_when = ["AGENTS.md", "README.md", "Makefile", ".github/workflows/**/*.yml"]
 memory_role = "durable_truth"
 
 [notes."memory/decisions/path-consolidation-agentic-workspace-2026-04-05.md"]
@@ -143,20 +143,20 @@ authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "optional"
-subsystems = ["migration", "orchestration"]
+subsystems = ["orchestration", "packaging"]
 surfaces = ["decision", "architecture"]
 routes_from = ["packages/memory/**", "packages/planning/**", "README.md", "Makefile"]
 stale_when = ["packages/memory/**", "packages/planning/**", "README.md", "Makefile"]
 memory_role = "durable_truth"
 
-[notes."memory/decisions/phase-4-completion-and-roadmap-decision-2026-04-05.md"]
+[notes."memory/decisions/foundation-stability-2026-04-05.md"]
 note_type = "decision"
-canonical_home = "memory/decisions/phase-4-completion-and-roadmap-decision-2026-04-05.md"
+canonical_home = "memory/decisions/foundation-stability-2026-04-05.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "optional"
-subsystems = ["migration", "planning"]
+subsystems = ["planning", "orchestration"]
 surfaces = ["decision", "architecture"]
 routes_from = ["docs/execplans/archive/**/*.md", "README.md", "AGENTS.md"]
 stale_when = ["docs/execplans/archive/**/*.md", "README.md", "AGENTS.md"]

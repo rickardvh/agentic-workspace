@@ -4,7 +4,7 @@ Last reviewed: 2026-04-05
 
 ## Purpose
 
-Inactive long-horizon migration and post-migration candidate work.
+Inactive long-horizon candidate work.
 
 ## Active Handoff
 
@@ -16,13 +16,13 @@ Inactive long-horizon migration and post-migration candidate work.
 
 - Shared tooling extraction: evaluate a common checker core when the first stable monorepo release exposes repeated maintenance friction across duplicated scripts.
 - Unified integration lane: add a dual-bootstrap coexistence smoke-test harness when release dry-runs show the monorepo install topology is stable enough to freeze expectations.
-- Contributor onboarding: add package ownership CODEOWNERS and contributor playbooks when migration close-out is complete and package boundaries are no longer shifting.
+- Contributor onboarding: add package ownership CODEOWNERS and contributor playbooks when package boundaries are stable enough to freeze ownership expectations.
 
 ## Reopen Conditions
 
-- Reopen roadmap planning when active queue completes or a new migration decision gate appears.
+- Reopen roadmap planning when active queue completes or a new bounded candidate is ready to promote.
 
 ## Promotion Rules
 
 - Promote candidate items only when active tranche dependencies are clear and bounded.
-- Keep detailed execution in `docs/migration/monorepo-migration-plan.md` once promoted.
+- Keep detailed execution in `docs/execplans/` once promoted.

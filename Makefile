@@ -1,4 +1,4 @@
-.PHONY: help sync-all sync-memory sync-planning import-checklist \
+.PHONY: help sync-all sync-memory sync-planning \
 	test test-memory test-planning \
 	lint lint-memory lint-planning markdownlint markdownlint-memory \
 	typecheck typecheck-memory typecheck-planning \
@@ -13,7 +13,6 @@ help:
 	@echo "  sync-all             Sync merged root environment for all workspace packages."
 	@echo "  sync-memory          Sync consolidated root dev environment for memory package checks."
 	@echo "  sync-planning        Sync consolidated root dev environment for planning package checks."
-	@echo "  import-checklist     Show migration import checklist."
 	@echo "  test                 Run both package test suites."
 	@echo "  lint                 Run non-mutating lint checks across both packages."
 	@echo "  markdownlint         Run Markdown lint checks for the memory package surfaces."
@@ -36,12 +35,6 @@ sync-memory:
 
 sync-planning:
 	uv sync --all-packages --group dev
-
-import-checklist:
-	@echo "1) Import agentic-memory into packages/memory with history preservation"
-	@echo "2) Import agentic-planning into packages/planning with history preservation"
-	@echo "3) Run package-local tests and lint in both packages"
-	@echo "4) Record source commit anchors in docs/migration/import-map.md"
 
 test-memory:
 	cd packages/memory && uv run pytest

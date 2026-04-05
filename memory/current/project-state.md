@@ -12,7 +12,6 @@ Workspace-orchestrator cleanup complete; active queue clear
 
 - AGENTS.md
 - TODO.md
-- docs/migration/monorepo-migration-plan.md
 - .agentic-workspace/WORKFLOW.md
 - .agentic-workspace/OWNERSHIP.toml
 - memory/index.md
@@ -55,9 +54,7 @@ Workspace-orchestrator cleanup complete; active queue clear
 
 ## High-level notes
 
-- Keep migration execution in docs/migration/monorepo-migration-plan.md while consolidation is active.
-- Package-local installed systems are migration residue and should not remain operational authorities.
-- Imported package planning history is preserved under docs/execplans/archive/imported-planning-package/.
+- Package-local runtime fixtures or payload copies should not become operational authorities.
 - Use root memory domain notes for package-origin context after package-local uninstall cleanup.
 - Product-managed additions should stay visibly fenced off from repo-owned instructions; a thin pointer block in `AGENTS.md` is preferred over mixed ownership prose.
 - Improvement signals from dogfooding should become plan updates, roadmap candidates, or memory pressure notes rather than staying implicit in ad hoc experience.
@@ -82,7 +79,6 @@ Workspace-orchestrator cleanup complete; active queue clear
 - `.agentic-workspace/memory/WORKFLOW.md`
 - `AGENTS.md`
 - `TODO.md`
-- `docs/migration/monorepo-migration-plan.md`
 - `README.md`
 - `Makefile`
 - `.github/workflows/ci.yml`

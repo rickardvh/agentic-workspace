@@ -4,7 +4,7 @@ Last pruned: 2026-04-05
 
 ## Purpose
 
-Active queue for monorepo migration work.
+Active queue for repository work.
 
 ## Now
 

@@ -24,7 +24,7 @@
 - live decision review: optional repo-owned `memory/current/active-decisions.md` when the repo keeps one, plus `memory/decisions/README.md`
 - monorepo memory-package work: `memory/domains/memory-package-context.md` plus `memory/current/active-decisions.md`
 - monorepo planning-package work: `memory/domains/planning-package-context.md` plus `memory/current/active-decisions.md`
-- migration policy or sequencing change: `memory/decisions/installed-system-consolidation-2026-04-05.md` plus `memory/current/project-state.md`
+- workspace ownership or package-boundary change: `memory/decisions/installed-system-consolidation-2026-04-05.md` plus `memory/current/project-state.md`
 - package memory tooling change: `memory/domains/memory-package-context.md` plus `memory/decisions/installed-system-consolidation-2026-04-05.md`
 - package planning tooling change: `memory/domains/planning-package-context.md` plus `memory/decisions/installed-system-consolidation-2026-04-05.md`
 - root check or CI routing change: `memory/current/active-decisions.md` plus `memory/current/project-state.md`
@@ -35,7 +35,7 @@ Prefer the smallest bundle that still covers the task surface.
 
 - If touching `packages/memory/**`, load `memory/domains/memory-package-context.md`.
 - If touching `packages/planning/**`, load `memory/domains/planning-package-context.md`.
-- If touching `docs/migration/**` or root orchestration files, load `memory/current/active-decisions.md` and `memory/decisions/installed-system-consolidation-2026-04-05.md`.
+- If touching root orchestration files, load `memory/current/active-decisions.md` and `memory/decisions/installed-system-consolidation-2026-04-05.md`.
 
 ## Loading rule
 
@@ -44,7 +44,7 @@ Prefer the smallest bundle that still covers the task surface.
 - Default to `memory/index.md` plus at most 2 additional notes unless the task clearly justifies more.
 - Load `memory/current/project-state.md` or `memory/current/task-context.md` only when they will reduce re-orientation cost for the current task.
 - Load `memory/current/routing-feedback.md` only when calibrating routing against a concrete missed-note or over-routing case.
-- When a repository has bootstrap-managed shared skills, check `.agentic-memory/skills/README.md` before inventing a new shared memory-operational procedure.
+- When a repository has bootstrap-managed shared skills, check `.agentic-workspace/memory/skills/README.md` before inventing a new shared memory-operational procedure.
 - Use touched files, modules, commands, or surfaces to decide which notes to load first.
 
 ## Note type split

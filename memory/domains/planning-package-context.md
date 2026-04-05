@@ -6,11 +6,7 @@ Active
 
 ## Purpose
 
-Capture durable context imported from the previous package-local planning and memory installs so root planning and memory ownership can replace package-local installs.
-
-## Consolidated from
-
-- Previous package-local planning TODO, ROADMAP, memory current note, and archived execplans under packages/planning/.
+Capture durable context for the planning bootstrap package and how it fits into the root-owned planning and memory systems.
 
 ## Durable context
 
@@ -18,30 +14,26 @@ Capture durable context imported from the previous package-local planning and me
 - Memory remains an optional companion for durable technical context and should not own active queue state.
 - Keep planning and memory ownership boundaries explicit in agent startup and routing docs.
 - Package planning active queue was empty at consolidation time.
-- Package planning roadmap carried one candidate: pin .agentic-planning/UPGRADE-SOURCE.toml to immutable tags/releases when release cadence stabilises.
-
-## Imported history location
-
-- docs/execplans/archive/imported-planning-package/
+- Package planning roadmap previously carried a candidate to pin UPGRADE-SOURCE metadata to immutable releases when release cadence stabilises.
 
 ## Monorepo adaptation note
 
-Root ownership now contains the installed planning and memory systems. Package-local installed systems in packages/planning should be removed after this context is preserved.
+Root ownership contains the installed planning and memory systems. Package-local payloads and tests should stay package-scoped and should not become operational authorities.
 
 ## Load when
 
 - Editing files under packages/planning.
-- Updating planning bootstrap package ownership or migration consolidation behavior.
+- Updating planning bootstrap package ownership, validation, or payload behavior.
 
 ## Review when
 
-- Planning package README, bootstrap payload, or archived execplan imports change materially.
-- Root planning orchestration changes how imported planning context is routed.
+- Planning package README, bootstrap payload, or validation surfaces change materially.
+- Root planning orchestration changes how package context is routed.
 
 ## Failure signals
 
-- Package-planning work misses package-specific execution assumptions after root consolidation.
-- Imported archive context under docs/execplans/archive/imported-planning-package becomes stale or inconsistent with package state.
+- Package-planning work misses package-specific execution assumptions.
+- Package context drifts away from the actual bootstrap payload, source, or tests.
 
 ## Verify
 
@@ -49,8 +41,7 @@ Root ownership now contains the installed planning and memory systems. Package-l
 - packages/planning/bootstrap/
 - packages/planning/src/
 - packages/planning/tests/
-- docs/execplans/archive/imported-planning-package/
 
 ## Last confirmed
 
-2026-04-05 during monorepo installed-system consolidation
+2026-04-05 after repository reference cleanup

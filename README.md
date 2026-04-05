@@ -7,23 +7,22 @@ Monorepo host for two distributable packages:
 
 ## Purpose
 
-This repository is the migration target that will consolidate the current
-`agentic-memory` and `agentic-planning` repositories into one workspace while
-keeping package boundaries, independent versioning, and independent release
-artifacts.
+This repository is the monorepo host for `agentic-memory-bootstrap` and
+`agentic-planning-bootstrap`, with shared workspace-level orchestration,
+validation, and dogfooding of the shipped packages.
 
 ## Layout
 
 - `packages/memory/` - package workspace for `agentic-memory-bootstrap`
 - `packages/planning/` - package workspace for `agentic-planning-bootstrap`
-- `docs/migration/` - migration decision log, import mapping, and checkpoints
+- `docs/execplans/` - active and archived execution plans
 - `.github/workflows/` - unified monorepo CI workflows
 
 ## Current Status
 
-Phase 4 orchestration and migration close-out.
+Workspace orchestration is stable.
 
-History-preserving package imports are complete. Root planning and memory systems now own monorepo operation, package-scoped dependency lanes are in place, and CI runs through root orchestration targets.
+Root planning and memory systems own monorepo operation, package-scoped validation lanes are in place, and CI runs through root orchestration targets.
 
 ## Environment Routing
 
@@ -35,6 +34,12 @@ Use one shared root environment for daily monorepo work and package validation.
 
 Validation entrypoints:
 
+- `make test`
+- `make lint`
+- `make typecheck`
+- `make format-check`
+- `make verify`
+- `make check`
 - `make check-memory`
 - `make check-planning`
 - `make check-all`

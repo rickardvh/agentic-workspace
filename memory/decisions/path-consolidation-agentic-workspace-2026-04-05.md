@@ -16,7 +16,7 @@ Accepted
 ## Review when
 
 - New bootstraps are added and need to define their install paths.
-- Namespace conflicts or migration challenges surface during adoption.
+- Namespace conflicts or layout challenges surface during adoption.
 
 ## Failure signals
 

@@ -11,11 +11,10 @@ Accepted
 ## Load when
 
 - Deciding operational ownership between root and package-local systems.
-- Reviewing migration changes that affect planning or memory routing.
+- Reviewing root-orchestration changes that affect planning or memory routing.
 
 ## Review when
 
-- Migration milestones change post-consolidation policy.
 - Root orchestration, CI validation, or package cleanup strategy changes.
 
 ## Failure signals
@@ -35,19 +34,17 @@ Use a single root-owned installed memory system and a single root-owned installe
 
 ## Consequences
 
-- Package knowledge and planning context must be intentionally migrated into root-owned notes and archives before uninstalling package-local installs.
+- Package knowledge and planning context must be intentionally preserved in root-owned notes before package-local operational copies are removed.
 - Package-level validation still runs through package-scoped sync/check lanes.
 - Package-local installed-system files are no longer authoritative for monorepo operations.
 
 ## Follow-through
 
-- Keep imported planning archives under docs/execplans/archive/imported-planning-package/.
 - Keep package context summaries in memory/domains/memory-package-context.md and memory/domains/planning-package-context.md.
 - Use uninstall commands in package roots to clean package-local installed-system surfaces.
 
 ## Verify
 
-- docs/migration/monorepo-migration-plan.md
 - TODO.md
 - Makefile
 - .github/workflows/ci.yml
