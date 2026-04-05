@@ -26,4 +26,4 @@ When there is no active task, keep this file minimal.
 - ID: planning-bootstrap-initialisation
   Status: in-progress
   Surface: docs/execplans/planning-bootstrap-initialisation-2026-04-05.md
-  Why now: the repo is being turned into the package and reference implementation for the planning bootstrap.
+  Why now: the package now needs the first execution-facing helper flows and checker diagnostics to match the documented contract.

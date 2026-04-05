@@ -51,6 +51,8 @@ Do not start coding from chat context alone when the same knowledge should live 
 - This repo is both the self-hosted reference install for the planning contract and the package source for the reusable bootstrap payload.
 - Key repo docs: `README.md`, `docs/execplans/README.md`, `docs/execplans/TEMPLATE.md`.
 - Key subsystems: `bootstrap/`, `src/repo_planning_bootstrap/`, `scripts/check/`, `tools/`.
+- Continually evaluate the planning system while using it in this repo. When execution friction, drift, ambiguity, or missing helper support shows up, record or suggest concrete improvements instead of treating the workflow as fixed.
+- Treat this repo as both implementation work and a real use case for testing the planning system; use that feedback loop to improve the package and the checked-in contract.
 - Do not broaden migrations, refactors, or schema changes beyond the active task unless a required adjacent fix is necessary for correctness.
 - Prefer updating an existing plan over creating overlapping plan files for the same feature.
 - Do not turn the planning surfaces into a generic tracker, backlog database, or Jira replacement.

@@ -6,13 +6,17 @@ import shutil
 
 from repo_planning_bootstrap import __version__
 from repo_planning_bootstrap.installer import (
+    archive_execplan,
     adopt_bootstrap,
     collect_status,
+    format_summary_json,
     doctor_bootstrap,
     format_actions,
     format_result_json,
     install_bootstrap,
     list_payload_files,
+    planning_summary,
+    promote_todo_item_to_execplan,
     verify_payload,
 )
 
@@ -45,6 +49,23 @@ def build_parser() -> argparse.ArgumentParser:
         command_parser.add_argument("--target")
         command_parser.add_argument("--format", choices=("text", "json"), default="text")
 
+    summary_parser = subparsers.add_parser("summary", help="Summarise the active planning surfaces in a machine-readable way.")
+    summary_parser.add_argument("--target")
+    summary_parser.add_argument("--format", choices=("text", "json"), default="text")
+
+    promote_parser = subparsers.add_parser("promote-to-plan", help="Promote a direct TODO item into an execplan scaffold.")
+    promote_parser.add_argument("item_id")
+    promote_parser.add_argument("--target")
+    promote_parser.add_argument("--plan-slug")
+    promote_parser.add_argument("--dry-run", action="store_true")
+    promote_parser.add_argument("--format", choices=("text", "json"), default="text")
+
+    archive_parser = subparsers.add_parser("archive-plan", help="Archive a completed execplan.")
+    archive_parser.add_argument("plan")
+    archive_parser.add_argument("--target")
+    archive_parser.add_argument("--dry-run", action="store_true")
+    archive_parser.add_argument("--format", choices=("text", "json"), default="text")
+
     list_files_parser = subparsers.add_parser("list-files")
     list_files_parser.add_argument("--format", choices=("text", "json"), default="text")
 
@@ -69,6 +90,25 @@ def main(argv: list[str] | None = None) -> int:
         return _emit(doctor_bootstrap(target=args.target), args.format)
     if args.command == "status":
         return _emit(collect_status(target=args.target), args.format)
+    if args.command == "summary":
+        summary = planning_summary(target=args.target)
+        if args.format == "json":
+            print(format_summary_json(summary))
+        else:
+            _print_summary(summary)
+        return 0
+    if args.command == "promote-to-plan":
+        return _emit(
+            promote_todo_item_to_execplan(
+                args.item_id,
+                target=args.target,
+                plan_slug=args.plan_slug,
+                dry_run=args.dry_run,
+            ),
+            args.format,
+        )
+    if args.command == "archive-plan":
+        return _emit(archive_execplan(args.plan, target=args.target, dry_run=args.dry_run), args.format)
     if args.command == "list-files":
         files = list_payload_files()
         if args.format == "json":
@@ -99,6 +139,30 @@ def _emit(result, output_format: str) -> int:
         for warning in result.warnings:
             print(f"- [{warning['warning_class']}] {warning['path']}: {warning['message']}")
     return 0
+
+
+def _print_summary(summary: dict) -> None:
+    print(f"Target: {summary['target_root']}")
+    print(f"Mode: {summary['adoption_mode']}")
+    print(
+        "TODO: "
+        f"{summary['todo']['active_count']} active / {summary['todo']['item_count']} items / {summary['todo']['line_count']} lines"
+    )
+    print(
+        "Execplans: "
+        f"{summary['execplans']['active_count']} active / {summary['execplans']['archived_count']} archived"
+    )
+    print(f"Roadmap: {summary['roadmap']['candidate_count']} candidate bullets")
+    if summary["todo"]["active_items"]:
+        print("Active items:")
+        for item in summary["todo"]["active_items"]:
+            print(f"- {item['id']}: {item['surface']}")
+    if summary["warning_count"]:
+        print(f"Warnings: {summary['warning_count']}")
+        for warning in summary["warnings"]:
+            print(f"- [{warning['warning_class']}] {warning['path']}: {warning['message']}")
+    else:
+        print("Warnings: none")
 
 
 def _build_prompt(command: str, target: str | None) -> str:

@@ -29,12 +29,15 @@ DRIFT_LOG_MAX_LINES = 80
 WARNING_TODO_SHAPE_DRIFT = "todo_shape_drift"
 WARNING_TODO_ACTIVATION_OVERFLOW = "todo_activation_overflow"
 WARNING_TODO_MISSING_EXECPLAN_LINKAGE = "todo_missing_execplan_linkage"
+WARNING_TODO_PLAN_REQUIRED_HINT = "todo_plan_required_hint"
 WARNING_TODO_BROKEN_SURFACE_REFERENCE = "todo_broken_surface_reference"
 WARNING_EXECPLAN_STRUCTURE_DRIFT = "execplan_structure_drift"
 WARNING_EXECPLAN_MULTIPLE_ACTIVE = "execplan_multiple_active_milestones"
 WARNING_EXECPLAN_IMMEDIATE_ACTION_DRIFT = "execplan_immediate_next_action_drift"
 WARNING_EXECPLAN_READINESS_DRIFT = "execplan_readiness_drift"
 WARNING_EXECPLAN_LOG_DRIFT = "execplan_log_drift"
+WARNING_EXECPLAN_NOTEBOOK_DRIFT = "execplan_notebook_drift"
+WARNING_EXECPLAN_UNDER_SPECIFIED = "execplan_under_specified"
 WARNING_ROADMAP_EXECUTION_DRIFT = "roadmap_execution_drift"
 WARNING_ROADMAP_MISSING_PROMOTION_SIGNAL = "roadmap_missing_promotion_signal"
 WARNING_ROADMAP_MISSING_REOPEN_SIGNAL = "roadmap_missing_reopen_signal"
@@ -200,6 +203,18 @@ def _looks_small_direct_task(block: dict[str, str]) -> bool:
     return bool(block.get("next action") and block.get("done when"))
 
 
+def _direct_task_has_plan_sized_shape(block: dict[str, str]) -> bool:
+    allowed = {"id", "status", "surface", "why now", "next action", "done when"}
+    extra_fields = {key for key in block if key not in allowed}
+    long_fields = any(len(block.get(key, "")) > 160 for key in ("why now", "next action", "done when"))
+    execution_markers = re.search(
+        r"\b(blocker|blocked|validation|milestone|scope|invariant|phase|rollback|migration)\b",
+        " ".join(block.get(key, "") for key in allowed),
+        re.IGNORECASE,
+    )
+    return bool(extra_fields or long_fields or execution_markers)
+
+
 def _check_todo(
     path: Path, *, repo_root: Path = REPO_ROOT
 ) -> tuple[list[PlanningWarning], set[str], list[dict[str, str]]]:
@@ -291,7 +306,16 @@ def _check_todo(
         execplan_ref = _surface_execplan_reference(surface_raw)
 
         if "in-progress" in status and execplan_ref:
-            if not (repo_root / execplan_ref).exists():
+            ref_path = repo_root / execplan_ref
+            if "docs/execplans/archive/" in execplan_ref:
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_TODO_BROKEN_SURFACE_REFERENCE,
+                        _render_path(path),
+                        f"TODO item '{item_id or '?'}' Surface points at archived plan '{execplan_ref}'; active work must point at a live execplan.",
+                    )
+                )
+            elif not ref_path.exists():
                 warnings.append(
                     PlanningWarning(
                         WARNING_TODO_BROKEN_SURFACE_REFERENCE,
@@ -306,6 +330,14 @@ def _check_todo(
                     WARNING_TODO_MISSING_EXECPLAN_LINKAGE,
                     _render_path(path),
                     f"TODO item '{item_id or '?'}' is in-progress without an execplan-backed Surface.",
+                )
+            )
+        if "in-progress" in status and _looks_small_direct_task(block) and _direct_task_has_plan_sized_shape(block):
+            warnings.append(
+                PlanningWarning(
+                    WARNING_TODO_PLAN_REQUIRED_HINT,
+                    _render_path(path),
+                    f"TODO item '{item_id or '?'}' still uses direct-task fields but already looks execplan-sized; promote it to docs/execplans/.",
                 )
             )
 
@@ -672,6 +704,14 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 "Touched Paths looks inventory-shaped; keep it as a compact scope guard.",
             )
         )
+    elif touched_path_bullets == 0:
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_UNDER_SPECIFIED,
+                _render_path(path),
+                "Touched Paths is empty; add the bounded files or directories this plan is allowed to touch.",
+            )
+        )
 
     invariants, _ = _extract_section_stats(lines, "Invariants")
     if len(invariants) > 16 or sum(len(line) for line in invariants) > 900:
@@ -682,12 +722,20 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 "Invariants section looks essay-shaped; keep concise contract statements.",
             )
         )
+    elif not [line for line in invariants if line.strip()]:
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_UNDER_SPECIFIED,
+                _render_path(path),
+                "Invariants is empty; record the contract statements that must stay true while executing this plan.",
+            )
+        )
 
     blockers, blocker_bullets = _extract_section_stats(lines, "Blockers")
     if len(blockers) > 10 and blocker_bullets <= 1:
         warnings.append(
             PlanningWarning(
-                WARNING_EXECPLAN_STRUCTURE_DRIFT,
+                WARNING_EXECPLAN_NOTEBOOK_DRIFT,
                 _render_path(path),
                 "Blockers section looks like status narrative; list explicit blockers only.",
             )
@@ -697,9 +745,19 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
     if not [line for line in completion_criteria if line.strip()] or completion_bullets == 0:
         warnings.append(
             PlanningWarning(
-                WARNING_EXECPLAN_STRUCTURE_DRIFT,
+                WARNING_EXECPLAN_UNDER_SPECIFIED,
                 _render_path(path),
                 "Completion Criteria is missing or vague.",
+            )
+        )
+
+    validation_commands, validation_bullets = _extract_section_stats(lines, "Validation Commands")
+    if not [line for line in validation_commands if line.strip()] or validation_bullets == 0:
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_UNDER_SPECIFIED,
+                _render_path(path),
+                "Validation Commands is empty; record the narrowest command that proves this plan.",
             )
         )
 
@@ -711,6 +769,14 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 WARNING_EXECPLAN_LOG_DRIFT,
                 _render_path(path),
                 "Drift Log is oversized/log-like; keep brief and decision-shaped.",
+            )
+        )
+    elif len(drift_entries) >= 6:
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_NOTEBOOK_DRIFT,
+                _render_path(path),
+                "Drift Log is trending journal-shaped; archive or compress older decision residue.",
             )
         )
 
@@ -727,6 +793,15 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
         )
 
     text = "\n".join(lines)
+    if len(lines) > 220:
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_NOTEBOOK_DRIFT,
+                _render_path(path),
+                "Execplan is getting long enough to act like a notebook; trim stale narrative or archive completed work.",
+            )
+        )
+
     if _contains_durable_technical_fact_shape(lines):
         warnings.append(
             PlanningWarning(
@@ -896,6 +971,63 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
     return warnings
 
 
+def gather_planning_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
+    todo_path = repo_root / "TODO.md"
+    roadmap_path = repo_root / "ROADMAP.md"
+    execplan_dir = repo_root / "docs" / "execplans"
+
+    todo_lines = _read_lines(todo_path)
+    todo_items = _todo_item_blocks(todo_lines)
+    active_items = []
+    for block in todo_items:
+        status = block.get("status", "").lower()
+        if "in-progress" in status or "active" in status or "ongoing" in status:
+            active_items.append(
+                {
+                    "id": block.get("id", ""),
+                    "surface": block.get("surface", ""),
+                    "why_now": block.get("why now", ""),
+                }
+            )
+
+    active_execplans = []
+    for plan_path in _active_execplans(execplan_dir):
+        status = ""
+        for line in _section_content(_read_lines(plan_path), "Active Milestone"):
+            match = re.match(r"^\s*-\s*status\s*:\s*(.*)\s*$", line, re.IGNORECASE)
+            if match:
+                status = match.group(1).strip().lower()
+                break
+        if status and status not in {"completed", "done", "closed", "planned", "pending", "not-started"}:
+            active_execplans.append({"path": _render_path(plan_path), "status": status})
+
+    candidate_section = _section_content(_read_lines(roadmap_path), "Next Candidate Queue")
+    warnings = gather_planning_warnings(repo_root=repo_root)
+
+    return {
+        "warning_count": len(warnings),
+        "warnings": [warning._asdict() for warning in warnings],
+        "todo": {
+            "line_count": len(todo_lines),
+            "item_count": len(todo_items),
+            "active_count": len(active_items),
+            "active_items": active_items,
+        },
+        "execplans": {
+            "active_count": len(active_execplans),
+            "active_execplans": active_execplans,
+            "archived_count": sum(
+                1 for path in (execplan_dir / "archive").glob("*.md") if path.is_file()
+            )
+            if (execplan_dir / "archive").exists()
+            else 0,
+        },
+        "roadmap": {
+            "candidate_count": sum(1 for line in candidate_section if re.match(r"^\s*-\s+", line)),
+        },
+    }
+
+
 def _print_warnings(warnings: list[PlanningWarning]) -> None:
     print("Planning surface health report")
     if not warnings:
@@ -924,14 +1056,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    warnings = gather_planning_warnings(repo_root=REPO_ROOT)
+    summary = gather_planning_summary(repo_root=REPO_ROOT)
+    warnings = [PlanningWarning(**warning) for warning in summary["warnings"]]
 
     if args.format == "json":
-        payload = {
-            "warning_count": len(warnings),
-            "warnings": [warning._asdict() for warning in warnings],
-        }
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
     else:
         _print_warnings(warnings)
 

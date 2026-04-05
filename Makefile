@@ -1,4 +1,4 @@
-.PHONY: test lint check-planning-surfaces check-planning-surfaces-json check-planning-surfaces-strict plan-check plan-check-json plan-check-strict render-agent-docs check-memory
+.PHONY: test lint check-planning-surfaces check-planning-surfaces-json check-planning-surfaces-strict plan-check plan-check-json plan-check-strict plan-summary render-agent-docs check-memory
 
 test:
 	uv run pytest
@@ -23,6 +23,9 @@ plan-check-json:
 
 plan-check-strict:
 	uv run python scripts/check/check_planning_surfaces.py --strict
+
+plan-summary:
+	uv run python scripts/check/check_planning_surfaces.py --format json
 
 render-agent-docs:
 	uv run python scripts/render_agent_docs.py
