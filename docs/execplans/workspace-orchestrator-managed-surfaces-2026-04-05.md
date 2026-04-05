@@ -13,14 +13,14 @@
 ## Active Milestone
 
 - Status: in-progress
-- Scope: define the target ownership model, then move planning-managed startup assets behind a workspace-level orchestrator and explicit fences without blurring repo-owned authority.
+- Scope: route planning-managed startup assets and helper surfaces through the workspace-level orchestrator and begin consuming the ownership ledger from installer logic.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Specify the target `.agentic-workspace/` layout and ownership ledger format so installer, upgrade, verify, and uninstall all use the same source of truth before any file moves begin.
+- Enumerate planning-managed routing and helper surfaces currently rooted in `tools/` and `scripts/`, then move or regenerate them from `.agentic-workspace/planning/` behind explicit managed fences.
 
 ## Blockers
 
@@ -71,3 +71,4 @@
 - 2026-04-05: Plan created by promoting the workspace-orchestrator and fenced-managed-surface candidate from ROADMAP into an active execution contract.
 - 2026-04-05: Added package-local `AGENTS.md` entrypoints under `packages/memory/` and `packages/planning/` so package work starts from explicit source-vs-payload-vs-root-authority boundaries before the broader orchestrator refactor begins.
 - 2026-04-05: Root contract updated to make dogfooding explicit: development here is live package testing, agents should capture friction as improvement signals, and changes should generalise beyond this monorepo.
+- 2026-04-05: Milestone 1 complete: seeded `.agentic-workspace/WORKFLOW.md`, defined the initial ownership-ledger format in `.agentic-workspace/OWNERSHIP.toml`, and switched the root `AGENTS.md` pointer to the workspace-level orchestrator.

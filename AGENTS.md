@@ -1,8 +1,8 @@
 # Agent Instructions
 
-<!-- agentic-memory:workflow:start -->
-Read `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.
-<!-- agentic-memory:workflow:end -->
+<!-- agentic-workspace:workflow:start -->
+Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules.
+<!-- agentic-workspace:workflow:end -->
 
 Local bootstrap contract for agents working in this monorepo.
 

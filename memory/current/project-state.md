@@ -13,8 +13,9 @@ Phase-4 root orchestration complete; migration foundation stabilized
 - AGENTS.md
 - TODO.md
 - docs/migration/monorepo-migration-plan.md
+- .agentic-workspace/WORKFLOW.md
+- .agentic-workspace/OWNERSHIP.toml
 - memory/index.md
-- .agentic-memory/WORKFLOW.md
 - docs/execplans/
 - tools/agent-manifest.json
 
@@ -34,7 +35,7 @@ Phase-4 root orchestration complete; migration foundation stabilized
 - Consolidate bootstrap namespace: move `.agentic-memory/` and `.agentic-planning/` to `.agentic-workspace/{memory,planning}/`.
 - Ensure both bootstraps work end-to-end with new paths and pass all validation tests.
 - Maintain package boundaries and independent release tracks while converging on unified namespace convention.
-- Define the next cleanup tranche: a workspace-owned orchestrator file and fenced product-managed insertions so shared guidance stops blending into repo-owned `AGENTS.md` prose.
+- Route planning-managed startup assets and helper surfaces behind the workspace-owned orchestrator and explicit managed fences.
 - Use normal development in this repo as product dogfooding, while routing friction and improvement signals back into plans or memory without overfitting package behavior to this monorepo.
 
 ## Recent meaningful progress
@@ -44,6 +45,7 @@ Phase-4 root orchestration complete; migration foundation stabilized
 - Verified end-to-end: both bootstraps successfully generate install plans targeting new consolidated structure.
 - Fixed syntax warnings and package escape sequences in installers and test fixtures.
 - Migrated current repo's installed systems from old dotfiles to new consolidated structure.
+- Seeded the workspace-level orchestrator contract and initial ownership ledger so future installer cleanup can converge on one source of truth.
 
 ## Blockers
 
@@ -57,6 +59,7 @@ Phase-4 root orchestration complete; migration foundation stabilized
 - Use root memory domain notes for package-origin context after package-local uninstall cleanup.
 - Product-managed additions should stay visibly fenced off from repo-owned instructions; a thin pointer block in `AGENTS.md` is preferred over mixed ownership prose.
 - Improvement signals from dogfooding should become plan updates, roadmap candidates, or memory pressure notes rather than staying implicit in ad hoc experience.
+- `.agentic-workspace/WORKFLOW.md` now owns the shared startup contract; root `AGENTS.md` should continue shrinking toward a thin repo entrypoint.
 
 ## Failure signals
 
@@ -72,6 +75,8 @@ Phase-4 root orchestration complete; migration foundation stabilized
 ## Verified against
 
 - `memory/index.md`
+- `.agentic-workspace/WORKFLOW.md`
+- `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/memory/WORKFLOW.md`
 - `AGENTS.md`
 - `TODO.md`
@@ -82,4 +87,4 @@ Phase-4 root orchestration complete; migration foundation stabilized
 
 ## Last confirmed
 
-2026-04-05 during root installed-system consolidation
+2026-04-05 during workspace-orchestrator milestone 1
