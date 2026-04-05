@@ -12,15 +12,15 @@
 
 ## Active Milestone
 
-- Status: in-progress
+- Status: completed
 - Scope: identify how generated artefacts are entering the payload, exclude them from package copy/install flows, and verify the self-hosted adopt path stays clean.
-- Ready: ready
-- Blocked: none
+- Ready: false
+- Blocked: n/a
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Inspect the payload discovery/copy path and the repo packaging config to locate where `__pycache__` artefacts are being picked up, then apply the smallest robust exclusion.
+- Archive this completed plan if no immediate follow-up work is required.
 
 ## Blockers
 
@@ -57,3 +57,4 @@
 ## Drift Log
 
 - 2026-04-05: Plan created after the canonical self-refresh workflow reported `scripts/__pycache__/render_agent_docs.cpython-314.pyc` as part of the payload.
+- 2026-04-05: Confirmed payload filtering blocks generated artefacts in the installer path, added regression coverage, and validated that wheel payload assembly stays clean before closing the thread.
