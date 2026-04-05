@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentic-bootstrap-monorepo"
+version = "0.0.0"
+description = "Monorepo host for agentic-memory-bootstrap and agentic-planning-bootstrap migration work."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.uv.workspace]
+members = [
+  "packages/memory",
+  "packages/planning",
+]
