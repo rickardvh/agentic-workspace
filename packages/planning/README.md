@@ -141,7 +141,7 @@ The package installs the checked-in planning contract and its supporting surface
 - `docs/execplans/README.md`
 - `docs/execplans/TEMPLATE.md`
 - `docs/execplans/archive/README.md`
-- `.agentic-planning/UPGRADE-SOURCE.toml`
+- `.agentic-workspace/planning/UPGRADE-SOURCE.toml`
 - `tools/agent-manifest.json`
 - `tools/AGENT_QUICKSTART.md`
 - `tools/AGENT_ROUTING.md`
@@ -293,7 +293,7 @@ This system is most useful when:
 
 `uninstall` is intentionally safe: it removes managed files only when they still match package content and leaves locally modified files in place for manual review.
 
-`.agentic-planning/UPGRADE-SOURCE.toml` records the intended bootstrap source for install and upgrade workflows. `doctor` reports that source and warns when the recorded source age crosses the configured threshold so upgrades remain intentional rather than silently drifting.
+`.agentic-workspace/planning/UPGRADE-SOURCE.toml` records the intended bootstrap source for install and upgrade workflows. `doctor` reports that source and warns when the recorded source age crosses the configured threshold so upgrades remain intentional rather than silently drifting.
 
 ## Success Criteria
 

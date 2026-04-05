@@ -20,7 +20,7 @@ Some AI agents, such as GitHub Copilot, have their own built-in memory, but that
 - **Clear ownership boundary.** Memory owns durable repo knowledge that is expensive to reconstruct from code alone: invariants, authority boundaries, recurring failure modes, operator sequences, and routing hints. The repository's active planning surface (`TODO.md`, issue trackers, and similar systems) keeps ownership of active intent and sequencing. Memory complements planning; it never competes with it.
 - **Improvement pressure without memory dependence.** Each note can declare whether it is *durable truth* or an *improvement signal* - something that exists because the repo still needs better tests, docs, validation, or design. Manifest fields like `preferred_remediation` and `elimination_target` let the `doctor` command, the freshness audit, and the sync workflow surface actionable suggestions that drive improvements into the codebase without assuming memory volume should follow one universal trend.
 - **Freshness and hygiene tooling.** A bundled audit script checks for missing metadata, stale confirmations, oversized notes, and manifest/note mismatches. `stale_when` globs catch semantic drift from code changes, not just calendar age.
-- **Skills layer.** Repeatable memory operations such as capture, hygiene, refresh, routing, and upgrade ship as upgrade-replaceable skills under `.agentic-memory/skills/`. Repos can add their own memory-specific skills under `memory/skills/` without modifying the core set.
+- **Skills layer.** Repeatable memory operations such as capture, hygiene, refresh, routing, and upgrade ship as upgrade-replaceable skills under `.agentic-workspace/memory/skills/`. Repos can add their own memory-specific skills under `memory/skills/` without modifying the core set.
 - **Language-agnostic.** The installed memory system is plain Markdown and TOML. It works in any repository regardless of language or framework. Only the bootstrap CLI itself requires Python; once installed, the memory layer has no runtime dependencies.
 
 ### Bootstrap CLI requirements
@@ -64,11 +64,11 @@ Running `install` or `adopt` adds the following to your repository:
 | `memory/mistakes/` | Recurring failure modes |
 | `memory/decisions/` | Longer-lived rationale and trade-offs |
 | `memory/current/` | Lightweight project overview and optional task-continuation compression |
-| `.agentic-memory/skills/` | Bootstrap-managed shared memory skills, upgrade-replaceable |
+| `.agentic-workspace/memory/skills/` | Bootstrap-managed shared memory skills, upgrade-replaceable |
 | `memory/skills/` | Optional repo-owned memory skills |
 | `scripts/check/` | Advisory freshness audit script |
 
-Install and adopt flows may create a temporary `.agentic-memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace. Upgrade should normally route through the checked-in `memory-upgrade` skill and no longer depends on that workspace as part of the primary model.
+Install and adopt flows may create a temporary `.agentic-workspace/memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace. Upgrade should normally route through the checked-in `memory-upgrade` skill and no longer depends on that workspace as part of the primary model.
 
 In this monorepo checkout, the active operational memory install lives at the repository root. This package directory keeps the reusable package source, bootstrap payload, tests, and fixtures; the paths listed above describe the target-repository structure that `install` or `adopt` writes.
 
@@ -92,7 +92,7 @@ uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirector
 pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
 ```
 
-Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. The printed prompt is designed for an agent to execute the bootstrap flow without asking you to install or clone this repo first. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but normal upgrades should route through the checked-in `memory-upgrade` skill under `.agentic-memory/skills/`, which runs the packaged upgrade flow using `.agentic-memory/UPGRADE-SOURCE.toml`. Treat that file as the source of truth for remote runner specs instead of scattering raw Git URLs through local workflow docs.
+Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. The printed prompt is designed for an agent to execute the bootstrap flow without asking you to install or clone this repo first. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but normal upgrades should route through the checked-in `memory-upgrade` skill under `.agentic-workspace/memory/skills/`, which runs the packaged upgrade flow using `.agentic-workspace/memory/UPGRADE-SOURCE.toml`. Treat that file as the source of truth for remote runner specs instead of scattering raw Git URLs through local workflow docs.
 
 Typical lifecycle for a fresh bootstrap:
 
@@ -100,7 +100,7 @@ Typical lifecycle for a fresh bootstrap:
 2. If new current-memory files were created, populate them conservatively.
 3. Run `bootstrap-cleanup` when bootstrap lifecycle work is complete.
 
-After the agent finishes install or adopt lifecycle work, run `agentic-memory-bootstrap bootstrap-cleanup --target /path/to/repo`, or let the agent run it, to remove the temporary `.agentic-memory/bootstrap/` workspace.
+After the agent finishes install or adopt lifecycle work, run `agentic-memory-bootstrap bootstrap-cleanup --target /path/to/repo`, or let the agent run it, to remove the temporary `.agentic-workspace/memory/bootstrap/` workspace.
 
 If you omit the placeholder flags such as `--project-name` or `--project-purpose`, your `AGENTS.md` will contain unfilled placeholders. Run `doctor` after install to identify them.
 
@@ -147,7 +147,7 @@ uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirector
 pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
 ```
 
-This is the preferred upgrade path for the primary agent-first workflow. The prompt tells the agent to use the checked-in `memory-upgrade` skill as the single repo-local upgrade entrypoint; the skill then runs the packaged upgrade flow using `.agentic-memory/UPGRADE-SOURCE.toml`.
+This is the preferred upgrade path for the primary agent-first workflow. The prompt tells the agent to use the checked-in `memory-upgrade` skill as the single repo-local upgrade entrypoint; the skill then runs the packaged upgrade flow using `.agentic-workspace/memory/UPGRADE-SOURCE.toml`.
 
 ### Manual alternative
 
@@ -207,7 +207,7 @@ Do not put general non-memory skills there.
 
 ## Memory Guidance
 
-The installed `WORKFLOW.md` under `.agentic-memory/` is the full reference for memory conventions, note types, improvement pressure, anti-patterns, and interoperability with planning surfaces. Key principles:
+The installed `WORKFLOW.md` under `.agentic-workspace/memory/` is the full reference for memory conventions, note types, improvement pressure, anti-patterns, and interoperability with planning surfaces. Key principles:
 
 - **Write to memory** when the fact is expensive to rediscover from code alone: invariants, authority boundaries, recurring failure modes, operator procedures, routing hints.
 - **Don't write to memory** for milestone status, backlog state, execution logs, or anything the repo's planning surface already owns.
