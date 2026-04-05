@@ -117,6 +117,27 @@ Active files stay small and current.
 - no runtime dependencies in the adopting repo
 - no hidden state
 
+## Ownership Boundary
+
+Put information in planning when it changes what is active now, what comes next, or what counts as done for live work.
+
+Planning owns:
+
+- roadmap state
+- active queue state
+- execplan structure
+- milestone sequencing
+- blockers and completion criteria for live work
+- planning-surface lifecycle helpers
+
+Planning does not own:
+
+- durable subsystem memory
+- recurring technical lessons that outlive the active task
+- routing of durable note bundles
+- broad knowledge-base content
+- canonical architecture documentation
+
 ## What This Is Not
 
 `agentic-planning-bootstrap` is deliberately not primarily:
@@ -130,6 +151,13 @@ Active files stay small and current.
 - a runtime orchestration tool
 
 It is not meant to become a Jira replacement, even though a repo may use it for lightweight planning and tracking.
+
+## Anti-Blur Rules
+
+- Planning must not become a knowledge base.
+- Planning should not absorb durable technical residue that belongs in memory or canonical docs.
+- Planning should stay useful on its own; it must not require a memory install to make sense.
+- The package should preserve clear horizons rather than growing a shadow routing or orchestration layer inside planning surfaces.
 
 ## What the Package Installs
 

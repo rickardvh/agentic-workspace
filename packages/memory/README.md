@@ -27,6 +27,34 @@ Some AI agents, such as GitHub Copilot, have their own built-in memory, but that
 
 Python 3.11 or newer, only needed to run the installer, not at runtime in the target repo.
 
+## Ownership Boundary
+
+Put information in memory when it preserves durable knowledge that outlives the current task and is expensive to reconstruct quickly.
+
+Memory owns:
+
+- durable subsystem orientation
+- invariants and authority boundaries
+- recurring failure modes
+- operator runbooks
+- compact continuation context
+- memory routing metadata and note hygiene rules
+
+Memory does not own:
+
+- active task state
+- next actions or milestone sequencing
+- backlog state
+- execution logs
+- broad canonical documentation
+
+## Anti-Blur Rules
+
+- Memory must not become a task tracker or backlog mirror.
+- Memory should complement planning surfaces, not replace them.
+- Routing hints inside memory should stay subordinate to the repo's canonical startup and planning contract.
+- Selective adoption must remain valid: memory should still make sense in repos that do not install planning.
+
 ## Table Of Contents
 
 - [agentic-memory-bootstrap](#agentic-memory-bootstrap)
