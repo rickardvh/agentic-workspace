@@ -10,7 +10,8 @@ Resolve instruction conflicts in this order:
 2. Active feature plan in `docs/execplans/`, when the task belongs to that plan.
 3. `AGENTS.md`.
 4. Checked-in workflow or memory policy docs, when present.
-5. Repo docs explicitly referenced by the active route or plan.
+5. Routed memory and invariants, when present and relevant.
+6. Repo docs explicitly referenced by the active route or plan.
 
 Prefer checked-in knowledge over durable chat memory when both exist.
 
@@ -23,7 +24,7 @@ Prefer checked-in knowledge over durable chat memory when both exist.
 5. Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.
 6. Prefer `tools/agent-manifest.json` and `tools/AGENT_QUICKSTART.md` before freeform exploration.
 7. Read only the repo docs relevant to the touched subsystem.
-8. Read checked-in memory or workflow policy only when the task actually touches those surfaces.
+8. Read `memory/index.md` and `.agentic-memory/WORKFLOW.md` only when memory is installed and the task is not already well-routed by the plan or manifest, or when changing workflow, planning, or memory itself.
 
 Do not bulk-read all planning surfaces for ordinary execution work. Start from `TODO.md`, then read at most one relevant active execplan.
 
@@ -34,6 +35,8 @@ Do not start coding from chat context alone when the same knowledge should live 
 - Active queue and lightweight direct tasks: `TODO.md`
 - Active feature execution contracts: `docs/execplans/`
 - Long-horizon planning: `ROADMAP.md`
+- Durable routed knowledge, when installed: `memory/index.md`
+- Shared memory workflow policy, when installed: `.agentic-memory/WORKFLOW.md`
 - Machine-readable routing and command bundles: `tools/agent-manifest.json`
 - Agent quickstart and rendered hot paths: `tools/AGENT_QUICKSTART.md`
 
@@ -45,6 +48,7 @@ Do not start coding from chat context alone when the same knowledge should live 
 - Key subsystems: `<KEY_SUBSYSTEMS>`.
 - Do not broaden migrations, refactors, or schema changes beyond the active task unless a required adjacent fix is necessary for correctness.
 - Prefer updating an existing plan over creating overlapping plan files for the same feature.
+- Memory complements planning; it does not own active queue state, milestone sequencing, or backlog status.
 - Keep durable implementation facts in canonical docs or memory, not in planning surfaces.
 
 ## Tooling And Validation

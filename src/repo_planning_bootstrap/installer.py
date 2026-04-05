@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import shutil
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -98,7 +99,7 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
         path = target_root / relative
         if path.exists():
             text = path.read_text(encoding="utf-8")
-            if "<" in text and ">" in text:
+            if _has_unresolved_placeholders(text):
                 result.add("manual review", path, "starter placeholders still need custom values")
 
     warnings = _run_planning_checker(target_root)
@@ -217,3 +218,7 @@ def _render_quickstart_for_repo(target_root: Path) -> str:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.render_quickstart(module.load_manifest())
+
+
+def _has_unresolved_placeholders(text: str) -> bool:
+    return bool(re.search(r"<[A-Z][A-Z0-9_]+>", text))

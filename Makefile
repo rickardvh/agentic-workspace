@@ -11,3 +11,6 @@ check-planning-surfaces:
 
 render-agent-docs:
 	uv run python scripts/render_agent_docs.py
+
+check-memory:
+	python scripts/check/check_memory_freshness.py

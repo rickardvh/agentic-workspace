@@ -2,7 +2,7 @@
 
 A small CLI and packaged payload for installing a checked-in planning system into a repository.
 
-This repo is the planning-system sister package to `agentic-memory`. Memory owns durable repo knowledge; planning owns active queue state, active execution contracts, and inactive strategic candidates.
+This repo is the planning-system companion package to `agentic-memory`. Memory owns durable repo knowledge; planning owns active queue state, active execution contracts, and inactive strategic candidates.
 
 ## What it installs
 
