@@ -1,0 +1,69 @@
+# Agent Quickstart
+
+Fast path for autonomous agents working on this repo.
+
+## First reads
+
+- `AGENTS.md`
+- `TODO.md`
+- `docs/execplans/README.md`
+- `tools/agent-manifest.json`
+
+## Conditional reads
+
+- Read the active feature plan in `docs/execplans/` when the task belongs to one.
+- Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.
+- Before editing files in a subtree, read the nearest relevant descendant `AGENTS.md` for that subtree only.
+- Do not bulk-read all planning surfaces for ordinary execution work; start from `TODO.md` and then the one relevant active plan.
+- Read only the repo docs explicitly referenced by that route.
+
+## Small-task mode
+
+- For very local changes, skip plans unless this manifest, the active plan, or the nearest descendant `AGENTS.md` says they are needed.
+
+## When to create a plan
+
+- Create or update a plan when work spans multiple milestones, will be handed across threads or models, or carries enough ambiguity that implementation should not start from chat context alone.
+
+## Validation flow
+
+- Run the narrowest validation that proves the change.
+- Use `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, and the nearest subsystem `AGENTS.md` for task-specific commands.
+- Escalate to broader checks only when the change crosses subsystem boundaries or invalidates the narrower proof.
+
+## Completion reminders
+
+- Do not leave completed task detail in `TODO.md` once it no longer changes execution.
+
+## Generated surfaces
+
+- `tools/AGENT_QUICKSTART.md` is generated from this manifest by `python scripts/render_agent_docs.py`.
+
+## Source of truth
+
+- Active queue and lightweight direct tasks: `TODO.md`
+- Active feature plans: `docs/execplans/`
+- Archived plans: `docs/execplans/archive/`
+- Long-horizon planning: `ROADMAP.md`
+- Machine-readable routing: `tools/agent-manifest.json`
+
+## Common task classes
+
+- `planning_surface_change`
+  Use when: Editing planning surfaces, plan templates, or planning-surface checks.
+  Prefer this route when: the change affects TODO, ROADMAP, execplans, or the planning bootstrap itself.
+  Touches: `AGENTS.md`, `TODO.md`, `ROADMAP.md`, `docs/execplans/`, `scripts/check/check_planning_surfaces.py`, `scripts/render_agent_docs.py`, `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`
+  Validate: `python scripts/check/check_planning_surfaces.py`; `python scripts/render_agent_docs.py`
+
+## Skills
+
+- Repo development skills: `tools/skills`
+- Shared memory workflow skills: `.agentic-memory/skills`
+- Repo-specific memory skills: `memory/skills`
+
+## Core invariants
+
+- TODO.md owns active queue state and lightweight direct tasks.
+- Active execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work.
+- ROADMAP.md owns inactive long-horizon candidate epics and promotion signals.
+- Do not bulk-read all planning surfaces for ordinary execution work.
