@@ -5,6 +5,9 @@ import json
 import shutil
 
 from repo_planning_bootstrap import __version__
+from repo_planning_bootstrap._planning import run_checker_cli
+from repo_planning_bootstrap._render import write_rendered_agent_docs
+from repo_planning_bootstrap._source import UpgradeSource, resolve_upgrade_source
 from repo_planning_bootstrap.installer import (
     adopt_bootstrap,
     archive_execplan,
@@ -21,8 +24,6 @@ from repo_planning_bootstrap.installer import (
     upgrade_bootstrap,
     verify_payload,
 )
-
-GIT_REPO_URL = "git+https://github.com/rickardvh/agentic-planning"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -193,13 +194,51 @@ def _print_summary(summary: dict) -> None:
 
 
 def _build_prompt(command: str, target: str | None) -> str:
-    runner = _preferred_runner()
+    source = resolve_upgrade_source(target)
+    runner = _preferred_runner(source)
     target_args = f" --target {target}" if target else ""
     if command == "install":
+        if runner is None:
+            return (
+                "No pinned remote runner is published for this bootstrap version yet. "
+                "Use an installed `agentic-planning-bootstrap` command if it is already available locally, "
+                "or publish a tagged release before relying on remote `prompt install` workflows."
+            )
         return (
             f"Run `{runner} install{target_args}`. "
             "Then customise `AGENTS.md`, prune starter placeholders, and run "
-            "`python scripts/render_agent_docs.py` plus `make plan-check`."
+            f"`{runner} render-agent-docs{target_args}` plus "
+            f"`{runner} check-planning-surfaces{target_args}`."
+        )
+    if command == "adopt":
+        if runner is None:
+            return (
+                "No pinned remote runner is published for this bootstrap version yet. "
+                "Use an installed `agentic-planning-bootstrap` command if it is already available locally, "
+                "or publish a tagged release before relying on remote `prompt adopt` workflows."
+            )
+        return (
+            f"Run `{runner} adopt{target_args}` conservatively. "
+            "Do not overwrite repo-owned planning files unless the user asks for it. "
+            f"Afterwards run `{runner} render-agent-docs{target_args}` and "
+            f"`{runner} check-planning-surfaces{target_args}`."
+        )
+    if command == "upgrade":
+        upgrade_guidance = (
+            f"Use the checked-in `bootstrap-upgrade` skill under `{_managed_skills_path(target)}/`. "
+            "It should use the repo's `.agentic-planning/UPGRADE-SOURCE.toml`, prefer an installed "
+            "`agentic-planning-bootstrap` command when available, and rerun render/check validation."
+        )
+        if runner is None:
+            return upgrade_guidance
+        return (
+            upgrade_guidance
+            + f" If a local install is unavailable, fall back to `{runner} upgrade --target <repo>`."
+        )
+    if runner is None:
+        return (
+            "No pinned remote runner is published for this bootstrap version yet. "
+            "Use an installed `agentic-planning-bootstrap` command if it is already available locally."
         )
     return (
         f"Run `{runner} adopt{target_args}` conservatively. "
@@ -208,9 +247,26 @@ def _build_prompt(command: str, target: str | None) -> str:
     )
 
 
-def _preferred_runner() -> str:
+def _preferred_runner(source: UpgradeSource) -> str | None:
+    if source.source_type == "none" or not source.source_ref:
+        return None
+    if source.source_type == "local":
+        return _runner_command_for_local_source(source.source_ref)
     if shutil.which("uvx"):
-        return f"uvx --from {GIT_REPO_URL} agentic-planning-bootstrap"
+        return f"uvx --from {source.source_ref} agentic-planning-bootstrap"
     if shutil.which("pipx"):
-        return f"pipx run --spec {GIT_REPO_URL} agentic-planning-bootstrap"
-    return f"uvx --from {GIT_REPO_URL} agentic-planning-bootstrap"
+        return f"pipx run --spec {source.source_ref} agentic-planning-bootstrap"
+    return f"uvx --from {source.source_ref} agentic-planning-bootstrap"
+
+
+def _managed_skills_path(target: str | None) -> str:
+    target_root = target or "/path/to/repo"
+    return f"{target_root}/skills"
+
+
+def _runner_command_for_local_source(source_ref: str) -> str:
+    if shutil.which("uvx"):
+        return f"uvx --from {source_ref} agentic-planning-bootstrap"
+    if shutil.which("pipx"):
+        return f"pipx run --spec {source_ref} agentic-planning-bootstrap"
+    return f"uvx --from {source_ref} agentic-planning-bootstrap"

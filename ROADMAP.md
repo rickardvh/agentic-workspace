@@ -27,7 +27,7 @@ Do not use it for:
 
 ## Next Candidate Queue
 
-No candidate epics right now.
+- Release-source pinning: switch `.agentic-planning/UPGRADE-SOURCE.toml` from `@master` to immutable tags or releases when the package has a stable release cadence and publish path.
 
 ## Reopen Conditions
 

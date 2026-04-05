@@ -10,7 +10,10 @@ from pathlib import Path
 from typing import Any
 
 from repo_planning_bootstrap import __version__
-from repo_planning_bootstrap._render import load_manifest, render_quickstart, render_routing
+from repo_planning_bootstrap._planning import gather_planning_summary, gather_planning_warnings
+from repo_planning_bootstrap._render import render_agent_docs_for_target
+from repo_planning_bootstrap._skills import skills_root
+from repo_planning_bootstrap._source import UPGRADE_SOURCE_PATH, resolve_upgrade_source
 
 REQUIRED_PAYLOAD_FILES = (
     Path("AGENTS.md"),
@@ -19,8 +22,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
     Path("docs/execplans/archive/README.md"),
-    Path("scripts/check/check_planning_surfaces.py"),
-    Path("scripts/render_agent_docs.py"),
+    UPGRADE_SOURCE_PATH,
     Path("tools/agent-manifest.json"),
     Path("tools/AGENT_QUICKSTART.md"),
     Path("tools/AGENT_ROUTING.md"),
@@ -173,6 +175,24 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message="Doctor report", dry_run=True)
     result.add("mode", target_root, f"detected adoption mode: {_detect_adoption_mode(target_root)}")
+    upgrade_source = resolve_upgrade_source(target_root)
+    source_detail = f"{upgrade_source.source_label}: {upgrade_source.source_ref}"
+    result.add("source", target_root / UPGRADE_SOURCE_PATH, source_detail)
+    source_age = upgrade_source.age_days()
+    if source_age is not None:
+        result.add("source age", target_root / UPGRADE_SOURCE_PATH, f"{source_age} days since {upgrade_source.recorded_at}")
+        if source_age >= upgrade_source.recommended_upgrade_after_days:
+            result.warnings.append(
+                {
+                    "warning_class": "upgrade_source_stale",
+                    "path": UPGRADE_SOURCE_PATH.as_posix(),
+                    "message": (
+                        f"Recorded upgrade source is {source_age} days old; consider refreshing from "
+                        f"{upgrade_source.source_label} when it is safe."
+                    ),
+                }
+            )
+
     for relative in REQUIRED_PAYLOAD_FILES:
         destination = target_root / relative
         detail = "required file present" if destination.exists() else "required file missing"
@@ -609,6 +629,7 @@ def _warning_remediation(warning_class: str) -> str | None:
         "roadmap_execution_drift": "Reduce ROADMAP back to candidate framing; keep active sequencing in TODO and execplans.",
         "roadmap_stale_candidate_pressure": "Prune stale candidate detail and leave compact candidate stubs only.",
         "promotion_linkage_drift": "Make the promotion signal explicit in TODO or ROADMAP so activation has a visible trigger.",
+        "upgrade_source_stale": "Refresh .agentic-planning/UPGRADE-SOURCE.toml after intentionally upgrading the bootstrap source.",
         "archive_accumulation_drift": "Remove completed residue from active surfaces or move completed plans into archive.",
         "planning_memory_boundary_blur": "Move durable technical facts into memory or canonical docs, then leave planning surfaces lean.",
         "startup_policy_drift": "Restore the minimal startup order in AGENTS, quickstart, and manifest.",

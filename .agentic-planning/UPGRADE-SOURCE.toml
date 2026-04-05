@@ -1,0 +1,5 @@
+source_type = "git"
+source_ref = "git+https://github.com/rickardvh/agentic-planning@master"
+source_label = "agentic-planning-bootstrap master"
+recorded_at = "2026-04-05"
+recommended_upgrade_after_days = 30
