@@ -22,7 +22,7 @@ from repo_planning_bootstrap.installer import (
     verify_payload,
 )
 
-GIT_REPO_URL = "git+https://github.com/Tenfifty/agentic-planning"
+GIT_REPO_URL = "git+https://github.com/rickardvh/agentic-planning"
 
 
 def build_parser() -> argparse.ArgumentParser:

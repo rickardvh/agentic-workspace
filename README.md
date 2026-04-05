@@ -143,6 +143,7 @@ The package installs the checked-in planning contract and its supporting surface
 - `docs/execplans/archive/README.md`
 - `tools/agent-manifest.json`
 - `tools/AGENT_QUICKSTART.md`
+- `tools/AGENT_ROUTING.md`
 - `scripts/render_agent_docs.py`
 - `scripts/check/check_planning_surfaces.py`
 

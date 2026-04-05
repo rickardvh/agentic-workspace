@@ -12,15 +12,15 @@
 
 ## Active Milestone
 
-- Status: in-progress
-- Scope: burn down the current `ROADMAP.md` candidate queue one thread at a time, with the next thread focused on more repo-agnostic generated agent-surface support.
-- Ready: ready
-- Blocked: none
+- Status: completed
+- Scope: burn down the remaining roadmap candidate queue, package the stable optional planning skill, and return the repo to an empty active-planning state.
+- Ready: false
+- Blocked: n/a
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Inspect the generated surface contract and identify the next repo-agnostic starter document that can be safely rendered from manifest/config rather than maintained as hand-edited duplicate text.
+- Archive this completed plan and leave the active planning surfaces empty.
 
 ## Blockers
 
@@ -60,3 +60,4 @@
 - 2026-04-05: Plan created to burn down the remaining roadmap candidate queue after the payload-hygiene thread closed.
 - 2026-04-05: Added conservative `upgrade` and safe `uninstall` lifecycle commands, then tightened the lifecycle boundary so repo-owned files like `tools/agent-manifest.json` are preserved during upgrade dogfooding.
 - 2026-04-05: Tightened `archive-plan --apply-cleanup` so removing the last TODO item restores a valid empty-state marker instead of leaving a blank `## Next` section behind.
+- 2026-04-05: Added a second generated agent surface (`tools/AGENT_ROUTING.md`), updated the render/install/verify pipeline to keep generated docs in sync, and packaged a repo-specific `planning-surface-change` skill after the workflow proved stable in repeated dogfooding.

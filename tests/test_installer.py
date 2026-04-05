@@ -78,6 +78,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert (tmp_path / "TODO.md").exists()
     assert (tmp_path / "ROADMAP.md").exists()
     assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
+    assert (tmp_path / "tools" / "AGENT_ROUTING.md").exists()
     assert any(action.kind in {"copied", "created", "updated"} for action in result.actions)
 
 
@@ -111,11 +112,14 @@ def test_payload_filters_generated_artifacts(tmp_path: Path, monkeypatch) -> Non
     assert any(action.path == tmp_path / "target" / "AGENTS.md" for action in result.actions)
 
 
-def test_verify_payload_quickstart_matches_manifest() -> None:
+def test_verify_payload_generated_docs_match_manifest() -> None:
     result = verify_payload()
     quickstart_actions = [action for action in result.actions if action.path.name == "AGENT_QUICKSTART.md"]
+    routing_actions = [action for action in result.actions if action.path.name == "AGENT_ROUTING.md"]
     assert quickstart_actions
+    assert routing_actions
     assert any(action.kind == "current" for action in quickstart_actions)
+    assert any(action.kind == "current" for action in routing_actions)
 
 
 def test_upgrade_bootstrap_overwrites_managed_files_but_preserves_root_surfaces(tmp_path: Path) -> None:

@@ -29,11 +29,12 @@
       "Do not leave completed task detail in `TODO.md` once it no longer changes execution."
     ],
     "generated_surfaces": [
-      "`tools/AGENT_QUICKSTART.md` is generated from this manifest by `python scripts/render_agent_docs.py`."
+      "`tools/AGENT_QUICKSTART.md` is generated from this manifest by `python scripts/render_agent_docs.py`.",
+      "`tools/AGENT_ROUTING.md` is generated from this manifest by `python scripts/render_agent_docs.py`."
     ],
     "validation_flow": [
       "Run the narrowest validation that proves the change.",
-      "Use `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, and the nearest subsystem `AGENTS.md` for task-specific commands.",
+      "Use `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`, and the nearest subsystem `AGENTS.md` for task-specific commands.",
       "Escalate to broader checks only when the change crosses subsystem boundaries or invalidates the narrower proof."
     ],
     "doc_precedence": [
@@ -53,7 +54,8 @@
     "memory/index.md": "memory-routing",
     ".agentic-memory/WORKFLOW.md": "shared-memory-workflow-policy",
     "tools/agent-manifest.json": "agent-manifest",
-    "tools/AGENT_QUICKSTART.md": "agent-hot-paths"
+    "tools/AGENT_QUICKSTART.md": "agent-hot-paths",
+    "tools/AGENT_ROUTING.md": "agent-routing-reference"
   },
   "skills": {
     "repo_dev_source_dir": "tools/skills",
@@ -73,7 +75,8 @@
         "scripts/check/check_planning_surfaces.py",
         "scripts/render_agent_docs.py",
         "tools/agent-manifest.json",
-        "tools/AGENT_QUICKSTART.md"
+        "tools/AGENT_QUICKSTART.md",
+        "tools/AGENT_ROUTING.md"
       ],
       "commands": [
         "make plan-check",

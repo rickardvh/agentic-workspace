@@ -23,7 +23,4 @@ When there is no active task, keep this file minimal.
 
 ## Next
 
-- ID: roadmap-burndown
-  Status: in-progress
-  Surface: docs/execplans/roadmap-burndown-2026-04-05.md
-  Why now: the roadmap still contains concrete candidate epics, and the user asked to implement the planned work until the planning surfaces are empty.
+- No active work right now.
