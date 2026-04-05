@@ -212,10 +212,7 @@ def test_promote_todo_item_to_execplan_refuses_existing_execplan_surface(tmp_pat
 
     result = promote_todo_item_to_execplan("plan-alpha", target=tmp_path)
 
-    assert any(
-        action.kind == "manual review" and "already points at" in action.detail
-        for action in result.actions
-    )
+    assert any(action.kind == "manual review" and "already points at" in action.detail for action in result.actions)
 
 
 def test_archive_execplan_moves_completed_plan(tmp_path: Path) -> None:

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import re
 import shutil
@@ -2033,5 +2033,3 @@ def uninstall_bootstrap(
         result=result,
     )
     return result
-
-

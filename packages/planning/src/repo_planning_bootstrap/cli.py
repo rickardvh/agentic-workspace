@@ -170,14 +170,8 @@ def _emit(result, output_format: str) -> int:
 def _print_summary(summary: dict) -> None:
     print(f"Target: {summary['target_root']}")
     print(f"Mode: {summary['adoption_mode']}")
-    print(
-        "TODO: "
-        f"{summary['todo']['active_count']} active / {summary['todo']['item_count']} items / {summary['todo']['line_count']} lines"
-    )
-    print(
-        "Execplans: "
-        f"{summary['execplans']['active_count']} active / {summary['execplans']['archived_count']} archived"
-    )
+    print(f"TODO: {summary['todo']['active_count']} active / {summary['todo']['item_count']} items / {summary['todo']['line_count']} lines")
+    print(f"Execplans: {summary['execplans']['active_count']} active / {summary['execplans']['archived_count']} archived")
     print(f"Roadmap: {summary['roadmap']['candidate_count']} candidate bullets")
     if summary["todo"]["active_items"]:
         print("Active items:")
@@ -229,10 +223,7 @@ def _build_prompt(command: str, target: str | None) -> str:
         )
         if runner is None:
             return upgrade_guidance
-        return (
-            upgrade_guidance
-            + f" If a local install is unavailable, fall back to `{runner} upgrade --target <repo>`."
-        )
+        return upgrade_guidance + f" If a local install is unavailable, fall back to `{runner} upgrade --target <repo>`."
     if runner is None:
         return (
             "No pinned remote runner is published for this bootstrap version yet. "

@@ -154,7 +154,9 @@ ALLOWED_HIGH_LEVEL_NOTES = {
 
 WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
 WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
-WORKFLOW_POINTER_BLOCK = f"{WORKFLOW_MARKER_START}\nRead `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n{WORKFLOW_MARKER_END}"
+WORKFLOW_POINTER_BLOCK = (
+    f"{WORKFLOW_MARKER_START}\nRead `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n{WORKFLOW_MARKER_END}"
+)
 EMBEDDED_WORKFLOW_HEADINGS = (
     "## Task system boundary",
     "## Memory discipline",

@@ -40,10 +40,10 @@ check-memory-strict:
 
 lint:
 	uv run ruff check . --fix
-	uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap memory skills
+	uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap skills
 
 markdownlint:
-	uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap memory skills
+	uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap skills
 
 format:
 	uv run ruff format .

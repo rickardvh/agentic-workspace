@@ -179,11 +179,7 @@ def _count_todo_now_items(lines: list[str]) -> int:
     if id_rows:
         return len(id_rows)
 
-    return sum(
-        1
-        for line in section
-        if re.match(r"^-\s+", line) and not re.match(r"^-\s+\[[ xX]\]\s+", line)
-    )
+    return sum(1 for line in section if re.match(r"^-\s+", line) and not re.match(r"^-\s+\[[ xX]\]\s+", line))
 
 
 def _todo_item_blocks(lines: list[str]) -> list[dict[str, str]]:
@@ -233,9 +229,7 @@ def _direct_task_has_plan_sized_shape(block: dict[str, str]) -> bool:
     return bool(extra_fields or long_fields or execution_markers)
 
 
-def _check_todo(
-    path: Path, *, repo_root: Path = REPO_ROOT
-) -> tuple[list[PlanningWarning], set[str], list[dict[str, str]]]:
+def _check_todo(path: Path, *, repo_root: Path = REPO_ROOT) -> tuple[list[PlanningWarning], set[str], list[dict[str, str]]]:
     warnings: list[PlanningWarning] = []
     active_ids: set[str] = set()
     active_items: list[dict[str, str]] = []
@@ -373,9 +367,7 @@ def _check_todo(
                 )
             )
 
-        if len(why_now) > 260 or re.search(
-            r"\b(blocker|depends on|milestone|validation|history)\b", why_now, re.IGNORECASE
-        ):
+        if len(why_now) > 260 or re.search(r"\b(blocker|depends on|milestone|validation|history)\b", why_now, re.IGNORECASE):
             warnings.append(
                 PlanningWarning(
                     WARNING_TODO_SHAPE_DRIFT,
@@ -421,16 +413,10 @@ def _surface_basename_tokens(surface_value: str) -> set[str]:
         "tranche",
         "scope",
     }
-    return {
-        token
-        for token in raw_tokens
-        if len(token) >= 4 and not token.isdigit() and token not in stop_tokens
-    }
+    return {token for token in raw_tokens if len(token) >= 4 and not token.isdigit() and token not in stop_tokens}
 
 
-def _check_promotion_linkage(
-    *, roadmap_path: Path, active_items: list[dict[str, str]]
-) -> list[PlanningWarning]:
+def _check_promotion_linkage(*, roadmap_path: Path, active_items: list[dict[str, str]]) -> list[PlanningWarning]:
     warnings: list[PlanningWarning] = []
     roadmap_text = "\n".join(_read_lines(roadmap_path)).lower()
     if not roadmap_text:
@@ -444,19 +430,14 @@ def _check_promotion_linkage(
         has_signal_reason = any(hint in why_now for hint in signal_hints)
         has_causal_reason = any(hint in why_now for hint in PROMOTION_REASON_HINTS)
         surface_tokens = _surface_basename_tokens(surface)
-        has_surface_link = bool(
-            surface_tokens and any(token in roadmap_text for token in surface_tokens)
-        )
+        has_surface_link = bool(surface_tokens and any(token in roadmap_text for token in surface_tokens))
 
         if not has_signal_reason and not has_causal_reason and not has_surface_link:
             warnings.append(
                 PlanningWarning(
                     WARNING_PROMOTION_LINKAGE_DRIFT,
                     _render_path(roadmap_path),
-                    (
-                        f"Active TODO item '{item_id}' lacks clear signal- or reason-driven "
-                        "linkage to ROADMAP framing."
-                    ),
+                    (f"Active TODO item '{item_id}' lacks clear signal- or reason-driven linkage to ROADMAP framing."),
                 )
             )
 
@@ -516,9 +497,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
 
     bootstrap = manifest.get("bootstrap", {}) if isinstance(manifest, dict) else {}
     first_reads = bootstrap.get("first_reads", []) if isinstance(bootstrap, dict) else []
-    conditional_reads = (
-        bootstrap.get("conditional_reads", []) if isinstance(bootstrap, dict) else []
-    )
+    conditional_reads = bootstrap.get("conditional_reads", []) if isinstance(bootstrap, dict) else []
 
     first_reads_lower = [str(item).lower() for item in first_reads]
     conditional_reads_lower = [str(item).lower() for item in conditional_reads]
@@ -533,9 +512,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         )
 
     if not any(
-        "roadmap.md` only when promoting work" in row
-        or "roadmap.md only when promoting work" in row
-        for row in conditional_reads_lower
+        "roadmap.md` only when promoting work" in row or "roadmap.md only when promoting work" in row for row in conditional_reads_lower
     ):
         warnings.append(
             PlanningWarning(
@@ -615,9 +592,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
     lowered_lines = [line.lower() for line in lines]
     headings = _heading_titles(lines)
 
-    missing_sections = [
-        section for section in EXPECTED_EXECPLAN_SECTIONS if section.lower() not in headings
-    ]
+    missing_sections = [section for section in EXPECTED_EXECPLAN_SECTIONS if section.lower() not in headings]
     if missing_sections:
         warnings.append(
             PlanningWarning(
@@ -636,12 +611,8 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
     ]
 
     all_status_rows = [line for line in lowered_lines if re.match(r"^\s*-\s*status\s*:\s*", line)]
-    planned_only_rows = [
-        line for line in all_status_rows if re.search(r"\b(planned|not-started|pending)\b", line)
-    ]
-    has_only_non_active_status = bool(all_status_rows) and len(planned_only_rows) == len(
-        all_status_rows
-    )
+    planned_only_rows = [line for line in all_status_rows if re.search(r"\b(planned|not-started|pending)\b", line)]
+    has_only_non_active_status = bool(all_status_rows) and len(planned_only_rows) == len(all_status_rows)
 
     # Enforce exactly one active milestone for active execplans; planned-only contracts are allowed.
     if not has_only_non_active_status and len(active_status_rows) != 1:
@@ -677,9 +648,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 )
             )
 
-        if ready_value in {"false", "blocked"} and (
-            not blocked_value or blocked_value in {"none", "n/a", ""}
-        ):
+        if ready_value in {"false", "blocked"} and (not blocked_value or blocked_value in {"none", "n/a", ""}):
             warnings.append(
                 PlanningWarning(
                     WARNING_EXECPLAN_READINESS_DRIFT,
@@ -688,12 +657,8 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 )
             )
 
-    next_action_section, next_action_bullets = _extract_section_stats(
-        lines, "Immediate Next Action"
-    )
-    non_empty_next_action = [
-        line for line in next_action_section if line.strip() and not line.strip().startswith("#")
-    ]
+    next_action_section, next_action_bullets = _extract_section_stats(lines, "Immediate Next Action")
+    non_empty_next_action = [line for line in next_action_section if line.strip() and not line.strip().startswith("#")]
     if not non_empty_next_action:
         warnings.append(
             PlanningWarning(
@@ -710,9 +675,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
         re.IGNORECASE,
     )
     if non_empty_next_action and (
-        next_action_bullets > 1
-        or re.search(r"(?m)^\s*\d+\.\s+", next_action_text)
-        or (prose_multi_step and len(non_empty_next_action) > 1)
+        next_action_bullets > 1 or re.search(r"(?m)^\s*\d+\.\s+", next_action_text) or (prose_multi_step and len(non_empty_next_action) > 1)
     ):
         warnings.append(
             PlanningWarning(
@@ -807,9 +770,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
             )
         )
 
-    completed_statuses = [
-        line for line in lowered_lines if re.match(r"^\s*-\s*status\s*:\s*.*\bcompleted\b", line)
-    ]
+    completed_statuses = [line for line in lowered_lines if re.match(r"^\s*-\s*status\s*:\s*.*\bcompleted\b", line)]
     if len(completed_statuses) > 1:
         warnings.append(
             PlanningWarning(
@@ -839,9 +800,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
         )
 
     match = re.search(r"(?im)^\s*-\s*ID\s*:\s*(\S+)\s*$", text)
-    if match and re.search(
-        r"(?im)^\s*-\s*Status\s*:\s*.*\b(in-progress|active|ongoing|current)\b", text
-    ):
+    if match and re.search(r"(?im)^\s*-\s*Status\s*:\s*.*\b(in-progress|active|ongoing|current)\b", text):
         active_signals.add(match.group(1))
 
     return warnings, active_signals
@@ -875,14 +834,9 @@ def _check_roadmap(path: Path, todo_active_ids: set[str]) -> list[PlanningWarnin
         )
 
     candidate_section = _section_content(lines, "Next Candidate Queue")
-    top_level_candidate_bullets = [
-        line.strip() for line in candidate_section if re.match(r"^-\s+", line)
-    ]
+    top_level_candidate_bullets = [line.strip() for line in candidate_section if re.match(r"^-\s+", line)]
 
-    if (
-        len(top_level_candidate_bullets) > ROADMAP_MAX_CANDIDATES
-        or len(candidate_section) > ROADMAP_MAX_CANDIDATE_SECTION_LINES
-    ):
+    if len(top_level_candidate_bullets) > ROADMAP_MAX_CANDIDATES or len(candidate_section) > ROADMAP_MAX_CANDIDATE_SECTION_LINES:
         warnings.append(
             PlanningWarning(
                 WARNING_ROADMAP_STALE_CANDIDATE_PRESSURE,
@@ -908,11 +862,7 @@ def _check_roadmap(path: Path, todo_active_ids: set[str]) -> list[PlanningWarnin
     reopen_section = _section_content(lines, "Reopen Conditions")
     reopen_bullets = [line.strip() for line in reopen_section if re.match(r"^\s*-\s+", line)]
     has_reopen_signal = any(
-        any(
-            hint in bullet.lower()
-            for hint in ("when", "if", "trigger", "signal", "queue", "report")
-        )
-        for bullet in reopen_bullets
+        any(hint in bullet.lower() for hint in ("when", "if", "trigger", "signal", "queue", "report")) for bullet in reopen_bullets
     )
     if not has_reopen_signal:
         warnings.append(
@@ -991,9 +941,7 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
         execplan_active_ids.update(plan_active_ids)
 
     warnings.extend(_check_roadmap(roadmap_path, todo_active_ids | execplan_active_ids))
-    warnings.extend(
-        _check_promotion_linkage(roadmap_path=roadmap_path, active_items=todo_active_items)
-    )
+    warnings.extend(_check_promotion_linkage(roadmap_path=roadmap_path, active_items=todo_active_items))
     warnings.extend(_check_startup_policy(repo_root))
     return warnings
 
@@ -1043,9 +991,7 @@ def gather_planning_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
         "execplans": {
             "active_count": len(active_execplans),
             "active_execplans": active_execplans,
-            "archived_count": sum(
-                1 for path in (execplan_dir / "archive").glob("*.md") if path.is_file()
-            )
+            "archived_count": sum(1 for path in (execplan_dir / "archive").glob("*.md") if path.is_file())
             if (execplan_dir / "archive").exists()
             else 0,
         },

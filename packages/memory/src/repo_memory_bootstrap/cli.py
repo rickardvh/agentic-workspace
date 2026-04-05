@@ -607,7 +607,8 @@ def _print_install_summary(result) -> None:
     bootstrap_skills_path = result.target_root / BOOTSTRAP_WORKSPACE_ROOT / "skills"
     print("Next steps:")
     print(
-        "- Review repository-specific details in AGENTS.md, then use `.agentic-workspace/memory/skills/memory-router/` for day-to-day note selection."
+        "- Review repository-specific details in AGENTS.md, then use "
+        "`.agentic-workspace/memory/skills/memory-router/` for day-to-day note selection."
     )
     print(
         f"- Use the temporary bootstrap skills under {bootstrap_skills_path} to finish install "

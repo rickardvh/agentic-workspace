@@ -110,11 +110,7 @@ def resolve_target_root(target: str | Path | None) -> Path:
 
 def list_payload_files() -> list[str]:
     root = payload_root()
-    return [
-        path.relative_to(root).as_posix()
-        for path in sorted(root.rglob("*"))
-        if _should_include_payload_path(path, root)
-    ]
+    return [path.relative_to(root).as_posix() for path in sorted(root.rglob("*")) if _should_include_payload_path(path, root)]
 
 
 def install_bootstrap(*, target: str | Path | None = None, dry_run: bool = False, force: bool = False) -> InstallResult:
@@ -245,11 +241,7 @@ def verify_payload() -> InstallResult:
     result = InstallResult(target_root=root, message="Payload verification", dry_run=False)
     payload_files = {Path(item) for item in list_payload_files()}
     for relative in REQUIRED_PAYLOAD_FILES:
-        detail = (
-            "required payload file present"
-            if relative in payload_files
-            else "required payload file missing"
-        )
+        detail = "required payload file present" if relative in payload_files else "required payload file missing"
         result.add("current" if relative in payload_files else "manual review", root / relative, detail)
 
     for relative, rendered, label in _generated_agent_file_expectations(root):
@@ -406,9 +398,7 @@ def archive_execplan(
         return result
 
     todo_ref_items = _todo_referencing_items(target_root / "TODO.md", plan_path, target_root)
-    blocking_todo_refs = [
-        item for item in todo_ref_items if _normalize_status(item.fields.get("status", "")) != "completed"
-    ]
+    blocking_todo_refs = [item for item in todo_ref_items if _normalize_status(item.fields.get("status", "")) != "completed"]
     if blocking_todo_refs:
         for item in blocking_todo_refs:
             item_id = item.item_id or "?"
@@ -428,19 +418,14 @@ def archive_execplan(
         return result
 
     cleanup_todo_lines: list[str] | None = None
-    completed_todo_refs = [
-        item for item in todo_ref_items if _normalize_status(item.fields.get("status", "")) == "completed"
-    ]
+    completed_todo_refs = [item for item in todo_ref_items if _normalize_status(item.fields.get("status", "")) == "completed"]
     if apply_cleanup and completed_todo_refs:
         cleanup_todo_lines = _remove_todo_items(target_root / "TODO.md", completed_todo_refs)
         for item in completed_todo_refs:
             result.add(
                 "would update" if dry_run else "updated",
                 target_root / "TODO.md",
-                (
-                    f"remove completed TODO item '{item.item_id}' "
-                    "while archiving its plan"
-                ),
+                (f"remove completed TODO item '{item.item_id}' while archiving its plan"),
             )
 
     cleanup_roadmap = _cleanup_roadmap_archive_followup(target_root / "ROADMAP.md", plan_path)
@@ -555,7 +540,11 @@ def _copy_payload_file(*, relative: Path, target_root: Path, result: InstallResu
 def _render_generated_agent_files(*, target_root: Path, result: InstallResult, apply: bool) -> None:
     manifest_path = target_root / PLANNING_MANIFEST_PATH
     if not manifest_path.exists():
-        result.add("manual review", manifest_path, "cannot render generated agent docs because .agentic-workspace/planning/agent-manifest.json is missing")
+        result.add(
+            "manual review",
+            manifest_path,
+            "cannot render generated agent docs because .agentic-workspace/planning/agent-manifest.json is missing",
+        )
         return
     for relative, rendered, label in _generated_agent_file_expectations(target_root):
         destination = target_root / relative
@@ -646,7 +635,9 @@ def _warning_remediation(warning_class: str) -> str | None:
         "roadmap_execution_drift": "Reduce ROADMAP back to candidate framing; keep active sequencing in TODO and execplans.",
         "roadmap_stale_candidate_pressure": "Prune stale candidate detail and leave compact candidate stubs only.",
         "promotion_linkage_drift": "Make the promotion signal explicit in TODO or ROADMAP so activation has a visible trigger.",
-        "upgrade_source_stale": "Refresh .agentic-workspace/planning/UPGRADE-SOURCE.toml after intentionally upgrading the bootstrap source.",
+        "upgrade_source_stale": (
+            "Refresh .agentic-workspace/planning/UPGRADE-SOURCE.toml after intentionally upgrading the bootstrap source."
+        ),
         "archive_accumulation_drift": "Remove completed residue from active surfaces or move completed plans into archive.",
         "planning_memory_boundary_blur": "Move durable technical facts into memory or canonical docs, then leave planning surfaces lean.",
         "startup_policy_drift": "Restore the minimal startup order in AGENTS, quickstart, and manifest.",

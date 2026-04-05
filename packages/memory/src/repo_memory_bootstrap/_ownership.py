@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import tomllib
 from functools import lru_cache
 from pathlib import Path
-import tomllib
+from typing import Any
 
 
 def _packaged_manifest_path() -> Path:
@@ -30,13 +31,19 @@ def ownership_manifest_path() -> Path:
 
 
 @lru_cache(maxsize=1)
-def _ownership_data() -> dict[str, object]:
+def _ownership_data() -> dict[str, Any]:
     with ownership_manifest_path().open("rb") as handle:
         return tomllib.load(handle)
 
 
 def module_root(module: str) -> Path:
-    for entry in _ownership_data().get("module_roots", []):
+    module_roots = _ownership_data().get("module_roots", [])
+    if not isinstance(module_roots, list):
+        raise KeyError("Ownership ledger is missing a valid module_roots list.")
+
+    for entry in module_roots:
+        if not isinstance(entry, dict):
+            continue
         if entry.get("module") == module:
             return Path(entry["path"])
     raise KeyError(f"Module {module!r} is not defined in the ownership ledger.")

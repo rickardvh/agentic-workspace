@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import subprocess
@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from repo_memory_bootstrap._ownership import module_root as memory_module_root
 from repo_memory_bootstrap import cli, installer
+from repo_memory_bootstrap._ownership import module_root as memory_module_root
 
 FIXTURES_ROOT = Path(__file__).resolve().parent / "fixtures" / "routing"
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
@@ -1444,7 +1444,9 @@ def test_upgrade_dry_run_simulates_default_migration_for_legacy_layout(tmp_path:
     result = installer.upgrade_bootstrap(target=target, dry_run=True)
 
     assert not (target / ".agentic-workspace/memory").exists()
-    assert any(action.kind == "would move" and action.path == target / ".agentic-workspace/memory" / "WORKFLOW.md" for action in result.actions)
+    assert any(
+        action.kind == "would move" and action.path == target / ".agentic-workspace/memory" / "WORKFLOW.md" for action in result.actions
+    )
     assert any(action.kind == "would patch" and action.path == target / "AGENTS.md" for action in result.actions)
 
 
@@ -3658,8 +3660,3 @@ task_relevance = "optional"
         and "shadow-doc overlap" in action.detail
         for action in result.actions
     )
-
-
-
-
-

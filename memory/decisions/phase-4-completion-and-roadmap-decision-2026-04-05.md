@@ -18,6 +18,12 @@ Decided
 - Next quarterly or major release planning occurs.
 - Organizational priorities shift regarding developer tooling or agent infrastructure.
 
+## Failure signals
+
+- Root planning or memory systems stop acting as the single operational authority for the monorepo.
+- A new active tranche is started without a bounded TODO or execplan surface.
+- Migration residue resurfaces in package roots as operational state instead of fixtures or payload content.
+
 ## Decision
 
 Mark phase-4 root orchestration migration as complete. The monorepo migration foundation is now stable:
