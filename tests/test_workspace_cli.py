@@ -98,6 +98,32 @@ def test_status_requires_explicit_module_when_nothing_detected(tmp_path: Path) -
     assert excinfo.value.code == 2
 
 
+def test_install_uses_full_preset(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["install", "--preset", "full", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert [report["module"] for report in payload["reports"]] == ["memory", "planning"]
+
+
+def test_status_uses_memory_preset(monkeypatch, tmp_path: Path) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["status", "--preset", "memory", "--target", str(tmp_path)]) == 0
+
+    assert calls == [("memory", "status", {"target": str(tmp_path)})]
+
+
+def test_preset_conflicts_with_explicit_modules(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["status", "--preset", "planning", "--module", "planning", "--target", str(tmp_path)])
+
+    assert excinfo.value.code == 2
+
+
 def test_install_real_planning_module_creates_payload(tmp_path: Path) -> None:
     target = tmp_path / "repo"
 

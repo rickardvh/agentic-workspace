@@ -96,6 +96,12 @@ This root CLI is intentionally thin. It orchestrates selected modules through on
 
 When `--module` is omitted, `install` and `adopt` default to the current shared module set. Maintenance verbs such as `status`, `doctor`, `upgrade`, and `uninstall` default to the modules already detected in the target repo.
 
+Supported presets:
+
+- `full` -> `memory` + `planning`
+- `memory` -> memory only
+- `planning` -> planning only
+
 ## Contributing
 
 See `docs/contributor-playbook.md` for package routing, ownership, and the smallest validation lane to run for common change types.

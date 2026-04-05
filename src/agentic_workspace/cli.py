@@ -11,6 +11,11 @@ from agentic_workspace import __version__
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 
 MODULE_ORDER = ("memory", "planning")
+PRESET_MODULES = {
+    "memory": ["memory"],
+    "planning": ["planning"],
+    "full": ["memory", "planning"],
+}
 
 
 @dataclass(frozen=True)
@@ -55,6 +60,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _add_shared_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
+        "--preset",
+        choices=tuple(PRESET_MODULES),
+        help="Preset module selection for common lifecycle operations.",
+    )
+    parser.add_argument(
         "--module",
         dest="modules",
         action="append",
@@ -79,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
 
     descriptors = _module_operations()
     try:
-        selected_modules = _selected_modules(args.command, args.modules, args.target, descriptors)
+        selected_modules = _selected_modules(args.command, args.preset, args.modules, args.target, descriptors)
     except ModuleSelectionError as exc:
         parser.error(str(exc))
     reports = [_invoke_module_command(args.command, module_name, descriptors[module_name], args) for module_name in selected_modules]
@@ -159,10 +169,17 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
 
 def _selected_modules(
     command_name: str,
+    preset_name: str | None,
     module_args: list[str] | None,
     target: str | None,
     descriptors: dict[str, ModuleDescriptor],
 ) -> list[str]:
+    if preset_name and module_args:
+        raise ModuleSelectionError("Use either --preset or --module, not both.")
+
+    if preset_name:
+        return [module_name for module_name in PRESET_MODULES[preset_name] if module_name in descriptors]
+
     if not module_args:
         if command_name in {"install", "adopt"}:
             return [module_name for module_name in MODULE_ORDER if module_name in descriptors]
