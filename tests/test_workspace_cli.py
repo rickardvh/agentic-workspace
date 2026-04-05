@@ -4,6 +4,8 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import pytest
+
 from agentic_workspace import cli
 
 
@@ -55,6 +57,27 @@ def test_status_dispatches_only_selected_modules(monkeypatch, tmp_path: Path) ->
     assert calls == [("planning", "status", {"target": str(tmp_path)})]
 
 
+def test_status_detects_installed_modules_by_default(monkeypatch, tmp_path: Path) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    descriptors = _fake_descriptors(tmp_path, calls)
+    (tmp_path / "planning").mkdir()
+    (tmp_path / "TODO.md").write_text("# TODO\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace" / "planning").mkdir(parents=True)
+    (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").write_text("{}\n", encoding="utf-8")
+    monkeypatch.setattr(cli, "_module_operations", lambda: descriptors)
+
+    assert cli.main(["status", "--target", str(tmp_path)]) == 0
+
+    assert calls == [("planning", "status", {"target": str(tmp_path)})]
+
+
+def test_status_requires_explicit_module_when_nothing_detected(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["status", "--target", str(tmp_path)])
+
+    assert excinfo.value.code == 2
+
+
 def test_install_real_planning_module_creates_payload(tmp_path: Path) -> None:
     target = tmp_path / "repo"
 
@@ -84,6 +107,7 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
             name=module_name,
             description=f"{module_name} module",
             commands={command_name: _build_handler(module_name, command_name) for command_name in commands},
+            detector=lambda detected_root, module_name=module_name: (detected_root / module_name).exists(),
         )
         for module_name in ("memory", "planning")
     }

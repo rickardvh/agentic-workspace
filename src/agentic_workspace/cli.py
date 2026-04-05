@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +17,11 @@ class ModuleDescriptor:
     name: str
     description: str
     commands: dict[str, Callable[..., Any]]
+    detector: Callable[[Path], bool]
+
+
+class ModuleSelectionError(ValueError):
+    """Raised when the orchestrator cannot resolve a safe default module set."""
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -72,7 +77,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     descriptors = _module_operations()
-    selected_modules = _selected_modules(args.modules, descriptors)
+    try:
+        selected_modules = _selected_modules(args.command, args.modules, args.target, descriptors)
+    except ModuleSelectionError as exc:
+        parser.error(str(exc))
     reports = [_invoke_module_command(args.command, module_name, descriptors[module_name], args) for module_name in selected_modules]
     _emit_reports(command_name=args.command, reports=reports, format_name=args.format)
     return 0
@@ -128,6 +136,8 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 "doctor": lambda *, target: memory_doctor_bootstrap(target=target),
                 "status": lambda *, target: memory_collect_status(target=target),
             },
+            detector=lambda target_root: (target_root / "memory" / "index.md").exists()
+            and (target_root / ".agentic-workspace" / "memory").exists(),
         ),
         "planning": ModuleDescriptor(
             name="planning",
@@ -140,19 +150,43 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 "doctor": lambda *, target: planning_doctor_bootstrap(target=target),
                 "status": lambda *, target: planning_collect_status(target=target),
             },
+            detector=lambda target_root: (target_root / "TODO.md").exists()
+            and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists(),
         ),
     }
 
 
-def _selected_modules(module_args: list[str] | None, descriptors: dict[str, ModuleDescriptor]) -> list[str]:
+def _selected_modules(
+    command_name: str,
+    module_args: list[str] | None,
+    target: str | None,
+    descriptors: dict[str, ModuleDescriptor],
+) -> list[str]:
     if not module_args:
-        return [module_name for module_name in MODULE_ORDER if module_name in descriptors]
+        if command_name in {"install", "adopt"}:
+            return [module_name for module_name in MODULE_ORDER if module_name in descriptors]
+
+        target_root = _resolve_target_root(target)
+        detected = [
+            module_name
+            for module_name in MODULE_ORDER
+            if module_name in descriptors and descriptors[module_name].detector(target_root)
+        ]
+        if detected:
+            return detected
+        raise ModuleSelectionError(
+            "No installed modules were detected for this maintenance command. Use --module to target a module explicitly."
+        )
 
     selected: list[str] = []
     for module_name in module_args:
         if module_name not in selected and module_name in descriptors:
             selected.append(module_name)
     return selected
+
+
+def _resolve_target_root(target: str | None) -> Path:
+    return Path(target).resolve() if target else Path.cwd().resolve()
 
 
 def _invoke_module_command(command_name: str, module_name: str, descriptor: ModuleDescriptor, args: argparse.Namespace) -> dict[str, Any]:
@@ -171,11 +205,13 @@ def _invoke_module_command(command_name: str, module_name: str, descriptor: Modu
         "target_root": Path(result.target_root),
         "dry_run": bool(result.dry_run),
         "actions": [_serialise_action(action) for action in result.actions],
-        "warnings": [_serialise_value(warning) for warning in result.warnings],
+        "warnings": [_serialise_value(warning) for warning in getattr(result, "warnings", [])],
     }
 
 
 def _serialise_action(action: Any) -> dict[str, Any]:
+    if is_dataclass(action):
+        return {key: _serialise_value(value) for key, value in asdict(action).items()}
     return {key: _serialise_value(value) for key, value in vars(action).items()}
 
 

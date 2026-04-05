@@ -39,6 +39,7 @@ Workspace-orchestrator cleanup complete; active queue clear
 
 - Consolidated path namespace: refactored both memory and planning bootstraps to use `.agentic-workspace/` parent directory.
 - Added a root `agentic-workspace` CLI that orchestrates shared lifecycle verbs across selected modules and introduced root validation coverage for that wrapper layer.
+- Made maintenance verbs in the root lifecycle CLI default to installed modules, so partial-adoption repos do not need explicit module selection for common status and doctor flows.
 - Updated all path constants, templates, docstrings, and test fixtures across both packages (156/158 memory tests, 25/25 planning tests passing).
 - Verified end-to-end: both bootstraps successfully generate install plans targeting new consolidated structure.
 - Fixed syntax warnings and package escape sequences in installers and test fixtures.

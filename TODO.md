@@ -8,11 +8,6 @@ Active queue for repository work.
 
 ## Now
 
-- ID: unified-lifecycle-orchestrator
-	Status: in-progress
-	Surface: docs/execplans/unified-lifecycle-orchestrator-2026-04-05.md
-	Why now: converge install and maintenance UX above the module packages before more lifecycle and extraction work expands the surface area.
-
 ## Action
 
 - Treat the workspace-level lifecycle orchestrator as the preferred next promotion once the tranche is bounded enough for a short execplan.

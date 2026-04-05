@@ -83,6 +83,8 @@ Use `agentic-workspace` for shared lifecycle verbs that span module selection:
 
 This root CLI is intentionally thin. It orchestrates selected modules through one workspace-level entrypoint while leaving module-specific logic and advanced flags inside the module packages.
 
+When `--module` is omitted, `install` and `adopt` default to the current shared module set. Maintenance verbs such as `status`, `doctor`, `upgrade`, and `uninstall` default to the modules already detected in the target repo.
+
 ## Environment Routing
 
 Use one shared root environment for daily monorepo work and package validation.

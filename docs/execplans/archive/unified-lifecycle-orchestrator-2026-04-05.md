@@ -12,7 +12,7 @@
 
 ## Active Milestone
 
-- Status: in-progress
+- Status: completed
 - Scope: make default module selection lifecycle-aware so maintenance verbs target installed modules by default while install/adopt remain explicit composition entrypoints.
 - Ready: ready
 - Blocked: none
@@ -20,7 +20,7 @@
 
 ## Immediate Next Action
 
-- Teach the root CLI to detect installed modules for maintenance flows and add validation for partial-adoption defaults.
+- Archive this completed plan and promote the next roadmap candidate only if it can be bounded cleanly.
 
 ## Blockers
 
