@@ -147,8 +147,9 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 "doctor": lambda *, target: memory_doctor_bootstrap(target=target),
                 "status": lambda *, target: memory_collect_status(target=target),
             },
-            detector=lambda target_root: (target_root / "memory" / "index.md").exists()
-            and (target_root / ".agentic-workspace" / "memory").exists(),
+            detector=lambda target_root: (
+                (target_root / "memory" / "index.md").exists() and (target_root / ".agentic-workspace" / "memory").exists()
+            ),
         ),
         "planning": ModuleDescriptor(
             name="planning",
@@ -161,8 +162,9 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 "doctor": lambda *, target: planning_doctor_bootstrap(target=target),
                 "status": lambda *, target: planning_collect_status(target=target),
             },
-            detector=lambda target_root: (target_root / "TODO.md").exists()
-            and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists(),
+            detector=lambda target_root: (
+                (target_root / "TODO.md").exists() and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+            ),
         ),
     }
 
@@ -186,9 +188,7 @@ def _selected_modules(
 
         target_root = _resolve_target_root(target)
         detected = [
-            module_name
-            for module_name in MODULE_ORDER
-            if module_name in descriptors and descriptors[module_name].detector(target_root)
+            module_name for module_name in MODULE_ORDER if module_name in descriptors and descriptors[module_name].detector(target_root)
         ]
         if detected:
             return detected

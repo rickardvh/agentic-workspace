@@ -180,6 +180,7 @@ Validation entrypoints:
 - `make test`
 - `make lint`
 - `make typecheck`
+- `make format`
 - `make format-check`
 - `make verify`
 - `make check`
@@ -188,6 +189,8 @@ Validation entrypoints:
 - `make check-all`
 
 `make check-memory` and `make check-planning` each perform a consolidated root dev sync first so checks remain repeatable from one workspace environment. For package-local test or lint runs, sync once from the root first, then run the package command from its package directory.
+
+If you use `pre-commit`, install the local hook with `uv run pre-commit install`. The repo's pre-commit hooks run `make format` and `make lint`: formatting is applied automatically where possible, then lint checks run locally before commit. If formatting rewrites files, restage them and rerun the commit. Keep full test execution in CI rather than in the pre-commit hook path.
 
 Root planning and memory installs are authoritative for monorepo operation.
 Package directories now keep package source, bootstrap payloads, and test fixtures only; package-local installed runtime systems have been removed.

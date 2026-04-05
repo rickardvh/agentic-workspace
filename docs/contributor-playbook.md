@@ -18,6 +18,8 @@ Default startup path for an agent maintainer:
 
 Prefer repository-native state over chat-only context. If a follow-up matters after the current turn, record it in planning or memory instead of relying on conversational residue.
 
+If you are maintaining the repo through git commits locally, install hooks with `uv run pre-commit install`. The current pre-commit hooks run the shared `make format` and `make lint` lanes: apply automatic formatting fixes locally, then enforce lint before commit. If formatting rewrites files, restage them and rerun the commit. Keep full test execution in CI instead of the pre-commit path.
+
 ## Start Here
 
 1. Read `AGENTS.md`.

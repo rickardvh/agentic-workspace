@@ -2,6 +2,7 @@
 	test test-workspace test-memory test-planning \
 	lint lint-workspace lint-memory lint-planning markdownlint markdownlint-memory \
 	typecheck typecheck-workspace typecheck-memory typecheck-planning \
+	format format-workspace format-memory format-planning \
 	format-check format-check-workspace format-check-memory format-check-planning \
 	verify verify-workspace verify-memory verify-planning \
 	memory-freshness memory-freshness-strict planning-surfaces planning-surfaces-strict render-agent-docs \
@@ -17,6 +18,7 @@ help:
 	@echo "  lint                 Run non-mutating lint checks across workspace and packages."
 	@echo "  markdownlint         Run Markdown lint checks for the memory package surfaces."
 	@echo "  typecheck            Run ty type checks across workspace and packages."
+	@echo "  format               Apply Ruff formatting across workspace and packages."
 	@echo "  format-check         Run formatting checks across workspace and packages."
 	@echo "  verify               Verify workspace CLI wiring and both packaged payload contracts."
 	@echo "  memory-freshness     Run the root memory freshness audit."
@@ -74,6 +76,17 @@ typecheck-planning:
 	cd packages/planning && uv run ty check src
 
 typecheck: sync-all typecheck-workspace typecheck-memory typecheck-planning
+
+format-workspace:
+	uv run ruff format src tests
+
+format-memory:
+	cd packages/memory && uv run ruff format .
+
+format-planning:
+	cd packages/planning && uv run ruff format .
+
+format: sync-all format-workspace format-memory format-planning
 
 format-check-workspace:
 	uv run ruff format --check src tests

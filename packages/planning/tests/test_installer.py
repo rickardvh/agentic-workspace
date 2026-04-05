@@ -296,7 +296,8 @@ def test_archive_execplan_apply_cleanup_removes_matching_candidate_queue_entry(t
 
 ## Next Candidate Queue
 
-- Workspace result contract: define a shared adapter or result protocol for orchestrated module actions and warnings when more module families land.
+- Workspace result contract: define a shared adapter or result protocol for
+    orchestrated module actions and warnings when more module families land.
 - Shared tooling extraction: evaluate a common checker core when repeated maintenance friction appears.
 """,
     )
@@ -309,9 +310,7 @@ def test_archive_execplan_apply_cleanup_removes_matching_candidate_queue_entry(t
     assert "Workspace result contract:" not in roadmap_text
     assert "Shared tooling extraction:" in roadmap_text
     assert any(
-        action.kind == "updated"
-        and action.path == tmp_path / "ROADMAP.md"
-        and "Next Candidate Queue" in action.detail
+        action.kind == "updated" and action.path == tmp_path / "ROADMAP.md" and "Next Candidate Queue" in action.detail
         for action in result.actions
     )
 
