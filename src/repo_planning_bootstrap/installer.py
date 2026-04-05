@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from repo_planning_bootstrap import __version__
-from repo_planning_bootstrap._render import load_manifest, render_quickstart
+from repo_planning_bootstrap._render import load_manifest, render_quickstart, render_routing
 
 REQUIRED_PAYLOAD_FILES = (
     Path("AGENTS.md"),
@@ -23,6 +23,25 @@ REQUIRED_PAYLOAD_FILES = (
     Path("scripts/render_agent_docs.py"),
     Path("tools/agent-manifest.json"),
     Path("tools/AGENT_QUICKSTART.md"),
+    Path("tools/AGENT_ROUTING.md"),
+)
+
+ROOT_SURFACE_FILES = (
+    Path("AGENTS.md"),
+    Path("TODO.md"),
+    Path("ROADMAP.md"),
+    Path("tools/agent-manifest.json"),
+)
+
+GENERATED_PAYLOAD_FILES = (
+    Path("tools/AGENT_QUICKSTART.md"),
+    Path("tools/AGENT_ROUTING.md"),
+)
+
+TODO_EMPTY_STATE_LINE = "- No active work right now."
+
+PACKAGE_MANAGED_FILES = tuple(
+    relative for relative in REQUIRED_PAYLOAD_FILES if relative not in ROOT_SURFACE_FILES and relative not in GENERATED_PAYLOAD_FILES
 )
 
 
@@ -84,7 +103,7 @@ def install_bootstrap(*, target: str | Path | None = None, dry_run: bool = False
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message="Install plan", dry_run=dry_run)
     _copy_payload(target_root=target_root, result=result, conservative=False, force=force)
-    _render_quickstart_file(target_root=target_root, result=result, apply=not dry_run)
+    _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     return result
 
 
@@ -92,7 +111,49 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) 
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message="Adoption plan for existing repository", dry_run=dry_run)
     _copy_payload(target_root=target_root, result=result, conservative=True, force=False)
-    _render_quickstart_file(target_root=target_root, result=result, apply=not dry_run)
+    _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
+    return result
+
+
+def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = InstallResult(target_root=target_root, message="Upgrade plan", dry_run=dry_run)
+
+    for relative in PACKAGE_MANAGED_FILES:
+        _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=True)
+
+    for relative in ROOT_SURFACE_FILES:
+        _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=False)
+
+    _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
+    return result
+
+
+def uninstall_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = InstallResult(target_root=target_root, message="Uninstall plan", dry_run=dry_run)
+
+    removable: list[Path] = []
+    for relative in REQUIRED_PAYLOAD_FILES:
+        destination = target_root / relative
+        if not destination.exists():
+            result.add("skipped", destination, "already absent")
+            continue
+        if _can_remove_payload_file(relative=relative, target_root=target_root):
+            removable.append(relative)
+            result.add("would remove" if dry_run else "removed", destination, "matches managed payload content")
+            continue
+        result.add("manual review", destination, "local file differs from managed payload; remove manually if intended")
+
+    if dry_run:
+        return result
+
+    for relative in removable:
+        destination = target_root / relative
+        if destination.exists():
+            destination.unlink()
+
+    _prune_empty_parent_dirs(target_root=target_root, relatives=removable)
     return result
 
 
@@ -132,18 +193,13 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
         if remediation:
             result.add("suggested fix", target_root / warning["path"], remediation)
 
-    manifest_path = target_root / "tools/agent-manifest.json"
-    quickstart_path = target_root / "tools/AGENT_QUICKSTART.md"
-    if manifest_path.exists() and quickstart_path.exists():
-        rendered = _render_quickstart_for_repo(target_root)
-        if quickstart_path.read_text(encoding="utf-8") != rendered:
+    for relative, rendered, label in _generated_agent_file_expectations(target_root):
+        destination = target_root / relative
+        if destination.exists() and destination.read_text(encoding="utf-8") != rendered:
             result.add(
                 "manual review",
-                quickstart_path,
-                (
-                    "quickstart is out of sync with tools/agent-manifest.json; "
-                    "run python scripts/render_agent_docs.py"
-                ),
+                destination,
+                f"{label} is out of sync with tools/agent-manifest.json; run python scripts/render_agent_docs.py",
             )
     return result
 
@@ -160,20 +216,13 @@ def verify_payload() -> InstallResult:
         )
         result.add("current" if relative in payload_files else "manual review", root / relative, detail)
 
-    manifest_path = root / "tools/agent-manifest.json"
-    quickstart_path = root / "tools/AGENT_QUICKSTART.md"
-    if manifest_path.exists() and quickstart_path.exists():
-        rendered = _render_quickstart_for_repo(root)
-        detail = (
-            "quickstart matches manifest"
-            if quickstart_path.read_text(encoding="utf-8") == rendered
-            else "quickstart does not match manifest"
-        )
-        result.add(
-            "current" if quickstart_path.read_text(encoding="utf-8") == rendered else "manual review",
-            quickstart_path,
-            detail,
-        )
+    for relative, rendered, label in _generated_agent_file_expectations(root):
+        destination = root / relative
+        if not destination.exists():
+            continue
+        current = destination.read_text(encoding="utf-8") == rendered
+        detail = f"{label} matches manifest" if current else f"{label} does not match manifest"
+        result.add("current" if current else "manual review", destination, detail)
     return result
 
 
@@ -437,23 +486,53 @@ def _copy_payload(*, target_root: Path, result: InstallResult, conservative: boo
         result.add("copied" if not existed else "overwritten", destination, source.as_posix())
 
 
-def _render_quickstart_file(*, target_root: Path, result: InstallResult, apply: bool) -> None:
+def _copy_payload_file(*, relative: Path, target_root: Path, result: InstallResult, overwrite: bool) -> None:
+    source = payload_root() / relative
+    destination = target_root / relative
+    if not source.exists():
+        result.add("manual review", destination, "payload source file is missing")
+        return
+
+    if destination.exists():
+        if not overwrite:
+            result.add("skipped", destination, "repo-owned surface left unchanged")
+            return
+        if _files_match(source, destination):
+            result.add("current", destination, "already matches managed payload")
+            return
+        if result.dry_run:
+            result.add("would overwrite", destination, source.as_posix())
+            return
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+        result.add("overwritten", destination, source.as_posix())
+        return
+
+    if result.dry_run:
+        result.add("would copy", destination, source.as_posix())
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, destination)
+    result.add("copied", destination, source.as_posix())
+
+
+def _render_generated_agent_files(*, target_root: Path, result: InstallResult, apply: bool) -> None:
     manifest_path = target_root / "tools/agent-manifest.json"
-    quickstart_path = target_root / "tools/AGENT_QUICKSTART.md"
     if not manifest_path.exists():
-        result.add("manual review", manifest_path, "cannot render quickstart because tools/agent-manifest.json is missing")
+        result.add("manual review", manifest_path, "cannot render generated agent docs because tools/agent-manifest.json is missing")
         return
-    rendered = _render_quickstart_for_repo(target_root)
-    existing = quickstart_path.read_text(encoding="utf-8") if quickstart_path.exists() else None
-    if existing == rendered:
-        result.add("current", quickstart_path, "quickstart already matches manifest")
-        return
-    if not apply:
-        result.add("would update", quickstart_path, "render quickstart from manifest")
-        return
-    quickstart_path.parent.mkdir(parents=True, exist_ok=True)
-    quickstart_path.write_text(rendered, encoding="utf-8")
-    result.add("updated" if existing is not None else "created", quickstart_path, "rendered quickstart from manifest")
+    for relative, rendered, label in _generated_agent_file_expectations(target_root):
+        destination = target_root / relative
+        existing = destination.read_text(encoding="utf-8") if destination.exists() else None
+        if existing == rendered:
+            result.add("current", destination, f"{label} already matches manifest")
+            continue
+        if not apply:
+            result.add("would update", destination, f"render {label} from manifest")
+            continue
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(rendered, encoding="utf-8")
+        result.add("updated" if existing is not None else "created", destination, f"rendered {label} from manifest")
 
 
 def _run_planning_checker(target_root: Path) -> list[dict[str, str]]:
@@ -485,6 +564,29 @@ def _render_quickstart_for_repo(target_root: Path) -> str:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.render_quickstart(module.load_manifest())
+
+
+def _render_routing_for_repo(target_root: Path) -> str:
+    script_path = target_root / "scripts" / "render_agent_docs.py"
+    manifest_path = target_root / "tools" / "agent-manifest.json"
+    if not script_path.exists() or not manifest_path.exists():
+        return render_routing(load_manifest(manifest_path))
+    spec = importlib.util.spec_from_file_location("render_agent_docs", script_path)
+    if spec is None or spec.loader is None:
+        return render_routing(load_manifest(manifest_path))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.render_routing(module.load_manifest())
+
+
+def _generated_agent_file_expectations(target_root: Path) -> list[tuple[Path, str, str]]:
+    manifest_path = target_root / "tools" / "agent-manifest.json"
+    if not manifest_path.exists():
+        return []
+    return [
+        (Path("tools/AGENT_QUICKSTART.md"), _render_quickstart_for_repo(target_root), "quickstart"),
+        (Path("tools/AGENT_ROUTING.md"), _render_routing_for_repo(target_root), "routing guide"),
+    ]
 
 
 def _has_unresolved_placeholders(text: str) -> bool:
@@ -531,6 +633,48 @@ def _should_include_payload_path(path: Path, root: Path) -> bool:
     if "__pycache__" in relative_parts:
         return False
     return path.suffix != ".pyc"
+
+
+def _can_remove_payload_file(*, relative: Path, target_root: Path) -> bool:
+    destination = target_root / relative
+    if not destination.exists() or not destination.is_file():
+        return False
+    if relative in GENERATED_PAYLOAD_FILES:
+        expectations = dict((path, text) for path, text, _ in _generated_agent_file_expectations(target_root))
+        expected_text = expectations.get(relative)
+        if expected_text is None:
+            return False
+        return destination.read_text(encoding="utf-8") == expected_text
+    expected = _expected_target_file_bytes(relative=relative, target_root=target_root)
+    if expected is None:
+        return False
+    return destination.read_bytes() == expected
+
+
+def _expected_target_file_bytes(*, relative: Path, target_root: Path) -> bytes | None:
+    source = payload_root() / relative
+    if not source.exists() or not source.is_file():
+        return None
+    return source.read_bytes()
+
+
+def _files_match(source: Path, destination: Path) -> bool:
+    return source.is_file() and destination.is_file() and source.read_bytes() == destination.read_bytes()
+
+
+def _prune_empty_parent_dirs(*, target_root: Path, relatives: list[Path]) -> None:
+    candidates = sorted(
+        {parent for relative in relatives for parent in relative.parents if parent != Path(".")},
+        key=lambda path: len(path.parts),
+        reverse=True,
+    )
+    for relative_dir in candidates:
+        directory = target_root / relative_dir
+        if directory.exists() and directory.is_dir():
+            try:
+                directory.rmdir()
+            except OSError:
+                continue
 
 
 def _read_lines(path: Path) -> list[str]:
@@ -726,7 +870,27 @@ def _remove_todo_items(todo_path: Path, items_to_remove: list[TodoItem]) -> list
     filtered_lines = [line for index, line in enumerate(lines) if index not in indexes_to_remove]
     while filtered_lines and filtered_lines[-1] == "":
         filtered_lines.pop()
-    return filtered_lines
+    return _restore_todo_empty_state(filtered_lines)
+
+
+def _restore_todo_empty_state(lines: list[str]) -> list[str]:
+    next_heading = next((index for index, line in enumerate(lines) if line.strip().lower() == "## next"), -1)
+    if next_heading < 0:
+        return lines
+    section_end = len(lines)
+    for index in range(next_heading + 1, len(lines)):
+        if lines[index].startswith("## "):
+            section_end = index
+            break
+
+    section_body = lines[next_heading + 1 : section_end]
+    if any(line.strip() and line.strip() != TODO_EMPTY_STATE_LINE for line in section_body):
+        return lines
+
+    normalized_lines = lines[: next_heading + 1] + ["", TODO_EMPTY_STATE_LINE] + lines[section_end:]
+    while len(normalized_lines) > 2 and normalized_lines[-1] == "" and normalized_lines[-2] == "":
+        normalized_lines.pop()
+    return normalized_lines
 
 
 def _plan_stem_tokens(plan_path: Path) -> list[str]:

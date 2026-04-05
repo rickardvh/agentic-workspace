@@ -26,10 +26,18 @@ Fast path for autonomous agents working on this repo.
 
 - Create or update a plan when work spans multiple milestones, will be handed across threads or models, or carries enough ambiguity that implementation should not start from chat context alone.
 
+## Source of truth
+
+- Active queue and lightweight direct tasks: `TODO.md`
+- Active feature plans: `docs/execplans/`
+- Archived plans: `docs/execplans/archive/`
+- Long-horizon planning: `ROADMAP.md`
+- Machine-readable routing: `tools/agent-manifest.json`
+
 ## Validation flow
 
 - Run the narrowest validation that proves the change.
-- Use `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, and the nearest subsystem `AGENTS.md` for task-specific commands.
+- Use `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`, and the nearest subsystem `AGENTS.md` for task-specific commands.
 - Escalate to broader checks only when the change crosses subsystem boundaries or invalidates the narrower proof.
 
 ## Completion reminders
@@ -39,21 +47,14 @@ Fast path for autonomous agents working on this repo.
 ## Generated surfaces
 
 - `tools/AGENT_QUICKSTART.md` is generated from this manifest by `python scripts/render_agent_docs.py`.
-
-## Source of truth
-
-- Active queue and lightweight direct tasks: `TODO.md`
-- Active feature plans: `docs/execplans/`
-- Archived plans: `docs/execplans/archive/`
-- Long-horizon planning: `ROADMAP.md`
-- Machine-readable routing: `tools/agent-manifest.json`
+- `tools/AGENT_ROUTING.md` is generated from this manifest by `python scripts/render_agent_docs.py`.
 
 ## Common task classes
 
 - `planning_surface_change`
   Use when: Editing planning-for-execution surfaces, plan templates, or planning-surface checks.
   Prefer this route when: the change affects TODO, ROADMAP, execplans, or the planning bootstrap itself.
-  Touches: `AGENTS.md`, `TODO.md`, `ROADMAP.md`, `docs/execplans/`, `scripts/check/check_planning_surfaces.py`, `scripts/render_agent_docs.py`, `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`
+  Touches: `AGENTS.md`, `TODO.md`, `ROADMAP.md`, `docs/execplans/`, `scripts/check/check_planning_surfaces.py`, `scripts/render_agent_docs.py`, `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`
   Validate: `make plan-check`; `python scripts/render_agent_docs.py`
 
 ## Skills

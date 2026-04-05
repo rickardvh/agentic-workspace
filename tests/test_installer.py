@@ -10,6 +10,8 @@ from repo_planning_bootstrap.installer import (
     install_bootstrap,
     planning_summary,
     promote_todo_item_to_execplan,
+    uninstall_bootstrap,
+    upgrade_bootstrap,
     verify_payload,
 )
 
@@ -76,6 +78,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert (tmp_path / "TODO.md").exists()
     assert (tmp_path / "ROADMAP.md").exists()
     assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
+    assert (tmp_path / "tools" / "AGENT_ROUTING.md").exists()
     assert any(action.kind in {"copied", "created", "updated"} for action in result.actions)
 
 
@@ -109,11 +112,47 @@ def test_payload_filters_generated_artifacts(tmp_path: Path, monkeypatch) -> Non
     assert any(action.path == tmp_path / "target" / "AGENTS.md" for action in result.actions)
 
 
-def test_verify_payload_quickstart_matches_manifest() -> None:
+def test_verify_payload_generated_docs_match_manifest() -> None:
     result = verify_payload()
     quickstart_actions = [action for action in result.actions if action.path.name == "AGENT_QUICKSTART.md"]
+    routing_actions = [action for action in result.actions if action.path.name == "AGENT_ROUTING.md"]
     assert quickstart_actions
+    assert routing_actions
     assert any(action.kind == "current" for action in quickstart_actions)
+    assert any(action.kind == "current" for action in routing_actions)
+
+
+def test_upgrade_bootstrap_overwrites_managed_files_but_preserves_root_surfaces(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    agents_path = tmp_path / "AGENTS.md"
+    checker_path = tmp_path / "scripts" / "check" / "check_planning_surfaces.py"
+
+    agents_path.write_text("repo-owned agents\n", encoding="utf-8")
+    checker_path.write_text("stale checker\n", encoding="utf-8")
+
+    result = upgrade_bootstrap(target=tmp_path)
+
+    assert agents_path.read_text(encoding="utf-8") == "repo-owned agents\n"
+    assert "stale checker" not in checker_path.read_text(encoding="utf-8")
+    assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
+    assert any(action.kind == "overwritten" and action.path == checker_path for action in result.actions)
+
+
+def test_uninstall_bootstrap_removes_pristine_files_and_keeps_modified_surfaces(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    agents_path = tmp_path / "AGENTS.md"
+    checker_path = tmp_path / "scripts" / "check" / "check_planning_surfaces.py"
+    quickstart_path = tmp_path / "tools" / "AGENT_QUICKSTART.md"
+
+    agents_path.write_text("repo-owned agents\n", encoding="utf-8")
+
+    result = uninstall_bootstrap(target=tmp_path)
+
+    assert agents_path.exists()
+    assert not checker_path.exists()
+    assert not quickstart_path.exists()
+    assert any(action.kind == "manual review" and action.path == agents_path for action in result.actions)
+    assert any(action.kind == "removed" and action.path == checker_path for action in result.actions)
 
 
 def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path: Path) -> None:
@@ -218,6 +257,7 @@ def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_p
     todo_text = (tmp_path / "TODO.md").read_text(encoding="utf-8")
     roadmap_text = (tmp_path / "ROADMAP.md").read_text(encoding="utf-8")
     assert "plan-alpha" not in todo_text
+    assert "- No active work right now." in todo_text
     assert "- No active handoff right now." in roadmap_text
     assert any(action.kind == "updated" and action.path == tmp_path / "TODO.md" for action in result.actions)
     assert any(action.kind == "updated" and action.path == tmp_path / "ROADMAP.md" for action in result.actions)

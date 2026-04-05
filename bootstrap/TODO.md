@@ -23,4 +23,4 @@ When there is no active task, keep this file minimal.
 
 ## Next
 
-- No active items.
+- No active work right now.

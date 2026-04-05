@@ -121,3 +121,53 @@ def render_quickstart(manifest: dict[str, Any]) -> str:
     for invariant in manifest.get("invariants", []):
         lines.append(f"- {invariant}")
     return "\n".join(lines) + "\n"
+
+
+def render_routing(manifest: dict[str, Any]) -> str:
+    bootstrap = manifest.get("bootstrap", {})
+    routing = manifest.get("routing", {})
+
+    lines: list[str] = []
+    lines.append("# Agent Routing")
+    lines.append("")
+    lines.append("Focused routing reference derived from `tools/agent-manifest.json`.")
+    lines.append("")
+
+    doc_precedence = bootstrap.get("doc_precedence", [])
+    if isinstance(doc_precedence, list) and doc_precedence:
+        lines.append("## Precedence")
+        lines.append("")
+        for item in doc_precedence:
+            lines.append(f"- {item}")
+        lines.append("")
+
+    lines.append("## Task Routes")
+    lines.append("")
+    if not routing:
+        lines.append("- No task routes declared.")
+        return "\n".join(lines) + "\n"
+
+    for task_name, payload in routing.items():
+        if not isinstance(payload, dict):
+            continue
+        lines.append(f"### `{task_name}`")
+        lines.append("")
+        when = payload.get("when")
+        prefer_when = payload.get("prefer_when")
+        touches = payload.get("touches", [])
+        commands = payload.get("commands", [])
+        if isinstance(when, str) and when.strip():
+            lines.append(f"- Use when: {when}")
+        if isinstance(prefer_when, str) and prefer_when.strip():
+            lines.append(f"- Prefer when: {prefer_when}")
+        if isinstance(touches, list) and touches:
+            lines.append("- Touches:")
+            for path in touches:
+                lines.append(f"  - `{path}`")
+        if isinstance(commands, list) and commands:
+            lines.append("- Validation:")
+            for command in commands:
+                lines.append(f"  - `{command}`")
+        lines.append("")
+
+    return "\n".join(lines) + "\n"

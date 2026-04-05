@@ -24,9 +24,9 @@ authors = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/Tenfifty/agentic-planning"
-Repository = "https://github.com/Tenfifty/agentic-planning"
-Issues = "https://github.com/Tenfifty/agentic-planning/issues"
+Homepage = "https://github.com/rickardvh/agentic-planning"
+Repository = "https://github.com/rickardvh/agentic-planning"
+Issues = "https://github.com/rickardvh/agentic-planning/issues"
 
 [project.scripts]
 agentic-planning-bootstrap = "repo_planning_bootstrap.cli:main"
