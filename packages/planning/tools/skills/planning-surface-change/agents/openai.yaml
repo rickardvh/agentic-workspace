@@ -1,4 +1,0 @@
-interface:
-  display_name: "Planning Surface Change"
-  short_description: "Edit TODO, ROADMAP, execplans, and planning helpers safely."
-  default_prompt: "Update planning surfaces and validate with render_agent_docs plus plan checks."
