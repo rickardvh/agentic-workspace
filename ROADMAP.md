@@ -14,6 +14,7 @@ Inactive long-horizon migration and post-migration candidate work.
 ## Next Candidate Queue
 
 - Shared tooling extraction: evaluate a common checker core when the first stable monorepo release exposes repeated maintenance friction across duplicated scripts.
+- Workspace orchestrator and fenced managed surfaces: move product-managed startup guidance, generated planning assets, and ownership metadata under `.agentic-workspace/`, with a top-level orchestrator file plus fenced managed insertions in `AGENTS.md`, when the post-migration layout is stable enough to refactor installer ownership rules safely.
 - Unified integration lane: add a dual-bootstrap coexistence smoke-test harness when release dry-runs show the monorepo install topology is stable enough to freeze expectations.
 - Contributor onboarding: add package ownership CODEOWNERS and contributor playbooks when migration close-out is complete and package boundaries are no longer shifting.
 

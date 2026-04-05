@@ -34,6 +34,7 @@ Phase-4 root orchestration complete; migration foundation stabilized
 - Consolidate bootstrap namespace: move `.agentic-memory/` and `.agentic-planning/` to `.agentic-workspace/{memory,planning}/`.
 - Ensure both bootstraps work end-to-end with new paths and pass all validation tests.
 - Maintain package boundaries and independent release tracks while converging on unified namespace convention.
+- Define the next cleanup tranche: a workspace-owned orchestrator file and fenced product-managed insertions so shared guidance stops blending into repo-owned `AGENTS.md` prose.
 
 ## Recent meaningful progress
 
@@ -53,6 +54,7 @@ Phase-4 root orchestration complete; migration foundation stabilized
 - Package-local installed systems are migration residue and should not remain operational authorities.
 - Imported package planning history is preserved under docs/execplans/archive/imported-planning-package/.
 - Use root memory domain notes for package-origin context after package-local uninstall cleanup.
+- Product-managed additions should stay visibly fenced off from repo-owned instructions; a thin pointer block in `AGENTS.md` is preferred over mixed ownership prose.
 
 ## Failure signals
 
@@ -68,7 +70,7 @@ Phase-4 root orchestration complete; migration foundation stabilized
 ## Verified against
 
 - `memory/index.md`
-- `.agentic-memory/WORKFLOW.md`
+- `.agentic-workspace/memory/WORKFLOW.md`
 - `AGENTS.md`
 - `TODO.md`
 - `docs/migration/monorepo-migration-plan.md`
