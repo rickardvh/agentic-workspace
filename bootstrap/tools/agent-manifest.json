@@ -63,7 +63,7 @@
   },
   "routing": {
     "planning_surface_change": {
-      "when": "Editing planning surfaces, plan templates, or planning-surface checks.",
+      "when": "Editing planning-for-execution surfaces, plan templates, or planning-surface checks.",
       "prefer_when": "the change affects TODO, ROADMAP, execplans, or the planning bootstrap itself.",
       "touches": [
         "AGENTS.md",
@@ -76,7 +76,7 @@
         "tools/AGENT_QUICKSTART.md"
       ],
       "commands": [
-        "python scripts/check/check_planning_surfaces.py",
+        "make plan-check",
         "python scripts/render_agent_docs.py"
       ]
     }
@@ -86,6 +86,7 @@
     "Active execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work.",
     "ROADMAP.md owns inactive long-horizon candidate epics and promotion signals.",
     "Checked-in memory, when installed, owns durable routed knowledge rather than active planning state.",
+    "Planning should remain useful without memory being installed.",
     "Do not bulk-read all planning surfaces for ordinary execution work."
   ]
 }

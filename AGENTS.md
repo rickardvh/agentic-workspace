@@ -48,10 +48,13 @@ Do not start coding from chat context alone when the same knowledge should live 
 
 - This is `agentic-planning-bootstrap`.
 - Repository purpose: package and maintain a reusable checked-in planning bootstrap that complements `agentic-memory`.
+- This repo is both the self-hosted reference install for the planning contract and the package source for the reusable bootstrap payload.
 - Key repo docs: `README.md`, `docs/execplans/README.md`, `docs/execplans/TEMPLATE.md`.
 - Key subsystems: `bootstrap/`, `src/repo_planning_bootstrap/`, `scripts/check/`, `tools/`.
 - Do not broaden migrations, refactors, or schema changes beyond the active task unless a required adjacent fix is necessary for correctness.
 - Prefer updating an existing plan over creating overlapping plan files for the same feature.
+- Do not turn the planning surfaces into a generic tracker, backlog database, or Jira replacement.
+- Prefer tightening the existing contract over inventing a second schema.
 - Memory complements planning; it does not own active queue state, milestone sequencing, or backlog status.
 - Keep durable implementation facts in canonical docs or memory, not in planning surfaces.
 

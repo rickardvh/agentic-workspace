@@ -51,10 +51,10 @@ Fast path for autonomous agents working on this repo.
 ## Common task classes
 
 - `planning_surface_change`
-  Use when: Editing planning surfaces, plan templates, or planning-surface checks.
+  Use when: Editing planning-for-execution surfaces, plan templates, or planning-surface checks.
   Prefer this route when: the change affects TODO, ROADMAP, execplans, or the planning bootstrap itself.
   Touches: `AGENTS.md`, `TODO.md`, `ROADMAP.md`, `docs/execplans/`, `scripts/check/check_planning_surfaces.py`, `scripts/render_agent_docs.py`, `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`
-  Validate: `python scripts/check/check_planning_surfaces.py`; `python scripts/render_agent_docs.py`
+  Validate: `make plan-check`; `python scripts/render_agent_docs.py`
 
 ## Skills
 
@@ -68,4 +68,5 @@ Fast path for autonomous agents working on this repo.
 - Active execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work.
 - ROADMAP.md owns inactive long-horizon candidate epics and promotion signals.
 - Checked-in memory, when installed, owns durable routed knowledge rather than active planning state.
+- Planning should remain useful without memory being installed.
 - Do not bulk-read all planning surfaces for ordinary execution work.

@@ -5,10 +5,10 @@ build-backend = "hatchling.build"
 [project]
 name = "agentic-planning-bootstrap"
 version = "0.1.0"
-description = "Install a checked-in planning bootstrap into an existing repository."
+description = "Install a checked-in planning bootstrap for execution into an existing repository."
 readme = "README.md"
 requires-python = ">=3.11"
-keywords = ["agents", "bootstrap", "planning", "repository", "workflow"]
+keywords = ["agents", "bootstrap", "execution-steering", "planning", "repository", "workflow"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",

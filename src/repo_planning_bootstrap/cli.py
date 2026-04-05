@@ -23,7 +23,7 @@ GIT_REPO_URL = "git+https://github.com/Tenfifty/agentic-planning"
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="agentic-planning-bootstrap",
-        description="Install and maintain a lightweight checked-in planning bootstrap.",
+        description="Install and maintain a lightweight checked-in planning bootstrap for execution.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -35,7 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
         command_parser.add_argument("--force", action="store_true")
         command_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    adopt_parser = subparsers.add_parser("adopt", help="Conservatively add bootstrap files to an existing repository.")
+    adopt_parser = subparsers.add_parser("adopt", help="Conservatively add planning bootstrap files to an existing repository.")
     adopt_parser.add_argument("--target")
     adopt_parser.add_argument("--dry-run", action="store_true")
     adopt_parser.add_argument("--format", choices=("text", "json"), default="text")
@@ -108,12 +108,12 @@ def _build_prompt(command: str, target: str | None) -> str:
         return (
             f"Run `{runner} install{target_args}`. "
             "Then customise `AGENTS.md`, prune starter placeholders, and run "
-            "`python scripts/render_agent_docs.py` plus `python scripts/check/check_planning_surfaces.py`."
+            "`python scripts/render_agent_docs.py` plus `make plan-check`."
         )
     return (
         f"Run `{runner} adopt{target_args}` conservatively. "
         "Do not overwrite repo-owned planning files unless the user asks for it. "
-        "Afterwards run `python scripts/render_agent_docs.py` and `python scripts/check/check_planning_surfaces.py`."
+        "Afterwards run `python scripts/render_agent_docs.py` and `make plan-check`."
     )
 
 

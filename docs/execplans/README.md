@@ -4,6 +4,8 @@ Checked-in execution plans for multi-milestone or multi-thread work live in this
 
 Use `python scripts/check/check_planning_surfaces.py` for advisory shape and drift warnings across `TODO.md`, active execplans, and `ROADMAP.md`.
 
+This planning system is for execution. It is not intended to become a generic tracker, backlog database, or Jira replacement.
+
 ## Layout
 
 - Keep active plans at the top level of `docs/execplans/`.
@@ -43,6 +45,8 @@ Keep the drift log decision-shaped and brief. Do not turn an active or completed
 Execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work. `TODO.md` should only expose that the work is active and point here.
 
 Keep durable technical facts and stable subsystem guidance in canonical docs or checked-in memory, not inside active execplans.
+
+Prefer refining the existing contract over inventing a second schema. If a proposed improvement makes plans harder to use than the work they are guiding, it is likely the wrong change.
 
 Default to one active milestone at a time.
 Prefer updating an existing active plan over creating overlapping plan files for the same feature.
