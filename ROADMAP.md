@@ -17,7 +17,6 @@ Inactive long-horizon candidate work.
 - Unified lifecycle orchestrator follow-through: deepen the new workspace-level lifecycle CLI with presets, richer shared UX, and broader composition flows while keeping module-specific logic in the module packages.
 - Shared tooling extraction: evaluate a common checker core when the first stable monorepo release exposes repeated maintenance friction across duplicated scripts.
 - Unified integration lane: add a dual-bootstrap coexistence smoke-test harness when release dry-runs show the monorepo install topology is stable enough to freeze expectations.
-- Contributor onboarding: add package ownership CODEOWNERS and contributor playbooks when package boundaries are stable enough to freeze ownership expectations.
 
 ## Reopen Conditions
 

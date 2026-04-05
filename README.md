@@ -96,6 +96,10 @@ This root CLI is intentionally thin. It orchestrates selected modules through on
 
 When `--module` is omitted, `install` and `adopt` default to the current shared module set. Maintenance verbs such as `status`, `doctor`, `upgrade`, and `uninstall` default to the modules already detected in the target repo.
 
+## Contributing
+
+See `docs/contributor-playbook.md` for package routing, ownership, and the smallest validation lane to run for common change types.
+
 ## Environment Routing
 
 Use one shared root environment for daily monorepo work and package validation.

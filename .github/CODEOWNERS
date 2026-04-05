@@ -1,0 +1,21 @@
+# Default owner for the monorepo
+* @rickardvh
+
+# Workspace-level orchestration and shared root surfaces
+/.github/ @rickardvh
+/.agentic-workspace/ @rickardvh
+/AGENTS.md @rickardvh
+/Makefile @rickardvh
+/README.md @rickardvh
+/ROADMAP.md @rickardvh
+/TODO.md @rickardvh
+/docs/execplans/ @rickardvh
+/memory/ @rickardvh
+/scripts/ @rickardvh
+/src/ @rickardvh
+/tests/ @rickardvh
+/tools/ @rickardvh
+
+# Package ownership
+/packages/memory/ @rickardvh
+/packages/planning/ @rickardvh
