@@ -253,6 +253,7 @@ def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_p
     todo_text = (tmp_path / "TODO.md").read_text(encoding="utf-8")
     roadmap_text = (tmp_path / "ROADMAP.md").read_text(encoding="utf-8")
     assert "plan-alpha" not in todo_text
+    assert "- No active work right now." in todo_text
     assert "- No active handoff right now." in roadmap_text
     assert any(action.kind == "updated" and action.path == tmp_path / "TODO.md" for action in result.actions)
     assert any(action.kind == "updated" and action.path == tmp_path / "ROADMAP.md" for action in result.actions)

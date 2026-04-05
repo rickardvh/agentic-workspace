@@ -36,6 +36,8 @@ GENERATED_PAYLOAD_FILES = (
     Path("tools/AGENT_QUICKSTART.md"),
 )
 
+TODO_EMPTY_STATE_LINE = "- No active work right now."
+
 PACKAGE_MANAGED_FILES = tuple(
     relative for relative in REQUIRED_PAYLOAD_FILES if relative not in ROOT_SURFACE_FILES and relative not in GENERATED_PAYLOAD_FILES
 )
@@ -853,7 +855,27 @@ def _remove_todo_items(todo_path: Path, items_to_remove: list[TodoItem]) -> list
     filtered_lines = [line for index, line in enumerate(lines) if index not in indexes_to_remove]
     while filtered_lines and filtered_lines[-1] == "":
         filtered_lines.pop()
-    return filtered_lines
+    return _restore_todo_empty_state(filtered_lines)
+
+
+def _restore_todo_empty_state(lines: list[str]) -> list[str]:
+    next_heading = next((index for index, line in enumerate(lines) if line.strip().lower() == "## next"), -1)
+    if next_heading < 0:
+        return lines
+    section_end = len(lines)
+    for index in range(next_heading + 1, len(lines)):
+        if lines[index].startswith("## "):
+            section_end = index
+            break
+
+    section_body = lines[next_heading + 1 : section_end]
+    if any(line.strip() and line.strip() != TODO_EMPTY_STATE_LINE for line in section_body):
+        return lines
+
+    normalized_lines = lines[: next_heading + 1] + ["", TODO_EMPTY_STATE_LINE] + lines[section_end:]
+    while len(normalized_lines) > 2 and normalized_lines[-1] == "" and normalized_lines[-2] == "":
+        normalized_lines.pop()
+    return normalized_lines
 
 
 def _plan_stem_tokens(plan_path: Path) -> list[str]:
