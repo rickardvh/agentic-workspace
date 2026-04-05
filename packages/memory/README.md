@@ -1,6 +1,6 @@
 # agentic-memory-bootstrap
 
-A small CLI that adds a checked-in, route-indexed memory layer to any Git repository so AI coding agents retain durable context across sessions without rediscovering the codebase from scratch each time.
+Agentic Memory is a checked-in, route-indexed durable repo-memory contract, currently distributed as the `agentic-memory-bootstrap` package and CLI.
 
 ## At A Glance
 
@@ -22,6 +22,8 @@ Do not use it for:
 
 If what you need is active work steering rather than durable repo memory, start with `agentic-planning-bootstrap` instead.
 
+Current maturity in this repo: beta.
+
 ## Quick Start
 
 Fastest no-install path:
@@ -31,6 +33,26 @@ uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirector
 ```
 
 Use `prompt install` for a clean bootstrap into a repo that does not already have a memory system. Use `prompt adopt` when the repository already has related docs or workflow notes and you want the installer to merge conservatively instead of assuming a blank slate.
+
+## Good Fits / Bad Fits
+
+Good fits:
+
+- a repo where agents repeatedly have to relearn operator sequences, subsystem boundaries, or recurring failure modes
+- a repo that already has task tracking, but no durable shared knowledge layer
+- a repo with many short sessions or many contributors switching tools
+
+Bad fits:
+
+- a repo that only needs a milestone tracker or backlog board
+- a repo where every important fact is already cheap to rediscover from code and canonical docs
+
+## Example Scenarios
+
+- Before: agents reopen the repo and repeatedly grep for the same authority boundary or runbook steps.
+  After: those facts live in routed notes under `memory/`, so the startup path can load the small relevant subset.
+- Before: team knowledge about recurring failures stays in chat transcripts or one maintainer's head.
+  After: the repo keeps reviewed, versioned failure notes and runbooks in a shared memory contract.
 
 ## Why
 

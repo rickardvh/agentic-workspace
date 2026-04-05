@@ -1,4 +1,8 @@
+<!-- GENERATED FILE: do not edit manually. -->
+
 # Agent Quickstart
+
+> GENERATED FILE. Do not edit manually. Update `.agentic-workspace/planning/agent-manifest.json` and rerender with `python scripts/render_agent_docs.py`.
 
 Fast path for autonomous agents working on this repo.
 

@@ -8,10 +8,13 @@ Active queue for repository work.
 
 ## Now
 
+- [docs-ecosystem-hardening-2026-04-05](docs/execplans/docs-ecosystem-hardening-2026-04-05.md) - Documentation and liveness tranche for naming clarity, chooser guidance, canonical policy docs, and startup/routing consistency checks.
+
 ## Action
 
-- Treat the workspace-level lifecycle orchestrator as the preferred next promotion once the tranche is bounded enough for a short execplan.
+- Treat naming cleanup, maintainer-doc liveness checks, and a shorter external chooser as the preferred next promotions, in that order, once each tranche is bounded enough for a short execplan.
 - Promote the next roadmap candidate only when it is bounded enough for a short active execplan.
+- Prefer documentation, liveness checks, and consistency hardening over introducing new top-level concepts.
 - Keep root planning surfaces compact; archive completed plans instead of letting TODO accumulate residue.
 
 ## Added In This Pass

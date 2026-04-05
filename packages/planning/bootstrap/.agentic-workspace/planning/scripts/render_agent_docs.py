@@ -6,6 +6,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 MANAGED_ROOT = REPO_ROOT / ".agentic-workspace" / "planning"
 MANIFEST_PATH = MANAGED_ROOT / "agent-manifest.json"
+GENERATED_DOC_NOTICE = (
+    "> GENERATED FILE. Do not edit manually. Update `.agentic-workspace/planning/agent-manifest.json` "
+    "and rerender with `python scripts/render_agent_docs.py`."
+)
 
 
 def load_manifest(path: Path = MANIFEST_PATH) -> dict:
@@ -21,7 +25,11 @@ def render_quickstart(manifest: dict) -> str:
     skills = manifest.get("skills", {})
 
     lines: list[str] = []
+    lines.append("<!-- GENERATED FILE: do not edit manually. -->")
+    lines.append("")
     lines.append("# Agent Quickstart")
+    lines.append("")
+    lines.append(GENERATED_DOC_NOTICE)
     lines.append("")
     lines.append("Fast path for autonomous agents working on this repo.")
     lines.append("")
@@ -102,7 +110,11 @@ def render_routing(manifest: dict) -> str:
     routing = manifest.get("routing", {})
 
     lines: list[str] = []
+    lines.append("<!-- GENERATED FILE: do not edit manually. -->")
+    lines.append("")
     lines.append("# Agent Routing")
+    lines.append("")
+    lines.append(GENERATED_DOC_NOTICE)
     lines.append("")
     lines.append("Focused routing reference derived from `.agentic-workspace/planning/agent-manifest.json`.")
     lines.append("")

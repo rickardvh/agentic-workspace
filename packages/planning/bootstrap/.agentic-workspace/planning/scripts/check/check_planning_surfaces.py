@@ -8,6 +8,7 @@ three-layer planning split. This check is advisory and exits with 0.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 from pathlib import Path
@@ -44,6 +45,7 @@ WARNING_ROADMAP_MISSING_REOPEN_SIGNAL = "roadmap_missing_reopen_signal"
 WARNING_ROADMAP_STALE_CANDIDATE_PRESSURE = "roadmap_stale_candidate_pressure"
 WARNING_PROMOTION_LINKAGE_DRIFT = "promotion_linkage_drift"
 WARNING_STARTUP_POLICY_DRIFT = "startup_policy_drift"
+WARNING_GENERATED_DOCS_DRIFT = "generated_docs_drift"
 WARNING_ARCHIVE_ACCUMULATION_DRIFT = "archive_accumulation_drift"
 WARNING_PLANNING_MEMORY_BOUNDARY_BLUR = "planning_memory_boundary_blur"
 
@@ -106,6 +108,8 @@ PROMOTION_REASON_HINTS = (
     "failed",
 )
 
+GENERATED_DOC_NOTICE_FRAGMENT = "generated file"
+
 
 class PlanningWarning(NamedTuple):
     warning_class: str
@@ -136,6 +140,16 @@ def _render_path(path: Path) -> str:
         return path.relative_to(REPO_ROOT).as_posix()
     except ValueError:
         return path.as_posix()
+
+
+def _load_render_module():
+    render_path = Path(__file__).resolve().parents[1] / "render_agent_docs.py"
+    spec = importlib.util.spec_from_file_location("workspace_planning_render_agent_docs", render_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Unable to load render module from {render_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _read_lines(path: Path) -> list[str]:
@@ -447,14 +461,18 @@ def _check_promotion_linkage(*, roadmap_path: Path, active_items: list[dict[str,
 def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     warnings: list[PlanningWarning] = []
     agents_path = repo_root / "AGENTS.md"
-    manifest_path = repo_root / "tools" / "agent-manifest.json"
+    manifest_path = repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json"
     quickstart_path = repo_root / "tools" / "AGENT_QUICKSTART.md"
+    readme_path = repo_root / "README.md"
+    contributor_path = repo_root / "docs" / "contributor-playbook.md"
 
     if not (agents_path.exists() and manifest_path.exists() and quickstart_path.exists()):
         return warnings
 
     agents_text = "\n".join(_read_lines(agents_path)).lower()
     quickstart_text = "\n".join(_read_lines(quickstart_path)).lower()
+    readme_text = "\n".join(_read_lines(readme_path)).lower() if readme_path.exists() else ""
+    contributor_text = "\n".join(_read_lines(contributor_path)).lower() if contributor_path.exists() else ""
 
     required_agents_fragments = (
         "read `todo.md`",
@@ -480,6 +498,38 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(quickstart_path),
                 "Quickstart conditional reads are missing roadmap/bulk-read startup constraints.",
+            )
+        )
+
+    required_readme_fragments = (
+        "for agent maintainers, the primary operating path is",
+        "`agents.md`",
+        "`todo.md`",
+        "active execplan",
+        "`docs/contributor-playbook.md`",
+    )
+    if readme_text and not all(fragment in readme_text for fragment in required_readme_fragments):
+        warnings.append(
+            PlanningWarning(
+                WARNING_STARTUP_POLICY_DRIFT,
+                _render_path(readme_path),
+                "README maintainer startup path is missing required agent-startup guidance.",
+            )
+        )
+
+    required_contributor_fragments = (
+        "default startup path for an agent maintainer",
+        "read `agents.md`",
+        "read `todo.md`",
+        "active execplan",
+        "package-local `agents.md`",
+    )
+    if contributor_text and not all(fragment in contributor_text for fragment in required_contributor_fragments):
+        warnings.append(
+            PlanningWarning(
+                WARNING_STARTUP_POLICY_DRIFT,
+                _render_path(contributor_path),
+                "Contributor playbook startup path is missing required maintainer guidance.",
             )
         )
 
@@ -528,6 +578,85 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
                 "Manifest conditional_reads must include the no-bulk-read startup constraint.",
+            )
+        )
+
+    return warnings
+
+
+def _check_generated_agent_docs(repo_root: Path) -> list[PlanningWarning]:
+    warnings: list[PlanningWarning] = []
+    source_manifest_path = repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json"
+    mirror_manifest_path = repo_root / "tools" / "agent-manifest.json"
+    quickstart_path = repo_root / "tools" / "AGENT_QUICKSTART.md"
+    routing_path = repo_root / "tools" / "AGENT_ROUTING.md"
+
+    if not all(path.exists() for path in (source_manifest_path, mirror_manifest_path, quickstart_path, routing_path)):
+        return warnings
+
+    try:
+        manifest = json.loads(source_manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        warnings.append(
+            PlanningWarning(
+                WARNING_GENERATED_DOCS_DRIFT,
+                _render_path(source_manifest_path),
+                "Source agent manifest is invalid JSON; generated docs cannot be validated.",
+            )
+        )
+        return warnings
+
+    render_module = _load_render_module()
+    expected_manifest = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
+    expected_quickstart = render_module.render_quickstart(manifest)
+    expected_routing = render_module.render_routing(manifest)
+
+    actual_manifest = mirror_manifest_path.read_text(encoding="utf-8")
+    actual_quickstart = quickstart_path.read_text(encoding="utf-8")
+    actual_routing = routing_path.read_text(encoding="utf-8")
+
+    if actual_manifest != expected_manifest:
+        warnings.append(
+            PlanningWarning(
+                WARNING_GENERATED_DOCS_DRIFT,
+                _render_path(mirror_manifest_path),
+                "Generated manifest mirror is out of date; rerender agent docs from the source manifest.",
+            )
+        )
+
+    if actual_quickstart != expected_quickstart:
+        warnings.append(
+            PlanningWarning(
+                WARNING_GENERATED_DOCS_DRIFT,
+                _render_path(quickstart_path),
+                "Generated quickstart is out of date; rerender agent docs from the source manifest.",
+            )
+        )
+
+    if actual_routing != expected_routing:
+        warnings.append(
+            PlanningWarning(
+                WARNING_GENERATED_DOCS_DRIFT,
+                _render_path(routing_path),
+                "Generated routing guide is out of date; rerender agent docs from the source manifest.",
+            )
+        )
+
+    if GENERATED_DOC_NOTICE_FRAGMENT not in actual_quickstart.lower():
+        warnings.append(
+            PlanningWarning(
+                WARNING_GENERATED_DOCS_DRIFT,
+                _render_path(quickstart_path),
+                "Generated quickstart is missing the non-manual generated-file marker.",
+            )
+        )
+
+    if GENERATED_DOC_NOTICE_FRAGMENT not in actual_routing.lower():
+        warnings.append(
+            PlanningWarning(
+                WARNING_GENERATED_DOCS_DRIFT,
+                _render_path(routing_path),
+                "Generated routing guide is missing the non-manual generated-file marker.",
             )
         )
 
@@ -943,6 +1072,7 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
     warnings.extend(_check_roadmap(roadmap_path, todo_active_ids | execplan_active_ids))
     warnings.extend(_check_promotion_linkage(roadmap_path=roadmap_path, active_items=todo_active_items))
     warnings.extend(_check_startup_policy(repo_root))
+    warnings.extend(_check_generated_agent_docs(repo_root))
     return warnings
 
 

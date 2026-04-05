@@ -1,0 +1,69 @@
+# Which Package Should I Install?
+
+Use this page when you are deciding what to adopt in a target repository.
+
+## Product Names And Package Names
+
+- Product name: Agentic Memory
+  Current package/CLI: `agentic-memory-bootstrap`
+- Product name: Agentic Planning
+  Current package/CLI: `agentic-planning-bootstrap`
+- Composition layer: `agentic-workspace`
+
+In other words, the ecosystem names are `Agentic Memory` and `Agentic Planning`; the current distributable package names still carry `-bootstrap` because they install the checked-in repo contracts.
+
+## Fast Chooser
+
+| If your main problem is... | Install... | Why |
+| --- | --- | --- |
+| Agents and contributors keep re-discovering stable repo knowledge | `agentic-memory-bootstrap` | It installs checked-in, route-indexed durable repo memory. |
+| Active work keeps drifting, fragmenting, or losing completion discipline | `agentic-planning-bootstrap` | It installs repo-native planning-for-execution surfaces. |
+| You want both durable memory and checked-in execution planning | Both packages, optionally coordinated through `agentic-workspace` | The workspace layer composes both modules without replacing their boundaries. |
+
+## Good Fits
+
+### Memory Good Fits
+
+- Polyglot repositories where subsystem knowledge is expensive to rediscover.
+- Multi-agent or multi-contributor repos where recurring failures and operator sequences should be shared.
+- Repositories that already have task tracking, but lack a durable knowledge layer.
+
+### Planning Good Fits
+
+- Repositories where work spans many short agent sessions.
+- Teams that want a checked-in active queue and bounded execplans instead of chat-only task continuity.
+- Repositories where backlog tools exist, but active execution still drifts.
+
+### Both
+
+- Repositories using agents as regular maintainers, where active work and durable knowledge both need checked-in homes.
+- Repositories that want restartable execution plus minimal rediscovery cost.
+
+## Bad Fits
+
+### Memory Bad Fits
+
+- Repos that only need a task list or milestone tracker.
+- Repos where every important fact is already cheap to rediscover from code and docs.
+
+### Planning Bad Fits
+
+- Repos looking for a full project-management system or ticket database.
+- Repos that only need durable technical documentation and not checked-in execution steering.
+
+## Partial-Adoption Compatibility Matrix
+
+| Combination | Supported | Installs |
+| --- | --- | --- |
+| Memory only | Yes | `memory/`, `.agentic-workspace/memory/`, memory skills, memory freshness tooling |
+| Planning only | Yes | `TODO.md`, `ROADMAP.md`, `docs/execplans/`, `.agentic-workspace/planning/`, generated routing docs, planning checks |
+| Memory + Planning | Yes | Both module installs, with planning and memory remaining separate owners |
+| Workspace composition with both modules | Yes | Shared lifecycle entrypoints over the same memory/planning module contracts |
+| Workspace layer without memory or planning | No | The workspace layer is intentionally thin and not a standalone domain product |
+
+## Next Reads
+
+- Memory path: `packages/memory/README.md`
+- Planning path: `packages/planning/README.md`
+- Architecture and boundaries: `docs/architecture.md`, `docs/boundary-and-extraction.md`
+- Maturity and support expectations: `docs/maturity-model.md`

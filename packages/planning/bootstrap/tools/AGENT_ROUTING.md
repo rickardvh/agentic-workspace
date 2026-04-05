@@ -1,4 +1,8 @@
+<!-- GENERATED FILE: do not edit manually. -->
+
 # Agent Routing
+
+> GENERATED FILE. Do not edit manually. Update `.agentic-workspace/planning/agent-manifest.json` and rerender with `python scripts/render_agent_docs.py`.
 
 Focused routing reference derived from `.agentic-workspace/planning/agent-manifest.json`.
 

@@ -32,6 +32,7 @@ Package-local contract for work under `packages/memory/`.
 
 - Keep a clear distinction between package source, shipped payload, and target-repository installed surfaces.
 - Do not treat files under `bootstrap/` as repo-owned monorepo workflow surfaces; they are package output.
+- Do not recreate package-local operational installs in this monorepo; root memory/planning installs remain authoritative here.
 - Preserve CLI behavior and upgrade semantics unless the active task explicitly changes them.
 - Prefer updating tests when installer paths, ownership rules, or payload contracts change.
 

@@ -42,6 +42,7 @@ Work in this repo should steer toward these goals:
 - Dogfood every major capability here before treating it as mature.
 - Continuously evaluate friction, reliability gaps, confusing ownership, and handoff failures during normal work.
 - Feed meaningful friction and improvement signals back into the active plan, roadmap, or routed memory instead of leaving them in chat-only residue.
+- When internal use reveals repeated friction, prefer fixing the shipped package or contract over adding repo-local workaround guidance.
 - Prefer repository-native state over chat-only or tool-local state.
 - Give agents durable context, explicit execution state, clear routing, narrow validation, and cheap handoff.
 - Optimise for continuity across sessions, tools, models, and contributors.

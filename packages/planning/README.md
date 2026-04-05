@@ -1,6 +1,6 @@
 # agentic-planning-bootstrap
 
-Checked-in planning system for execution in agent-driven development.
+Agentic Planning is a checked-in planning-for-execution contract, currently distributed as the `agentic-planning-bootstrap` package and CLI.
 
 ## At A Glance
 
@@ -21,6 +21,8 @@ Do not use it for:
 
 If your main problem is shared repo memory rather than active work steering, start with `agentic-memory-bootstrap` instead.
 
+Current maturity in this repo: alpha.
+
 ## Quick Start
 
 Fastest no-install path:
@@ -30,6 +32,26 @@ uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirector
 ```
 
 Use `prompt install` for a clean bootstrap. Use `adopt` when the repository already has planning-like docs and you want the package to merge conservatively around existing surfaces.
+
+## Good Fits / Bad Fits
+
+Good fits:
+
+- a repo where active work drifts between sessions and needs a checked-in active queue
+- a repo that wants bounded execution contracts without introducing a full project-management system
+- a repo using agents heavily enough that chat-only task continuity is too fragile
+
+Bad fits:
+
+- a repo looking for durable subsystem documentation or knowledge capture rather than execution steering
+- a repo expecting a full ticketing, sprint, or PM platform
+
+## Example Scenarios
+
+- Before: each session restarts by rediscovering what mattered last time.
+  After: `TODO.md` and one active execplan hold the live execution contract.
+- Before: follow-on work derails the current thread because there is no compact place to capture it safely.
+  After: future work goes to `ROADMAP.md` while the current thread stays bounded.
 
 ## Overview
 

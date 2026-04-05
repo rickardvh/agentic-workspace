@@ -1,0 +1,42 @@
+# Boundary And Extraction Policy
+
+This page is the canonical policy surface for module boundaries and extraction decisions.
+
+## Ownership Tests
+
+| Concern | Owns | Does not own |
+| --- | --- | --- |
+| Memory | durable knowledge that is expensive to rediscover | active task sequencing and backlog state |
+| Planning | active execution state, next actions, and completion criteria | durable technical knowledge and long-lived subsystem memory |
+| Routing | task-class decisions about what to read, trust, and run | shadow planning or shadow memory state |
+| Checks | drift and liveness validation for installed surfaces | hidden ownership of the source-of-truth content |
+| Workspace | multi-module lifecycle entrypoints and composition | package-internal domain behavior |
+
+## Boundary Rules
+
+- Memory must not become a task tracker or backlog mirror.
+- Planning must not become a durable knowledge base.
+- Routing must not become a shadow planning or memory system.
+- Checks must not silently become the policy owner for source-of-truth content.
+- Workspace must orchestrate domain packages without absorbing their internal rules.
+
+## Workspace Thinness Rule
+
+New module-specific lifecycle flags, installer rules, or domain policy should land in the package CLI first unless there is a strong workspace-level reason to expose them centrally.
+
+## Extraction Criteria
+
+Treat routing and checks as capabilities first, not packages by default.
+
+Extract a new package only when all of the following are true:
+
+- the ownership boundary is stable and not better explained as memory, planning, or workspace composition
+- the capability exposes explicit seams such as manifests, schemas, adapters, or generated artifacts
+- the capability is independently useful in selective-adoption repos
+- dogfooding shows repeated reuse pressure or maintenance friction that is better solved by extraction
+
+Do not extract a package when the result would mostly be a shell around one module's helper logic.
+
+## Root Versus Package Workspace Rule
+
+For this monorepo, root installed planning and memory surfaces are authoritative for live operation. Package roots are source, payload, skills, tests, and fixtures; do not recreate package-local operational installs as a workaround for missing product behavior.
