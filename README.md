@@ -64,6 +64,17 @@ Prefer explicit seams:
 
 Avoid implicit cross-package assumptions, duplicated ownership of the same state, or sibling-package dependence on private internals.
 
+## Extraction Criteria
+
+A cross-cutting capability should become its own package only when all of the following are true:
+
+- it has a stable ownership boundary that is not already better explained as part of memory, planning, or workspace orchestration
+- it exposes explicit seams such as schemas, manifests, adapters, or generated artifacts instead of depending on sibling-package internals
+- it is independently useful in selective-adoption repos rather than only as internal glue inside this monorepo
+- dogfooding shows repeated reuse pressure or maintenance friction that is better solved by extraction than by keeping the capability internal
+
+Do not extract a new package when the capability is still mostly one module's helper logic, when the boundary is still moving, or when the result would create a shell package whose real behavior still lives elsewhere.
+
 ## Selective Adoption
 
 The ecosystem should support partial adoption. Today that means `agentic-memory-bootstrap` and `agentic-planning-bootstrap` can each stand alone while the workspace layer composes them for this monorepo.
