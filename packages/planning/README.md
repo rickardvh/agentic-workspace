@@ -29,6 +29,12 @@ Adoption shape:
 - Works alongside Agentic Memory when active planning should be able to reference durable repo knowledge.
 - Does not require the full stack or the workspace layer.
 
+Collaboration shape:
+
+- Works best when active work is split into feature-scoped execplans instead of broad shared status files.
+- Keeps branch-local execution state in TODO plus the active execplan, while durable technical guidance stays elsewhere.
+- Expects completed plans to archive quickly so active surfaces stay small and merge-friendly.
+
 ## Quick Start
 
 Fastest no-install path:

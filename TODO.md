@@ -12,9 +12,10 @@ Active queue for repository work.
 
 ## Action
 
-- Treat naming cleanup, maintainer-doc liveness checks, and a shorter external chooser as the preferred next promotions, in that order, once each tranche is bounded enough for a short execplan.
+- Treat collaboration-safe installed-contract hardening as the preferred next promotion set after the current docs tranche, in this order: planning contract safety, memory contract safety, then cross-module collaboration rules.
 - Promote the next roadmap candidate only when it is bounded enough for a short active execplan.
 - Prefer documentation, liveness checks, and consistency hardening over introducing new top-level concepts.
+- Favor merge-safe installed file shapes, weak-authority current surfaces, and collaboration-oriented checks over repo-local workaround guidance.
 - Keep root planning surfaces compact; archive completed plans instead of letting TODO accumulate residue.
 
 ## Added In This Pass
@@ -32,3 +33,5 @@ Active queue for repository work.
 - Implemented root-fixture redirection and uninstall-safe checks: planning checker tests now load root checker first, memory installer tests use fixture templates instead of package-installed memory files, and root/package check targets fall back to root scripts.
 - Executed uninstall flows (dry-run + apply) in both `packages/memory` and `packages/planning`; root `make check-all` now passes against the post-uninstall layout.
 - Completed manual-review residue cleanup in both package roots and updated tests to avoid deleted package-local current-note dependencies; `make check-all` remains green.
+- Captured new collaboration-safety follow-on work for installed contracts, centered on merge-friendly planning templates, weak-authority memory current-state surfaces, cross-module write-authority rules, and package-authoring checklists for git-heavy teams.
+- Completed the planning collaboration-safety tranche: execplan templates now push merge-friendly compact shape, planning checks warn on completed plans left active and oversized active plan sets, and the planning package docs now describe collaboration-safe active-state handling more explicitly.

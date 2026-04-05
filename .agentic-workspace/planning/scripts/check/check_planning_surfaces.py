@@ -39,6 +39,7 @@ WARNING_EXECPLAN_READINESS_DRIFT = "execplan_readiness_drift"
 WARNING_EXECPLAN_LOG_DRIFT = "execplan_log_drift"
 WARNING_EXECPLAN_NOTEBOOK_DRIFT = "execplan_notebook_drift"
 WARNING_EXECPLAN_UNDER_SPECIFIED = "execplan_under_specified"
+WARNING_EXECPLAN_ACTIVE_SET_PRESSURE = "execplan_active_set_pressure"
 WARNING_ROADMAP_EXECUTION_DRIFT = "roadmap_execution_drift"
 WARNING_ROADMAP_MISSING_PROMOTION_SIGNAL = "roadmap_missing_promotion_signal"
 WARNING_ROADMAP_MISSING_REOPEN_SIGNAL = "roadmap_missing_reopen_signal"
@@ -723,6 +724,14 @@ def _active_execplans(execplan_dir: Path) -> list[Path]:
     return plans
 
 
+def _execplan_status(path: Path) -> str:
+    for line in _section_content(_read_lines(path), "Active Milestone"):
+        match = re.match(r"^\s*-\s*status\s*:\s*(.*)\s*$", line, re.IGNORECASE)
+        if match:
+            return match.group(1).strip().lower()
+    return ""
+
+
 def _extract_section_stats(lines: list[str], section_name: str) -> tuple[list[str], int]:
     section = _section_content(lines, section_name)
     bullets = sum(1 for line in section if re.match(r"^\s*[-*]\s+", line))
@@ -770,8 +779,14 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
     planned_only_rows = [
         line for line in all_status_rows if re.search(r"\b(planned|not-started|pending)\b", line)
     ]
-    has_only_non_active_status = bool(all_status_rows) and len(planned_only_rows) == len(
+    completed_only_rows = [
+        line for line in all_status_rows if re.search(r"\b(completed|done|closed)\b", line)
+    ]
+    has_only_completed_status = bool(all_status_rows) and len(completed_only_rows) == len(
         all_status_rows
+    )
+    has_only_non_active_status = bool(all_status_rows) and (
+        len(planned_only_rows) == len(all_status_rows) or has_only_completed_status
     )
 
     # Enforce exactly one active milestone for active execplans; planned-only contracts are allowed.
@@ -950,6 +965,15 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
             )
         )
 
+    if has_only_completed_status:
+        warnings.append(
+            PlanningWarning(
+                WARNING_ARCHIVE_ACCUMULATION_DRIFT,
+                _render_path(path),
+                "Completed execplan is still in active execplans space; archive it once it no longer changes future execution.",
+            )
+        )
+
     text = "\n".join(lines)
     if len(lines) > 220:
         warnings.append(
@@ -1105,6 +1129,26 @@ def _check_roadmap(path: Path, todo_active_ids: set[str]) -> list[PlanningWarnin
     return warnings
 
 
+def _check_execplan_active_set(execplan_dir: Path) -> list[PlanningWarning]:
+    warnings: list[PlanningWarning] = []
+    active_plans = []
+    for path in _active_execplans(execplan_dir):
+        status = _execplan_status(path)
+        if status and status not in {"completed", "done", "closed", "planned", "pending", "not-started"}:
+            active_plans.append(path)
+
+    if len(active_plans) > TODO_MAX_NOW_ITEMS:
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_ACTIVE_SET_PRESSURE,
+                _render_path(execplan_dir),
+                f"Active execplan set has {len(active_plans)} live plans; keep the active set small and feature-scoped.",
+            )
+        )
+
+    return warnings
+
+
 def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWarning]:
     todo_path = repo_root / "TODO.md"
     roadmap_path = repo_root / "ROADMAP.md"
@@ -1121,6 +1165,7 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
         warnings.extend(plan_warnings)
         execplan_active_ids.update(plan_active_ids)
 
+    warnings.extend(_check_execplan_active_set(execplan_dir))
     warnings.extend(_check_roadmap(roadmap_path, todo_active_ids | execplan_active_ids))
     warnings.extend(
         _check_promotion_linkage(roadmap_path=roadmap_path, active_items=todo_active_items)
@@ -1151,12 +1196,7 @@ def gather_planning_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
 
     active_execplans = []
     for plan_path in _active_execplans(execplan_dir):
-        status = ""
-        for line in _section_content(_read_lines(plan_path), "Active Milestone"):
-            match = re.match(r"^\s*-\s*status\s*:\s*(.*)\s*$", line, re.IGNORECASE)
-            if match:
-                status = match.group(1).strip().lower()
-                break
+        status = _execplan_status(plan_path)
         if status and status not in {"completed", "done", "closed", "planned", "pending", "not-started"}:
             active_execplans.append({"path": _render_path(plan_path), "status": status})
 

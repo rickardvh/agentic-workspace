@@ -36,7 +36,7 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text.strip() + "\n", encoding="utf-8")
 
 
-def _minimal_execplan() -> str:
+def _minimal_execplan(*, status: str = "in-progress") -> str:
     return """
 # Plan Alpha
 
@@ -50,7 +50,7 @@ def _minimal_execplan() -> str:
 
 ## Active Milestone
 
-- Status: in-progress
+- Status: {status}
 - Scope: maintain planning discipline.
 - Ready: ready
 - Blocked: none
@@ -83,7 +83,7 @@ def _minimal_execplan() -> str:
 ## Drift Log
 
 - 2026-04-04: Initial plan created.
-"""
+""".format(status=status)
 
 
 def _baseline_todo(surface: str = "docs/execplans/plan-alpha.md") -> str:
@@ -339,6 +339,27 @@ Long narrative status update line eleven.
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "execplan_under_specified" in classes
     assert "execplan_notebook_drift" in classes
+
+
+def test_completed_execplan_left_active_warns_archive_drift(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_completed_active")
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan(status="completed"))
+
+    classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
+    assert "archive_accumulation_drift" in classes
+
+
+def test_active_execplan_set_pressure_warns(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_active_set")
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    for name in ("plan-alpha", "plan-beta", "plan-gamma", "plan-delta"):
+        _write(tmp_path / "docs" / "execplans" / f"{name}.md", _minimal_execplan())
+
+    classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
+    assert "execplan_active_set_pressure" in classes
 
 
 def test_promotion_linkage_accepts_clear_causal_why_now(tmp_path: Path) -> None:

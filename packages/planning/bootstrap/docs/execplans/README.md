@@ -15,8 +15,10 @@ This planning system is for execution. It is not intended to become a generic tr
 - Move completed plans into `docs/execplans/archive/`.
 - Mark the active milestone `Status` as `completed` before archiving a finished plan.
 - Keep exactly one active milestone and one immediate next action by default.
+- Prefer feature-scoped plan files over growing broad shared hot files.
 - Skip `archive/` during normal startup unless the task explicitly needs historical plan context.
 - Do not treat `TODO.md`, `ROADMAP.md`, or active execplans as long-form completion logs; once a plan is complete, archive it and remove the completed-work detail from forward-looking planning surfaces.
+- Treat active plan state as branch-local and low half-life: archive, replace, or prune it rather than mutating it forever.
 
 Use a plan here when:
 
@@ -45,6 +47,7 @@ Readiness fields belong under `## Active Milestone` for active plans:
 
 Keep the drift log decision-shaped and brief. Do not turn an active or completed execplan into a changelog when the same detail is already recoverable from archived plans and git.
 Execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work. `TODO.md` should only expose that the work is active and point here.
+Use stable headings, explicit status markers, and compact bullets so active plans remain merge-friendly under concurrent edits.
 
 Keep durable technical facts and stable subsystem guidance in canonical docs or checked-in memory, not inside active execplans.
 

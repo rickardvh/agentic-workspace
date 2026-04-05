@@ -11,17 +11,18 @@ Inactive long-horizon candidate work.
 - Monorepo scaffold is in place.
 - No active execution tranche is currently promoted.
 - Maintainer feedback favors sharper documentation, liveness checks, and naming consistency over adding new layers.
+- New maintainer feedback centers on git-safe installed contracts: merge-friendly file shapes, weak-authority current surfaces, explicit lifecycle markers, and collaboration-oriented checks.
 - Promote the next candidate only when the scope is bounded enough for a short execplan and a narrow validation story.
 
 ## Next Candidate Queue
 
-- Naming and chooser cleanup: decide whether stable external product names are `agentic-memory` / `agentic-planning` or the current `*-bootstrap` names, add a very short external package chooser, and move excess maintainer/architecture detail out of the root README so it stays primarily an external entrypoint. Promote when naming choices and external entrypoint scope can be bounded into one short documentation tranche.
+- Memory collaboration-safe contract hardening: make installed memory safer for concurrent edits by weakening `memory/current/` authority, tightening one-fact-one-home discipline, defining stale or superseded note expectations more explicitly, and adding checks for oversized current-state notes or durable-note duplication pressure. Promote when memory-current and note-hygiene rules can be delivered as one bounded contract-and-check tranche.
 
-- Maintainer startup and routing liveness checks: add cheap checks for `.agentic-workspace/planning/agent-manifest.json` vs generated `tools/` docs and for the repeated maintainer startup path across root maintainer surfaces; make generated routing docs visibly non-manual. Promote when the canonical sources and expected compared surfaces are enumerated clearly enough for one narrow validation tranche.
+- Cross-module collaboration contract and write-authority rules: make branch-vs-trunk state boundaries, canonical-source precedence, selective write authority, and partial-adoption behavior explicit across memory, planning, and the workspace layer so concurrent contributors can tell which surfaces are safe to edit. Promote when the integration rules can be expressed as one compact package-facing contract without expanding the workspace layer's ownership.
 
-- Boundary and ecosystem policy hardening: create one canonical boundary/extraction-policy doc, add a compact ecosystem roadmap note for routing/checks extraction evidence, make workspace-layer thinness and the dogfooding fix-the-product rule more explicit, and document collaboration-safety rules plus the root-install versus package-workspace boundary. Promote when those policy surfaces can be grouped into one bounded doc set without rewriting the whole maintainer stack.
+- Installed-contract collaboration design checklist for package authorship: add a package-authoring checklist aimed at templates, generated artifacts, lifecycle markers, collaboration-oriented checks, and merge-safe file shapes so new installed surfaces are evaluated for concurrent git workflows instead of only single-agent restartability. Promote when the checklist can stay short, package-facing, and directly actionable during package evolution.
 
-- External adoption and maturity guidance: strengthen package fit examples and adoption scenarios, reposition the memory package around the repo-memory contract instead of "small CLI" framing, clarify alpha/beta meaning, add a partial-adoption compatibility matrix, and add a small public architecture diagram and design-principles page. Promote when adopter-facing examples and maturity language can be delivered as one bounded documentation tranche with a narrow review surface.
+- Shared tooling extraction: evaluate a common checker core when the first stable monorepo release exposes repeated maintenance friction across duplicated scripts.
 
 - Shared tooling extraction: evaluate a common checker core when the first stable monorepo release exposes repeated maintenance friction across duplicated scripts.
 
@@ -33,3 +34,4 @@ Inactive long-horizon candidate work.
 
 - Promote candidate items only when active tranche dependencies are clear and bounded.
 - Keep detailed execution in `docs/execplans/` once promoted.
+- Prefer collaboration-safe installed-contract work over new top-level concepts when dogfooding shows concurrent-edit ambiguity or merge pressure.

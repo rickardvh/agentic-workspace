@@ -3,14 +3,15 @@
 Use this template for an active plan in `docs/execplans/`. Move the file into
 `docs/execplans/archive/` once it is completed and no longer affects future execution.
 Before archiving, set `## Active Milestone` `Status` to `completed`.
+Prefer a feature-scoped file over expanding a shared hot plan, and keep headings stable so concurrent edits merge cleanly.
 
 ## Goal
 
-- 
+-
 
 ## Non-Goals
 
-- 
+-
 
 ## Active Milestone
 
@@ -21,10 +22,11 @@ Before archiving, set `## Active Milestone` `Status` to `completed`.
 - optional_deps:
 
 Keep one active milestone by default.
+Keep branch-local progress, blockers, and next-step state here rather than in durable docs or broad summaries.
 
 ## Immediate Next Action
 
-- 
+-
 
 Keep exactly one immediate action by default; avoid multi-step mini-plans here.
 
@@ -34,26 +36,28 @@ Keep exactly one immediate action by default; avoid multi-step mini-plans here.
 
 ## Touched Paths
 
-- 
+-
 
 Keep this as a scope guard, not a broad file inventory.
+Avoid large hand-maintained tables in active plans; compact bullets are easier to merge.
 
 ## Invariants
 
-- 
+-
 
 Keep invariants contract-shaped and brief.
 
 ## Validation Commands
 
-- 
+-
 
 ## Completion Criteria
 
-- 
+-
 
 ## Drift Log
 
 - 2026-01-01: Initial plan created.
 
 Keep drift entries short and decision-shaped; archive completed history instead of accumulating logs.
+Completed plans should leave the active path quickly instead of becoming long-lived status records.
