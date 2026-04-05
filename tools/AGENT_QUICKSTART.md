@@ -7,14 +7,14 @@ Fast path for autonomous agents working on this repo.
 - `AGENTS.md`
 - `TODO.md`
 - `docs/execplans/README.md`
-- `tools/agent-manifest.json`
+- `.agentic-workspace/planning/agent-manifest.json`
 
 ## Conditional reads
 
 - Read the active feature plan in `docs/execplans/` when the task belongs to one.
 - Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.
 - Before editing files in a subtree, read the nearest relevant descendant `AGENTS.md` for that subtree only.
-- Read `memory/index.md` and `.agentic-memory/WORKFLOW.md` only when memory is installed and the plan or manifest does not already route the task, or when changing workflow, planning, or memory itself.
+- Read `memory/index.md` and `.agentic-workspace/memory/WORKFLOW.md` only when memory is installed and the plan or manifest does not already route the task, or when changing workflow, planning, or memory itself.
 - Do not bulk-read all planning surfaces for ordinary execution work; start from `TODO.md` and then the one relevant active plan.
 - Read only the repo docs explicitly referenced by that route.
 
@@ -32,12 +32,12 @@ Fast path for autonomous agents working on this repo.
 - Active feature plans: `docs/execplans/`
 - Archived plans: `docs/execplans/archive/`
 - Long-horizon planning: `ROADMAP.md`
-- Machine-readable routing: `tools/agent-manifest.json`
+- Machine-readable routing: `.agentic-workspace/planning/agent-manifest.json`
 
 ## Validation flow
 
 - Run the narrowest validation that proves the change.
-- Use `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`, and the nearest subsystem `AGENTS.md` for task-specific commands.
+- Use `.agentic-workspace/planning/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`, and the nearest subsystem `AGENTS.md` for task-specific commands.
 - Escalate to broader checks only when the change crosses subsystem boundaries or invalidates the narrower proof.
 
 ## Completion reminders
@@ -46,21 +46,22 @@ Fast path for autonomous agents working on this repo.
 
 ## Generated surfaces
 
-- `tools/AGENT_QUICKSTART.md` is generated from this manifest by `python scripts/render_agent_docs.py`.
-- `tools/AGENT_ROUTING.md` is generated from this manifest by `python scripts/render_agent_docs.py`.
+- `tools/agent-manifest.json` is a generated mirror of `.agentic-workspace/planning/agent-manifest.json`.
+- `tools/AGENT_QUICKSTART.md` is generated from `.agentic-workspace/planning/agent-manifest.json` by `python scripts/render_agent_docs.py`.
+- `tools/AGENT_ROUTING.md` is generated from `.agentic-workspace/planning/agent-manifest.json` by `python scripts/render_agent_docs.py`.
 
 ## Common task classes
 
 - `planning_surface_change`
   Use when: Editing planning-for-execution surfaces, plan templates, or planning-surface checks.
   Prefer this route when: the change affects TODO, ROADMAP, execplans, or the planning bootstrap itself.
-  Touches: `AGENTS.md`, `TODO.md`, `ROADMAP.md`, `docs/execplans/`, `scripts/check/check_planning_surfaces.py`, `scripts/render_agent_docs.py`, `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`
+  Touches: `AGENTS.md`, `TODO.md`, `ROADMAP.md`, `docs/execplans/`, `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`, `.agentic-workspace/planning/scripts/render_agent_docs.py`, `.agentic-workspace/planning/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`
   Validate: `make plan-check`; `python scripts/render_agent_docs.py`
 
 ## Skills
 
 - Repo development skills: `tools/skills`
-- Shared memory workflow skills: `.agentic-memory/skills`
+- Shared memory workflow skills: `.agentic-workspace/memory/skills`
 - Repo-specific memory skills: `memory/skills`
 
 ## Core invariants

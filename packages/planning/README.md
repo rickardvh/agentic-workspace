@@ -142,6 +142,9 @@ The package installs the checked-in planning contract and its supporting surface
 - `docs/execplans/TEMPLATE.md`
 - `docs/execplans/archive/README.md`
 - `.agentic-workspace/planning/UPGRADE-SOURCE.toml`
+- `.agentic-workspace/planning/agent-manifest.json`
+- `.agentic-workspace/planning/scripts/render_agent_docs.py`
+- `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`
 - `tools/agent-manifest.json`
 - `tools/AGENT_QUICKSTART.md`
 - `tools/AGENT_ROUTING.md`
@@ -151,7 +154,8 @@ The package installs the checked-in planning contract and its supporting surface
 It packages:
 
 - the planning contract
-- the checker
+- the module-managed planning manifest and helper scripts
+- generated mirrors and thin root wrappers for repo ergonomics
 - file-native helper commands for promotion, archiving, and summary
 - starter surfaces
 - startup docs and manifest wiring
@@ -289,7 +293,7 @@ This system is most useful when:
 
 `archive-plan --apply-cleanup` is intentionally narrow. It may remove completed TODO items that still point at the archived plan and compress stale `ROADMAP.md` Active Handoff residue tied to that same thread, but it does not invent hidden state or perform broad automatic rewrites.
 
-`upgrade` is intentionally conservative: it refreshes package-managed helper surfaces and re-renders quickstart output, but leaves repo-owned planning surfaces like `AGENTS.md`, `TODO.md`, `ROADMAP.md`, and `tools/agent-manifest.json` unchanged when they already exist.
+`upgrade` is intentionally conservative: it refreshes package-managed helper surfaces and re-renders generated planning docs, but leaves repo-owned planning surfaces like `AGENTS.md`, `TODO.md`, and `ROADMAP.md` unchanged when they already exist.
 
 `uninstall` is intentionally safe: it removes managed files only when they still match package content and leaves locally modified files in place for manual review.
 

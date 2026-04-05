@@ -1,6 +1,6 @@
 # Agent Routing
 
-Focused routing reference derived from `tools/agent-manifest.json`.
+Focused routing reference derived from `.agentic-workspace/planning/agent-manifest.json`.
 
 ## Precedence
 
@@ -20,9 +20,9 @@ Focused routing reference derived from `tools/agent-manifest.json`.
   - `TODO.md`
   - `ROADMAP.md`
   - `docs/execplans/`
-  - `scripts/check/check_planning_surfaces.py`
-  - `scripts/render_agent_docs.py`
-  - `tools/agent-manifest.json`
+  - `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`
+  - `.agentic-workspace/planning/scripts/render_agent_docs.py`
+  - `.agentic-workspace/planning/agent-manifest.json`
   - `tools/AGENT_QUICKSTART.md`
   - `tools/AGENT_ROUTING.md`
 - Validation:

@@ -77,6 +77,9 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert (tmp_path / "AGENTS.md").exists()
     assert (tmp_path / "TODO.md").exists()
     assert (tmp_path / "ROADMAP.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "render_agent_docs.py").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_planning_surfaces.py").exists()
     assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
     assert (tmp_path / "tools" / "AGENT_ROUTING.md").exists()
     assert any(action.kind in {"copied", "created", "updated"} for action in result.actions)
@@ -114,10 +117,13 @@ def test_payload_filters_generated_artifacts(tmp_path: Path, monkeypatch) -> Non
 
 def test_verify_payload_generated_docs_match_manifest() -> None:
     result = verify_payload()
+    manifest_actions = [action for action in result.actions if action.path.name == "agent-manifest.json"]
     quickstart_actions = [action for action in result.actions if action.path.name == "AGENT_QUICKSTART.md"]
     routing_actions = [action for action in result.actions if action.path.name == "AGENT_ROUTING.md"]
+    assert manifest_actions
     assert quickstart_actions
     assert routing_actions
+    assert any(action.kind == "current" for action in manifest_actions)
     assert any(action.kind == "current" for action in quickstart_actions)
     assert any(action.kind == "current" for action in routing_actions)
 

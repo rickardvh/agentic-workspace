@@ -35,7 +35,7 @@ Phase-4 root orchestration complete; migration foundation stabilized
 - Consolidate bootstrap namespace: move `.agentic-memory/` and `.agentic-planning/` to `.agentic-workspace/{memory,planning}/`.
 - Ensure both bootstraps work end-to-end with new paths and pass all validation tests.
 - Maintain package boundaries and independent release tracks while converging on unified namespace convention.
-- Route planning-managed startup assets and helper surfaces behind the workspace-owned orchestrator and explicit managed fences.
+- Route product-managed startup assets behind the workspace-owned orchestrator and explicit managed fences, then switch installer logic over to the shared ownership ledger.
 - Use normal development in this repo as product dogfooding, while routing friction and improvement signals back into plans or memory without overfitting package behavior to this monorepo.
 
 ## Recent meaningful progress
@@ -46,6 +46,8 @@ Phase-4 root orchestration complete; migration foundation stabilized
 - Fixed syntax warnings and package escape sequences in installers and test fixtures.
 - Migrated current repo's installed systems from old dotfiles to new consolidated structure.
 - Seeded the workspace-level orchestrator contract and initial ownership ledger so future installer cleanup can converge on one source of truth.
+- Moved planning-owned manifest and helper scripts under `.agentic-workspace/planning/`, kept root scripts as compatibility wrappers, and regenerated root `tools/` routing surfaces from the managed planning manifest.
+- Restored wrapper compatibility for module-level overrides such as `REPO_ROOT`, which package tests and downstream tooling rely on when loading helper scripts as Python modules.
 
 ## Blockers
 
@@ -87,4 +89,4 @@ Phase-4 root orchestration complete; migration foundation stabilized
 
 ## Last confirmed
 
-2026-04-05 during workspace-orchestrator milestone 1
+2026-04-05 during workspace-orchestrator milestone 2

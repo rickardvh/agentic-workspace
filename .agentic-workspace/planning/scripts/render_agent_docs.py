@@ -2,17 +2,20 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+MANAGED_ROOT = REPO_ROOT / ".agentic-workspace" / "planning"
+MANIFEST_PATH = MANAGED_ROOT / "agent-manifest.json"
 
 
-def load_manifest(path: Path) -> dict[str, Any]:
+def load_manifest(path: Path = MANIFEST_PATH) -> dict:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError("agent manifest must be a JSON object")
     return payload
 
 
-def render_quickstart(manifest: dict[str, Any]) -> str:
+def render_quickstart(manifest: dict) -> str:
     bootstrap = manifest.get("bootstrap", {})
     routing = manifest.get("routing", {})
     skills = manifest.get("skills", {})
@@ -28,62 +31,33 @@ def render_quickstart(manifest: dict[str, Any]) -> str:
         lines.append(f"- `{path}`")
     lines.append("")
 
-    conditional_reads = bootstrap.get("conditional_reads", [])
-    if isinstance(conditional_reads, list) and conditional_reads:
-        lines.append("## Conditional reads")
-        lines.append("")
-        for item in conditional_reads:
-            lines.append(f"- {item}")
-        lines.append("")
+    for title, key in (
+        ("Conditional reads", "conditional_reads"),
+        ("Small-task mode", "small_task_mode"),
+        ("When to create a plan", "plan_threshold"),
+        ("Source of truth", None),
+        ("Validation flow", "validation_flow"),
+        ("Completion reminders", "completion_reminders"),
+        ("Generated surfaces", "generated_surfaces"),
+    ):
+        if key is None:
+            lines.append("## Source of truth")
+            lines.append("")
+            lines.append(f"- Active queue and lightweight direct tasks: `{bootstrap.get('task_source_of_truth', 'TODO.md')}`")
+            lines.append(f"- Active feature plans: `{bootstrap.get('active_plan_dir', 'docs/execplans/')}`")
+            lines.append(f"- Archived plans: `{bootstrap.get('archived_plan_dir', 'docs/execplans/archive/')}`")
+            lines.append(f"- Long-horizon planning: `{bootstrap.get('roadmap_source_of_truth', 'ROADMAP.md')}`")
+            lines.append("- Machine-readable routing: `.agentic-workspace/planning/agent-manifest.json`")
+            lines.append("")
+            continue
 
-    small_task_mode = bootstrap.get("small_task_mode", [])
-    if isinstance(small_task_mode, list) and small_task_mode:
-        lines.append("## Small-task mode")
-        lines.append("")
-        for item in small_task_mode:
-            lines.append(f"- {item}")
-        lines.append("")
-
-    plan_threshold = bootstrap.get("plan_threshold", [])
-    if isinstance(plan_threshold, list) and plan_threshold:
-        lines.append("## When to create a plan")
-        lines.append("")
-        for item in plan_threshold:
-            lines.append(f"- {item}")
-        lines.append("")
-
-    lines.append("## Source of truth")
-    lines.append("")
-    lines.append(f"- Active queue and lightweight direct tasks: `{bootstrap.get('task_source_of_truth', 'TODO.md')}`")
-    lines.append(f"- Active feature plans: `{bootstrap.get('active_plan_dir', 'docs/execplans/')}`")
-    lines.append(f"- Archived plans: `{bootstrap.get('archived_plan_dir', 'docs/execplans/archive/')}`")
-    lines.append(f"- Long-horizon planning: `{bootstrap.get('roadmap_source_of_truth', 'ROADMAP.md')}`")
-    lines.append("- Machine-readable routing: `.agentic-workspace/planning/agent-manifest.json`")
-    lines.append("")
-
-    validation_flow = bootstrap.get("validation_flow", [])
-    if isinstance(validation_flow, list) and validation_flow:
-        lines.append("## Validation flow")
-        lines.append("")
-        for item in validation_flow:
-            lines.append(f"- {item}")
-        lines.append("")
-
-    completion_reminders = bootstrap.get("completion_reminders", [])
-    if isinstance(completion_reminders, list) and completion_reminders:
-        lines.append("## Completion reminders")
-        lines.append("")
-        for item in completion_reminders:
-            lines.append(f"- {item}")
-        lines.append("")
-
-    generated_surfaces = bootstrap.get("generated_surfaces", [])
-    if isinstance(generated_surfaces, list) and generated_surfaces:
-        lines.append("## Generated surfaces")
-        lines.append("")
-        for item in generated_surfaces:
-            lines.append(f"- {item}")
-        lines.append("")
+        items = bootstrap.get(key, [])
+        if isinstance(items, list) and items:
+            lines.append(f"## {title}")
+            lines.append("")
+            for item in items:
+                lines.append(f"- {item}")
+            lines.append("")
 
     lines.append("## Common task classes")
     lines.append("")
@@ -123,7 +97,7 @@ def render_quickstart(manifest: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_routing(manifest: dict[str, Any]) -> str:
+def render_routing(manifest: dict) -> str:
     bootstrap = manifest.get("bootstrap", {})
     routing = manifest.get("routing", {})
 
@@ -171,3 +145,19 @@ def render_routing(manifest: dict[str, Any]) -> str:
         lines.append("")
 
     return "\n".join(lines) + "\n"
+
+
+def main() -> int:
+    manifest = load_manifest()
+    outputs = {
+        REPO_ROOT / "tools" / "agent-manifest.json": json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        REPO_ROOT / "tools" / "AGENT_QUICKSTART.md": render_quickstart(manifest),
+        REPO_ROOT / "tools" / "AGENT_ROUTING.md": render_routing(manifest),
+    }
+    for path, text in outputs.items():
+        path.write_text(text, encoding="utf-8")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

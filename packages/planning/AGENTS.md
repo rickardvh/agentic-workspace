@@ -17,7 +17,7 @@ Package-local contract for work under `packages/planning/`.
 1. Read `README.md`.
 2. Read `pyproject.toml` when changing packaging, CLI entry points, or metadata.
 3. Read only the relevant files under `src/repo_planning_bootstrap/`, `bootstrap/`, `skills/`, or `tests/` for the task.
-4. When the task affects planning ownership, startup routing, or generated agent docs, re-check `../../AGENTS.md`, `../../TODO.md`, and the active execplan.
+4. When the task affects planning ownership, startup routing, generated agent docs, or managed wrappers, re-check `../../AGENTS.md`, `../../TODO.md`, and the active execplan.
 
 ## Sources Of Truth
 
@@ -32,7 +32,7 @@ Package-local contract for work under `packages/planning/`.
 
 - Keep a clear distinction between package source, shipped payload, and this repo's active planning surfaces.
 - Do not confuse payload files under `bootstrap/` with the root planning system that drives current work in this monorepo.
-- Preserve generated-doc and manifest relationships when changing planning routing or helper tooling.
+- Preserve the relationship between `.agentic-workspace/planning/agent-manifest.json`, the managed planning scripts, and the generated root helper surfaces.
 - Prefer updating tests when installer paths, generated outputs, or ownership rules change.
 
 ## Validation

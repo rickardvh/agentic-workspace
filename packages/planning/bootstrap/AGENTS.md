@@ -22,7 +22,7 @@ Prefer checked-in knowledge over durable chat memory when both exist.
 3. Read `docs/execplans/README.md`.
 4. Read the active feature plan in `docs/execplans/` when the task belongs to one.
 5. Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.
-6. Prefer `tools/agent-manifest.json` and `tools/AGENT_QUICKSTART.md` before freeform exploration.
+6. Prefer `.agentic-workspace/planning/agent-manifest.json` and `tools/AGENT_QUICKSTART.md` before freeform exploration.
 7. Read only the repo docs relevant to the touched subsystem.
 8. Read `memory/index.md` and `\.agentic-workspace/memory/WORKFLOW.md` only when memory is installed and the task is not already well-routed by the plan or manifest, or when changing workflow, planning, or memory itself.
 
@@ -37,7 +37,7 @@ Do not start coding from chat context alone when the same knowledge should live 
 - Long-horizon planning: `ROADMAP.md`
 - Durable routed knowledge, when installed: `memory/index.md`
 - Shared memory workflow policy, when installed: `\.agentic-workspace/memory/WORKFLOW.md`
-- Machine-readable routing and command bundles: `tools/agent-manifest.json`
+- Machine-readable routing and command bundles: `.agentic-workspace/planning/agent-manifest.json`
 - Agent quickstart and rendered hot paths: `tools/AGENT_QUICKSTART.md`
 
 ## Repo Rules
