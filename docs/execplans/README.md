@@ -3,6 +3,7 @@
 Checked-in execution plans for multi-milestone or multi-thread work live in this directory.
 
 Use `python scripts/check/check_planning_surfaces.py` for advisory shape and drift warnings across `TODO.md`, active execplans, and `ROADMAP.md`.
+Use `agentic-planning-bootstrap summary`, `promote-to-plan`, and `archive-plan` as thin file-native helpers around the same checked-in contract.
 
 This planning system is for execution. It is not intended to become a generic tracker, backlog database, or Jira replacement.
 

@@ -6,20 +6,19 @@ import shutil
 
 from repo_planning_bootstrap import __version__
 from repo_planning_bootstrap.installer import (
-    archive_execplan,
     adopt_bootstrap,
+    archive_execplan,
     collect_status,
-    format_summary_json,
     doctor_bootstrap,
     format_actions,
     format_result_json,
+    format_summary_json,
     install_bootstrap,
     list_payload_files,
     planning_summary,
     promote_todo_item_to_execplan,
     verify_payload,
 )
-
 
 GIT_REPO_URL = "git+https://github.com/Tenfifty/agentic-planning"
 

@@ -11,15 +11,15 @@
 
 ## Active Milestone
 
-- Status: in-progress
-- Scope: finish the first packaged execution-facing helpers, stronger checker diagnostics, and the supporting tests/docs for the self-hosted planning bootstrap.
-- Ready: ready
+- Status: completed
+- Scope: landed the first packaged execution-facing helpers, stronger checker diagnostics, and the supporting tests/docs for the self-hosted planning bootstrap.
+- Ready: false
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Reconcile the partially landed helper/checker changes by finishing tests, fixing verification failures, and documenting the new commands.
+- Archive this completed execplan once no active surfaces still reference it.
 
 ## Blockers
 
@@ -63,3 +63,4 @@
 - 2026-04-05: Initial plan created.
 - 2026-04-05: Expanded the active milestone to cover helper flows and checker diagnostics after the initial bootstrap landed.
 - 2026-04-05: Recorded the current pass mid-implementation to bring the remaining work back under the checked-in execution contract.
+- 2026-04-05: Completed the helper, checker, testing, and documentation pass for the first execution-facing productization layer.

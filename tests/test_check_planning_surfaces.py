@@ -4,7 +4,6 @@ import importlib.util
 import json
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -141,6 +140,94 @@ def test_execplan_readiness_missing_warning(tmp_path: Path) -> None:
     assert "execplan_readiness_drift" in classes
 
 
+def test_direct_task_can_trigger_plan_required_hint(tmp_path: Path) -> None:
+    mod = _load_module(REPO_ROOT / "scripts" / "check" / "check_planning_surfaces.py", "planning_plan_required")
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: direct-item
+  Status: in-progress
+  Surface: direct
+  Why now: this step now carries milestone and validation detail that no longer fits a tiny direct task.
+  Next action: check blocker sequencing and validation scope before coding.
+  Done when: milestone-level validation and blocker handling are recorded.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
+    assert "todo_plan_required_hint" in classes
+
+
+def test_execplan_under_specified_and_notebook_warnings(tmp_path: Path) -> None:
+    mod = _load_module(REPO_ROOT / "scripts" / "check" / "check_planning_surfaces.py", "planning_execplan_shape")
+    under_specified_plan = """
+# Plan Alpha
+
+## Goal
+
+- Keep scope clear.
+
+## Non-Goals
+
+- No runtime changes.
+
+## Active Milestone
+
+- Status: in-progress
+- Scope: maintain planning discipline.
+- Ready: ready
+- Blocked: none
+- optional_deps: none
+
+## Immediate Next Action
+
+- Add one checker.
+
+## Blockers
+
+Long narrative status update line one.
+Long narrative status update line two.
+Long narrative status update line three.
+Long narrative status update line four.
+Long narrative status update line five.
+Long narrative status update line six.
+Long narrative status update line seven.
+Long narrative status update line eight.
+Long narrative status update line nine.
+Long narrative status update line ten.
+Long narrative status update line eleven.
+
+## Touched Paths
+
+## Invariants
+
+## Validation Commands
+
+## Completion Criteria
+
+- 
+
+## Drift Log
+
+- 2026-04-01: Decision one.
+- 2026-04-02: Decision two.
+- 2026-04-03: Decision three.
+- 2026-04-04: Decision four.
+- 2026-04-05: Decision five.
+- 2026-04-06: Decision six.
+"""
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", under_specified_plan)
+    classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
+    assert "execplan_under_specified" in classes
+    assert "execplan_notebook_drift" in classes
+
+
 def test_main_json_format_outputs_payload(tmp_path: Path, capsys) -> None:
     mod = _load_module(REPO_ROOT / "scripts" / "check" / "check_planning_surfaces.py", "planning_json")
     _write(tmp_path / "TODO.md", _baseline_todo())
@@ -159,3 +246,5 @@ def test_main_json_format_outputs_payload(tmp_path: Path, capsys) -> None:
     payload = json.loads(captured.out)
     assert payload["warning_count"] == 0
     assert payload["warnings"] == []
+    assert payload["todo"]["active_count"] == 1
+    assert payload["execplans"]["active_count"] == 1

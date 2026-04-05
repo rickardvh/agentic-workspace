@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-from datetime import date
 import importlib.util
 import json
 import re
 import shutil
 from dataclasses import dataclass, field
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 from repo_planning_bootstrap import __version__
 from repo_planning_bootstrap._render import load_manifest, render_quickstart
-
 
 REQUIRED_PAYLOAD_FILES = (
     Path("AGENTS.md"),
@@ -100,7 +99,8 @@ def collect_status(*, target: str | Path | None = None) -> InstallResult:
     result.add("mode", target_root, f"detected adoption mode: {mode}")
     for relative in REQUIRED_PAYLOAD_FILES:
         destination = target_root / relative
-        result.add("present" if destination.exists() else "missing", destination, "file exists" if destination.exists() else "file missing")
+        detail = "file exists" if destination.exists() else "file missing"
+        result.add("present" if destination.exists() else "missing", destination, detail)
     return result
 
 
@@ -110,7 +110,8 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
     result.add("mode", target_root, f"detected adoption mode: {_detect_adoption_mode(target_root)}")
     for relative in REQUIRED_PAYLOAD_FILES:
         destination = target_root / relative
-        result.add("current" if destination.exists() else "manual review", destination, "required file present" if destination.exists() else "required file missing")
+        detail = "required file present" if destination.exists() else "required file missing"
+        result.add("current" if destination.exists() else "manual review", destination, detail)
 
     for relative in (Path("AGENTS.md"), Path("TODO.md"), Path("ROADMAP.md")):
         path = target_root / relative
@@ -132,7 +133,14 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
     if manifest_path.exists() and quickstart_path.exists():
         rendered = _render_quickstart_for_repo(target_root)
         if quickstart_path.read_text(encoding="utf-8") != rendered:
-            result.add("manual review", quickstart_path, "quickstart is out of sync with tools/agent-manifest.json; run python scripts/render_agent_docs.py")
+            result.add(
+                "manual review",
+                quickstart_path,
+                (
+                    "quickstart is out of sync with tools/agent-manifest.json; "
+                    "run python scripts/render_agent_docs.py"
+                ),
+            )
     return result
 
 
@@ -141,13 +149,27 @@ def verify_payload() -> InstallResult:
     result = InstallResult(target_root=root, message="Payload verification", dry_run=False)
     payload_files = {Path(item) for item in list_payload_files()}
     for relative in REQUIRED_PAYLOAD_FILES:
-        result.add("current" if relative in payload_files else "manual review", root / relative, "required payload file present" if relative in payload_files else "required payload file missing")
+        detail = (
+            "required payload file present"
+            if relative in payload_files
+            else "required payload file missing"
+        )
+        result.add("current" if relative in payload_files else "manual review", root / relative, detail)
 
     manifest_path = root / "tools/agent-manifest.json"
     quickstart_path = root / "tools/AGENT_QUICKSTART.md"
     if manifest_path.exists() and quickstart_path.exists():
         rendered = _render_quickstart_for_repo(root)
-        result.add("current" if quickstart_path.read_text(encoding="utf-8") == rendered else "manual review", quickstart_path, "quickstart matches manifest" if quickstart_path.read_text(encoding="utf-8") == rendered else "quickstart does not match manifest")
+        detail = (
+            "quickstart matches manifest"
+            if quickstart_path.read_text(encoding="utf-8") == rendered
+            else "quickstart does not match manifest"
+        )
+        result.add(
+            "current" if quickstart_path.read_text(encoding="utf-8") == rendered else "manual review",
+            quickstart_path,
+            detail,
+        )
     return result
 
 
@@ -406,7 +428,13 @@ def _run_planning_checker(target_root: Path) -> list[dict[str, str]]:
         return []
     spec = importlib.util.spec_from_file_location("planning_checker", checker_path)
     if spec is None or spec.loader is None:
-        return [{"warning_class": "planning_checker_load_failure", "path": "scripts/check/check_planning_surfaces.py", "message": "Unable to load planning checker."}]
+        return [
+            {
+                "warning_class": "planning_checker_load_failure",
+                "path": "scripts/check/check_planning_surfaces.py",
+                "message": "Unable to load planning checker.",
+            }
+        ]
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return [warning._asdict() for warning in module.gather_planning_warnings(repo_root=target_root)]
@@ -598,14 +626,14 @@ def _render_execplan_from_todo_item(
 
 
 def _surface_execplan_reference(surface_value: str) -> str | None:
-    inline_path_match = re.search(r"docs/execplans/[A-Za-z0-9._/\\-]+\\.md", surface_value)
+    inline_path_match = re.search(r"docs/execplans/[A-Za-z0-9._/\-]+\.md", surface_value)
     if inline_path_match:
-        return inline_path_match.group(0).replace("\\", "/")
-    markdown_target = re.search(r"\\]\\(([^)]+)\\)", surface_value)
+        return inline_path_match.group(0)
+    markdown_target = re.search(r"\]\(([^)]+)\)", surface_value)
     if markdown_target:
-        target_match = re.search(r"docs/execplans/[A-Za-z0-9._/\\-]+\\.md", markdown_target.group(1))
+        target_match = re.search(r"docs/execplans/[A-Za-z0-9._/\-]+\.md", markdown_target.group(1))
         if target_match:
-            return target_match.group(0).replace("\\", "/")
+            return target_match.group(0)
     return None
 
 

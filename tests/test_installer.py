@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from repo_planning_bootstrap.installer import (
@@ -126,6 +125,30 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
     assert "Next Action:" not in todo_text
     assert "Done When:" not in todo_text
     assert any(action.kind == "created" and action.path == plan_path for action in result.actions)
+
+
+def test_promote_todo_item_to_execplan_refuses_existing_execplan_surface(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: docs/execplans/plan-alpha.md
+  Why now: this item is already routed through an execplan.
+""",
+    )
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+
+    result = promote_todo_item_to_execplan("plan-alpha", target=tmp_path)
+
+    assert any(
+        action.kind == "manual review" and "already points at" in action.detail
+        for action in result.actions
+    )
 
 
 def test_archive_execplan_moves_completed_plan(tmp_path: Path) -> None:

@@ -280,7 +280,6 @@ def _check_todo(
         item_id = block.get("id", "")
         status = block.get("status", "").lower()
         surface_raw = block.get("surface", "")
-        surface = surface_raw.lower()
         why_now = block.get("why now", "")
 
         if item_id and "in-progress" in status:
@@ -312,7 +311,10 @@ def _check_todo(
                     PlanningWarning(
                         WARNING_TODO_BROKEN_SURFACE_REFERENCE,
                         _render_path(path),
-                        f"TODO item '{item_id or '?'}' Surface points at archived plan '{execplan_ref}'; active work must point at a live execplan.",
+                        (
+                            f"TODO item '{item_id or '?'}' Surface points at archived plan "
+                            f"'{execplan_ref}'; active work must point at a live execplan."
+                        ),
                     )
                 )
             elif not ref_path.exists():
@@ -337,7 +339,10 @@ def _check_todo(
                 PlanningWarning(
                     WARNING_TODO_PLAN_REQUIRED_HINT,
                     _render_path(path),
-                    f"TODO item '{item_id or '?'}' still uses direct-task fields but already looks execplan-sized; promote it to docs/execplans/.",
+                    (
+                        f"TODO item '{item_id or '?'}' still uses direct-task fields but already "
+                        "looks execplan-sized; promote it to docs/execplans/."
+                    ),
                 )
             )
 

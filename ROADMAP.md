@@ -23,7 +23,7 @@ Do not use it for:
 
 ## Active Handoff
 
-- The first package pass is focused on establishing the reusable payload, installer CLI, checker, and a self-hosted reference repo shape.
+- The initial package pass is complete. Future work continues only through the candidate queue below.
 
 ## Next Candidate Queue
 

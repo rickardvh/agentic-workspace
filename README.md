@@ -150,6 +150,7 @@ It packages:
 
 - the planning contract
 - the checker
+- file-native helper commands for promotion, archiving, and summary
 - starter surfaces
 - startup docs and manifest wiring
 
@@ -268,12 +269,16 @@ This system is most useful when:
 - `agentic-planning-bootstrap adopt --target <repo>`
 - `agentic-planning-bootstrap doctor --target <repo>`
 - `agentic-planning-bootstrap status --target <repo>`
+- `agentic-planning-bootstrap summary --target <repo> --format json`
+- `agentic-planning-bootstrap promote-to-plan <todo-id> --target <repo>`
+- `agentic-planning-bootstrap archive-plan <plan> --target <repo>`
 - `agentic-planning-bootstrap list-files`
 - `agentic-planning-bootstrap verify-payload`
 - `agentic-planning-bootstrap prompt install --target <repo>`
 - `make plan-check`
 - `make plan-check-json`
 - `make plan-check-strict`
+- `make plan-summary`
 
 ## Success Criteria
 

@@ -23,7 +23,7 @@ When there is no active task, keep this file minimal.
 
 ## Next
 
-- ID: planning-bootstrap-initialisation
+- ID: archive-reference-cleanup
   Status: in-progress
-  Surface: docs/execplans/planning-bootstrap-initialisation-2026-04-05.md
-  Why now: the package now needs the first execution-facing helper flows and checker diagnostics to match the documented contract.
+  Surface: docs/execplans/archive-reference-cleanup-2026-04-05.md
+  Why now: dogfooding the new archive flow exposed a recurring follow-up step that should be made easier without hiding file edits.
