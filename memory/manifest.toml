@@ -136,19 +136,6 @@ routes_from = []
 stale_when = []
 memory_role = "durable_truth"
 
-[notes."memory/decisions/agent-memory-wishlist.md"]
-note_type = "decision"
-canonical_home = "memory/decisions/agent-memory-wishlist.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["memory-system", "product"]
-surfaces = ["decision"]
-routes_from = []
-stale_when = ["AGENTS.md", "memory/**/*.md", ".agentic-memory/**/*.md", "src/**/*.py", "bootstrap/**/*.md"]
-memory_role = "durable_truth"
-
 [notes."memory/current/active-decisions.md"]
 note_type = "current-decisions"
 canonical_home = "memory/current/active-decisions.md"

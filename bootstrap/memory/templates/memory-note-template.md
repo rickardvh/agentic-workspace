@@ -25,6 +25,7 @@ Optional when the note exists because of repo friction rather than durable truth
 
 Use these when you want the package to recommend an upstream improvement that should reduce the note later.
 Prefer a concrete remediation target and an explicit post-remediation memory shape over vague prose.
+If the likely post-remediation shape is "delete this note", say so explicitly instead of assuming the note will continue by default.
 
 ## Scope
 
@@ -59,6 +60,7 @@ Examples:
 
 - <Core rule or durable lesson>
 - Prefer durable orientation or boundary knowledge here; move procedure-heavy repeated steps into a skill or runbook as appropriate.
+- If the note starts mixing boundaries, invariants, rationale, and repeatable steps, split those into separate primary homes instead of keeping a multi-home note.
 - If the note starts to read like a reusable maintenance script or refresh checklist, prefer a skill instead.
 - If the content becomes stable human-facing policy or procedure, promote it into checked-in canonical docs and reduce this note to a short stub or fallback summary.
 

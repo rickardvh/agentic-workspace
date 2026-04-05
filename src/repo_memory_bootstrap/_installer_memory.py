@@ -37,6 +37,8 @@ from repo_memory_bootstrap._installer_shared import (
 
 H2_RE = re.compile(r"^\s{0,3}##\s+(.+?)\s*$")
 H3_RE = re.compile(r"^\s{0,3}###\s+(?:Case:\s*)?(.+?)\s*$")
+INVARIANT_SIGNAL_RE = re.compile(r"\b(?:must|must not|never|always|cannot|do not|invariant)\b", re.IGNORECASE)
+RATIONALE_SIGNAL_RE = re.compile(r"\b(?:because|therefore|trade-?off|rejected|decision|rationale)\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True, slots=True)
@@ -394,6 +396,83 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                     source=note.path.as_posix(),
                     category="contract-drift",
                 )
+            if note.canonicality != "agent_only":
+                result.add(
+                    "manual review",
+                    target_root / note.path,
+                    "current-memory notes should stay agent_only rather than becoming promotion or canonical-doc targets",
+                    role="memory-manifest",
+                    safety="manual",
+                    source=note.path.as_posix(),
+                    category="contract-drift",
+                )
+        if note.path == Path("memory/current/routing-feedback.md"):
+            if note.task_relevance != "optional":
+                result.add(
+                    "manual review",
+                    target_root / note.path,
+                    "routing-feedback should stay optional calibration context rather than required task setup",
+                    role="memory-manifest",
+                    safety="manual",
+                    source=note.path.as_posix(),
+                    category="contract-drift",
+                )
+            if note.canonicality != "agent_only":
+                result.add(
+                    "manual review",
+                    target_root / note.path,
+                    "routing-feedback should stay agent_only calibration context rather than a promotion or canonical-doc target",
+                    role="memory-manifest",
+                    safety="manual",
+                    source=note.path.as_posix(),
+                    category="contract-drift",
+                )
+            if note.memory_role:
+                result.add(
+                    "manual review",
+                    target_root / note.path,
+                    "routing-feedback should stay calibration-only rather than declaring durable truth or improvement-signal memory",
+                    role="memory-manifest",
+                    safety="manual",
+                    source=note.path.as_posix(),
+                    category="contract-drift",
+                )
+            if note.surfaces or note.routes_from or note.stale_when:
+                result.add(
+                    "manual review",
+                    target_root / note.path,
+                    (
+                        "routing-feedback should not advertise broad routing or freshness metadata; "
+                        "keep it as a compact calibration surface only"
+                    ),
+                    role="memory-manifest",
+                    safety="manual",
+                    source=note.path.as_posix(),
+                    category="contract-drift",
+                )
+        if note.path == Path("memory/current/project-state.md") and note.canonicality != "agent_only":
+            result.add(
+                "manual review",
+                target_root / note.path,
+                "project-state should stay agent_only current context rather than a promotion or canonical-doc target",
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
+            if note.surfaces or note.routes_from:
+                result.add(
+                    "manual review",
+                    target_root / note.path,
+                    (
+                        "task-context should not advertise broad routing metadata; load "
+                        "it only when active continuation context is genuinely needed"
+                    ),
+                    role="memory-manifest",
+                    safety="manual",
+                    source=note.path.as_posix(),
+                    category="contract-drift",
+                )
         if path_family_warning := _manifest_note_path_family_warning(note):
             result.add(
                 "manual review",
@@ -554,9 +633,8 @@ def _audit_note_overlap(*, target_root: Path, manifest: MemoryManifest, result) 
             categories = tuple(sorted({left.note_type, right.note_type}))
             same_family = left.path.parent == right.path.parent or categories in adjacent_categories
             shared_surfaces = set(left.surfaces) & set(right.surfaces)
-            shared_subsystems = set(left.subsystems) & set(right.subsystems)
             shared_routes = set(left.routes_from) & set(right.routes_from)
-            if not same_family and not shared_surfaces and not shared_subsystems and not shared_routes:
+            if not same_family and not shared_surfaces and not shared_routes:
                 continue
             right_path = target_root / right.path
             shared_terms = sorted(left_terms & _significant_terms(right_path.read_text(encoding="utf-8")))
@@ -732,6 +810,160 @@ def _size_warning_for_note(note: MemoryNoteRecord | None, note_path: Path, text:
         "memory-note": "split by primary home or reduce stable guidance to a shorter residue note",
     }[note_type]
     return f"{note_type} note is oversized ({line_count} lines, expected <= {limit}); {remediation}"
+
+
+def _post_remediation_shape_advice(recommendation: RemediationRecommendation) -> str:
+    advice = {
+        "promote": "leave memory as a short stub, backlink, or fallback summary",
+        "keep_stub": "keep the memory note as short assistive residue only",
+        "automate": "remove repeated mechanics from the note and keep only minimal residue if any context still saves rediscovery cost",
+        "refactor_away": "remove the note or reduce it to a brief boundary reminder once the underlying friction is gone",
+        "shrink": "keep only the durable residue that still saves rediscovery cost",
+    }
+    return advice.get(recommendation.memory_action, "keep only the smallest memory shape that remains justified")
+
+
+def _note_lifecycle_findings(
+    note: MemoryNoteRecord,
+    *,
+    note_path: Path,
+    text: str,
+    recommendation: RemediationRecommendation | None,
+) -> list[tuple[str, str, str, str, str]]:
+    if recommendation is None:
+        return []
+
+    line_count = len(text.splitlines())
+    findings: list[tuple[str, str, str, str, str]] = []
+    shape_advice = _post_remediation_shape_advice(recommendation)
+
+    if note.canonicality == "candidate_for_promotion" and line_count >= 40:
+        findings.append(
+            (
+                (
+                    f"promotion candidate is still carrying substantial prose in memory ({line_count} lines); move canonical guidance into "
+                    f"{recommendation.target_path_hint} and {shape_advice}"
+                ),
+                recommendation.kind,
+                recommendation.target_path_hint,
+                recommendation.confidence,
+                recommendation.memory_action,
+            )
+        )
+    if note.canonicality == "canonical_elsewhere" and line_count >= 30:
+        findings.append(
+            (
+                (
+                    f"canonical_elsewhere note is too large for assistive residue ({line_count} lines); "
+                    f"reduce it and {shape_advice} while pointing at {recommendation.target_path_hint}"
+                ),
+                recommendation.kind,
+                recommendation.target_path_hint,
+                recommendation.confidence,
+                recommendation.memory_action,
+            )
+        )
+    if note.memory_role == "improvement_signal" and recommendation.memory_action in {"automate", "refactor_away"} and line_count >= 20:
+        findings.append(
+            (
+                (
+                    f"improvement-signal note should not become the long-term endpoint; once {recommendation.target_path_hint} lands, "
+                    f"{shape_advice}"
+                ),
+                recommendation.kind,
+                recommendation.target_path_hint,
+                recommendation.confidence,
+                recommendation.memory_action,
+            )
+        )
+    if recommendation.kind == "skill" and line_count >= 20:
+        findings.append(
+            (
+                (
+                    f"repeatable procedural prose is accumulating here; move the workflow into {recommendation.target_path_hint} and "
+                    f"{shape_advice}"
+                ),
+                recommendation.kind,
+                recommendation.target_path_hint,
+                recommendation.confidence,
+                recommendation.memory_action,
+            )
+        )
+
+    deduped: list[tuple[str, str, str, str, str]] = []
+    seen_details: set[str] = set()
+    for finding in findings:
+        if finding[0] in seen_details:
+            continue
+        seen_details.add(finding[0])
+        deduped.append(finding)
+    return deduped
+
+
+def _note_multi_home_findings(
+    note: MemoryNoteRecord,
+    *,
+    note_path: Path,
+    text: str,
+) -> list[tuple[str, str, str, str, str]]:
+    lines = text.splitlines()
+    line_count = len(lines)
+    imperative_lines = sum(1 for line in lines if re.match(r"^\s*(?:-|\*|\d+\.)\s+", line) or line.strip().startswith("`"))
+    command_lines = sum(1 for line in lines if re.search(r"`[^`]+`", line) or re.match(r"^\s*(?:run|execute|call)\b", line.strip().lower()))
+    invariant_lines = sum(1 for line in lines if INVARIANT_SIGNAL_RE.search(line))
+    rationale_lines = sum(1 for line in lines if RATIONALE_SIGNAL_RE.search(line))
+    findings: list[tuple[str, str, str, str, str]] = []
+
+    if note.note_type in {"domain", "decision"} and imperative_lines >= 6 and command_lines >= 4:
+        findings.append(
+            (
+                (
+                    f"{note.note_type} note is accumulating repeatable procedure ({imperative_lines} imperative lines); "
+                    f"extract the workflow into {_infer_skill_target(note, note_path)} or a sibling runbook and keep this note focused on durable boundaries"
+                ),
+                "skill",
+                _infer_skill_target(note, note_path),
+                "medium",
+                "automate",
+            )
+        )
+    if note.note_type in {"domain", "decision", "runbook"} and invariant_lines >= 5 and line_count >= 8:
+        invariant_target = f"memory/invariants/{note_path.stem}.md"
+        findings.append(
+            (
+                (
+                    "must-stay-true rules are accumulating outside memory/invariants/; "
+                    f"extract the invariant content into {invariant_target} and leave the remaining note in one primary home"
+                ),
+                "docs",
+                invariant_target,
+                "medium",
+                "shrink",
+            )
+        )
+    if note.note_type == "runbook" and rationale_lines >= 4 and line_count >= 30:
+        decision_target = f"memory/decisions/{note_path.stem}.md"
+        findings.append(
+            (
+                (
+                    f"runbook is accumulating rationale or trade-off prose; move durable why/why-not context into {decision_target} "
+                    "and keep this note procedural only"
+                ),
+                "docs",
+                decision_target,
+                "low",
+                "shrink",
+            )
+        )
+
+    deduped: list[tuple[str, str, str, str, str]] = []
+    seen_details: set[str] = set()
+    for finding in findings:
+        if finding[0] in seen_details:
+            continue
+        seen_details.add(finding[0])
+        deduped.append(finding)
+    return deduped
 
 
 def _explicit_note_review_detail(requested_note: Path) -> str:
@@ -1118,6 +1350,76 @@ def _emit_memory_shape_pressure(
             source=relative.as_posix(),
             category="manual-review",
         )
+
+
+def _emit_note_lifecycle_pressure(
+    *,
+    target_root: Path,
+    manifest: MemoryManifest | None,
+    result,
+) -> None:
+    if manifest is None:
+        return
+
+    for note in manifest.notes:
+        note_path = target_root / note.path
+        if not note_path.exists():
+            continue
+        text = note_path.read_text(encoding="utf-8")
+        recommendation = _build_remediation_recommendation(note, note_path, text, for_report=False)
+        for detail, remediation_kind, remediation_target, remediation_confidence, memory_action in _note_lifecycle_findings(
+            note,
+            note_path=note_path,
+            text=text,
+            recommendation=recommendation,
+        ):
+            result.add(
+                "manual review",
+                note_path,
+                detail,
+                role="memory-lifecycle",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="manual-review",
+                remediation_kind=remediation_kind,
+                remediation_target=remediation_target,
+                remediation_confidence=remediation_confidence,
+                memory_action=memory_action,
+            )
+
+
+def _emit_multi_home_pressure(
+    *,
+    target_root: Path,
+    manifest: MemoryManifest | None,
+    result,
+) -> None:
+    if manifest is None:
+        return
+
+    for note in manifest.notes:
+        note_path = target_root / note.path
+        if not note_path.exists():
+            continue
+        text = note_path.read_text(encoding="utf-8")
+        for detail, remediation_kind, remediation_target, remediation_confidence, memory_action in _note_multi_home_findings(
+            note,
+            note_path=note_path,
+            text=text,
+        ):
+            result.add(
+                "manual review",
+                note_path,
+                detail,
+                role="memory-multi-home",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="manual-review",
+                remediation_kind=remediation_kind,
+                remediation_target=remediation_target,
+                remediation_confidence=remediation_confidence,
+                memory_action=memory_action,
+            )
 
 
 def _load_routing_feedback_cases(path: Path) -> list[RoutingFeedbackCase]:
@@ -1582,6 +1884,7 @@ def _evaluate_route_fixture(*, target_root: Path, fixture: dict[str, object], ro
         "routed_line_count": routed_line_count,
         "exceeded_target": "yes" if routed_note_count > ROUTE_WORKING_SET_TARGET else "no",
         "exceeded_strong_warning": "yes" if routed_note_count > ROUTE_WORKING_SET_STRONG_WARNING else "no",
+        "routing_confidence": str(result.route_summary.get("confidence", "")),
     }
 
 
@@ -1739,6 +2042,50 @@ def _significant_terms(text: str) -> set[str]:
         "while",
         "task",
         "tasks",
+        "active",
+        "applies",
+        "against",
+        "behaviour",
+        "behaviours",
+        "changes",
+        "check",
+        "checked",
+        "confirmed",
+        "current",
+        "decision",
+        "decisions",
+        "failure",
+        "failures",
+        "goal",
+        "goals",
+        "high",
+        "high-level",
+        "impact",
+        "improvement",
+        "improvements",
+        "implementation",
+        "implemented",
+        "last",
+        "lesson",
+        "lessons",
+        "level",
+        "load",
+        "primary",
+        "product",
+        "progress",
+        "rule",
+        "rules",
+        "scope",
+        "signals",
+        "state",
+        "status",
+        "surface",
+        "surfaces",
+        "system",
+        "systems",
+        "verified",
+        "verify",
+        "wishlist",
     }
     return {word for word in words if word not in stop_words}
 
@@ -1835,6 +2182,19 @@ def _first_route_match_source(match_source: str) -> str:
     return match_source.split(",", 1)[0].strip()
 
 
+def _route_signal_strength(match_source: str) -> str:
+    first = _first_route_match_source(match_source)
+    if first in {"file-path", "surface"}:
+        return "direct"
+    if first in {"index-fallback"}:
+        return "fallback"
+    if first in {"high-level-fallback", "explicit-current-context"}:
+        return "weak"
+    if first == "routing-baseline":
+        return "baseline"
+    return "unknown"
+
+
 def _build_route_summary(
     kept_suggestions: list[tuple[str, str, str, str, int]],
 ) -> dict[str, object]:
@@ -1842,11 +2202,55 @@ def _build_route_summary(
     optional_count = sum(1 for recommendation, *_ in kept_suggestions if recommendation == "optional")
     routed_count = len(kept_suggestions)
     exceeded = routed_count > ROUTE_WORKING_SET_TARGET
+    direct_matches = 0
+    fallback_matches = 0
+    weak_matches = 0
+    baseline_matches = 0
+    weak_signal_notes: list[str] = []
+    confidence_reasons: list[str] = []
+    for _recommendation, note, _reason, match_source, _priority in kept_suggestions:
+        strength = _route_signal_strength(match_source)
+        if strength == "direct":
+            direct_matches += 1
+        elif strength == "fallback":
+            fallback_matches += 1
+        elif strength == "weak":
+            weak_matches += 1
+            weak_signal_notes.append(note)
+        elif strength == "baseline":
+            baseline_matches += 1
+
+    confidence = "high"
+    if routed_count > ROUTE_WORKING_SET_STRONG_WARNING:
+        confidence = "low"
+        confidence_reasons.append("working set exceeded the strong warning threshold")
+    elif direct_matches == 0 and (fallback_matches > 0 or weak_matches > 0):
+        confidence = "low"
+        confidence_reasons.append("routing relied on fallback signals rather than direct manifest matches")
+    elif direct_matches == 0:
+        confidence = "low"
+        confidence_reasons.append("routing returned only the baseline route without task-specific direct matches")
+    elif weak_matches > 0 or fallback_matches > 0 or exceeded:
+        confidence = "medium"
+        if fallback_matches > 0:
+            confidence_reasons.append("manifest coverage was incomplete enough to keep index fallbacks")
+        if weak_matches > 0:
+            confidence_reasons.append("one or more weak-signal notes were retained")
+        if exceeded:
+            confidence_reasons.append("the routed set exceeded the default working-set target")
+
     summary: dict[str, object] = {
         "routed_note_count": routed_count,
         "required_count": required_count,
         "optional_count": optional_count,
         "exceeded_target": "yes" if exceeded else "no",
+        "confidence": confidence,
+        "confidence_reasons": confidence_reasons,
+        "direct_match_count": direct_matches,
+        "fallback_match_count": fallback_matches,
+        "weak_signal_note_count": weak_matches,
+        "baseline_note_count": baseline_matches,
+        "weak_signal_notes": weak_signal_notes,
     }
     if routed_count > ROUTE_WORKING_SET_TARGET:
         sources = [match_source for _, _, _, match_source, _ in kept_suggestions if match_source]
@@ -1858,6 +2262,8 @@ def _build_route_summary(
         summary["warning"] = "routing returned more than five notes; review routing precision and merge pressure"
     elif routed_count > ROUTE_WORKING_SET_TARGET:
         summary["warning"] = "routing exceeded the default three-note target; optional weak matches were trimmed first"
+    elif confidence == "low":
+        summary["warning"] = "routing confidence is low; capture any missed note and review manifest coverage"
     return summary
 
 

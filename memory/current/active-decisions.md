@@ -75,6 +75,8 @@ Active
 - `promotion-report` should be the primary elimination workflow, with `--mode remediation` focusing on medium/high-confidence candidates only.
 - The package may recommend concrete repo-owned docs, tests, scripts, skill, validation, or refactor targets, but it should stay advisory outside the managed bootstrap surface rather than mutating repo-owned files itself.
 - The package should not assume that healthy repos always need less memory over time; it should encourage justified memory and upstream repo improvements instead of dependence on memory for avoidable complexity.
+- Routing should explain not just what it returned but how trustworthy the result is; low-confidence routes should drive calibration rather than normalising broader default reading.
+- Notes that are marked for promotion, automation, or refactor-away should face explicit pressure to shrink, become stubs, or disappear once the upstream change lands.
 
 ## Last confirmed
 

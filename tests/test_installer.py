@@ -825,6 +825,59 @@ def test_route_memory_adds_architecture_suggestions(tmp_path: Path) -> None:
     assert "justification" in result.route_summary
 
 
+def test_route_memory_reports_low_confidence_for_index_only_fallbacks(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory").mkdir(parents=True)
+    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
+
+    result = installer.route_memory(target=target, files=["deploy/k8s/service.yaml"])
+
+    assert result.route_summary["confidence"] == "low"
+    assert result.route_summary["fallback_match_count"] >= 1
+    assert "routing relied on fallback signals" in " ".join(result.route_summary["confidence_reasons"])
+
+
+def test_route_memory_reports_high_confidence_for_direct_manifest_matches(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
+    (target / "memory" / "domains" / "api.md").write_text("# API\n", encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/index.md"]
+note_type = "routing"
+canonical_home = "memory/index.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+routing_only = true
+
+[notes."memory/domains/api.md"]
+note_type = "domain"
+canonical_home = "memory/domains/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+routes_from = ["src/api.py"]
+surfaces = ["api"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.route_memory(target=target, files=["src/api.py"])
+
+    assert result.route_summary["confidence"] == "high"
+    assert result.route_summary["direct_match_count"] == 1
+    assert result.route_summary["weak_signal_note_count"] == 0
+
+
 def test_route_memory_falls_back_to_index_when_manifest_is_incomplete(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
@@ -2496,6 +2549,7 @@ def test_route_report_json_includes_summary_feedback_cases_and_fixture_results(t
     assert "route_report_fixture_results" in data
     assert "missed_note" in data["route_report_summary"]
     assert "over_routing" in data["route_report_summary"]
+    assert "routing_confidence" in data["route_report_summary"]
     assert "startup_cost" in data["route_report_summary"]
 
 
@@ -2592,6 +2646,10 @@ def test_route_report_fixture_counts_and_working_set_metrics_are_correct(tmp_pat
     assert summary["fixture_count_exceeding_strong_warning"] == 0
     assert summary["average_routed_line_count"] > 0
     assert summary["max_routed_line_count"] > 0
+    confidence = result.route_report_summary["routing_confidence"]
+    assert confidence["high_confidence_fixture_count"] >= 0
+    assert confidence["medium_confidence_fixture_count"] >= 0
+    assert confidence["low_confidence_fixture_count"] >= 0
 
 
 def test_route_report_text_output_lists_only_failing_or_unresolved_items(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -3018,6 +3076,72 @@ task_relevance = "optional"
     assert any("notes under memory/domains/ should keep note_type = domain" in action.detail for action in result.actions)
 
 
+def test_doctor_enforces_routing_feedback_as_calibration_only(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "current").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "current" / "routing-feedback.md").write_text(
+        """# Routing Feedback
+
+## Status
+
+Active
+
+## Scope
+
+- Calibration only.
+
+## Load when
+
+- Reviewing routing.
+
+## Review when
+
+- Routes change.
+
+## Missed-note entries
+
+## Over-routing entries
+
+## Synthesis
+
+- Keep this compact.
+
+## Last confirmed
+
+2026-04-05
+""",
+        encoding="utf-8",
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/current/routing-feedback.md"]
+note_type = "routing-feedback"
+canonical_home = "docs/routing.md"
+authority = "canonical"
+audience = "agent"
+canonicality = "candidate_for_promotion"
+task_relevance = "required"
+memory_role = "durable_truth"
+routes_from = ["src/**/*.py"]
+stale_when = ["src/**/*.py"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+    details = [action.detail for action in result.actions if action.path == target / "memory/current/routing-feedback.md"]
+
+    assert any("routing-feedback should stay optional calibration context" in detail for detail in details)
+    assert any("routing-feedback should stay agent_only calibration context" in detail for detail in details)
+    assert any("routing-feedback should stay calibration-only" in detail for detail in details)
+    assert any("should not advertise broad routing or freshness metadata" in detail for detail in details)
+
+
 def test_doctor_emits_note_type_specific_size_warning(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
@@ -3044,6 +3168,110 @@ task_relevance = "optional"
 
     assert any(
         action.role == "memory-size-audit" and "invariant note is oversized" in action.detail and "expected <= 80" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_emits_note_lifecycle_pressure_for_promotion_candidate(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "domains" / "api.md").write_text("# API\n\n" + ("Stable guidance.\n" * 45), encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/api.md"]
+note_type = "domain"
+canonical_home = "docs/api.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "candidate_for_promotion"
+task_relevance = "optional"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.role == "memory-lifecycle"
+        and action.path == target / "memory/domains/api.md"
+        and "move canonical guidance into docs/api.md" in action.detail
+        and "short stub" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_emits_multi_home_pressure_for_procedural_domain_note(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "domains" / "api.md").write_text(
+        "# API\n\n" + "\n".join(f"{idx}. Run `cmd {idx}` and verify output." for idx in range(1, 8)),
+        encoding="utf-8",
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/api.md"]
+note_type = "domain"
+canonical_home = "memory/domains/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.role == "memory-multi-home"
+        and action.path == target / "memory/domains/api.md"
+        and "memory/skills/api/SKILL.md" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_emits_multi_home_pressure_for_invariant_heavy_runbook(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "runbooks").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "runbooks" / "release.md").write_text(
+        "# Release\n\n"
+        + "\n".join("The service must remain compatible and must never skip validation." for _ in range(8)),
+        encoding="utf-8",
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/runbooks/release.md"]
+note_type = "runbook"
+canonical_home = "memory/runbooks/release.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.role == "memory-multi-home"
+        and action.path == target / "memory/runbooks/release.md"
+        and "memory/invariants/release.md" in action.detail
         for action in result.actions
     )
 
@@ -3188,6 +3416,113 @@ routes_from = ["src/**/*.py"]
 
     assert any(
         action.role == "memory-overlap-audit" and "possible note overlap" in action.detail and "recommend" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_does_not_flag_wishlist_style_note_overlap_from_template_language(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "decisions").mkdir(parents=True)
+    (target / "memory" / "mistakes").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "decisions" / "wishlist.md").write_text(
+        """# Wishlist
+
+## Status
+
+Active
+
+## Scope
+
+- Product wishlist note.
+
+## Applies to
+
+- `AGENTS.md`
+
+## Review when
+
+- Changes are implemented.
+
+## Failure signals
+
+- Product feedback is not captured.
+
+## Rule or lesson
+
+- Keep this note focused on improvements and verified lessons.
+
+## Last confirmed
+
+2026-04-05
+""",
+        encoding="utf-8",
+    )
+    (target / "memory" / "mistakes" / "recurring-failures.md").write_text(
+        """# Recurring Failures
+
+## Status
+
+Active
+
+## Scope
+
+- Mistakes note.
+
+## Applies to
+
+- `AGENTS.md`
+
+## Review when
+
+- Behaviour changes.
+
+## Failure signals
+
+- Check current failure modes.
+
+## Rule or lesson
+
+- Keep this note focused on repeated failures and verified fixes.
+
+## Last confirmed
+
+2026-04-05
+""",
+        encoding="utf-8",
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/decisions/wishlist.md"]
+note_type = "decision"
+canonical_home = "memory/decisions/wishlist.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+
+[notes."memory/mistakes/recurring-failures.md"]
+note_type = "recurring-failures"
+canonical_home = "memory/mistakes/recurring-failures.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert not any(
+        action.role == "memory-overlap-audit"
+        and action.path == target / "memory" / "decisions" / "wishlist.md"
         for action in result.actions
     )
 

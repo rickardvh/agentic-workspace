@@ -16,6 +16,8 @@ from repo_memory_bootstrap._installer_memory import (
     _build_route_summary,
     _dedupe_route_suggestions,
     _emit_improvement_pressure,
+    _emit_multi_home_pressure,
+    _emit_note_lifecycle_pressure,
     _emit_memory_shape_pressure,
     _evaluate_route_report_fixtures,
     _find_manifest_matches,
@@ -610,6 +612,8 @@ def doctor_bootstrap(
                 category="manual-review",
             )
     _emit_memory_shape_pressure(target_root=target_root, manifest=manifest, result=result)
+    _emit_note_lifecycle_pressure(target_root=target_root, manifest=manifest, result=result)
+    _emit_multi_home_pressure(target_root=target_root, manifest=manifest, result=result)
     _emit_improvement_pressure(target_root=target_root, manifest=manifest, result=result)
     return result
 
@@ -1083,6 +1087,13 @@ def report_routes(*, target: str | Path | None = None) -> InstallResult:
             "max_routed_note_count": fixture_summary["max_routed_note_count"],
             "fixture_count_exceeding_target": fixture_summary["fixture_count_exceeding_target"],
             "fixture_count_exceeding_strong_warning": fixture_summary["fixture_count_exceeding_strong_warning"],
+        },
+        "routing_confidence": {
+            "high_confidence_fixture_count": sum(1 for item in fixture_results if item.get("valid") and item.get("routing_confidence") == "high"),
+            "medium_confidence_fixture_count": sum(
+                1 for item in fixture_results if item.get("valid") and item.get("routing_confidence") == "medium"
+            ),
+            "low_confidence_fixture_count": sum(1 for item in fixture_results if item.get("valid") and item.get("routing_confidence") == "low"),
         },
         "startup_cost": {
             "average_routed_line_count": fixture_summary["average_routed_line_count"],

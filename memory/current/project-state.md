@@ -48,7 +48,8 @@ Active
 - Tightened routing so repo-level fixtures now pass against real checked-in notes, while current-decision and version metadata stay out of ordinary routes.
 - Made `route-report`, `doctor`, and the freshness audit use more of the manifest contract directly, including canonical-dir, task-board, and note-type drift checks.
 - Added optional strict-mode freshness enforcement (`scripts/check/check_memory_freshness.py --strict`) with configurable strict categories and starter-placeholder routing detection for CI-friendly policy checks.
-- Added a durable agent-memory wishlist note and tightened `AGENTS.md` so work in this repo continually feeds product-feedback improvements back into the memory system.
+- Tightened `AGENTS.md` so work in this repo continually feeds product-feedback improvements back into the memory system without relying on transient chat context.
+- Added routing-confidence reporting, calibration-artifact contract checks, lifecycle pressure for notes that should shrink or disappear, and earlier multi-home pressure for notes drifting between domains, invariants, runbooks, and skills.
 
 ## Blockers
 
@@ -62,7 +63,8 @@ Active
 - Use `promotion-report --mode remediation` as the main package-level workflow for turning improvement-signal memory into concrete upstream repo changes.
 - Keep remediation non-invasive: the package may suggest repo-owned targets, but it should not autonomously rewrite repo-owned docs, tests, scripts, or code.
 - Keep the package neutral about memory volume trends: the goal is justified memory and less avoidable dependence on notes, not a universal requirement that note count must fall over time.
-- Treat this repo as both implementation and continuous real-use validation of the memory system; durable friction should become explicit product feedback rather than staying implicit.
+- Treat this repo as both implementation and continuous real-use validation of the memory system; durable friction should become explicit product feedback, while planning material stays out of checked-in memory.
+- Treat low-confidence routing, bulky fallback notes, and multi-home notes as pressure to improve note shape or repo structure rather than as reasons to broaden the default read path.
 
 ## Failure signals
 
@@ -87,4 +89,4 @@ Active
 
 ## Last confirmed
 
-2026-04-05 during agent-memory wishlist capture
+2026-04-05 during wishlist hardening follow-up
