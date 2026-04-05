@@ -34,7 +34,7 @@ Active
 - Memory bootstrap was adopted conservatively into this repo, including the shared `.agentic-memory/` workflow surface and routed `memory/` tree.
 - The planning bootstrap contract now treats memory as an optional routed companion rather than a competing startup surface.
 - The planning package now ships conservative `upgrade` and `uninstall` lifecycle flows, a second manifest-driven agent surface (`tools/AGENT_ROUTING.md`), and a repo-specific planning-surface skill.
-- The memory bootstrap is now upgraded to version 46 from the recorded upstream source, while repo-owned memory notes remain separately reviewed and preserved.
+- The memory bootstrap is now upgraded to version 47 from the recorded upstream source, while repo-owned memory notes remain separately reviewed and preserved.
 
 ## Blockers
 
@@ -71,4 +71,4 @@ Active
 
 ## Last confirmed
 
-2026-04-05 after memory bootstrap upgrade review and roadmap burndown completion
+2026-04-05 after memory bootstrap upgrade to version 47 and direct review of repo-owned notes

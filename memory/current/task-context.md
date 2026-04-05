@@ -33,4 +33,4 @@ Active
 
 ## Last confirmed
 
-2026-04-05 after memory upgrade review with no active interrupted thread
+2026-04-05 after memory bootstrap upgrade to version 47 with no active interrupted thread
