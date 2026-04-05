@@ -9,11 +9,16 @@ Inactive long-horizon candidate work.
 ## Active Handoff
 
 - Monorepo scaffold is in place.
+- Current architecture stance: keep `agentic-memory-bootstrap` and `agentic-planning-bootstrap` as the standalone products, with the workspace layer owning orchestration; treat routing and checks as cross-cutting capabilities until dogfooding proves they deserve package extraction.
+- Preferred next promotion: converge package-local lifecycle tooling toward one workspace-level orchestrator that installs and manages selected modules without erasing module ownership boundaries.
 - No active execution tranche is currently promoted.
 - Promote the next candidate only when the scope is bounded enough for a short execplan and a narrow validation story.
 
 ## Next Candidate Queue
 
+- Unified lifecycle orchestrator: replace the current package-by-package bootstrap UX with one workspace-level install/adopt/upgrade/uninstall flow that selects and manages modules, preserves selective adoption, and leaves domain logic inside the module packages.
+- Capability extraction criteria: define the contract and promotion bar for when routing or checks should graduate from cross-cutting capabilities into standalone packages, using stable schemas, explicit ownership, adapter-friendly validation, partial-adoption support, and real reuse pressure as the gate.
+- Boundary charter hardening: codify package ownership tests, anti-blur guardrails, and preferred integration patterns so new work lands in the right layer before more package extraction is attempted.
 - Shared tooling extraction: evaluate a common checker core when the first stable monorepo release exposes repeated maintenance friction across duplicated scripts.
 - Unified integration lane: add a dual-bootstrap coexistence smoke-test harness when release dry-runs show the monorepo install topology is stable enough to freeze expectations.
 - Contributor onboarding: add package ownership CODEOWNERS and contributor playbooks when package boundaries are stable enough to freeze ownership expectations.

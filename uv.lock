@@ -22,7 +22,11 @@ source = { editable = "packages/planning" }
 [[package]]
 name = "agentic-workspace"
 version = "0.0.0"
-source = { virtual = "." }
+source = { editable = "." }
+dependencies = [
+    { name = "agentic-memory-bootstrap" },
+    { name = "agentic-planning-bootstrap" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -34,6 +38,10 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [
+    { name = "agentic-memory-bootstrap", editable = "packages/memory" },
+    { name = "agentic-planning-bootstrap", editable = "packages/planning" },
+]
 
 [package.metadata.requires-dev]
 dev = [

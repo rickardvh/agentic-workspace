@@ -8,7 +8,13 @@ version = "0.0.0"
 description = "Monorepo host for agentic-memory and agentic-planning."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+  "agentic-memory-bootstrap",
+  "agentic-planning-bootstrap",
+]
+
+[project.scripts]
+agentic-workspace = "agentic_workspace.cli:main"
 
 [dependency-groups]
 dev = [
@@ -20,10 +26,42 @@ dev = [
 ]
 
 [tool.uv]
-package = false
+package = true
+
+[tool.uv.sources]
+agentic-memory-bootstrap = { workspace = true }
+agentic-planning-bootstrap = { workspace = true }
 
 [tool.uv.workspace]
 members = [
   "packages/memory",
   "packages/planning",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentic_workspace"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/README.md",
+  "/src/agentic_workspace",
+  "/tests",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.coverage.run]
+source = ["agentic_workspace"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

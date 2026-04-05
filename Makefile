@@ -1,9 +1,9 @@
 .PHONY: help sync-all sync-memory sync-planning \
-	test test-memory test-planning \
-	lint lint-memory lint-planning markdownlint markdownlint-memory \
-	typecheck typecheck-memory typecheck-planning \
-	format-check format-check-memory format-check-planning \
-	verify verify-memory verify-planning \
+	test test-workspace test-memory test-planning \
+	lint lint-workspace lint-memory lint-planning markdownlint markdownlint-memory \
+	typecheck typecheck-workspace typecheck-memory typecheck-planning \
+	format-check format-check-workspace format-check-memory format-check-planning \
+	verify verify-workspace verify-memory verify-planning \
 	memory-freshness memory-freshness-strict planning-surfaces planning-surfaces-strict render-agent-docs \
 	check check-memory check-planning check-all
 
@@ -13,12 +13,12 @@ help:
 	@echo "  sync-all             Sync merged root environment for all workspace packages."
 	@echo "  sync-memory          Sync consolidated root dev environment for memory package checks."
 	@echo "  sync-planning        Sync consolidated root dev environment for planning package checks."
-	@echo "  test                 Run both package test suites."
-	@echo "  lint                 Run non-mutating lint checks across both packages."
+	@echo "  test                 Run workspace and package test suites."
+	@echo "  lint                 Run non-mutating lint checks across workspace and packages."
 	@echo "  markdownlint         Run Markdown lint checks for the memory package surfaces."
-	@echo "  typecheck            Run ty type checks across both packages."
-	@echo "  format-check         Run formatting checks across both packages."
-	@echo "  verify               Verify both packaged payload contracts."
+	@echo "  typecheck            Run ty type checks across workspace and packages."
+	@echo "  format-check         Run formatting checks across workspace and packages."
+	@echo "  verify               Verify workspace CLI wiring and both packaged payload contracts."
 	@echo "  memory-freshness     Run the root memory freshness audit."
 	@echo "  planning-surfaces    Run the root planning surface audit."
 	@echo "  render-agent-docs    Regenerate root planning docs from the managed manifest."
@@ -36,13 +36,19 @@ sync-memory:
 sync-planning:
 	uv sync --all-packages --group dev
 
+test-workspace:
+	uv run pytest tests
+
 test-memory:
 	cd packages/memory && uv run pytest
 
 test-planning:
 	cd packages/planning && uv run pytest
 
-test: sync-all test-memory test-planning
+test: sync-all test-workspace test-memory test-planning
+
+lint-workspace:
+	uv run ruff check src tests
 
 lint-memory:
 	cd packages/memory && uv run ruff check .
@@ -51,12 +57,15 @@ lint-memory:
 lint-planning:
 	cd packages/planning && uv run ruff check .
 
-lint: sync-all lint-memory lint-planning
+lint: sync-all lint-workspace lint-memory lint-planning
 
 markdownlint-memory:
 	cd packages/memory && uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap skills
 
 markdownlint: sync-all markdownlint-memory
+
+typecheck-workspace:
+	uv run ty check src
 
 typecheck-memory:
 	cd packages/memory && uv run ty check src
@@ -64,7 +73,10 @@ typecheck-memory:
 typecheck-planning:
 	cd packages/planning && uv run ty check src
 
-typecheck: sync-all typecheck-memory typecheck-planning
+typecheck: sync-all typecheck-workspace typecheck-memory typecheck-planning
+
+format-check-workspace:
+	uv run ruff format --check src tests
 
 format-check-memory:
 	cd packages/memory && uv run ruff format --check .
@@ -72,7 +84,10 @@ format-check-memory:
 format-check-planning:
 	cd packages/planning && uv run ruff format --check .
 
-format-check: sync-all format-check-memory format-check-planning
+format-check: sync-all format-check-workspace format-check-memory format-check-planning
+
+verify-workspace:
+	uv run agentic-workspace modules --format json
 
 verify-memory:
 	cd packages/memory && uv run agentic-memory-bootstrap verify-payload --target .
@@ -80,7 +95,7 @@ verify-memory:
 verify-planning:
 	cd packages/planning && uv run agentic-planning-bootstrap verify-payload
 
-verify: sync-all verify-memory verify-planning
+verify: sync-all verify-workspace verify-memory verify-planning
 
 memory-freshness:
 	uv run python scripts/check/check_memory_freshness.py

@@ -32,12 +32,13 @@ Workspace-orchestrator cleanup complete; active queue clear
 ## Current focus
 
 - Keep the workspace-orchestrator layout stable while using normal development here as product dogfooding.
-- Promote the next roadmap candidate only when a fresh bounded tranche is justified.
+- Bound the next tranche around workspace-level lifecycle orchestration so install/adopt/upgrade/uninstall flows can converge above the module packages.
 - Preserve package boundaries and independent release tracks while continuing to generalise from repo use without overfitting to this monorepo.
 
 ## Recent meaningful progress
 
 - Consolidated path namespace: refactored both memory and planning bootstraps to use `.agentic-workspace/` parent directory.
+- Added a root `agentic-workspace` CLI that orchestrates shared lifecycle verbs across selected modules and introduced root validation coverage for that wrapper layer.
 - Updated all path constants, templates, docstrings, and test fixtures across both packages (156/158 memory tests, 25/25 planning tests passing).
 - Verified end-to-end: both bootstraps successfully generate install plans targeting new consolidated structure.
 - Fixed syntax warnings and package escape sequences in installers and test fixtures.

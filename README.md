@@ -24,6 +24,65 @@ Workspace orchestration is stable.
 
 Root planning and memory systems own monorepo operation, package-scoped validation lanes are in place, and CI runs through root orchestration targets.
 
+## Architecture Stance
+
+This repo currently treats two domains as standalone distributable products:
+
+- `agentic-memory-bootstrap`
+- `agentic-planning-bootstrap`
+
+The workspace layer composes those products, owns shared managed-surface orchestration, and provides the integrated monorepo operating model.
+
+Routing and checks are important cross-cutting capabilities, but they are not yet treated as standalone packages. Keep them as contracts and implementation seams inside the existing products and workspace layer until dogfooding shows stable schemas, clear ownership, and repeated reuse pressure that justify extraction.
+
+## Boundary Guide
+
+Use these ownership tests when deciding where a feature belongs:
+
+- Memory: durable knowledge that outlives the current task and is expensive to reconstruct quickly.
+- Planning: active execution state, what matters now, what comes next, and what counts as done.
+- Routing: how an agent decides what to read, trust, run, and validate for a task class.
+- Checks: drift, liveness, shape, and consistency validation for installed workflow surfaces.
+- Workspace: install, adopt, upgrade, uninstall, presets, integrated status, and multi-package composition.
+
+Treat routing and checks as capabilities first, not packages by default. Extraction is warranted only when the boundary is stable enough to stand alone without leaning on sibling-package internals.
+
+## Boundary Rules
+
+- Memory must not become a task tracker or backlog mirror.
+- Planning must not become a durable knowledge base.
+- Routing must not become a shadow planning or memory system.
+- Checks must not become the hidden policy owner for source-of-truth content.
+- Workspace must orchestrate domain packages without absorbing their internal domain logic.
+
+Prefer explicit seams:
+
+- schemas and manifests
+- generated artifacts derived from canonical sources
+- adapters over private cross-package imports
+- explicit capability detection for partial adoption
+
+Avoid implicit cross-package assumptions, duplicated ownership of the same state, or sibling-package dependence on private internals.
+
+## Selective Adoption
+
+The ecosystem should support partial adoption. Today that means `agentic-memory-bootstrap` and `agentic-planning-bootstrap` can each stand alone while the workspace layer composes them for this monorepo.
+
+If routing or checks are extracted later, they should preserve that property: no domain package should assume the full stack is present.
+
+## Shared Lifecycle Entrypoint
+
+Use `agentic-workspace` for shared lifecycle verbs that span module selection:
+
+- `install`
+- `adopt`
+- `upgrade`
+- `uninstall`
+- `doctor`
+- `status`
+
+This root CLI is intentionally thin. It orchestrates selected modules through one workspace-level entrypoint while leaving module-specific logic and advanced flags inside the module packages.
+
 ## Environment Routing
 
 Use one shared root environment for daily monorepo work and package validation.
