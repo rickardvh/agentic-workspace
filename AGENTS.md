@@ -34,6 +34,29 @@ Do not bulk-read all planning surfaces.
 - Migration execution contract: `docs/migration/monorepo-migration-plan.md`
 - Long-horizon candidate work: `ROADMAP.md`
 
+## Product Direction
+
+This repository exists to build agent-first workspace infrastructure: systems that make coding agents more capable, more reliable, and easier to trust in real repositories.
+
+Work in this repo should steer toward these goals:
+
+- Build for agents first, while keeping the result legible and useful to humans.
+- Treat development work in this repo as live testing of the shipped packages and workflows.
+- Dogfood every major capability here before treating it as mature.
+- Continuously evaluate friction, reliability gaps, confusing ownership, and handoff failures during normal work.
+- Feed meaningful friction and improvement signals back into the active plan, roadmap, or routed memory instead of leaving them in chat-only residue.
+- Prefer repository-native state over chat-only or tool-local state.
+- Give agents durable context, explicit execution state, clear routing, narrow validation, and cheap handoff.
+- Optimise for continuity across sessions, tools, models, and contributors.
+- Keep systems modular, portable, and selectively adoptable in other repos.
+- Preserve strict boundaries between concerns; do not let planning, memory, routing, checks, or workspace orchestration blur together.
+- Treat internal use as a proving ground, not a licence for repo-specific hacks.
+- Generalise only after a feature works under real autonomous use here.
+- Avoid overfitting to this monorepo when shaping package behavior; prefer solutions that remain broadly useful in other repositories.
+- Favour mechanisms that reduce rediscovery, drift, and manual supervision.
+
+The standard for success is not novelty. It is giving agents real operating leverage in a repo: faster restart, safer execution, better continuity, and less wasted context.
+
 ## Repo Rules
 
 - Keep package boundaries explicit.

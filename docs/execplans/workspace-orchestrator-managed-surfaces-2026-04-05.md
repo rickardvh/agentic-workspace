@@ -45,6 +45,8 @@
 - `AGENTS.md` remains a thin repo entrypoint and must not accumulate mixed-ownership workflow prose.
 - Install, upgrade, verify, and uninstall must read from one ownership definition instead of inferring ownership from scattered heuristics.
 - The system should stay quiet and orderly in normal use: efficient, predictable, and low-ceremony for repo owners.
+- Normal development here is product dogfooding and should emit explicit improvement signals.
+- Dogfooding changes must generalise beyond this monorepo.
 
 ## Validation Commands
 
@@ -68,3 +70,4 @@
 
 - 2026-04-05: Plan created by promoting the workspace-orchestrator and fenced-managed-surface candidate from ROADMAP into an active execution contract.
 - 2026-04-05: Added package-local `AGENTS.md` entrypoints under `packages/memory/` and `packages/planning/` so package work starts from explicit source-vs-payload-vs-root-authority boundaries before the broader orchestrator refactor begins.
+- 2026-04-05: Root contract updated to make dogfooding explicit: development here is live package testing, agents should capture friction as improvement signals, and changes should generalise beyond this monorepo.

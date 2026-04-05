@@ -35,6 +35,7 @@ Phase-4 root orchestration complete; migration foundation stabilized
 - Ensure both bootstraps work end-to-end with new paths and pass all validation tests.
 - Maintain package boundaries and independent release tracks while converging on unified namespace convention.
 - Define the next cleanup tranche: a workspace-owned orchestrator file and fenced product-managed insertions so shared guidance stops blending into repo-owned `AGENTS.md` prose.
+- Use normal development in this repo as product dogfooding, while routing friction and improvement signals back into plans or memory without overfitting package behavior to this monorepo.
 
 ## Recent meaningful progress
 
@@ -55,6 +56,7 @@ Phase-4 root orchestration complete; migration foundation stabilized
 - Imported package planning history is preserved under docs/execplans/archive/imported-planning-package/.
 - Use root memory domain notes for package-origin context after package-local uninstall cleanup.
 - Product-managed additions should stay visibly fenced off from repo-owned instructions; a thin pointer block in `AGENTS.md` is preferred over mixed ownership prose.
+- Improvement signals from dogfooding should become plan updates, roadmap candidates, or memory pressure notes rather than staying implicit in ad hoc experience.
 
 ## Failure signals
 
