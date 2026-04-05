@@ -31,16 +31,17 @@ Active
 
 ## Current focus
 
-- Complete migration from package-local installed systems to root-owned planning and memory systems.
-- Keep package boundaries and independent release tracks intact while centralising operational routing at root.
-- Enforce deterministic root and package-scoped validation entrypoints through Make and CI.
+- Consolidate bootstrap namespace: move `.agentic-memory/` and `.agentic-planning/` to `.agentic-workspace/{memory,planning}/`.
+- Ensure both bootstraps work end-to-end with new paths and pass all validation tests.
+- Maintain package boundaries and independent release tracks while converging on unified namespace convention.
 
 ## Recent meaningful progress
 
-- Root memory system adopted conservatively and populated with package-context summaries.
-- Root planning system adopted conservatively and populated with imported planning archives from packages/planning.
-- Root sync entrypoints now distinguish merged all-package sync from package-scoped sync lanes.
-- CI now routes package checks through root make entrypoints.
+- Consolidated path namespace: refactored both memory and planning bootstraps to use `.agentic-workspace/` parent directory.
+- Updated all path constants, templates, docstrings, and test fixtures across both packages (156/158 memory tests, 25/25 planning tests passing).
+- Verified end-to-end: both bootstraps successfully generate install plans targeting new consolidated structure.
+- Fixed syntax warnings and package escape sequences in installers and test fixtures.
+- Migrated current repo's installed systems from old dotfiles to new consolidated structure.
 
 ## Blockers
 
