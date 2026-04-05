@@ -67,3 +67,4 @@
 ## Drift Log
 
 - 2026-04-05: Plan created by promoting the workspace-orchestrator and fenced-managed-surface candidate from ROADMAP into an active execution contract.
+- 2026-04-05: Added package-local `AGENTS.md` entrypoints under `packages/memory/` and `packages/planning/` so package work starts from explicit source-vs-payload-vs-root-authority boundaries before the broader orchestrator refactor begins.
