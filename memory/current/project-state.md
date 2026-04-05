@@ -2,7 +2,7 @@
 
 ## Status
 
-Active
+Phase-4 root orchestration complete; migration foundation stabilized
 
 ## Scope
 

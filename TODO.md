@@ -9,9 +9,14 @@ Active queue for monorepo migration work.
 ## Now
 
 - ID: phase-4-root-orchestration
-- Status: in-progress
+- Status: complete
 - Surface: docs/execplans/phase-4-root-orchestration-2026-04-05.md
-- Why now: After root-owned installs, fixture redirection, and package-root uninstall cleanup stabilized, only final planning guardrails and migration close-out remain.
+- Why now: After root-owned installs, fixture redirection, and package-root uninstall cleanup stabilized, final planning guardrails and migration close-out completed.
+
+## Action
+
+- Review ROADMAP for next candidate promotion or plan close-out conditions.
+- No active execution queue; awaiting next iteration decision.
 
 ## Added In This Pass
 

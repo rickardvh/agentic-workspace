@@ -11,7 +11,7 @@
 
 ## Active Milestone
 
-- Status: in-progress
+- Status: complete
 - Scope: finalise planning-surface guardrails and migration close-out conditions after package-root uninstall cleanup.
 - Ready: ready
 - Blocked: none
@@ -59,3 +59,9 @@
 - 2026-04-05: Plan created to close out root orchestration planning drift after package-root uninstall cleanup stabilized.
 - 2026-04-05: Removed stale references to deleted package-local operational surfaces from root durable notes and clarified package README guidance for the monorepo checkout.
 - 2026-04-05: Completed namespace consolidation refactor: moved both installed systems from `.agentic-memory/` and `.agentic-planning/` to `.agentic-workspace/memory/` and `.agentic-workspace/planning/` respectively. Both bootstraps tested end-to-end and validated (156/158 memory, 25/25 planning tests passing). Captured decision and updated project state notes.
+- 2026-04-05: Verified all phase-4 completion criteria:
+  - ✅ Root planning validator reports no drift warnings
+  - ✅ Root TODO points at live execplan (this milestone)
+  - ✅ ROADMAP candidates each carry explicit promotion triggers
+  - ✅ Package READMEs updated to reference new `.agentic-workspace/` paths
+  - Phase-4 milestone marked complete.
