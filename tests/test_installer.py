@@ -10,6 +10,8 @@ from repo_planning_bootstrap.installer import (
     install_bootstrap,
     planning_summary,
     promote_todo_item_to_execplan,
+    uninstall_bootstrap,
+    upgrade_bootstrap,
     verify_payload,
 )
 
@@ -114,6 +116,39 @@ def test_verify_payload_quickstart_matches_manifest() -> None:
     quickstart_actions = [action for action in result.actions if action.path.name == "AGENT_QUICKSTART.md"]
     assert quickstart_actions
     assert any(action.kind == "current" for action in quickstart_actions)
+
+
+def test_upgrade_bootstrap_overwrites_managed_files_but_preserves_root_surfaces(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    agents_path = tmp_path / "AGENTS.md"
+    checker_path = tmp_path / "scripts" / "check" / "check_planning_surfaces.py"
+
+    agents_path.write_text("repo-owned agents\n", encoding="utf-8")
+    checker_path.write_text("stale checker\n", encoding="utf-8")
+
+    result = upgrade_bootstrap(target=tmp_path)
+
+    assert agents_path.read_text(encoding="utf-8") == "repo-owned agents\n"
+    assert "stale checker" not in checker_path.read_text(encoding="utf-8")
+    assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
+    assert any(action.kind == "overwritten" and action.path == checker_path for action in result.actions)
+
+
+def test_uninstall_bootstrap_removes_pristine_files_and_keeps_modified_surfaces(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    agents_path = tmp_path / "AGENTS.md"
+    checker_path = tmp_path / "scripts" / "check" / "check_planning_surfaces.py"
+    quickstart_path = tmp_path / "tools" / "AGENT_QUICKSTART.md"
+
+    agents_path.write_text("repo-owned agents\n", encoding="utf-8")
+
+    result = uninstall_bootstrap(target=tmp_path)
+
+    assert agents_path.exists()
+    assert not checker_path.exists()
+    assert not quickstart_path.exists()
+    assert any(action.kind == "manual review" and action.path == agents_path for action in result.actions)
+    assert any(action.kind == "removed" and action.path == checker_path for action in result.actions)
 
 
 def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path: Path) -> None:

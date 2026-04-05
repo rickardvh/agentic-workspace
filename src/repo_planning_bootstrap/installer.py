@@ -25,6 +25,21 @@ REQUIRED_PAYLOAD_FILES = (
     Path("tools/AGENT_QUICKSTART.md"),
 )
 
+ROOT_SURFACE_FILES = (
+    Path("AGENTS.md"),
+    Path("TODO.md"),
+    Path("ROADMAP.md"),
+    Path("tools/agent-manifest.json"),
+)
+
+GENERATED_PAYLOAD_FILES = (
+    Path("tools/AGENT_QUICKSTART.md"),
+)
+
+PACKAGE_MANAGED_FILES = tuple(
+    relative for relative in REQUIRED_PAYLOAD_FILES if relative not in ROOT_SURFACE_FILES and relative not in GENERATED_PAYLOAD_FILES
+)
+
 
 @dataclass
 class Action:
@@ -93,6 +108,48 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) 
     result = InstallResult(target_root=target_root, message="Adoption plan for existing repository", dry_run=dry_run)
     _copy_payload(target_root=target_root, result=result, conservative=True, force=False)
     _render_quickstart_file(target_root=target_root, result=result, apply=not dry_run)
+    return result
+
+
+def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = InstallResult(target_root=target_root, message="Upgrade plan", dry_run=dry_run)
+
+    for relative in PACKAGE_MANAGED_FILES:
+        _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=True)
+
+    for relative in ROOT_SURFACE_FILES:
+        _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=False)
+
+    _render_quickstart_file(target_root=target_root, result=result, apply=not dry_run)
+    return result
+
+
+def uninstall_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = InstallResult(target_root=target_root, message="Uninstall plan", dry_run=dry_run)
+
+    removable: list[Path] = []
+    for relative in REQUIRED_PAYLOAD_FILES:
+        destination = target_root / relative
+        if not destination.exists():
+            result.add("skipped", destination, "already absent")
+            continue
+        if _can_remove_payload_file(relative=relative, target_root=target_root):
+            removable.append(relative)
+            result.add("would remove" if dry_run else "removed", destination, "matches managed payload content")
+            continue
+        result.add("manual review", destination, "local file differs from managed payload; remove manually if intended")
+
+    if dry_run:
+        return result
+
+    for relative in removable:
+        destination = target_root / relative
+        if destination.exists():
+            destination.unlink()
+
+    _prune_empty_parent_dirs(target_root=target_root, relatives=removable)
     return result
 
 
@@ -437,6 +494,36 @@ def _copy_payload(*, target_root: Path, result: InstallResult, conservative: boo
         result.add("copied" if not existed else "overwritten", destination, source.as_posix())
 
 
+def _copy_payload_file(*, relative: Path, target_root: Path, result: InstallResult, overwrite: bool) -> None:
+    source = payload_root() / relative
+    destination = target_root / relative
+    if not source.exists():
+        result.add("manual review", destination, "payload source file is missing")
+        return
+
+    if destination.exists():
+        if not overwrite:
+            result.add("skipped", destination, "repo-owned surface left unchanged")
+            return
+        if _files_match(source, destination):
+            result.add("current", destination, "already matches managed payload")
+            return
+        if result.dry_run:
+            result.add("would overwrite", destination, source.as_posix())
+            return
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+        result.add("overwritten", destination, source.as_posix())
+        return
+
+    if result.dry_run:
+        result.add("would copy", destination, source.as_posix())
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, destination)
+    result.add("copied", destination, source.as_posix())
+
+
 def _render_quickstart_file(*, target_root: Path, result: InstallResult, apply: bool) -> None:
     manifest_path = target_root / "tools/agent-manifest.json"
     quickstart_path = target_root / "tools/AGENT_QUICKSTART.md"
@@ -531,6 +618,46 @@ def _should_include_payload_path(path: Path, root: Path) -> bool:
     if "__pycache__" in relative_parts:
         return False
     return path.suffix != ".pyc"
+
+
+def _can_remove_payload_file(*, relative: Path, target_root: Path) -> bool:
+    destination = target_root / relative
+    if not destination.exists() or not destination.is_file():
+        return False
+    expected = _expected_target_file_bytes(relative=relative, target_root=target_root)
+    if expected is None:
+        return False
+    return destination.read_bytes() == expected
+
+
+def _expected_target_file_bytes(*, relative: Path, target_root: Path) -> bytes | None:
+    if relative == Path("tools/AGENT_QUICKSTART.md"):
+        manifest_path = target_root / "tools" / "agent-manifest.json"
+        if manifest_path.exists():
+            return _render_quickstart_for_repo(target_root).encode("utf-8")
+    source = payload_root() / relative
+    if not source.exists() or not source.is_file():
+        return None
+    return source.read_bytes()
+
+
+def _files_match(source: Path, destination: Path) -> bool:
+    return source.is_file() and destination.is_file() and source.read_bytes() == destination.read_bytes()
+
+
+def _prune_empty_parent_dirs(*, target_root: Path, relatives: list[Path]) -> None:
+    candidates = sorted(
+        {parent for relative in relatives for parent in relative.parents if parent != Path(".")},
+        key=lambda path: len(path.parts),
+        reverse=True,
+    )
+    for relative_dir in candidates:
+        directory = target_root / relative_dir
+        if directory.exists() and directory.is_dir():
+            try:
+                directory.rmdir()
+            except OSError:
+                continue
 
 
 def _read_lines(path: Path) -> list[str]:

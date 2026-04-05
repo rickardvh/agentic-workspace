@@ -267,6 +267,8 @@ This system is most useful when:
 
 - `agentic-planning-bootstrap install --target <repo>`
 - `agentic-planning-bootstrap adopt --target <repo>`
+- `agentic-planning-bootstrap upgrade --target <repo>`
+- `agentic-planning-bootstrap uninstall --target <repo>`
 - `agentic-planning-bootstrap doctor --target <repo>`
 - `agentic-planning-bootstrap status --target <repo>`
 - `agentic-planning-bootstrap summary --target <repo> --format json`
@@ -282,6 +284,10 @@ This system is most useful when:
 - `make plan-summary`
 
 `archive-plan --apply-cleanup` is intentionally narrow. It may remove completed TODO items that still point at the archived plan and compress stale `ROADMAP.md` Active Handoff residue tied to that same thread, but it does not invent hidden state or perform broad automatic rewrites.
+
+`upgrade` is intentionally conservative: it refreshes package-managed helper surfaces and re-renders quickstart output, but leaves repo-owned planning surfaces like `AGENTS.md`, `TODO.md`, `ROADMAP.md`, and `tools/agent-manifest.json` unchanged when they already exist.
+
+`uninstall` is intentionally safe: it removes managed files only when they still match package content and leaves locally modified files in place for manual review.
 
 ## Success Criteria
 

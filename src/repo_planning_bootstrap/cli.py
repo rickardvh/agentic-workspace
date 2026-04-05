@@ -17,6 +17,8 @@ from repo_planning_bootstrap.installer import (
     list_payload_files,
     planning_summary,
     promote_todo_item_to_execplan,
+    uninstall_bootstrap,
+    upgrade_bootstrap,
     verify_payload,
 )
 
@@ -42,6 +44,15 @@ def build_parser() -> argparse.ArgumentParser:
     adopt_parser.add_argument("--target")
     adopt_parser.add_argument("--dry-run", action="store_true")
     adopt_parser.add_argument("--format", choices=("text", "json"), default="text")
+
+    for command, help_text in (
+        ("upgrade", "Refresh package-managed helper surfaces without overwriting repo-owned root planning files."),
+        ("uninstall", "Remove managed bootstrap files when they still match package content."),
+    ):
+        command_parser = subparsers.add_parser(command, help=help_text)
+        command_parser.add_argument("--target")
+        command_parser.add_argument("--dry-run", action="store_true")
+        command_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     for command in ("doctor", "status"):
         command_parser = subparsers.add_parser(command)
@@ -90,6 +101,10 @@ def main(argv: list[str] | None = None) -> int:
         return _emit(install_bootstrap(target=args.target, dry_run=args.dry_run, force=args.force), args.format)
     if args.command == "adopt":
         return _emit(adopt_bootstrap(target=args.target, dry_run=args.dry_run), args.format)
+    if args.command == "upgrade":
+        return _emit(upgrade_bootstrap(target=args.target, dry_run=args.dry_run), args.format)
+    if args.command == "uninstall":
+        return _emit(uninstall_bootstrap(target=args.target, dry_run=args.dry_run), args.format)
     if args.command == "doctor":
         return _emit(doctor_bootstrap(target=args.target), args.format)
     if args.command == "status":

@@ -28,8 +28,6 @@ Do not use it for:
 ## Next Candidate Queue
 
 - Keep refining archive cleanup helpers when repeated dogfooding reports show the same post-archive compression step across repos.
-- Exclude generated artefacts from the packaged payload when self-refresh runs show `__pycache__` or similar residue leaking into adopt/install flows.
-- Add upgrade and uninstall flows when the initial installer contract is stable and repeated dogfooding shows the safe lifecycle boundaries clearly.
 - Add more repo-agnostic generated agent-surface support when multiple repositories converge on the same startup contract.
 - Add optional planning skills only when a repeated planning workflow proves stable enough to ship as reusable automation.
 
