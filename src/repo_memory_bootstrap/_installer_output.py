@@ -402,14 +402,14 @@ def _validate_upgrade_source_record(path: Path, result) -> None:
         )
 
 
-def resolve_upgrade_source(target: str | Path | None = None) -> dict[str, str | int | None]:
+def resolve_upgrade_source(target: str | Path | None = None) -> dict[str, str | int | Path | None]:
     target_root = Path(target or Path.cwd()).resolve()
     path = target_root / UPGRADE_SOURCE_PATH
     if not path.exists():
         legacy = target_root / LEGACY_UPGRADE_SOURCE_PATH
         if legacy.exists():
             path = legacy
-    default = {
+    default: dict[str, str | int | Path | None] = {
         "source_type": "git",
         "source_ref": "git+https://github.com/Tenfifty/agentic-memory@main",
         "source_label": "agentic-memory-bootstrap main",

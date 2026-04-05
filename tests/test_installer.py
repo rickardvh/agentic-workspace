@@ -3283,8 +3283,7 @@ def test_doctor_emits_multi_home_pressure_for_invariant_heavy_runbook(tmp_path: 
     (target / "memory" / "runbooks").mkdir(parents=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
     (target / "memory" / "runbooks" / "release.md").write_text(
-        "# Release\n\n"
-        + "\n".join("The service must remain compatible and must never skip validation." for _ in range(8)),
+        "# Release\n\n" + "\n".join("The service must remain compatible and must never skip validation." for _ in range(8)),
         encoding="utf-8",
     )
     (target / "memory" / "manifest.toml").write_text(
@@ -3558,8 +3557,7 @@ subsystems = ["memory-system"]
     result = installer.doctor_bootstrap(target=target)
 
     assert not any(
-        action.role == "memory-overlap-audit"
-        and action.path == target / "memory" / "decisions" / "wishlist.md"
+        action.role == "memory-overlap-audit" and action.path == target / "memory" / "decisions" / "wishlist.md"
         for action in result.actions
     )
 

@@ -712,7 +712,7 @@ def _pipx_git_runner_command() -> str:
     return f"pipx run --spec {source['source_ref']} agentic-memory-bootstrap"
 
 
-def _preferred_git_runner_command(source: dict[str, str | int | None]) -> str:
+def _preferred_git_runner_command(source: dict[str, str | int | Path | None]) -> str:
     source_ref = str(source["source_ref"])
     if shutil.which("uvx"):
         return f"uvx --from {source_ref} agentic-memory-bootstrap"

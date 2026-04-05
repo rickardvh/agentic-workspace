@@ -1,6 +1,3 @@
-# Local agent working context
-.agent-work/
-
 # Local Python environment
 .venv/
 
@@ -13,6 +10,5 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 
-# Dolt database files (added by bd init)
-.dolt/
-*.db
+# Coverage reports
+.coverage

@@ -919,7 +919,8 @@ def _note_multi_home_findings(
             (
                 (
                     f"{note.note_type} note is accumulating repeatable procedure ({imperative_lines} imperative lines); "
-                    f"extract the workflow into {_infer_skill_target(note, note_path)} or a sibling runbook and keep this note focused on durable boundaries"
+                    f"extract the workflow into {_infer_skill_target(note, note_path)}"
+                    " or a sibling runbook and keep this note focused on durable boundaries"
                 ),
                 "skill",
                 _infer_skill_target(note, note_path),

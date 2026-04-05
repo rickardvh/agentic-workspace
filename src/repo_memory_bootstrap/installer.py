@@ -1166,11 +1166,15 @@ def report_routes(*, target: str | Path | None = None) -> InstallResult:
             "fixture_count_exceeding_strong_warning": fixture_summary["fixture_count_exceeding_strong_warning"],
         },
         "routing_confidence": {
-            "high_confidence_fixture_count": sum(1 for item in fixture_results if item.get("valid") and item.get("routing_confidence") == "high"),
+            "high_confidence_fixture_count": sum(
+                1 for item in fixture_results if item.get("valid") and item.get("routing_confidence") == "high"
+            ),
             "medium_confidence_fixture_count": sum(
                 1 for item in fixture_results if item.get("valid") and item.get("routing_confidence") == "medium"
             ),
-            "low_confidence_fixture_count": sum(1 for item in fixture_results if item.get("valid") and item.get("routing_confidence") == "low"),
+            "low_confidence_fixture_count": sum(
+                1 for item in fixture_results if item.get("valid") and item.get("routing_confidence") == "low"
+            ),
         },
         "startup_cost": {
             "average_routed_line_count": fixture_summary["average_routed_line_count"],
