@@ -33,6 +33,8 @@ Active
 - Initial package skeleton landed with packaged payload, installer CLI, baseline tests, and self-hosted planning surfaces.
 - Memory bootstrap was adopted conservatively into this repo, including the shared `.agentic-memory/` workflow surface and routed `memory/` tree.
 - The planning bootstrap contract now treats memory as an optional routed companion rather than a competing startup surface.
+- The planning package now ships conservative `upgrade` and `uninstall` lifecycle flows, a second manifest-driven agent surface (`tools/AGENT_ROUTING.md`), and a repo-specific planning-surface skill.
+- The memory bootstrap is now upgraded to version 46 from the recorded upstream source, while repo-owned memory notes remain separately reviewed and preserved.
 
 ## Blockers
 
@@ -42,7 +44,9 @@ Active
 
 - Planning remains the owner of `TODO.md`, active execplans, and `ROADMAP.md`.
 - Memory should only hold durable routed knowledge and compact current-state orientation for this repo.
-- The package currently covers install, adopt, doctor, status, verification, and prompt flows; upgrade and uninstall parity with `agentic-memory-bootstrap` is still future work.
+- Route through `memory/index.md`, `memory/manifest.toml`, and the shipped memory skills before broad note reading.
+- Keep the managed `.agentic-memory/` surface clearly separate from repo-owned `memory/`.
+- Treat this repo as both implementation and continuous real-use validation of the planning/memory boundary; durable friction should become explicit product feedback, while planning material stays out of checked-in memory.
 
 ## Failure signals
 
@@ -53,7 +57,7 @@ Active
 
 - Read `memory/index.md` and confirm the routing still matches the memory structure.
 - Confirm the current focus, recent progress, and blockers still reflect the repo.
-- Confirm `AGENTS.md`, `tools/agent-manifest.json`, and `tools/AGENT_QUICKSTART.md` still preserve the planning-versus-memory ownership boundary.
+- Confirm `AGENTS.md`, `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, and `.agentic-memory/WORKFLOW.md` still preserve the planning-versus-memory ownership boundary.
 
 ## Verified against
 
@@ -61,8 +65,10 @@ Active
 - `.agentic-memory/WORKFLOW.md`
 - `README.md`
 - `AGENTS.md`
-- `docs/execplans/planning-bootstrap-initialisation-2026-04-05.md`
+- `tools/agent-manifest.json`
+- `tools/AGENT_QUICKSTART.md`
+- `docs/execplans/archive/roadmap-burndown-2026-04-05.md`
 
 ## Last confirmed
 
-2026-04-05 after memory bootstrap adoption and planning-memory boundary review
+2026-04-05 after memory bootstrap upgrade review and roadmap burndown completion

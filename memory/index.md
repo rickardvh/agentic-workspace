@@ -6,12 +6,16 @@
 - Planning remains primary for active execution state: `TODO.md`, active execplans, and `ROADMAP.md`.
 - Use memory only for durable routed knowledge, current orientation, and compact continuation context.
 - Start here only after identifying the task from the planning surface or explicit user request.
+- If `memory/manifest.toml` exists, use it as the machine-readable routing and freshness companion to this file.
+- Routing quality matters more than memory volume: good memory systems should help an agent read less, not more.
 
 ## Loading rule
 
 - Do not load all of `/memory` by default.
 - Start from `memory/index.md` plus the smallest relevant bundle below.
-- Load `memory/current/task-context.md` only when it materially reduces restart cost.
+- Default to `memory/index.md` plus at most 2 additional notes unless the task clearly justifies more.
+- Load `memory/current/project-state.md` or `memory/current/task-context.md` only when they materially reduce restart cost.
+- Load `memory/current/routing-feedback.md` only when calibrating routing against a concrete missed-note or over-routing case.
 - Load `.agentic-memory/WORKFLOW.md` only when the task touches memory, planning/memory boundaries, or bootstrap workflow policy.
 
 ## Common task bundles
@@ -49,12 +53,24 @@ Do not store:
 - execution logs
 - one-off implementation chatter
 
+If a recurring procedure is reusable but not itself durable repo knowledge, prefer a skill over a new memory note.
+
 ## One-home rule
 
 - planning surfaces own active execution state
 - `/memory` owns durable routed knowledge
 - canonical docs own stable general guidance
 - skills own repeatable operational workflows when prose would otherwise sprawl
+
+Use short references instead of repeating the same guidance in multiple notes.
+
+## Index compactness rule
+
+`memory/index.md` is a routing layer, not a knowledge file.
+
+Keep it short.
+Do not summarise note contents beyond what is needed for routing.
+Update this index in the same change when the memory structure changes.
 
 ## Repo notes
 

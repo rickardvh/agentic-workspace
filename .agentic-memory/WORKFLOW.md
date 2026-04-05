@@ -34,6 +34,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Use `memory/index.md` as the routing layer; do not bulk-load `/memory`.
 - Prefer the smallest useful working set.
 - Default to `memory/index.md` plus at most 2 additional notes unless the task clearly justifies more.
+- Treat low-confidence routing as a calibration signal: if routing relies on index or high-level fallbacks instead of direct manifest matches, capture the missed note rather than silently widening the default read set.
 - Optimise for deletion and consolidation, not just capture.
 - Prefer editing, merging, or removing existing notes over accumulating near-duplicates.
 - When referenced behaviour changes, update the note, mark it `Needs verification`, or remove it in the same change.
@@ -47,6 +48,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Move procedure-heavy prose into a skill when the durable fact should stay in files but the repeated workflow should become optional execution guidance.
 - Prefer one primary home for the durable fact and a short cross-reference elsewhere rather than parallel note copies.
 - Ask what repo change would eliminate or shrink the note: canonical docs, stronger tests, validation, a script, a skill, or a clearer design boundary.
+- Ask whether the note should still exist at all after that repo change; prefer a stub, short residue note, or deletion over carrying full prose forward by default.
 
 ## Metadata
 
@@ -56,12 +58,14 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Prefer `memory/manifest.toml` for machine-readable note typing, routing, and freshness triggers when the repository maintains that file.
 - Use manifest fields such as `audience`, `canonicality`, `task_relevance`, `routes_from`, and `stale_when` to distinguish note classes, promotion candidates, routing relevance, and freshness pressure.
 - Optional manifest fields such as `memory_role`, `symptom_of`, `preferred_remediation`, `improvement_candidate`, `improvement_note`, and `elimination_target` can capture why a note exists and what kind of upstream improvement it may be pointing toward.
+- Keep calibration artefacts distinct from durable notes: `memory/current/routing-feedback.md` should stay optional, agent-only, and free of broad routing metadata or durable-truth claims.
 
 ## Canonical-doc boundary
 
 - Prefer checked-in canonical docs first and memory second when stable policies, procedures, or engineering guidance already have a natural home in `README.md`, `docs/`, or equivalent repo docs.
 - Treat memory as assistive residue by default: short lessons, pitfalls, routing hints, operator context, and compact shared state.
 - If a memory note becomes stable guidance for humans, mark it as a promotion candidate, move the canonical truth into checked-in docs, then leave a short memory stub or fallback note instead of duplicate prose.
+- If a note is already marked `canonical_elsewhere`, keep it visibly smaller than the canonical doc and resist turning fallback context back into a second handbook.
 - Do not make core repo docs depend on memory unless the repository explicitly chooses that policy boundary.
 
 ## Current-context files
@@ -69,12 +73,14 @@ Keep it concise, repo-agnostic, and non-procedural.
 - `memory/current/project-state.md` is a short overview only.
 - `memory/current/task-context.md` is optional continuation compression only.
 - `memory/current/routing-feedback.md` is optional routing calibration only.
+- Do not treat routing-feedback as durable knowledge; it is temporary calibration input and should be compressed or removed once the route is tuned.
 - Neither file should become a task list, detailed plan, journal, backlog, ledger, tranche history, or duplicated memory summary.
 - A good `project-state.md` normally covers current focus, recent meaningful progress, blockers, and a few high-value notes only.
 - Keep `project-state.md` aggressively summary-shaped; if it starts reading like a changelog, history log, or backlog, compress it.
 - A good `task-context.md` normally covers status, scope, active goal, touched surfaces, blocking assumptions, next validation, resume cues, and last confirmed only.
 - Do not let `task-context.md` become a shadow task board, execution log, sequencing surface, or duplicate planner.
 - Keep `routing-feedback.md` compact and review-shaped: record only concrete missed-note or over-routing cases, then compress or remove resolved entries.
+- Bias calibration toward missed-note capture first; over-routing cases are useful, but they are more subjective and should stay especially high-signal.
 - Treat planner-like headings such as backlog, roadmap, completed tasks, timeline, sprint, action items, or next steps as suspicion signals that the current note may be drifting.
 
 ## Ownership boundary
@@ -95,6 +101,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - `memory/skills/` is reserved for skills whose primary purpose is operating on checked-in memory or maintaining the memory system, not for general repo workflows.
 - When a repository has shipped shared memory skills, treat `.agentic-memory/skills/README.md` as the discovery surface for those skills instead of expanding `AGENTS.md` with more shared trigger prose.
 - If prose starts describing a repeatable maintenance, routing, refresh, capture, hygiene, or upgrade workflow, that is usually a skill candidate.
+- If a domain or decision note starts accumulating command-heavy repeatable steps, split the procedure into a runbook or checked-in skill before broadening the note further.
 - Checked-in repo-local skills should take precedence over runtime-local mirrors or cached user copies when both exist.
 - The base memory system must remain understandable without skills.
 
@@ -105,6 +112,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Freshness review should consider semantic drift as well as age: linked code, commands, authority boundaries, or expected routing surfaces may have changed even when metadata still looks current.
 - If a note keeps growing through unrelated edits, split it by primary home or move repeated procedure into a skill.
 - Use note-type-aware size pressure: keep invariants especially tight, keep runbooks procedural, and keep current-context files very small.
+- Watch for multi-home drift early: procedures do not belong in domain notes, invariants do not belong in runbooks, and durable rationale should not stay buried in operational checklists.
 
 ## Capture threshold
 
@@ -127,6 +135,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - When routing or syncing memory exposes repeated friction, note sprawl, or recurring workarounds, propose or make the smallest upstream improvement that would reduce the note when it is safe and in scope.
 - Prefer emitting a concrete remediation target over a vague hint: suggest where the docs, skill, script, test, validation, or refactor should land, then keep the memory note only as residue, a stub, or a short fallback summary.
 - Treat `promotion-report` as the main elimination workflow: use it to decide the upstream target and the intended post-remediation memory shape before expanding the note further.
+- If remediation lands, explicitly re-evaluate whether the note should shrink, become a stub, or disappear instead of assuming it remains justified.
 - Keep the package advisory outside managed bootstrap surfaces: it may diagnose, classify, prioritise, and suggest concrete repo-owned targets, but it must not autonomously rewrite repo-owned docs, tests, scripts, or code outside the managed bootstrap surface.
 - If remediation suggestions become too repo-shape-specific, prefer a clearer handoff into repo-owned work over making the bootstrap itself more invasive.
 
