@@ -81,8 +81,8 @@
         "tools/AGENT_ROUTING.md"
       ],
       "commands": [
-        "make plan-check",
-        "python scripts/render_agent_docs.py"
+        "make planning-surfaces",
+        "make render-agent-docs"
       ]
     }
   },

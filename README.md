@@ -5,11 +5,56 @@ Monorepo host for two distributable packages:
 - `agentic-memory-bootstrap`
 - `agentic-planning-bootstrap`
 
+If you are landing here for the first time, the important question is usually not "how does the monorepo work?" but "which module should I use in my repo?"
+
+## Start Here
+
+Choose the package that matches the problem you are trying to solve:
+
+| If you want to add... | Use... | Start with... |
+| --- | --- | --- |
+| Shared durable repo memory for agents and humans | `agentic-memory-bootstrap` | `packages/memory/README.md` |
+| Checked-in execution planning surfaces for active work | `agentic-planning-bootstrap` | `packages/planning/README.md` |
+| Both together inside this monorepo or a composed workspace flow | `agentic-workspace` | this README, then the package READMEs |
+
+Package maturity today:
+
+- `agentic-memory-bootstrap`: beta
+- `agentic-planning-bootstrap`: alpha
+
+The root `agentic-workspace` CLI is a thin composition layer. It is useful when one workflow needs to coordinate both modules, but the package READMEs are still the best entrypoint for understanding what gets installed and why.
+
 ## Purpose
 
 This repository is the monorepo host for `agentic-memory-bootstrap` and
 `agentic-planning-bootstrap`, with shared workspace-level orchestration,
 validation, and dogfooding of the shipped packages.
+
+## What The Modules Do
+
+| Module | Primary job | Owns | Does not own |
+| --- | --- | --- | --- |
+| `agentic-memory-bootstrap` | Preserve durable repo knowledge | invariants, runbooks, decisions, recurring failures, routed context | active task sequencing and backlog state |
+| `agentic-planning-bootstrap` | Keep active execution aligned | roadmap candidates, active queue state, execplans, completion criteria | durable subsystem knowledge and long-lived technical memory |
+| `agentic-workspace` | Compose modules at the workspace level | shared lifecycle entrypoints, preset selection, integrated status | package-internal domain logic |
+
+Memory and planning are meant to complement each other, not absorb each other.
+
+## Quick Start
+
+For most external users, start with one package directly:
+
+```bash
+# Shared repository memory
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target /path/to/repo
+
+# Checked-in execution planning
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt install --target /path/to/repo
+```
+
+Use `prompt install` when you want an agent-friendly, no-local-install entrypoint. Use `adopt` instead of `install` when the target repository already has related docs or workflow surfaces and you want a conservative merge.
+
+If you are evaluating the combined model rather than one module in isolation, read both package READMEs first. The workspace layer is intentionally thin and assumes the module boundaries stay explicit.
 
 ## Layout
 
@@ -23,6 +68,8 @@ validation, and dogfooding of the shipped packages.
 Workspace orchestration is stable.
 
 Root planning and memory systems own monorepo operation, package-scoped validation lanes are in place, and CI runs through root orchestration targets.
+
+For a newcomer, the important implication is: this repository is both the packaging source and the live dogfooding environment. Some docs describe target-repository behavior, while root docs also describe how this monorepo runs itself.
 
 ## Architecture Stance
 
@@ -106,6 +153,18 @@ Supported presets:
 
 See `docs/contributor-playbook.md` for package routing, ownership, and the smallest validation lane to run for common change types.
 
+For agent maintainers, the primary operating path is:
+
+1. `AGENTS.md` for startup and precedence
+2. `TODO.md` for the active queue
+3. one active execplan when the task is planned
+4. `docs/contributor-playbook.md` for ownership and validation routing
+5. `tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md` for compact generated guidance
+
+This repo is maintained as an agent-first system. Human-readable docs matter, but the maintainer contract should stay optimized for agents that need explicit startup order, narrow validation, durable state, and cheap handoff.
+
+Generated planning routing docs under `tools/` are mirrors of `.agentic-workspace/planning/agent-manifest.json`. Update the managed manifest and rerender those docs instead of editing the mirrors by hand.
+
 ## Environment Routing
 
 Use one shared root environment for daily monorepo work and package validation.
@@ -128,7 +187,7 @@ Validation entrypoints:
 - `make check-planning`
 - `make check-all`
 
-`make check-memory` and `make check-planning` each perform a consolidated root dev sync first so checks remain repeatable from one workspace environment.
+`make check-memory` and `make check-planning` each perform a consolidated root dev sync first so checks remain repeatable from one workspace environment. For package-local test or lint runs, sync once from the root first, then run the package command from its package directory.
 
 Root planning and memory installs are authoritative for monorepo operation.
 Package directories now keep package source, bootstrap payloads, and test fixtures only; package-local installed runtime systems have been removed.

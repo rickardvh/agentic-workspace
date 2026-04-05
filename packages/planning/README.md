@@ -1,6 +1,35 @@
 # agentic-planning-bootstrap
 
-*A checked-in planning system for execution in agent-driven development*
+Checked-in planning system for execution in agent-driven development.
+
+## At A Glance
+
+Choose this package when you want active work in a repository to stay bounded, resumable, and finishable across fragmented sessions.
+
+Use it for:
+
+- keeping a small active queue in `TODO.md`
+- storing inactive future candidates in `ROADMAP.md`
+- attaching bounded execution contracts to active work in `docs/execplans/`
+- helping agents restart from checked-in execution state instead of chat-only context
+
+Do not use it for:
+
+- durable technical knowledge that should outlive the active task
+- subsystem documentation or runbooks
+- a full project-management or ticketing system
+
+If your main problem is shared repo memory rather than active work steering, start with `agentic-memory-bootstrap` instead.
+
+## Quick Start
+
+Fastest no-install path:
+
+```bash
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt install --target /path/to/repo
+```
+
+Use `prompt install` for a clean bootstrap. Use `adopt` when the repository already has planning-like docs and you want the package to merge conservatively around existing surfaces.
 
 ## Overview
 
@@ -26,6 +55,8 @@ In agent-driven or session-based development, work tends to degrade over time:
 - follow-on work derails current execution
 
 This package helps prevent that by installing a structured execution layer that lives in the repo itself.
+
+For many users the simplest mental model is: planning owns what matters now, what comes next, and what counts as done.
 
 ## Core Idea
 
@@ -314,10 +345,9 @@ This system is most useful when:
 - `agentic-planning-bootstrap list-files`
 - `agentic-planning-bootstrap verify-payload`
 - `agentic-planning-bootstrap prompt install --target <repo>`
-- `make plan-check`
-- `make plan-check-json`
-- `make plan-check-strict`
-- `make plan-summary`
+- `make planning-surfaces`
+- `make planning-surfaces-strict`
+- `make render-agent-docs`
 
 `archive-plan --apply-cleanup` is intentionally narrow. It may remove completed TODO items that still point at the archived plan and compress stale `ROADMAP.md` Active Handoff residue tied to that same thread, but it does not invent hidden state or perform broad automatic rewrites.
 
@@ -348,11 +378,13 @@ The system is working when:
 ## Development
 
 ```bash
-uv sync --group dev
-uv run pytest
+make sync-planning
+cd packages/planning && uv run pytest
 make render-agent-docs
-make plan-check
+make planning-surfaces
 
 # Or from the monorepo root
 make check-planning
 ```
+
+Package checks run against the shared root workspace environment; the package directory is not a separate operational planning install in this monorepo.

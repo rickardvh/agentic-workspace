@@ -2,6 +2,36 @@
 
 A small CLI that adds a checked-in, route-indexed memory layer to any Git repository so AI coding agents retain durable context across sessions without rediscovering the codebase from scratch each time.
 
+## At A Glance
+
+Choose this package when you want a repository to keep durable, shared knowledge that survives across sessions, contributors, and agent tools.
+
+Use it for:
+
+- invariants and authority boundaries
+- subsystem orientation that is expensive to rediscover
+- recurring failure modes and operator runbooks
+- compact current-state notes that help an agent restart work faster
+
+Do not use it for:
+
+- active milestone sequencing
+- backlog tracking
+- execution logs
+- broad canonical product documentation
+
+If what you need is active work steering rather than durable repo memory, start with `agentic-planning-bootstrap` instead.
+
+## Quick Start
+
+Fastest no-install path:
+
+```bash
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target /path/to/repo
+```
+
+Use `prompt install` for a clean bootstrap into a repo that does not already have a memory system. Use `prompt adopt` when the repository already has related docs or workflow notes and you want the installer to merge conservatively instead of assuming a blank slate.
+
 ## Why
 
 Some AI agents, such as GitHub Copilot, have their own built-in memory, but that memory is typically per-user, per-machine, and invisible to the rest of the team. Checked-in repository memory complements those systems by providing a shared, version-controlled knowledge layer that:
@@ -12,6 +42,8 @@ Some AI agents, such as GitHub Copilot, have their own built-in memory, but that
 - **Stays auditable and reviewable.** Checked-in notes go through normal code review and version history, making it visible when knowledge changes and why.
 
 `agentic-memory-bootstrap` installs a lightweight `memory/` tree that agents load selectively on each task start, giving them the smallest useful slice of durable context without bulk-reading the codebase.
+
+For many users the simplest mental model is: planning tells an agent what matters now; memory tells an agent what is expensive to forget.
 
 ## How it works
 
@@ -64,14 +96,14 @@ Memory does not own:
   - [Table Of Contents](#table-of-contents)
   - [What It Does](#what-it-does)
   - [Install](#install)
-    - [Agent workflow](#agent-workflow)
-    - [Manual alternative](#manual-alternative)
+    - [Agent workflow for install](#agent-workflow-for-install)
+    - [Manual install alternative](#manual-install-alternative)
   - [Upgrade](#upgrade)
-    - [Agent workflow](#agent-workflow-1)
-    - [Manual alternative](#manual-alternative-1)
+    - [Agent workflow for upgrade](#agent-workflow-for-upgrade)
+    - [Manual upgrade alternative](#manual-upgrade-alternative)
   - [Uninstall](#uninstall)
-    - [Agent workflow](#agent-workflow-2)
-    - [Manual alternative](#manual-alternative-2)
+    - [Agent workflow for uninstall](#agent-workflow-for-uninstall)
+    - [Manual uninstall alternative](#manual-uninstall-alternative)
   - [Skills](#skills)
   - [Memory Guidance](#memory-guidance)
   - [Command Summary](#command-summary)
@@ -82,7 +114,7 @@ Memory does not own:
 Running `install` or `adopt` adds the following to your repository:
 
 | Path | Purpose |
-|------|---------|
+| --- | --- |
 | `AGENTS.md` | Repo-local agent contract and bootstrap entry point |
 | `memory/index.md` | Route-indexed entry point that maps tasks to minimal note bundles |
 | `memory/manifest.toml` | Machine-readable note metadata, routing triggers, and improvement-pressure fields |
@@ -102,7 +134,7 @@ In this monorepo checkout, the active operational memory install lives at the re
 
 ## Install
 
-### Agent workflow
+### Agent workflow for install
 
 If you want an agent to perform the setup and do not want to install the CLI locally, print a ready-to-paste prompt with one of these commands:
 
@@ -132,7 +164,7 @@ After the agent finishes install or adopt lifecycle work, run `agentic-memory-bo
 
 If you omit the placeholder flags such as `--project-name` or `--project-purpose`, your `AGENTS.md` will contain unfilled placeholders. Run `doctor` after install to identify them.
 
-### Manual alternative
+### Manual install alternative
 
 If you want a local CLI installation instead, install the tool with one of these commands:
 
@@ -163,7 +195,7 @@ If you are working from a local clone, replace the Git URL with `.`.
 
 ## Upgrade
 
-### Agent workflow
+### Agent workflow for upgrade
 
 If you want an agent to perform the upgrade without a local CLI install, print a ready-to-paste prompt with one of these commands:
 
@@ -177,7 +209,7 @@ pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdir
 
 This is the preferred upgrade path for the primary agent-first workflow. The prompt tells the agent to use the checked-in `memory-upgrade` skill as the single repo-local upgrade entrypoint; the skill then runs the packaged upgrade flow using `.agentic-workspace/memory/UPGRADE-SOURCE.toml`.
 
-### Manual alternative
+### Manual upgrade alternative
 
 After installation, run:
 
@@ -189,7 +221,7 @@ agentic-memory-bootstrap upgrade --target /path/to/repo
 
 ## Uninstall
 
-### Agent workflow
+### Agent workflow for uninstall
 
 If you want an agent to perform the uninstall without a local CLI install, print a ready-to-paste prompt with one of these commands:
 
@@ -203,7 +235,7 @@ pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdir
 
 This runs the uninstall flow conservatively and points the agent to the bundled `bootstrap-uninstall` skill when manual-review items remain.
 
-### Manual alternative
+### Manual uninstall alternative
 
 If the tool is already installed, run:
 
@@ -279,12 +311,12 @@ Common arguments:
 Useful maintainer commands:
 
 ```bash
-uv sync --group dev
-uv run --group dev pytest
+make sync-memory
+cd packages/memory && uv run pytest
 make check-memory
 
-# Or from the monorepo root
-make check-memory
+# Or sync the shared workspace environment directly
+uv sync --all-packages --group dev
 ```
 
-When installer behaviour or the payload changes, verify against this repo itself. When the packaged tool changes, bump the package version in `pyproject.toml`.
+Package checks run against the shared root workspace environment; the package directory is not a separate operational install in this monorepo. When installer behaviour or the payload changes, verify against this repo itself. When the packaged tool changes, bump the package version in `pyproject.toml`.

@@ -232,7 +232,7 @@ def _build_prompt(command: str, target: str | None) -> str:
     return (
         f"Run `{runner} adopt{target_args}` conservatively. "
         "Do not overwrite repo-owned planning files unless the user asks for it. "
-        "Afterwards run `python scripts/render_agent_docs.py` and `make plan-check`."
+        "Afterwards run `make render-agent-docs` and `make planning-surfaces`."
     )
 
 

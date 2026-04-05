@@ -26,6 +26,6 @@ Focused routing reference derived from `.agentic-workspace/planning/agent-manife
   - `tools/AGENT_QUICKSTART.md`
   - `tools/AGENT_ROUTING.md`
 - Validation:
-  - `make plan-check`
-  - `python scripts/render_agent_docs.py`
+  - `make planning-surfaces`
+  - `make render-agent-docs`
 
