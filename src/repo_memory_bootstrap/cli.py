@@ -32,8 +32,6 @@ from repo_memory_bootstrap.installer import (
     verify_payload,
 )
 
-GIT_REPO_URL = "git+https://github.com/Tenfifty/agentic-memory"
-
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -652,7 +650,8 @@ def _created_current_memory_notes(result) -> bool:
 
 def _build_agent_prompt(command: str, *, target: str | None) -> str:
     target_root = target or "/path/to/repo"
-    runner = _preferred_git_runner_command()
+    source = resolve_upgrade_source(target)
+    runner = _preferred_git_runner_command(source)
     target_args = _target_args(target)
     bootstrap_skills = _bootstrap_skills_path(target)
     upgrade_runner = _upgrade_runner_command(target)
@@ -704,26 +703,29 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
 
 
 def _uvx_git_runner_command() -> str:
-    return f"uvx --from {GIT_REPO_URL} agentic-memory-bootstrap"
+    source = resolve_upgrade_source(None)
+    return f"uvx --from {source['source_ref']} agentic-memory-bootstrap"
 
 
 def _pipx_git_runner_command() -> str:
-    return f"pipx run --spec {GIT_REPO_URL} agentic-memory-bootstrap"
+    source = resolve_upgrade_source(None)
+    return f"pipx run --spec {source['source_ref']} agentic-memory-bootstrap"
 
 
-def _preferred_git_runner_command() -> str:
+def _preferred_git_runner_command(source: dict[str, str | int | None]) -> str:
+    source_ref = str(source["source_ref"])
     if shutil.which("uvx"):
-        return _uvx_git_runner_command()
+        return f"uvx --from {source_ref} agentic-memory-bootstrap"
     if shutil.which("pipx"):
-        return _pipx_git_runner_command()
-    return _uvx_git_runner_command()
+        return f"pipx run --spec {source_ref} agentic-memory-bootstrap"
+    return f"uvx --from {source_ref} agentic-memory-bootstrap"
 
 
 def _upgrade_runner_command(target: str | None) -> str:
     source = resolve_upgrade_source(target)
     if source["source_type"] == "local":
-        return _runner_command_for_local_source(source["source_ref"])
-    return _preferred_git_runner_command()
+        return _runner_command_for_local_source(str(source["source_ref"]))
+    return _preferred_git_runner_command(source)
 
 
 def _target_args(target: str | None) -> str:

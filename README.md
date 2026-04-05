@@ -78,19 +78,19 @@ If you want an agent to perform the setup and do not want to install the CLI loc
 
 ```bash
 # Preferred when uvx is available
-uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt install --target /path/to/repo
+uvx --from git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap prompt install --target /path/to/repo
 
 # Fallback when pipx is available instead
-pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt install --target /path/to/repo
+pipx run --spec git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap prompt install --target /path/to/repo
 
 # Conservative adoption into an existing repo
-uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
+uvx --from git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap prompt adopt --target /path/to/repo
 
 # Fallback when pipx is available instead
-pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
+pipx run --spec git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap prompt adopt --target /path/to/repo
 ```
 
-Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. The printed prompt is designed for an agent to execute the bootstrap flow without asking you to install or clone this repo first. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but normal upgrades should route through the checked-in `memory-upgrade` skill under `.agentic-memory/skills/`, which runs the packaged upgrade flow using `.agentic-memory/UPGRADE-SOURCE.toml`.
+Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. The printed prompt is designed for an agent to execute the bootstrap flow without asking you to install or clone this repo first. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but normal upgrades should route through the checked-in `memory-upgrade` skill under `.agentic-memory/skills/`, which runs the packaged upgrade flow using `.agentic-memory/UPGRADE-SOURCE.toml`. Treat that file as the source of truth for remote runner specs instead of scattering raw Git URLs through local workflow docs.
 
 Typical lifecycle for a fresh bootstrap:
 
@@ -108,13 +108,13 @@ If you want a local CLI installation instead, install the tool with one of these
 
 ```bash
 # Choose one
-uv tool install --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap
+uv tool install --from git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap
 
 # Or
-pipx install git+https://github.com/Tenfifty/agentic-memory
+pipx install git+https://github.com/Tenfifty/agentic-memory@main
 
 # Or
-python -m pip install git+https://github.com/Tenfifty/agentic-memory
+python -m pip install git+https://github.com/Tenfifty/agentic-memory@main
 ```
 
 Then run:
@@ -139,10 +139,10 @@ If you want an agent to perform the upgrade without a local CLI install, print a
 
 ```bash
 # Preferred when uvx is available
-uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
+uvx --from git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap prompt upgrade --target /path/to/repo
 
 # Fallback when pipx is available instead
-pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
+pipx run --spec git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap prompt upgrade --target /path/to/repo
 ```
 
 This is the preferred upgrade path for the primary agent-first workflow. The prompt tells the agent to use the checked-in `memory-upgrade` skill as the single repo-local upgrade entrypoint; the skill then runs the packaged upgrade flow using `.agentic-memory/UPGRADE-SOURCE.toml`.
@@ -165,10 +165,10 @@ If you want an agent to perform the uninstall without a local CLI install, print
 
 ```bash
 # Preferred when uvx is available
-uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt uninstall --target /path/to/repo
+uvx --from git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap prompt uninstall --target /path/to/repo
 
 # Fallback when pipx is available instead
-pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap prompt uninstall --target /path/to/repo
+pipx run --spec git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap prompt uninstall --target /path/to/repo
 ```
 
 This runs the uninstall flow conservatively and points the agent to the bundled `bootstrap-uninstall` skill when manual-review items remain.

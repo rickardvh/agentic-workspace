@@ -353,6 +353,8 @@ def _validate_upgrade_source_record(path: Path, result) -> None:
 
     source_type = str(data.get("source_type", "")).strip()
     source_ref = str(data.get("source_ref", "")).strip()
+    recorded_at = str(data.get("recorded_at", "")).strip()
+    recommended_upgrade_after_days = data.get("recommended_upgrade_after_days", 30)
     if source_type not in {"git", "local"}:
         result.add(
             "manual review",
@@ -374,9 +376,33 @@ def _validate_upgrade_source_record(path: Path, result) -> None:
             source=UPGRADE_SOURCE_PATH.as_posix(),
             category="contract-drift",
         )
+        return
+    if recorded_at:
+        try:
+            datetime.strptime(recorded_at, "%Y-%m-%d")
+        except ValueError:
+            result.add(
+                "manual review",
+                path,
+                "upgrade source metadata has invalid recorded_at; use YYYY-MM-DD",
+                role="payload-contract",
+                safety="manual",
+                source=UPGRADE_SOURCE_PATH.as_posix(),
+                category="contract-drift",
+            )
+    if not isinstance(recommended_upgrade_after_days, int):
+        result.add(
+            "manual review",
+            path,
+            "upgrade source metadata has invalid recommended_upgrade_after_days; use an integer day count",
+            role="payload-contract",
+            safety="manual",
+            source=UPGRADE_SOURCE_PATH.as_posix(),
+            category="contract-drift",
+        )
 
 
-def resolve_upgrade_source(target: str | Path | None = None) -> dict[str, str]:
+def resolve_upgrade_source(target: str | Path | None = None) -> dict[str, str | int | None]:
     target_root = Path(target or Path.cwd()).resolve()
     path = target_root / UPGRADE_SOURCE_PATH
     if not path.exists():
@@ -385,7 +411,11 @@ def resolve_upgrade_source(target: str | Path | None = None) -> dict[str, str]:
             path = legacy
     default = {
         "source_type": "git",
-        "source_ref": "git+https://github.com/Tenfifty/agentic-memory",
+        "source_ref": "git+https://github.com/Tenfifty/agentic-memory@main",
+        "source_label": "agentic-memory-bootstrap main",
+        "recorded_at": "2026-04-05",
+        "recommended_upgrade_after_days": 30,
+        "path": None,
     }
     if not target_root.exists() or not path.exists():
         return default
@@ -397,9 +427,28 @@ def resolve_upgrade_source(target: str | Path | None = None) -> dict[str, str]:
 
     source_type = str(data.get("source_type", "")).strip()
     source_ref = str(data.get("source_ref", "")).strip()
+    source_label = str(data.get("source_label", "")).strip() or default["source_label"]
+    recorded_at = str(data.get("recorded_at", "")).strip() or default["recorded_at"]
+    recommended_upgrade_after_days = data.get("recommended_upgrade_after_days", default["recommended_upgrade_after_days"])
     if source_type not in {"git", "local"} or not source_ref:
         return default
-    return {"source_type": source_type, "source_ref": source_ref}
+    if not isinstance(recommended_upgrade_after_days, int):
+        recommended_upgrade_after_days = default["recommended_upgrade_after_days"]
+    age_days: int | None = None
+    try:
+        recorded_date = datetime.strptime(recorded_at, "%Y-%m-%d").date()
+        age_days = (datetime.now(UTC).date() - recorded_date).days
+    except ValueError:
+        age_days = None
+    return {
+        "source_type": source_type,
+        "source_ref": source_ref,
+        "source_label": source_label,
+        "recorded_at": recorded_at,
+        "recommended_upgrade_after_days": recommended_upgrade_after_days,
+        "age_days": age_days,
+        "path": path,
+    }
 
 
 def _embeds_shared_workflow_rules(text: str) -> bool:
