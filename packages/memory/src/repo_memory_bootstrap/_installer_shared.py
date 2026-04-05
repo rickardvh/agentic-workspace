@@ -6,7 +6,7 @@ from pathlib import Path
 
 PROJECT_MARKERS = ("pyproject.toml", "package.json", "Cargo.toml", ".hg")
 AGENT_ROOT_MARKERS = (Path("AGENTS.md"), Path("memory"))
-MANAGED_ROOT = Path(".agentic-memory")
+MANAGED_ROOT = Path(".agentic-workspace/memory")
 LEGACY_SYSTEM_ROOT = Path("memory/system")
 VERSION_PATH = MANAGED_ROOT / "VERSION.md"
 LEGACY_VERSION_PATH = LEGACY_SYSTEM_ROOT / "VERSION.md"
@@ -152,7 +152,7 @@ ALLOWED_HIGH_LEVEL_NOTES = {
 
 WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
 WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
-WORKFLOW_POINTER_BLOCK = f"{WORKFLOW_MARKER_START}\nRead `.agentic-memory/WORKFLOW.md` for shared workflow rules.\n{WORKFLOW_MARKER_END}"
+WORKFLOW_POINTER_BLOCK = f"{WORKFLOW_MARKER_START}\nRead `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n{WORKFLOW_MARKER_END}"
 EMBEDDED_WORKFLOW_HEADINGS = (
     "## Task system boundary",
     "## Memory discipline",

@@ -224,7 +224,7 @@ def _build_prompt(command: str, target: str | None) -> str:
     if command == "upgrade":
         upgrade_guidance = (
             f"Use the checked-in `bootstrap-upgrade` skill under `{_managed_skills_path(target)}/`. "
-            "It should use the repo's `.agentic-planning/UPGRADE-SOURCE.toml`, prefer an installed "
+            "It should use the repo's `.agentic-workspace/planning/UPGRADE-SOURCE.toml`, prefer an installed "
             "`agentic-planning-bootstrap` command when available, and rerun render/check validation."
         )
         if runner is None:

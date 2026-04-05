@@ -352,7 +352,7 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 source=note.path.as_posix(),
                 category="contract-drift",
             )
-        if note.path == Path(".agentic-memory/WORKFLOW.md") and note.task_relevance == "required":
+        if note.path == Path(".agentic-workspace/memory/WORKFLOW.md") and note.task_relevance == "required":
             result.add(
                 "manual review",
                 target_root / note.path,

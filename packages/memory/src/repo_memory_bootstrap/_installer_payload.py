@@ -74,11 +74,11 @@ def _target_relative_path(relative_path: Path, *, target_layout: str) -> Path:
         return relative_path
     path_str = relative_path.as_posix()
     if path_str.startswith("memory/system/"):
-        return Path(".agentic-memory") / relative_path.relative_to(LEGACY_SYSTEM_ROOT)
+        return Path(".agentic-workspace/memory") / relative_path.relative_to(LEGACY_SYSTEM_ROOT)
     if path_str.startswith("memory/bootstrap/"):
-        return Path(".agentic-memory/bootstrap") / relative_path.relative_to(LEGACY_BOOTSTRAP_WORKSPACE_ROOT)
+        return Path(".agentic-workspace/memory/bootstrap") / relative_path.relative_to(LEGACY_BOOTSTRAP_WORKSPACE_ROOT)
     if path_str.startswith("memory/skills/"):
-        return Path(".agentic-memory/skills") / relative_path.relative_to(LEGACY_SHIPPED_SKILLS_ROOT)
+        return Path(".agentic-workspace/memory/skills") / relative_path.relative_to(LEGACY_SHIPPED_SKILLS_ROOT)
     return relative_path
 
 
@@ -88,7 +88,7 @@ def _classify_role(relative_path: Path) -> str:
         return "local-entrypoint"
     if relative_path == AUDIT_SCRIPT_PATH:
         return "shared-replaceable"
-    if path_str.startswith(".agentic-memory/"):
+    if path_str.startswith(".agentic-workspace/memory/"):
         return "shared-replaceable"
     if path_str.startswith(BOOTSTRAP_WORKSPACE_ROOT.as_posix()):
         return "shared-replaceable"

@@ -633,7 +633,7 @@ def _warning_remediation(warning_class: str) -> str | None:
         "roadmap_execution_drift": "Reduce ROADMAP back to candidate framing; keep active sequencing in TODO and execplans.",
         "roadmap_stale_candidate_pressure": "Prune stale candidate detail and leave compact candidate stubs only.",
         "promotion_linkage_drift": "Make the promotion signal explicit in TODO or ROADMAP so activation has a visible trigger.",
-        "upgrade_source_stale": "Refresh .agentic-planning/UPGRADE-SOURCE.toml after intentionally upgrading the bootstrap source.",
+        "upgrade_source_stale": "Refresh .agentic-workspace/planning/UPGRADE-SOURCE.toml after intentionally upgrading the bootstrap source.",
         "archive_accumulation_drift": "Remove completed residue from active surfaces or move completed plans into archive.",
         "planning_memory_boundary_blur": "Move durable technical facts into memory or canonical docs, then leave planning surfaces lean.",
         "startup_policy_drift": "Restore the minimal startup order in AGENTS, quickstart, and manifest.",

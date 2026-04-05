@@ -10,7 +10,7 @@ DEFAULT_SOURCE_REF = "git+https://github.com/rickardvh/agentic-workspace@master#
 DEFAULT_SOURCE_LABEL = "agentic-planning-bootstrap monorepo master"
 DEFAULT_RECORDED_AT = "2026-04-05"
 DEFAULT_RECOMMENDED_UPGRADE_AFTER_DAYS = 30
-UPGRADE_SOURCE_PATH = Path(".agentic-planning/UPGRADE-SOURCE.toml")
+UPGRADE_SOURCE_PATH = Path(".agentic-workspace/planning/UPGRADE-SOURCE.toml")
 
 
 @dataclass(frozen=True)

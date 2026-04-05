@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import re
 import shutil
@@ -365,7 +365,7 @@ def upgrade_bootstrap(
                 target_root / upgrade_source_path,
                 (
                     f"recorded upgrade source is {source_age_days} days old; "
-                    "consider refreshing `.agentic-memory/UPGRADE-SOURCE.toml` when it is safe"
+                    "consider refreshing `\.agentic-workspace/memory/UPGRADE-SOURCE.toml` when it is safe"
                 ),
                 role="payload-contract",
                 safety="safe",
@@ -623,7 +623,7 @@ def doctor_bootstrap(
                 target_root / upgrade_source_path,
                 (
                     f"recorded upgrade source is {source_age_days} days old; "
-                    "consider refreshing `.agentic-memory/UPGRADE-SOURCE.toml` when it is safe"
+                    "consider refreshing `\.agentic-workspace/memory/UPGRADE-SOURCE.toml` when it is safe"
                 ),
                 role="payload-contract",
                 safety="safe",
@@ -649,7 +649,7 @@ def doctor_bootstrap(
             (
                 "legacy managed layout detected; the next "
                 "`agentic-memory-bootstrap upgrade --target <repo>` will "
-                "migrate bootstrap-managed files into `.agentic-memory/` "
+                "migrate bootstrap-managed files into `.agentic-workspace/memory/` "
                 "automatically"
             ),
             role="payload-contract",
@@ -1438,7 +1438,7 @@ def _should_suggest_project_state(
     return any(
         _path_matches_pattern(path, pattern)
         for path in files
-        for pattern in ("README.md", "docs/**/*.md", ".agentic-memory/**/*.md", "bootstrap/**/*.md")
+        for pattern in ("README.md", "docs/**/*.md", "\.agentic-workspace/memory/**/*.md", "bootstrap/**/*.md")
     )
 
 
@@ -1655,7 +1655,7 @@ def migrate_layout(
         result.add(
             "current",
             target_root / VERSION_PATH,
-            "bootstrap-managed files already use `.agentic-memory/`",
+            "bootstrap-managed files already use `.agentic-workspace/memory/`",
             role="payload-contract",
             safety="safe",
             source=VERSION_PATH.as_posix(),
@@ -1754,7 +1754,7 @@ def migrate_layout(
                 result.add(
                     "would patch",
                     agents_path,
-                    "refresh AGENTS.md to point at `.agentic-memory/WORKFLOW.md`",
+                    "refresh AGENTS.md to point at `.agentic-workspace/memory/WORKFLOW.md`",
                     role="local-entrypoint",
                     safety="safe",
                     source=AGENTS_PATH.as_posix(),
@@ -1764,7 +1764,7 @@ def migrate_layout(
                 result.add(
                     "patched",
                     agents_path,
-                    "refreshed AGENTS.md to point at `.agentic-memory/WORKFLOW.md`",
+                    "refreshed AGENTS.md to point at `.agentic-workspace/memory/WORKFLOW.md`",
                     role="local-entrypoint",
                     safety="safe",
                     source=AGENTS_PATH.as_posix(),
@@ -2033,3 +2033,4 @@ def uninstall_bootstrap(
         result=result,
     )
     return result
+

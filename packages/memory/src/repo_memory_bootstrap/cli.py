@@ -86,7 +86,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     migrate_parser = subparsers.add_parser(
         "migrate-layout",
-        help="Move bootstrap-managed files from the legacy memory layout into `.agentic-memory/` conservatively.",
+        help="Move bootstrap-managed files from the legacy memory layout into `.agentic-workspace/memory/` conservatively.",
     )
     _add_target_arguments(migrate_parser)
     migrate_parser.add_argument(
@@ -607,20 +607,20 @@ def _print_install_summary(result) -> None:
     bootstrap_skills_path = result.target_root / BOOTSTRAP_WORKSPACE_ROOT / "skills"
     print("Next steps:")
     print(
-        "- Review repository-specific details in AGENTS.md, then use `.agentic-memory/skills/memory-router/` for day-to-day note selection."
+        "- Review repository-specific details in AGENTS.md, then use `.agentic-workspace/memory/skills/memory-router/` for day-to-day note selection."
     )
     print(
         f"- Use the temporary bootstrap skills under {bootstrap_skills_path} to finish install "
         "or adopt lifecycle work, then run `agentic-memory-bootstrap bootstrap-cleanup --target "
         "<repo>` when that work is complete."
     )
-    print("- Treat `.agentic-memory/` as the bootstrap-managed surface, and keep repo-specific memory procedures outside it.")
+    print("- Treat `.agentic-workspace/memory/` as the bootstrap-managed surface, and keep repo-specific memory procedures outside it.")
     print("- Keep memory/current/project-state.md as a short overview note, not a task list.")
     print(
         "- Populate memory/current/task-context.md only when active work would benefit from "
         "short checked-in continuation compression, not a shadow planner."
     )
-    print("- Use `.agentic-memory/skills/memory-refresh/` after code or docs changes that may have shifted durable memory.")
+    print("- Use `.agentic-workspace/memory/skills/memory-refresh/` after code or docs changes that may have shifted durable memory.")
     print("- Confirm the repo's active planning/status surface separately; this bootstrap does not install one.")
     if _created_current_memory_notes(result):
         print(
@@ -663,7 +663,7 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
             f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out "
-            f"that `{target_root}/.agentic-memory/` is the bootstrap-managed surface while repo-owned "
+            f"that `{target_root}/.agentic-workspace/memory/` is the bootstrap-managed surface while repo-owned "
             "memory notes stay under `memory/`."
         )
     if command == "adopt":
@@ -673,7 +673,7 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
             f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out "
-            f"that `{target_root}/.agentic-memory/` is the bootstrap-managed surface while repo-owned "
+            f"that `{target_root}/.agentic-workspace/memory/` is the bootstrap-managed surface while repo-owned "
             "memory notes stay under `memory/`."
         )
     if command == "populate":
@@ -744,7 +744,7 @@ def _managed_skills_path(target: str | None) -> str:
     if target and Path(target).exists():
         if detect_bootstrap_layout(Path(target).resolve()) == "legacy":
             return f"{target_root}/memory/skills"
-    return f"{target_root}/.agentic-memory/skills"
+    return f"{target_root}/.agentic-workspace/memory/skills"
 
 
 def _runner_command_for_local_source(source_ref: str) -> str:

@@ -1,4 +1,4 @@
-# Agent Instructions
+﻿# Agent Instructions
 
 Local bootstrap contract for agents working in this repository.
 
@@ -24,7 +24,7 @@ Prefer checked-in knowledge over durable chat memory when both exist.
 5. Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.
 6. Prefer `tools/agent-manifest.json` and `tools/AGENT_QUICKSTART.md` before freeform exploration.
 7. Read only the repo docs relevant to the touched subsystem.
-8. Read `memory/index.md` and `.agentic-memory/WORKFLOW.md` only when memory is installed and the task is not already well-routed by the plan or manifest, or when changing workflow, planning, or memory itself.
+8. Read `memory/index.md` and `\.agentic-workspace/memory/WORKFLOW.md` only when memory is installed and the task is not already well-routed by the plan or manifest, or when changing workflow, planning, or memory itself.
 
 Do not bulk-read all planning surfaces for ordinary execution work. Start from `TODO.md`, then read at most one relevant active execplan.
 
@@ -36,7 +36,7 @@ Do not start coding from chat context alone when the same knowledge should live 
 - Active feature execution contracts: `docs/execplans/`
 - Long-horizon planning: `ROADMAP.md`
 - Durable routed knowledge, when installed: `memory/index.md`
-- Shared memory workflow policy, when installed: `.agentic-memory/WORKFLOW.md`
+- Shared memory workflow policy, when installed: `\.agentic-workspace/memory/WORKFLOW.md`
 - Machine-readable routing and command bundles: `tools/agent-manifest.json`
 - Agent quickstart and rendered hot paths: `tools/AGENT_QUICKSTART.md`
 
@@ -64,3 +64,4 @@ Do not start coding from chat context alone when the same knowledge should live 
 2. Update the active plan in `docs/execplans/` when working from one.
 3. If a task leaves meaningful follow-up work, record it in the appropriate planning surface before closing the task.
 4. Remove completed task detail from `TODO.md` once it no longer changes the next contributor's queue decision.
+
