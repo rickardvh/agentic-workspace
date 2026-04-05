@@ -17,13 +17,13 @@ artifacts.
 - `packages/memory/` - package workspace for `agentic-memory-bootstrap`
 - `packages/planning/` - package workspace for `agentic-planning-bootstrap`
 - `docs/migration/` - migration decision log, import mapping, and checkpoints
-- `.github/workflows/` - unified CI/release workflows (to be completed)
+- `.github/workflows/` - unified monorepo CI workflows
 
 ## Current Status
 
-Phase 4 orchestration in progress.
+Phase 4 orchestration and migration close-out.
 
-History-preserving package imports are complete. Current work is consolidating root runtime systems (planning and memory), dependency routing lanes, and root CI orchestration.
+History-preserving package imports are complete. Root planning and memory systems now own monorepo operation, package-scoped dependency lanes are in place, and CI runs through root orchestration targets.
 
 ## Environment Routing
 
@@ -42,4 +42,4 @@ Validation entrypoints:
 `make check-memory` and `make check-planning` each perform their own package-scoped sync first so lane checks remain isolated and repeatable.
 
 Root planning and memory installs are authoritative for monorepo operation.
-Package-local planning and memory files under `packages/*` are currently retained as package-owned fixture/dev surfaces because package test suites still depend on them.
+Package directories now keep package source, bootstrap payloads, and test fixtures only; package-local installed runtime systems have been removed.

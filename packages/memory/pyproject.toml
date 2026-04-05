@@ -25,9 +25,9 @@ authors = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/Tenfifty/agentic-memory"
-Repository = "https://github.com/Tenfifty/agentic-memory"
-Issues = "https://github.com/Tenfifty/agentic-memory/issues"
+Homepage = "https://github.com/rickardvh/agentic-workspace/tree/master/packages/memory"
+Repository = "https://github.com/rickardvh/agentic-workspace"
+Issues = "https://github.com/rickardvh/agentic-workspace/issues"
 
 [project.scripts]
 agentic-memory-bootstrap = "repo_memory_bootstrap.cli:main"

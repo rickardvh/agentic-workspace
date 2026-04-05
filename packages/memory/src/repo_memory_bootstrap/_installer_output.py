@@ -411,8 +411,8 @@ def resolve_upgrade_source(target: str | Path | None = None) -> dict[str, str | 
             path = legacy
     default: dict[str, str | int | Path | None] = {
         "source_type": "git",
-        "source_ref": "git+https://github.com/Tenfifty/agentic-memory@main",
-        "source_label": "agentic-memory-bootstrap main",
+        "source_ref": "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory",
+        "source_label": "agentic-memory-bootstrap monorepo master",
         "recorded_at": "2026-04-05",
         "recommended_upgrade_after_days": 30,
         "path": None,
