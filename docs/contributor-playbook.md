@@ -37,8 +37,11 @@ If you are maintaining the repo through git commits locally, install hooks with 
 
 - Use root planning surfaces for active work, roadmap candidates, and execplans.
 - Use root memory notes for durable repo knowledge, decisions, and recurring failure modes.
+- Treat `memory/current/` as weak-authority current context: concise re-orientation only, not the durable home for facts.
 - Edit package code only when the change belongs to that package's shipped behavior or tests.
 - Keep the root `agentic-workspace` CLI thin; push module-specific lifecycle logic back into the module packages.
+- Treat `.agentic-workspace/` module trees as product-managed surfaces; change them through the owning package or managed source rather than as freehand repo docs.
+- Treat `tools/` agent docs as generated mirrors; change `.agentic-workspace/planning/agent-manifest.json` and rerender instead of editing them directly.
 
 As a maintainer rule of thumb:
 

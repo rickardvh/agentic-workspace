@@ -53,13 +53,13 @@ In other words, the ecosystem names are `Agentic Memory` and `Agentic Planning`;
 
 ## Partial-Adoption Compatibility Matrix
 
-| Combination | Supported | Installs |
-| --- | --- | --- |
-| Memory only | Yes | `memory/`, `.agentic-workspace/memory/`, memory skills, memory freshness tooling |
-| Planning only | Yes | `TODO.md`, `ROADMAP.md`, `docs/execplans/`, `.agentic-workspace/planning/`, generated routing docs, planning checks |
-| Memory + Planning | Yes | Both module installs, with planning and memory remaining separate owners |
-| Workspace composition with both modules | Yes | Shared lifecycle entrypoints over the same memory/planning module contracts |
-| Workspace layer without memory or planning | No | The workspace layer is intentionally thin and not a standalone domain product |
+| Combination | Supported | Installs | Primary writable surfaces |
+| --- | --- | --- | --- |
+| Memory only | Yes | `memory/`, `.agentic-workspace/memory/`, memory skills, memory freshness tooling | Durable `memory/` notes plus optional weak-authority `memory/current/`; no planning dependency |
+| Planning only | Yes | `TODO.md`, `ROADMAP.md`, `docs/execplans/`, `.agentic-workspace/planning/`, generated routing docs, planning checks | Repo planning surfaces; generated `tools/` docs stay rerendered outputs |
+| Memory + Planning | Yes | Both module installs, with planning and memory remaining separate owners | Planning for active-now state, memory for durable knowledge, `memory/current/` for compact re-orientation only |
+| Workspace composition with both modules | Yes | Shared lifecycle entrypoints over the same memory/planning module contracts | Same module-owned writable surfaces, plus thin root orchestration entrypoints |
+| Workspace layer without memory or planning | No | The workspace layer is intentionally thin and not a standalone domain product | Not applicable |
 
 ## Next Reads
 
