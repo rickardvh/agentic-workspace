@@ -23,6 +23,12 @@ If your main problem is shared repo memory rather than active work steering, sta
 
 Current maturity in this repo: alpha.
 
+Adoption shape:
+
+- Works well alone in repos that need checked-in execution steering without a separate memory layer.
+- Works alongside Agentic Memory when active planning should be able to reference durable repo knowledge.
+- Does not require the full stack or the workspace layer.
+
 ## Quick Start
 
 Fastest no-install path:
@@ -226,11 +232,13 @@ The package installs the checked-in planning contract and its supporting surface
 - `.agentic-workspace/planning/agent-manifest.json`
 - `.agentic-workspace/planning/scripts/render_agent_docs.py`
 - `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`
+- `.agentic-workspace/planning/scripts/check/check_maintainer_surfaces.py`
 - `tools/agent-manifest.json`
 - `tools/AGENT_QUICKSTART.md`
 - `tools/AGENT_ROUTING.md`
 - `scripts/render_agent_docs.py`
 - `scripts/check/check_planning_surfaces.py`
+- `scripts/check/check_maintainer_surfaces.py`
 
 It packages:
 
@@ -367,6 +375,8 @@ This system is most useful when:
 - `agentic-planning-bootstrap list-files`
 - `agentic-planning-bootstrap verify-payload`
 - `agentic-planning-bootstrap prompt install --target <repo>`
+- `python scripts/check/check_maintainer_surfaces.py`
+- `make maintainer-surfaces`
 - `make planning-surfaces`
 - `make planning-surfaces-strict`
 - `make render-agent-docs`
@@ -403,7 +413,7 @@ The system is working when:
 make sync-planning
 cd packages/planning && uv run pytest
 make render-agent-docs
-make planning-surfaces
+make maintainer-surfaces
 
 # Or from the monorepo root
 make check-planning

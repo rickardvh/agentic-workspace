@@ -6,14 +6,12 @@ This page describes the current ecosystem shape.
 
 ```mermaid
 flowchart TD
-    A[Target Repository] --> B[Agentic Memory\nagentic-memory-bootstrap]
-    A --> C[Agentic Planning\nagentic-planning-bootstrap]
-    B --> D[memory/\n.agentic-workspace/memory/]
-    C --> E[TODO.md\nROADMAP.md\ndocs/execplans/\n.agentic-workspace/planning/]
-    C --> F[Generated routing docs\ntools/AGENT_QUICKSTART.md\ntools/AGENT_ROUTING.md]
-    C --> G[Planning liveness checks\nscripts/check/check_planning_surfaces.py]
-    H[agentic-workspace CLI] --> B
-    H --> C
+    W[agentic-workspace\nthin workspace layer] --> M[Agentic Memory\nagentic-memory-bootstrap]
+    W --> P[Agentic Planning\nagentic-planning-bootstrap]
+    P --> R[Target-repo planning install\nTODO.md • ROADMAP.md • docs/execplans/\n.agentic-workspace/planning/]
+    M --> N[Target-repo memory install\nmemory/ • .agentic-workspace/memory/]
+    P --> G[Generated maintainer docs\ntools/agent-manifest.json\nAGENT_QUICKSTART.md\nAGENT_ROUTING.md]
+    G --> C[Maintainer liveness path\nmake maintainer-surfaces\nscripts/check/check_maintainer_surfaces.py]
 ```
 
 ## Current Module Roles
@@ -21,7 +19,7 @@ flowchart TD
 - Agentic Memory owns durable repo knowledge.
 - Agentic Planning owns active execution state.
 - `agentic-workspace` coordinates module selection and shared lifecycle verbs.
-- Routing and checks are important capabilities, but are not standalone packages yet.
+- Generated docs and checks support the package contracts, but are not standalone products.
 
 ## Monorepo Operating Boundary
 

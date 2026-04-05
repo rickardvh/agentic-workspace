@@ -5,7 +5,7 @@
 	format format-workspace format-memory format-planning \
 	format-check format-check-workspace format-check-memory format-check-planning \
 	verify verify-workspace verify-memory verify-planning \
-	memory-freshness memory-freshness-strict planning-surfaces planning-surfaces-strict render-agent-docs \
+	memory-freshness memory-freshness-strict planning-surfaces planning-surfaces-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs \
 	check check-memory check-planning check-all
 
 help:
@@ -23,6 +23,7 @@ help:
 	@echo "  verify               Verify workspace CLI wiring and both packaged payload contracts."
 	@echo "  memory-freshness     Run the root memory freshness audit."
 	@echo "  planning-surfaces    Run the root planning surface audit."
+	@echo "  maintainer-surfaces  Run maintainer-surface freshness and liveness checks."
 	@echo "  render-agent-docs    Regenerate root planning docs from the managed manifest."
 	@echo "  check                Run the full root validation lane."
 	@echo "  check-memory         Run package-local checks for packages/memory."
@@ -122,13 +123,19 @@ planning-surfaces:
 planning-surfaces-strict:
 	uv run python scripts/check/check_planning_surfaces.py --strict
 
+maintainer-surfaces: render-agent-docs planning-surfaces verify-planning
+	uv run python scripts/check/check_maintainer_surfaces.py
+
+maintainer-surfaces-strict: render-agent-docs planning-surfaces-strict verify-planning
+	uv run python scripts/check/check_maintainer_surfaces.py --strict
+
 render-agent-docs:
 	uv run python scripts/render_agent_docs.py
 
 check-memory: sync-all test-memory lint-memory typecheck-memory verify-memory memory-freshness-strict
 
-check-planning: sync-all test-planning lint-planning typecheck-planning verify-planning planning-surfaces memory-freshness render-agent-docs
+check-planning: sync-all test-planning lint-planning typecheck-planning maintainer-surfaces memory-freshness
 
-check: sync-all test lint typecheck format-check verify memory-freshness-strict planning-surfaces render-agent-docs
+check: sync-all test lint typecheck format-check verify memory-freshness-strict maintainer-surfaces
 
 check-all: check-memory check-planning

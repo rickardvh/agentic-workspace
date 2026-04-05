@@ -24,6 +24,12 @@ If what you need is active work steering rather than durable repo memory, start 
 
 Current maturity in this repo: beta.
 
+Adoption shape:
+
+- Works well alone in repos that need durable shared knowledge without a checked-in planning system.
+- Works alongside Agentic Planning when the repo also needs active execution steering.
+- Does not require the full stack or the workspace layer.
+
 ## Quick Start
 
 Fastest no-install path:

@@ -22,8 +22,10 @@ PLANNING_MANAGED_ROOT = module_root("planning")
 PLANNING_MANIFEST_PATH = PLANNING_MANAGED_ROOT / "agent-manifest.json"
 PLANNING_RENDER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "render_agent_docs.py"
 PLANNING_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
+PLANNING_MAINTAINER_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_maintainer_surfaces.py"
 ROOT_RENDER_SCRIPT_PATH = Path("scripts/render_agent_docs.py")
 ROOT_CHECKER_SCRIPT_PATH = Path("scripts/check/check_planning_surfaces.py")
+ROOT_MAINTAINER_CHECKER_PATH = Path("scripts/check/check_maintainer_surfaces.py")
 ROOT_MANIFEST_MIRROR_PATH = Path("tools/agent-manifest.json")
 
 REQUIRED_PAYLOAD_FILES = (
@@ -35,10 +37,12 @@ REQUIRED_PAYLOAD_FILES = (
     Path("docs/execplans/archive/README.md"),
     ROOT_RENDER_SCRIPT_PATH,
     ROOT_CHECKER_SCRIPT_PATH,
+    ROOT_MAINTAINER_CHECKER_PATH,
     UPGRADE_SOURCE_PATH,
     PLANNING_MANIFEST_PATH,
     PLANNING_RENDER_SCRIPT_PATH,
     PLANNING_CHECKER_SCRIPT_PATH,
+    PLANNING_MAINTAINER_CHECKER_SCRIPT_PATH,
     ROOT_MANIFEST_MIRROR_PATH,
     Path("tools/AGENT_QUICKSTART.md"),
     Path("tools/AGENT_ROUTING.md"),

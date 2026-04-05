@@ -41,5 +41,5 @@ Package-local contract for work under `packages/planning/`.
 - Run the narrowest package-local validation that proves the change.
 - Prefer `uv run pytest packages/planning/tests` for behavior changes.
 - Prefer `uv run ruff check packages/planning` for lint validation.
-- Run `uv run python scripts/check/check_planning_surfaces.py` when a change also affects the root planning contract.
+- Run `make maintainer-surfaces` when a change also affects generated maintainer docs, startup routing, or the root planning contract.
 - Escalate to `make check-planning` or `make check-all` only when the change crosses package or root orchestration boundaries.

@@ -52,14 +52,7 @@ uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirector
 
 Use `prompt install` for a clean bootstrap and `adopt` for conservative merge into an existing repo.
 
-## Workspace Layer
-
-`agentic-workspace` is the thin composition layer for shared lifecycle verbs when a repository uses both modules.
-
-Rule of thumb:
-
-- add module-specific lifecycle flags or domain rules to the package CLI first
-- add them to the workspace layer only when there is a clear cross-module reason
+If you adopt both modules together, use `agentic-workspace` as the thin composition layer and see `docs/architecture.md` plus `docs/integration-contract.md` for the package-to-workspace boundary.
 
 ## Maturity Today
 
@@ -68,33 +61,13 @@ Rule of thumb:
 
 See `docs/maturity-model.md` for what `alpha` and `beta` mean here.
 
-## Purpose
-
-This repository is the monorepo host for `agentic-memory-bootstrap` and
-`agentic-planning-bootstrap`, with shared workspace-level orchestration,
-validation, and dogfooding of the shipped packages.
-
-## Layout
-
-- `packages/memory/` - package workspace for `agentic-memory-bootstrap`
-- `packages/planning/` - package workspace for `agentic-planning-bootstrap`
-- `docs/execplans/` - active and archived execution plans
-- `.github/workflows/` - unified monorepo CI workflows
-
-## Current Status
-
-Workspace orchestration is stable.
-
-Root planning and memory systems own monorepo operation, package-scoped validation lanes are in place, and CI runs through root orchestration targets.
-
-Some docs describe target-repository behavior, while root docs also describe how this monorepo runs itself.
-
 ## Docs Map
 
 For adopters:
 
 - `docs/which-package.md`
 - `docs/architecture.md`
+- `docs/integration-contract.md`
 - `docs/maturity-model.md`
 
 For boundaries and ecosystem policy:
@@ -108,11 +81,9 @@ For maintainers:
 - `docs/contributor-playbook.md`
 - `docs/maintainer-commands.md`
 - `docs/collaboration-safety.md`
+- `docs/dogfooding-feedback.md`
+- `docs/workflow-contract-changes.md`
 
-## Contributing
+For agent maintainers, the primary operating path is `AGENTS.md`, `TODO.md`, the active execplan, and `docs/contributor-playbook.md`.
 
-For agent maintainers, the primary operating path is: `AGENTS.md` -> `TODO.md` -> one active execplan -> `docs/contributor-playbook.md`.
-
-Use `docs/contributor-playbook.md` for routing and `docs/maintainer-commands.md` for the command index.
-
-Generated planning routing docs under `tools/` are derived from `.agentic-workspace/planning/agent-manifest.json`; rerender them instead of editing by hand.
+For maintainer workflow, command routing, and generated-surface checks, go straight to `docs/contributor-playbook.md` and `docs/maintainer-commands.md`.

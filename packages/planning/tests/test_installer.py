@@ -81,8 +81,10 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "render_agent_docs.py").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_planning_surfaces.py").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_maintainer_surfaces.py").exists()
     assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
     assert (tmp_path / "tools" / "AGENT_ROUTING.md").exists()
+    assert (tmp_path / "scripts" / "check" / "check_maintainer_surfaces.py").exists()
     assert any(action.kind in {"copied", "created", "updated"} for action in result.actions)
 
 

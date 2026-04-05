@@ -33,17 +33,16 @@ Keep exactly one immediate action by default; avoid multi-step mini-plans here.
 ## Touched Paths
 
 - README.md
+- Makefile
 - AGENTS.md
-- docs/contributor-playbook.md
 - docs/*.md
+- scripts/check/
 - tools/*.md
-- .agentic-workspace/planning/scripts/check/check_planning_surfaces.py
+- .agentic-workspace/planning/scripts/check/
 - .agentic-workspace/planning/scripts/render_agent_docs.py
 - .agentic-workspace/planning/agent-manifest.json
-- packages/memory/README.md
-- packages/planning/README.md
-- packages/memory/AGENTS.md
-- packages/planning/AGENTS.md
+- packages/memory/
+- packages/planning/
 
 Keep this as a scope guard, not a broad file inventory.
 
@@ -73,3 +72,4 @@ Keep invariants contract-shaped and brief.
 ## Drift Log
 
 - 2026-04-05: Initial plan created for the documentation and liveness hardening tranche.
+- 2026-04-06: Extended the tranche with a repo-maintainer `make maintainer-surfaces` path, an explicit integration contract, and dogfooding-feedback capture guidance.

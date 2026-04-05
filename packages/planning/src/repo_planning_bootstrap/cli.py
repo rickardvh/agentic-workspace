@@ -199,8 +199,8 @@ def _build_prompt(command: str, target: str | None) -> str:
         return (
             f"Run `{runner} install{target_args}`. "
             "Then customise `AGENTS.md`, prune starter placeholders, and run "
-            f"`{runner} render-agent-docs{target_args}` plus "
-            f"`{runner} check-planning-surfaces{target_args}`."
+            "`python scripts/render_agent_docs.py` plus "
+            "`python scripts/check/check_maintainer_surfaces.py` inside the target repo."
         )
     if command == "adopt":
         if runner is None:
@@ -212,8 +212,8 @@ def _build_prompt(command: str, target: str | None) -> str:
         return (
             f"Run `{runner} adopt{target_args}` conservatively. "
             "Do not overwrite repo-owned planning files unless the user asks for it. "
-            f"Afterwards run `{runner} render-agent-docs{target_args}` and "
-            f"`{runner} check-planning-surfaces{target_args}`."
+            "Afterwards run `python scripts/render_agent_docs.py` and "
+            "`python scripts/check/check_maintainer_surfaces.py` inside the target repo."
         )
     if command == "upgrade":
         upgrade_guidance = (
@@ -232,7 +232,8 @@ def _build_prompt(command: str, target: str | None) -> str:
     return (
         f"Run `{runner} adopt{target_args}` conservatively. "
         "Do not overwrite repo-owned planning files unless the user asks for it. "
-        "Afterwards run `make render-agent-docs` and `make planning-surfaces`."
+        "Afterwards run `python scripts/render_agent_docs.py` and "
+        "`python scripts/check/check_maintainer_surfaces.py` inside the target repo."
     )
 
 

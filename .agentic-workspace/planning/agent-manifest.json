@@ -74,14 +74,16 @@
         "TODO.md",
         "ROADMAP.md",
         "docs/execplans/",
+        "scripts/check/check_maintainer_surfaces.py",
         ".agentic-workspace/planning/scripts/check/check_planning_surfaces.py",
+        ".agentic-workspace/planning/scripts/check/check_maintainer_surfaces.py",
         ".agentic-workspace/planning/scripts/render_agent_docs.py",
         ".agentic-workspace/planning/agent-manifest.json",
         "tools/AGENT_QUICKSTART.md",
         "tools/AGENT_ROUTING.md"
       ],
       "commands": [
-        "make planning-surfaces",
+        "make maintainer-surfaces",
         "make render-agent-docs"
       ]
     }

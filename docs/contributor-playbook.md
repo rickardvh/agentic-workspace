@@ -53,7 +53,8 @@ Run the narrowest lane that proves the change.
 - Root workspace CLI changes: `uv run pytest tests/test_workspace_cli.py`, `uv run ruff check src tests`, `uv run ty check src`
 - Memory package changes: `make sync-memory` once, then `cd packages/memory && uv run pytest` or `cd packages/memory && uv run ruff check .`; escalate to `make check-memory` for the full package lane
 - Planning package changes: `make sync-planning` once, then `cd packages/planning && uv run pytest` or `cd packages/planning && uv run ruff check .`; escalate to `make check-planning` for the full package lane
-- Planning-surface changes: `make planning-surfaces`; rerun `make render-agent-docs` when the planning manifest or generated routing docs change
+- Maintainer-surface or generated-doc changes: `make maintainer-surfaces`
+- Planning-surface changes only: `make planning-surfaces`; rerun `make render-agent-docs` when the planning manifest or generated routing docs change
 - Memory note/current-state changes: `uv run python scripts/check/check_memory_freshness.py`
 
 Escalate to `make check-memory`, `make check-planning`, or `make check-all` only when the change crosses package or root orchestration boundaries.
@@ -66,6 +67,18 @@ Escalate to `make check-memory`, `make check-planning`, or `make check-all` only
 - Planning contract or archive behavior: start at `TODO.md`, the active execplan, and `packages/planning/src/repo_planning_bootstrap/installer.py`.
 
 Generated guidance lives under `tools/`, but the source of truth for that guidance is `.agentic-workspace/planning/agent-manifest.json`. When routing docs drift, update the managed manifest and rerender instead of editing generated files directly.
+
+## Dogfooding Feedback Capture
+
+When internal use reveals friction, classify it before routing it onward.
+
+- Package defect
+- Boundary issue
+- Install-flow issue
+- Docs or routing issue
+- Monorepo-only friction
+
+Use `docs/dogfooding-feedback.md` for the capture convention and preferred destinations.
 
 ## Review Expectations
 
