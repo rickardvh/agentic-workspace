@@ -1,0 +1,5 @@
+source_type = "git"
+source_ref = "git+https://github.com/Tenfifty/agentic-memory@main"
+source_label = "agentic-memory-bootstrap main"
+recorded_at = "2026-04-05"
+recommended_upgrade_after_days = 30

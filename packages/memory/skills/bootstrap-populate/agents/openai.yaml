@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bootstrap Populate"
+  short_description: "Populate new current-memory files conservatively."
+  default_prompt: "Use $bootstrap-populate to populate newly installed current-memory files conservatively from existing repo docs and visible repo state."

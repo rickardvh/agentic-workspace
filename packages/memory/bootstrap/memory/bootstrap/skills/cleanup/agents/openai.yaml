@@ -1,0 +1,3 @@
+description: Remove the repo's temporary bootstrap workspace after lifecycle work is complete.
+prompt:
+  default_prompt: "Use $cleanup from the repo's `.agentic-memory/bootstrap/skills/` path to remove the temporary bootstrap workspace when bootstrap work is complete."
