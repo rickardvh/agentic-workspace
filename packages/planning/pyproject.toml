@@ -36,6 +36,7 @@ packages = ["src/repo_planning_bootstrap"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "bootstrap" = "src/repo_planning_bootstrap/_payload"
+"src/repo_planning_bootstrap/_ownership.toml" = "src/repo_planning_bootstrap/_ownership.toml"
 
 [tool.hatch.build.targets.sdist]
 include = [

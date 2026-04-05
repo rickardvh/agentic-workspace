@@ -12,15 +12,15 @@
 
 ## Active Milestone
 
-- Status: in-progress
-- Scope: begin consuming the workspace ownership ledger from installer logic and continue shrinking mixed-ownership root guidance toward explicit managed fences only.
+- Status: completed
+- Scope: consume the workspace ownership ledger for module-root installer decisions and close the remaining workspace-orchestrator cleanup tranche.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Define the first installer-facing ownership-ledger read path, then update planning and memory install or verify flows to consume shared ownership data instead of package-local path heuristics.
+- Archive this completed plan and leave `TODO.md` empty until a new roadmap candidate is explicitly promoted.
 
 ## Blockers
 
@@ -72,3 +72,4 @@
 - 2026-04-05: Milestone 1 complete: seeded `.agentic-workspace/WORKFLOW.md`, defined the initial ownership-ledger format in `.agentic-workspace/OWNERSHIP.toml`, and switched the root `AGENTS.md` pointer to the workspace-level orchestrator.
 - 2026-04-05: Milestone 2 complete: planning-owned routing and helper assets now live under `.agentic-workspace/planning/`, root `scripts/` helpers are thin compatibility wrappers, and root `tools/` routing docs plus manifest are generated mirrors rendered from the managed planning manifest.
 - 2026-04-05: Dogfooding note: wrapperized helper scripts must preserve import-compatible module globals such as `REPO_ROOT`, not just CLI entrypoints, because package tests and downstream tooling patch those symbols directly.
+- 2026-04-05: Milestone 3 complete: both planning and memory bootstraps now resolve their module-managed roots from the shared ownership ledger, using packaged ownership mirrors as distribution fallbacks instead of hardcoded module-root constants.

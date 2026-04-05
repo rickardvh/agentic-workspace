@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import repo_planning_bootstrap.installer as installer_mod
+from repo_planning_bootstrap._ownership import module_root as planning_module_root
 from repo_planning_bootstrap.installer import (
     adopt_bootstrap,
     archive_execplan,
@@ -83,6 +84,10 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
     assert (tmp_path / "tools" / "AGENT_ROUTING.md").exists()
     assert any(action.kind in {"copied", "created", "updated"} for action in result.actions)
+
+
+def test_ownership_module_root_matches_workspace_ledger() -> None:
+    assert planning_module_root("planning") == Path(".agentic-workspace/planning")
 
 
 def test_adopt_bootstrap_preserves_existing_agents(tmp_path: Path) -> None:

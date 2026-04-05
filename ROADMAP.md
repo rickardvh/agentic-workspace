@@ -9,7 +9,8 @@ Inactive long-horizon migration and post-migration candidate work.
 ## Active Handoff
 
 - Monorepo scaffold is in place.
-- Next active tranche is workspace-orchestrator cleanup: centralise product-managed startup rules under `.agentic-workspace/`, add explicit ownership metadata, and keep managed insertions visibly fenced off from repo-owned instructions.
+- No active execution tranche is currently promoted.
+- Promote the next candidate only when the scope is bounded enough for a short execplan and a narrow validation story.
 
 ## Next Candidate Queue
 

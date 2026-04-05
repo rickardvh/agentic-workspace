@@ -1,0 +1,73 @@
+schema_version = 1
+
+[workspace]
+workflow_path = ".agentic-workspace/WORKFLOW.md"
+ownership_manifest_path = ".agentic-workspace/OWNERSHIP.toml"
+managed_root = ".agentic-workspace/"
+
+[ownership_classes.repo_owned]
+summary = "Repository-native state owned by the repo and not upgrade-replaceable by installed packages."
+
+[ownership_classes.managed_fence]
+summary = "Product-managed content inside an explicit fence in a repo-owned file."
+
+[ownership_classes.module_managed]
+summary = "Upgrade-replaceable content owned by one installed module under .agentic-workspace/."
+
+[[module_roots]]
+module = "workspace"
+path = ".agentic-workspace/"
+ownership = "module_managed"
+uninstall_policy = "remove-managed-files-only"
+
+[[module_roots]]
+module = "memory"
+path = ".agentic-workspace/memory/"
+ownership = "module_managed"
+uninstall_policy = "remove-managed-files-only"
+
+[[module_roots]]
+module = "planning"
+path = ".agentic-workspace/planning/"
+ownership = "module_managed"
+uninstall_policy = "remove-managed-files-only"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/WORKFLOW.md"
+kind = "workflow-contract"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/OWNERSHIP.toml"
+kind = "ownership-ledger"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+module = "memory"
+path = ".agentic-workspace/memory/**"
+kind = "module-root"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+module = "planning"
+path = ".agentic-workspace/planning/**"
+kind = "module-root"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[fences]]
+name = "workspace-workflow-pointer"
+module = "workspace"
+file = "AGENTS.md"
+start = "<!-- agentic-workspace:workflow:start -->"
+end = "<!-- agentic-workspace:workflow:end -->"
+ownership = "managed_fence"
+uninstall_policy = "remove-fence-only"
+
+[notes]
+purpose = "This file defines the initial ownership-ledger format. Installers should converge on this ledger instead of maintaining duplicated managed-path heuristics."

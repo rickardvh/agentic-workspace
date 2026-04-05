@@ -1,4 +1,4 @@
-﻿version = 1
+version = 1
 
 [rules]
 routing_only = ["memory/index.md"]
@@ -12,7 +12,7 @@ canonical_dirs = [
 ]
 task_board_globs = ["TODO.md", "tasks/**", ".github/issues/**"]
 core_doc_globs = ["README.md", "docs/**/*.md", "CONTRIBUTING.md", ".github/**/*.md"]
-core_doc_exclude_globs = ["AGENTS.md", "memory/**/*.md", "\.agentic-workspace/memory/**/*.md"]
+core_doc_exclude_globs = ["AGENTS.md", "memory/**/*.md", ".agentic-workspace/memory/**/*.md"]
 forbid_core_docs_depend_on_memory = false
 # Recommended audience conventions for planner-agnostic routing:
 # - agent_bootstrap
@@ -52,8 +52,8 @@ canonicality = "agent_only"
 task_relevance = "optional"
 subsystems = ["current-context"]
 surfaces = []
-routes_from = ["README.md", "\.agentic-workspace/memory/**/*.md", "bootstrap/**/*.md"]
-stale_when = ["README.md", "\.agentic-workspace/memory/**/*.md", "bootstrap/**/*.md"]
+routes_from = ["README.md", ".agentic-workspace/memory/**/*.md", "bootstrap/**/*.md"]
+stale_when = ["README.md", ".agentic-workspace/memory/**/*.md", "bootstrap/**/*.md"]
 memory_role = "durable_truth"
 
 [notes."memory/current/task-context.md"]
@@ -84,23 +84,23 @@ stale_when = []
 # Use this note only for compact routing calibration:
 # concrete missed-note or over-routing cases worth revisiting after manifest or index changes.
 
-[notes."\.agentic-workspace/memory/WORKFLOW.md"]
+[notes.".agentic-workspace/memory/WORKFLOW.md"]
 note_type = "workflow-policy"
-canonical_home = "\.agentic-workspace/memory/WORKFLOW.md"
+canonical_home = ".agentic-workspace/memory/WORKFLOW.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "optional"
 subsystems = ["memory-system"]
 surfaces = []
-routes_from = ["AGENTS.md", "memory/index.md", "memory/manifest.toml", "\.agentic-workspace/memory/**/*.md"]
+routes_from = ["AGENTS.md", "memory/index.md", "memory/manifest.toml", ".agentic-workspace/memory/**/*.md"]
 stale_when = ["AGENTS.md", "memory/index.md", "memory/manifest.toml", "bootstrap/AGENTS.md"]
 related_validations = ["python scripts/check/check_memory_freshness.py"]
 memory_role = "durable_truth"
 
-[notes."\.agentic-workspace/memory/VERSION.md"]
+[notes.".agentic-workspace/memory/VERSION.md"]
 note_type = "version-marker"
-canonical_home = "\.agentic-workspace/memory/VERSION.md"
+canonical_home = ".agentic-workspace/memory/VERSION.md"
 authority = "canonical"
 audience = "agent"
 canonicality = "agent_only"
@@ -128,4 +128,3 @@ preferred_remediation = "test"
 improvement_candidate = true
 improvement_note = "If recurring failures persist, consider a regression test, validation, or lint rule before growing the note."
 elimination_target = "shrink"
-

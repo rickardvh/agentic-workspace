@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from repo_planning_bootstrap import __version__
+from repo_planning_bootstrap._ownership import module_root
 from repo_planning_bootstrap._render import (
     load_manifest,
     render_quickstart,
@@ -17,7 +18,7 @@ from repo_planning_bootstrap._render import (
 )
 from repo_planning_bootstrap._source import UPGRADE_SOURCE_PATH, resolve_upgrade_source
 
-PLANNING_MANAGED_ROOT = Path(".agentic-workspace/planning")
+PLANNING_MANAGED_ROOT = module_root("planning")
 PLANNING_MANIFEST_PATH = PLANNING_MANAGED_ROOT / "agent-manifest.json"
 PLANNING_RENDER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "render_agent_docs.py"
 PLANNING_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_planning_surfaces.py"

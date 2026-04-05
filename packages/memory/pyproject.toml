@@ -37,6 +37,7 @@ packages = ["src/repo_memory_bootstrap"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "bootstrap" = "src/repo_memory_bootstrap/_payload"
+"src/repo_memory_bootstrap/_ownership.toml" = "src/repo_memory_bootstrap/_ownership.toml"
 "skills" = "src/repo_memory_bootstrap/_skills"
 
 [tool.hatch.build.targets.sdist]

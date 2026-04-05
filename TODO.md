@@ -8,19 +8,16 @@ Active queue for monorepo migration work.
 
 ## Now
 
-- ID: workspace-orchestrator-managed-surfaces
-- Status: in-progress
-- Surface: docs/execplans/workspace-orchestrator-managed-surfaces-2026-04-05.md
-- Why now: The namespace consolidation is in place, but product-managed guidance and ownership rules are still split across root files; the next tranche is to centralise shared startup rules, add explicit ownership metadata, and fence managed insertions cleanly.
+- No active work right now.
 
 ## Action
 
-- Define the target `.agentic-workspace/` layout and ownership ledger before moving any more managed files.
-- Keep repo-owned execution surfaces visible while shrinking mixed-ownership startup prose.
+- Promote the next roadmap candidate only when it is bounded enough for a short active execplan.
+- Keep root planning surfaces compact; archive completed plans instead of letting TODO accumulate residue.
 
 ## Added In This Pass
 
-- Promoted the workspace-orchestrator and fenced-managed-surface candidate into an active execplan so the next cleanup tranche starts from a checked-in contract instead of chat residue.
+- Completed and archived the workspace-orchestrator cleanup tranche after consolidating managed planning assets under `.agentic-workspace/planning/` and switching both package installers to the shared ownership ledger for module-root decisions.
 
 - Captured uv workspace lessons: member cwd does not isolate workspace installs and shared group names (`dev`) merge at root sync.
 - Queued follow-up work for dependency-group routing, package-scoped sync/check targets, and documentation of shared vs scoped environments.

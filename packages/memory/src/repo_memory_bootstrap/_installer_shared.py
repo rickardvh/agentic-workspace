@@ -4,9 +4,11 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from repo_memory_bootstrap._ownership import module_root
+
 PROJECT_MARKERS = ("pyproject.toml", "package.json", "Cargo.toml", ".hg")
 AGENT_ROOT_MARKERS = (Path("AGENTS.md"), Path("memory"))
-MANAGED_ROOT = Path(".agentic-workspace/memory")
+MANAGED_ROOT = module_root("memory")
 LEGACY_SYSTEM_ROOT = Path("memory/system")
 VERSION_PATH = MANAGED_ROOT / "VERSION.md"
 LEGACY_VERSION_PATH = LEGACY_SYSTEM_ROOT / "VERSION.md"

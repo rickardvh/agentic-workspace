@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from repo_memory_bootstrap._ownership import module_root as memory_module_root
 from repo_memory_bootstrap import cli, installer
 
 FIXTURES_ROOT = Path(__file__).resolve().parent / "fixtures" / "routing"
@@ -15,6 +16,10 @@ WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
 MEMORY_INDEX_TEMPLATE = FIXTURES_ROOT / "memory-index-template.md"
 MEMORY_MANIFEST_TEMPLATE = FIXTURES_ROOT / "memory-manifest-template.toml"
 MEMORY_GIT_SOURCE_REF = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory"
+
+
+def test_ownership_module_root_matches_workspace_ledger() -> None:
+    assert memory_module_root("memory") == Path(".agentic-workspace/memory")
 
 
 def _memory_index_text() -> str:
