@@ -931,39 +931,58 @@ def _cleanup_roadmap_archive_followup(roadmap_path: Path, plan_path: Path) -> di
         return {"changed": False, "text": None, "details": [], "note": None}
 
     lines = _read_lines(roadmap_path)
-    section = _section_lines(lines, "Active Handoff")
-    if not section:
-        return {"changed": False, "text": None, "details": [], "note": None}
+    tokens = _plan_stem_tokens(plan_path)
+    details: list[str] = []
+    changed = False
 
-    start = next((index for index, line in enumerate(lines) if line.strip().lower() == "## active handoff"), -1)
-    if start < 0:
+    lines, handoff_removed = _cleanup_roadmap_section(lines, "Active Handoff", tokens, empty_line="- No active handoff right now.")
+    if handoff_removed:
+        changed = True
+        details.append("compress Active Handoff residue tied to the archived plan")
+
+    lines, queue_removed = _cleanup_roadmap_section(lines, "Next Candidate Queue", tokens, empty_line=None)
+    if queue_removed:
+        changed = True
+        details.append("remove archived-plan candidate residue from Next Candidate Queue")
+
+    if not changed:
         return {"changed": False, "text": None, "details": [], "note": None}
+    return {
+        "changed": True,
+        "text": "\n".join(lines).rstrip() + "\n",
+        "details": details,
+        "note": None,
+    }
+
+
+def _cleanup_roadmap_section(lines: list[str], heading: str, tokens: list[str], *, empty_line: str | None) -> tuple[list[str], bool]:
+    section = _section_lines(lines, heading)
+    if not section:
+        return lines, False
+
+    start = next((index for index, line in enumerate(lines) if line.strip().lower() == f"## {heading.lower()}"), -1)
+    if start < 0:
+        return lines, False
     section_start = start + 1
     section_end = section_start + len(section)
-    tokens = _plan_stem_tokens(plan_path)
-    active_handoff_lines = []
+
+    kept_lines: list[str] = []
     removed = False
     for line in section:
         if not re.match(r"^\s*-\s+", line):
-            active_handoff_lines.append(line)
+            kept_lines.append(line)
             continue
         lowered = line.lower()
         if tokens and any(token in lowered for token in tokens):
             removed = True
             continue
-        active_handoff_lines.append(line)
+        kept_lines.append(line)
 
     if not removed:
-        return {"changed": False, "text": None, "details": [], "note": None}
+        return lines, False
 
-    replacement = [line for line in active_handoff_lines if line.strip()]
-    if not any(re.match(r"^\s*-\s+", line) for line in replacement):
-        replacement = ["- No active handoff right now."]
+    replacement = [line for line in kept_lines if line.strip()]
+    if empty_line is not None and not any(re.match(r"^\s*-\s+", line) for line in replacement):
+        replacement = [empty_line]
 
-    new_lines = lines[:section_start] + replacement + lines[section_end:]
-    return {
-        "changed": True,
-        "text": "\n".join(new_lines).rstrip() + "\n",
-        "details": ["compress Active Handoff residue tied to the archived plan"],
-        "note": None,
-    }
+    return lines[:section_start] + replacement + lines[section_end:], True

@@ -271,6 +271,51 @@ def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_p
     assert any(action.kind == "updated" and action.path == tmp_path / "ROADMAP.md" for action in result.actions)
 
 
+def test_archive_execplan_apply_cleanup_removes_matching_candidate_queue_entry(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: workspace-result-contract
+  Status: completed
+  Surface: docs/execplans/workspace-result-contract-2026-04-05.md
+  Why now: already finished.
+""",
+    )
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Active Handoff
+
+- Workspace result contract docs are complete.
+
+## Next Candidate Queue
+
+- Workspace result contract: define a shared adapter or result protocol for orchestrated module actions and warnings when more module families land.
+- Shared tooling extraction: evaluate a common checker core when repeated maintenance friction appears.
+""",
+    )
+    plan_path = tmp_path / "docs" / "execplans" / "workspace-result-contract-2026-04-05.md"
+    _write(plan_path, _minimal_execplan(status="completed"))
+
+    result = archive_execplan("workspace-result-contract-2026-04-05", target=tmp_path, apply_cleanup=True)
+
+    roadmap_text = (tmp_path / "ROADMAP.md").read_text(encoding="utf-8")
+    assert "Workspace result contract:" not in roadmap_text
+    assert "Shared tooling extraction:" in roadmap_text
+    assert any(
+        action.kind == "updated"
+        and action.path == tmp_path / "ROADMAP.md"
+        and "Next Candidate Queue" in action.detail
+        for action in result.actions
+    )
+
+
 def test_archive_execplan_without_cleanup_only_suggests_roadmap_followup(tmp_path: Path) -> None:
     _write(tmp_path / "TODO.md", "# TODO\n")
     _write(
