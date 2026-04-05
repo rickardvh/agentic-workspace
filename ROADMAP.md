@@ -13,8 +13,9 @@ Inactive long-horizon candidate work.
 - Promote the next candidate only when the scope is bounded enough for a short execplan and a narrow validation story.
 
 ## Next Candidate Queue
+
 - Shared tooling extraction: evaluate a common checker core when the first stable monorepo release exposes repeated maintenance friction across duplicated scripts.
-- Unified integration lane: add a dual-bootstrap coexistence smoke-test harness when release dry-runs show the monorepo install topology is stable enough to freeze expectations.
+
 ## Reopen Conditions
 
 - Reopen roadmap planning when active queue completes or a new bounded candidate is ready to promote.

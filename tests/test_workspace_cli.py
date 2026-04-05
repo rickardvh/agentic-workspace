@@ -133,6 +133,17 @@ def test_install_real_planning_module_creates_payload(tmp_path: Path) -> None:
     assert (target / "tools" / "AGENT_QUICKSTART.md").exists()
 
 
+def test_install_full_preset_creates_combined_memory_and_planning_surfaces(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+
+    assert cli.main(["install", "--preset", "full", "--target", str(target)]) == 0
+
+    assert (target / "memory" / "index.md").exists()
+    assert (target / ".agentic-workspace" / "memory" / "WORKFLOW.md").exists()
+    assert (target / "TODO.md").exists()
+    assert (target / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+
+
 def test_adapt_action_supports_slotted_dataclass(tmp_path: Path) -> None:
     action = SlottedAction(kind="copied", path=tmp_path / "demo.txt", detail="ok")
 

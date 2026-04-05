@@ -110,6 +110,8 @@ See `docs/contributor-playbook.md` for package routing, ownership, and the small
 
 Use one shared root environment for daily monorepo work and package validation.
 
+The root workspace test suite includes a combined-install smoke test for the `full` lifecycle preset so the shared entrypoint is exercised against both modules together.
+
 - Merged root lane (both packages): `make sync-all`
 - Memory check lane alias: `make sync-memory`
 - Planning check lane alias: `make sync-planning`

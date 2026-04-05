@@ -208,6 +208,7 @@ def _resolve_target_root(target: str | None) -> Path:
 
 
 def _invoke_module_command(command_name: str, module_name: str, descriptor: ModuleDescriptor, args: argparse.Namespace) -> dict[str, Any]:
+    _prepare_target_root(command_name=command_name, target=args.target)
     command = descriptor.commands[command_name]
     kwargs: dict[str, Any] = {"target": args.target}
     if command_name == "install":
@@ -218,6 +219,12 @@ def _invoke_module_command(command_name: str, module_name: str, descriptor: Modu
 
     result = command(**kwargs)
     return adapt_module_result(module=module_name, result=result).to_dict()
+
+
+def _prepare_target_root(*, command_name: str, target: str | None) -> None:
+    if target is None or command_name not in {"install", "adopt"}:
+        return
+    Path(target).mkdir(parents=True, exist_ok=True)
 
 
 def _emit_modules(*, format_name: str) -> None:
