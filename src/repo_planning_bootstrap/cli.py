@@ -63,6 +63,11 @@ def build_parser() -> argparse.ArgumentParser:
     archive_parser.add_argument("plan")
     archive_parser.add_argument("--target")
     archive_parser.add_argument("--dry-run", action="store_true")
+    archive_parser.add_argument(
+        "--apply-cleanup",
+        action="store_true",
+        help="Apply narrow cleanup for completed TODO references and Active Handoff residue tied to the archived plan.",
+    )
     archive_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     list_files_parser = subparsers.add_parser("list-files")
@@ -107,7 +112,15 @@ def main(argv: list[str] | None = None) -> int:
             args.format,
         )
     if args.command == "archive-plan":
-        return _emit(archive_execplan(args.plan, target=args.target, dry_run=args.dry_run), args.format)
+        return _emit(
+            archive_execplan(
+                args.plan,
+                target=args.target,
+                dry_run=args.dry_run,
+                apply_cleanup=args.apply_cleanup,
+            ),
+            args.format,
+        )
     if args.command == "list-files":
         files = list_payload_files()
         if args.format == "json":

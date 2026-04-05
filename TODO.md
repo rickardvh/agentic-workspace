@@ -23,7 +23,4 @@ When there is no active task, keep this file minimal.
 
 ## Next
 
-- ID: archive-reference-cleanup
-  Status: in-progress
-  Surface: docs/execplans/archive-reference-cleanup-2026-04-05.md
-  Why now: dogfooding the new archive flow exposed a recurring follow-up step that should be made easier without hiding file edits.
+No active items right now.

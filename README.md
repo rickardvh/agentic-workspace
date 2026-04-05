@@ -272,6 +272,7 @@ This system is most useful when:
 - `agentic-planning-bootstrap summary --target <repo> --format json`
 - `agentic-planning-bootstrap promote-to-plan <todo-id> --target <repo>`
 - `agentic-planning-bootstrap archive-plan <plan> --target <repo>`
+- `agentic-planning-bootstrap archive-plan <plan> --target <repo> --apply-cleanup`
 - `agentic-planning-bootstrap list-files`
 - `agentic-planning-bootstrap verify-payload`
 - `agentic-planning-bootstrap prompt install --target <repo>`
@@ -279,6 +280,8 @@ This system is most useful when:
 - `make plan-check-json`
 - `make plan-check-strict`
 - `make plan-summary`
+
+`archive-plan --apply-cleanup` is intentionally narrow. It may remove completed TODO items that still point at the archived plan and compress stale `ROADMAP.md` Active Handoff residue tied to that same thread, but it does not invent hidden state or perform broad automatic rewrites.
 
 ## Success Criteria
 

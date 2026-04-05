@@ -165,6 +165,68 @@ def test_archive_execplan_moves_completed_plan(tmp_path: Path) -> None:
     assert any(action.kind == "moved" and action.path == archived_path for action in result.actions)
 
 
+def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: completed
+  Surface: docs/execplans/plan-alpha.md
+  Why now: already finished.
+""",
+    )
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Active Handoff
+
+- Plan alpha is the current active package pass.
+
+## Next Candidate Queue
+
+- Candidate beta: promote when a report signals follow-on work.
+""",
+    )
+    plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
+    _write(plan_path, _minimal_execplan(status="completed"))
+
+    result = archive_execplan("plan-alpha", target=tmp_path, apply_cleanup=True)
+
+    todo_text = (tmp_path / "TODO.md").read_text(encoding="utf-8")
+    roadmap_text = (tmp_path / "ROADMAP.md").read_text(encoding="utf-8")
+    assert "plan-alpha" not in todo_text
+    assert "- No active handoff right now." in roadmap_text
+    assert any(action.kind == "updated" and action.path == tmp_path / "TODO.md" for action in result.actions)
+    assert any(action.kind == "updated" and action.path == tmp_path / "ROADMAP.md" for action in result.actions)
+
+
+def test_archive_execplan_without_cleanup_only_suggests_roadmap_followup(tmp_path: Path) -> None:
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Active Handoff
+
+- Plan alpha is the current active package pass.
+""",
+    )
+    plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
+    _write(plan_path, _minimal_execplan(status="completed"))
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert any(action.kind == "suggested fix" and action.path == tmp_path / "ROADMAP.md" for action in result.actions)
+    assert any(warning["warning_class"] == "roadmap_archive_followup" for warning in result.warnings)
+
+
 def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(

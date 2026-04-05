@@ -4,6 +4,7 @@ Checked-in execution plans for multi-milestone or multi-thread work live in this
 
 Use `python scripts/check/check_planning_surfaces.py` for advisory shape and drift warnings across `TODO.md`, active execplans, and `ROADMAP.md`.
 Use `agentic-planning-bootstrap summary`, `promote-to-plan`, and `archive-plan` as thin file-native helpers around the same checked-in contract.
+Use `archive-plan --apply-cleanup` only when you want the helper to also remove completed TODO references and compress matching `ROADMAP.md` Active Handoff residue for the same archived thread.
 
 This planning system is for execution. It is not intended to become a generic tracker, backlog database, or Jira replacement.
 

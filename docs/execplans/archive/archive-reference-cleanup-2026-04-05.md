@@ -12,15 +12,15 @@
 
 ## Active Milestone
 
-- Status: in-progress
-- Scope: define the assisted archive cleanup workflow, implement the smallest useful helper behavior, and prove it against the self-hosted repo.
-- Ready: ready
+- Status: completed
+- Scope: defined the assisted archive cleanup workflow, implemented the smallest useful helper behavior, and proved it against the self-hosted repo.
+- Ready: false
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Inspect the current archive helper, identify the minimum explicit cleanup actions it can safely assist with, and turn that into a concrete implementation delta.
+- Archive this completed execplan now that the assisted cleanup workflow has passed verification.
 
 ## Blockers
 
@@ -57,3 +57,7 @@
 ## Drift Log
 
 - 2026-04-05: Plan created after dogfooding `archive-plan` surfaced a recurring manual follow-up step.
+- 2026-04-05: Reduced scope to an explicit `--apply-cleanup` flow so archive assistance stays narrow and reviewable.
+- 2026-04-05: Dogfooding showed the helper must still emit a suggested fix when cleanup is available but not requested.
+- 2026-04-05: The promotion-linkage checker caught this follow-on thread until the roadmap carried the same signal language, which is useful feedback about how strict the cross-surface linkage currently feels in practice.
+- 2026-04-05: Completed the assisted cleanup implementation, tests, docs, and self-hosted verification pass.

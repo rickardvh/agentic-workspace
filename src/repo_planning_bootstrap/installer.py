@@ -297,6 +297,7 @@ def archive_execplan(
     *,
     target: str | Path | None = None,
     dry_run: bool = False,
+    apply_cleanup: bool = False,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message=f"Archive execplan '{plan}'", dry_run=dry_run)
@@ -315,9 +316,13 @@ def archive_execplan(
         result.add("manual review", plan_path, "archive requires the active milestone status to be completed/done/closed")
         return result
 
-    todo_refs = _todo_references_to_plan(target_root / "TODO.md", plan_path, target_root)
-    if todo_refs:
-        for item_id in todo_refs:
+    todo_ref_items = _todo_referencing_items(target_root / "TODO.md", plan_path, target_root)
+    blocking_todo_refs = [
+        item for item in todo_ref_items if _normalize_status(item.fields.get("status", "")) != "completed"
+    ]
+    if blocking_todo_refs:
+        for item in blocking_todo_refs:
+            item_id = item.item_id or "?"
             result.warnings.append(
                 {
                     "warning_class": "archive_blocked_by_todo_reference",
@@ -328,21 +333,42 @@ def archive_execplan(
             result.add("manual review", target_root / "TODO.md", f"TODO item '{item_id}' still references this execplan")
         return result
 
-    roadmap_note = _roadmap_archive_hint(target_root / "ROADMAP.md", plan_path)
-    if roadmap_note:
-        result.warnings.append(
-            {
-                "warning_class": "roadmap_archive_followup",
-                "path": "ROADMAP.md",
-                "message": roadmap_note,
-            }
-        )
-        result.add("suggested fix", target_root / "ROADMAP.md", roadmap_note)
-
     destination = archive_dir / plan_path.name
     if destination.exists():
         result.add("manual review", destination, "archive destination already exists")
         return result
+
+    cleanup_todo_lines: list[str] | None = None
+    completed_todo_refs = [
+        item for item in todo_ref_items if _normalize_status(item.fields.get("status", "")) == "completed"
+    ]
+    if apply_cleanup and completed_todo_refs:
+        cleanup_todo_lines = _remove_todo_items(target_root / "TODO.md", completed_todo_refs)
+        for item in completed_todo_refs:
+            result.add(
+                "would update" if dry_run else "updated",
+                target_root / "TODO.md",
+                (
+                    f"remove completed TODO item '{item.item_id}' "
+                    "while archiving its plan"
+                ),
+            )
+
+    cleanup_roadmap = _cleanup_roadmap_archive_followup(target_root / "ROADMAP.md", plan_path)
+    if cleanup_roadmap["changed"] and apply_cleanup:
+        action_kind = "would update" if dry_run else "updated"
+        for detail in cleanup_roadmap["details"]:
+            result.add(action_kind, target_root / "ROADMAP.md", detail)
+    elif cleanup_roadmap["changed"] or cleanup_roadmap["note"]:
+        note = cleanup_roadmap["note"] or "ROADMAP has cleanup-ready residue tied to the archived plan."
+        result.warnings.append(
+            {
+                "warning_class": "roadmap_archive_followup",
+                "path": "ROADMAP.md",
+                "message": note,
+            }
+        )
+        result.add("suggested fix", target_root / "ROADMAP.md", note)
 
     if dry_run:
         result.add("would move", destination, f"archive {plan_path.relative_to(target_root).as_posix()}")
@@ -350,6 +376,10 @@ def archive_execplan(
 
     archive_dir.mkdir(parents=True, exist_ok=True)
     shutil.move(str(plan_path), str(destination))
+    if cleanup_todo_lines is not None:
+        (target_root / "TODO.md").write_text("\n".join(cleanup_todo_lines).rstrip() + "\n", encoding="utf-8")
+    if cleanup_roadmap["changed"] and apply_cleanup:
+        (target_root / "ROADMAP.md").write_text(cleanup_roadmap["text"], encoding="utf-8")
     result.add("moved", destination, f"archived {plan_path.relative_to(target_root).as_posix()}")
     return result
 
@@ -662,21 +692,76 @@ def _execplan_status(path: Path) -> str:
     return ""
 
 
-def _todo_references_to_plan(todo_path: Path, plan_path: Path, target_root: Path) -> list[str]:
+def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path) -> list[TodoItem]:
     _, items = _read_todo_items(todo_path)
     relative = plan_path.relative_to(target_root).as_posix()
-    matches: list[str] = []
+    matches: list[TodoItem] = []
     for item in items:
         if _surface_execplan_reference(item.fields.get("surface", "")) == relative:
-            matches.append(item.item_id or "?")
+            matches.append(item)
     return matches
 
 
-def _roadmap_archive_hint(roadmap_path: Path, plan_path: Path) -> str | None:
+def _remove_todo_items(todo_path: Path, items_to_remove: list[TodoItem]) -> list[str]:
+    lines, _ = _read_todo_items(todo_path)
+    indexes_to_remove: set[int] = set()
+    for item in items_to_remove:
+        indexes_to_remove.update(range(item.start, item.end))
+        if item.end < len(lines) and lines[item.end].strip() == "":
+            indexes_to_remove.add(item.end)
+
+    filtered_lines = [line for index, line in enumerate(lines) if index not in indexes_to_remove]
+    while filtered_lines and filtered_lines[-1] == "":
+        filtered_lines.pop()
+    return filtered_lines
+
+
+def _plan_stem_tokens(plan_path: Path) -> list[str]:
+    return [token for token in re.split(r"[^a-z0-9]+", plan_path.stem.lower()) if len(token) >= 4 and not token.isdigit()]
+
+
+def _cleanup_roadmap_archive_followup(roadmap_path: Path, plan_path: Path) -> dict[str, Any]:
+    note = "ROADMAP still mentions this thread; compress any active-sounding residue into a candidate stub if needed."
     if not roadmap_path.exists():
-        return None
-    text = roadmap_path.read_text(encoding="utf-8").lower()
-    stem_tokens = [token for token in re.split(r"[^a-z0-9]+", plan_path.stem.lower()) if len(token) >= 4]
-    if stem_tokens and any(token in text for token in stem_tokens):
-        return "ROADMAP still mentions this thread; compress any active-sounding residue into a candidate stub if needed."
-    return None
+        return {"changed": False, "text": None, "details": [], "note": None}
+
+    lines = _read_lines(roadmap_path)
+    section = _section_lines(lines, "Active Handoff")
+    if not section:
+        return {"changed": False, "text": None, "details": [], "note": None}
+
+    start = next((index for index, line in enumerate(lines) if line.strip().lower() == "## active handoff"), -1)
+    if start < 0:
+        return {"changed": False, "text": None, "details": [], "note": None}
+    section_start = start + 1
+    section_end = section_start + len(section)
+    tokens = _plan_stem_tokens(plan_path)
+    active_handoff_lines = []
+    removed = False
+    for line in section:
+        if not re.match(r"^\s*-\s+", line):
+            active_handoff_lines.append(line)
+            continue
+        lowered = line.lower()
+        if tokens and any(token in lowered for token in tokens):
+            removed = True
+            continue
+        active_handoff_lines.append(line)
+
+    if not removed:
+        roadmap_text = "\n".join(lines).lower()
+        if tokens and any(token in roadmap_text for token in tokens):
+            return {"changed": False, "text": None, "details": [], "note": note}
+        return {"changed": False, "text": None, "details": [], "note": None}
+
+    replacement = [line for line in active_handoff_lines if line.strip()]
+    if not any(re.match(r"^\s*-\s+", line) for line in replacement):
+        replacement = ["- No active handoff right now."]
+
+    new_lines = lines[:section_start] + replacement + lines[section_end:]
+    return {
+        "changed": True,
+        "text": "\n".join(new_lines).rstrip() + "\n",
+        "details": ["compress Active Handoff residue tied to the archived plan"],
+        "note": None,
+    }
