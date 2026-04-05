@@ -8,7 +8,21 @@ Active queue for monorepo migration work.
 
 ## Now
 
-- ID: phase-2-history-import
+- ID: phase-4-root-orchestration
 - Status: in-progress
-- Surface: docs/migration/monorepo-migration-plan.md
-- Why now: The monorepo skeleton exists and the next blocking step is a history-preserving import of both source repositories into package workspaces.
+- Surface: docs/execplans/phase-4-root-orchestration-2026-04-05.md
+- Why now: After root-owned installs, fixture redirection, and package-root uninstall cleanup stabilized, only final planning guardrails and migration close-out remain.
+
+## Added In This Pass
+
+- Captured uv workspace lessons: member cwd does not isolate workspace installs and shared group names (`dev`) merge at root sync.
+- Queued follow-up work for dependency-group routing, package-scoped sync/check targets, and documentation of shared vs scoped environments.
+- Captured installed-system overlap: `packages/memory/` contains an installed memory system and `packages/planning/` contains both installed memory and planning systems.
+- Queued root-level adopt plus populate consolidation work to merge existing memory/planning content and define post-merge handling for package-local installed-system files.
+- Implemented root adoption and population for planning/memory systems, imported package planning archives into root planning archive, and added root sync lane orchestration in Make and CI.
+- Ran uninstall flows under package subdirectories and verified package checks; retained package-local system files needed by package-local test fixtures.
+- Added fixture-lane hardening to active follow-up: document package-local systems as package test/dev fixtures, guard root orchestration against fixture paths, and add drift checks for unexpected fixture-surface growth.
+- Added redirection queue: point package tests at root-owned planning/memory fixture homes where possible, and keep only minimal package-local payload-contract tests.
+- Implemented root-fixture redirection and uninstall-safe checks: planning checker tests now load root checker first, memory installer tests use fixture templates instead of package-installed memory files, and root/package check targets fall back to root scripts.
+- Executed uninstall flows (dry-run + apply) in both `packages/memory` and `packages/planning`; root `make check-all` now passes against the post-uninstall layout.
+- Completed manual-review residue cleanup in both package roots and updated tests to avoid deleted package-local current-note dependencies; `make check-all` remains green.

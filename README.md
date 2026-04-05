@@ -1,4 +1,4 @@
-# agentic-bootstrap-monorepo
+# agentic-workspace
 
 Monorepo host for two distributable packages:
 
@@ -21,6 +21,25 @@ artifacts.
 
 ## Current Status
 
-Phase 0/1 scaffold created.
+Phase 4 orchestration in progress.
 
-Code import, history-preserving migration, and CI/release cutover are pending.
+History-preserving package imports are complete. Current work is consolidating root runtime systems (planning and memory), dependency routing lanes, and root CI orchestration.
+
+## Environment Routing
+
+Use one shared root environment for daily monorepo work, and package-scoped lanes when validating package boundaries.
+
+- Merged root lane (both packages): `make sync-all`
+- Memory package lane: `make sync-memory`
+- Planning package lane: `make sync-planning`
+
+Validation entrypoints:
+
+- `make check-memory`
+- `make check-planning`
+- `make check-all`
+
+`make check-memory` and `make check-planning` each perform their own package-scoped sync first so lane checks remain isolated and repeatable.
+
+Root planning and memory installs are authoritative for monorepo operation.
+Package-local planning and memory files under `packages/*` are currently retained as package-owned fixture/dev surfaces because package test suites still depend on them.

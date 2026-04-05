@@ -1,0 +1,182 @@
+version = 1
+
+[rules]
+routing_only = ["memory/index.md"]
+high_level = ["memory/index.md", "memory/current/project-state.md"]
+canonical_dirs = [
+  "memory/domains",
+  "memory/invariants",
+  "memory/runbooks",
+  "memory/mistakes",
+  "memory/decisions",
+]
+task_board_globs = ["TODO.md", "tasks/**", ".github/issues/**"]
+core_doc_globs = ["README.md", "docs/**/*.md", "CONTRIBUTING.md", ".github/**/*.md"]
+core_doc_exclude_globs = ["AGENTS.md", "memory/**/*.md", ".agentic-memory/**/*.md"]
+forbid_core_docs_depend_on_memory = false
+# Recommended audience conventions for planner-agnostic routing:
+# - agent_bootstrap
+# - human_operator
+# - shared_invariant
+# Existing repos may keep their current audience values; these labels are guidance only.
+# Optional improvement-pressure fields:
+# - memory_role = "durable_truth" | "improvement_signal"
+# - symptom_of = "workflow_friction" | "guidance_drift" | "missing_guardrail" | "architecture_friction" | "operator_complexity"
+# - preferred_remediation = "docs" | "skill" | "script" | "test" | "validation" | "refactor" | "code"
+# - improvement_candidate = true
+# - improvement_note = "short advisory hint"
+# - elimination_target = "shrink" | "promote" | "automate" | "refactor_away"
+# - retention_justification = "short reason the note should remain despite being an improvement signal"
+# These fields are advisory only; existing manifests remain valid without them.
+
+[notes."memory/index.md"]
+note_type = "routing"
+canonical_home = "memory/index.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+subsystems = ["memory-system"]
+surfaces = ["decision", "runtime", "api", "retrieval", "tests", "architecture"]
+routes_from = ["AGENTS.md", "memory/**/*.md"]
+stale_when = ["memory/**/*.md"]
+routing_only = true
+high_level = true
+
+[notes."memory/current/project-state.md"]
+note_type = "current-overview"
+canonical_home = "memory/current/project-state.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["current-context"]
+surfaces = []
+routes_from = ["README.md", ".agentic-memory/**/*.md", "bootstrap/**/*.md"]
+stale_when = ["README.md", ".agentic-memory/**/*.md", "bootstrap/**/*.md"]
+memory_role = "durable_truth"
+
+[notes."memory/current/task-context.md"]
+note_type = "current-context"
+canonical_home = "memory/current/task-context.md"
+authority = "canonical"
+audience = "agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["current-context"]
+surfaces = []
+routes_from = []
+stale_when = []
+# Use this note only for optional continuation compression:
+# active goal, touched surfaces, blocking assumptions, and next validation.
+
+[notes."memory/current/routing-feedback.md"]
+note_type = "routing-feedback"
+canonical_home = "memory/current/routing-feedback.md"
+authority = "canonical"
+audience = "agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system", "routing"]
+surfaces = []
+routes_from = []
+stale_when = []
+# Use this note only for compact routing calibration:
+# concrete missed-note or over-routing cases worth revisiting after manifest or index changes.
+
+[notes."memory/current/active-decisions.md"]
+note_type = "current-decisions"
+canonical_home = "memory/current/active-decisions.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["migration", "orchestration"]
+surfaces = ["decision", "architecture"]
+routes_from = ["TODO.md", "docs/migration/**/*.md", "Makefile", ".github/workflows/**/*.yml"]
+stale_when = ["TODO.md", "docs/migration/**/*.md", "Makefile", ".github/workflows/**/*.yml"]
+memory_role = "durable_truth"
+
+[notes."memory/domains/memory-package-context.md"]
+note_type = "domain"
+canonical_home = "memory/domains/memory-package-context.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-package", "migration"]
+surfaces = ["architecture", "runtime"]
+routes_from = ["packages/memory/**", "packages/memory/AGENTS.md", "packages/memory/README.md"]
+stale_when = ["packages/memory/**"]
+memory_role = "durable_truth"
+
+[notes."memory/domains/planning-package-context.md"]
+note_type = "domain"
+canonical_home = "memory/domains/planning-package-context.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["planning-package", "migration"]
+surfaces = ["architecture", "decision"]
+routes_from = ["packages/planning/**", "packages/planning/AGENTS.md", "packages/planning/README.md", "docs/execplans/archive/imported-planning-package/**"]
+stale_when = ["packages/planning/**", "docs/execplans/archive/imported-planning-package/**"]
+memory_role = "durable_truth"
+
+[notes."memory/decisions/installed-system-consolidation-2026-04-05.md"]
+note_type = "decision"
+canonical_home = "memory/decisions/installed-system-consolidation-2026-04-05.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["migration", "orchestration"]
+surfaces = ["decision", "architecture"]
+routes_from = ["docs/migration/**/*.md", "AGENTS.md", "README.md"]
+stale_when = ["docs/migration/**/*.md", "README.md", "Makefile", ".github/workflows/**/*.yml"]
+memory_role = "durable_truth"
+
+[notes.".agentic-memory/WORKFLOW.md"]
+note_type = "workflow-policy"
+canonical_home = ".agentic-memory/WORKFLOW.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+surfaces = []
+routes_from = ["AGENTS.md", "memory/index.md", "memory/manifest.toml", ".agentic-memory/**/*.md"]
+stale_when = ["AGENTS.md", "memory/index.md", "memory/manifest.toml", "bootstrap/AGENTS.md"]
+related_validations = ["python scripts/check/check_memory_freshness.py"]
+memory_role = "durable_truth"
+
+[notes.".agentic-memory/VERSION.md"]
+note_type = "version-marker"
+canonical_home = ".agentic-memory/VERSION.md"
+authority = "canonical"
+audience = "agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["installer", "payload"]
+surfaces = ["api"]
+routes_from = ["src/**/*.py", "pyproject.toml"]
+stale_when = ["src/**/*.py", "pyproject.toml", "bootstrap/memory/system/VERSION.md"]
+
+[notes."memory/mistakes/recurring-failures.md"]
+note_type = "recurring-failures"
+canonical_home = "memory/mistakes/recurring-failures.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+surfaces = ["tests", "architecture"]
+routes_from = ["tests/**/*.py", "scripts/check/**/*.py"]
+stale_when = ["tests/**/*.py", "scripts/check/**/*.py"]
+related_validations = ["python scripts/check/check_memory_freshness.py"]
+memory_role = "improvement_signal"
+symptom_of = "missing_guardrail"
+preferred_remediation = "test"
+improvement_candidate = true
+improvement_note = "If recurring failures persist, consider a regression test, validation, or lint rule before growing the note."
+elimination_target = "shrink"

@@ -1,3 +1,8 @@
+MEMORY_CHECK_SCRIPT := scripts/check/check_memory_freshness.py
+ifeq (,$(wildcard $(MEMORY_CHECK_SCRIPT)))
+MEMORY_CHECK_SCRIPT := ../../scripts/check/check_memory_freshness.py
+endif
+
 help:
 	@echo "Available targets:"
 	@echo "  help            Show this help."
@@ -28,10 +33,10 @@ prompt-upgrade:
 	uv run agentic-memory-bootstrap prompt upgrade --target .
 
 check-memory:
-	uv run python scripts/check/check_memory_freshness.py
+	uv run python $(MEMORY_CHECK_SCRIPT)
 
 check-memory-strict:
-	uv run python scripts/check/check_memory_freshness.py --strict
+	uv run python $(MEMORY_CHECK_SCRIPT) --strict
 
 lint:
 	uv run ruff check . --fix

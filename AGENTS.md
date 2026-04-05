@@ -1,5 +1,9 @@
 # Agent Instructions
 
+<!-- agentic-memory:workflow:start -->
+Read `.agentic-memory/WORKFLOW.md` for shared workflow rules.
+<!-- agentic-memory:workflow:end -->
+
 Local bootstrap contract for agents working in this monorepo.
 
 ## Precedence
@@ -16,11 +20,13 @@ Resolve instruction conflicts in this order:
 
 1. Read `AGENTS.md`.
 2. Read `TODO.md`.
-3. Read `docs/migration/monorepo-migration-plan.md`.
-4. Read `ROADMAP.md` only for inactive candidate migration work.
-5. Load package-local docs only for the package being edited.
+3. Read the active feature plan in `docs/execplans/` when the TODO surface points there.
+4. Read `docs/migration/monorepo-migration-plan.md` when migration work is active or the task belongs to migration execution.
+5. Read `ROADMAP.md` only when promoting work.
+6. Load package-local docs only for the package being edited.
 
 Do not start coding from chat context alone when the same information exists in checked-in files.
+Do not bulk-read all planning surfaces.
 
 ## Sources Of Truth
 

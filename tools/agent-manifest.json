@@ -63,7 +63,7 @@
     "repo_memory_source_dir": "memory/skills",
     "cache_note": "Checked-in repo skills are authoritative; local copies are a disposable cache."
   },
-    "routing": {
+  "routing": {
     "planning_surface_change": {
       "when": "Editing planning-for-execution surfaces, plan templates, or planning-surface checks.",
       "prefer_when": "the change affects TODO, ROADMAP, execplans, or the planning bootstrap itself.",

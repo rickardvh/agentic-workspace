@@ -3,12 +3,15 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentic-bootstrap-monorepo"
+name = "agentic-workspace"
 version = "0.0.0"
-description = "Monorepo host for agentic-memory-bootstrap and agentic-planning-bootstrap migration work."
+description = "Monorepo host for agentic-memory and agentic-planning."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
+
+[tool.uv]
+package = false
 
 [tool.uv.workspace]
 members = [

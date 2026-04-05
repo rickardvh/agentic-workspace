@@ -10,9 +10,11 @@ from pathlib import Path
 from typing import Any
 
 from repo_planning_bootstrap import __version__
-from repo_planning_bootstrap._planning import gather_planning_summary, gather_planning_warnings
-from repo_planning_bootstrap._render import render_agent_docs_for_target
-from repo_planning_bootstrap._skills import skills_root
+from repo_planning_bootstrap._render import (
+    load_manifest,
+    render_quickstart,
+    render_routing,
+)
 from repo_planning_bootstrap._source import UPGRADE_SOURCE_PATH, resolve_upgrade_source
 
 REQUIRED_PAYLOAD_FILES = (
@@ -22,6 +24,8 @@ REQUIRED_PAYLOAD_FILES = (
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
     Path("docs/execplans/archive/README.md"),
+    Path("scripts/render_agent_docs.py"),
+    Path("scripts/check/check_planning_surfaces.py"),
     UPGRADE_SOURCE_PATH,
     Path("tools/agent-manifest.json"),
     Path("tools/AGENT_QUICKSTART.md"),

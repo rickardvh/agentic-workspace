@@ -35,4 +35,4 @@ Active
 
 ## Last confirmed
 
-2026-04-04 during routing calibration pass 1
+2026-04-05 during bootstrap adoption

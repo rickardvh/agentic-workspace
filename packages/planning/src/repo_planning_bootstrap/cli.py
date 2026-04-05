@@ -5,8 +5,6 @@ import json
 import shutil
 
 from repo_planning_bootstrap import __version__
-from repo_planning_bootstrap._planning import run_checker_cli
-from repo_planning_bootstrap._render import write_rendered_agent_docs
 from repo_planning_bootstrap._source import UpgradeSource, resolve_upgrade_source
 from repo_planning_bootstrap.installer import (
     adopt_bootstrap,

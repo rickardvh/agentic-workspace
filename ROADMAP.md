@@ -13,9 +13,9 @@ Inactive long-horizon migration and post-migration candidate work.
 
 ## Next Candidate Queue
 
-- Shared tooling extraction: evaluate if duplicated check scripts should share a common core after first stable monorepo release.
-- Unified integration lane: add a dual-bootstrap coexistence smoke-test harness.
-- Contributor onboarding: add package ownership CODEOWNERS and contributor playbooks once imports are complete.
+- Shared tooling extraction: evaluate a common checker core when the first stable monorepo release exposes repeated maintenance friction across duplicated scripts.
+- Unified integration lane: add a dual-bootstrap coexistence smoke-test harness when release dry-runs show the monorepo install topology is stable enough to freeze expectations.
+- Contributor onboarding: add package ownership CODEOWNERS and contributor playbooks when migration close-out is complete and package boundaries are no longer shifting.
 
 ## Reopen Conditions
 

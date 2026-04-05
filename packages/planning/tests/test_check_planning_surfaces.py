@@ -4,7 +4,15 @@ import importlib.util
 import json
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _checker_script_path() -> Path:
+    root_checker = WORKSPACE_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
+    if root_checker.exists():
+        return root_checker
+    return PACKAGE_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
 
 
 def _load_module(path: Path, module_name: str):
@@ -99,7 +107,7 @@ def _baseline_roadmap() -> str:
 
 
 def test_valid_compact_planning_shape_passes(tmp_path: Path) -> None:
-    mod = _load_module(REPO_ROOT / "scripts" / "check" / "check_planning_surfaces.py", "planning_valid")
+    mod = _load_module(_checker_script_path(), "planning_valid")
     _write(tmp_path / "TODO.md", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
@@ -107,7 +115,7 @@ def test_valid_compact_planning_shape_passes(tmp_path: Path) -> None:
 
 
 def test_todo_shape_drift_for_checklist_and_missing_execplan(tmp_path: Path) -> None:
-    mod = _load_module(REPO_ROOT / "scripts" / "check" / "check_planning_surfaces.py", "planning_todo_shape")
+    mod = _load_module(_checker_script_path(), "planning_todo_shape")
     _write(
         tmp_path / "TODO.md",
         """
@@ -131,7 +139,7 @@ def test_todo_shape_drift_for_checklist_and_missing_execplan(tmp_path: Path) -> 
 
 
 def test_execplan_readiness_missing_warning(tmp_path: Path) -> None:
-    mod = _load_module(REPO_ROOT / "scripts" / "check" / "check_planning_surfaces.py", "planning_readiness")
+    mod = _load_module(_checker_script_path(), "planning_readiness")
     plan = _minimal_execplan().replace("- Ready: ready\n", "")
     _write(tmp_path / "TODO.md", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
@@ -141,7 +149,7 @@ def test_execplan_readiness_missing_warning(tmp_path: Path) -> None:
 
 
 def test_direct_task_can_trigger_plan_required_hint(tmp_path: Path) -> None:
-    mod = _load_module(REPO_ROOT / "scripts" / "check" / "check_planning_surfaces.py", "planning_plan_required")
+    mod = _load_module(_checker_script_path(), "planning_plan_required")
     _write(
         tmp_path / "TODO.md",
         """
@@ -163,7 +171,7 @@ def test_direct_task_can_trigger_plan_required_hint(tmp_path: Path) -> None:
 
 
 def test_execplan_under_specified_and_notebook_warnings(tmp_path: Path) -> None:
-    mod = _load_module(REPO_ROOT / "scripts" / "check" / "check_planning_surfaces.py", "planning_execplan_shape")
+    mod = _load_module(_checker_script_path(), "planning_execplan_shape")
     under_specified_plan = """
 # Plan Alpha
 
@@ -229,7 +237,7 @@ Long narrative status update line eleven.
 
 
 def test_promotion_linkage_accepts_clear_causal_why_now(tmp_path: Path) -> None:
-    mod = _load_module(REPO_ROOT / "scripts" / "check" / "check_planning_surfaces.py", "planning_promotion_reason")
+    mod = _load_module(_checker_script_path(), "planning_promotion_reason")
     _write(
         tmp_path / "TODO.md",
         """
@@ -263,7 +271,7 @@ def test_promotion_linkage_accepts_clear_causal_why_now(tmp_path: Path) -> None:
 
 
 def test_promotion_linkage_still_warns_for_vague_activation(tmp_path: Path) -> None:
-    mod = _load_module(REPO_ROOT / "scripts" / "check" / "check_planning_surfaces.py", "planning_promotion_vague")
+    mod = _load_module(_checker_script_path(), "planning_promotion_vague")
     _write(
         tmp_path / "TODO.md",
         """
@@ -297,7 +305,7 @@ def test_promotion_linkage_still_warns_for_vague_activation(tmp_path: Path) -> N
 
 
 def test_main_json_format_outputs_payload(tmp_path: Path, capsys) -> None:
-    mod = _load_module(REPO_ROOT / "scripts" / "check" / "check_planning_surfaces.py", "planning_json")
+    mod = _load_module(_checker_script_path(), "planning_json")
     _write(tmp_path / "TODO.md", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())

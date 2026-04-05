@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import subprocess
@@ -9,7 +9,55 @@ import pytest
 
 from repo_memory_bootstrap import cli, installer
 
-FIXTURES_ROOT = Path("tests/fixtures/routing")
+FIXTURES_ROOT = Path(__file__).resolve().parent / "fixtures" / "routing"
+PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
+MEMORY_INDEX_TEMPLATE = FIXTURES_ROOT / "memory-index-template.md"
+MEMORY_MANIFEST_TEMPLATE = FIXTURES_ROOT / "memory-manifest-template.toml"
+
+
+def _memory_index_text() -> str:
+    if MEMORY_INDEX_TEMPLATE.exists():
+        return MEMORY_INDEX_TEMPLATE.read_text(encoding="utf-8")
+    root_index = WORKSPACE_ROOT / "memory" / "index.md"
+    if root_index.exists():
+        return root_index.read_text(encoding="utf-8")
+    payload_index = installer.payload_root() / "memory" / "index.md"
+    if payload_index.exists():
+        return payload_index.read_text(encoding="utf-8")
+    return (PACKAGE_ROOT / "memory" / "index.md").read_text(encoding="utf-8")
+
+
+def _memory_manifest_text() -> str:
+    if MEMORY_MANIFEST_TEMPLATE.exists():
+        return MEMORY_MANIFEST_TEMPLATE.read_text(encoding="utf-8")
+    root_manifest = WORKSPACE_ROOT / "memory" / "manifest.toml"
+    if root_manifest.exists():
+        return root_manifest.read_text(encoding="utf-8")
+    payload_manifest = installer.payload_root() / "memory" / "manifest.toml"
+    if payload_manifest.exists():
+        return payload_manifest.read_text(encoding="utf-8")
+    return (PACKAGE_ROOT / "memory" / "manifest.toml").read_text(encoding="utf-8")
+
+
+def _project_state_text() -> str:
+    root_note = WORKSPACE_ROOT / "memory" / "current" / "project-state.md"
+    if root_note.exists():
+        return root_note.read_text(encoding="utf-8")
+    payload_note = installer.payload_root() / "memory" / "current" / "project-state.md"
+    if payload_note.exists():
+        return payload_note.read_text(encoding="utf-8")
+    return (PACKAGE_ROOT / "memory" / "current" / "project-state.md").read_text(encoding="utf-8")
+
+
+def _task_context_text() -> str:
+    root_note = WORKSPACE_ROOT / "memory" / "current" / "task-context.md"
+    if root_note.exists():
+        return root_note.read_text(encoding="utf-8")
+    payload_note = installer.payload_root() / "memory" / "current" / "task-context.md"
+    if payload_note.exists():
+        return payload_note.read_text(encoding="utf-8")
+    return (PACKAGE_ROOT / "memory" / "current" / "task-context.md").read_text(encoding="utf-8")
 
 
 def _load_routing_fixture(name: str) -> dict[str, object]:
@@ -37,7 +85,7 @@ def _write_routing_fixture_file(
 def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, object]:
     fixture = _load_routing_fixture(fixture_name)
     (target / ".git").mkdir(parents=True)
-    _write_repo_file(target, "memory/index.md", Path("memory/index.md").read_text(encoding="utf-8"))
+    _write_repo_file(target, "memory/index.md", _memory_index_text())
     _write_repo_file(target, "memory/domains/README.md", "# Domains\n")
     _write_repo_file(target, "memory/invariants/README.md", "# Invariants\n")
     _write_repo_file(target, "memory/runbooks/README.md", "# Runbooks\n")
@@ -686,7 +734,7 @@ def test_current_check_flags_task_context_structure_drift_and_planner_signals(tm
     (target / ".git").mkdir(parents=True)
     (target / "memory" / "current").mkdir(parents=True)
     (target / "memory" / "current" / "project-state.md").write_text(
-        Path("memory/current/project-state.md").read_text(encoding="utf-8"),
+        _project_state_text(),
         encoding="utf-8",
     )
     (target / "memory" / "current" / "task-context.md").write_text(
@@ -710,11 +758,11 @@ def test_current_check_allows_next_validation_heading(tmp_path: Path) -> None:
     (target / ".git").mkdir(parents=True)
     (target / "memory" / "current").mkdir(parents=True)
     (target / "memory" / "current" / "project-state.md").write_text(
-        Path("memory/current/project-state.md").read_text(encoding="utf-8"),
+        _project_state_text(),
         encoding="utf-8",
     )
     (target / "memory" / "current" / "task-context.md").write_text(
-        Path("memory/current/task-context.md").read_text(encoding="utf-8"),
+        _task_context_text(),
         encoding="utf-8",
     )
 
@@ -827,7 +875,7 @@ def test_route_memory_adds_routing_baseline_and_runtime_suggestions(tmp_path: Pa
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
+    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
 
     result = installer.route_memory(target=target, files=["deploy/k8s/service.yaml"])
     required = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "required"}
@@ -849,7 +897,7 @@ def test_route_memory_adds_architecture_suggestions(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
+    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
 
     result = installer.route_memory(target=target, files=["src/architecture/schema.py"])
     suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "optional"}
@@ -866,7 +914,7 @@ def test_route_memory_reports_low_confidence_for_index_only_fallbacks(tmp_path: 
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
+    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
 
     result = installer.route_memory(target=target, files=["deploy/k8s/service.yaml"])
 
@@ -879,7 +927,7 @@ def test_route_memory_reports_high_confidence_for_direct_manifest_matches(tmp_pa
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory" / "domains").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
+    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
     (target / "memory" / "domains" / "api.md").write_text("# API\n", encoding="utf-8")
     (target / "memory" / "manifest.toml").write_text(
         """
@@ -919,7 +967,7 @@ def test_route_memory_falls_back_to_index_when_manifest_is_incomplete(tmp_path: 
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
+    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
     (target / "memory" / "manifest.toml").write_text(
         """
 version = 1
@@ -948,9 +996,9 @@ def test_route_memory_does_not_treat_routing_baseline_as_surface_coverage(tmp_pa
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
+    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
     (target / "memory" / "manifest.toml").write_text(
-        Path("memory/manifest.toml").read_text(encoding="utf-8"),
+        _memory_manifest_text(),
         encoding="utf-8",
     )
 
@@ -969,7 +1017,7 @@ def test_route_memory_only_suggests_task_context_on_explicit_input(tmp_path: Pat
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
+    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
 
     result = installer.route_memory(target=target, files=["memory/current/task-context.md"])
 
@@ -1137,7 +1185,7 @@ def test_sync_memory_with_explicit_file_produces_recommendations(
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
+    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
 
     result = installer.sync_memory(target=target, files=["tests/test_cli.py"])
 
@@ -2188,7 +2236,7 @@ def test_route_memory_json_includes_summary_and_missing_note_hint(tmp_path: Path
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text((Path("memory/index.md")).read_text(encoding="utf-8"), encoding="utf-8")
+    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
 
     result = installer.route_memory(target=target, files=["deploy/k8s/service.yaml"])
     data = json.loads(installer.format_result_json(result))
@@ -2375,7 +2423,7 @@ def test_route_review_reports_missed_note_case_that_still_fails(tmp_path: Path) 
 def test_route_review_reports_over_routing_case_that_still_fails(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
-    _write_repo_file(target, "memory/index.md", Path("memory/index.md").read_text(encoding="utf-8"))
+    _write_repo_file(target, "memory/index.md", _memory_index_text())
     _write_repo_file(target, "memory/domains/too-broad.md", "# Too broad\n")
     _write_repo_file(
         target,
@@ -2733,7 +2781,7 @@ def test_route_report_does_not_emit_combined_routing_score(tmp_path: Path) -> No
 def test_doctor_audits_routing_feedback_hygiene(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
-    _write_repo_file(target, "memory/index.md", Path("memory/index.md").read_text(encoding="utf-8"))
+    _write_repo_file(target, "memory/index.md", _memory_index_text())
     filler = "\n".join("- filler" for _ in range(110))
     feedback_text = (
         "# Routing Feedback\n\n"
