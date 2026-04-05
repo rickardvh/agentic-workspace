@@ -32,6 +32,7 @@ Active
 
 - Keep only concrete cases that materially improve routing.
 - Compress tuned or rejected cases into a short summary or remove them once the routing rule is stable.
+- Do not restate durable routing guidance here once it has a better long-lived home.
 
 ## Last confirmed
 

@@ -30,6 +30,12 @@ Adoption shape:
 - Works alongside Agentic Planning when the repo also needs active execution steering.
 - Does not require the full stack or the workspace layer.
 
+Collaboration shape:
+
+- Treat `memory/current/` as weak-authority re-orientation context, not as the canonical home for durable facts.
+- Keep one fact in one durable primary home; current notes should compress, point, or disappear instead of duplicating stable notes.
+- Expect current-state notes to stay compact and easy to replace under concurrent edits.
+
 ## Quick Start
 
 Fastest no-install path:
@@ -75,7 +81,7 @@ For many users the simplest mental model is: planning tells an agent what matter
 
 ## How it works
 
-- **Structured taxonomy.** Notes are split into `domains/` for subsystem orientation, `invariants/` for contracts and authority boundaries, `runbooks/` for operator procedures, `mistakes/` for recurring failure modes, `decisions/` for longer-lived rationale, and `current/` for lightweight project overview plus optional task-continuation compression.
+- **Structured taxonomy.** Notes are split into `domains/` for subsystem orientation, `invariants/` for contracts and authority boundaries, `runbooks/` for operator procedures, `mistakes/` for recurring failure modes, `decisions/` for longer-lived rationale, and `current/` for weak-authority project overview, optional task-continuation compression, and compact routing calibration.
 - **Route-indexed, not bulk-loaded.** `memory/index.md` maps task types to minimal note bundles, and a machine-readable `manifest.toml` annotates every note with audience, authority, routing triggers (`routes_from`, `stale_when`), and task relevance so agents read only what matters for the current change. Good memory helps an agent read *less*, not more.
 - **Clear ownership boundary.** Memory owns durable repo knowledge that is expensive to reconstruct from code alone: invariants, authority boundaries, recurring failure modes, operator sequences, and routing hints. The repository's active planning surface (`TODO.md`, issue trackers, and similar systems) keeps ownership of active intent and sequencing. Memory complements planning; it never competes with it.
 - **Improvement pressure without memory dependence.** Each note can declare whether it is *durable truth* or an *improvement signal* - something that exists because the repo still needs better tests, docs, validation, or design. Manifest fields like `preferred_remediation` and `elimination_target` let the `doctor` command, the freshness audit, and the sync workflow surface actionable suggestions that drive improvements into the codebase without assuming memory volume should follow one universal trend.

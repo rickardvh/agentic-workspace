@@ -16,8 +16,6 @@ Inactive long-horizon candidate work.
 
 ## Next Candidate Queue
 
-- Memory collaboration-safe contract hardening: make installed memory safer for concurrent edits by weakening `memory/current/` authority, tightening one-fact-one-home discipline, defining stale or superseded note expectations more explicitly, and adding checks for oversized current-state notes or durable-note duplication pressure. Promote when memory-current and note-hygiene rules can be delivered as one bounded contract-and-check tranche.
-
 - Cross-module collaboration contract and write-authority rules: make branch-vs-trunk state boundaries, canonical-source precedence, selective write authority, and partial-adoption behavior explicit across memory, planning, and the workspace layer so concurrent contributors can tell which surfaces are safe to edit. Promote when the integration rules can be expressed as one compact package-facing contract without expanding the workspace layer's ownership.
 
 - Installed-contract collaboration design checklist for package authorship: add a package-authoring checklist aimed at templates, generated artifacts, lifecycle markers, collaboration-oriented checks, and merge-safe file shapes so new installed surfaces are evaluated for concurrent git workflows instead of only single-agent restartability. Promote when the checklist can stay short, package-facing, and directly actionable during package evolution.

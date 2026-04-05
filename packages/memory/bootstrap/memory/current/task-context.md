@@ -29,6 +29,7 @@ Active
 - Keep this file brief.
 - Do not turn it into a task list, backlog, execution log, roadmap, or sequencing surface.
 - Remove stale detail once it no longer reduces re-orientation cost.
+- Treat this note as replaceable handoff residue, not as the primary home for durable knowledge.
 
 ## Last confirmed
 

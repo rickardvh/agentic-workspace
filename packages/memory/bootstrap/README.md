@@ -16,8 +16,8 @@ It is intended to be copied into an existing repository to provide:
 - `.agentic-memory/WORKFLOW.md` as the shared reusable memory workflow rules
 - `.agentic-memory/SKILLS.md` as the shared skill-boundary guidance
 - `.agentic-memory/VERSION.md` as the installed bootstrap version marker
-- `memory/current/project-state.md` as a short human-readable overview
-- `memory/current/task-context.md` as optional checked-in continuation compression
+- `memory/current/project-state.md` as a weak-authority current overview
+- `memory/current/task-context.md` as optional weak-authority continuation compression
 - an advisory memory freshness audit
 - optional workflow fragments for common contribution flows
 
@@ -101,7 +101,7 @@ Ownership split:
 - bootstrap-managed and upgrade-replaceable: the workflow pointer block in `AGENTS.md`, `.agentic-memory/`, and other shared replaceable payload files
 - repo-owned and expected to diverge: `AGENTS.md` content outside the managed pointer block, repo-added sibling skills under `memory/skills/`, and ordinary notes outside the product-managed shared directories
 
-`memory/current/project-state.md` should stay aggressively summary-shaped: current focus, recent meaningful progress, blockers, and a few high-value notes are usually enough. If it starts reading like a planner, ledger, backlog, or changelog, compress it.
+`memory/current/project-state.md` should stay aggressively summary-shaped and weak-authority: current focus, recent meaningful progress, blockers, and a few high-value notes are usually enough. If a fact becomes durable, move it into a primary home and leave only a short pointer or remove it.
 
 Small routing layers work better than summary-heavy indexes. A good `memory/index.md` points to a few likely-relevant notes rather than trying to restate them.
 Treat `.agentic-memory/skills/memory-router/` as the normal entrypoint for day-to-day note selection, with `memory/index.md` and `memory/manifest.toml` providing the visible routing contract behind it.
@@ -119,7 +119,7 @@ Common task bundles:
 - tests or validation work: `memory/domains/<testing-or-validation-note>.md` plus `memory/mistakes/recurring-failures.md`
 - architecture or data-model work: `memory/domains/<data-model-or-architecture-note>.md` plus `memory/invariants/<relevant-invariant-note>.md` plus `memory/decisions/README.md`
 
-Optional repo pattern only: keep short-horizon task execution in the repo's chosen planning/status surface, keep long-horizon roadmap or epic planning separate, and use checked-in current-context notes only for concise re-orientation.
+Optional repo pattern only: keep short-horizon task execution in the repo's chosen planning/status surface, keep long-horizon roadmap or epic planning separate, and use checked-in current-context notes only for concise re-orientation. Current notes should stay easy to compress, replace, or delete rather than becoming a second durable knowledge layer.
 
 Interoperability pattern catalogue:
 

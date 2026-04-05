@@ -38,8 +38,9 @@ Active
 ## High-level notes
 
 - Replace this starter text with a short overview drawn from existing repo docs and visible repo state.
-- Keep this note concise; it is an overview note, not a task list, planner, or changelog.
+- Keep this note concise and weak-authority; it is an overview note, not a task list, planner, or changelog.
 - A good shape is: current focus, recent meaningful progress, blockers, then a few high-value notes.
+- If a fact becomes durable guidance, move it into a primary memory note or canonical doc and leave only a short pointer here.
 
 ## Failure signals
 

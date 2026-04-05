@@ -46,7 +46,7 @@ high_level = true
 [notes."memory/current/project-state.md"]
 note_type = "current-overview"
 canonical_home = "memory/current/project-state.md"
-authority = "canonical"
+authority = "advisory"
 audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "optional"
@@ -54,12 +54,11 @@ subsystems = ["current-context"]
 surfaces = []
 routes_from = ["README.md", ".agentic-workspace/memory/**/*.md", "bootstrap/**/*.md"]
 stale_when = ["README.md", ".agentic-workspace/memory/**/*.md", "bootstrap/**/*.md"]
-memory_role = "durable_truth"
 
 [notes."memory/current/task-context.md"]
 note_type = "current-context"
 canonical_home = "memory/current/task-context.md"
-authority = "canonical"
+authority = "advisory"
 audience = "agent"
 canonicality = "agent_only"
 task_relevance = "optional"
@@ -73,7 +72,7 @@ stale_when = []
 [notes."memory/current/routing-feedback.md"]
 note_type = "routing-feedback"
 canonical_home = "memory/current/routing-feedback.md"
-authority = "canonical"
+authority = "advisory"
 audience = "agent"
 canonicality = "agent_only"
 task_relevance = "optional"

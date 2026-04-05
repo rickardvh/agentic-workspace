@@ -3235,6 +3235,94 @@ stale_when = ["src/**/*.py"]
     assert any("should not advertise broad routing or freshness metadata" in detail for detail in details)
 
 
+def test_doctor_flags_current_note_authority_and_memory_role_drift(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "current").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "current" / "project-state.md").write_text(
+        """
+# Project State
+
+## Status
+
+Active
+
+## Scope
+
+- Overview only.
+
+## Applies to
+
+- README.md
+
+## Load when
+
+- Starting work.
+
+## Review when
+
+- Focus changes.
+
+## Current focus
+
+- Short summary.
+
+## Recent meaningful progress
+
+- None yet.
+
+## Blockers
+
+- None.
+
+## High-level notes
+
+- Keep brief.
+
+## Failure signals
+
+- Drift.
+
+## Verify
+
+- Check current state.
+
+## Verified against
+
+- README.md
+
+## Last confirmed
+
+2026-04-06
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/current/project-state.md"]
+note_type = "current-overview"
+canonical_home = "memory/current/project-state.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+memory_role = "durable_truth"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+    details = [action.detail for action in result.actions if action.path == target / "memory/current/project-state.md"]
+
+    assert any("weak-authority context" in detail for detail in details)
+    assert any("should not declare durable-truth or improvement-signal memory roles" in detail for detail in details)
+
+
 def test_doctor_emits_note_type_specific_size_warning(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)

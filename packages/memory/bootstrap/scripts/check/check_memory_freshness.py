@@ -38,6 +38,9 @@ TYPE_LIMITS = {
     "task-context": 80,
     "routing-feedback": 120,
 }
+CURRENT_NOTE_AUTHORITY_VALUES = {"advisory", "supporting"}
+CURRENT_NOTE_OVERLAP_MIN_SHARED_TERMS = 8
+CURRENT_NOTE_OVERLAP_MIN_LINES = 30
 PROJECT_STATE_SECTIONS = {
     "Status",
     "Scope",
@@ -104,6 +107,8 @@ DEFAULT_STRICT_CATEGORIES = {
     "missing_last_confirmed",
     "invalid_last_confirmed",
     "old_confirmations",
+    "current_authority_drift",
+    "current_durable_truth_drift",
     "missing_manifest_entries",
     "manifest_records_for_missing_notes",
     "always_read_creep",
@@ -125,6 +130,9 @@ STRICT_CATEGORY_CHOICES = sorted(
         "old_confirmations",
         "oversized_files",
         "current_context_shape",
+        "current_authority_drift",
+        "current_durable_truth_drift",
+        "current_note_overlap_pressure",
         "incomplete_improvement_signals",
         "always_read_creep",
         "manifest_note_type_drift",
@@ -433,6 +441,21 @@ def main() -> int:
         if scan.line_count > _line_limit(scan.note_type)
     )
     current_context_shape = sorted(_render_path(scan.path) for scan in scans if _missing_sections(scan) or scan.suspicious_current_context)
+    current_authority_drift = sorted(
+        note_path
+        for note_path, raw in manifest_notes.items()
+        if isinstance(raw, dict)
+        and note_path.startswith("memory/current/")
+        and str(raw.get("authority", "")).strip() not in CURRENT_NOTE_AUTHORITY_VALUES
+    )
+    current_durable_truth_drift = sorted(
+        note_path
+        for note_path, raw in manifest_notes.items()
+        if isinstance(raw, dict)
+        and note_path.startswith("memory/current/")
+        and str(raw.get("memory_role", "")).strip()
+    )
+    current_note_overlap_pressure = _current_note_overlap_pressure(scans)
     incomplete_improvement_signals = sorted(
         note_path
         for note_path, raw in manifest_notes.items()
@@ -484,6 +507,9 @@ def main() -> int:
     _print_section(f"Old confirmations (>{STALE_DAYS} days)", old_confirmations)
     _print_section("Oversized files", oversized_files)
     _print_section("Current-context drift signals", current_context_shape)
+    _print_section("Current-note authority drift", current_authority_drift)
+    _print_section("Current-note durable-truth drift", current_durable_truth_drift)
+    _print_section("Current-note overlap pressure", current_note_overlap_pressure)
     _print_section("Incomplete improvement-signal lifecycle", incomplete_improvement_signals)
     _print_section("Always-read surface creep", always_read_creep)
     _print_section("Manifest note-type drift", manifest_note_type_drift)
@@ -507,6 +533,9 @@ def main() -> int:
         "old_confirmations": old_confirmations,
         "oversized_files": oversized_files,
         "current_context_shape": current_context_shape,
+        "current_authority_drift": current_authority_drift,
+        "current_durable_truth_drift": current_durable_truth_drift,
+        "current_note_overlap_pressure": current_note_overlap_pressure,
         "incomplete_improvement_signals": incomplete_improvement_signals,
         "always_read_creep": always_read_creep,
         "manifest_note_type_drift": manifest_note_type_drift,
@@ -574,6 +603,73 @@ def _index_placeholder_findings(index_path: Path) -> list[str]:
     if "<runtime-or-deployment-note>.md" in text or "<api-or-interface-note>.md" in text:
         findings.append("memory/index.md still contains starter placeholder route examples")
     return findings
+
+
+def _current_note_overlap_pressure(scans: list[NoteScan]) -> list[str]:
+    current_scans = [scan for scan in scans if scan.path.as_posix().startswith("memory/current/")]
+    durable_scans = [
+        scan
+        for scan in scans
+        if scan.path.as_posix().startswith("memory/")
+        and not scan.path.as_posix().startswith("memory/current/")
+        and scan.path.name not in {"README.md", "index.md"}
+    ]
+    findings: list[str] = []
+    for current_scan in current_scans:
+        if current_scan.line_count < CURRENT_NOTE_OVERLAP_MIN_LINES:
+            continue
+        current_terms = _significant_terms(current_scan.path.read_text(encoding="utf-8"))
+        if len(current_terms) < CURRENT_NOTE_OVERLAP_MIN_SHARED_TERMS:
+            continue
+        for durable_scan in durable_scans:
+            shared_terms = sorted(
+                current_terms & _significant_terms(durable_scan.path.read_text(encoding="utf-8"))
+            )
+            if len(shared_terms) >= CURRENT_NOTE_OVERLAP_MIN_SHARED_TERMS:
+                findings.append(
+                    (
+                        f"{_render_path(current_scan.path)} overlaps durable note "
+                        f"{_render_path(durable_scan.path)} "
+                        f"({', '.join(shared_terms[:8])})"
+                    )
+                )
+    return sorted(set(findings))
+
+
+def _significant_terms(text: str) -> set[str]:
+    words = re.findall(r"[A-Za-z][A-Za-z0-9_-]{3,}", text.lower())
+    stop_words = {
+        "this",
+        "that",
+        "with",
+        "from",
+        "into",
+        "when",
+        "where",
+        "which",
+        "should",
+        "would",
+        "could",
+        "there",
+        "their",
+        "about",
+        "only",
+        "keep",
+        "note",
+        "notes",
+        "memory",
+        "current",
+        "state",
+        "task",
+        "context",
+        "routing",
+        "feedback",
+        "review",
+        "load",
+        "last",
+        "confirmed",
+    }
+    return {word for word in words if word not in stop_words}
 
 
 if __name__ == "__main__":

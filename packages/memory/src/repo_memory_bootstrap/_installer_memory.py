@@ -372,6 +372,30 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 source=note.path.as_posix(),
                 category="contract-drift",
             )
+        if note.path.parts[:2] == ("memory", "current") and note.authority not in {"advisory", "supporting"}:
+            result.add(
+                "manual review",
+                target_root / note.path,
+                "current-memory notes should stay weak-authority context rather than canonical durable authority",
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
+        if note.path.parts[:2] == ("memory", "current") and note.memory_role:
+            result.add(
+                "manual review",
+                target_root / note.path,
+                (
+                    "current-memory notes should not declare durable-truth or "
+                    "improvement-signal memory roles; move durable facts to a "
+                    "primary home"
+                ),
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
         if note.path == Path("memory/current/task-context.md"):
             if note.task_relevance != "optional":
                 result.add(
