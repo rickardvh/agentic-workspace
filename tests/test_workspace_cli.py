@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from agentic_workspace import cli
+from agentic_workspace.result_adapter import adapt_action, adapt_module_result
 
 
 @dataclass
@@ -23,6 +24,25 @@ class FakeResult:
     dry_run: bool
     actions: list[FakeAction] = field(default_factory=list)
     warnings: list[dict[str, str]] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class SlottedAction:
+    kind: str
+    path: Path
+    detail: str
+
+
+class DictAction:
+    def __init__(self, path: Path) -> None:
+        self.path = path
+
+    def to_dict(self, target_root: Path) -> dict[str, object]:
+        return {
+            "kind": "converted",
+            "path": self.path.relative_to(target_root),
+            "detail": "used to_dict",
+        }
 
 
 def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) -> None:
@@ -85,6 +105,36 @@ def test_install_real_planning_module_creates_payload(tmp_path: Path) -> None:
 
     assert (target / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert (target / "tools" / "AGENT_QUICKSTART.md").exists()
+
+
+def test_adapt_action_supports_slotted_dataclass(tmp_path: Path) -> None:
+    action = SlottedAction(kind="copied", path=tmp_path / "demo.txt", detail="ok")
+
+    payload = adapt_action(action=action, target_root=tmp_path)
+
+    assert payload == {"kind": "copied", "path": (tmp_path / "demo.txt").as_posix(), "detail": "ok"}
+
+
+def test_adapt_action_prefers_to_dict_protocol(tmp_path: Path) -> None:
+    action = DictAction(tmp_path / "nested" / "demo.txt")
+
+    payload = adapt_action(action=action, target_root=tmp_path)
+
+    assert payload == {"kind": "converted", "path": "nested/demo.txt", "detail": "used to_dict"}
+
+
+def test_adapt_module_result_handles_optional_warnings(tmp_path: Path) -> None:
+    result = FakeResult(
+        target_root=tmp_path,
+        message="status memory",
+        dry_run=False,
+        actions=[FakeAction(kind="recorded", path=tmp_path / "memory", detail="ran status")],
+    )
+    delattr(result, "warnings")
+
+    report = adapt_module_result(module="memory", result=result)
+
+    assert report.to_dict()["warnings"] == []
 
 
 def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, object]]]) -> dict[str, cli.ModuleDescriptor]:

@@ -3,11 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 from collections.abc import Callable
-from dataclasses import asdict, dataclass, is_dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from agentic_workspace import __version__
+from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 
 MODULE_ORDER = ("memory", "planning")
 
@@ -199,30 +200,7 @@ def _invoke_module_command(command_name: str, module_name: str, descriptor: Modu
         kwargs["dry_run"] = args.dry_run
 
     result = command(**kwargs)
-    return {
-        "module": module_name,
-        "message": result.message,
-        "target_root": Path(result.target_root),
-        "dry_run": bool(result.dry_run),
-        "actions": [_serialise_action(action) for action in result.actions],
-        "warnings": [_serialise_value(warning) for warning in getattr(result, "warnings", [])],
-    }
-
-
-def _serialise_action(action: Any) -> dict[str, Any]:
-    if is_dataclass(action):
-        return {key: _serialise_value(value) for key, value in asdict(action).items()}
-    return {key: _serialise_value(value) for key, value in vars(action).items()}
-
-
-def _serialise_value(value: Any) -> Any:
-    if isinstance(value, Path):
-        return value.as_posix()
-    if isinstance(value, dict):
-        return {key: _serialise_value(inner) for key, inner in value.items()}
-    if isinstance(value, list):
-        return [_serialise_value(item) for item in value]
-    return value
+    return adapt_module_result(module=module_name, result=result).to_dict()
 
 
 def _emit_modules(*, format_name: str) -> None:
@@ -247,7 +225,7 @@ def _emit_modules(*, format_name: str) -> None:
 
 def _emit_reports(*, command_name: str, reports: list[dict[str, Any]], format_name: str) -> None:
     if format_name == "json":
-        payload = _serialise_value({"command": command_name, "reports": reports})
+        payload = serialise_value({"command": command_name, "reports": reports})
         print(json.dumps(payload, indent=2))
         return
 
