@@ -1,0 +1,2 @@
+source_type = "git"
+source_ref = "git+https://github.com/Tenfifty/agentic-memory"
