@@ -27,11 +27,11 @@ History-preserving package imports are complete. Root planning and memory system
 
 ## Environment Routing
 
-Use one shared root environment for daily monorepo work, and package-scoped lanes when validating package boundaries.
+Use one shared root environment for daily monorepo work and package validation.
 
 - Merged root lane (both packages): `make sync-all`
-- Memory package lane: `make sync-memory`
-- Planning package lane: `make sync-planning`
+- Memory check lane alias: `make sync-memory`
+- Planning check lane alias: `make sync-planning`
 
 Validation entrypoints:
 
@@ -39,7 +39,7 @@ Validation entrypoints:
 - `make check-planning`
 - `make check-all`
 
-`make check-memory` and `make check-planning` each perform their own package-scoped sync first so lane checks remain isolated and repeatable.
+`make check-memory` and `make check-planning` each perform a consolidated root dev sync first so checks remain repeatable from one workspace environment.
 
 Root planning and memory installs are authoritative for monorepo operation.
 Package directories now keep package source, bootstrap payloads, and test fixtures only; package-local installed runtime systems have been removed.

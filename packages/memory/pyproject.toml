@@ -32,15 +32,6 @@ Issues = "https://github.com/rickardvh/agentic-workspace/issues"
 [project.scripts]
 agentic-memory-bootstrap = "repo_memory_bootstrap.cli:main"
 
-[dependency-groups]
-dev = [
-  "pytest-cov",
-  "pytest",
-  "ruff",
-  "ty",
-  "pymarkdownlnt",
-]
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/repo_memory_bootstrap"]
 

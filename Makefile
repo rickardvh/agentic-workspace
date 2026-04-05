@@ -2,8 +2,8 @@ help:
 	@echo "Available targets:"
 	@echo "  help                 Show this help."
 	@echo "  sync-all             Sync merged root environment for all workspace packages."
-	@echo "  sync-memory          Sync package-scoped environment lane for memory package checks."
-	@echo "  sync-planning        Sync package-scoped environment lane for planning package checks."
+	@echo "  sync-memory          Sync consolidated root dev environment for memory package checks."
+	@echo "  sync-planning        Sync consolidated root dev environment for planning package checks."
 	@echo "  import-checklist     Show migration import checklist."
 	@echo "  check-memory         Run package-local checks for packages/memory."
 	@echo "  check-planning       Run package-local checks for packages/planning."
@@ -13,10 +13,10 @@ sync-all:
 	uv sync --all-packages --all-groups
 
 sync-memory:
-	uv sync --package agentic-memory-bootstrap --group dev
+	uv sync --all-packages --group dev
 
 sync-planning:
-	uv sync --package agentic-planning-bootstrap --group dev
+	uv sync --all-packages --group dev
 
 import-checklist:
 	@echo "1) Import agentic-memory into packages/memory with history preservation"

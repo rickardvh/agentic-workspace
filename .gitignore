@@ -2,13 +2,12 @@
 .venv/
 
 # Python caches
-__pycache__/
-*.py[cod]
+**/__pycache__/
+**/*.py[cod]
 
 # Common test and tooling caches
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
+**/.pytest_cache/
+**/.ruff_cache/
 
 # Coverage reports
-.coverage
+**/.coverage

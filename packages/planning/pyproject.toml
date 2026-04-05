@@ -31,13 +31,6 @@ Issues = "https://github.com/rickardvh/agentic-workspace/issues"
 [project.scripts]
 agentic-planning-bootstrap = "repo_planning_bootstrap.cli:main"
 
-[dependency-groups]
-dev = [
-  "pytest",
-  "pytest-cov",
-  "ruff",
-]
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/repo_planning_bootstrap"]
 
