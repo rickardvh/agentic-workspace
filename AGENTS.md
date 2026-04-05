@@ -80,7 +80,9 @@ This repository produces and maintains a reusable bootstrap system that adds dur
 
 When developing this bootstrap tool in this repository:
 
+- treat every task in this repo as both product implementation and real-use-case testing of the memory system, and use that feedback loop deliberately rather than incidentally
 - continuously evaluate whether the current task exposed friction, ambiguity, or unnecessary manual review in the install, doctor, adopt, or upgrade workflow
+- when you encounter friction, routing misses or noise, note sprawl, weak compression, unclear ownership, or any other meaningful quality gap in the memory system, suggest an improvement explicitly and record the durable lesson in repo memory when it is worth keeping
 - continuously evaluate whether a repeatable procedure is stretching `AGENTS.md`, `WORKFLOW.md`, or repo docs beyond what should stay in checked-in guidance
 - if you spot a meaningful improvement, suggest it explicitly and, when in scope, implement it in the tool or docs
 - treat your own use of the bootstrap system here as product feedback, not just local task execution
