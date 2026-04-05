@@ -365,7 +365,7 @@ def upgrade_bootstrap(
                 target_root / upgrade_source_path,
                 (
                     f"recorded upgrade source is {source_age_days} days old; "
-                    "consider refreshing `\.agentic-workspace/memory/UPGRADE-SOURCE.toml` when it is safe"
+                    "consider refreshing `.agentic-workspace/memory/UPGRADE-SOURCE.toml` when it is safe"
                 ),
                 role="payload-contract",
                 safety="safe",
@@ -623,7 +623,7 @@ def doctor_bootstrap(
                 target_root / upgrade_source_path,
                 (
                     f"recorded upgrade source is {source_age_days} days old; "
-                    "consider refreshing `\.agentic-workspace/memory/UPGRADE-SOURCE.toml` when it is safe"
+                    "consider refreshing `.agentic-workspace/memory/UPGRADE-SOURCE.toml` when it is safe"
                 ),
                 role="payload-contract",
                 safety="safe",
@@ -1438,7 +1438,7 @@ def _should_suggest_project_state(
     return any(
         _path_matches_pattern(path, pattern)
         for path in files
-        for pattern in ("README.md", "docs/**/*.md", "\.agentic-workspace/memory/**/*.md", "bootstrap/**/*.md")
+        for pattern in ("README.md", "docs/**/*.md", ".agentic-workspace/memory/**/*.md", "bootstrap/**/*.md")
     )
 
 
@@ -2033,4 +2033,5 @@ def uninstall_bootstrap(
         result=result,
     )
     return result
+
 
