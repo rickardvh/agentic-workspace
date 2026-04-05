@@ -6,14 +6,11 @@ Active
 
 ## Purpose
 
-Capture durable context imported from the previous installed planning and memory systems under packages/planning so root planning and memory ownership can replace package-local installs.
+Capture durable context imported from the previous package-local planning and memory installs so root planning and memory ownership can replace package-local installs.
 
 ## Consolidated from
 
-- packages/planning/memory/current/project-state.md
-- packages/planning/TODO.md
-- packages/planning/ROADMAP.md
-- packages/planning/docs/execplans/archive/*.md
+- Previous package-local planning TODO, ROADMAP, memory current note, and archived execplans under packages/planning/.
 
 ## Durable context
 
@@ -38,7 +35,7 @@ Root ownership now contains the installed planning and memory systems. Package-l
 
 ## Review when
 
-- Planning package AGENTS, TODO, ROADMAP, or archived execplan imports change materially.
+- Planning package README, bootstrap payload, or archived execplan imports change materially.
 - Root planning orchestration changes how imported planning context is routed.
 
 ## Failure signals
@@ -48,10 +45,10 @@ Root ownership now contains the installed planning and memory systems. Package-l
 
 ## Verify
 
-- packages/planning/AGENTS.md
 - packages/planning/README.md
-- packages/planning/TODO.md
-- packages/planning/ROADMAP.md
+- packages/planning/bootstrap/
+- packages/planning/src/
+- packages/planning/tests/
 - docs/execplans/archive/imported-planning-package/
 
 ## Last confirmed

@@ -70,6 +70,8 @@ Running `install` or `adopt` adds the following to your repository:
 
 Install and adopt flows may create a temporary `.agentic-memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace. Upgrade should normally route through the checked-in `memory-upgrade` skill and no longer depends on that workspace as part of the primary model.
 
+In this monorepo checkout, the active operational memory install lives at the repository root. This package directory keeps the reusable package source, bootstrap payload, tests, and fixtures; the paths listed above describe the target-repository structure that `install` or `adopt` writes.
+
 ## Install
 
 ### Agent workflow
@@ -251,7 +253,10 @@ Useful maintainer commands:
 ```bash
 uv sync --group dev
 uv run --group dev pytest
-uv run python scripts/check/check_memory_freshness.py
+make check-memory
+
+# Or from the monorepo root
+make check-memory
 ```
 
 When installer behaviour or the payload changes, verify against this repo itself. When the packaged tool changes, bump the package version in `pyproject.toml`.

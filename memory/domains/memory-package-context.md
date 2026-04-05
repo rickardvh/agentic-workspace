@@ -6,12 +6,11 @@ Active
 
 ## Purpose
 
-Capture durable context imported from the previous installed memory system under packages/memory so root memory ownership can replace package-local installs.
+Capture durable context imported from the previous package-local memory install so root memory ownership can replace package-local installs.
 
 ## Consolidated from
 
-- packages/memory/memory/current/project-state.md
-- packages/memory/memory/current/active-decisions.md
+- Previous package-local current-memory notes under packages/memory/memory/current/.
 
 ## Durable context
 
@@ -33,7 +32,7 @@ Root ownership now contains the installed memory system. Package-local installed
 
 ## Review when
 
-- The memory package AGENTS contract or README changes materially.
+- The memory package README or bootstrap payload layout changes materially.
 - Memory bootstrap workflow ownership changes between root and package surfaces.
 
 ## Failure signals
@@ -43,9 +42,10 @@ Root ownership now contains the installed memory system. Package-local installed
 
 ## Verify
 
-- packages/memory/AGENTS.md
 - packages/memory/README.md
+- packages/memory/bootstrap/
 - packages/memory/src/
+- packages/memory/tests/
 
 ## Last confirmed
 

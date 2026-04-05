@@ -158,6 +158,8 @@ It packages:
 
 It does not package repo-specific active execution content.
 
+In this monorepo checkout, the active operational planning install lives at the repository root. This package directory keeps the reusable package source, bootstrap payload, tests, and fixtures; the planning surfaces listed above describe the target-repository structure that `install` or `adopt` writes.
+
 ## Repository Structure
 
 ```text
@@ -316,6 +318,9 @@ The system is working when:
 ```bash
 uv sync --group dev
 uv run pytest
-uv run python scripts/render_agent_docs.py
-uv run python scripts/check/check_planning_surfaces.py
+make render-agent-docs
+make plan-check
+
+# Or from the monorepo root
+make check-planning
 ```

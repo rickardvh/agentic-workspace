@@ -106,7 +106,7 @@ canonicality = "agent_only"
 task_relevance = "optional"
 subsystems = ["memory-package", "migration"]
 surfaces = ["architecture", "runtime"]
-routes_from = ["packages/memory/**", "packages/memory/AGENTS.md", "packages/memory/README.md"]
+routes_from = ["packages/memory/**", "packages/memory/README.md"]
 stale_when = ["packages/memory/**"]
 memory_role = "durable_truth"
 
@@ -119,7 +119,7 @@ canonicality = "agent_only"
 task_relevance = "optional"
 subsystems = ["planning-package", "migration"]
 surfaces = ["architecture", "decision"]
-routes_from = ["packages/planning/**", "packages/planning/AGENTS.md", "packages/planning/README.md", "docs/execplans/archive/imported-planning-package/**"]
+routes_from = ["packages/planning/**", "packages/planning/README.md", "docs/execplans/archive/imported-planning-package/**"]
 stale_when = ["packages/planning/**", "docs/execplans/archive/imported-planning-package/**"]
 memory_role = "durable_truth"
 

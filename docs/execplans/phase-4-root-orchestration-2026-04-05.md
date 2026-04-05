@@ -32,6 +32,9 @@
 - AGENTS.md
 - docs/execplans/
 - docs/migration/monorepo-migration-plan.md
+- memory/
+- packages/memory/README.md
+- packages/planning/README.md
 
 ## Invariants
 
@@ -49,7 +52,9 @@
 - Root planning validator reports no TODO, ROADMAP, or startup-policy drift warnings for the active tranche.
 - Root TODO points at a live execplan for active work.
 - ROADMAP candidate entries each carry an explicit promotion trigger.
+- Live root memory notes and package READMEs no longer point contributors at removed package-local operational installs.
 
 ## Drift Log
 
 - 2026-04-05: Plan created to close out root orchestration planning drift after package-root uninstall cleanup stabilized.
+- 2026-04-05: Removed stale references to deleted package-local operational surfaces from root durable notes and clarified package README guidance for the monorepo checkout.
