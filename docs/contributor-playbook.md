@@ -83,6 +83,8 @@ When internal use reveals friction, classify it before routing it onward.
 
 Use `docs/dogfooding-feedback.md` for the capture convention and preferred destinations.
 
+Use `docs/installed-contract-design-checklist.md` when a package change adds or materially reshapes an installed file, generated mirror, or other collaboration-sensitive contract surface.
+
 ## Review Expectations
 
 - Preserve package boundaries and independent CLI entrypoints.

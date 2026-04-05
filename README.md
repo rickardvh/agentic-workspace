@@ -81,6 +81,7 @@ For maintainers:
 - `docs/contributor-playbook.md`
 - `docs/maintainer-commands.md`
 - `docs/collaboration-safety.md`
+- `docs/installed-contract-design-checklist.md`
 - `docs/dogfooding-feedback.md`
 - `docs/workflow-contract-changes.md`
 

@@ -16,8 +16,6 @@ Inactive long-horizon candidate work.
 
 ## Next Candidate Queue
 
-- Installed-contract collaboration design checklist for package authorship: add a package-authoring checklist aimed at templates, generated artifacts, lifecycle markers, collaboration-oriented checks, and merge-safe file shapes so new installed surfaces are evaluated for concurrent git workflows instead of only single-agent restartability. Promote when the checklist can stay short, package-facing, and directly actionable during package evolution.
-
 - Shared tooling extraction: evaluate a common checker core when the first stable monorepo release exposes repeated maintenance friction across duplicated scripts.
 
 - Shared tooling extraction: evaluate a common checker core when the first stable monorepo release exposes repeated maintenance friction across duplicated scripts.
