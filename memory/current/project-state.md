@@ -50,6 +50,7 @@ Active
 - Added optional strict-mode freshness enforcement (`scripts/check/check_memory_freshness.py --strict`) with configurable strict categories and starter-placeholder routing detection for CI-friendly policy checks.
 - Tightened `AGENTS.md` so work in this repo continually feeds product-feedback improvements back into the memory system without relying on transient chat context.
 - Added routing-confidence reporting, calibration-artifact contract checks, lifecycle pressure for notes that should shrink or disappear, and earlier multi-home pressure for notes drifting between domains, invariants, runbooks, and skills.
+- Added source-record metadata for upgrades and prompts, including source labels, recorded dates, age-based doctor guidance, and branch-pinned `@main` runner specs instead of floating raw Git URLs.
 
 ## Blockers
 
@@ -89,4 +90,4 @@ Active
 
 ## Last confirmed
 
-2026-04-05 during wishlist hardening follow-up
+2026-04-05 during source-record hardening follow-up

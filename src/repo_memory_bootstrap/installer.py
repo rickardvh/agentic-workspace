@@ -16,9 +16,9 @@ from repo_memory_bootstrap._installer_memory import (
     _build_route_summary,
     _dedupe_route_suggestions,
     _emit_improvement_pressure,
+    _emit_memory_shape_pressure,
     _emit_multi_home_pressure,
     _emit_note_lifecycle_pressure,
-    _emit_memory_shape_pressure,
     _evaluate_route_report_fixtures,
     _find_manifest_matches,
     _first_improvement_hint,
@@ -333,12 +333,45 @@ def upgrade_bootstrap(
     result.add(
         "current",
         target_root / upgrade_source_path,
-        f"upgrade source resolved to {source_choice['source_type']} ({source_choice['source_ref']})",
+        (
+            f"upgrade source resolved to {source_choice['source_type']} "
+            f"({source_choice['source_ref']})"
+            + (
+                f"; label={source_choice['source_label']}; recorded_at={source_choice['recorded_at']}"
+                if source_choice.get("source_label") and source_choice.get("recorded_at")
+                else ""
+            )
+        ),
         role="payload-contract",
         safety="safe",
         source=upgrade_source_path.as_posix(),
         category="safe-update",
     )
+    source_age_days = source_choice.get("age_days")
+    if isinstance(source_age_days, int):
+        result.add(
+            "current",
+            target_root / upgrade_source_path,
+            f"upgrade source age is {source_age_days} days",
+            role="payload-contract",
+            safety="safe",
+            source=upgrade_source_path.as_posix(),
+            category="safe-update",
+        )
+        threshold = source_choice.get("recommended_upgrade_after_days")
+        if isinstance(threshold, int) and source_age_days >= threshold:
+            result.add(
+                "warning",
+                target_root / upgrade_source_path,
+                (
+                    f"recorded upgrade source is {source_age_days} days old; "
+                    "consider refreshing `.agentic-memory/UPGRADE-SOURCE.toml` when it is safe"
+                ),
+                role="payload-contract",
+                safety="safe",
+                source=upgrade_source_path.as_posix(),
+                category="safe-update",
+            )
     if detected_layout == "legacy":
         migration_result = migrate_layout(target=target_root, dry_run=dry_run)
         result.actions.extend(migration_result.actions)
@@ -553,6 +586,50 @@ def doctor_bootstrap(
     result = _new_result(target_root, dry_run=True, message="Doctor report")
     _record_repo_context_warnings(target_root, result)
     target_layout = "legacy" if detect_bootstrap_layout(target_root) == "legacy" else "managed-root"
+    source_choice = resolve_upgrade_source(target_root)
+    upgrade_source_path = LEGACY_UPGRADE_SOURCE_PATH if target_layout == "legacy" else UPGRADE_SOURCE_PATH
+    result.add(
+        "current",
+        target_root / upgrade_source_path,
+        (
+            f"upgrade source resolved to {source_choice['source_type']} "
+            f"({source_choice['source_ref']})"
+            + (
+                f"; label={source_choice['source_label']}; recorded_at={source_choice['recorded_at']}"
+                if source_choice.get("source_label") and source_choice.get("recorded_at")
+                else ""
+            )
+        ),
+        role="payload-contract",
+        safety="safe",
+        source=upgrade_source_path.as_posix(),
+        category="safe-update",
+    )
+    source_age_days = source_choice.get("age_days")
+    if isinstance(source_age_days, int):
+        result.add(
+            "current",
+            target_root / upgrade_source_path,
+            f"upgrade source age is {source_age_days} days",
+            role="payload-contract",
+            safety="safe",
+            source=upgrade_source_path.as_posix(),
+            category="safe-update",
+        )
+        threshold = source_choice.get("recommended_upgrade_after_days")
+        if isinstance(threshold, int) and source_age_days >= threshold:
+            result.add(
+                "warning",
+                target_root / upgrade_source_path,
+                (
+                    f"recorded upgrade source is {source_age_days} days old; "
+                    "consider refreshing `.agentic-memory/UPGRADE-SOURCE.toml` when it is safe"
+                ),
+                role="payload-contract",
+                safety="safe",
+                source=upgrade_source_path.as_posix(),
+                category="safe-update",
+            )
     _plan_from_entries(
         source_root=source_root,
         target_root=target_root,
@@ -1089,11 +1166,15 @@ def report_routes(*, target: str | Path | None = None) -> InstallResult:
             "fixture_count_exceeding_strong_warning": fixture_summary["fixture_count_exceeding_strong_warning"],
         },
         "routing_confidence": {
-            "high_confidence_fixture_count": sum(1 for item in fixture_results if item.get("valid") and item.get("routing_confidence") == "high"),
+            "high_confidence_fixture_count": sum(
+                1 for item in fixture_results if item.get("valid") and item.get("routing_confidence") == "high"
+            ),
             "medium_confidence_fixture_count": sum(
                 1 for item in fixture_results if item.get("valid") and item.get("routing_confidence") == "medium"
             ),
-            "low_confidence_fixture_count": sum(1 for item in fixture_results if item.get("valid") and item.get("routing_confidence") == "low"),
+            "low_confidence_fixture_count": sum(
+                1 for item in fixture_results if item.get("valid") and item.get("routing_confidence") == "low"
+            ),
         },
         "startup_cost": {
             "average_routed_line_count": fixture_summary["average_routed_line_count"],

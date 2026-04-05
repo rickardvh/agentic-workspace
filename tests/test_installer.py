@@ -591,7 +591,9 @@ def test_install_writes_upgrade_source_metadata(tmp_path: Path) -> None:
 
     text = (target / ".agentic-memory" / "UPGRADE-SOURCE.toml").read_text(encoding="utf-8")
     assert 'source_type = "git"' in text
-    assert "git+https://github.com/Tenfifty/agentic-memory" in text
+    assert "git+https://github.com/Tenfifty/agentic-memory@main" in text
+    assert 'source_label = "agentic-memory-bootstrap main"' in text
+    assert 'recorded_at = "2026-04-05"' in text
 
 
 def test_adopt_writes_upgrade_source_metadata(tmp_path: Path) -> None:
@@ -604,6 +606,7 @@ def test_adopt_writes_upgrade_source_metadata(tmp_path: Path) -> None:
 
     text = (target / ".agentic-memory" / "UPGRADE-SOURCE.toml").read_text(encoding="utf-8")
     assert 'source_type = "git"' in text
+    assert "git+https://github.com/Tenfifty/agentic-memory@main" in text
 
 
 def test_build_substitutions_supports_explicit_placeholder_flags(
@@ -736,7 +739,10 @@ def test_resolve_upgrade_source_defaults_to_git_when_metadata_missing(
     resolved = installer.resolve_upgrade_source(target=target)
 
     assert resolved["source_type"] == "git"
-    assert resolved["source_ref"] == "git+https://github.com/Tenfifty/agentic-memory"
+    assert resolved["source_ref"] == "git+https://github.com/Tenfifty/agentic-memory@main"
+    assert resolved["source_label"] == "agentic-memory-bootstrap main"
+    assert resolved["recorded_at"] == "2026-04-05"
+    assert resolved["recommended_upgrade_after_days"] == 30
 
 
 def test_upgrade_reports_resolved_source(tmp_path: Path) -> None:
@@ -750,6 +756,37 @@ def test_upgrade_reports_resolved_source(tmp_path: Path) -> None:
         action.path == target / ".agentic-memory" / "UPGRADE-SOURCE.toml"
         and action.kind == "current"
         and "upgrade source resolved to git" in action.detail
+        for action in result.actions
+    )
+    assert any(
+        action.path == target / ".agentic-memory" / "UPGRADE-SOURCE.toml"
+        and action.kind == "current"
+        and "recorded_at=2026-04-05" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_reports_stale_upgrade_source_metadata(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+    (target / ".agentic-memory" / "UPGRADE-SOURCE.toml").write_text(
+        (
+            'source_type = "git"\n'
+            'source_ref = "git+https://github.com/Tenfifty/agentic-memory@main"\n'
+            'source_label = "agentic-memory-bootstrap main"\n'
+            'recorded_at = "2025-01-01"\n'
+            "recommended_upgrade_after_days = 30\n"
+        ),
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.path == target / ".agentic-memory" / "UPGRADE-SOURCE.toml"
+        and action.kind == "warning"
+        and "consider refreshing `.agentic-memory/UPGRADE-SOURCE.toml`" in action.detail
         for action in result.actions
     )
 
@@ -1904,7 +1941,7 @@ def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(
     prompt = cli._build_agent_prompt("install", target="C:/repo")
 
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
-    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap init --target C:/repo" in prompt
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap init --target C:/repo" in prompt
     assert "`install` skill at `C:/repo/.agentic-memory/bootstrap/skills`" in prompt
     assert "bootstrap-cleanup --target C:/repo" in prompt
     assert ".agentic-memory/" in prompt
@@ -1918,7 +1955,7 @@ def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
     prompt = cli._build_agent_prompt("adopt", target="C:/repo")
 
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
-    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap adopt --target C:/repo" in prompt
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap adopt --target C:/repo" in prompt
     assert "`install` skill at `C:/repo/.agentic-memory/bootstrap/skills`" in prompt
     assert "`populate` from the same path" in prompt
     assert "bootstrap-cleanup --target C:/repo" in prompt
@@ -1931,7 +1968,7 @@ def test_build_populate_prompt_mentions_task_context_heuristic(monkeypatch) -> N
     monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     prompt = cli._build_agent_prompt("populate", target="C:/repo")
 
-    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap current show --target C:/repo" in prompt
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap current show --target C:/repo" in prompt
     assert "`populate` skill at `C:/repo/.agentic-memory/bootstrap/skills`" in prompt
     assert "overview note only" in prompt
     assert "task-context.md" in prompt
@@ -1949,7 +1986,7 @@ def test_build_upgrade_prompt_mentions_local_bootstrap_skills(monkeypatch) -> No
     assert "recorded upgrade source automatically" in prompt
     assert "packaged upgrade flow for this repo" in prompt
     assert "prefer the installed `agentic-memory-bootstrap` CLI when available" in prompt
-    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target <repo>" in prompt
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap upgrade --target <repo>" in prompt
     assert "bootstrap-cleanup --target C:/repo" not in prompt
     assert not prompt.startswith("Run `")
 
@@ -1971,14 +2008,14 @@ def test_build_upgrade_prompt_uses_local_source_when_recorded(monkeypatch, tmp_p
     assert "recorded upgrade source automatically" in prompt
     assert "packaged upgrade flow for this repo" in prompt
     assert "uvx --from C:/src/agentic-memory agentic-memory-bootstrap upgrade --target <repo>" in prompt
-    assert "git+https://github.com/Tenfifty/agentic-memory" not in prompt
+    assert "git+https://github.com/Tenfifty/agentic-memory@main" not in prompt
 
 
 def test_build_uninstall_prompt_mentions_bundled_skill(monkeypatch) -> None:
     monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
     prompt = cli._build_agent_prompt("uninstall", target="C:/repo")
 
-    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap uninstall --target C:/repo" in prompt
+    assert "uvx --from git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap uninstall --target C:/repo" in prompt
     assert "bootstrap-uninstall" in prompt
 
 
@@ -1991,7 +2028,7 @@ def test_build_prompt_falls_back_to_pipx_when_uvx_is_missing(monkeypatch) -> Non
     assert "Use the checked-in `memory-upgrade` skill" in prompt
     assert "C:/repo/.agentic-memory/skills/" in prompt
     assert "recorded upgrade source automatically" in prompt
-    assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory agentic-memory-bootstrap upgrade --target <repo>" in prompt
+    assert "pipx run --spec git+https://github.com/Tenfifty/agentic-memory@main agentic-memory-bootstrap upgrade --target <repo>" in prompt
     assert "uvx --from" not in prompt
 
 
@@ -3246,8 +3283,7 @@ def test_doctor_emits_multi_home_pressure_for_invariant_heavy_runbook(tmp_path: 
     (target / "memory" / "runbooks").mkdir(parents=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
     (target / "memory" / "runbooks" / "release.md").write_text(
-        "# Release\n\n"
-        + "\n".join("The service must remain compatible and must never skip validation." for _ in range(8)),
+        "# Release\n\n" + "\n".join("The service must remain compatible and must never skip validation." for _ in range(8)),
         encoding="utf-8",
     )
     (target / "memory" / "manifest.toml").write_text(
@@ -3521,8 +3557,7 @@ subsystems = ["memory-system"]
     result = installer.doctor_bootstrap(target=target)
 
     assert not any(
-        action.role == "memory-overlap-audit"
-        and action.path == target / "memory" / "decisions" / "wishlist.md"
+        action.role == "memory-overlap-audit" and action.path == target / "memory" / "decisions" / "wishlist.md"
         for action in result.actions
     )
 
