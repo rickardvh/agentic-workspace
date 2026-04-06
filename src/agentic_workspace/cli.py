@@ -505,26 +505,13 @@ def _run_lifecycle_command(
         )
         for module_name in selected_modules
     ]
+    summary = _summarise_reports(target_root=target_root, reports=reports)
     warnings: list[str] = []
     placeholders: list[str] = []
     stale_generated_surfaces: list[str] = []
-    for report in reports:
-        for action in report["actions"]:
-            relative_path = _display_path(action.get("path", "."), target_root)
-            detail = str(action.get("detail", ""))
-            kind = str(action.get("kind", ""))
-            if kind in {"manual review", "warning", "missing"}:
-                _append_unique(warnings, _format_issue(relative_path=relative_path, detail=detail))
-            if _is_placeholder_issue(detail=detail):
-                _append_unique(placeholders, relative_path)
-            if _is_generated_artifact(relative_path=relative_path, detail=detail) and kind in {"manual review", "warning", "updated", "would update"}:
-                _append_unique(stale_generated_surfaces, relative_path)
-        for warning in report["warnings"]:
-            relative_path = _display_path(warning.get("path", "."), target_root)
-            message = str(warning.get("message", "needs review"))
-            _append_unique(warnings, _format_issue(relative_path=relative_path, detail=message))
-            if _is_placeholder_issue(detail=message):
-                _append_unique(placeholders, relative_path)
+    warnings.extend(summary["warnings"])
+    placeholders.extend(summary["placeholders"])
+    stale_generated_surfaces.extend(summary["stale_generated_surfaces"])
 
     return {
         "command": command_name,
@@ -533,11 +520,70 @@ def _run_lifecycle_command(
         "preset": resolved_preset,
         "dry_run": dry_run,
         "health": "healthy" if not warnings else "attention-needed",
+        "created": summary["created"],
+        "updated_managed": summary["updated_managed"],
+        "preserved_existing": summary["preserved_existing"],
+        "needs_review": summary["needs_review"],
+        "generated_artifacts": summary["generated_artifacts"],
         "warnings": warnings,
         "placeholders": placeholders,
         "stale_generated_surfaces": stale_generated_surfaces,
         "next_steps": _lifecycle_next_steps(command_name=command_name, target_root=target_root, warnings=warnings),
         "reports": reports,
+    }
+
+
+def _summarise_reports(*, target_root: Path, reports: list[dict[str, Any]]) -> dict[str, list[str]]:
+    created: list[str] = []
+    updated_managed: list[str] = []
+    preserved_existing: list[str] = []
+    needs_review: list[str] = []
+    generated_artifacts: list[str] = []
+    warnings: list[str] = []
+    placeholders: list[str] = []
+    stale_generated_surfaces: list[str] = []
+
+    for report in reports:
+        for action in report["actions"]:
+            relative_path = _display_path(action.get("path", "."), target_root)
+            detail = str(action.get("detail", ""))
+            kind = str(action.get("kind", ""))
+            if _is_generated_artifact(relative_path=relative_path, detail=detail):
+                _append_unique(generated_artifacts, relative_path)
+            if _is_placeholder_issue(detail=detail):
+                _append_unique(placeholders, relative_path)
+            if kind in {"created", "copied", "would create", "would copy"}:
+                _append_unique(created, relative_path)
+            elif kind in {"updated", "overwritten", "would update", "would overwrite"}:
+                _append_unique(updated_managed, relative_path)
+            elif kind == "skipped":
+                _append_unique(preserved_existing, relative_path)
+            elif kind in {"manual review", "missing", "warning"}:
+                issue = _format_issue(relative_path=relative_path, detail=detail)
+                _append_unique(needs_review, issue)
+                if kind in {"missing", "warning"}:
+                    _append_unique(warnings, issue)
+            if _is_generated_artifact(relative_path=relative_path, detail=detail) and kind in {"manual review", "warning", "updated", "would update"}:
+                _append_unique(stale_generated_surfaces, relative_path)
+
+        for warning in report["warnings"]:
+            relative_path = _display_path(warning.get("path", "."), target_root)
+            message = str(warning.get("message", "needs review"))
+            issue = _format_issue(relative_path=relative_path, detail=message)
+            _append_unique(needs_review, issue)
+            _append_unique(warnings, issue)
+            if _is_placeholder_issue(detail=message):
+                _append_unique(placeholders, relative_path)
+
+    return {
+        "created": _dedupe(created),
+        "updated_managed": _dedupe(updated_managed),
+        "preserved_existing": _dedupe(preserved_existing),
+        "needs_review": _dedupe(needs_review),
+        "generated_artifacts": _dedupe(generated_artifacts),
+        "warnings": _dedupe(warnings),
+        "placeholders": _dedupe(placeholders),
+        "stale_generated_surfaces": _dedupe(stale_generated_surfaces),
     }
 
 
@@ -702,6 +748,11 @@ def _emit_lifecycle_text(payload: dict[str, Any]) -> None:
     print(f"Command: {payload['command']}{' (dry-run)' if payload.get('dry_run') else ''}")
     print(f"Modules: {', '.join(payload['modules'])}")
     print(f"Health: {payload['health']}")
+    _print_path_list("Created", payload["created"])
+    _print_path_list("Updated managed", payload["updated_managed"])
+    _print_path_list("Preserved existing", payload["preserved_existing"])
+    _print_path_list("Needs review", payload["needs_review"])
+    _print_path_list("Generated artifacts", payload["generated_artifacts"])
     _print_path_list("Warnings", payload["warnings"])
     _print_path_list("Placeholders", payload["placeholders"])
     _print_path_list("Stale generated surfaces", payload["stale_generated_surfaces"])

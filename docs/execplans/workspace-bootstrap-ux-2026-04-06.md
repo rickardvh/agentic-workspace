@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Replace the root workspace CLI install/adopt split with the spec-driven `init` workflow and bootstrap report contract.
+- Exercise the root lifecycle against messier repo fixtures and tighten install-mode heuristics plus prompt classification where current detection still feels too coarse.
 
 Keep exactly one immediate action by default; avoid multi-step mini-plans here.
 
@@ -67,3 +67,4 @@ Keep invariants contract-shaped and brief.
 ## Drift Log
 
 - 2026-04-06: Promoted from the workspace bootstrap UX specification so the public entrypoint, report contract, and handoff workflow become explicit product behavior instead of an implicit thin wrapper.
+- 2026-04-06: Dogfooding the root CLI showed that `init` had a useful top-level summary but the other lifecycle verbs still exposed mostly raw module reports, so the first hardening milestone standardized those summary categories before pushing further into adopt heuristics.

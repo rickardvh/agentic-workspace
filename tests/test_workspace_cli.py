@@ -179,6 +179,38 @@ def test_status_real_init_reports_workspace_health(tmp_path: Path, capsys) -> No
     assert "health" in payload
 
 
+def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["doctor", "--modules", "planning,memory", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["command"] == "doctor"
+    assert payload["created"] == ["planning", "memory"]
+    assert payload["updated_managed"] == []
+    assert payload["preserved_existing"] == []
+    assert payload["needs_review"] == []
+    assert payload["generated_artifacts"] == []
+
+
+def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))
+
+    assert cli.main(["upgrade", "--modules", "planning", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["command"] == "upgrade"
+    assert payload["updated_managed"] == ["tools/AGENT_QUICKSTART.md"]
+    assert payload["preserved_existing"] == ["AGENTS.md"]
+    assert payload["generated_artifacts"] == ["tools/AGENT_QUICKSTART.md"]
+    assert payload["needs_review"] == ["README.md: inspect manually"]
+    assert payload["warnings"] == []
+    assert payload["stale_generated_surfaces"] == ["tools/AGENT_QUICKSTART.md"]
+
+
 def test_adapt_action_supports_slotted_dataclass(tmp_path: Path) -> None:
     action = SlottedAction(kind="copied", path=tmp_path / "demo.txt", detail="ok")
 
@@ -232,6 +264,37 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
             detector=lambda detected_root, module_name=module_name: (detected_root / module_name).exists(),
         )
         for module_name in ("planning", "memory")
+    }
+
+
+def _descriptors_with_mixed_actions(target_root: Path) -> dict[str, cli.ModuleDescriptor]:
+    def _upgrade_handler(**kwargs):
+        return FakeResult(
+            target_root=target_root,
+            message="upgrade planning",
+            dry_run=bool(kwargs.get("dry_run", False)),
+            actions=[
+                FakeAction(kind="would update", path=target_root / "tools" / "AGENT_QUICKSTART.md", detail="render quickstart from manifest"),
+                FakeAction(kind="skipped", path=target_root / "AGENTS.md", detail="repo-owned surface left unchanged"),
+                FakeAction(kind="manual review", path=target_root / "README.md", detail="inspect manually"),
+            ],
+            warnings=[],
+        )
+
+    return {
+        "planning": cli.ModuleDescriptor(
+            name="planning",
+            description="planning module",
+            commands={
+                "install": _upgrade_handler,
+                "adopt": _upgrade_handler,
+                "upgrade": _upgrade_handler,
+                "uninstall": _upgrade_handler,
+                "doctor": _upgrade_handler,
+                "status": _upgrade_handler,
+            },
+            detector=lambda detected_root: True,
+        )
     }
 
 
