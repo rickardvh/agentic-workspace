@@ -18,6 +18,7 @@ Package-local contract for work under `packages/planning/`.
 2. Read `pyproject.toml` when changing packaging, CLI entry points, or metadata.
 3. Read only the relevant files under `src/repo_planning_bootstrap/`, `bootstrap/`, `skills/`, or `tests/` for the task.
 4. When the task affects planning ownership, startup routing, generated agent docs, or managed wrappers, re-check `../../AGENTS.md`, `../../TODO.md`, and the active execplan.
+5. When working on shipped package behavior, refresh the installed package through the canonical upgrade workflow first so the task starts from the latest checked-in package version.
 
 ## Sources Of Truth
 

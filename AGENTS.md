@@ -22,6 +22,7 @@ Resolve instruction conflicts in this order:
 3. Read the active feature plan in `docs/execplans/` when the TODO surface points there.
 4. Read `ROADMAP.md` only when promoting work.
 5. Load package-local docs only for the package being edited.
+6. Before touching a shipped package, refresh it to the latest checked-in version through that package's canonical update workflow so local work starts from the current package contract.
 
 Do not start coding from chat context alone when the same information exists in checked-in files.
 Do not bulk-read all planning surfaces.
