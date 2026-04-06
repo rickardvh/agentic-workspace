@@ -576,6 +576,7 @@ def _run_lifecycle_command(
     descriptors: dict[str, ModuleDescriptor],
     dry_run: bool,
 ) -> dict[str, Any]:
+    registry = _module_registry(descriptors=descriptors, target_root=target_root)
     reports = [
         _invoke_module_command(
             command_name=command_name,
@@ -610,6 +611,18 @@ def _run_lifecycle_command(
         "warnings": warnings,
         "placeholders": placeholders,
         "stale_generated_surfaces": stale_generated_surfaces,
+        "registry": [
+            {
+                "name": entry.name,
+                "description": entry.description,
+                "commands": list(entry.lifecycle_commands),
+                "autodetects_installation": entry.autodetects_installation,
+                "installed": entry.installed,
+                "dry_run_commands": list(entry.dry_run_commands),
+                "force_commands": list(entry.force_commands),
+            }
+            for entry in registry
+        ],
         "next_steps": _lifecycle_next_steps(command_name=command_name, target_root=target_root, warnings=warnings),
         "reports": reports,
     }

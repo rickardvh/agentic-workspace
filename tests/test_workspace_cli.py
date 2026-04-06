@@ -337,6 +337,8 @@ def test_status_real_init_reports_workspace_health(tmp_path: Path, capsys) -> No
     assert payload["command"] == "status"
     assert payload["modules"] == ["planning", "memory"]
     assert "health" in payload
+    assert payload["registry"][0]["name"] == "planning"
+    assert payload["registry"][1]["installed"] is True
 
 
 def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: Path, capsys) -> None:
@@ -353,6 +355,7 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
     assert payload["preserved_existing"] == []
     assert payload["needs_review"] == []
     assert payload["generated_artifacts"] == []
+    assert payload["registry"][0]["name"] == "planning"
 
 
 def test_doctor_real_init_preserves_package_contract_shortlists_in_reports(tmp_path: Path, capsys) -> None:
