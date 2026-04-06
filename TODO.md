@@ -8,11 +8,11 @@ Active queue for repository work.
 
 ## Now
 
-- [stable-package-contract-freeze-2026-04-06](docs/execplans/stable-package-contract-freeze-2026-04-06.md) - Freeze the practical compatibility contract for planning and memory surfaces that should stop changing shape casually now that lifecycle wording and adoption realism are in a healthier place.
+- [first-party-module-contract-2026-04-06](docs/execplans/first-party-module-contract-2026-04-06.md) - Formalize the shared first-party module contract so the workspace layer can orchestrate planning and memory through the same explicit metadata and adapter boundaries instead of accreted module-specific knowledge.
 
 ## Action
 
-- Treat stable package contract freeze as the current top priority: turn the already-proved planning and memory surface boundaries into an explicit compatibility target.
-- Keep the tranche bounded around identifying the installed surfaces that should stop changing shape casually, plus the validation and docs updates needed to support that promise.
-- Favor contract clarification and compatibility discipline over new lifecycle surface invention.
+- Treat first-party module contract as the current top priority: turn the existing planning and memory orchestration shape into an explicit shared internal module contract.
+- Keep the tranche bounded around first-party module metadata, adapter behavior, and ownership boundaries rather than registry or plugin design.
+- Favor removing root-layer special cases and duplicate module knowledge over adding new lifecycle verbs.
 - Keep root planning surfaces compact; archive completed plans instead of letting TODO accumulate residue.

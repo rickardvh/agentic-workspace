@@ -12,9 +12,9 @@
 
 ## Active Milestone
 
-- Status: in-progress
+- Status: completed
 - Scope: identify the installed planning and memory surfaces that now behave like compatibility contract surfaces, document their expected stability, and tighten validation or docs where the current promise is still ambiguous.
-- Ready: ready
+- Ready: false
 - Blocked: none
 - optional_deps: none
 
@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Decide whether the stable-contract tranche is now ready to archive, or whether one more validation lane should be added before treating the frozen boundary as sufficiently proved.
+- Promote the first-party module contract tranche so the workspace layer can replace lingering module-specific orchestration assumptions with an explicit shared internal contract.
 
 ## Blockers
 
@@ -31,6 +31,7 @@ Keep one active milestone by default.
 ## Touched Paths
 
 - ROADMAP.md
+- README.md
 - docs/
 - packages/memory/
 - packages/planning/
@@ -54,6 +55,7 @@ Keep invariants contract-shaped and brief.
 - make maintainer-surfaces
 - cd packages/planning && uv run pytest
 - cd packages/memory && uv run pytest
+- uv run pytest tests/test_workspace_cli.py
 
 ## Completion Criteria
 
