@@ -29,6 +29,14 @@ MODULE_SIGNAL_PATHS = {
         Path(".agentic-workspace/memory"),
     ),
 }
+MODULE_COMMAND_ARGS = {
+    "install": ("target", "dry_run", "force"),
+    "adopt": ("target", "dry_run"),
+    "upgrade": ("target", "dry_run"),
+    "uninstall": ("target", "dry_run"),
+    "doctor": ("target",),
+    "status": ("target",),
+}
 PLACEHOLDER_RE = re.compile(r"<[A-Z][A-Z0-9_]+>")
 
 
@@ -195,19 +203,18 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
     )
 
     return {
-        "planning": ModuleDescriptor(
+        "planning": _build_module_descriptor(
             name="planning",
             description="Repo-native execution planning bootstrap and maintenance.",
-            commands={
-                "install": lambda *, target, dry_run, force: planning_install_bootstrap(target=target, dry_run=dry_run, force=force),
-                "adopt": lambda *, target, dry_run: planning_adopt_bootstrap(target=target, dry_run=dry_run),
-                "upgrade": lambda *, target, dry_run: planning_upgrade_bootstrap(target=target, dry_run=dry_run),
-                "uninstall": lambda *, target, dry_run: planning_uninstall_bootstrap(target=target, dry_run=dry_run),
-                "doctor": lambda *, target: planning_doctor_bootstrap(target=target),
-                "status": lambda *, target: planning_collect_status(target=target),
-            },
+            install_handler=planning_install_bootstrap,
+            adopt_handler=planning_adopt_bootstrap,
+            upgrade_handler=planning_upgrade_bootstrap,
+            uninstall_handler=planning_uninstall_bootstrap,
+            doctor_handler=planning_doctor_bootstrap,
+            status_handler=planning_collect_status,
             detector=lambda target_root: (
-                (target_root / "TODO.md").exists() and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+                (target_root / "TODO.md").exists()
+                and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
             ),
             install_signals=MODULE_SIGNAL_PATHS["planning"],
             workflow_surfaces=(
@@ -226,26 +233,16 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 Path("tools/AGENT_QUICKSTART.md"),
                 Path("tools/AGENT_ROUTING.md"),
             ),
-            command_args={
-                "install": ("target", "dry_run", "force"),
-                "adopt": ("target", "dry_run"),
-                "upgrade": ("target", "dry_run"),
-                "uninstall": ("target", "dry_run"),
-                "doctor": ("target",),
-                "status": ("target",),
-            },
         ),
-        "memory": ModuleDescriptor(
+        "memory": _build_module_descriptor(
             name="memory",
             description="Durable repository knowledge bootstrap and maintenance.",
-            commands={
-                "install": lambda *, target, dry_run, force: memory_install_bootstrap(target=target, dry_run=dry_run, force=force),
-                "adopt": lambda *, target, dry_run: memory_adopt_bootstrap(target=target, dry_run=dry_run),
-                "upgrade": lambda *, target, dry_run: memory_upgrade_bootstrap(target=target, dry_run=dry_run),
-                "uninstall": lambda *, target, dry_run: memory_uninstall_bootstrap(target=target, dry_run=dry_run),
-                "doctor": lambda *, target: memory_doctor_bootstrap(target=target),
-                "status": lambda *, target: memory_collect_status(target=target),
-            },
+            install_handler=memory_install_bootstrap,
+            adopt_handler=memory_adopt_bootstrap,
+            upgrade_handler=memory_upgrade_bootstrap,
+            uninstall_handler=memory_uninstall_bootstrap,
+            doctor_handler=memory_doctor_bootstrap,
+            status_handler=memory_collect_status,
             detector=lambda target_root: (
                 (target_root / "memory" / "index.md").exists() and (target_root / ".agentic-workspace" / "memory").exists()
             ),
@@ -257,16 +254,42 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 Path(".agentic-workspace/memory"),
             ),
             generated_artifacts=(),
-            command_args={
-                "install": ("target", "dry_run", "force"),
-                "adopt": ("target", "dry_run"),
-                "upgrade": ("target", "dry_run"),
-                "uninstall": ("target", "dry_run"),
-                "doctor": ("target",),
-                "status": ("target",),
-            },
         ),
     }
+
+
+def _build_module_descriptor(
+    *,
+    name: str,
+    description: str,
+    install_handler: Callable[..., Any],
+    adopt_handler: Callable[..., Any],
+    upgrade_handler: Callable[..., Any],
+    uninstall_handler: Callable[..., Any],
+    doctor_handler: Callable[..., Any],
+    status_handler: Callable[..., Any],
+    detector: Callable[[Path], bool],
+    install_signals: tuple[Path, ...],
+    workflow_surfaces: tuple[Path, ...],
+    generated_artifacts: tuple[Path, ...],
+) -> ModuleDescriptor:
+    return ModuleDescriptor(
+        name=name,
+        description=description,
+        commands={
+            "install": lambda *, target, dry_run, force: install_handler(target=target, dry_run=dry_run, force=force),
+            "adopt": lambda *, target, dry_run: adopt_handler(target=target, dry_run=dry_run),
+            "upgrade": lambda *, target, dry_run: upgrade_handler(target=target, dry_run=dry_run),
+            "uninstall": lambda *, target, dry_run: uninstall_handler(target=target, dry_run=dry_run),
+            "doctor": lambda *, target: doctor_handler(target=target),
+            "status": lambda *, target: status_handler(target=target),
+        },
+        detector=detector,
+        install_signals=install_signals,
+        workflow_surfaces=workflow_surfaces,
+        generated_artifacts=generated_artifacts,
+        command_args=MODULE_COMMAND_ARGS,
+    )
 
 
 def _selected_modules(

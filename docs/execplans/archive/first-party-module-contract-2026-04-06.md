@@ -12,9 +12,9 @@
 
 ## Active Milestone
 
-- Status: in-progress
+- Status: completed
 - Scope: audit the current workspace orchestration path, name the shared first-party module contract it already assumes, and tighten root-module boundaries where that contract is currently implicit or duplicated.
-- Ready: ready
+- Ready: completed
 - Blocked: none
 - optional_deps: none
 
@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Tighten the remaining implicit first-party module contract around module construction so first-party descriptors can be assembled through one explicit helper or factory instead of repeated package-specific import wiring in the CLI body.
+- Archived after the workspace layer made first-party module metadata, surface ownership, generated-artifact classification, and descriptor construction explicit enough to support the next registry-oriented tranche.
 
 ## Blockers
 
@@ -51,8 +51,6 @@ Keep invariants contract-shaped and brief.
 ## Validation Commands
 
 - uv run pytest tests/test_workspace_cli.py
-- cd packages/planning && uv run pytest
-- cd packages/memory && uv run pytest
 - uv run python scripts/check/check_planning_surfaces.py
 
 ## Completion Criteria
@@ -65,5 +63,4 @@ Keep invariants contract-shaped and brief.
 ## Drift Log
 
 - 2026-04-06: Promoted after stable contract freeze landed cleanly enough that the next orchestration risk is no longer package-surface ambiguity but implicit module-contract knowledge living in the workspace layer.
-- 2026-04-06: Made the first shared contract slice explicit in workspace module descriptors by moving install-signal metadata and per-command argument support out of root branching and into descriptor-owned fields, then locked that shape with workspace CLI coverage.
-- 2026-04-06: Moved workflow-overlap and generated-artifact classification into descriptor-owned metadata as well, so init ambiguity checks and lifecycle summaries no longer depend on package-specific root path lists outside the first-party module contract.
+- 2026-04-06: Moved install-signal metadata, per-command argument support, workflow-overlap paths, generated-artifact classification, and descriptor construction into the explicit first-party module contract, then locked the root behavior with focused workspace CLI coverage.

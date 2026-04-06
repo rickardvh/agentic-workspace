@@ -8,11 +8,11 @@ Active queue for repository work.
 
 ## Now
 
-- [first-party-module-contract-2026-04-06](docs/execplans/first-party-module-contract-2026-04-06.md) - Formalize the shared first-party module contract so the workspace layer can orchestrate planning and memory through the same explicit metadata and adapter boundaries instead of accreted module-specific knowledge.
+- [module-registry-capability-model-2026-04-06](docs/execplans/module-registry-capability-model-2026-04-06.md) - Turn the explicit first-party module contract into a queryable registry-style model so the workspace layer can enumerate module capabilities and lifecycle support without re-encoding that knowledge across commands.
 
 ## Action
 
-- Treat first-party module contract as the current top priority: turn the existing planning and memory orchestration shape into an explicit shared internal module contract.
-- Keep the tranche bounded around first-party module metadata, adapter behavior, and ownership boundaries rather than registry or plugin design.
-- Favor removing root-layer special cases and duplicate module knowledge over adding new lifecycle verbs.
+- Treat the internal module registry model as the current top priority: build on the explicit first-party module contract without broadening into a public plugin surface.
+- Keep the tranche bounded around queryable module metadata, lifecycle capability enumeration, and root orchestration simplification rather than extension hooks.
+- Favor replacing hard-coded module lists and repeated orchestration knowledge over adding new lifecycle verbs.
 - Keep root planning surfaces compact; archive completed plans instead of letting TODO accumulate residue.
