@@ -13,16 +13,16 @@ Inactive long-horizon candidate work.
 - Docs-surface governance landed across the Memory README first screen, the root docs map, maintainer-doc role scoping, workflow-surface history, and a root maintainer-surface role-drift check.
 - The workspace bootstrap UX tranche landed across the root `init` lifecycle, standardized lifecycle summaries, messy-repo inspection heuristics, adopter docs, and focused root CLI regression coverage.
 - Dogfooding the root lifecycle surfaced two concrete lessons that are now folded back into the plan history: non-`init` lifecycle verbs needed the same top-level summary shape as `init`, and partial-state detection in messy repos needs to travel with ownership-reconciliation warnings instead of pretending those concerns are separate.
-- The current promoted tranche is execution scaling so installed planning can make the simple-task fast path and promotion triggers explicit after the lifecycle surface work.
+- The execution-scaling tranche landed across planning docs, shipped bootstrap payloads, manifest-backed maintainer guidance, and checker heuristics that now fail closed when direct tasks pick up restart, handoff, recovery, or concurrent-branch weight.
+- Dogfooding that tranche surfaced a concrete lesson now folded back into plan history: the direct-task fast path is only trustworthy when the same promotion triggers appear in docs, generated maintainer guidance, and checker warnings instead of living in just one surface.
+- The current promoted tranche is install/adopt fixture hardening so conservative lifecycle behavior can be proven against representative repo shapes instead of inferred from happy-path payload checks.
 - A longer-horizon maturity roadmap now anchors the next product phases after the active UX tranche: lifecycle stability, real-world adopt hardening, contract freeze, generated-surface trust, external selective-adoption proof, disciplined dogfooding, and final public-surface tightening.
 - A broader modular-platform vision now frames that maturity work as part of a larger outcome: Agentic Workspace should become a modular agent-ready platform with first-party managed modules, registry-ready orchestration, intentional composition, and a future extension boundary that still preserves strict ownership.
-- Execution-scaling contract work remains an immediate follow-on candidate inside that larger maturity program so installed planning can make the simple-task fast path and promotion triggers explicit.
 - Shared-tooling extraction remains a later support candidate inside the same maturity program, but only if duplicated checks and renderers still create sustained maintenance drag after the lifecycle and adoption phases settle.
 - Promote the next candidate only when the scope is bounded enough for a short execplan and a narrow validation story.
 
 ## Next Candidate Queue
 
-- Execution scaling contract: make direct execution an explicit success mode and define operational promotion triggers plus minimal residue rules. Promote when the active bootstrap UX tranche is archived and planning behavior still feels too ritualised in normal work.
 - Install/adopt fixture hardening: prove conservative behavior across representative empty, docs-heavy, and pre-existing workflow repositories. Promote when lifecycle UX is stable enough that adoption failures, not command shape, are the dominant remaining maturity risk.
 - Stable package contract freeze: document and freeze the memory and planning surfaces that should stop changing shape casually. Promote when lifecycle and adoption behavior have settled enough that compatibility promises will not be immediately invalidated.
 - First-party module contract: formalize the shared module metadata and adapter contract for memory and planning. Promote when lifecycle UX is stable enough that the remaining orchestration cost is mostly coming from module-specific branching in the workspace layer.

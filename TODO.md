@@ -8,12 +8,11 @@ Active queue for repository work.
 
 ## Now
 
-- [execution-scaling-contract-2026-04-06](docs/execplans/execution-scaling-contract-2026-04-06.md) - Make the simple-task direct-execution path explicit, add operational promotion triggers, and tighten minimal residue rules so planning stays adaptive instead of ritualised.
+- [install-adopt-fixture-hardening-2026-04-06](docs/execplans/install-adopt-fixture-hardening-2026-04-06.md) - Harden planning and workspace lifecycle adoption against representative empty, docs-heavy, and pre-existing workflow repositories so conservative install and adopt behavior is proven by fixtures instead of intuition.
 
 ## Action
 
-- Treat execution scaling as the current top priority: keep simple work cheap, make promotion into planning explicit, and tighten residue rules around the direct-execution path.
-- Keep the tranche bounded around three outcomes: direct execution becomes an explicit success mode, plan-promotion triggers become operational and observable, and simple-work residue rules become part of the checked-in contract.
-- Prefer documentation, liveness checks, and consistency hardening over introducing new top-level planner concepts.
-- Favor merge-safe installed file shapes, weak-authority current surfaces, and collaboration-oriented checks over repo-local workaround guidance.
+- Treat install/adopt fixture hardening as the current top priority: prove conservative behavior against realistic repo shapes rather than relying on happy-path payload checks.
+- Keep the tranche bounded around representative fixture coverage, preserve-versus-manage expectations, and narrow lifecycle validation for docs-heavy and partially pre-owned repos.
+- Favor package-local fixture breadth and adoption realism over new lifecycle surface invention.
 - Keep root planning surfaces compact; archive completed plans instead of letting TODO accumulate residue.

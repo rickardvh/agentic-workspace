@@ -12,7 +12,7 @@
 
 ## Active Milestone
 
-- Status: in-progress
+- Status: completed
 - Scope: turn recent maintainer feedback into a bounded execution-scaling tranche covering the direct-execution fast path, operational promotion triggers, minimal residue rules, and validation guidance for the right failure cases.
 - Ready: ready
 - Blocked: none
@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Re-run the planning checks and decide whether the tranche is complete enough to archive or still needs a final residue-focused pass.
+- None.
 
 Keep exactly one immediate action by default; avoid multi-step mini-plans here.
 
