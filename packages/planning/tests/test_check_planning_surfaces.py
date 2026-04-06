@@ -243,6 +243,32 @@ def test_todo_shape_drift_for_checklist_and_missing_execplan(tmp_path: Path) -> 
     assert "todo_missing_execplan_linkage" in classes
 
 
+def test_todo_shape_drift_for_finished_work_section(tmp_path: Path) -> None:
+        mod = _load_module(_checker_script_path(), "planning_todo_finished_work")
+        _write(
+                tmp_path / "TODO.md",
+                """
+# TODO
+
+## Now
+
+- ID: plan-alpha
+    Status: in-progress
+    Surface: docs/execplans/plan-alpha.md
+    Why now: promote when maintained report signal appears for this bounded next step.
+
+## Added In This Pass
+
+- Completed prior tranche details live here.
+""",
+        )
+        _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+        _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+
+        classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
+        assert "todo_shape_drift" in classes
+
+
 def test_execplan_readiness_missing_warning(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_readiness")
     plan = _minimal_execplan().replace("- Ready: ready\n", "")

@@ -78,6 +78,13 @@ PLANNING_FORBIDDEN_TODO_MARKERS = {
     "## drift log",
 }
 
+TODO_FINISHED_WORK_HEADINGS = {
+    "added in this pass",
+    "completed work",
+    "completed this pass",
+    "finished work",
+}
+
 PROMOTION_SIGNAL_HINTS = (
     "if",
     "when",
@@ -291,6 +298,19 @@ def _check_todo(path: Path, *, repo_root: Path = REPO_ROOT) -> tuple[list[Planni
                 )
             )
             break
+
+    if _heading_titles(lines) & TODO_FINISHED_WORK_HEADINGS:
+        warnings.append(
+            PlanningWarning(
+                WARNING_TODO_SHAPE_DRIFT,
+                _render_path(path),
+                (
+                    "TODO.md contains a finished-work or retrospective section; "
+                    "keep completed detail in archived execplans, workflow notes, "
+                    "or git history."
+                ),
+            )
+        )
 
     if re.search(r"(?m)^\s*-\s*\[[ xX]\]\s+", text):
         warnings.append(

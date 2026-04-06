@@ -18,6 +18,7 @@ This planning system is for execution. It is not intended to become a generic tr
 - Prefer feature-scoped plan files over growing broad shared hot files.
 - Skip `archive/` during normal startup unless the task explicitly needs historical plan context.
 - Do not treat `TODO.md`, `ROADMAP.md`, or active execplans as long-form completion logs; once a plan is complete, archive it and remove the completed-work detail from forward-looking planning surfaces.
+- Do not add sections such as `Added In This Pass`, `Completed Work`, or similar retrospective logs to `TODO.md`; completed detail belongs in archived execplans, workflow-change notes, or git history.
 - Treat active plan state as branch-local and low half-life: archive, replace, or prune it rather than mutating it forever.
 
 Use a plan here when:

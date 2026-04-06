@@ -18,8 +18,6 @@ Inactive long-horizon candidate work.
 
 - Shared tooling extraction: evaluate a common checker core when the first stable monorepo release exposes repeated maintenance friction across duplicated scripts.
 
-- Shared tooling extraction: evaluate a common checker core when the first stable monorepo release exposes repeated maintenance friction across duplicated scripts.
-
 ## Reopen Conditions
 
 - Reopen roadmap planning when active queue completes or a new bounded candidate is ready to promote.

@@ -148,6 +148,7 @@ without breaking execution focus.
 ### 7. Keeps active surfaces clean
 
 Completed work should leave active surfaces rather than accumulate there.
+`TODO.md` should stay a live activation surface, not a running list of what was finished in the current pass.
 
 ## Key Properties
 
