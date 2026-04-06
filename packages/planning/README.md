@@ -40,10 +40,56 @@ Collaboration shape:
 Fastest no-install path:
 
 ```bash
+# Preferred when uvx is available
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt install --target /path/to/repo
+
+# Alternative when pipx is available instead
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt install --target /path/to/repo
 ```
 
+Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no-install path when it is the runner a repo already uses.
+
 Use `prompt install` for a clean bootstrap. Use `adopt` when the repository already has planning-like docs and you want the package to merge conservatively around existing surfaces.
+
+## Agent Workflow Commands
+
+If you want an agent to perform lifecycle work without a local CLI install, use the paired remote prompt commands below.
+
+### Install Or Adopt
+
+```bash
+# Preferred when uvx is available: clean bootstrap
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt install --target /path/to/repo
+
+# Alternative when pipx is available instead: clean bootstrap
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt install --target /path/to/repo
+
+# Preferred when uvx is available: conservative adoption
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt adopt --target /path/to/repo
+
+# Alternative when pipx is available instead: conservative adoption
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt adopt --target /path/to/repo
+```
+
+### Upgrade
+
+```bash
+# Preferred when uvx is available
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt upgrade --target /path/to/repo
+
+# Alternative when pipx is available instead
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt upgrade --target /path/to/repo
+```
+
+### Uninstall
+
+```bash
+# Preferred when uvx is available
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt uninstall --target /path/to/repo
+
+# Alternative when pipx is available instead
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt uninstall --target /path/to/repo
+```
 
 ## Good Fits / Bad Fits
 

@@ -43,8 +43,14 @@ The CLI is the delivery mechanism, not the whole product. The product capability
 Fastest no-install path:
 
 ```bash
+# Preferred when uvx is available
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target /path/to/repo
+
+# Alternative when pipx is available instead
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target /path/to/repo
 ```
+
+Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no-install path when it is the runner a repo already uses.
 
 Use `prompt install` for a clean bootstrap into a repo that does not already have a memory system. Use `prompt adopt` when the repository already has related docs or workflow notes and you want the installer to merge conservatively instead of assuming a blank slate.
 

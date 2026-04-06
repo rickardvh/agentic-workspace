@@ -43,15 +43,26 @@ Treat `-bootstrap` as the current distribution identity for the checked-in contr
 The default public bootstrap path is the root workspace CLI:
 
 ```bash
-# Agentic Memory only
+# Preferred when uv is available: Agentic Memory only
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target /path/to/repo --preset memory
 
-# Agentic Planning only
+# Preferred when uv is available: Agentic Planning only
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target /path/to/repo --preset planning
 
-# Both together
+# Preferred when uv is available: both together
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target /path/to/repo --preset full
+
+# Alternative when pipx is available instead: Agentic Memory only
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace agentic-workspace init --target /path/to/repo --preset memory
+
+# Alternative when pipx is available instead: Agentic Planning only
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace agentic-workspace init --target /path/to/repo --preset planning
+
+# Alternative when pipx is available instead: both together
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace agentic-workspace init --target /path/to/repo --preset full
 ```
+
+Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no-install path when it is the runner a repo already uses.
 
 `init` defaults to the full preset when you omit module selection. It bootstraps mechanically, detects whether the repo should stay in clean-install mode or switch to conservative adopt mode, and can print or write a repo-specific handoff prompt when finishing work still needs judgment.
 
@@ -67,11 +78,17 @@ agentic-workspace uninstall --target /path/to/repo --preset planning
 Direct module CLIs still exist for maintainers, power users, and package-local workflows:
 
 ```bash
-# Agentic Memory advanced path
+# Preferred when uv is available: Agentic Memory advanced path
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target /path/to/repo
 
-# Agentic Planning advanced path
+# Preferred when uv is available: Agentic Planning advanced path
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt install --target /path/to/repo
+
+# Alternative when pipx is available instead: Agentic Memory advanced path
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target /path/to/repo
+
+# Alternative when pipx is available instead: Agentic Planning advanced path
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt install --target /path/to/repo
 ```
 
 Use the module-specific CLIs when you want package-local control. Use `agentic-workspace` when you want the thin composition layer to select modules, sequence them, and aggregate the bootstrap report and handoff prompt.
