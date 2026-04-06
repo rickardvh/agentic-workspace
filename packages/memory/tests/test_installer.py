@@ -1286,6 +1286,59 @@ def test_verify_payload_passes_for_current_payload(tmp_path: Path) -> None:
     assert not any(action.category == "contract-drift" for action in result.actions)
 
 
+def test_verify_payload_reports_contract_surface_shortlists(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    result = installer.verify_payload(target=target)
+
+    assert any(
+        action.path == target / "memory" / "manifest.toml"
+        and action.kind == "current"
+        and action.role == "payload-contract"
+        and "compatibility contract files:" in action.detail
+        and "memory/index.md" in action.detail
+        and "memory/current/project-state.md" in action.detail
+        for action in result.actions
+    )
+    assert any(
+        action.path == target / ".agentic-workspace" / "memory" / "UPGRADE-SOURCE.toml"
+        and action.kind == "current"
+        and action.role == "payload-contract"
+        and "lower-stability helper files:" in action.detail
+        and "scripts/check/check_memory_freshness.py" in action.detail
+        and ".agentic-workspace/memory/bootstrap/README.md" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    installer.install_bootstrap(target=target)
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.path == target / "memory" / "manifest.toml"
+        and action.kind == "current"
+        and action.role == "payload-contract"
+        and "compatibility contract files:" in action.detail
+        and "memory/runbooks/README.md" in action.detail
+        and "memory/decisions/README.md" in action.detail
+        for action in result.actions
+    )
+    assert any(
+        action.path == target / ".agentic-workspace" / "memory" / "UPGRADE-SOURCE.toml"
+        and action.kind == "current"
+        and action.role == "payload-contract"
+        and "lower-stability helper files:" in action.detail
+        and ".agentic-workspace/memory/skills/README.md" in action.detail
+        and "scripts/check/check_memory_freshness.py" in action.detail
+        for action in result.actions
+    )
+
+
 def test_memory_freshness_audit_ignores_bootstrap_workspace(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)

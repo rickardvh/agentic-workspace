@@ -93,6 +93,21 @@ PACKAGE_MANAGED_FILES = tuple(
 )
 
 
+def _add_contract_surface_summary(result: InstallResult, root: Path) -> None:
+    compatibility = ", ".join(path.as_posix() for path in PLANNING_COMPATIBILITY_CONTRACT_FILES)
+    helpers = ", ".join(path.as_posix() for path in PLANNING_LOWER_STABILITY_HELPER_FILES)
+    result.add(
+        "current",
+        root / PLANNING_MANIFEST_PATH,
+        f"compatibility contract files: {compatibility}",
+    )
+    result.add(
+        "current",
+        root / PLANNING_RENDER_SCRIPT_PATH,
+        f"lower-stability helper files: {helpers}",
+    )
+
+
 @dataclass
 class Action:
     kind: str
@@ -240,6 +255,8 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
         detail = "required file present" if destination.exists() else "required file missing"
         result.add("current" if destination.exists() else "manual review", destination, detail)
 
+    _add_contract_surface_summary(result, target_root)
+
     for relative in (Path("AGENTS.md"), Path("TODO.md"), Path("ROADMAP.md")):
         path = target_root / relative
         if path.exists():
@@ -273,6 +290,8 @@ def verify_payload() -> InstallResult:
     for relative in REQUIRED_PAYLOAD_FILES:
         detail = "required payload file present" if relative in payload_files else "required payload file missing"
         result.add("current" if relative in payload_files else "manual review", root / relative, detail)
+
+    _add_contract_surface_summary(result, root)
 
     for relative, fragments in PAYLOAD_GUIDANCE_FRAGMENTS.items():
         destination = root / relative

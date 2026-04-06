@@ -90,6 +90,8 @@ from repo_memory_bootstrap._installer_shared import (
     LEGACY_BOOTSTRAP_WORKSPACE_ROOT,
     LEGACY_UPGRADE_SOURCE_PATH,
     MANIFEST_PATH,
+    MEMORY_COMPATIBILITY_CONTRACT_FILES,
+    MEMORY_LOWER_STABILITY_HELPER_FILES,
     OBSOLETE_SHARED_FILES,
     OPTIONAL_APPEND_TARGETS,
     OPTIONAL_CURRENT_MEMORY_FILES,
@@ -107,6 +109,29 @@ from repo_memory_bootstrap._installer_shared import (
     InstallResult,
     RepoDetectionError,
 )
+
+
+def _add_contract_surface_summary(result: InstallResult, target_root: Path) -> None:
+    compatibility = ", ".join(path.as_posix() for path in MEMORY_COMPATIBILITY_CONTRACT_FILES)
+    helpers = ", ".join(path.as_posix() for path in MEMORY_LOWER_STABILITY_HELPER_FILES)
+    result.add(
+        "current",
+        target_root / MANIFEST_PATH,
+        f"compatibility contract files: {compatibility}",
+        role="payload-contract",
+        safety="safe",
+        source=MANIFEST_PATH.as_posix(),
+        category="safe-update",
+    )
+    result.add(
+        "current",
+        target_root / UPGRADE_SOURCE_PATH,
+        f"lower-stability helper files: {helpers}",
+        role="payload-contract",
+        safety="safe",
+        source=UPGRADE_SOURCE_PATH.as_posix(),
+        category="safe-update",
+    )
 
 __all__ = [
     "subprocess",
@@ -657,6 +682,7 @@ def doctor_bootstrap(
         include_bootstrap_workspace=False,
         target_layout=target_layout,
     )
+    _add_contract_surface_summary(result, target_root)
     if target_layout == "legacy":
         result.add(
             "current",
@@ -1596,6 +1622,8 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
             source=required.as_posix(),
             category="safe-update" if present else "contract-drift",
         )
+
+    _add_contract_surface_summary(result, target_root)
 
     current_payload = {path for path in payload_paths if path.as_posix().startswith("memory/current/")}
     required_current = set(CURRENT_MEMORY_BASELINE)

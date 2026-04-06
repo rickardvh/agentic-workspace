@@ -11,6 +11,7 @@ from repo_planning_bootstrap.installer import (
     adopt_bootstrap,
     archive_execplan,
     collect_status,
+    doctor_bootstrap,
     install_bootstrap,
     planning_summary,
     promote_todo_item_to_execplan,
@@ -228,6 +229,50 @@ def test_verify_payload_generated_docs_match_manifest() -> None:
     assert any(action.kind == "current" for action in manifest_actions)
     assert any(action.kind == "current" for action in quickstart_actions)
     assert any(action.kind == "current" for action in routing_actions)
+
+
+def test_verify_payload_reports_contract_surface_shortlists() -> None:
+    result = verify_payload()
+
+    assert any(
+        action.path.name == "agent-manifest.json"
+        and action.kind == "current"
+        and "compatibility contract files:" in action.detail
+        and "AGENTS.md" in action.detail
+        and ".agentic-workspace/planning/agent-manifest.json" in action.detail
+        for action in result.actions
+    )
+    assert any(
+        action.path.name == "render_agent_docs.py"
+        and action.kind == "current"
+        and "lower-stability helper files:" in action.detail
+        and "scripts/render_agent_docs.py" in action.detail
+        and "tools/AGENT_QUICKSTART.md" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+
+    result = doctor_bootstrap(target=tmp_path)
+
+    assert any(
+        action.path == tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
+        and action.kind == "current"
+        and "compatibility contract files:" in action.detail
+        and "AGENTS.md" in action.detail
+        and "docs/execplans/TEMPLATE.md" in action.detail
+        for action in result.actions
+    )
+    assert any(
+        action.path == tmp_path / ".agentic-workspace" / "planning" / "scripts" / "render_agent_docs.py"
+        and action.kind == "current"
+        and "lower-stability helper files:" in action.detail
+        and "scripts/check/check_planning_surfaces.py" in action.detail
+        and "tools/AGENT_ROUTING.md" in action.detail
+        for action in result.actions
+    )
 
 
 def test_verify_payload_flags_missing_collaboration_safe_template_guidance(tmp_path: Path, monkeypatch) -> None:

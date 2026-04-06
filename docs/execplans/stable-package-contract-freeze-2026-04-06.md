@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Decide whether verify-payload or doctor output should surface the frozen contract shortlist explicitly instead of leaving it only in code and README guidance.
+- Decide whether package-local runtime shortlist reporting is sufficient, or whether root workspace status or module-reporting output should surface those contract boundaries too.
 
 ## Blockers
 
@@ -66,4 +66,5 @@ Keep invariants contract-shaped and brief.
 - 2026-04-06: Promoted after lifecycle wording, adoption realism, and cross-module ambiguity hardening all landed cleanly enough that the next maturity risk became compatibility drift rather than missing behavior proof.
 - 2026-04-06: The initial audit showed memory already had richer internal contract metadata than planning, so the first milestone now makes both packages expose an explicit compatibility-contract shortlist and distinguish it from lower-stability helpers in tests and README guidance.
 - 2026-04-06: Added explicit contract shortlists for both packages, documented them in the READMEs, and locked them in with installer tests; the next question is whether runtime verification output should expose that shortlist directly for maintainers.
+- 2026-04-06: Added compact contract-shortlist summaries to planning and memory doctor and verify-payload output, then locked both verify-payload and doctor coverage so maintainers can inspect the frozen boundary without reading code constants.
 - 2026-04-06: Integrated the expanded design principles into canonical docs and maintainer guidance so future contract-freeze decisions are evaluated against quieter operation, lower reading cost, clear ownership, portability, and selective adoption rather than local convenience.
