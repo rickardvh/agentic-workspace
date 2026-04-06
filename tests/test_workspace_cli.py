@@ -82,11 +82,10 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
 def test_modules_command_reports_installation_state_for_target(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "planning").mkdir()
     (tmp_path / "TODO.md").write_text("# TODO\n", encoding="utf-8")
     (tmp_path / ".agentic-workspace" / "planning").mkdir(parents=True)
     (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").write_text("{}\n", encoding="utf-8")
-    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+    monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_install_signals(tmp_path, calls))
 
     assert cli.main(["modules", "--target", str(tmp_path), "--format", "json"]) == 0
 
