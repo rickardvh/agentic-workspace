@@ -12,7 +12,7 @@
 
 ## Active Milestone
 
-- Status: in-progress
+- Status: completed
 - Scope: ship the root lifecycle contract from the UX spec across planning surfaces, root CLI behavior, report/prompt aggregation, regression coverage, and adopter-facing docs.
 - Ready: ready
 - Blocked: none
@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Decide whether the current workspace bootstrap tranche is complete enough to archive, or whether one more pass is needed to tighten root lifecycle docs and real-world fixture coverage beyond the current CLI regression suite.
+- None. Plan archived after the root lifecycle UX landed and validation passed.
 
 Keep exactly one immediate action by default; avoid multi-step mini-plans here.
 
