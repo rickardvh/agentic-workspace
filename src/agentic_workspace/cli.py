@@ -62,6 +62,20 @@ class RepoInspection:
     placeholders: list[str]
 
 
+@dataclass(frozen=True)
+class ModuleRegistryEntry:
+    name: str
+    description: str
+    lifecycle_commands: tuple[str, ...]
+    autodetects_installation: bool
+    installed: bool | None
+    install_signals: tuple[Path, ...]
+    workflow_surfaces: tuple[Path, ...]
+    generated_artifacts: tuple[Path, ...]
+    dry_run_commands: tuple[str, ...]
+    force_commands: tuple[str, ...]
+
+
 class ModuleSelectionError(ValueError):
     """Raised when the orchestrator cannot resolve a safe module set."""
 
@@ -79,6 +93,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     modules_parser = subparsers.add_parser("modules", help="List workspace modules available to the orchestrator.")
+    modules_parser.add_argument("--target", help="Optional repository path used to report installed modules.")
     _add_format_argument(modules_parser)
 
     init_parser = subparsers.add_parser("init", help="Bootstrap selected modules into a target repository.")
@@ -121,7 +136,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "modules":
-        _emit_modules(format_name=args.format)
+        target_root = _resolve_target_root(args.target) if args.target else None
+        if target_root is not None:
+            _validate_target_root(command_name="modules", target_root=target_root)
+        _emit_modules(format_name=args.format, target_root=target_root)
         return 0
 
     descriptors = _module_operations()
@@ -313,7 +331,8 @@ def _selected_modules(
     if command_name == "init":
         return [module_name for module_name in PRESET_MODULES["full"] if module_name in descriptors], "full"
 
-    detected = [module_name for module_name in MODULE_ORDER if module_name in descriptors and descriptors[module_name].detector(target_root)]
+    registry = _module_registry(descriptors=descriptors, target_root=target_root)
+    detected = [entry.name for entry in registry if entry.installed]
     if detected:
         return detected, None
 
@@ -769,23 +788,61 @@ def _write_prompt_file(*, write_prompt: str, prompt_text: str) -> Path:
     return prompt_path
 
 
-def _emit_modules(*, format_name: str) -> None:
+def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
     descriptors = _module_operations()
+    registry = _module_registry(descriptors=descriptors, target_root=target_root)
     payload = {
         "modules": [
             {
-                "name": descriptor.name,
-                "description": descriptor.description,
-                "commands": sorted(descriptor.commands),
-                "install_signals": [path.as_posix() for path in descriptor.install_signals],
-                "workflow_surfaces": [path.as_posix() for path in descriptor.workflow_surfaces],
-                "generated_artifacts": [path.as_posix() for path in descriptor.generated_artifacts],
-                "command_args": {name: list(args) for name, args in descriptor.command_args.items()},
+                "name": entry.name,
+                "description": entry.description,
+                "commands": list(entry.lifecycle_commands),
+                "autodetects_installation": entry.autodetects_installation,
+                "installed": entry.installed,
+                "install_signals": [path.as_posix() for path in entry.install_signals],
+                "workflow_surfaces": [path.as_posix() for path in entry.workflow_surfaces],
+                "generated_artifacts": [path.as_posix() for path in entry.generated_artifacts],
+                "dry_run_commands": list(entry.dry_run_commands),
+                "force_commands": list(entry.force_commands),
+                "command_args": {name: list(args) for name, args in descriptors[entry.name].command_args.items()},
             }
-            for descriptor in descriptors.values()
+            for entry in registry
         ]
     }
     _emit_payload(payload=payload, format_name=format_name)
+
+
+def _module_registry(
+    *, descriptors: dict[str, ModuleDescriptor], target_root: Path | None
+) -> list[ModuleRegistryEntry]:
+    entries: list[ModuleRegistryEntry] = []
+    for module_name in MODULE_ORDER:
+        if module_name not in descriptors:
+            continue
+        descriptor = descriptors[module_name]
+        lifecycle_commands = tuple(sorted(descriptor.commands))
+        dry_run_commands = tuple(
+            command_name for command_name in lifecycle_commands if "dry_run" in descriptor.command_args[command_name]
+        )
+        force_commands = tuple(
+            command_name for command_name in lifecycle_commands if "force" in descriptor.command_args[command_name]
+        )
+        installed = descriptor.detector(target_root) if target_root is not None else None
+        entries.append(
+            ModuleRegistryEntry(
+                name=descriptor.name,
+                description=descriptor.description,
+                lifecycle_commands=lifecycle_commands,
+                autodetects_installation=True,
+                installed=installed,
+                install_signals=descriptor.install_signals,
+                workflow_surfaces=descriptor.workflow_surfaces,
+                generated_artifacts=descriptor.generated_artifacts,
+                dry_run_commands=dry_run_commands,
+                force_commands=force_commands,
+            )
+        )
+    return entries
 
 
 def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:

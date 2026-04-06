@@ -71,8 +71,30 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
         "tools/AGENT_QUICKSTART.md",
         "tools/AGENT_ROUTING.md",
     ]
+    assert planning_module["autodetects_installation"] is True
+    assert planning_module["installed"] is None
+    assert planning_module["dry_run_commands"] == ["adopt", "install", "uninstall", "upgrade"]
+    assert planning_module["force_commands"] == ["install"]
     assert planning_module["command_args"]["install"] == ["target", "dry_run", "force"]
     assert planning_module["command_args"]["doctor"] == ["target"]
+
+
+def test_modules_command_reports_installation_state_for_target(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    (tmp_path / "planning").mkdir()
+    (tmp_path / "TODO.md").write_text("# TODO\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace" / "planning").mkdir(parents=True)
+    (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").write_text("{}\n", encoding="utf-8")
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["modules", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    planning_module = next(entry for entry in payload["modules"] if entry["name"] == "planning")
+    memory_module = next(entry for entry in payload["modules"] if entry["name"] == "memory")
+    assert planning_module["installed"] is True
+    assert memory_module["installed"] is False
 
 
 def test_init_dispatches_to_full_preset_by_default(monkeypatch, tmp_path: Path, capsys) -> None:
