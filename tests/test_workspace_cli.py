@@ -314,6 +314,34 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
     assert payload["generated_artifacts"] == []
 
 
+def test_doctor_real_init_preserves_package_contract_shortlists_in_reports(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    planning_report = next(report for report in payload["reports"] if report["module"] == "planning")
+    memory_report = next(report for report in payload["reports"] if report["module"] == "memory")
+
+    assert any(
+        action["path"] == ".agentic-workspace/planning/agent-manifest.json"
+        and "compatibility contract files:" in action["detail"]
+        and "AGENTS.md" in action["detail"]
+        for action in planning_report["actions"]
+    )
+    assert any(
+        action["path"] == ".agentic-workspace/memory/UPGRADE-SOURCE.toml"
+        and "lower-stability helper files:" in action["detail"]
+        and "scripts/check/check_memory_freshness.py" in action["detail"]
+        for action in memory_report["actions"]
+    )
+
+
 def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))
@@ -335,7 +363,7 @@ def test_adapt_action_supports_slotted_dataclass(tmp_path: Path) -> None:
 
     payload = adapt_action(action=action, target_root=tmp_path)
 
-    assert payload == {"kind": "copied", "path": (tmp_path / "demo.txt").as_posix(), "detail": "ok"}
+    assert payload == {"kind": "copied", "path": "demo.txt", "detail": "ok"}
 
 
 def test_adapt_action_prefers_to_dict_protocol(tmp_path: Path) -> None:

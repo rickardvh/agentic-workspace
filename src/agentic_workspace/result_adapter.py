@@ -48,7 +48,14 @@ def adapt_action(*, action: Any, target_root: Path) -> dict[str, Any]:
     if callable(to_dict):
         return {key: serialise_value(value) for key, value in to_dict(target_root).items()}
     if is_dataclass(action):
-        return {key: serialise_value(value) for key, value in asdict(action).items()}
+        payload = asdict(action)
+        path_value = payload.get("path")
+        if isinstance(path_value, Path):
+            try:
+                payload["path"] = path_value.relative_to(target_root)
+            except ValueError:
+                payload["path"] = path_value
+        return {key: serialise_value(value) for key, value in payload.items()}
     return {key: serialise_value(value) for key, value in vars(action).items()}
 
 
