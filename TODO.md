@@ -8,11 +8,11 @@ Active queue for repository work.
 
 ## Now
 
-- [install-adopt-fixture-hardening-2026-04-06](docs/execplans/install-adopt-fixture-hardening-2026-04-06.md) - Harden planning and workspace lifecycle adoption against representative empty, docs-heavy, and pre-existing workflow repositories so conservative install and adopt behavior is proven by fixtures instead of intuition.
+- [stable-package-contract-freeze-2026-04-06](docs/execplans/stable-package-contract-freeze-2026-04-06.md) - Freeze the practical compatibility contract for planning and memory surfaces that should stop changing shape casually now that lifecycle wording and adoption realism are in a healthier place.
 
 ## Action
 
-- Treat install/adopt fixture hardening as the current top priority: prove conservative behavior against realistic repo shapes rather than relying on happy-path payload checks.
-- Keep the tranche bounded around representative fixture coverage, preserve-versus-manage expectations, and narrow lifecycle validation for docs-heavy and partially pre-owned repos.
-- Favor package-local fixture breadth and adoption realism over new lifecycle surface invention.
+- Treat stable package contract freeze as the current top priority: turn the already-proved planning and memory surface boundaries into an explicit compatibility target.
+- Keep the tranche bounded around identifying the installed surfaces that should stop changing shape casually, plus the validation and docs updates needed to support that promise.
+- Favor contract clarification and compatibility discipline over new lifecycle surface invention.
 - Keep root planning surfaces compact; archive completed plans instead of letting TODO accumulate residue.

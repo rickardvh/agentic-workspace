@@ -12,8 +12,8 @@
 
 ## Active Milestone
 
-- Status: in-progress
-- Scope: define the missing representative repo shapes, add the first bounded fixture tranche for docs-heavy and partially pre-owned repositories, and tighten preserve-versus-manage expectations where current tests are still too synthetic.
+- Status: completed
+- Scope: define the missing representative repo shapes, add the first bounded fixture tranche for docs-heavy and partially pre-owned repositories, and tighten preserve-versus-manage expectations where current tests were still too synthetic.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Add the next fixture for mixed module ownership so adoption coverage exercises cross-module ambiguity, not just single-module residue.
+- None.
 
 ## Blockers
 
@@ -61,8 +61,7 @@ Keep invariants contract-shaped and brief.
 
 ## Drift Log
 
-- 2026-04-06: Promoted after the execution-scaling tranche landed and the next maturity risk remained adoption realism rather than lifecycle wording.
-- 2026-04-06: The first audit showed planning adoption coverage was still thin compared with memory; the highest-value immediate gap was a docs-heavy existing-repo shape that exercises preserved root surfaces plus generated helper installation.
-- 2026-04-06: Added the first docs-heavy adoption fixtures in both the planning package and workspace CLI so preserved root surfaces and generated helper installation are now exercised against a more realistic existing-repo shape.
-- 2026-04-06: The next audit pass showed planning still lacked explicit partial-managed-state coverage, so the next milestone now targets orphaned planning surfaces and pre-existing manifest state rather than another docs-preservation variant.
-- 2026-04-06: Added partial-managed-state fixtures for pre-existing planning manifest state and orphaned planning surfaces; current conservative behavior passed both, so the next realism gap is mixed module ownership rather than single-module residue.
+- 2026-04-06: Thin planning adoption coverage compared with memory made docs-heavy existing repos the first high-value realism gap.
+- 2026-04-06: Added docs-heavy adoption fixtures at both the planning package and workspace CLI layers so preserved root surfaces and generated helper installation are exercised together.
+- 2026-04-06: Added partial-managed-state fixtures for pre-existing planning manifest state and orphaned planning surfaces; current conservative behavior passed both.
+- 2026-04-06: Added mixed-ownership fixtures proving planning adoption leaves memory-owned surfaces untouched and the workspace layer reports cross-module partial state as review-required ambiguity.

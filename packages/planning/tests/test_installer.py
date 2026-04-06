@@ -158,6 +158,17 @@ def test_adopt_bootstrap_preserves_existing_manifest_in_partial_managed_state(tm
     )
 
 
+def test_adopt_bootstrap_leaves_memory_owned_surfaces_untouched(tmp_path: Path) -> None:
+    memory_index_path = tmp_path / "memory" / "index.md"
+    _write(memory_index_path, "# Existing memory index\n")
+
+    result = adopt_bootstrap(target=tmp_path)
+
+    assert memory_index_path.read_text(encoding="utf-8") == "# Existing memory index\n"
+    assert not any(action.path == memory_index_path for action in result.actions)
+    assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+
+
 def test_status_reports_missing_and_present_files(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     result = collect_status(target=tmp_path)
