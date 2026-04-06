@@ -79,6 +79,9 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 
 def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     result = install_bootstrap(target=tmp_path)
+    skill_readme_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "README.md"
+    skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
+
     assert (tmp_path / "AGENTS.md").exists()
     assert (tmp_path / "TODO.md").exists()
     assert (tmp_path / "ROADMAP.md").exists()
@@ -86,6 +89,8 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "render_agent_docs.py").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_planning_surfaces.py").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_maintainer_surfaces.py").exists()
+    assert skill_readme_path.exists()
+    assert skill_path.exists()
     assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
     assert (tmp_path / "tools" / "AGENT_ROUTING.md").exists()
     assert (tmp_path / "scripts" / "check" / "check_maintainer_surfaces.py").exists()
@@ -138,6 +143,7 @@ def test_adopt_bootstrap_docs_heavy_repo_preserves_root_surfaces_and_installs_he
     assert contributor_playbook_path.read_text(encoding="utf-8") == "# Existing contributor playbook\n"
     assert maintainer_commands_path.read_text(encoding="utf-8") == "# Existing commands\n"
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md").exists()
     assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
     assert (tmp_path / "tools" / "AGENT_ROUTING.md").exists()
     assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
@@ -332,16 +338,20 @@ def test_upgrade_bootstrap_overwrites_managed_files_but_preserves_root_surfaces(
     install_bootstrap(target=tmp_path)
     agents_path = tmp_path / "AGENTS.md"
     checker_path = tmp_path / "scripts" / "check" / "check_planning_surfaces.py"
+    skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
 
     agents_path.write_text("repo-owned agents\n", encoding="utf-8")
     checker_path.write_text("stale checker\n", encoding="utf-8")
+    skill_path.write_text("stale skill\n", encoding="utf-8")
 
     result = upgrade_bootstrap(target=tmp_path)
 
     assert agents_path.read_text(encoding="utf-8") == "repo-owned agents\n"
     assert "stale checker" not in checker_path.read_text(encoding="utf-8")
+    assert "stale skill" not in skill_path.read_text(encoding="utf-8")
     assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
     assert any(action.kind == "overwritten" and action.path == checker_path for action in result.actions)
+    assert any(action.kind == "overwritten" and action.path == skill_path for action in result.actions)
 
 
 def test_uninstall_bootstrap_removes_pristine_files_and_keeps_modified_surfaces(tmp_path: Path) -> None:
@@ -349,6 +359,7 @@ def test_uninstall_bootstrap_removes_pristine_files_and_keeps_modified_surfaces(
     agents_path = tmp_path / "AGENTS.md"
     checker_path = tmp_path / "scripts" / "check" / "check_planning_surfaces.py"
     quickstart_path = tmp_path / "tools" / "AGENT_QUICKSTART.md"
+    skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
 
     agents_path.write_text("repo-owned agents\n", encoding="utf-8")
 
@@ -357,8 +368,10 @@ def test_uninstall_bootstrap_removes_pristine_files_and_keeps_modified_surfaces(
     assert agents_path.exists()
     assert not checker_path.exists()
     assert not quickstart_path.exists()
+    assert not skill_path.exists()
     assert any(action.kind == "manual review" and action.path == agents_path for action in result.actions)
     assert any(action.kind == "removed" and action.path == checker_path for action in result.actions)
+    assert any(action.kind == "removed" and action.path == skill_path for action in result.actions)
 
 
 def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path: Path) -> None:

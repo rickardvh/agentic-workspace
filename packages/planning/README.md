@@ -38,7 +38,7 @@ Collaboration shape:
 
 Bundled skills:
 
-- The package also ships `planning-autopilot` under `skills/` for bounded milestone execution from the checked-in planning surfaces.
+- The package also ships `planning-autopilot` under `skills/` and installs it into `.agentic-workspace/planning/skills/` for bounded milestone execution from the checked-in planning surfaces.
 
 ## Quick Start
 

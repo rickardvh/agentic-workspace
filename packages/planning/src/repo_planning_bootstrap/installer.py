@@ -19,6 +19,7 @@ from repo_planning_bootstrap._render import (
 from repo_planning_bootstrap._source import UPGRADE_SOURCE_PATH, resolve_upgrade_source
 
 PLANNING_MANAGED_ROOT = module_root("planning")
+PLANNING_SKILLS_MANAGED_ROOT = PLANNING_MANAGED_ROOT / "skills"
 PLANNING_MANIFEST_PATH = PLANNING_MANAGED_ROOT / "agent-manifest.json"
 PLANNING_RENDER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "render_agent_docs.py"
 PLANNING_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
@@ -93,6 +94,13 @@ PACKAGE_MANAGED_FILES = tuple(
 )
 
 
+def skills_root() -> Path:
+    packaged = Path(__file__).resolve().parent / "_skills"
+    if packaged.exists():
+        return packaged
+    return Path(__file__).resolve().parents[2] / "skills"
+
+
 def _add_contract_surface_summary(result: InstallResult, root: Path) -> None:
     compatibility = ", ".join(path.as_posix() for path in PLANNING_COMPATIBILITY_CONTRACT_FILES)
     helpers = ", ".join(path.as_posix() for path in PLANNING_LOWER_STABILITY_HELPER_FILES)
@@ -147,6 +155,24 @@ def payload_root() -> Path:
     return Path(__file__).resolve().parents[2] / "bootstrap"
 
 
+def _bundled_skill_relative_paths() -> tuple[Path, ...]:
+    root = skills_root()
+    if not root.exists():
+        return ()
+    return tuple(
+        path.relative_to(root)
+        for path in sorted(root.rglob("*"))
+        if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+    )
+
+
+PLANNING_BUNDLED_SKILL_FILES = tuple(PLANNING_SKILLS_MANAGED_ROOT / relative for relative in _bundled_skill_relative_paths())
+
+
+def _installed_surface_files() -> tuple[Path, ...]:
+    return REQUIRED_PAYLOAD_FILES + PLANNING_BUNDLED_SKILL_FILES
+
+
 def resolve_target_root(target: str | Path | None) -> Path:
     resolved = Path(target).resolve() if target else Path.cwd().resolve()
     resolved.mkdir(parents=True, exist_ok=True)
@@ -162,6 +188,7 @@ def install_bootstrap(*, target: str | Path | None = None, dry_run: bool = False
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message="Install plan", dry_run=dry_run)
     _copy_payload(target_root=target_root, result=result, conservative=False, force=force)
+    _copy_bundled_skills(target_root=target_root, result=result, conservative=False, force=force)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     return result
 
@@ -170,6 +197,7 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) 
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message="Adoption plan for existing repository", dry_run=dry_run)
     _copy_payload(target_root=target_root, result=result, conservative=True, force=False)
+    _copy_bundled_skills(target_root=target_root, result=result, conservative=True, force=False)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     return result
 
@@ -180,6 +208,8 @@ def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False
 
     for relative in PACKAGE_MANAGED_FILES:
         _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=True)
+
+    _copy_bundled_skills(target_root=target_root, result=result, conservative=False, force=True)
 
     for relative in ROOT_SURFACE_FILES:
         _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=False)
@@ -193,12 +223,16 @@ def uninstall_bootstrap(*, target: str | Path | None = None, dry_run: bool = Fal
     result = InstallResult(target_root=target_root, message="Uninstall plan", dry_run=dry_run)
 
     removable: list[Path] = []
-    for relative in REQUIRED_PAYLOAD_FILES:
+    for relative in _installed_surface_files():
         destination = target_root / relative
         if not destination.exists():
             result.add("skipped", destination, "already absent")
             continue
-        if _can_remove_payload_file(relative=relative, target_root=target_root):
+        if relative in PLANNING_BUNDLED_SKILL_FILES:
+            removable_check = _remove_bundled_skill_file(relative=relative, target_root=target_root)
+        else:
+            removable_check = _can_remove_payload_file(relative=relative, target_root=target_root)
+        if removable_check:
             removable.append(relative)
             result.add("would remove" if dry_run else "removed", destination, "matches managed payload content")
             continue
@@ -221,7 +255,7 @@ def collect_status(*, target: str | Path | None = None) -> InstallResult:
     mode = _detect_adoption_mode(target_root)
     result = InstallResult(target_root=target_root, message=f"Status report ({mode} mode)", dry_run=False)
     result.add("mode", target_root, f"detected adoption mode: {mode}")
-    for relative in REQUIRED_PAYLOAD_FILES:
+    for relative in _installed_surface_files():
         destination = target_root / relative
         detail = "file exists" if destination.exists() else "file missing"
         result.add("present" if destination.exists() else "missing", destination, detail)
@@ -250,7 +284,7 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
                 }
             )
 
-    for relative in REQUIRED_PAYLOAD_FILES:
+    for relative in _installed_surface_files():
         destination = target_root / relative
         detail = "required file present" if destination.exists() else "required file missing"
         result.add("current" if destination.exists() else "manual review", destination, detail)
@@ -571,6 +605,32 @@ def _copy_payload(*, target_root: Path, result: InstallResult, conservative: boo
         result.add("copied" if not existed else "overwritten", destination, source.as_posix())
 
 
+def _copy_bundled_skills(*, target_root: Path, result: InstallResult, conservative: bool, force: bool) -> None:
+    root = skills_root()
+    if not root.exists():
+        destination = target_root / PLANNING_SKILLS_MANAGED_ROOT
+        result.add("manual review", destination, "bundled planning skills directory is missing")
+        return
+    for source in sorted(root.rglob("*")):
+        if not source.is_file() or "__pycache__" in source.parts or source.suffix == ".pyc":
+            continue
+        relative = source.relative_to(root)
+        destination = target_root / PLANNING_SKILLS_MANAGED_ROOT / relative
+        existed = destination.exists()
+        if existed and conservative:
+            result.add("skipped", destination, "already present")
+            continue
+        if existed and not force:
+            result.add("skipped", destination, "already present")
+            continue
+        if result.dry_run:
+            result.add("would copy" if not existed else "would overwrite", destination, source.as_posix())
+            continue
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+        result.add("copied" if not existed else "overwritten", destination, source.as_posix())
+
+
 def _copy_payload_file(*, relative: Path, target_root: Path, result: InstallResult, overwrite: bool) -> None:
     source = payload_root() / relative
     destination = target_root / relative
@@ -599,6 +659,16 @@ def _copy_payload_file(*, relative: Path, target_root: Path, result: InstallResu
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, destination)
     result.add("copied", destination, source.as_posix())
+
+
+def _remove_bundled_skill_file(*, relative: Path, target_root: Path) -> bool:
+    destination = target_root / relative
+    if not destination.exists() or not destination.is_file():
+        return False
+    source = skills_root() / relative.relative_to(PLANNING_SKILLS_MANAGED_ROOT)
+    if not source.exists() or not source.is_file():
+        return False
+    return destination.read_bytes() == source.read_bytes()
 
 
 def _render_generated_agent_files(*, target_root: Path, result: InstallResult, apply: bool) -> None:
@@ -709,12 +779,12 @@ def _warning_remediation(warning_class: str) -> str | None:
 
 
 def _detect_adoption_mode(target_root: Path) -> str:
-    required_present = sum(1 for relative in REQUIRED_PAYLOAD_FILES if (target_root / relative).exists())
+    required_present = sum(1 for relative in _installed_surface_files() if (target_root / relative).exists())
     if required_present == 0:
         return "uninitialised"
     if (target_root / "src" / "repo_planning_bootstrap").exists() and (target_root / "bootstrap").exists():
         return "self-hosted"
-    if required_present >= len(REQUIRED_PAYLOAD_FILES) // 2:
+    if required_present >= len(_installed_surface_files()) // 2:
         return "installed"
     return "partial"
 
