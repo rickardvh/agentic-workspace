@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Tighten the planning contract docs and shipped planning guidance around when work should stay direct versus promote into an execplan.
+- Decide whether the current direct-task heuristics need checker changes or only more explicit validation examples for interrupted and resumed work.
 
 Keep exactly one immediate action by default; avoid multi-step mini-plans here.
 
@@ -66,3 +66,4 @@ Keep invariants contract-shaped and brief.
 ## Drift Log
 
 - 2026-04-06: Promoted from maintainer feedback after a small-project experiment showed the fast path can succeed without planning, but the transition into planning still needs a clearer checked-in contract.
+- 2026-04-06: Tightened the contract in planning docs, shipped bootstrap payloads, and manifest-backed maintainer guidance so direct execution and promotion triggers are stated in the same operational language across installed and self-hosted surfaces.

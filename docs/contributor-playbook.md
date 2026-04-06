@@ -51,6 +51,12 @@ As a maintainer rule of thumb:
 - if the fact changes what is active now or what must happen next, it probably belongs in planning
 - if the behavior is package-specific, keep it in that package rather than teaching the workspace layer too much
 
+For execution scaling specifically:
+
+- keep work direct in `TODO.md` when one coherent pass can finish it and the row can stay at `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`
+- promote to an execplan when the work gains milestone sequencing, blocker handling, non-obvious validation scope, rollback or migration detail, or enough ambiguity that restart would require more than the TODO row
+- treat direct execution as a valid success path, then record only the minimum durable residue that outlives the task
+
 ## Validation Lanes
 
 Run the narrowest lane that proves the change.

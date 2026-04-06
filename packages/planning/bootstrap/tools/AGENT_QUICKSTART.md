@@ -25,10 +25,12 @@ Fast path for autonomous agents working on this repo.
 ## Small-task mode
 
 - For very local changes, skip plans unless this manifest, the active plan, or the nearest descendant `AGENTS.md` says they are needed.
+- Keep direct tasks in `TODO.md` only when one coherent pass can finish them and the row can stay compact: `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`.
 
 ## When to create a plan
 
 - Create or update a plan when work spans multiple milestones, will be handed across threads or models, or carries enough ambiguity that implementation should not start from chat context alone.
+- Promote a direct task once it picks up blocker handling, validation scope, rollback or migration detail, ownership reconciliation, or enough narrative that the TODO row stops being self-sufficient.
 
 ## Source of truth
 
@@ -47,6 +49,7 @@ Fast path for autonomous agents working on this repo.
 ## Completion reminders
 
 - Do not leave completed task detail in `TODO.md` once it no longer changes execution.
+- When direct execution changes durable knowledge or leaves meaningful follow-up, record only that minimal residue in memory, canonical docs, `ROADMAP.md`, or a promoted execplan.
 
 ## Generated surfaces
 
@@ -75,4 +78,5 @@ Fast path for autonomous agents working on this repo.
 - ROADMAP.md owns inactive long-horizon candidate epics and promotion signals.
 - Checked-in memory, when installed, owns durable routed knowledge rather than active planning state.
 - Planning should remain useful without memory being installed.
+- Direct execution is a valid success mode for small local work.
 - Do not bulk-read all planning surfaces for ordinary execution work.

@@ -28,6 +28,9 @@ Prefer checked-in knowledge over durable chat memory when both exist.
 
 Do not bulk-read all planning surfaces for ordinary execution work. Start from `TODO.md`, then read at most one relevant active execplan.
 
+Direct execution is valid when one coherent pass can finish the work and the `TODO.md` item can stay compact with `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`.
+Promote that task into `docs/execplans/` once it needs milestone sequencing, blocker handling, non-obvious validation scope, rollback or migration detail, or enough ambiguity that restart would require more than the TODO row.
+
 Do not start coding from chat context alone when the same knowledge should live in checked-in files.
 
 ## Sources Of Truth

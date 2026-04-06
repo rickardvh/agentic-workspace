@@ -93,6 +93,31 @@ pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdir
 
 ## Good Fits / Bad Fits
 
+## Direct Execution Or Execplan
+
+Use a direct task in `TODO.md` when the work is small enough to finish in one coherent pass and does not need milestone sequencing, blocker tracking, or a wider validation story.
+
+Treat the direct-task shape as compact by default:
+
+- `ID`
+- `Status`
+- `Surface`
+- `Why now`
+- `Next action`
+- `Done when`
+
+Promote the task into `docs/execplans/` when any of the following becomes true:
+
+- the work now spans more than one milestone or session-sized checkpoint
+- the next contributor would need explicit blocker or dependency handling
+- validation scope has to be spelled out instead of staying obvious from the change
+- rollback, migration, or ownership-reconciliation detail appears
+- the TODO row starts carrying extra execution fields or long narrative text
+
+Direct execution is an explicit success mode for small local work. The goal is not to force every change through planning; the goal is to promote only when the cheap path stops being safe.
+
+When a direct task completes, remove it from `TODO.md` promptly. If the task changed durable repo knowledge or left important follow-up work, record that residue in memory, canonical docs, `ROADMAP.md`, or a newly promoted execplan rather than leaving chat-only context behind.
+
 Good fits:
 
 - a repo where active work drifts between sessions and needs a checked-in active queue

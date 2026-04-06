@@ -28,6 +28,11 @@ Use a plan here when:
 - implementation should not start from chat context alone
 - architectural drift or validation scope needs explicit tracking
 
+Keep small direct work in `TODO.md` when one coherent pass can finish it safely.
+A direct task should stay compact and normally use only `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`.
+Promote that task into `docs/execplans/` once it picks up milestone sequencing, blocker management, validation scope, rollback or migration handling, or enough ambiguity that the next contributor would need more than the TODO row to continue.
+Direct execution is a success mode, not a planning failure.
+
 Each active plan should stay compact and include:
 
 - goal
