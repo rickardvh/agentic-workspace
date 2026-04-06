@@ -8,12 +8,13 @@ Active queue for repository work.
 
 ## Now
 
-- No active work right now.
+- [execution-scaling-contract-2026-04-06](docs/execplans/execution-scaling-contract-2026-04-06.md) - Make the simple-task direct-execution path explicit, add operational promotion triggers, and tighten minimal residue rules so planning stays adaptive instead of ritualised.
 
 ## Action
 
-- Promote the next roadmap candidate only when the scope is bounded enough for a short active execplan and a narrow validation story.
-- Favor concrete maintenance friction over speculative abstraction when deciding whether to promote shared-tooling extraction.
+- Treat execution scaling as the current top priority: keep simple work cheap, make promotion into planning explicit, and tighten residue rules around the direct-execution path.
+- Keep the tranche bounded around three outcomes: direct execution becomes an explicit success mode, plan-promotion triggers become operational and observable, and simple-work residue rules become part of the checked-in contract.
+- Promote shared-tooling extraction only when repeated checker or renderer duplication still looks like the dominant maintenance pressure after this tranche.
 - Prefer documentation, liveness checks, and consistency hardening over introducing new top-level concepts.
 - Favor merge-safe installed file shapes, weak-authority current surfaces, and collaboration-oriented checks over repo-local workaround guidance.
 - Keep root planning surfaces compact; archive completed plans instead of letting TODO accumulate residue.
