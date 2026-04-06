@@ -8,6 +8,11 @@ from pathlib import Path
 import pytest
 
 from repo_memory_bootstrap import cli, installer
+from repo_memory_bootstrap._installer_shared import (
+    MEMORY_COMPATIBILITY_CONTRACT_FILES,
+    MEMORY_LOWER_STABILITY_HELPER_FILES,
+    PAYLOAD_REQUIRED_FILES,
+)
 from repo_memory_bootstrap._ownership import module_root as memory_module_root
 
 FIXTURES_ROOT = Path(__file__).resolve().parent / "fixtures" / "routing"
@@ -20,6 +25,16 @@ MEMORY_GIT_SOURCE_REF = "git+https://github.com/rickardvh/agentic-workspace@mast
 
 def test_ownership_module_root_matches_workspace_ledger() -> None:
     assert memory_module_root("memory") == Path(".agentic-workspace/memory")
+
+
+def test_memory_contract_file_shortlist_is_explicit() -> None:
+    assert Path("AGENTS.md") in MEMORY_COMPATIBILITY_CONTRACT_FILES
+    assert Path("memory/index.md") in MEMORY_COMPATIBILITY_CONTRACT_FILES
+    assert Path("memory/manifest.toml") in MEMORY_COMPATIBILITY_CONTRACT_FILES
+    assert Path("scripts/check/check_memory_freshness.py") in MEMORY_LOWER_STABILITY_HELPER_FILES
+    assert Path(".agentic-workspace/memory/bootstrap/README.md") in MEMORY_LOWER_STABILITY_HELPER_FILES
+    assert set(MEMORY_COMPATIBILITY_CONTRACT_FILES).isdisjoint(MEMORY_LOWER_STABILITY_HELPER_FILES)
+    assert set(MEMORY_COMPATIBILITY_CONTRACT_FILES) | set(MEMORY_LOWER_STABILITY_HELPER_FILES) == set(PAYLOAD_REQUIRED_FILES)
 
 
 def _memory_index_text() -> str:

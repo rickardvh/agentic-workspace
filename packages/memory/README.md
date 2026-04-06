@@ -56,6 +56,29 @@ Use `prompt install` for a clean bootstrap into a repo that does not already hav
 
 ## Good Fits / Bad Fits
 
+## Stability Contract
+
+The installed memory payload is not one flat compatibility promise.
+
+Treat these files as the current memory compatibility contract surfaces that should not change shape casually:
+
+- `AGENTS.md`
+- `memory/index.md`
+- `memory/manifest.toml`
+- `.agentic-workspace/memory/SKILLS.md`
+- `.agentic-workspace/memory/WORKFLOW.md`
+- `memory/current/project-state.md`
+- `memory/current/task-context.md`
+- `memory/domains/README.md`
+- `memory/invariants/README.md`
+- `memory/runbooks/README.md`
+- `memory/mistakes/recurring-failures.md`
+- `memory/decisions/README.md`
+
+Treat upgrade metadata, audit scripts, bootstrap workspace files, and shipped shared skills as lower-stability helpers unless a stricter promise is stated later. Those helper surfaces matter operationally, but they remain easier to refine than the core installed memory contract above.
+
+Generated or derived guidance should only inherit stability from its canonical source when that relationship is explicit. A helper may remain upgrade-replaceable even when the memory note tree it supports is part of the compatibility contract.
+
 Good fits:
 
 - a repo where agents repeatedly have to relearn operator sequences, subsystem boundaries, or recurring failure modes

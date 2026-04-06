@@ -72,6 +72,23 @@ PAYLOAD_REQUIRED_FILES = (
     *BOOTSTRAP_WORKSPACE_FILES,
     *CORE_PAYLOAD_SKILL_FILES,
 )
+MEMORY_COMPATIBILITY_CONTRACT_FILES = (
+    AGENTS_PATH,
+    Path("memory/index.md"),
+    MANIFEST_PATH,
+    MANAGED_ROOT / "SKILLS.md",
+    WORKFLOW_PATH,
+    Path("memory/current/project-state.md"),
+    Path("memory/current/task-context.md"),
+    Path("memory/domains/README.md"),
+    Path("memory/invariants/README.md"),
+    Path("memory/runbooks/README.md"),
+    Path("memory/mistakes/recurring-failures.md"),
+    Path("memory/decisions/README.md"),
+)
+MEMORY_LOWER_STABILITY_HELPER_FILES = tuple(
+    relative for relative in PAYLOAD_REQUIRED_FILES if relative not in MEMORY_COMPATIBILITY_CONTRACT_FILES
+)
 FORBIDDEN_PAYLOAD_FILES = (Path("TODO.md"), Path("memory/current/active-decisions.md"), LEGACY_SYSTEM_ROOT / "UPGRADE.md")
 OBSOLETE_SHARED_FILES = (LEGACY_SYSTEM_ROOT / "UPGRADE.md",)
 FORBIDDEN_PAYLOAD_PREFIXES = (".agent-work/",)

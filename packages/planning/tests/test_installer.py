@@ -5,6 +5,9 @@ from pathlib import Path
 import repo_planning_bootstrap.installer as installer_mod
 from repo_planning_bootstrap._ownership import module_root as planning_module_root
 from repo_planning_bootstrap.installer import (
+    PLANNING_COMPATIBILITY_CONTRACT_FILES,
+    PLANNING_LOWER_STABILITY_HELPER_FILES,
+    REQUIRED_PAYLOAD_FILES,
     adopt_bootstrap,
     archive_execplan,
     collect_status,
@@ -90,6 +93,16 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
 
 def test_ownership_module_root_matches_workspace_ledger() -> None:
     assert planning_module_root("planning") == Path(".agentic-workspace/planning")
+
+
+def test_planning_contract_file_shortlist_is_explicit() -> None:
+    assert Path("AGENTS.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path("TODO.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path("docs/execplans/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path("tools/AGENT_QUICKSTART.md") in PLANNING_LOWER_STABILITY_HELPER_FILES
+    assert Path("scripts/render_agent_docs.py") in PLANNING_LOWER_STABILITY_HELPER_FILES
+    assert set(PLANNING_COMPATIBILITY_CONTRACT_FILES).isdisjoint(PLANNING_LOWER_STABILITY_HELPER_FILES)
+    assert set(PLANNING_COMPATIBILITY_CONTRACT_FILES) | set(PLANNING_LOWER_STABILITY_HELPER_FILES) == set(REQUIRED_PAYLOAD_FILES)
 
 
 def test_adopt_bootstrap_preserves_existing_agents(tmp_path: Path) -> None:

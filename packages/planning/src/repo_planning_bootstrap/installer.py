@@ -48,6 +48,20 @@ REQUIRED_PAYLOAD_FILES = (
     Path("tools/AGENT_ROUTING.md"),
 )
 
+PLANNING_COMPATIBILITY_CONTRACT_FILES = (
+    Path("AGENTS.md"),
+    Path("TODO.md"),
+    Path("ROADMAP.md"),
+    Path("docs/execplans/README.md"),
+    Path("docs/execplans/TEMPLATE.md"),
+    Path("docs/execplans/archive/README.md"),
+    PLANNING_MANIFEST_PATH,
+)
+
+PLANNING_LOWER_STABILITY_HELPER_FILES = tuple(
+    relative for relative in REQUIRED_PAYLOAD_FILES if relative not in PLANNING_COMPATIBILITY_CONTRACT_FILES
+)
+
 ROOT_SURFACE_FILES = (
     Path("AGENTS.md"),
     Path("TODO.md"),

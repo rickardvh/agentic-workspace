@@ -93,6 +93,24 @@ pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdir
 
 ## Good Fits / Bad Fits
 
+## Stability Contract
+
+The installed planning payload is not one flat compatibility promise.
+
+Treat these files as the current planning compatibility contract surfaces that should not change shape casually:
+
+- `AGENTS.md`
+- `TODO.md`
+- `ROADMAP.md`
+- `docs/execplans/README.md`
+- `docs/execplans/TEMPLATE.md`
+- `docs/execplans/archive/README.md`
+- `.agentic-workspace/planning/agent-manifest.json`
+
+Treat helper scripts and generated mirrors as lower-stability support surfaces unless a stricter promise is stated later. That lower-stability set currently includes the render and check scripts under `scripts/` and `.agentic-workspace/planning/scripts/`, plus generated mirrors such as `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, and `tools/AGENT_ROUTING.md`.
+
+Generated mirrors inherit stability from their canonical source relationships, not from their exact rendered text. If the manifest contract stays stable, the generated wording may still evolve when the renderer improves.
+
 ## Direct Execution Or Execplan
 
 Use a direct task in `TODO.md` when the work is small enough to finish in one coherent pass and does not need milestone sequencing, blocker tracking, or a wider validation story.
