@@ -99,6 +99,7 @@ def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_p
     payload = json.loads(capsys.readouterr().out)
     assert payload["mode"] == "adopt_high_ambiguity"
     assert payload["prompt_requirement"] == "required"
+    assert sorted(payload["detected_surfaces"]) == ["AGENTS.md", "TODO.md", "docs/execplans", "memory/index.md"]
     assert "handoff_prompt" in payload
     assert calls == [
         ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
@@ -119,6 +120,42 @@ def test_init_can_write_prompt_file(monkeypatch, tmp_path: Path, capsys) -> None
     assert payload["handoff_prompt_path"] == prompt_path.as_posix()
     assert prompt_path.exists()
     assert "Finish the Agentic Workspace bootstrap" in prompt_path.read_text(encoding="utf-8")
+
+
+def test_init_uses_recommended_prompt_for_single_existing_surface(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    (tmp_path / "AGENTS.md").write_text("# Existing\n", encoding="utf-8")
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mode"] == "adopt"
+    assert payload["prompt_requirement"] == "recommended"
+    assert payload["detected_surfaces"] == ["AGENTS.md"]
+    assert calls == [
+        ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
+        ("memory", "adopt", {"target": str(tmp_path), "dry_run": False}),
+    ]
+
+
+def test_init_marks_partial_module_state_for_review(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    (tmp_path / "memory").mkdir()
+    (tmp_path / "memory" / "index.md").write_text("# Memory\n", encoding="utf-8")
+    monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_install_signals(tmp_path, calls))
+
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mode"] == "adopt_high_ambiguity"
+    assert payload["prompt_requirement"] == "required"
+    assert payload["needs_review"] == [
+        "memory/index.md: partial module state detected",
+        "memory/index.md: reconcile existing workflow surface ownership",
+    ]
 
 
 def test_status_detects_installed_modules_by_default(monkeypatch, tmp_path: Path) -> None:
@@ -295,6 +332,31 @@ def _descriptors_with_mixed_actions(target_root: Path) -> dict[str, cli.ModuleDe
             },
             detector=lambda detected_root: True,
         )
+    }
+
+
+def _descriptors_with_install_signals(
+    target_root: Path, calls: list[tuple[str, str, dict[str, object]]]
+) -> dict[str, cli.ModuleDescriptor]:
+    descriptors = _fake_descriptors(target_root, calls)
+    return {
+        "planning": cli.ModuleDescriptor(
+            name="planning",
+            description=descriptors["planning"].description,
+            commands=descriptors["planning"].commands,
+            detector=lambda detected_root: (
+                (detected_root / "TODO.md").exists()
+                and (detected_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+            ),
+        ),
+        "memory": cli.ModuleDescriptor(
+            name="memory",
+            description=descriptors["memory"].description,
+            commands=descriptors["memory"].commands,
+            detector=lambda detected_root: (
+                (detected_root / "memory" / "index.md").exists() and (detected_root / ".agentic-workspace" / "memory").exists()
+            ),
+        ),
     }
 
 

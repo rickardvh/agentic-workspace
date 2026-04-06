@@ -468,6 +468,7 @@ def _build_init_summary(
         "preset": resolved_preset,
         "mode": inspection.mode,
         "prompt_requirement": prompt_requirement,
+        "detected_surfaces": inspection.detected_surfaces,
         "created": _dedupe(created),
         "updated_managed": _dedupe(updated_managed),
         "preserved_existing": _dedupe(preserved_existing),
@@ -727,6 +728,7 @@ def _emit_init_text(payload: dict[str, Any]) -> None:
     print(f"Modules: {', '.join(payload['modules'])}")
     print(f"Mode: {payload['mode']}")
     print(f"Prompt requirement: {payload['prompt_requirement']}")
+    _print_path_list("Detected surfaces", payload["detected_surfaces"])
     _print_path_list("Created", payload["created"])
     _print_path_list("Updated managed", payload["updated_managed"])
     _print_path_list("Preserved existing", payload["preserved_existing"])

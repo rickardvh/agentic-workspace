@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Exercise the root lifecycle against messier repo fixtures and tighten install-mode heuristics plus prompt classification where current detection still feels too coarse.
+- Decide whether the current workspace bootstrap tranche is complete enough to archive, or whether one more pass is needed to tighten root lifecycle docs and real-world fixture coverage beyond the current CLI regression suite.
 
 Keep exactly one immediate action by default; avoid multi-step mini-plans here.
 
@@ -68,3 +68,4 @@ Keep invariants contract-shaped and brief.
 
 - 2026-04-06: Promoted from the workspace bootstrap UX specification so the public entrypoint, report contract, and handoff workflow become explicit product behavior instead of an implicit thin wrapper.
 - 2026-04-06: Dogfooding the root CLI showed that `init` had a useful top-level summary but the other lifecycle verbs still exposed mostly raw module reports, so the first hardening milestone standardized those summary categories before pushing further into adopt heuristics.
+- 2026-04-06: Tightening messy-repo `init` coverage showed that partial-state detection and ownership-reconciliation warnings need to travel together in high-ambiguity cases, so the regression suite now exercises both instead of pretending they are separate concerns.
