@@ -22,9 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Audit current workspace and planning adoption fixtures to identify the highest-value missing repo shapes before adding new tests.
-
-Keep exactly one immediate action by default; avoid multi-step mini-plans here.
+- Add the next fixture for partial managed state so adoption realism covers more than docs-heavy preserved roots.
 
 ## Blockers
 
@@ -64,3 +62,5 @@ Keep invariants contract-shaped and brief.
 ## Drift Log
 
 - 2026-04-06: Promoted after the execution-scaling tranche landed and the next maturity risk remained adoption realism rather than lifecycle wording.
+- 2026-04-06: The first audit showed planning adoption coverage was still thin compared with memory; the highest-value immediate gap was a docs-heavy existing-repo shape that exercises preserved root surfaces plus generated helper installation.
+- 2026-04-06: Added the first docs-heavy adoption fixtures in both the planning package and workspace CLI so preserved root surfaces and generated helper installation are now exercised against a more realistic existing-repo shape.

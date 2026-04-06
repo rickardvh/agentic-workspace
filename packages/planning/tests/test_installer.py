@@ -100,6 +100,46 @@ def test_adopt_bootstrap_preserves_existing_agents(tmp_path: Path) -> None:
     assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
 
 
+def test_adopt_bootstrap_docs_heavy_repo_preserves_root_surfaces_and_installs_helpers(tmp_path: Path) -> None:
+    agents_path = tmp_path / "AGENTS.md"
+    todo_path = tmp_path / "TODO.md"
+    roadmap_path = tmp_path / "ROADMAP.md"
+    execplan_readme_path = tmp_path / "docs" / "execplans" / "README.md"
+    contributor_playbook_path = tmp_path / "docs" / "contributor-playbook.md"
+    maintainer_commands_path = tmp_path / "docs" / "maintainer-commands.md"
+
+    _write(agents_path, "# Existing agents\n")
+    _write(todo_path, "# Existing TODO\n")
+    _write(roadmap_path, "# Existing Roadmap\n")
+    _write(execplan_readme_path, "# Existing execution docs\n")
+    _write(contributor_playbook_path, "# Existing contributor playbook\n")
+    _write(maintainer_commands_path, "# Existing commands\n")
+
+    result = adopt_bootstrap(target=tmp_path)
+
+    assert agents_path.read_text(encoding="utf-8") == "# Existing agents\n"
+    assert todo_path.read_text(encoding="utf-8") == "# Existing TODO\n"
+    assert roadmap_path.read_text(encoding="utf-8") == "# Existing Roadmap\n"
+    assert execplan_readme_path.read_text(encoding="utf-8") == "# Existing execution docs\n"
+    assert contributor_playbook_path.read_text(encoding="utf-8") == "# Existing contributor playbook\n"
+    assert maintainer_commands_path.read_text(encoding="utf-8") == "# Existing commands\n"
+    assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+    assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
+    assert (tmp_path / "tools" / "AGENT_ROUTING.md").exists()
+    assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
+    assert any(action.kind == "skipped" and action.path == execplan_readme_path for action in result.actions)
+    assert any(
+        action.kind in {"copied", "created", "updated"}
+        and action.path == tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
+        for action in result.actions
+    )
+    assert any(
+        action.kind in {"copied", "created", "updated"}
+        and action.path == tmp_path / "tools" / "AGENT_QUICKSTART.md"
+        for action in result.actions
+    )
+
+
 def test_status_reports_missing_and_present_files(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     result = collect_status(target=tmp_path)

@@ -140,6 +140,37 @@ def test_init_uses_recommended_prompt_for_single_existing_surface(monkeypatch, t
     ]
 
 
+def test_init_reports_docs_heavy_repo_as_high_ambiguity(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    (tmp_path / "AGENTS.md").write_text("# Existing\n", encoding="utf-8")
+    (tmp_path / "TODO.md").write_text("# Existing TODO\n", encoding="utf-8")
+    (tmp_path / "ROADMAP.md").write_text("# Existing Roadmap\n", encoding="utf-8")
+    (tmp_path / "docs" / "contributor-playbook.md").parent.mkdir(parents=True)
+    (tmp_path / "docs" / "contributor-playbook.md").write_text("# Contributor Playbook\n", encoding="utf-8")
+    (tmp_path / "docs" / "maintainer-commands.md").write_text("# Maintainer Commands\n", encoding="utf-8")
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mode"] == "adopt_high_ambiguity"
+    assert payload["prompt_requirement"] == "required"
+    assert sorted(payload["detected_surfaces"]) == [
+        "AGENTS.md",
+        "ROADMAP.md",
+        "TODO.md",
+        "docs/contributor-playbook.md",
+        "docs/maintainer-commands.md",
+    ]
+    assert "AGENTS.md: reconcile existing workflow surface ownership" in payload["needs_review"]
+    assert "docs/contributor-playbook.md: reconcile existing workflow surface ownership" in payload["needs_review"]
+    assert calls == [
+        ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
+        ("memory", "adopt", {"target": str(tmp_path), "dry_run": False}),
+    ]
+
+
 def test_init_marks_partial_module_state_for_review(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
