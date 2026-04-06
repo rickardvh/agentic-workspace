@@ -75,6 +75,8 @@ agentic-workspace upgrade --target /path/to/repo
 agentic-workspace uninstall --target /path/to/repo --preset planning
 ```
 
+`agentic-workspace doctor` now surfaces each module's frozen compatibility-contract shortlist inside the nested module reports, so maintainers can inspect the current contract boundary from the root CLI without dropping into package-local doctor commands first.
+
 Direct module CLIs still exist for maintainers, power users, and package-local workflows:
 
 ```bash
