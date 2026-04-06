@@ -301,6 +301,28 @@ def test_direct_task_can_trigger_plan_required_hint(tmp_path: Path) -> None:
     assert "todo_plan_required_hint" in classes
 
 
+def test_direct_task_handoff_and_recovery_language_triggers_plan_hint(tmp_path: Path) -> None:
+        mod = _load_module(_checker_script_path(), "planning_plan_required_recovery")
+        _write(
+                tmp_path / "TODO.md",
+                """
+# TODO
+
+## Next
+
+- ID: direct-item
+    Status: in-progress
+    Surface: direct
+    Why now: this needs a clean handoff if the current session stops midway.
+    Next action: resume from the last checkpoint and recover the partial failure path.
+    Done when: concurrent branch work can land without extra restart notes.
+""",
+        )
+        _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+        classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
+        assert "todo_plan_required_hint" in classes
+
+
 def test_execplan_under_specified_and_notebook_warnings(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_execplan_shape")
     under_specified_plan = """

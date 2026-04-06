@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Decide whether the current direct-task heuristics need checker changes or only more explicit validation examples for interrupted and resumed work.
+- Re-run the planning checks and decide whether the tranche is complete enough to archive or still needs a final residue-focused pass.
 
 Keep exactly one immediate action by default; avoid multi-step mini-plans here.
 
@@ -67,3 +67,4 @@ Keep invariants contract-shaped and brief.
 
 - 2026-04-06: Promoted from maintainer feedback after a small-project experiment showed the fast path can succeed without planning, but the transition into planning still needs a clearer checked-in contract.
 - 2026-04-06: Tightened the contract in planning docs, shipped bootstrap payloads, and manifest-backed maintainer guidance so direct execution and promotion triggers are stated in the same operational language across installed and self-hosted surfaces.
+- 2026-04-06: Expanded the checker's promotion signals to cover resume, handoff, recovery, retry, and concurrent-branch language so the direct-task fast path fails closed when restart cost is no longer trivial.

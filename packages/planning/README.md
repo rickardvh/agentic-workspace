@@ -118,6 +118,20 @@ Direct execution is an explicit success mode for small local work. The goal is n
 
 When a direct task completes, remove it from `TODO.md` promptly. If the task changed durable repo knowledge or left important follow-up work, record that residue in memory, canonical docs, `ROADMAP.md`, or a newly promoted execplan rather than leaving chat-only context behind.
 
+## Direct-Task Recovery Cases
+
+Keep the task direct only while the TODO row stays self-sufficient.
+
+Promote into an execplan when any of these cases appears:
+
+- interrupted work now needs an explicit restart or resume path
+- a handoff between sessions, contributors, or models would require more than one TODO row
+- partial failure or retry handling needs to be spelled out
+- concurrent branch work creates merge, ownership, or sequencing risk
+- stale residue would otherwise be left in `TODO.md` because the task can no longer close in one pass
+
+The practical test is simple: if safe continuation depends on more than `Why now`, `Next action`, and `Done when`, the work is no longer a direct task.
+
 Good fits:
 
 - a repo where active work drifts between sessions and needs a checked-in active queue

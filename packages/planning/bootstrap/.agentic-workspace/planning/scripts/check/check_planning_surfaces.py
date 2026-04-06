@@ -244,7 +244,7 @@ def _direct_task_has_plan_sized_shape(block: dict[str, str]) -> bool:
     extra_fields = {key for key in block if key not in allowed}
     long_fields = any(len(block.get(key, "")) > 160 for key in ("why now", "next action", "done when"))
     execution_markers = re.search(
-        r"\b(blocker|blocked|validation|milestone|scope|invariant|phase|rollback|migration)\b",
+        r"\b(blocker|blocked|validation|milestone|scope|invariant|phase|rollback|migration|handoff|resume|resumed|restart|recovery|recover|retry|branch|concurrent)\b",
         " ".join(block.get(key, "") for key in allowed),
         re.IGNORECASE,
     )
