@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Decide whether root text lifecycle output should stay quiet by leaving contract boundaries inside module reports only, or whether a small module-scoped summary line would improve discoverability without adding noise.
+- Decide whether the stable-contract tranche should stop after runtime and workspace reporting proof, or whether maintainer-facing docs should add one short note explaining that root doctor already exposes the package contract boundaries through nested module reports.
 
 ## Blockers
 
@@ -68,3 +68,4 @@ Keep invariants contract-shaped and brief.
 - 2026-04-06: Declared explicit planning and memory compatibility-contract shortlists, separated lower-stability helpers, and documented that boundary in package READMEs and installer tests.
 - 2026-04-06: Surfaced the contract shortlists in planning and memory doctor and verify-payload output, then proved the root workspace doctor JSON already preserves those module-level summaries without adding a new top-level schema.
 - 2026-04-06: Normalized workspace adapter path serialization for dataclass-based module actions so nested planning and memory report paths now share the same target-relative shape.
+- 2026-04-06: Confirmed the default root doctor text output already shows the contract shortlists via module report lines, so adding another top-level contract summary layer would mostly duplicate existing output.

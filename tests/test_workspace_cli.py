@@ -342,6 +342,23 @@ def test_doctor_real_init_preserves_package_contract_shortlists_in_reports(tmp_p
     )
 
 
+def test_doctor_text_output_shows_package_contract_shortlists(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["doctor", "--target", str(target)]) == 0
+
+    output = capsys.readouterr().out
+    assert "[planning] Doctor report" in output
+    assert "[memory] Doctor report" in output
+    assert "compatibility contract files:" in output
+    assert "lower-stability helper files:" in output
+
+
 def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))
