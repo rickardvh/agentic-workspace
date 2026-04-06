@@ -8,6 +8,8 @@ Use `docs/maintainer-commands.md` when you need the literal command to run; use 
 
 This playbook is primarily for maintainers operating as coding agents. Human contributors can use it too, but it is intentionally optimized for explicit routing, bounded reads, and narrow validation.
 
+Use `docs/design-principles.md` when a change affects product shape, ownership, lifecycle behavior, or the amount of ceremony the repo imposes on normal work.
+
 ## Agent Maintainer Path
 
 Default startup path for an agent maintainer:
@@ -50,6 +52,15 @@ As a maintainer rule of thumb:
 - if the fact should survive the current task, it probably belongs in memory or canonical docs
 - if the fact changes what is active now or what must happen next, it probably belongs in planning
 - if the behavior is package-specific, keep it in that package rather than teaching the workspace layer too much
+
+Design guardrails:
+
+- prefer repo-native state over chat residue when the fact materially affects restart cost or safe execution
+- reduce reading and reasoning cost rather than adding broad new workflow surfaces
+- preserve one clear owner per concern instead of duplicating authority across docs, memory, planning, checks, or orchestration
+- keep simple work simple; add ceremony only when complexity, ambiguity, or collaboration risk justifies it
+- keep the workspace layer thin and explicit rather than absorbing package-local domain logic
+- favor portable, selective-adoption behavior over monorepo-local cleverness
 
 For execution scaling specifically:
 

@@ -2,6 +2,8 @@
 
 This page is the canonical policy surface for module boundaries and extraction decisions.
 
+It operationalizes the higher-level product rules in `docs/design-principles.md`, especially one-home-per-concern ownership, selective adoption, explicit seams, and thin workspace orchestration.
+
 ## Ownership Tests
 
 | Concern | Owns | Does not own |

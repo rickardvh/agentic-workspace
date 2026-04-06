@@ -2,6 +2,8 @@
 
 This page describes the current ecosystem shape.
 
+Use `docs/design-principles.md` as the higher-level rule set for why this shape exists and what future changes must preserve.
+
 ## Public Shape
 
 ```mermaid

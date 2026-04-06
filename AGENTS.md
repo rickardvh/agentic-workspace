@@ -30,6 +30,7 @@ Do not bulk-read all planning surfaces.
 
 - Active queue: `TODO.md`
 - Long-horizon candidate work: `ROADMAP.md`
+- Design constraints for future changes: `docs/design-principles.md`
 
 ## Product Direction
 
@@ -52,8 +53,14 @@ Work in this repo should steer toward these goals:
 - Generalise only after a feature works under real autonomous use here.
 - Avoid overfitting to this monorepo when shaping package behavior; prefer solutions that remain broadly useful in other repositories.
 - Favour mechanisms that reduce rediscovery, drift, and manual supervision.
+- Keep the system quiet in normal use: prefer structure that lowers reading and reasoning cost over workflow ceremony.
+- Preserve one primary owner per concern so planning, memory, routing, checks, and orchestration do not drift into duplicated authority.
+- Treat selective adoption as a product requirement, not a nice-to-have: each module should remain useful alone.
+- Keep lifecycle centralized and domain logic package-local so workspace convenience does not erase module responsibility.
 
 The standard for success is not novelty. It is giving agents real operating leverage in a repo: faster restart, safer execution, better continuity, and less wasted context.
+
+When changing product shape, ownership boundaries, lifecycle behavior, or maintainer workflow, re-check `docs/design-principles.md` and make sure the change still passes those design tests.
 
 ## Repo Rules
 

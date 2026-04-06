@@ -8,6 +8,7 @@ Inactive long-horizon candidate work.
 
 ## Active Handoff
 
+- The full Agentic Workspace design principles are now a canonical repo doc rather than attachment-only guidance, so future roadmap promotion and product-shape changes should be tested against that file explicitly.
 - External entry, naming, architecture, maturity framing, and maintainer-boundary docs are now in a credible product shape.
 - Installed-contract collaboration safety landed across the integration contract, package framing, shipped templates, payload verification, and the maintainer liveness lane.
 - Docs-surface governance landed across the Memory README first screen, the root docs map, maintainer-doc role scoping, workflow-surface history, and a root maintainer-surface role-drift check.
@@ -22,6 +23,8 @@ Inactive long-horizon candidate work.
 - A broader modular-platform vision now frames that maturity work as part of a larger outcome: Agentic Workspace should become a modular agent-ready platform with first-party managed modules, registry-ready orchestration, intentional composition, and a future extension boundary that still preserves strict ownership.
 - Shared-tooling extraction remains a later support candidate inside the same maturity program, but only if duplicated checks and renderers still create sustained maintenance drag after the lifecycle and adoption phases settle.
 - Promote the next candidate only when the scope is bounded enough for a short execplan and a narrow validation story.
+
+Future promoted work should continue to pass the design tests in `docs/design-principles.md`: lower startup friction, reduce rediscovery, preserve ownership boundaries, stay quiet in normal use, and remain portable beyond this monorepo.
 
 ## Next Candidate Queue
 

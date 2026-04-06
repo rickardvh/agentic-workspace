@@ -43,6 +43,7 @@ Keep this as a scope guard, not a broad file inventory.
 - Generated mirrors should only inherit stability from their canonical sources when that relationship is explicit.
 - Planning and memory must remain selectively adoptable with clear module boundaries.
 - Validation should prove the declared contract rather than relying on informal maintainer memory.
+- The frozen contract should reduce ambiguity for adopters without adding new ceremony for simple lifecycle work.
 
 Keep invariants contract-shaped and brief.
 
@@ -65,3 +66,4 @@ Keep invariants contract-shaped and brief.
 - 2026-04-06: Promoted after lifecycle wording, adoption realism, and cross-module ambiguity hardening all landed cleanly enough that the next maturity risk became compatibility drift rather than missing behavior proof.
 - 2026-04-06: The initial audit showed memory already had richer internal contract metadata than planning, so the first milestone now makes both packages expose an explicit compatibility-contract shortlist and distinguish it from lower-stability helpers in tests and README guidance.
 - 2026-04-06: Added explicit contract shortlists for both packages, documented them in the READMEs, and locked them in with installer tests; the next question is whether runtime verification output should expose that shortlist directly for maintainers.
+- 2026-04-06: Integrated the expanded design principles into canonical docs and maintainer guidance so future contract-freeze decisions are evaluated against quieter operation, lower reading cost, clear ownership, portability, and selective adoption rather than local convenience.

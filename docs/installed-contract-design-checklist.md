@@ -49,4 +49,7 @@ Use `docs/maintainer-commands.md` for commands and `docs/contributor-playbook.md
 ## Review Bar
 
 - If two contributors edited this surface on different branches, would the merge path be obvious?
+- Does the surface stay quiet by default instead of adding ongoing workflow ceremony for simple work?
+- Does it reduce reading and reasoning cost, or does it mostly create new startup burden?
+- Does it preserve one clear owner per concern and avoid pushing package-local logic into the workspace layer by convenience?
 - If the answer depends on chat context or maintainer folklore, tighten the contract before shipping the change.
