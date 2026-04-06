@@ -29,15 +29,16 @@ Current high-impact decisions that still affect active implementation choices.
 - The root `agentic-workspace` CLI is the shared lifecycle entrypoint for common workspace verbs, while package CLIs remain authoritative for module-specific behavior.
 - Keep collaboration-safe installed-contract hardening ahead of new top-level concepts when dogfooding exposes merge or ownership ambiguity.
 - Use ownership tests and explicit manifests before introducing new shared managed surfaces.
+- Keep `ROADMAP.md` as a concise sequencing queue; move long-horizon product framing into `docs/ecosystem-roadmap.md` and `docs/design-principles.md`.
 
 ## Verify
 
 - TODO.md
-- .agentic-workspace/WORKFLOW.md
-- .agentic-workspace/OWNERSHIP.toml
-- Makefile
-- .github/workflows/ci.yml
+- ROADMAP.md
+- README.md
+- docs/ecosystem-roadmap.md
+- docs/design-principles.md
 
 ## Last confirmed
 
-2026-04-06 after tightening weak-authority current-memory rules
+2026-04-06 after trimming the roadmap to queue-only scope
