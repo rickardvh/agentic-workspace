@@ -54,6 +54,7 @@ Work in this repo should steer toward these goals:
 - Avoid overfitting to this monorepo when shaping package behavior; prefer solutions that remain broadly useful in other repositories.
 - Favour mechanisms that reduce rediscovery, drift, and manual supervision.
 - Keep the system quiet in normal use: prefer structure that lowers reading and reasoning cost over workflow ceremony.
+- Leave the repository cleaner than you found it within the touched scope, and record broader cleanup as follow-up instead of silently expanding the task.
 - Preserve one primary owner per concern so planning, memory, routing, checks, and orchestration do not drift into duplicated authority.
 - Treat selective adoption as a product requirement, not a nice-to-have: each module should remain useful alone.
 - Keep lifecycle centralized and domain logic package-local so workspace convenience does not erase module responsibility.

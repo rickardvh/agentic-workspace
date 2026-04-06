@@ -135,6 +135,10 @@ The right long-term answer is often:
 - better scripts
 - stronger validation
 
+Leave the repository cleaner than you found it within the touched scope.
+
+If cleanup would expand beyond the touched scope, record the broader improvement as follow-up instead of silently absorbing it.
+
 The system should help the repo mature, not simply accumulate operational residue forever.
 
 ### 9. Favor explicit seams over hidden coupling

@@ -16,6 +16,7 @@ Classify each signal into exactly one primary bucket first:
 - Boundary issue: ownership between memory, planning, routing, checks, or workspace composition is unclear or drifting.
 - Install-flow issue: install, adopt, upgrade, uninstall, or doctor behavior is confusing or unsafe.
 - Docs or routing issue: maintainer guidance, startup path, generated docs, or command discovery drifted away from reality.
+- Stewardship friction: the repository keeps needing extra cleanup at the end of tasks or the touched scope is too unclear to finish cleanly.
 - Monorepo-only friction: the problem appears in this dogfooding repo but should not automatically change the external product contract.
 
 ## Capture Rules
@@ -23,6 +24,7 @@ Classify each signal into exactly one primary bucket first:
 - If the signal changes active execution, route it into `TODO.md` or an execplan.
 - If it is a future candidate, record it in `ROADMAP.md` with a promotion signal.
 - If it is durable operating knowledge, capture it in memory or canonical docs.
+- If cleanup burden repeats, classify it as stewardship friction and route it into planning rather than letting it become invisible task residue.
 - If it is monorepo-only friction, say that explicitly so it does not silently become product policy.
 
 ## Preferred Resolution Order

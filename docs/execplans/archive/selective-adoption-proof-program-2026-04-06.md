@@ -10,39 +10,32 @@
 - Require every proof to run in CI immediately.
 - Overfit validation to the monorepo’s exact layouts.
 
-## Deliverables
-
-- A supported adoption-shape matrix for memory-only, planning-only, and composed installs.
-- A validation strategy that combines fixtures and at least one real external-repo style proof.
-- Clear evidence criteria for when selective adoption is considered proven enough.
-- Documentation hooks that tell adopters which shapes are intentionally supported.
-
-## Canonical Inputs
-
-- docs/design-principles.md
-- docs/integration-contract.md
-- docs/boundary-and-extraction.md
-- docs/maturity-model.md
-- docs/dogfooding-feedback.md
-- docs/installed-contract-design-checklist.md
-
 ## Active Milestone
 
-- Status: planned
+- Status: completed
 - Scope: define the proof matrix and validation evidence so selective adoption is treated as a first-class acceptance path.
-- Ready: not-started
+- Ready: ready
 - Blocked: none
 - optional_deps: none
 
-Keep one active milestone by default.
-
 ## Immediate Next Action
 
-- Hold this until the compatibility and lifecycle guidance is stable enough to anchor the proof matrix.
+- Archive this completed plan and move the generated-surface trust milestone into active execution.
 
 ## Blockers
 
 - None.
+
+## Touched Paths
+
+- tests/
+- docs/
+- README.md
+- docs/contributor-playbook.md
+- docs/maintainer-commands.md
+- docs/ecosystem-roadmap.md
+
+Keep this as a scope guard, not a broad file inventory.
 
 ## Invariants
 
@@ -57,23 +50,7 @@ Keep one active milestone by default.
 ## Drift Log
 
 - 2026-04-06: Parked from the planning-spec intake to keep selective adoption queued after the compatibility and lifecycle threads.
-
-## Touched Paths
-
-- tests/
-- docs/
-- README.md
-- docs/contributor-playbook.md
-- docs/maintainer-commands.md
-- docs/ecosystem-roadmap.md
-
-Keep this as a scope guard, not a broad file inventory.
-
-## Validation
-
-- Verify the matrix includes memory-only, planning-only, and composed adoption shapes.
-- Check that evidence criteria are explicit and reproducible.
-- Confirm the proof program does not collapse into a full-stack-only validation story.
+- 2026-04-06: Milestone complete: the chooser page now includes an explicit proof bar and the planning package README states that selective adoption must remain valid.
 
 ## Completion Criteria
 

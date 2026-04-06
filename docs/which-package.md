@@ -63,6 +63,13 @@ For the stable-versus-mutable surface policy that underpins this chooser, see `d
 | Workspace composition with both modules | Yes | Shared lifecycle entrypoints over the same memory/planning module contracts | Same module-owned writable surfaces, plus thin root orchestration entrypoints |
 | Workspace layer without memory or planning | No | The workspace layer is intentionally thin and not a standalone domain product | Not applicable |
 
+## Proof Bar
+
+- Memory-only repos should install and adopt cleanly without planning assumptions.
+- Planning-only repos should install and adopt cleanly without memory assumptions.
+- Repos with both modules should keep ownership separate while the root workspace layer stays thin.
+- Evidence should come from package tests plus at least one real temporary-repo proof for each supported shape.
+
 ## Next Reads
 
 - Memory path: `packages/memory/README.md`

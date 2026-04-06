@@ -11,6 +11,7 @@ Keep this page short and decision-shaped; it is not the full changelog, release 
 - Tightened package README first-screen framing around selective adoption and working alongside the other module.
 - Added an installed-contract design checklist so package authors can review new shipped surfaces against collaboration-safe criteria.
 - Clarified the root docs map with page-specific roles and added a maintainer-surface check for docs-role drift across the maintainer docs set.
+- Added a generated-surface trust doc so maintainer guidance can point at one canonical source/freshness policy for generated mirrors.
 
 ## 2026-04-05
 

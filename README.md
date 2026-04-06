@@ -64,7 +64,7 @@ pipx run --spec git+https://github.com/rickardvh/agentic-workspace agentic-works
 
 Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no-install path when it is the runner a repo already uses.
 
-`init` defaults to the full preset when you omit module selection. It bootstraps mechanically, detects whether the repo should stay in clean-install mode or switch to conservative adopt mode, and can print or write a repo-specific handoff prompt when finishing work still needs judgment.
+`init` defaults to the full preset when you omit module selection. It bootstraps mechanically, then chooses clean install, conservative adopt, or high-ambiguity adopt based on the repo state. See `docs/init-lifecycle.md` for the mode matrix and prompt requirement semantics.
 
 After bootstrap, use the same root CLI for the shared lifecycle verbs:
 
@@ -107,6 +107,7 @@ See `docs/maturity-model.md` for what `alpha` and `beta` mean here.
 For adopters:
 
 - `docs/which-package.md` - choose Memory, Planning, or both.
+- `docs/init-lifecycle.md` - understand the root `init` mode matrix and prompt requirements.
 - `docs/architecture.md` - see the public ecosystem shape and thin-workspace boundary.
 - `docs/integration-contract.md` - understand how memory, planning, managed surfaces, and generated docs interact.
 - `docs/maturity-model.md` - understand current alpha/beta expectations.
@@ -122,6 +123,7 @@ For maintainers:
 
 - `docs/contributor-playbook.md` - choose the right ownership surface and validation lane before editing.
 - `docs/maintainer-commands.md` - canonical command index for routine maintenance.
+- `docs/generated-surface-trust.md` - understand the canonical sources and freshness rules for generated maintainer surfaces.
 - `docs/collaboration-safety.md` - concurrent-edit and git hygiene rules.
 - `docs/installed-contract-design-checklist.md` - review bar for new or changed shipped surfaces.
 - `docs/dogfooding-feedback.md` - classify internal friction before routing it onward.

@@ -12,32 +12,16 @@ Inactive long-horizon candidate work.
 - External entry, naming, architecture, maturity framing, and maintainer-boundary docs are now in a credible product shape.
 - The stable package contract freeze tranche landed across explicit contract shortlists, runtime doctor and verify-payload reporting, and root workspace passthrough proof.
 - The first-party module contract tranche landed across explicit descriptor metadata for lifecycle arguments, install signals, workflow-overlap paths, generated-artifact classification, and centralized descriptor construction.
-- The current promoted tranche is module registry and capability model so the workspace layer can enumerate first-party modules and lifecycle support from one internal model instead of scattered lists and command-specific assumptions.
+- The remaining long-horizon candidate work is composition and extension preparation, with shared tooling extraction only if duplicated maintenance drag still matters after the lifecycle and adoption phases settle.
 - A broader modular-platform vision now frames that maturity work as part of a larger outcome: Agentic Workspace should become a modular agent-ready platform with first-party managed modules, registry-ready orchestration, intentional composition, and a future extension boundary that still preserves strict ownership.
 - Shared-tooling extraction remains a later support candidate inside the same maturity program, but only if duplicated checks and renderers still create sustained maintenance drag after the lifecycle and adoption phases settle.
 - Promote the next candidate only when the scope is bounded enough for a short execplan and a narrow validation story.
 
-## Remaining Plan Split
-
-- Platform contract hardening: keep module registry and capability reporting explicit and queryable without broadening into a public extension API.
-- Lifecycle and compatibility hardening: define the stable-surface promise, breaking-change expectations, and the dedicated `init` adoption-mode guidance.
-- Stewardship and design-principle tightening: add the repository stewardship rule so task-local cleanup and follow-up planning stay deliberate.
-- Generated-surface trust and validation hardening: make canonical sources, rerender expectations, and liveness checks boring and explicit.
-- Selective-adoption proof work: prove memory-only, planning-only, and composed installs cleanly outside the monorepo.
-- Long-term module/plugin preparation: keep composition contract hardening, extension boundary design, and shared tooling extraction as later phases after the first-party contract settles.
-
-Promotion criteria: move each thread into an active execplan only when its canonical doc exists, the scope fits a short implementation lane, and it does not force the workspace layer to own module semantics.
-
-Future promoted work should continue to pass the design tests in `docs/design-principles.md`: lower startup friction, reduce rediscovery, preserve ownership boundaries, stay quiet in normal use, and remain portable beyond this monorepo.
-
 ## Next Candidate Queue
 
-- Compatibility policy and stable surfaces: define which workspace and package surfaces are stable today and what counts as a breaking change. Promote when the module-registry tranche has a stable enough surface map to anchor compatibility wording.
-- Repository stewardship rule: define the bounded cleanup and follow-up rule for leaving the repo better than found. Promote when the maintainer guidance needs a durable cleanup policy instead of implicit expectations.
-- Init lifecycle and adoption modes: document clean install, conservative adopt, high-ambiguity adopt, and prompt requirements. Promote when lifecycle wording needs a dedicated home outside the README.
-- Generated surface trust hardening: tighten canonical-source declarations, rerender expectations, and liveness checks. Promote when stable-surface language is settled enough to keep generated-surface policy compact.
-- Selective adoption proof program: prove memory-only, planning-only, and composed installs with explicit evidence. Promote when compatibility and lifecycle docs make supported adoption shapes explicit.
-- Composition and extension preparation: define composition contract hardening, extension boundary design, and shared tooling extraction only after the first-party contract and compatibility work settle. Promote when registry and compatibility work are stable enough to avoid redesign.
+- Composition contract hardening: define how modules interact, compose presets, and share lifecycle reporting without blurring ownership. Promote when future composition work needs a stable contract.
+- Extension boundary design: define the public plugin or external-module contract only after first-party module assumptions have stabilized. Promote when external use becomes a product need.
+- Shared tooling extraction: evaluate a common checker core when duplicated maintenance drag remains a real cost after the lifecycle and adoption phases settle. Promote when duplicated checker and renderer maintenance remains a higher cost than unresolved product-contract ambiguity.
 
 ## Platform Vision Goal
 

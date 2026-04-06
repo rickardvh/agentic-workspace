@@ -10,39 +10,31 @@
 - Expand scope silently beyond the touched surfaces.
 - Replace the existing design principles or maintainer playbook.
 
-## Deliverables
+## Active Milestone
 
-- A short canonical stewardship rule that says tasks should leave the repository cleaner than they found it within scope.
-- Integration into the design-principles and maintainer-facing guidance surfaces.
-- A clear distinction between in-scope cleanup and follow-up improvements.
-- A repeatable signal for recurring cleanup friction so it can become roadmap input instead of invisible toil.
+- Status: completed
+- Scope: define the stewardship rule and place it in the repo’s durable guidance surfaces without turning it into a broad cleanup policy.
+- Ready: ready
+- Blocked: none
+- optional_deps: none
 
-## Canonical Inputs
+## Immediate Next Action
+
+- Archive this completed plan and move the init-lifecycle milestone into active execution.
+
+## Blockers
+
+- None.
+
+## Touched Paths
 
 - docs/design-principles.md
 - AGENTS.md
 - docs/contributor-playbook.md
 - docs/maintainer-commands.md
-- docs/installed-contract-design-checklist.md
 - docs/dogfooding-feedback.md
 
-## Active Milestone
-
-- Status: planned
-- Scope: define the stewardship rule and place it in the repo’s durable guidance surfaces without turning it into a broad cleanup policy.
-- Ready: not-started
-- Blocked: none
-- optional_deps: none
-
-Keep one active milestone by default.
-
-## Immediate Next Action
-
-- Wait for the current active tranche to settle, then promote this rule alongside the maintainer guidance updates it needs.
-
-## Blockers
-
-- None.
+Keep this as a scope guard, not a broad file inventory.
 
 ## Invariants
 
@@ -57,22 +49,7 @@ Keep one active milestone by default.
 ## Drift Log
 
 - 2026-04-06: Parked from the planning-spec intake to keep the repo stewardship rule queued behind the active registry work.
-
-## Touched Paths
-
-- docs/design-principles.md
-- AGENTS.md
-- docs/contributor-playbook.md
-- docs/maintainer-commands.md
-- docs/dogfooding-feedback.md
-
-Keep this as a scope guard, not a broad file inventory.
-
-## Validation
-
-- Check that the rule is short, actionable, and adjacent to existing stewardship guidance.
-- Verify the repo still distinguishes task-local cleanup from follow-up planning.
-- Confirm the guidance does not create a second maintenance doctrine.
+- 2026-04-06: Milestone complete: the repo now says to leave touched surfaces cleaner than you found them and routes repeated cleanup burden through a specific stewardship-friction signal.
 
 ## Completion Criteria
 

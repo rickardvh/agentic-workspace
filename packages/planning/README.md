@@ -28,6 +28,7 @@ Adoption shape:
 - Works well alone in repos that need checked-in execution steering without a separate memory layer.
 - Works alongside Agentic Memory when active planning should be able to reference durable repo knowledge.
 - Does not require the full stack or the workspace layer.
+- Selective adoption must remain valid: planning should still make sense in repos that do not install memory.
 
 Collaboration shape:
 
