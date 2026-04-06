@@ -140,6 +140,24 @@ def test_adopt_bootstrap_docs_heavy_repo_preserves_root_surfaces_and_installs_he
     )
 
 
+def test_adopt_bootstrap_preserves_existing_manifest_in_partial_managed_state(tmp_path: Path) -> None:
+    manifest_path = tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
+    manifest_text = '{"bootstrap": {"first_reads": ["AGENTS.md", "TODO.md"]}}\n'
+    _write(manifest_path, manifest_text)
+
+    result = adopt_bootstrap(target=tmp_path)
+
+    assert manifest_path.read_text(encoding="utf-8") == manifest_text
+    assert (tmp_path / "tools" / "agent-manifest.json").exists()
+    assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
+    assert any(action.kind == "skipped" and action.path == manifest_path for action in result.actions)
+    assert any(
+        action.kind in {"created", "updated"}
+        and action.path == tmp_path / "tools" / "agent-manifest.json"
+        for action in result.actions
+    )
+
+
 def test_status_reports_missing_and_present_files(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     result = collect_status(target=tmp_path)

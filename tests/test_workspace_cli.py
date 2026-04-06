@@ -189,6 +189,29 @@ def test_init_marks_partial_module_state_for_review(monkeypatch, tmp_path: Path,
     ]
 
 
+def test_init_marks_partial_planning_state_for_review(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    (tmp_path / "TODO.md").write_text("# Existing TODO\n", encoding="utf-8")
+    (tmp_path / "docs" / "execplans").mkdir(parents=True)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_install_signals(tmp_path, calls))
+
+    assert cli.main(["init", "--modules", "planning", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mode"] == "adopt_high_ambiguity"
+    assert payload["prompt_requirement"] == "required"
+    assert payload["needs_review"] == [
+        "TODO.md: partial module state detected",
+        "docs/execplans: partial module state detected",
+        "TODO.md: reconcile existing workflow surface ownership",
+        "docs/execplans: reconcile existing workflow surface ownership",
+    ]
+    assert calls == [
+        ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
+    ]
+
+
 def test_status_detects_installed_modules_by_default(monkeypatch, tmp_path: Path) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
