@@ -1,6 +1,6 @@
 # Roadmap
 
-Last reviewed: 2026-04-05
+Last reviewed: 2026-04-06
 
 ## Purpose
 
@@ -8,10 +8,9 @@ Inactive long-horizon candidate work.
 
 ## Active Handoff
 
-- Monorepo scaffold is in place.
-- No active execution tranche is currently promoted.
-- Maintainer feedback favors sharper documentation, liveness checks, and naming consistency over adding new layers.
-- New maintainer feedback centers on git-safe installed contracts: merge-friendly file shapes, weak-authority current surfaces, explicit lifecycle markers, and collaboration-oriented checks.
+- External entry, naming, architecture, maturity framing, and maintainer-boundary docs are now in a credible product shape.
+- The current promoted tranche is installed-contract collaboration safety for multi-branch, multi-agent adopter repos.
+- The next likely pressure after that remains shared-tooling extraction, but only if duplicated checks and renderers create sustained maintenance drag.
 - Promote the next candidate only when the scope is bounded enough for a short execplan and a narrow validation story.
 
 ## Next Candidate Queue

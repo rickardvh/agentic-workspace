@@ -1,12 +1,28 @@
 # Integration Contract
 
-This page records the explicit cross-module contract for repositories that use both Agentic Memory and Agentic Planning.
+This page records the compact interaction contract for repositories that use both Agentic Memory and Agentic Planning.
 
 ## Purpose
 
 - Keep memory and planning selectively adoptable.
-- Make legitimate cross-module references explicit.
+- Make the allowed interaction model explicit for adopter repositories.
 - Preserve the workspace layer as a thin orchestrator instead of a shadow domain owner.
+
+## Core Interaction Model
+
+| Concern | Primary owner | May reference | Must not become |
+| --- | --- | --- | --- |
+| Durable repo knowledge | Memory | Planning when active work needs durable context | A second task tracker or backlog |
+| Active execution state | Planning | Memory when work depends on durable repo knowledge | A durable knowledge base or subsystem manual |
+| Shared module workflow support | Product-managed `.agentic-workspace/` surfaces | Repo planning and memory surfaces as inputs | Repo-owned canonical content |
+| Generated maintainer guidance | Rendered `tools/` docs | Managed manifest and renderers only | Editable source of truth |
+
+The shortest operating model is:
+
+1. Planning says what matters now.
+2. Memory says what is expensive to forget.
+3. Managed module surfaces support those contracts.
+4. Generated docs mirror managed sources and should be rerendered, not edited.
 
 ## Canonical-Source Precedence
 
@@ -18,6 +34,67 @@ When multiple surfaces mention the same concern, prefer the narrowest canonical 
 4. Generated mirrors such as `tools/` docs only as rendered outputs, never as editable source.
 
 If two surfaces look equally authoritative, the contract is unclear and should be tightened instead of relying on contributor judgement.
+
+## Interaction Rules
+
+### Memory -> Planning
+
+Memory may consume planning only as routing or restart context.
+
+Allowed:
+
+- current task scope when deciding which notes to load
+- touched-path hints from an active execplan when routing durable notes
+- compact continuation context that helps an agent restart the current thread
+
+Not allowed:
+
+- copying TODO or roadmap state into memory as a second active queue
+- treating execplans as the durable home for repo knowledge
+
+### Planning -> Memory
+
+Planning may reference memory when active execution depends on durable repo knowledge.
+
+Allowed:
+
+- an execplan links to an invariant, runbook, or recurring-failure note
+- a blocker points at a memory note that explains an authority boundary or operator sequence
+- a completed thread promotes a durable lesson into memory instead of leaving it in planning surfaces
+
+Not allowed:
+
+- moving durable technical guidance into TODO or execplans just because it is active right now
+- making planning the primary home for subsystem orientation or runbooks
+
+### Managed -> Repo-Owned Surfaces
+
+Product-managed `.agentic-workspace/` surfaces may support repo execution, but they should stay upgrade-replaceable and subordinate to repo-owned planning and memory content.
+
+Allowed:
+
+- workflow helpers, upgrade sources, managed skills, and check scripts
+- renderers and manifests that regenerate maintainer guidance
+- thin wrappers that preserve package-owned behavior at predictable repo paths
+
+Not allowed:
+
+- hidden policy that becomes more authoritative than repo docs or manifests
+- repo-specific rules that belong in the adopting repository instead of the package contract
+
+### Generated -> Canonical Sources
+
+Generated maintainer guidance under `tools/` may summarize the operating model, but it must always point back to its managed source.
+
+Allowed:
+
+- rerendering `tools/` docs from `.agentic-workspace/planning/agent-manifest.json`
+- checking generated docs for drift against the managed manifest and renderer output
+
+Not allowed:
+
+- hand-editing generated docs as if they were the canonical contract
+- letting generated mirrors silently diverge from the managed source they summarize
 
 ## Branch-Vs-Trunk State
 
@@ -37,36 +114,6 @@ If two surfaces look equally authoritative, the contract is unclear and should b
 | `tools/AGENT_*.md`, `tools/agent-manifest.json` | Generated planning outputs | No | Update `.agentic-workspace/planning/agent-manifest.json` and rerender. |
 | Root `agentic-workspace` CLI and shared Make targets | Workspace composition layer | Yes, when the behavior is truly cross-module | Keep thin; push module-specific logic back into the module packages. |
 
-## Memory May Consume From Planning
-
-Memory may use planning only as routing context, not as durable source ownership.
-
-Allowed examples:
-
-- current task scope when deciding which memory notes are worth loading
-- touched-path hints from an active execplan when routing durable notes
-- compact continuation context that helps an agent restart the current thread
-
-Not allowed:
-
-- copying TODO or roadmap state into memory as a second active queue
-- treating execplans as the durable home for repo knowledge
-
-## Planning May Reference Memory
-
-Planning may point at memory when active execution depends on durable repo knowledge.
-
-Allowed examples:
-
-- an execplan links to an invariant, runbook, or recurring-failure note
-- a blocker points at a memory note that explains an authority boundary or operator sequence
-- a completed thread promotes a durable lesson into memory instead of leaving it in planning surfaces
-
-Not allowed:
-
-- moving durable technical guidance into TODO or execplans just because it is active right now
-- making planning the primary home for subsystem orientation or runbooks
-
 ## Workspace Layer May Orchestrate
 
 The workspace layer may own only cross-module composition behavior.
@@ -82,6 +129,13 @@ Not allowed:
 - module-specific policy that belongs inside Agentic Memory or Agentic Planning
 - hidden cross-module state that becomes more authoritative than the package-owned surfaces
 
+## Checks And Liveness
+
+- Planning-surface checks should catch drift in TODO, ROADMAP, execplans, startup policy, and generated planning docs.
+- Memory freshness checks should keep current notes weak-authority and durable notes in their primary homes.
+- Package payload verification should keep shipped package surfaces present and structurally consistent before release or upgrade work.
+- Maintainer validation should cover both modules when a change touches shared package contracts or collaboration-sensitive installed surfaces.
+
 ## Partial-Adoption Rules
 
 - Memory-only repos should not need planning surfaces or planning-specific workflow assumptions.
@@ -95,6 +149,7 @@ Not allowed:
 - Planning owns active execution state.
 - `memory/current/` owns only weak-authority current context.
 - Generated maintainer docs must derive from canonical sources.
+- Package payload checks must stay on the maintainer path when installed contract drift could affect adopters.
 - Cross-module convenience belongs at the workspace layer only when the reason is truly cross-module.
 
 ## Failure Signals

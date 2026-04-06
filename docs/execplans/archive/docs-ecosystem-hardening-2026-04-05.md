@@ -12,8 +12,8 @@
 
 ## Active Milestone
 
-- Status: in-progress
-- Scope: implement the current roadmap documentation tranche, including naming clarification, chooser guidance, canonical policy docs, generated-doc markings, compatibility/maturity guidance, and maintainership liveness checks.
+- Status: completed
+- Scope: implemented the documentation tranche for naming clarification, chooser guidance, canonical policy docs, generated-doc markings, compatibility framing, maturity guidance, and maintainer-surface liveness checks.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Validate the updated startup-path and generated-doc drift checks.
+- Promote installed-contract collaboration safety, with emphasis on merge-safe adopter behavior and a more compact cross-module interaction model.
 
 Keep exactly one immediate action by default; avoid multi-step mini-plans here.
 
@@ -73,3 +73,4 @@ Keep invariants contract-shaped and brief.
 
 - 2026-04-05: Initial plan created for the documentation and liveness hardening tranche.
 - 2026-04-06: Extended the tranche with a repo-maintainer `make maintainer-surfaces` path, an explicit integration contract, and dogfooding-feedback capture guidance.
+- 2026-04-06: Archived after the docs ecosystem work landed and the next pressure shifted to installed-contract collaboration safety.

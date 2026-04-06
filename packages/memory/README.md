@@ -1,10 +1,10 @@
 # agentic-memory-bootstrap
 
-Agentic Memory is a checked-in, route-indexed durable repo-memory contract, currently distributed as the `agentic-memory-bootstrap` package and CLI.
+Agentic Memory is a checked-in durable repo-memory system for teams using agents, fragmented sessions, or both. It is currently distributed as the `agentic-memory-bootstrap` package and CLI.
 
 ## At A Glance
 
-Choose this package when you want a repository to keep durable, shared knowledge that survives across sessions, contributors, and agent tools.
+Choose this package when you want a repository to keep durable, shared technical knowledge that survives across sessions, contributors, branches, and agent tools.
 
 Use it for:
 
@@ -35,6 +35,8 @@ Collaboration shape:
 - Treat `memory/current/` as weak-authority re-orientation context, not as the canonical home for durable facts.
 - Keep one fact in one durable primary home; current notes should compress, point, or disappear instead of duplicating stable notes.
 - Expect current-state notes to stay compact and easy to replace under concurrent edits.
+
+The installer is the delivery mechanism, not the whole product. The product capability is a checked-in memory contract with routing, manifests, freshness checks, skills, and explicit improvement pressure around notes that exist because the repository still needs clearer docs, validation, or structure.
 
 ## Quick Start
 
