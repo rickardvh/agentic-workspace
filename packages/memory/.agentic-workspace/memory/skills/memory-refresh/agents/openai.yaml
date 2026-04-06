@@ -1,4 +1,0 @@
-interface:
-  display_name: "Memory Refresh"
-  short_description: "Refresh affected memory after code changes."
-  default_prompt: "Use $memory-refresh to inspect changed files and update or flag affected memory notes."
