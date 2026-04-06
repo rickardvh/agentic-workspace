@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,12 +11,43 @@ from typing import Any
 from agentic_workspace import __version__
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 
-MODULE_ORDER = ("memory", "planning")
+MODULE_ORDER = ("planning", "memory")
 PRESET_MODULES = {
     "memory": ["memory"],
     "planning": ["planning"],
-    "full": ["memory", "planning"],
+    "full": ["planning", "memory"],
 }
+WORKFLOW_SURFACE_PATHS = (
+    Path("AGENTS.md"),
+    Path("TODO.md"),
+    Path("ROADMAP.md"),
+    Path("docs/execplans"),
+    Path("memory/index.md"),
+    Path("memory/current"),
+    Path("docs/contributor-playbook.md"),
+    Path("docs/maintainer-commands.md"),
+    Path(".agentic-workspace"),
+    Path("tools/AGENT_QUICKSTART.md"),
+    Path("tools/AGENT_ROUTING.md"),
+)
+GENERATED_ARTIFACT_PATHS = {
+    "tools/agent-manifest.json",
+    "tools/AGENT_QUICKSTART.md",
+    "tools/AGENT_ROUTING.md",
+}
+MODULE_SIGNAL_PATHS = {
+    "planning": (
+        Path("TODO.md"),
+        Path("docs/execplans"),
+        Path(".agentic-workspace/planning"),
+    ),
+    "memory": (
+        Path("memory/index.md"),
+        Path("memory/current"),
+        Path(".agentic-workspace/memory"),
+    ),
+}
+PLACEHOLDER_RE = re.compile(r"<[A-Z][A-Z0-9_]+>")
 
 
 @dataclass(frozen=True)
@@ -26,8 +58,22 @@ class ModuleDescriptor:
     detector: Callable[[Path], bool]
 
 
+@dataclass(frozen=True)
+class RepoInspection:
+    mode: str
+    prompt_requirement: str
+    detected_surfaces: list[str]
+    preserved_existing: list[str]
+    needs_review: list[str]
+    placeholders: list[str]
+
+
 class ModuleSelectionError(ValueError):
-    """Raised when the orchestrator cannot resolve a safe default module set."""
+    """Raised when the orchestrator cannot resolve a safe module set."""
+
+
+class WorkspaceUsageError(ValueError):
+    """Raised when workspace CLI preconditions are not met."""
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -41,37 +87,34 @@ def build_parser() -> argparse.ArgumentParser:
     modules_parser = subparsers.add_parser("modules", help="List workspace modules available to the orchestrator.")
     _add_format_argument(modules_parser)
 
-    install_parser = subparsers.add_parser("install", help="Install selected modules into a repository.")
-    _add_shared_arguments(install_parser)
-    install_parser.add_argument("--dry-run", action="store_true", help="Show planned changes without writing files.")
-    install_parser.add_argument("--force", action="store_true", help="Allow module installers to overwrite managed files when supported.")
+    init_parser = subparsers.add_parser("init", help="Bootstrap selected modules into a target repository.")
+    _add_selection_arguments(init_parser)
+    init_parser.add_argument("--adopt", action="store_true", help="Force conservative adopt behavior.")
+    init_parser.add_argument("--dry-run", action="store_true", help="Show planned changes without mutating files.")
+    init_parser.add_argument("--print-prompt", action="store_true", help="Print the generated handoff prompt.")
+    init_parser.add_argument("--write-prompt", help="Write the generated handoff prompt to a file.")
 
-    for command in ("adopt", "upgrade", "uninstall"):
-        command_parser = subparsers.add_parser(command, help=f"Run `{command}` for the selected modules.")
-        _add_shared_arguments(command_parser)
-        command_parser.add_argument("--dry-run", action="store_true", help="Show planned changes without writing files.")
+    status_parser = subparsers.add_parser("status", help="Report installed modules and workspace health summary.")
+    _add_selection_arguments(status_parser)
 
-    for command in ("doctor", "status"):
-        command_parser = subparsers.add_parser(command, help=f"Run `{command}` for the selected modules.")
-        _add_shared_arguments(command_parser)
+    doctor_parser = subparsers.add_parser("doctor", help="Report drift, missing surfaces, and recommended remediation.")
+    _add_selection_arguments(doctor_parser)
+
+    upgrade_parser = subparsers.add_parser("upgrade", help="Refresh managed surfaces for selected installed modules.")
+    _add_selection_arguments(upgrade_parser)
+    upgrade_parser.add_argument("--dry-run", action="store_true", help="Show planned changes without mutating files.")
+
+    uninstall_parser = subparsers.add_parser("uninstall", help="Remove managed surfaces conservatively for selected installed modules.")
+    _add_selection_arguments(uninstall_parser)
+    uninstall_parser.add_argument("--dry-run", action="store_true", help="Show planned changes without mutating files.")
 
     return parser
 
 
-def _add_shared_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        "--preset",
-        choices=tuple(PRESET_MODULES),
-        help="Preset module selection for common lifecycle operations.",
-    )
-    parser.add_argument(
-        "--module",
-        dest="modules",
-        action="append",
-        choices=MODULE_ORDER,
-        help="Module to operate on. Repeat to target multiple modules. Defaults to all available modules.",
-    )
+def _add_selection_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--target", help="Target repository path. Defaults to the current directory.")
+    parser.add_argument("--preset", choices=tuple(PRESET_MODULES), help="Named module bundle.")
+    parser.add_argument("--modules", help="Comma-separated module selection.")
     _add_format_argument(parser)
 
 
@@ -89,11 +132,41 @@ def main(argv: list[str] | None = None) -> int:
 
     descriptors = _module_operations()
     try:
-        selected_modules = _selected_modules(args.command, args.preset, args.modules, args.target, descriptors)
-    except ModuleSelectionError as exc:
+        target_root = _resolve_target_root(args.target)
+        _validate_target_root(command_name=args.command, target_root=target_root)
+        selected_modules, resolved_preset = _selected_modules(
+            command_name=args.command,
+            preset_name=args.preset,
+            module_arg=args.modules,
+            target_root=target_root,
+            descriptors=descriptors,
+        )
+    except (ModuleSelectionError, WorkspaceUsageError) as exc:
         parser.error(str(exc))
-    reports = [_invoke_module_command(args.command, module_name, descriptors[module_name], args) for module_name in selected_modules]
-    _emit_reports(command_name=args.command, reports=reports, format_name=args.format)
+
+    if args.command == "init":
+        payload = _run_init(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            descriptors=descriptors,
+            dry_run=args.dry_run,
+            force_adopt=args.adopt,
+            print_prompt=args.print_prompt,
+            write_prompt=args.write_prompt,
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
+
+    payload = _run_lifecycle_command(
+        command_name=args.command,
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        dry_run=bool(getattr(args, "dry_run", False)),
+    )
+    _emit_payload(payload=payload, format_name=args.format)
     return 0
 
 
@@ -136,21 +209,6 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
     )
 
     return {
-        "memory": ModuleDescriptor(
-            name="memory",
-            description="Durable repository knowledge bootstrap and maintenance.",
-            commands={
-                "install": lambda *, target, dry_run, force: memory_install_bootstrap(target=target, dry_run=dry_run, force=force),
-                "adopt": lambda *, target, dry_run: memory_adopt_bootstrap(target=target, dry_run=dry_run),
-                "upgrade": lambda *, target, dry_run: memory_upgrade_bootstrap(target=target, dry_run=dry_run),
-                "uninstall": lambda *, target, dry_run: memory_uninstall_bootstrap(target=target, dry_run=dry_run),
-                "doctor": lambda *, target: memory_doctor_bootstrap(target=target),
-                "status": lambda *, target: memory_collect_status(target=target),
-            },
-            detector=lambda target_root: (
-                (target_root / "memory" / "index.md").exists() and (target_root / ".agentic-workspace" / "memory").exists()
-            ),
-        ),
         "planning": ModuleDescriptor(
             name="planning",
             description="Repo-native execution planning bootstrap and maintenance.",
@@ -166,65 +224,425 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 (target_root / "TODO.md").exists() and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
             ),
         ),
+        "memory": ModuleDescriptor(
+            name="memory",
+            description="Durable repository knowledge bootstrap and maintenance.",
+            commands={
+                "install": lambda *, target, dry_run, force: memory_install_bootstrap(target=target, dry_run=dry_run, force=force),
+                "adopt": lambda *, target, dry_run: memory_adopt_bootstrap(target=target, dry_run=dry_run),
+                "upgrade": lambda *, target, dry_run: memory_upgrade_bootstrap(target=target, dry_run=dry_run),
+                "uninstall": lambda *, target, dry_run: memory_uninstall_bootstrap(target=target, dry_run=dry_run),
+                "doctor": lambda *, target: memory_doctor_bootstrap(target=target),
+                "status": lambda *, target: memory_collect_status(target=target),
+            },
+            detector=lambda target_root: (
+                (target_root / "memory" / "index.md").exists() and (target_root / ".agentic-workspace" / "memory").exists()
+            ),
+        ),
     }
 
 
 def _selected_modules(
+    *,
     command_name: str,
     preset_name: str | None,
-    module_args: list[str] | None,
-    target: str | None,
+    module_arg: str | None,
+    target_root: Path,
     descriptors: dict[str, ModuleDescriptor],
-) -> list[str]:
-    if preset_name and module_args:
-        raise ModuleSelectionError("Use either --preset or --module, not both.")
+) -> tuple[list[str], str | None]:
+    if preset_name and module_arg:
+        raise ModuleSelectionError("Use either --preset or --modules, not both.")
 
     if preset_name:
-        return [module_name for module_name in PRESET_MODULES[preset_name] if module_name in descriptors]
+        return [module_name for module_name in PRESET_MODULES[preset_name] if module_name in descriptors], preset_name
 
-    if not module_args:
-        if command_name in {"install", "adopt"}:
-            return [module_name for module_name in MODULE_ORDER if module_name in descriptors]
+    if module_arg:
+        requested = _parse_modules(module_arg)
+        return [module_name for module_name in MODULE_ORDER if module_name in requested and module_name in descriptors], None
 
-        target_root = _resolve_target_root(target)
-        detected = [
-            module_name for module_name in MODULE_ORDER if module_name in descriptors and descriptors[module_name].detector(target_root)
-        ]
-        if detected:
-            return detected
-        raise ModuleSelectionError(
-            "No installed modules were detected for this maintenance command. Use --module to target a module explicitly."
-        )
+    if command_name == "init":
+        return [module_name for module_name in PRESET_MODULES["full"] if module_name in descriptors], "full"
 
-    selected: list[str] = []
-    for module_name in module_args:
-        if module_name not in selected and module_name in descriptors:
-            selected.append(module_name)
-    return selected
+    detected = [module_name for module_name in MODULE_ORDER if module_name in descriptors and descriptors[module_name].detector(target_root)]
+    if detected:
+        return detected, None
+
+    raise ModuleSelectionError("No installed modules were detected for this lifecycle command. Use --modules to target modules explicitly.")
+
+
+def _parse_modules(module_arg: str) -> set[str]:
+    tokens = [token.strip() for token in module_arg.split(",") if token.strip()]
+    if not tokens:
+        raise ModuleSelectionError("--modules requires at least one module token.")
+
+    unknown = [token for token in tokens if token not in MODULE_ORDER]
+    if unknown:
+        supported = ", ".join(MODULE_ORDER)
+        unknown_text = ", ".join(sorted(set(unknown)))
+        raise ModuleSelectionError(f"Unknown module token(s): {unknown_text}. Supported modules: {supported}.")
+
+    return set(tokens)
 
 
 def _resolve_target_root(target: str | None) -> Path:
     return Path(target).resolve() if target else Path.cwd().resolve()
 
 
-def _invoke_module_command(command_name: str, module_name: str, descriptor: ModuleDescriptor, args: argparse.Namespace) -> dict[str, Any]:
-    _prepare_target_root(command_name=command_name, target=args.target)
-    command = descriptor.commands[command_name]
-    kwargs: dict[str, Any] = {"target": args.target}
-    if command_name == "install":
-        kwargs["dry_run"] = args.dry_run
-        kwargs["force"] = args.force
-    elif command_name in {"adopt", "upgrade", "uninstall"}:
-        kwargs["dry_run"] = args.dry_run
+def _validate_target_root(*, command_name: str, target_root: Path) -> None:
+    if not target_root.exists():
+        raise WorkspaceUsageError(f"Target path does not exist: {target_root}")
+    if not target_root.is_dir():
+        raise WorkspaceUsageError(f"Target path is not a directory: {target_root}")
+    if command_name in {"init", "status", "doctor", "upgrade", "uninstall"} and not _is_git_repo_root(target_root):
+        raise WorkspaceUsageError("Target must be a git repository root with a .git directory or file.")
 
+
+def _is_git_repo_root(target_root: Path) -> bool:
+    return (target_root / ".git").exists()
+
+
+def _run_init(
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    descriptors: dict[str, ModuleDescriptor],
+    dry_run: bool,
+    force_adopt: bool,
+    print_prompt: bool,
+    write_prompt: str | None,
+) -> dict[str, Any]:
+    inspection = _inspect_repo_state(target_root=target_root, selected_modules=selected_modules, descriptors=descriptors, force_adopt=force_adopt)
+    module_command = "install" if inspection.mode == "install" else "adopt"
+    reports = [
+        _invoke_module_command(
+            command_name=module_command,
+            module_name=module_name,
+            descriptor=descriptors[module_name],
+            target_root=target_root,
+            dry_run=dry_run,
+            force=False,
+        )
+        for module_name in selected_modules
+    ]
+    summary = _build_init_summary(
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        inspection=inspection,
+        reports=reports,
+    )
+    prompt_text = _build_handoff_prompt(summary)
+    prompt_path = _write_prompt_file(write_prompt=write_prompt, prompt_text=prompt_text) if write_prompt else None
+    payload: dict[str, Any] = summary | {
+        "dry_run": dry_run,
+        "module_reports": reports,
+    }
+    should_include_prompt = print_prompt or prompt_path is not None or summary["prompt_requirement"] != "none"
+    if should_include_prompt:
+        payload["handoff_prompt"] = prompt_text
+    if prompt_path is not None:
+        payload["handoff_prompt_path"] = prompt_path.as_posix()
+        payload["next_steps"].append(f"Review the written handoff prompt at {prompt_path.as_posix()}.")
+    return payload
+
+
+def _inspect_repo_state(
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    descriptors: dict[str, ModuleDescriptor],
+    force_adopt: bool,
+) -> RepoInspection:
+    detected_surfaces = [path.as_posix() for path in WORKFLOW_SURFACE_PATHS if (target_root / path).exists()]
+    preserved_existing = [path for path in detected_surfaces if path not in GENERATED_ARTIFACT_PATHS]
+    partial_state: list[str] = []
+    for module_name in selected_modules:
+        installed = descriptors[module_name].detector(target_root)
+        hits = [marker.as_posix() for marker in MODULE_SIGNAL_PATHS[module_name] if (target_root / marker).exists()]
+        if hits and not installed:
+            partial_state.extend(hits)
+
+    placeholders = _detect_placeholder_surfaces(target_root=target_root, surfaces=detected_surfaces)
+    overlap_count = len(preserved_existing)
+    managed_root_present = (target_root / ".agentic-workspace").exists()
+    high_ambiguity = bool(partial_state) or bool(placeholders) or overlap_count >= 4 or (managed_root_present and overlap_count >= 2)
+
+    if not preserved_existing and not force_adopt:
+        mode = "install"
+    elif high_ambiguity:
+        mode = "adopt_high_ambiguity"
+    else:
+        mode = "adopt"
+
+    prompt_requirement = {
+        "install": "none",
+        "adopt": "recommended",
+        "adopt_high_ambiguity": "required",
+    }[mode]
+    if partial_state or placeholders:
+        prompt_requirement = "required"
+
+    needs_review = [f"{path}: partial module state detected" for path in _dedupe(partial_state)]
+    if mode == "adopt_high_ambiguity":
+        needs_review.extend(f"{path}: reconcile existing workflow surface ownership" for path in preserved_existing)
+
+    return RepoInspection(
+        mode=mode,
+        prompt_requirement=prompt_requirement,
+        detected_surfaces=detected_surfaces,
+        preserved_existing=_dedupe(preserved_existing),
+        needs_review=_dedupe(needs_review),
+        placeholders=_dedupe(placeholders),
+    )
+
+
+def _detect_placeholder_surfaces(*, target_root: Path, surfaces: list[str]) -> list[str]:
+    placeholders: list[str] = []
+    for surface in surfaces:
+        path = target_root / surface
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if PLACEHOLDER_RE.search(text):
+            placeholders.append(path.relative_to(target_root).as_posix())
+    return placeholders
+
+
+def _build_init_summary(
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    inspection: RepoInspection,
+    reports: list[dict[str, Any]],
+) -> dict[str, Any]:
+    created: list[str] = []
+    updated_managed: list[str] = []
+    preserved_existing = list(inspection.preserved_existing)
+    needs_review = list(inspection.needs_review)
+    placeholders = list(inspection.placeholders)
+    generated_artifacts: list[str] = []
+
+    for report in reports:
+        for action in report["actions"]:
+            relative_path = _display_path(action.get("path", "."), target_root)
+            detail = str(action.get("detail", ""))
+            kind = str(action.get("kind", ""))
+            if _is_generated_artifact(relative_path=relative_path, detail=detail):
+                _append_unique(generated_artifacts, relative_path)
+            if _is_placeholder_issue(detail=detail):
+                _append_unique(placeholders, relative_path)
+            if kind in {"created", "copied", "would create", "would copy"}:
+                _append_unique(created, relative_path)
+                continue
+            if kind in {"updated", "overwritten", "would update", "would overwrite"}:
+                _append_unique(updated_managed, relative_path)
+                continue
+            if kind == "skipped":
+                _append_unique(preserved_existing, relative_path)
+                continue
+            if kind in {"manual review", "missing", "warning"}:
+                _append_unique(needs_review, _format_issue(relative_path=relative_path, detail=detail))
+
+        for warning in report["warnings"]:
+            relative_path = _display_path(warning.get("path", "."), target_root)
+            message = str(warning.get("message", "needs review"))
+            if _is_placeholder_issue(detail=message):
+                _append_unique(placeholders, relative_path)
+            _append_unique(needs_review, _format_issue(relative_path=relative_path, detail=message))
+
+    prompt_requirement = inspection.prompt_requirement
+    if placeholders or any(": partial module state detected" in issue for issue in needs_review):
+        prompt_requirement = "required"
+    elif prompt_requirement == "none" and (preserved_existing or needs_review):
+        prompt_requirement = "recommended"
+
+    return {
+        "command": "init",
+        "target": target_root.as_posix(),
+        "modules": selected_modules,
+        "preset": resolved_preset,
+        "mode": inspection.mode,
+        "prompt_requirement": prompt_requirement,
+        "created": _dedupe(created),
+        "updated_managed": _dedupe(updated_managed),
+        "preserved_existing": _dedupe(preserved_existing),
+        "needs_review": _dedupe(needs_review),
+        "placeholders": _dedupe(placeholders),
+        "generated_artifacts": _dedupe(generated_artifacts),
+        "validation": _validation_commands(target_root=target_root),
+        "next_steps": _init_next_steps(
+            target_root=target_root,
+            mode=inspection.mode,
+            prompt_requirement=prompt_requirement,
+            needs_review=needs_review,
+            placeholders=placeholders,
+        ),
+    }
+
+
+def _run_lifecycle_command(
+    *,
+    command_name: str,
+    target_root: Path,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    descriptors: dict[str, ModuleDescriptor],
+    dry_run: bool,
+) -> dict[str, Any]:
+    reports = [
+        _invoke_module_command(
+            command_name=command_name,
+            module_name=module_name,
+            descriptor=descriptors[module_name],
+            target_root=target_root,
+            dry_run=dry_run,
+            force=False,
+        )
+        for module_name in selected_modules
+    ]
+    warnings: list[str] = []
+    placeholders: list[str] = []
+    stale_generated_surfaces: list[str] = []
+    for report in reports:
+        for action in report["actions"]:
+            relative_path = _display_path(action.get("path", "."), target_root)
+            detail = str(action.get("detail", ""))
+            kind = str(action.get("kind", ""))
+            if kind in {"manual review", "warning", "missing"}:
+                _append_unique(warnings, _format_issue(relative_path=relative_path, detail=detail))
+            if _is_placeholder_issue(detail=detail):
+                _append_unique(placeholders, relative_path)
+            if _is_generated_artifact(relative_path=relative_path, detail=detail) and kind in {"manual review", "warning", "updated", "would update"}:
+                _append_unique(stale_generated_surfaces, relative_path)
+        for warning in report["warnings"]:
+            relative_path = _display_path(warning.get("path", "."), target_root)
+            message = str(warning.get("message", "needs review"))
+            _append_unique(warnings, _format_issue(relative_path=relative_path, detail=message))
+            if _is_placeholder_issue(detail=message):
+                _append_unique(placeholders, relative_path)
+
+    return {
+        "command": command_name,
+        "target": target_root.as_posix(),
+        "modules": selected_modules,
+        "preset": resolved_preset,
+        "dry_run": dry_run,
+        "health": "healthy" if not warnings else "attention-needed",
+        "warnings": warnings,
+        "placeholders": placeholders,
+        "stale_generated_surfaces": stale_generated_surfaces,
+        "next_steps": _lifecycle_next_steps(command_name=command_name, target_root=target_root, warnings=warnings),
+        "reports": reports,
+    }
+
+
+def _invoke_module_command(
+    *,
+    command_name: str,
+    module_name: str,
+    descriptor: ModuleDescriptor,
+    target_root: Path,
+    dry_run: bool,
+    force: bool,
+) -> dict[str, Any]:
+    command = descriptor.commands[command_name]
+    kwargs: dict[str, Any] = {"target": str(target_root)}
+    if command_name == "install":
+        kwargs["dry_run"] = dry_run
+        kwargs["force"] = force
+    elif command_name in {"adopt", "upgrade", "uninstall"}:
+        kwargs["dry_run"] = dry_run
     result = command(**kwargs)
     return adapt_module_result(module=module_name, result=result).to_dict()
 
 
-def _prepare_target_root(*, command_name: str, target: str | None) -> None:
-    if target is None or command_name not in {"install", "adopt"}:
-        return
-    Path(target).mkdir(parents=True, exist_ok=True)
+def _validation_commands(*, target_root: Path) -> list[str]:
+    target = target_root.as_posix()
+    return [
+        f"agentic-workspace doctor --target {target}",
+        f"agentic-workspace status --target {target}",
+    ]
+
+
+def _init_next_steps(*, target_root: Path, mode: str, prompt_requirement: str, needs_review: list[str], placeholders: list[str]) -> list[str]:
+    target = target_root.as_posix()
+    steps = [f"Run agentic-workspace doctor --target {target} after bootstrap changes settle."]
+    if prompt_requirement == "none":
+        steps.append("Tell your coding agent to use the installed workflow surfaces directly for normal work.")
+        return steps
+    if mode == "adopt_high_ambiguity":
+        steps.append("Paste the generated handoff prompt into your coding agent and treat the finishing pass as required.")
+    else:
+        steps.append("Review preserved and review-needed workflow surfaces before treating bootstrap as complete.")
+        steps.append("Paste the generated handoff prompt into your coding agent if repo-specific reconciliation is still needed.")
+    if placeholders:
+        steps.append("Resolve remaining placeholders or bootstrap markers before normal workflow begins.")
+    elif needs_review:
+        steps.append("Close out the listed review items before relying on the installed lifecycle flow.")
+    return steps
+
+
+def _lifecycle_next_steps(*, command_name: str, target_root: Path, warnings: list[str]) -> list[str]:
+    target = target_root.as_posix()
+    if command_name == "status":
+        return [] if not warnings else [f"Run agentic-workspace doctor --target {target} to inspect the reported warnings."]
+    if command_name == "doctor":
+        return [] if not warnings else ["Review the warning list and apply the narrowest remediation that closes each issue."]
+    if command_name == "upgrade":
+        return [f"Run agentic-workspace doctor --target {target} after the refresh completes."]
+    if command_name == "uninstall":
+        return ["Manually review any preserved repo-owned content before deleting it."]
+    return []
+
+
+def _build_handoff_prompt(summary: dict[str, Any]) -> str:
+    lines = [f"Finish the Agentic Workspace bootstrap in {summary['target']}.", "", "Selected modules:"]
+    lines.extend(f"- {module_name}" for module_name in summary["modules"])
+    lines.extend(["", "Bootstrap mode:", f"- {summary['mode']}", "", "The CLI already:"])
+    for path in summary["created"]:
+        lines.append(f"- created {path}")
+    for path in summary["updated_managed"]:
+        lines.append(f"- refreshed {path}")
+    for path in summary["preserved_existing"]:
+        lines.append(f"- preserved {path}")
+    for path in summary["generated_artifacts"]:
+        lines.append(f"- rendered {path}")
+    review_items = list(summary["needs_review"])
+    review_items.extend(f"{path}: unresolved placeholder or bootstrap marker" for path in summary["placeholders"])
+    if review_items:
+        lines.extend(["", "Review and finish:"])
+        lines.extend(f"- {item}" for item in review_items)
+    lines.extend(
+        [
+            "",
+            "Rules:",
+            "- do not overwrite preserved repo-owned surfaces blindly",
+            "- prefer conservative merge over replacement when existing docs overlap",
+            "- do not edit generated files manually when a canonical source exists",
+            "- keep planning and memory boundaries explicit",
+            "- avoid creating duplicate source-of-truth workflow surfaces",
+            "",
+            "Validation:",
+        ]
+    )
+    lines.extend(f"- {command}" for command in summary["validation"])
+    lines.extend(["", "When done:"])
+    if summary["placeholders"]:
+        lines.append("- remove or resolve any remaining placeholders before closing the bootstrap task")
+    lines.append("- leave only durable workflow residue; do not keep temporary bootstrap notes around")
+    return "\n".join(lines)
+
+
+def _write_prompt_file(*, write_prompt: str, prompt_text: str) -> Path:
+    prompt_path = Path(write_prompt).expanduser().resolve()
+    prompt_path.parent.mkdir(parents=True, exist_ok=True)
+    prompt_path.write_text(prompt_text + "\n", encoding="utf-8")
+    return prompt_path
 
 
 def _emit_modules(*, format_name: str) -> None:
@@ -239,36 +657,68 @@ def _emit_modules(*, format_name: str) -> None:
             for descriptor in descriptors.values()
         ]
     }
+    _emit_payload(payload=payload, format_name=format_name)
+
+
+def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
     if format_name == "json":
-        print(json.dumps(payload, indent=2))
+        print(json.dumps(serialise_value(payload), indent=2))
         return
-    for module_data in payload["modules"]:
-        print(f"{module_data['name']}: {module_data['description']}")
-        print(f"  commands: {', '.join(module_data['commands'])}")
-
-
-def _emit_reports(*, command_name: str, reports: list[dict[str, Any]], format_name: str) -> None:
-    if format_name == "json":
-        payload = serialise_value({"command": command_name, "reports": reports})
-        print(json.dumps(payload, indent=2))
+    if payload.get("command") == "init":
+        _emit_init_text(payload)
         return
+    if "modules" in payload and "reports" not in payload and "command" not in payload:
+        for module_data in payload["modules"]:
+            print(f"{module_data['name']}: {module_data['description']}")
+            print(f"  commands: {', '.join(module_data['commands'])}")
+        return
+    _emit_lifecycle_text(payload)
 
-    target_root = reports[0]["target_root"] if reports else Path.cwd()
-    print(f"Target: {target_root}")
-    print(f"Command: {command_name}")
-    print(f"Modules: {', '.join(report['module'] for report in reports)}")
-    for report in reports:
+
+def _emit_init_text(payload: dict[str, Any]) -> None:
+    print(f"Target: {payload['target']}")
+    print(f"Command: init{' (dry-run)' if payload.get('dry_run') else ''}")
+    print(f"Modules: {', '.join(payload['modules'])}")
+    print(f"Mode: {payload['mode']}")
+    print(f"Prompt requirement: {payload['prompt_requirement']}")
+    _print_path_list("Created", payload["created"])
+    _print_path_list("Updated managed", payload["updated_managed"])
+    _print_path_list("Preserved existing", payload["preserved_existing"])
+    _print_path_list("Needs review", payload["needs_review"])
+    _print_path_list("Placeholders", payload["placeholders"])
+    _print_path_list("Generated artifacts", payload["generated_artifacts"])
+    _print_path_list("Validation", payload["validation"])
+    _print_path_list("Next steps", payload["next_steps"])
+    if payload.get("handoff_prompt_path"):
+        print(f"Handoff prompt file: {payload['handoff_prompt_path']}")
+    if payload.get("handoff_prompt"):
+        print("")
+        print("Handoff Prompt:")
+        print(payload["handoff_prompt"])
+
+
+def _emit_lifecycle_text(payload: dict[str, Any]) -> None:
+    print(f"Target: {payload['target']}")
+    print(f"Command: {payload['command']}{' (dry-run)' if payload.get('dry_run') else ''}")
+    print(f"Modules: {', '.join(payload['modules'])}")
+    print(f"Health: {payload['health']}")
+    _print_path_list("Warnings", payload["warnings"])
+    _print_path_list("Placeholders", payload["placeholders"])
+    _print_path_list("Stale generated surfaces", payload["stale_generated_surfaces"])
+    for report in payload["reports"]:
         print(f"[{report['module']}] {report['message']}")
         for action in report["actions"]:
             detail = f" ({action['detail']})" if action.get("detail") else ""
-            print(f"- {action['kind']}: {_display_path(action['path'], report['target_root'])}{detail}")
-        if report["warnings"]:
-            print("Warnings:")
-            for warning in report["warnings"]:
-                warning_path = warning.get("path", ".")
-                warning_message = warning.get("message", "")
-                warning_class = warning.get("warning_class", "warning")
-                print(f"- [{warning_class}] {warning_path}: {warning_message}")
+            print(f"- {action['kind']}: {_display_path(action['path'], Path(payload['target']))}{detail}")
+    _print_path_list("Next steps", payload["next_steps"])
+
+
+def _print_path_list(heading: str, values: list[str]) -> None:
+    if not values:
+        return
+    print(f"{heading}:")
+    for value in values:
+        print(f"- {value}")
 
 
 def _display_path(path_value: str, target_root: Path) -> str:
@@ -277,3 +727,28 @@ def _display_path(path_value: str, target_root: Path) -> str:
         return path.relative_to(target_root).as_posix()
     except ValueError:
         return path.as_posix()
+
+
+def _is_generated_artifact(*, relative_path: str, detail: str) -> bool:
+    return relative_path in GENERATED_ARTIFACT_PATHS or detail.lower().startswith("render")
+
+
+def _is_placeholder_issue(*, detail: str) -> bool:
+    detail_lower = detail.lower()
+    return "placeholder" in detail_lower or "bootstrap marker" in detail_lower
+
+
+def _format_issue(*, relative_path: str, detail: str) -> str:
+    return f"{relative_path}: {detail}" if detail else relative_path
+
+
+def _append_unique(values: list[str], value: str) -> None:
+    if value and value not in values:
+        values.append(value)
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    ordered: list[str] = []
+    for value in values:
+        _append_unique(ordered, value)
+    return ordered

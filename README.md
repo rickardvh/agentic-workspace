@@ -40,19 +40,41 @@ Treat `-bootstrap` as the current distribution identity for the checked-in contr
 
 ## Quick Start
 
-For most adopters, install one package directly:
+The default public bootstrap path is the root workspace CLI:
 
 ```bash
-# Agentic Memory
+# Agentic Memory only
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target /path/to/repo --preset memory
+
+# Agentic Planning only
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target /path/to/repo --preset planning
+
+# Both together
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target /path/to/repo --preset full
+```
+
+`init` defaults to the full preset when you omit module selection. It bootstraps mechanically, detects whether the repo should stay in clean-install mode or switch to conservative adopt mode, and can print or write a repo-specific handoff prompt when finishing work still needs judgment.
+
+After bootstrap, use the same root CLI for the shared lifecycle verbs:
+
+```bash
+agentic-workspace status --target /path/to/repo
+agentic-workspace doctor --target /path/to/repo
+agentic-workspace upgrade --target /path/to/repo
+agentic-workspace uninstall --target /path/to/repo --preset planning
+```
+
+Direct module CLIs still exist for maintainers, power users, and package-local workflows:
+
+```bash
+# Agentic Memory advanced path
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target /path/to/repo
 
-# Agentic Planning
+# Agentic Planning advanced path
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt install --target /path/to/repo
 ```
 
-Use `prompt install` for a clean bootstrap and `adopt` for conservative merge into an existing repo.
-
-If you adopt both modules together, use `agentic-workspace` as the thin composition layer and see `docs/architecture.md` plus `docs/integration-contract.md` for the package-to-workspace boundary.
+Use the module-specific CLIs when you want package-local control. Use `agentic-workspace` when you want the thin composition layer to select modules, sequence them, and aggregate the bootstrap report and handoff prompt.
 
 ## Maturity Today
 
