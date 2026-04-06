@@ -36,6 +36,10 @@ Collaboration shape:
 - Keeps branch-local execution state in TODO plus the active execplan, while durable technical guidance stays elsewhere.
 - Expects completed plans to archive quickly so active surfaces stay small and merge-friendly.
 
+Bundled skills:
+
+- The package also ships `planning-autopilot` under `skills/` for bounded milestone execution from the checked-in planning surfaces.
+
 ## Quick Start
 
 Fastest no-install path:

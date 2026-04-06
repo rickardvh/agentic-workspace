@@ -36,12 +36,14 @@ packages = ["src/repo_planning_bootstrap"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "bootstrap" = "src/repo_planning_bootstrap/_payload"
+"skills" = "src/repo_planning_bootstrap/_skills"
 "src/repo_planning_bootstrap/_ownership.toml" = "src/repo_planning_bootstrap/_ownership.toml"
 
 [tool.hatch.build.targets.sdist]
 include = [
   "/README.md",
   "/bootstrap",
+  "/skills",
   "/src/repo_planning_bootstrap",
   "/tests",
 ]
