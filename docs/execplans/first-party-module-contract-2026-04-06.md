@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Audit the current workspace module descriptors, result adapters, and lifecycle dispatch path to list the metadata and behaviors that already act like an internal first-party module contract.
+- Tighten the remaining implicit first-party module contract around owned and generated surfaces so the workspace layer is not still depending on package-specific path lists outside explicit descriptor or adapter boundaries.
 
 ## Blockers
 
@@ -65,3 +65,4 @@ Keep invariants contract-shaped and brief.
 ## Drift Log
 
 - 2026-04-06: Promoted after stable contract freeze landed cleanly enough that the next orchestration risk is no longer package-surface ambiguity but implicit module-contract knowledge living in the workspace layer.
+- 2026-04-06: Made the first shared contract slice explicit in workspace module descriptors by moving install-signal metadata and per-command argument support out of root branching and into descriptor-owned fields, then locked that shape with workspace CLI coverage.

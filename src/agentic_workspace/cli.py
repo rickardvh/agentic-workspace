@@ -56,6 +56,8 @@ class ModuleDescriptor:
     description: str
     commands: dict[str, Callable[..., Any]]
     detector: Callable[[Path], bool]
+    install_signals: tuple[Path, ...]
+    command_args: dict[str, tuple[str, ...]]
 
 
 @dataclass(frozen=True)
@@ -223,6 +225,15 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             detector=lambda target_root: (
                 (target_root / "TODO.md").exists() and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
             ),
+            install_signals=MODULE_SIGNAL_PATHS["planning"],
+            command_args={
+                "install": ("target", "dry_run", "force"),
+                "adopt": ("target", "dry_run"),
+                "upgrade": ("target", "dry_run"),
+                "uninstall": ("target", "dry_run"),
+                "doctor": ("target",),
+                "status": ("target",),
+            },
         ),
         "memory": ModuleDescriptor(
             name="memory",
@@ -238,6 +249,15 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             detector=lambda target_root: (
                 (target_root / "memory" / "index.md").exists() and (target_root / ".agentic-workspace" / "memory").exists()
             ),
+            install_signals=MODULE_SIGNAL_PATHS["memory"],
+            command_args={
+                "install": ("target", "dry_run", "force"),
+                "adopt": ("target", "dry_run"),
+                "upgrade": ("target", "dry_run"),
+                "uninstall": ("target", "dry_run"),
+                "doctor": ("target",),
+                "status": ("target",),
+            },
         ),
     }
 
@@ -358,8 +378,9 @@ def _inspect_repo_state(
     preserved_existing = [path for path in detected_surfaces if path not in GENERATED_ARTIFACT_PATHS]
     partial_state: list[str] = []
     for module_name in selected_modules:
-        installed = descriptors[module_name].detector(target_root)
-        hits = [marker.as_posix() for marker in MODULE_SIGNAL_PATHS[module_name] if (target_root / marker).exists()]
+        descriptor = descriptors[module_name]
+        installed = descriptor.detector(target_root)
+        hits = [marker.as_posix() for marker in descriptor.install_signals if (target_root / marker).exists()]
         if hits and not installed:
             partial_state.extend(hits)
 
@@ -598,12 +619,14 @@ def _invoke_module_command(
     force: bool,
 ) -> dict[str, Any]:
     command = descriptor.commands[command_name]
-    kwargs: dict[str, Any] = {"target": str(target_root)}
-    if command_name == "install":
-        kwargs["dry_run"] = dry_run
-        kwargs["force"] = force
-    elif command_name in {"adopt", "upgrade", "uninstall"}:
-        kwargs["dry_run"] = dry_run
+    kwargs: dict[str, Any] = {}
+    for argument_name in descriptor.command_args[command_name]:
+        if argument_name == "target":
+            kwargs[argument_name] = str(target_root)
+        elif argument_name == "dry_run":
+            kwargs[argument_name] = dry_run
+        elif argument_name == "force":
+            kwargs[argument_name] = force
     result = command(**kwargs)
     return adapt_module_result(module=module_name, result=result).to_dict()
 
@@ -700,6 +723,8 @@ def _emit_modules(*, format_name: str) -> None:
                 "name": descriptor.name,
                 "description": descriptor.description,
                 "commands": sorted(descriptor.commands),
+                "install_signals": [path.as_posix() for path in descriptor.install_signals],
+                "command_args": {name: list(args) for name, args in descriptor.command_args.items()},
             }
             for descriptor in descriptors.values()
         ]

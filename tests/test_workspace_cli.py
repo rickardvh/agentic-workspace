@@ -53,6 +53,10 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
 
     payload = json.loads(capsys.readouterr().out)
     assert [entry["name"] for entry in payload["modules"]] == ["planning", "memory"]
+    planning_module = next(entry for entry in payload["modules"] if entry["name"] == "planning")
+    assert planning_module["install_signals"] == ["TODO.md", "docs/execplans", ".agentic-workspace/planning"]
+    assert planning_module["command_args"]["install"] == ["target", "dry_run", "force"]
+    assert planning_module["command_args"]["doctor"] == ["target"]
 
 
 def test_init_dispatches_to_full_preset_by_default(monkeypatch, tmp_path: Path, capsys) -> None:
@@ -405,6 +409,41 @@ def test_adapt_module_result_handles_optional_warnings(tmp_path: Path) -> None:
     assert report.to_dict()["warnings"] == []
 
 
+def test_invoke_module_command_uses_descriptor_command_args(tmp_path: Path) -> None:
+    captured: dict[str, object] = {}
+
+    def _doctor_handler(**kwargs):
+        captured.update(kwargs)
+        return FakeResult(
+            target_root=tmp_path,
+            message="doctor planning",
+            dry_run=False,
+            actions=[],
+            warnings=[],
+        )
+
+    descriptor = cli.ModuleDescriptor(
+        name="planning",
+        description="planning module",
+        commands={"doctor": _doctor_handler},
+        detector=lambda detected_root: True,
+        install_signals=(Path("TODO.md"),),
+        command_args={"doctor": ("target",)},
+    )
+
+    report = cli._invoke_module_command(
+        command_name="doctor",
+        module_name="planning",
+        descriptor=descriptor,
+        target_root=tmp_path,
+        dry_run=True,
+        force=True,
+    )
+
+    assert captured == {"target": str(tmp_path)}
+    assert report["module"] == "planning"
+
+
 def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, object]]]) -> dict[str, cli.ModuleDescriptor]:
     def _build_handler(module_name: str, command_name: str):
         def _handler(**kwargs):
@@ -426,6 +465,15 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
             description=f"{module_name} module",
             commands={command_name: _build_handler(module_name, command_name) for command_name in commands},
             detector=lambda detected_root, module_name=module_name: (detected_root / module_name).exists(),
+            install_signals=cli.MODULE_SIGNAL_PATHS.get(module_name, (Path(module_name),)),
+            command_args={
+                "install": ("target", "dry_run", "force"),
+                "adopt": ("target", "dry_run"),
+                "upgrade": ("target", "dry_run"),
+                "uninstall": ("target", "dry_run"),
+                "doctor": ("target",),
+                "status": ("target",),
+            },
         )
         for module_name in ("planning", "memory")
     }
@@ -458,6 +506,15 @@ def _descriptors_with_mixed_actions(target_root: Path) -> dict[str, cli.ModuleDe
                 "status": _upgrade_handler,
             },
             detector=lambda detected_root: True,
+            install_signals=cli.MODULE_SIGNAL_PATHS["planning"],
+            command_args={
+                "install": ("target", "dry_run", "force"),
+                "adopt": ("target", "dry_run"),
+                "upgrade": ("target", "dry_run"),
+                "uninstall": ("target", "dry_run"),
+                "doctor": ("target",),
+                "status": ("target",),
+            },
         )
     }
 
@@ -475,6 +532,8 @@ def _descriptors_with_install_signals(
                 (detected_root / "TODO.md").exists()
                 and (detected_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
             ),
+            install_signals=cli.MODULE_SIGNAL_PATHS["planning"],
+            command_args=descriptors["planning"].command_args,
         ),
         "memory": cli.ModuleDescriptor(
             name="memory",
@@ -483,6 +542,8 @@ def _descriptors_with_install_signals(
             detector=lambda detected_root: (
                 (detected_root / "memory" / "index.md").exists() and (detected_root / ".agentic-workspace" / "memory").exists()
             ),
+            install_signals=cli.MODULE_SIGNAL_PATHS["memory"],
+            command_args=descriptors["memory"].command_args,
         ),
     }
 
