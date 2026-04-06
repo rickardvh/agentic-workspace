@@ -9,6 +9,7 @@ Use `docs/maintainer-commands.md` when you need the literal command to run; use 
 This playbook is primarily for maintainers operating as coding agents. Human contributors can use it too, but it is intentionally optimized for explicit routing, bounded reads, and narrow validation.
 
 Use `docs/design-principles.md` when a change affects product shape, ownership, lifecycle behavior, or the amount of ceremony the repo imposes on normal work.
+Use `docs/compatibility-policy.md` when you need to judge whether a surface is stable, mutable, or generated before making the change.
 
 ## Agent Maintainer Path
 
@@ -42,6 +43,7 @@ If you are maintaining the repo through git commits locally, install hooks with 
 - Use root planning surfaces for active work, roadmap candidates, and execplans.
 - Use root memory notes for durable repo knowledge, decisions, and recurring failure modes.
 - Treat `memory/current/` as weak-authority current context: concise re-orientation only, not the durable home for facts.
+- Use `docs/compatibility-policy.md` for surface-stability questions before deciding whether a doc, manifest, or managed mirror is safe to change directly.
 - Edit package code only when the change belongs to that package's shipped behavior or tests.
 - Keep the root `agentic-workspace` CLI thin; push module-specific lifecycle logic back into the module packages.
 - Treat `.agentic-workspace/` module trees as product-managed surfaces; change them through the owning package or managed source rather than as freehand repo docs.

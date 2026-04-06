@@ -17,14 +17,27 @@ Inactive long-horizon candidate work.
 - Shared-tooling extraction remains a later support candidate inside the same maturity program, but only if duplicated checks and renderers still create sustained maintenance drag after the lifecycle and adoption phases settle.
 - Promote the next candidate only when the scope is bounded enough for a short execplan and a narrow validation story.
 
+## Remaining Plan Split
+
+- Platform contract hardening: keep module registry and capability reporting explicit and queryable without broadening into a public extension API.
+- Lifecycle and compatibility hardening: define the stable-surface promise, breaking-change expectations, and the dedicated `init` adoption-mode guidance.
+- Stewardship and design-principle tightening: add the repository stewardship rule so task-local cleanup and follow-up planning stay deliberate.
+- Generated-surface trust and validation hardening: make canonical sources, rerender expectations, and liveness checks boring and explicit.
+- Selective-adoption proof work: prove memory-only, planning-only, and composed installs cleanly outside the monorepo.
+- Long-term module/plugin preparation: keep composition contract hardening, extension boundary design, and shared tooling extraction as later phases after the first-party contract settles.
+
+Promotion criteria: move each thread into an active execplan only when its canonical doc exists, the scope fits a short implementation lane, and it does not force the workspace layer to own module semantics.
+
 Future promoted work should continue to pass the design tests in `docs/design-principles.md`: lower startup friction, reduce rediscovery, preserve ownership boundaries, stay quiet in normal use, and remain portable beyond this monorepo.
 
 ## Next Candidate Queue
 
-- Module registry and capability model: make module discovery, lifecycle hooks, ownership surfaces, and capabilities explicit and queryable. Promote when the first-party module contract is stable enough that registry work will not be immediately redesigned.
-- Composition contract hardening: define how modules interact, compose presets, and share lifecycle reporting without blurring ownership. Promote when multi-module installs still feel incidental rather than clearly intentional after the root lifecycle work lands.
-- Extension boundary design: define the public plugin or external-module contract only after first-party module assumptions have stabilized. Promote when first-party modules themselves are using a sufficiently explicit module contract that could be versioned for external use.
-- Shared tooling extraction: evaluate a common checker core when the first stable monorepo release exposes repeated maintenance friction across duplicated scripts. Promote when duplicated checker and renderer maintenance remains a higher cost than any unresolved product-contract ambiguity.
+- Compatibility policy and stable surfaces: define which workspace and package surfaces are stable today and what counts as a breaking change. Promote when the module-registry tranche has a stable enough surface map to anchor compatibility wording.
+- Repository stewardship rule: define the bounded cleanup and follow-up rule for leaving the repo better than found. Promote when the maintainer guidance needs a durable cleanup policy instead of implicit expectations.
+- Init lifecycle and adoption modes: document clean install, conservative adopt, high-ambiguity adopt, and prompt requirements. Promote when lifecycle wording needs a dedicated home outside the README.
+- Generated surface trust hardening: tighten canonical-source declarations, rerender expectations, and liveness checks. Promote when stable-surface language is settled enough to keep generated-surface policy compact.
+- Selective adoption proof program: prove memory-only, planning-only, and composed installs with explicit evidence. Promote when compatibility and lifecycle docs make supported adoption shapes explicit.
+- Composition and extension preparation: define composition contract hardening, extension boundary design, and shared tooling extraction only after the first-party contract and compatibility work settle. Promote when registry and compatibility work are stable enough to avoid redesign.
 
 ## Platform Vision Goal
 

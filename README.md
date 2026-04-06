@@ -113,6 +113,7 @@ For adopters:
 
 For boundaries and ecosystem policy:
 
+- `docs/compatibility-policy.md` - understand which surfaces are stable, mutable, or generated before changing a contract.
 - `docs/boundary-and-extraction.md` - decide what belongs in a package, the workspace layer, or a generated surface.
 - `docs/ecosystem-roadmap.md` - see long-horizon direction for the ecosystem shape.
 - `docs/design-principles.md` - review the product rules that constrain future changes.

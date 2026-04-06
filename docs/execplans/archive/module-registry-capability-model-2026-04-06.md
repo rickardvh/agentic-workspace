@@ -12,17 +12,15 @@
 
 ## Active Milestone
 
-- Status: in-progress
+- Status: completed
 - Scope: make first-party module metadata discoverable enough that the workspace layer can enumerate capabilities and lifecycle support from registry-like structures instead of only internal descriptor assembly.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
 
-Keep one active milestone by default.
-
 ## Immediate Next Action
 
-- Audit the current `modules`, selection, and lifecycle-report paths to decide which first-party module metadata should become explicit registry-style fields next without broadening into a public extension interface.
+- Archive this completed plan and move the compatibility-policy milestone into active execution.
 
 ## Blockers
 
@@ -63,3 +61,4 @@ Keep invariants contract-shaped and brief.
 ## Drift Log
 
 - 2026-04-06: Promoted after the first-party module contract tranche made descriptor metadata, owned surfaces, generated artifacts, and descriptor construction explicit enough that the next orchestration gap is discoverability rather than hidden contract shape.
+- 2026-04-06: Milestone complete: the root CLI now exposes a registry-style module view, target-aware installation state, and registry snapshots in lifecycle reports, and the corresponding tests cover the new reporting shape.

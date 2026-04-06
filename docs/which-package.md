@@ -12,6 +12,8 @@ Use this page when you are deciding what to adopt in a target repository.
 
 In other words, the ecosystem names are `Agentic Memory` and `Agentic Planning`; the current distributable package names still carry `-bootstrap` because they install the checked-in repo contracts.
 
+For the stable-versus-mutable surface policy that underpins this chooser, see `docs/compatibility-policy.md`.
+
 ## Fast Chooser
 
 | If your main problem is... | Install... | Why |
