@@ -65,25 +65,25 @@ See `docs/maturity-model.md` for what `alpha` and `beta` mean here.
 
 For adopters:
 
-- `docs/which-package.md`
-- `docs/architecture.md`
-- `docs/integration-contract.md`
-- `docs/maturity-model.md`
+- `docs/which-package.md` - choose Memory, Planning, or both.
+- `docs/architecture.md` - see the public ecosystem shape and thin-workspace boundary.
+- `docs/integration-contract.md` - understand how memory, planning, managed surfaces, and generated docs interact.
+- `docs/maturity-model.md` - understand current alpha/beta expectations.
 
 For boundaries and ecosystem policy:
 
-- `docs/boundary-and-extraction.md`
-- `docs/ecosystem-roadmap.md`
-- `docs/design-principles.md`
+- `docs/boundary-and-extraction.md` - decide what belongs in a package, the workspace layer, or a generated surface.
+- `docs/ecosystem-roadmap.md` - see long-horizon direction for the ecosystem shape.
+- `docs/design-principles.md` - review the product rules that constrain future changes.
 
 For maintainers:
 
-- `docs/contributor-playbook.md`
-- `docs/maintainer-commands.md`
-- `docs/collaboration-safety.md`
-- `docs/installed-contract-design-checklist.md`
-- `docs/dogfooding-feedback.md`
-- `docs/workflow-contract-changes.md`
+- `docs/contributor-playbook.md` - choose the right ownership surface and validation lane before editing.
+- `docs/maintainer-commands.md` - canonical command index for routine maintenance.
+- `docs/collaboration-safety.md` - concurrent-edit and git hygiene rules.
+- `docs/installed-contract-design-checklist.md` - review bar for new or changed shipped surfaces.
+- `docs/dogfooding-feedback.md` - classify internal friction before routing it onward.
+- `docs/workflow-contract-changes.md` - compact record of recent workflow-surface changes.
 
 For agent maintainers, the primary operating path is `AGENTS.md`, `TODO.md`, the active execplan, and `docs/contributor-playbook.md`.
 

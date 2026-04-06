@@ -2,6 +2,8 @@
 
 This page is the single-source command index for routine repo maintenance.
 
+Use this page when you need the canonical command to run, not the broader routing, ownership, or workflow-history context.
+
 ## Setup
 
 | Command | Purpose |

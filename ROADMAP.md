@@ -10,8 +10,9 @@ Inactive long-horizon candidate work.
 
 - External entry, naming, architecture, maturity framing, and maintainer-boundary docs are now in a credible product shape.
 - Installed-contract collaboration safety landed across the integration contract, package framing, shipped templates, payload verification, and the maintainer liveness lane.
+- Docs-surface governance landed across the Memory README first screen, the root docs map, maintainer-doc role scoping, workflow-surface history, and a root maintainer-surface role-drift check.
 - No active execution tranche is currently promoted.
-- The next likely pressure after that remains shared-tooling extraction, but only if duplicated checks and renderers create sustained maintenance drag.
+- Shared-tooling extraction remains the likely next candidate, but only if duplicated checks and renderers still create sustained maintenance drag after the current docs/check shape settles.
 - Promote the next candidate only when the scope is bounded enough for a short execplan and a narrow validation story.
 
 ## Next Candidate Queue

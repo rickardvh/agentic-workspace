@@ -2,6 +2,8 @@
 
 Use this convention when internal use reveals friction.
 
+Use planning surfaces when the signal changes active execution; this page is only for classifying and routing the signal, not for keeping a backlog.
+
 ## Goal
 
 Turn friction into a classified improvement signal instead of leaving it in chat residue.

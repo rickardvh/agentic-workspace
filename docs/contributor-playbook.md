@@ -4,6 +4,8 @@
 
 Use this playbook to choose the right package, planning surface, and validation lane before making changes in `agentic-workspace`.
 
+Use `docs/maintainer-commands.md` when you need the literal command to run; use this playbook when you need routing, ownership, or validation guidance.
+
 This playbook is primarily for maintainers operating as coding agents. Human contributors can use it too, but it is intentionally optimized for explicit routing, bounded reads, and narrow validation.
 
 ## Agent Maintainer Path

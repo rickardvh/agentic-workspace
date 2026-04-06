@@ -2,6 +2,8 @@
 
 Use this checklist when adding or materially changing a shipped installed surface in a package payload.
 
+Use `docs/maintainer-commands.md` for commands and `docs/contributor-playbook.md` for routing; this page is only the review bar for collaboration-sensitive installed surfaces.
+
 ## Ownership
 
 - Does the surface have one clear primary owner: planning, memory, workspace orchestration, or generated support?
