@@ -17,24 +17,6 @@ PRESET_MODULES = {
     "planning": ["planning"],
     "full": ["planning", "memory"],
 }
-WORKFLOW_SURFACE_PATHS = (
-    Path("AGENTS.md"),
-    Path("TODO.md"),
-    Path("ROADMAP.md"),
-    Path("docs/execplans"),
-    Path("memory/index.md"),
-    Path("memory/current"),
-    Path("docs/contributor-playbook.md"),
-    Path("docs/maintainer-commands.md"),
-    Path(".agentic-workspace"),
-    Path("tools/AGENT_QUICKSTART.md"),
-    Path("tools/AGENT_ROUTING.md"),
-)
-GENERATED_ARTIFACT_PATHS = {
-    "tools/agent-manifest.json",
-    "tools/AGENT_QUICKSTART.md",
-    "tools/AGENT_ROUTING.md",
-}
 MODULE_SIGNAL_PATHS = {
     "planning": (
         Path("TODO.md"),
@@ -57,6 +39,8 @@ class ModuleDescriptor:
     commands: dict[str, Callable[..., Any]]
     detector: Callable[[Path], bool]
     install_signals: tuple[Path, ...]
+    workflow_surfaces: tuple[Path, ...]
+    generated_artifacts: tuple[Path, ...]
     command_args: dict[str, tuple[str, ...]]
 
 
@@ -226,6 +210,22 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 (target_root / "TODO.md").exists() and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
             ),
             install_signals=MODULE_SIGNAL_PATHS["planning"],
+            workflow_surfaces=(
+                Path("AGENTS.md"),
+                Path("TODO.md"),
+                Path("ROADMAP.md"),
+                Path("docs/execplans"),
+                Path("docs/contributor-playbook.md"),
+                Path("docs/maintainer-commands.md"),
+                Path(".agentic-workspace/planning"),
+                Path("tools/AGENT_QUICKSTART.md"),
+                Path("tools/AGENT_ROUTING.md"),
+            ),
+            generated_artifacts=(
+                Path("tools/agent-manifest.json"),
+                Path("tools/AGENT_QUICKSTART.md"),
+                Path("tools/AGENT_ROUTING.md"),
+            ),
             command_args={
                 "install": ("target", "dry_run", "force"),
                 "adopt": ("target", "dry_run"),
@@ -250,6 +250,13 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 (target_root / "memory" / "index.md").exists() and (target_root / ".agentic-workspace" / "memory").exists()
             ),
             install_signals=MODULE_SIGNAL_PATHS["memory"],
+            workflow_surfaces=(
+                Path("AGENTS.md"),
+                Path("memory/index.md"),
+                Path("memory/current"),
+                Path(".agentic-workspace/memory"),
+            ),
+            generated_artifacts=(),
             command_args={
                 "install": ("target", "dry_run", "force"),
                 "adopt": ("target", "dry_run"),
@@ -349,6 +356,7 @@ def _run_init(
         target_root=target_root,
         selected_modules=selected_modules,
         resolved_preset=resolved_preset,
+        descriptors=descriptors,
         inspection=inspection,
         reports=reports,
     )
@@ -374,8 +382,10 @@ def _inspect_repo_state(
     descriptors: dict[str, ModuleDescriptor],
     force_adopt: bool,
 ) -> RepoInspection:
-    detected_surfaces = [path.as_posix() for path in WORKFLOW_SURFACE_PATHS if (target_root / path).exists()]
-    preserved_existing = [path for path in detected_surfaces if path not in GENERATED_ARTIFACT_PATHS]
+    workflow_surfaces = _module_workflow_surfaces(selected_modules=selected_modules, descriptors=descriptors)
+    generated_artifacts = _module_generated_artifacts(selected_modules=selected_modules, descriptors=descriptors)
+    detected_surfaces = [path.as_posix() for path in workflow_surfaces if (target_root / path).exists()]
+    preserved_existing = [path for path in detected_surfaces if path not in generated_artifacts]
     partial_state: list[str] = []
     for module_name in selected_modules:
         descriptor = descriptors[module_name]
@@ -438,6 +448,7 @@ def _build_init_summary(
     target_root: Path,
     selected_modules: list[str],
     resolved_preset: str | None,
+    descriptors: dict[str, ModuleDescriptor],
     inspection: RepoInspection,
     reports: list[dict[str, Any]],
 ) -> dict[str, Any]:
@@ -449,11 +460,18 @@ def _build_init_summary(
     generated_artifacts: list[str] = []
 
     for report in reports:
+        module_generated_artifacts = {
+            path.as_posix() for path in descriptors[report["module"]].generated_artifacts
+        }
         for action in report["actions"]:
             relative_path = _display_path(action.get("path", "."), target_root)
             detail = str(action.get("detail", ""))
             kind = str(action.get("kind", ""))
-            if _is_generated_artifact(relative_path=relative_path, detail=detail):
+            if _is_generated_artifact(
+                relative_path=relative_path,
+                detail=detail,
+                generated_artifacts=module_generated_artifacts,
+            ):
                 _append_unique(generated_artifacts, relative_path)
             if _is_placeholder_issue(detail=detail):
                 _append_unique(placeholders, relative_path)
@@ -527,7 +545,7 @@ def _run_lifecycle_command(
         )
         for module_name in selected_modules
     ]
-    summary = _summarise_reports(target_root=target_root, reports=reports)
+    summary = _summarise_reports(target_root=target_root, reports=reports, descriptors=descriptors)
     warnings: list[str] = []
     placeholders: list[str] = []
     stale_generated_surfaces: list[str] = []
@@ -555,7 +573,9 @@ def _run_lifecycle_command(
     }
 
 
-def _summarise_reports(*, target_root: Path, reports: list[dict[str, Any]]) -> dict[str, list[str]]:
+def _summarise_reports(
+    *, target_root: Path, reports: list[dict[str, Any]], descriptors: dict[str, ModuleDescriptor]
+) -> dict[str, list[str]]:
     created: list[str] = []
     updated_managed: list[str] = []
     preserved_existing: list[str] = []
@@ -566,11 +586,18 @@ def _summarise_reports(*, target_root: Path, reports: list[dict[str, Any]]) -> d
     stale_generated_surfaces: list[str] = []
 
     for report in reports:
+        module_generated_artifacts = {
+            path.as_posix() for path in descriptors[report["module"]].generated_artifacts
+        }
         for action in report["actions"]:
             relative_path = _display_path(action.get("path", "."), target_root)
             detail = str(action.get("detail", ""))
             kind = str(action.get("kind", ""))
-            if _is_generated_artifact(relative_path=relative_path, detail=detail):
+            if _is_generated_artifact(
+                relative_path=relative_path,
+                detail=detail,
+                generated_artifacts=module_generated_artifacts,
+            ):
                 _append_unique(generated_artifacts, relative_path)
             if _is_placeholder_issue(detail=detail):
                 _append_unique(placeholders, relative_path)
@@ -585,7 +612,11 @@ def _summarise_reports(*, target_root: Path, reports: list[dict[str, Any]]) -> d
                 _append_unique(needs_review, issue)
                 if kind in {"missing", "warning"}:
                     _append_unique(warnings, issue)
-            if _is_generated_artifact(relative_path=relative_path, detail=detail) and kind in {"manual review", "warning", "updated", "would update"}:
+            if _is_generated_artifact(
+                relative_path=relative_path,
+                detail=detail,
+                generated_artifacts=module_generated_artifacts,
+            ) and kind in {"manual review", "warning", "updated", "would update"}:
                 _append_unique(stale_generated_surfaces, relative_path)
 
         for warning in report["warnings"]:
@@ -724,6 +755,8 @@ def _emit_modules(*, format_name: str) -> None:
                 "description": descriptor.description,
                 "commands": sorted(descriptor.commands),
                 "install_signals": [path.as_posix() for path in descriptor.install_signals],
+                "workflow_surfaces": [path.as_posix() for path in descriptor.workflow_surfaces],
+                "generated_artifacts": [path.as_posix() for path in descriptor.generated_artifacts],
                 "command_args": {name: list(args) for name, args in descriptor.command_args.items()},
             }
             for descriptor in descriptors.values()
@@ -807,8 +840,28 @@ def _display_path(path_value: str, target_root: Path) -> str:
         return path.as_posix()
 
 
-def _is_generated_artifact(*, relative_path: str, detail: str) -> bool:
-    return relative_path in GENERATED_ARTIFACT_PATHS or detail.lower().startswith("render")
+def _module_workflow_surfaces(
+    *, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]
+) -> tuple[Path, ...]:
+    ordered: list[Path] = []
+    for module_name in selected_modules:
+        for path in descriptors[module_name].workflow_surfaces:
+            if path not in ordered:
+                ordered.append(path)
+    return tuple(ordered)
+
+
+def _module_generated_artifacts(
+    *, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]
+) -> set[str]:
+    generated: set[str] = set()
+    for module_name in selected_modules:
+        generated.update(path.as_posix() for path in descriptors[module_name].generated_artifacts)
+    return generated
+
+
+def _is_generated_artifact(*, relative_path: str, detail: str, generated_artifacts: set[str]) -> bool:
+    return relative_path in generated_artifacts or detail.lower().startswith("render")
 
 
 def _is_placeholder_issue(*, detail: str) -> bool:

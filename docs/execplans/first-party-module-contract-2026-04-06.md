@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Tighten the remaining implicit first-party module contract around owned and generated surfaces so the workspace layer is not still depending on package-specific path lists outside explicit descriptor or adapter boundaries.
+- Tighten the remaining implicit first-party module contract around module construction so first-party descriptors can be assembled through one explicit helper or factory instead of repeated package-specific import wiring in the CLI body.
 
 ## Blockers
 
@@ -66,3 +66,4 @@ Keep invariants contract-shaped and brief.
 
 - 2026-04-06: Promoted after stable contract freeze landed cleanly enough that the next orchestration risk is no longer package-surface ambiguity but implicit module-contract knowledge living in the workspace layer.
 - 2026-04-06: Made the first shared contract slice explicit in workspace module descriptors by moving install-signal metadata and per-command argument support out of root branching and into descriptor-owned fields, then locked that shape with workspace CLI coverage.
+- 2026-04-06: Moved workflow-overlap and generated-artifact classification into descriptor-owned metadata as well, so init ambiguity checks and lifecycle summaries no longer depend on package-specific root path lists outside the first-party module contract.

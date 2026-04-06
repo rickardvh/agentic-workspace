@@ -55,6 +55,22 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert [entry["name"] for entry in payload["modules"]] == ["planning", "memory"]
     planning_module = next(entry for entry in payload["modules"] if entry["name"] == "planning")
     assert planning_module["install_signals"] == ["TODO.md", "docs/execplans", ".agentic-workspace/planning"]
+    assert planning_module["workflow_surfaces"] == [
+        "AGENTS.md",
+        "TODO.md",
+        "ROADMAP.md",
+        "docs/execplans",
+        "docs/contributor-playbook.md",
+        "docs/maintainer-commands.md",
+        ".agentic-workspace/planning",
+        "tools/AGENT_QUICKSTART.md",
+        "tools/AGENT_ROUTING.md",
+    ]
+    assert planning_module["generated_artifacts"] == [
+        "tools/agent-manifest.json",
+        "tools/AGENT_QUICKSTART.md",
+        "tools/AGENT_ROUTING.md",
+    ]
     assert planning_module["command_args"]["install"] == ["target", "dry_run", "force"]
     assert planning_module["command_args"]["doctor"] == ["target"]
 
@@ -428,6 +444,8 @@ def test_invoke_module_command_uses_descriptor_command_args(tmp_path: Path) -> N
         commands={"doctor": _doctor_handler},
         detector=lambda detected_root: True,
         install_signals=(Path("TODO.md"),),
+        workflow_surfaces=(Path("TODO.md"),),
+        generated_artifacts=(),
         command_args={"doctor": ("target",)},
     )
 
@@ -466,6 +484,31 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
             commands={command_name: _build_handler(module_name, command_name) for command_name in commands},
             detector=lambda detected_root, module_name=module_name: (detected_root / module_name).exists(),
             install_signals=cli.MODULE_SIGNAL_PATHS.get(module_name, (Path(module_name),)),
+            workflow_surfaces=(
+                (
+                    Path("AGENTS.md"),
+                    Path("TODO.md"),
+                    Path("ROADMAP.md"),
+                    Path("docs/execplans"),
+                    Path("docs/contributor-playbook.md"),
+                    Path("docs/maintainer-commands.md"),
+                    Path(".agentic-workspace/planning"),
+                    Path("tools/AGENT_QUICKSTART.md"),
+                    Path("tools/AGENT_ROUTING.md"),
+                )
+                if module_name == "planning"
+                else (
+                    Path("AGENTS.md"),
+                    Path("memory/index.md"),
+                    Path("memory/current"),
+                    Path(".agentic-workspace/memory"),
+                )
+            ),
+            generated_artifacts=(
+                (Path("tools/agent-manifest.json"), Path("tools/AGENT_QUICKSTART.md"), Path("tools/AGENT_ROUTING.md"))
+                if module_name == "planning"
+                else ()
+            ),
             command_args={
                 "install": ("target", "dry_run", "force"),
                 "adopt": ("target", "dry_run"),
@@ -507,6 +550,8 @@ def _descriptors_with_mixed_actions(target_root: Path) -> dict[str, cli.ModuleDe
             },
             detector=lambda detected_root: True,
             install_signals=cli.MODULE_SIGNAL_PATHS["planning"],
+            workflow_surfaces=(Path("AGENTS.md"), Path("tools/AGENT_QUICKSTART.md")),
+            generated_artifacts=(Path("tools/AGENT_QUICKSTART.md"),),
             command_args={
                 "install": ("target", "dry_run", "force"),
                 "adopt": ("target", "dry_run"),
@@ -533,6 +578,8 @@ def _descriptors_with_install_signals(
                 and (detected_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
             ),
             install_signals=cli.MODULE_SIGNAL_PATHS["planning"],
+            workflow_surfaces=descriptors["planning"].workflow_surfaces,
+            generated_artifacts=descriptors["planning"].generated_artifacts,
             command_args=descriptors["planning"].command_args,
         ),
         "memory": cli.ModuleDescriptor(
@@ -543,6 +590,8 @@ def _descriptors_with_install_signals(
                 (detected_root / "memory" / "index.md").exists() and (detected_root / ".agentic-workspace" / "memory").exists()
             ),
             install_signals=cli.MODULE_SIGNAL_PATHS["memory"],
+            workflow_surfaces=descriptors["memory"].workflow_surfaces,
+            generated_artifacts=descriptors["memory"].generated_artifacts,
             command_args=descriptors["memory"].command_args,
         ),
     }
