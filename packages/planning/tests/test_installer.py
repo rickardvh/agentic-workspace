@@ -109,7 +109,20 @@ def test_status_reports_missing_and_present_files(tmp_path: Path) -> None:
 def test_payload_filters_generated_artifacts(tmp_path: Path, monkeypatch) -> None:
     payload_root = tmp_path / "payload"
     _write(payload_root / "AGENTS.md", "agents\n")
-    _write(payload_root / "scripts" / "render_agent_docs.py", "print('ok')\n")
+    _write(
+        payload_root / "scripts" / "render_agent_docs.py",
+        (
+            "import json\n\n"
+            "from pathlib import Path\n\n"
+            "def load_manifest():\n"
+            "    manifest_path = Path(__file__).resolve().parents[1] / '.agentic-workspace' / 'planning' / 'agent-manifest.json'\n"
+            "    return json.loads(manifest_path.read_text(encoding='utf-8'))\n\n"
+            "def render_quickstart(_manifest):\n"
+            "    return 'generated file\\n'\n\n"
+            "def render_routing(_manifest):\n"
+            "    return 'generated file\\n'\n"
+        ),
+    )
     _write(payload_root / "scripts" / "__pycache__" / "render_agent_docs.cpython-314.pyc", "junk\n")
 
     monkeypatch.setattr(installer_mod, "payload_root", lambda: payload_root)
@@ -133,6 +146,51 @@ def test_verify_payload_generated_docs_match_manifest() -> None:
     assert any(action.kind == "current" for action in manifest_actions)
     assert any(action.kind == "current" for action in quickstart_actions)
     assert any(action.kind == "current" for action in routing_actions)
+
+
+def test_verify_payload_flags_missing_collaboration_safe_template_guidance(tmp_path: Path, monkeypatch) -> None:
+    payload_root = tmp_path / "payload"
+    _write(payload_root / "AGENTS.md", "# Agent Instructions\n")
+    _write(payload_root / "TODO.md", "# TODO\n")
+    _write(payload_root / "ROADMAP.md", "# Roadmap\n")
+    _write(payload_root / "docs" / "execplans" / "README.md", "# Execution Plans\n")
+    _write(payload_root / "docs" / "execplans" / "TEMPLATE.md", "# Plan Title\n")
+    _write(payload_root / "docs" / "execplans" / "archive" / "README.md", "# Archive\n")
+    _write(payload_root / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml", "source_type = \"git\"\n")
+    _write(payload_root / ".agentic-workspace" / "planning" / "agent-manifest.json", "{}\n")
+    _write(payload_root / ".agentic-workspace" / "planning" / "scripts" / "render_agent_docs.py", "def render_quickstart(_manifest):\n    return \"generated file\\n\"\n\ndef render_routing(_manifest):\n    return \"generated file\\n\"\n")
+    _write(payload_root / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_planning_surfaces.py", "print('ok')\n")
+    _write(payload_root / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_maintainer_surfaces.py", "print('ok')\n")
+    _write(
+        payload_root / "scripts" / "render_agent_docs.py",
+        (
+            "import json\n\n"
+            "from pathlib import Path\n\n"
+            "def load_manifest():\n"
+            "    manifest_path = Path(__file__).resolve().parents[1] / '.agentic-workspace' / 'planning' / 'agent-manifest.json'\n"
+            "    return json.loads(manifest_path.read_text(encoding='utf-8'))\n\n"
+            "def render_quickstart(_manifest):\n"
+            "    return 'generated file\\n'\n\n"
+            "def render_routing(_manifest):\n"
+            "    return 'generated file\\n'\n"
+        ),
+    )
+    _write(payload_root / "scripts" / "check" / "check_planning_surfaces.py", "print('ok')\n")
+    _write(payload_root / "scripts" / "check" / "check_maintainer_surfaces.py", "print('ok')\n")
+    _write(payload_root / "tools" / "agent-manifest.json", "{}\n")
+    _write(payload_root / "tools" / "AGENT_QUICKSTART.md", "generated file\n")
+    _write(payload_root / "tools" / "AGENT_ROUTING.md", "generated file\n")
+
+    monkeypatch.setattr(installer_mod, "payload_root", lambda: payload_root)
+
+    result = verify_payload()
+
+    assert any(
+        action.path == payload_root / "docs" / "execplans" / "TEMPLATE.md"
+        and action.kind == "manual review"
+        and "collaboration-safe template wording" in action.detail
+        for action in result.actions
+    )
 
 
 def test_upgrade_bootstrap_overwrites_managed_files_but_preserves_root_surfaces(tmp_path: Path) -> None:

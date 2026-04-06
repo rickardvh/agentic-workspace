@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Strengthen the installed collaboration-safe templates and maintainer liveness path so both modules are covered by the collaboration contract in practice, not only in docs.
+- Run the broadened maintainer lane and package regression coverage.
 
 Keep exactly one immediate action by default; avoid multi-step mini-plans here.
 
@@ -67,3 +67,4 @@ Keep invariants contract-shaped and brief.
 
 - 2026-04-06: Promoted from maintainer feedback after the docs ecosystem tranche established clearer external entrypoints, architecture, and package boundaries.
 - 2026-04-06: Tightened the integration contract into a more compact interaction model and reframed the memory docs around product capability first, installer second.
+- 2026-04-06: Added collaboration-safe payload guidance checks for shipped planning and memory templates and broadened the maintainer lane to verify both package contracts.

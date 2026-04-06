@@ -60,6 +60,18 @@ GENERATED_PAYLOAD_FILES = (
     Path("tools/AGENT_ROUTING.md"),
 )
 
+PAYLOAD_GUIDANCE_FRAGMENTS = {
+    Path("docs/execplans/TEMPLATE.md"): (
+        "concurrent edits merge cleanly",
+        "do not add retrospective sections such as `Added In This Pass`",
+        "Replace stale immediate-action text when the next step changes",
+    ),
+    Path("docs/execplans/README.md"): (
+        "Do not add sections such as `Added In This Pass`",
+        "Treat active plan state as branch-local and low half-life",
+    ),
+}
+
 TODO_EMPTY_STATE_LINE = "- No active work right now."
 
 PACKAGE_MANAGED_FILES = tuple(
@@ -247,6 +259,21 @@ def verify_payload() -> InstallResult:
     for relative in REQUIRED_PAYLOAD_FILES:
         detail = "required payload file present" if relative in payload_files else "required payload file missing"
         result.add("current" if relative in payload_files else "manual review", root / relative, detail)
+
+    for relative, fragments in PAYLOAD_GUIDANCE_FRAGMENTS.items():
+        destination = root / relative
+        if not destination.exists():
+            continue
+        text = destination.read_text(encoding="utf-8")
+        missing = [fragment for fragment in fragments if fragment not in text]
+        if missing:
+            result.add(
+                "manual review",
+                destination,
+                "payload guidance is missing collaboration-safe template wording",
+            )
+        else:
+            result.add("current", destination, "payload guidance includes collaboration-safe template wording")
 
     for relative, rendered, label in _generated_agent_file_expectations(root):
         destination = root / relative

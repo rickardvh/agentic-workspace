@@ -1670,6 +1670,46 @@ def test_verify_payload_reports_version_mismatch(tmp_path: Path, monkeypatch) ->
     )
 
 
+def test_verify_payload_flags_missing_current_note_collaboration_guidance(tmp_path: Path, monkeypatch) -> None:
+    payload = tmp_path / "payload"
+    (payload / ".agentic-workspace/memory").mkdir(parents=True)
+    (payload / ".agentic-workspace/memory" / "VERSION.md").write_text(f"Version: {installer.BOOTSTRAP_VERSION}\n", encoding="utf-8")
+    (payload / ".agentic-workspace/memory" / "UPGRADE-SOURCE.toml").write_text(
+        "source_type = \"git\"\nsource_ref = \"example\"\nsource_label = \"Example\"\nrecorded_at = \"2026-04-06\"\n",
+        encoding="utf-8",
+    )
+    (payload / "AGENTS.md").write_text("# Agent Instructions\n", encoding="utf-8")
+    (payload / "scripts" / "check").mkdir(parents=True)
+    (payload / "scripts" / "check" / "check_memory_freshness.py").write_text("print('ok')\n", encoding="utf-8")
+    (payload / "memory" / "domains").mkdir(parents=True)
+    (payload / "memory" / "invariants").mkdir(parents=True)
+    (payload / "memory" / "runbooks").mkdir(parents=True)
+    (payload / "memory" / "mistakes").mkdir(parents=True)
+    (payload / "memory" / "decisions").mkdir(parents=True)
+    (payload / "memory" / "current").mkdir(parents=True)
+    (payload / "memory" / "index.md").write_text("# Memory Index\n", encoding="utf-8")
+    (payload / "memory" / "manifest.toml").write_text("version = 1\n", encoding="utf-8")
+    (payload / "memory" / "domains" / "README.md").write_text("# Domains\n", encoding="utf-8")
+    (payload / "memory" / "invariants" / "README.md").write_text("# Invariants\n", encoding="utf-8")
+    (payload / "memory" / "runbooks" / "README.md").write_text("# Runbooks\n", encoding="utf-8")
+    (payload / "memory" / "mistakes" / "recurring-failures.md").write_text("# Recurring Failures\n", encoding="utf-8")
+    (payload / "memory" / "decisions" / "README.md").write_text("# Decisions\n", encoding="utf-8")
+    (payload / "memory" / "current" / "project-state.md").write_text("# Project State\n", encoding="utf-8")
+    (payload / "memory" / "current" / "task-context.md").write_text("# Task Context\n", encoding="utf-8")
+    (payload / "memory" / "current" / "routing-feedback.md").write_text("# Routing Feedback\n", encoding="utf-8")
+
+    monkeypatch.setattr(installer, "payload_root", lambda: payload)
+
+    result = installer.verify_payload(target=payload)
+
+    assert any(
+        action.path == payload / "memory" / "current" / "project-state.md"
+        and action.kind == "manual review"
+        and "collaboration-safe wording" in action.detail
+        for action in result.actions
+    )
+
+
 def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_guidance() -> None:
     text = (installer.payload_root() / "memory" / "system" / "WORKFLOW.md").read_text(encoding="utf-8")
 

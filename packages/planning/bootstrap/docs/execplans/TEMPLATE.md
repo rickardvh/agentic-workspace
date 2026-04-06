@@ -4,6 +4,7 @@ Use this template for an active plan in `docs/execplans/`. Move the file into
 `docs/execplans/archive/` once it is completed and no longer affects future execution.
 Before archiving, set `## Active Milestone` `Status` to `completed`.
 Prefer a feature-scoped file over expanding a shared hot plan, and keep headings stable so concurrent edits merge cleanly.
+Prefer replacing resolved status lines instead of appending pass-by-pass history, and do not add retrospective sections such as `Added In This Pass`.
 
 ## Goal
 
@@ -29,6 +30,7 @@ Keep branch-local progress, blockers, and next-step state here rather than in du
 -
 
 Keep exactly one immediate action by default; avoid multi-step mini-plans here.
+Replace stale immediate-action text when the next step changes instead of preserving old actions as history.
 
 ## Blockers
 

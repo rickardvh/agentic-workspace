@@ -56,7 +56,7 @@ Run the narrowest lane that proves the change.
 - Root workspace CLI changes: `uv run pytest tests/test_workspace_cli.py`, `uv run ruff check src tests`, `uv run ty check src`
 - Memory package changes: `make sync-memory` once, then `cd packages/memory && uv run pytest` or `cd packages/memory && uv run ruff check .`; escalate to `make check-memory` for the full package lane
 - Planning package changes: `make sync-planning` once, then `cd packages/planning && uv run pytest` or `cd packages/planning && uv run ruff check .`; escalate to `make check-planning` for the full package lane
-- Maintainer-surface or generated-doc changes: `make maintainer-surfaces`
+- Maintainer-surface, generated-doc, or installed-contract payload changes: `make maintainer-surfaces`
 - Planning-surface changes only: `make planning-surfaces`; rerun `make render-agent-docs` when the planning manifest or generated routing docs change
 - Memory note/current-state changes: `uv run python scripts/check/check_memory_freshness.py`
 

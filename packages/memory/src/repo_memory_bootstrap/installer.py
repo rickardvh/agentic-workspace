@@ -187,6 +187,21 @@ __all__ = [
     "_validate_upgrade_source_record",
 ]
 
+PAYLOAD_GUIDANCE_FRAGMENTS: dict[Path, tuple[str, ...]] = {
+    Path("memory/current/project-state.md"): (
+        "Keep this note concise and weak-authority",
+        "Prefer replacing stale bullets instead of appending timeline-style progress logs",
+    ),
+    Path("memory/current/task-context.md"): (
+        "Do not turn it into a task list, backlog, execution log, roadmap, or sequencing surface.",
+        "Prefer replacing resolved resume bullets instead of accumulating pass-by-pass checkpoints",
+    ),
+    Path("memory/current/routing-feedback.md"): (
+        "Keep only concrete cases that materially improve routing.",
+        "Prefer one live case per routing issue and prune resolved entries quickly",
+    ),
+}
+
 
 def install_bootstrap(
     *,
@@ -1636,6 +1651,26 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
             safety="manual",
             source=MANIFEST_PATH.as_posix(),
             category="contract-drift",
+        )
+
+    for relative, fragments in PAYLOAD_GUIDANCE_FRAGMENTS.items():
+        destination = source_root / relative
+        if not destination.exists():
+            continue
+        text = destination.read_text(encoding="utf-8")
+        missing = [fragment for fragment in fragments if fragment not in text]
+        result.add(
+            "current" if not missing else "manual review",
+            target_root / relative,
+            (
+                "collaboration-safe current-note guidance present"
+                if not missing
+                else "current-note payload guidance is missing collaboration-safe wording"
+            ),
+            role="payload-contract",
+            safety="safe" if not missing else "manual",
+            source=relative.as_posix(),
+            category="safe-update" if not missing else "contract-drift",
         )
     return result
 

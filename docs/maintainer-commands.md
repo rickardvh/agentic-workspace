@@ -17,7 +17,7 @@ This page is the single-source command index for routine repo maintenance.
 | `make lint` | Run lint checks across workspace and packages |
 | `make typecheck` | Run type checks across workspace and packages |
 | `make render-agent-docs` | Regenerate routing docs from the planning manifest |
-| `make maintainer-surfaces` | Run the maintainer-surface liveness path for generated docs, startup-policy consistency, and packaged planning payload freshness |
+| `make maintainer-surfaces` | Run the maintainer-surface liveness path for generated docs, startup-policy consistency, and both packaged payload contracts |
 | `make planning-surfaces` | Run the underlying planning-surface audit directly |
 
 ## Validation Lanes
@@ -33,4 +33,4 @@ This page is the single-source command index for routine repo maintenance.
 
 - Pre-commit is for formatting and lint.
 - Full tests should run in CI and in explicit local validation runs such as `make check-all`.
-- Prefer `make maintainer-surfaces` when a change touches generated maintainer docs, startup routing, or planning manifest wiring.
+- Prefer `make maintainer-surfaces` when a change touches generated maintainer docs, startup routing, or either package's installed contract surfaces.

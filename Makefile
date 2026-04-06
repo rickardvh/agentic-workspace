@@ -123,10 +123,10 @@ planning-surfaces:
 planning-surfaces-strict:
 	uv run python scripts/check/check_planning_surfaces.py --strict
 
-maintainer-surfaces: render-agent-docs planning-surfaces verify-planning
+maintainer-surfaces: render-agent-docs planning-surfaces verify-memory verify-planning
 	uv run python scripts/check/check_maintainer_surfaces.py
 
-maintainer-surfaces-strict: render-agent-docs planning-surfaces-strict verify-planning
+maintainer-surfaces-strict: render-agent-docs planning-surfaces-strict verify-memory verify-planning
 	uv run python scripts/check/check_maintainer_surfaces.py --strict
 
 render-agent-docs:
