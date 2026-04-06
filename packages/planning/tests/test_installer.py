@@ -158,7 +158,15 @@ def test_verify_payload_flags_missing_collaboration_safe_template_guidance(tmp_p
     _write(payload_root / "docs" / "execplans" / "archive" / "README.md", "# Archive\n")
     _write(payload_root / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml", "source_type = \"git\"\n")
     _write(payload_root / ".agentic-workspace" / "planning" / "agent-manifest.json", "{}\n")
-    _write(payload_root / ".agentic-workspace" / "planning" / "scripts" / "render_agent_docs.py", "def render_quickstart(_manifest):\n    return \"generated file\\n\"\n\ndef render_routing(_manifest):\n    return \"generated file\\n\"\n")
+    _write(
+        payload_root / ".agentic-workspace" / "planning" / "scripts" / "render_agent_docs.py",
+        (
+            "def render_quickstart(_manifest):\n"
+            "    return \"generated file\\n\"\n\n"
+            "def render_routing(_manifest):\n"
+            "    return \"generated file\\n\"\n"
+        ),
+    )
     _write(payload_root / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_planning_surfaces.py", "print('ok')\n")
     _write(payload_root / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_maintainer_surfaces.py", "print('ok')\n")
     _write(

@@ -12,8 +12,8 @@
 
 ## Active Milestone
 
-- Status: in-progress
-- Scope: finish the installed-contract collaboration tranche by hardening merge-safe installed templates and checks, broadening maintainer liveness coverage, and then validating and archiving the tranche.
+- Status: completed
+- Scope: finished the installed-contract collaboration tranche by hardening merge-safe installed templates and checks, broadening maintainer liveness coverage, and validating the resulting contract across both packages.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
@@ -22,7 +22,7 @@ Keep one active milestone by default.
 
 ## Immediate Next Action
 
-- Run the broadened maintainer lane and package regression coverage.
+- Promote the next candidate only when a bounded follow-on tranche is clearly justified by real maintenance pressure.
 
 Keep exactly one immediate action by default; avoid multi-step mini-plans here.
 
@@ -34,6 +34,7 @@ Keep exactly one immediate action by default; avoid multi-step mini-plans here.
 
 - TODO.md
 - ROADMAP.md
+- Makefile
 - docs/
 - packages/memory/
 - packages/planning/
@@ -54,7 +55,8 @@ Keep invariants contract-shaped and brief.
 
 - uv run python scripts/check/check_planning_surfaces.py
 - make maintainer-surfaces
-- uv run pytest packages/memory/tests packages/planning/tests
+- cd packages/memory && uv run pytest
+- cd packages/planning && uv run pytest
 
 ## Completion Criteria
 
@@ -68,3 +70,4 @@ Keep invariants contract-shaped and brief.
 - 2026-04-06: Promoted from maintainer feedback after the docs ecosystem tranche established clearer external entrypoints, architecture, and package boundaries.
 - 2026-04-06: Tightened the integration contract into a more compact interaction model and reframed the memory docs around product capability first, installer second.
 - 2026-04-06: Added collaboration-safe payload guidance checks for shipped planning and memory templates and broadened the maintainer lane to verify both package contracts.
+- 2026-04-06: Completed the tranche after validating the broadened maintainer lane plus both package installer suites and archiving the active plan.
