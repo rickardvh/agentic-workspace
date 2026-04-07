@@ -44,11 +44,11 @@ The orchestrator owns shared product-managed startup guidance for the installed 
 - Future installer work should consume the ownership ledger instead of hard-coding duplicate ownership rules across modules.
 - Module-specific workflow files should exist only when the workspace-level contract is not specific enough.
 
-## Follow-through
+## Expected downstream impact
 
-- Move planning-managed startup assets behind the workspace orchestrator.
-- Teach installer, upgrade, verify, and uninstall flows to read the ownership ledger.
-- Keep repo-owned execution surfaces at root and fenced managed insertions minimal.
+- Planning-managed startup assets should stay behind the workspace orchestrator.
+- Installer and lifecycle work should converge on the ownership ledger rather than duplicate heuristics.
+- Repo-owned execution surfaces should stay at root with minimal fenced managed insertions.
 
 ## Verify
 

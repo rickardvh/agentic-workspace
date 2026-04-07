@@ -15,24 +15,19 @@ The workflow should let agents perform bounded review passes, capture concrete f
 
 ## Active Milestone
 
-### Milestone
-Define the planning contract for review-driven future-work discovery and decide how it should integrate with the existing planning and memory model.
-
-### Status
-active
-
-### Ready
-ready
-
-### Blocked
-none
-
-### optional_deps
-none
+- Status: completed
+- Scope: Define the planning contract for review-driven future-work discovery and land the initial shipped review-artifact surfaces.
+- Ready: ready
+- Blocked: none
+- optional_deps: none
 
 ## Immediate Next Action
 
-Draft the canonical workflow contract for review passes, promotion rules, artifact shape, and candidate planning skills, then decide whether to land it first as a temporary execplan-only contract or promote it into package docs and shipped planning helpers.
+- Archive this execplan now that the review-artifact contract, bundled skills, and package docs have landed.
+
+## Blockers
+
+- None.
 
 ## Touched Paths
 
@@ -103,3 +98,4 @@ Use staged promotion:
 ## Drift Log
 
 - 2026-04-07: Created as a temporary execplan to capture the proposed review-driven planning lane before deciding how much should become shipped planning behavior.
+- 2026-04-07: Promoted the review lane into shipped planning docs, bundled skills, and packaged `docs/reviews/` contract surfaces.

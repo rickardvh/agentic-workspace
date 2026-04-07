@@ -89,6 +89,10 @@ Run the narrowest lane that proves the change.
 
 Escalate to `make check-memory`, `make check-planning`, or `make check-all` only when the change crosses package or root orchestration boundaries.
 
+Final repo sync after package work:
+
+- After memory or planning package changes, refresh the root repo install to the latest checked-in version of both packages as a final compatibility test: `uv run agentic-planning-bootstrap upgrade --target .` and `uv run agentic-memory-bootstrap upgrade --target .`
+
 ## Common Routes
 
 - Lifecycle orchestration or root CLI: start at `src/agentic_workspace/` and `README.md`.

@@ -1,5 +1,9 @@
 # Agent Instructions
 
+<!-- agentic-memory:workflow:start -->
+Read `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.
+<!-- agentic-memory:workflow:end -->
+
 <!-- agentic-workspace:workflow:start -->
 Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules.
 <!-- agentic-workspace:workflow:end -->
@@ -75,3 +79,4 @@ When changing product shape, ownership boundaries, lifecycle behavior, or mainta
 - Run the narrowest validation that proves a change.
 - Prefer package-local checks after package import.
 - Add monorepo-wide checks only when cross-package integration changes.
+- As a final repo-level test after package work, refresh the root install to the latest checked-in version of both shipped packages: `uv run agentic-planning-bootstrap upgrade --target .` and `uv run agentic-memory-bootstrap upgrade --target .`.

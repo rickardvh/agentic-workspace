@@ -39,12 +39,11 @@ Move both memory and planning installed systems from `.agentic-memory/` and `.ag
 - Existing installations remain at old paths; users must run upgrade to migrate.
 - Unified documentation and bootstrap-adoption workflows now reference single parent directory.
 
-## Follow-through
+## Landed evidence
 
-- Both bootstrap packages updated: MANAGED_ROOT, UPGRADE_SOURCE_PATH, all path constants.
-- All docstrings and test fixtures updated to use new paths.
-- Bootstrap payloads (templates) now generate `.agentic-workspace/{memory,planning}/` structures.
-- End-to-end verified: both CLIs successfully generate install plans to new locations.
+- Both bootstrap packages now use `.agentic-workspace/{memory,planning}/` path constants.
+- Bootstrap payloads and test fixtures were updated to the consolidated paths.
+- End-to-end CLI verification confirmed install plans at the new locations.
 
 ## Verify
 

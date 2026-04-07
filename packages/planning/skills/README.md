@@ -20,3 +20,10 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
   - execute one bounded planning milestone at a time from the checked-in planning surfaces
 
 These bundled skills cover bootstrap lifecycle work and the bounded planning execution operator.
+
+Additional bundled review-discovery skills:
+
+- `planning-review-pass`
+  - run a bounded review pass and capture compact findings under `docs/reviews/`
+- `planning-promote-review-findings`
+  - turn selected reviewed findings into roadmap or active-planning candidates without collapsing capture and promotion

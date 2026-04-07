@@ -47,11 +47,11 @@ Next work is optional and should be driven by product priorities rather than rep
 - Package maintainers can release independently with confidence in root orchestration.
 - Future work should start from ROADMAP promotion rather than historical cleanup plans.
 
-## Follow-through
+## Ongoing stance
 
-- Keep archived execplans only as lightweight historical context.
-- Promote new TODO entries only from bounded roadmap candidates.
-- Monitor whether shared-tooling, integration-lane, or onboarding candidates become urgent enough to activate.
+- Archived execplans remain lightweight historical context only.
+- New TODO entries should continue to come from bounded roadmap candidates.
+- Future work is additive product improvement rather than structural cleanup.
 
 ## Verify
 

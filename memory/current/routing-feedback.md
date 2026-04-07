@@ -31,6 +31,8 @@ Active
 ## Synthesis
 
 - Keep only concrete cases that materially improve routing.
+- Do not restate durable routing guidance here once it has a better long-lived home.
+- Prefer one live case per routing issue and prune resolved entries quickly so the note stays merge-friendly.
 - Compress tuned or rejected cases into a short summary or remove them once the routing rule is stable.
 
 ## Last confirmed

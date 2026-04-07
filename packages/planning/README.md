@@ -11,6 +11,7 @@ Use it for:
 - keeping a small active queue in `TODO.md`
 - storing inactive future candidates in `ROADMAP.md`
 - attaching bounded execution contracts to active work in `docs/execplans/`
+- capturing analysis-derived future-work findings in `docs/reviews/` before promotion
 - helping agents restart from checked-in execution state instead of chat-only context
 
 Do not use it for:
@@ -110,6 +111,8 @@ Treat these files as the current planning compatibility contract surfaces that s
 - `docs/execplans/README.md`
 - `docs/execplans/TEMPLATE.md`
 - `docs/execplans/archive/README.md`
+- `docs/reviews/README.md`
+- `docs/reviews/TEMPLATE.md`
 - `.agentic-workspace/planning/agent-manifest.json`
 
 Treat helper scripts and generated mirrors as lower-stability support surfaces unless a stricter promise is stated later. That lower-stability set currently includes the render and check scripts under `scripts/` and `.agentic-workspace/planning/scripts/`, plus generated mirrors such as `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, and `tools/AGENT_ROUTING.md`.
@@ -300,6 +303,7 @@ Planning owns:
 - roadmap state
 - active queue state
 - execplan structure
+- bounded review-artifact structure for future-work discovery
 - milestone sequencing
 - blockers and completion criteria for live work
 - planning-surface lifecycle helpers
@@ -311,6 +315,25 @@ Planning does not own:
 - routing of durable note bundles
 - broad knowledge-base content
 - canonical architecture documentation
+
+## Review-Driven Future Work Discovery
+
+Planning includes a bounded review lane for deliberate future-work discovery:
+
+- `docs/reviews/` captures review artifacts
+- `ROADMAP.md` receives promoted future candidates
+- `TODO.md` plus `docs/execplans/` receive only the findings that are explicitly activated
+
+The review lane exists so analysis-derived findings do not masquerade as friction-confirmed work.
+Its rules are:
+
+- capture and promotion are separate steps
+- each finding carries evidence, confidence, source class, and promotion guidance
+- friction-confirmed findings remain higher trust than pure analysis findings
+- weak or speculative findings should be dismissed instead of promoted
+
+Use review artifacts when a task is a bounded review pass rather than implementation.
+Do not use them as a substitute for durable docs, memory notes, or active execplans.
 
 ## What This Is Not
 
@@ -360,6 +383,7 @@ It packages:
 - the planning contract
 - the module-managed planning manifest and helper scripts
 - generated mirrors and thin root wrappers for repo ergonomics
+- review-artifact contract surfaces under `docs/reviews/`
 - file-native helper commands for promotion, archiving, and summary
 - starter surfaces
 - startup docs and manifest wiring

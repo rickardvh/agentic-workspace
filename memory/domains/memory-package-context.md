@@ -23,7 +23,7 @@ Capture durable context imported from the previous package-local memory install 
 
 ## Monorepo adaptation note
 
-Root ownership now contains the installed memory system. Package-local installed memory systems should be removed after this context is preserved.
+Root ownership now contains the installed memory system. For the owning rationale, load `memory/decisions/installed-system-consolidation-2026-04-05.md` instead of expanding this context note.
 
 ## Load when
 
