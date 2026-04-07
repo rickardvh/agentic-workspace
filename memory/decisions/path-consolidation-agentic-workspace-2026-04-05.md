@@ -1,4 +1,4 @@
-# Decision: Consolidate Installed Systems Under .agentic-workspace/
+# Decision: Consolidate Installed Systems Under `.agentic-workspace/`
 
 ## Status
 
@@ -10,47 +10,35 @@ Accepted
 
 ## Load when
 
-- Deciding how to namespace installed bootstrap systems to avoid bloating target repos with many dotfiles.
-- Reviewing ergonomic improvements to multibootstrap installations.
+Read this note when deciding how installed bootstrap systems should be namespaced in target repos, or when path-related lifecycle changes could reopen the directory-layout question.
 
 ## Review when
 
-- New bootstraps are added and need to define their install paths.
-- Namespace conflicts or layout challenges surface during adoption.
+Review this note if a new bootstrap needs an install path, if namespace conflicts appear, or if adoption friction suggests the current layout is no longer the cleanest shared convention.
 
 ## Failure signals
 
-- Target repos accumulate many `.agentic-*` directories, making the root directory cluttered.
-- New bootstraps introduce conflicting naming schemes or separate structural conventions.
+Failure looks like target repos growing multiple top-level `.agentic-*` directories again, or new bootstraps inventing incompatible path conventions.
 
 ## Decision
 
-Move both memory and planning installed systems from `.agentic-memory/` and `.agentic-planning/` to `.agentic-workspace/memory/` and `.agentic-workspace/planning/` respectively. This consolidates all bootstrap-managed files under a single parent.
+Both memory and planning installed systems live under `.agentic-workspace/`, specifically `.agentic-workspace/memory/` and `.agentic-workspace/planning/`, instead of separate `.agentic-memory/` and `.agentic-planning/` roots.
 
 ## Why
 
-- Cleaner namespace when multiple bootstraps target the same repository.
-- Single organizational convention (`.agentic-workspace/`) scales better than per-bootstrap dotfiles.
-- Reserves `.agentic-workspace/` as a reserved namespace for Agentic Systems projects.
+One shared namespace is cleaner for multi-bootstrap repos, scales better than one dot-directory per module, and makes `.agentic-workspace/` the explicit reserved home for Agentic Workspace managed assets.
 
 ## Consequences
 
-- Major version bump for both agentic-memory-bootstrap and agentic-planning-bootstrap (installer path constants changed).
-- Existing installations remain at old paths; users must run upgrade to migrate.
-- Unified documentation and bootstrap-adoption workflows now reference single parent directory.
+This path move required coordinated package-version updates, payload updates, and migration-aware upgrade behavior. Existing installs can remain on old paths until upgraded, but the shared contract now assumes the consolidated layout.
 
-## Landed evidence
+## Durable evidence
 
-- Both bootstrap packages now use `.agentic-workspace/{memory,planning}/` path constants.
-- Bootstrap payloads and test fixtures were updated to the consolidated paths.
-- End-to-end CLI verification confirmed install plans at the new locations.
+The package constants, payloads, and test fixtures were updated to the consolidated paths, and end-to-end CLI verification confirmed install plans at the new locations. Use [path-consolidation-check](C:/Users/ricka/src/agentic-workspace/memory/skills/path-consolidation-check/SKILL.md) for the repeatable validation workflow instead of expanding this decision note.
 
 ## Verify
 
-- packages/memory/tests/test_installer.py: 156/158 passing
-- packages/planning/tests/test_upgrade_source.py: 25/25 passing
-- agentic-memory-bootstrap init --dry-run output shows `.agentic-workspace/memory/` copies
-- agentic-planning-bootstrap install --dry-run output shows `.agentic-workspace/planning/` copies
+Confirm the memory and planning package docs, payloads, and install/upgrade tests still point at `.agentic-workspace/{memory,planning}/`.
 
 ## Last confirmed
 

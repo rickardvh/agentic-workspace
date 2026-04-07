@@ -42,6 +42,10 @@ Do not bulk-read all planning surfaces.
 
 This repository exists to build agent-first workspace infrastructure: systems that make coding agents more capable, more reliable, and easier to trust in real repositories.
 
+Dogfooding is a primary development mode here, not just background context.
+When normal work in this repo reveals friction, ambiguity, noisy maintenance, or repeated agent missteps in the shipped planning or memory systems, treat that as a product signal that should enter the checked-in feedback loop.
+Route that signal into the active execplan, `TODO.md`, `ROADMAP.md`, memory, or canonical docs as appropriate instead of treating chat or ad hoc direct package edits as the default feedback path.
+
 Work in this repo should steer toward these goals:
 
 - Build for agents first, while keeping the result legible and useful to humans.
@@ -80,3 +84,11 @@ When changing product shape, ownership boundaries, lifecycle behavior, or mainta
 - Prefer package-local checks after package import.
 - Add monorepo-wide checks only when cross-package integration changes.
 - As a final repo-level test after package work, refresh the root install to the latest checked-in version of both shipped packages: `uv run agentic-planning-bootstrap upgrade --target .` and `uv run agentic-memory-bootstrap upgrade --target .`.
+
+## Dogfooding Rule
+
+- Treat this monorepo as the proving ground for shipped agent workflows.
+- If repo-local work exposes a real product deficiency in planning, memory, routing, checks, or lifecycle behavior, capture it in the checked-in planning or memory system so the signal survives the current session.
+- Prefer promoting the signal into planned work instead of making unauthorised direct package changes solely because the repo exposed the issue.
+- Make direct package or shipped-contract fixes only when they are already in active scope, explicitly requested, or clearly the smallest approved way to complete the current planned work.
+- When a repo-specific symptom does not generalise cleanly, record the signal in memory, docs, roadmap, or an execplan instead of forcing a package change.

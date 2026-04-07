@@ -366,12 +366,13 @@ def _plan_existing_file_for_upgrade(
             )
         else:
             result.add(
-                "manual review",
+                "customised",
                 destination,
-                ("starter note looks customised; keep as-is if the localised content is intentional, or replace it only after review"),
+                ("starter note differs from payload; preserving repo-local customisation during upgrade"),
                 role=entry.role,
-                safety="manual",
+                safety="safe",
                 source=str(entry.relative_path),
+                category="customisation-present",
             )
         return
 

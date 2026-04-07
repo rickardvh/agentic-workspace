@@ -10,55 +10,35 @@ Decided
 
 ## Load when
 
-- Planning the next iteration after the orchestration foundation stabilised.
-- Deciding whether to promote the next ROADMAP candidate into active execution.
+Read this note when deciding whether the repo is still in structural cleanup mode or whether new work should start from product priorities and bounded planning promotion.
 
 ## Review when
 
-- Next quarterly or major release planning occurs.
-- Organizational priorities shift regarding developer tooling or agent infrastructure.
+Review this note if root-owned planning or memory stops being the operational authority, if package fixtures start acting like live state again, or if a new active tranche appears without bounded planning surfaces.
 
 ## Failure signals
 
-- Root planning or memory systems stop acting as the single operational authority for the monorepo.
-- A new active tranche is started without a bounded TODO or execplan surface.
-- Package-local runtime copies or fixtures start acting as operational state again.
+Failure looks like the monorepo no longer operating from one root-owned planning and memory install, or contributors reintroducing historical cleanup behavior as if the foundation were still unsettled.
 
 ## Decision
 
-Treat the repository foundation as stable.
-
-- Root-owned planning and memory systems are the single operational authority.
-- Both bootstraps use the unified `.agentic-workspace/` namespace with end-to-end validation.
-- Package boundaries remain preserved with independent release cadence.
-- Planning surfaces pass drift validation without warnings.
-
-Next work is optional and should be driven by product priorities rather than repository cleanup debt.
+Treat the repository foundation as stable. Root-owned planning and memory are the operational authority, both bootstraps use the unified `.agentic-workspace/` namespace, package boundaries remain independent, and future work should start from roadmap promotion rather than more cleanup tranches.
 
 ## Why
 
-- The root orchestration contract, ownership ledger, and validation targets are in place.
-- Remaining work is additive product improvement, not structural cleanup.
-- Dogfooding the planning and memory systems in this repo has validated that the operating model is usable in day-to-day development.
+The root orchestration contract, ownership ledger, and validation lanes were already in place, and day-to-day dogfooding had moved the repo from structural cleanup into additive product work.
 
 ## Consequences
 
-- The monorepo host is now the normal source of truth for ongoing work.
-- Package maintainers can release independently with confidence in root orchestration.
-- Future work should start from ROADMAP promotion rather than historical cleanup plans.
+The monorepo host is the normal source of truth for ongoing work, package maintainers can release independently with confidence in root orchestration, and archived cleanup plans should stay historical rather than return as active operating guidance.
 
 ## Ongoing stance
 
-- Archived execplans remain lightweight historical context only.
-- New TODO entries should continue to come from bounded roadmap candidates.
-- Future work is additive product improvement rather than structural cleanup.
+Keep archived execplans lightweight, keep new TODO entries bounded and roadmap-driven, and treat future work as product evolution rather than repository stabilization. Use [foundation-stability-check](C:/Users/ricka/src/agentic-workspace/memory/skills/foundation-stability-check/SKILL.md) for the repeatable recheck workflow.
 
 ## Verify
 
-- `TODO.md` has no active cleanup residue.
-- `ROADMAP.md` carries only inactive candidate work.
-- `make check` passes from the repository root.
-- Package READMEs point at current `.agentic-workspace/` paths.
+Confirm that `TODO.md` and `ROADMAP.md` remain bounded, the relevant root validation lanes still pass, and package docs still describe the current `.agentic-workspace/`-based operating model.
 
 ## Last confirmed
 

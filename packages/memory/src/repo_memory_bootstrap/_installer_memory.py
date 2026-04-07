@@ -650,7 +650,9 @@ def _audit_note_overlap(*, target_root: Path, manifest: MemoryManifest, result) 
     ]
     for idx, left in enumerate(comparable_notes):
         left_path = target_root / left.path
-        left_terms = _significant_terms(left_path.read_text(encoding="utf-8"))
+        left_text = left_path.read_text(encoding="utf-8")
+        left_terms = _significant_terms(left_text)
+        left_refs = set(_extract_memory_references(left_text))
         if len(left_terms) < SHADOW_DOC_MIN_SHARED_TERMS:
             continue
         for right in comparable_notes[idx + 1 :]:
@@ -661,7 +663,11 @@ def _audit_note_overlap(*, target_root: Path, manifest: MemoryManifest, result) 
             if not same_family and not shared_surfaces and not shared_routes:
                 continue
             right_path = target_root / right.path
-            shared_terms = sorted(left_terms & _significant_terms(right_path.read_text(encoding="utf-8")))
+            right_text = right_path.read_text(encoding="utf-8")
+            right_refs = set(_extract_memory_references(right_text))
+            if right.path.as_posix() in left_refs or left.path.as_posix() in right_refs:
+                continue
+            shared_terms = sorted(left_terms & _significant_terms(right_text))
             if len(shared_terms) < SHADOW_DOC_MIN_SHARED_TERMS + 2:
                 continue
             recommendation = "reclassify" if left.note_type != right.note_type else "merge"
@@ -2037,6 +2043,10 @@ def _significant_terms(text: str) -> set[str]:
         "that",
         "with",
         "from",
+        "after",
+        "again",
+        "before",
+        "during",
         "when",
         "where",
         "should",
@@ -2075,12 +2085,28 @@ def _significant_terms(text: str) -> set[str]:
         "changes",
         "check",
         "checked",
+        "cleanup",
+        "confirm",
+        "consequences",
+        "consolidation",
+        "contract",
+        "contracts",
         "confirmed",
         "current",
         "decision",
         "decisions",
+        "docs",
+        "durable",
+        "entrypoint",
+        "explicit",
         "failure",
         "failures",
+        "files",
+        "install",
+        "installed",
+        "lifecycle",
+        "longer",
+        "looks",
         "goal",
         "goals",
         "high",
@@ -2095,11 +2121,21 @@ def _significant_terms(text: str) -> set[str]:
         "lessons",
         "level",
         "load",
+        "managed",
+        "materially",
+        "monorepo",
+        "ownership",
+        "package",
+        "packages",
         "primary",
         "product",
         "progress",
+        "read",
+        "reading",
+        "remain",
         "rule",
         "rules",
+        "root",
         "scope",
         "signals",
         "state",
@@ -2108,6 +2144,7 @@ def _significant_terms(text: str) -> set[str]:
         "surfaces",
         "system",
         "systems",
+        "workflow",
         "verified",
         "verify",
         "wishlist",

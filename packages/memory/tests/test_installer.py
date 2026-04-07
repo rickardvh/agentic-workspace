@@ -594,6 +594,153 @@ def test_doctor_reports_customised_seed_notes_as_expected_customisation(
     )
 
 
+def test_doctor_overlap_audit_ignores_generic_ownership_terms(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+
+    domain_path = target / "memory" / "domains" / "ownership-domain.md"
+    decision_path = target / "memory" / "decisions" / "ownership-decision.md"
+    domain_path.write_text(
+        (
+            "# Ownership Domain\n\n"
+            "ownership boundaries install installed root package packages workflow managed explicit contract "
+            "consolidation lifecycle files read durable memory-only adapter\n"
+        ),
+        encoding="utf-8",
+    )
+    decision_path.write_text(
+        (
+            "# Ownership Decision\n\n"
+            "ownership boundaries install installed root package packages workflow managed explicit contract "
+            "consolidation lifecycle files read durable decision-specific ledger\n"
+        ),
+        encoding="utf-8",
+    )
+
+    manifest_path = target / "memory" / "manifest.toml"
+    manifest_text = manifest_path.read_text(encoding="utf-8")
+    manifest_text += (
+        '\n[notes."memory/domains/ownership-domain.md"]\n'
+        'note_type = "domain"\n'
+        'canonical_home = "memory/domains/ownership-domain.md"\n'
+        'authority = "canonical"\n'
+        'audience = "human+agent"\n'
+        'canonicality = "agent_only"\n'
+        'task_relevance = "optional"\n'
+        'subsystems = ["ownership"]\n'
+        'surfaces = ["architecture"]\n'
+        'routes_from = ["AGENTS.md"]\n'
+        'stale_when = ["AGENTS.md"]\n'
+        '\n[notes."memory/decisions/ownership-decision.md"]\n'
+        'note_type = "decision"\n'
+        'canonical_home = "memory/decisions/ownership-decision.md"\n'
+        'authority = "canonical"\n'
+        'audience = "human+agent"\n'
+        'canonicality = "agent_only"\n'
+        'task_relevance = "optional"\n'
+        'subsystems = ["ownership"]\n'
+        'surfaces = ["architecture"]\n'
+        'routes_from = ["AGENTS.md"]\n'
+        'stale_when = ["AGENTS.md"]\n'
+    )
+    manifest_path.write_text(manifest_text, encoding="utf-8")
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert not any(
+        action.role == "memory-overlap-audit"
+        and action.path in {domain_path, decision_path}
+        and "ownership-decision.md" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_overlap_audit_skips_explicit_primary_home_references(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+
+    domain_path = target / "memory" / "domains" / "package-context.md"
+    decision_path = target / "memory" / "decisions" / "package-context-decision.md"
+    domain_path.write_text(
+        (
+            "# Package Context\n\n"
+            "Package boundary context lives here.\n\n"
+            "For the owning rationale, load `memory/decisions/package-context-decision.md` instead of expanding this note.\n"
+        ),
+        encoding="utf-8",
+    )
+    decision_path.write_text(
+        (
+            "# Package Context Decision\n\n"
+            "This note keeps the durable decision about the package boundary.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    manifest_path = target / "memory" / "manifest.toml"
+    manifest_text = manifest_path.read_text(encoding="utf-8")
+    manifest_text += (
+        '\n[notes."memory/domains/package-context.md"]\n'
+        'note_type = "domain"\n'
+        'canonical_home = "memory/domains/package-context.md"\n'
+        'authority = "canonical"\n'
+        'audience = "human+agent"\n'
+        'canonicality = "agent_only"\n'
+        'task_relevance = "optional"\n'
+        'subsystems = ["packages"]\n'
+        'surfaces = ["architecture"]\n'
+        'routes_from = ["packages/**"]\n'
+        'stale_when = ["packages/**"]\n'
+        '\n[notes."memory/decisions/package-context-decision.md"]\n'
+        'note_type = "decision"\n'
+        'canonical_home = "memory/decisions/package-context-decision.md"\n'
+        'authority = "canonical"\n'
+        'audience = "human+agent"\n'
+        'canonicality = "agent_only"\n'
+        'task_relevance = "optional"\n'
+        'subsystems = ["packages"]\n'
+        'surfaces = ["architecture"]\n'
+        'routes_from = ["packages/**"]\n'
+        'stale_when = ["packages/**"]\n'
+    )
+    manifest_path.write_text(manifest_text, encoding="utf-8")
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert not any(
+        action.role == "memory-overlap-audit"
+        and action.path in {domain_path, decision_path}
+        and "package-context-decision.md" in action.detail
+        for action in result.actions
+    )
+
+
+def test_upgrade_reports_customised_seed_notes_as_expected_customisation(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+    note_path = target / "memory" / "current" / "project-state.md"
+    note_path.write_text("# Project State\n\nlocalised\n", encoding="utf-8")
+
+    result = installer.upgrade_bootstrap(target=target)
+
+    assert any(
+        action.path == note_path
+        and action.kind == "customised"
+        and action.category == "customisation-present"
+        and "preserving repo-local customisation during upgrade" in action.detail
+        for action in result.actions
+    )
+
+
 def test_list_payload_files_excludes_agent_work_templates_and_gitignore_append(
     tmp_path: Path,
 ) -> None:
