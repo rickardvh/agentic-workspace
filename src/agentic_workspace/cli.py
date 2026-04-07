@@ -402,8 +402,6 @@ def _workspace_agents_template(*, selected_modules: list[str]) -> str:
         "",
         WORKSPACE_POINTER_BLOCK,
     ]
-    if "memory" in selected_modules:
-        lines.extend(["", MEMORY_POINTER_BLOCK])
     lines.extend(
         [
             "",
@@ -470,6 +468,17 @@ def _replace_or_insert_fenced_block(*, text: str, block: str, start_marker: str,
     return prefix + block + "\n", True
 
 
+def _remove_fenced_block(*, text: str, start_marker: str, end_marker: str) -> tuple[str, bool]:
+    fenced_re = re.compile(r"\n?" + re.escape(start_marker) + r".*?" + re.escape(end_marker) + r"\n?", re.DOTALL)
+    updated, count = fenced_re.subn("\n", text, count=1)
+    if count == 0:
+        return text, False
+    updated = re.sub(r"\n{3,}", "\n\n", updated).lstrip("\n")
+    if updated and not updated.endswith("\n"):
+        updated += "\n"
+    return updated, True
+
+
 def _workspace_status_report(*, target_root: Path, selected_modules: list[str], command_name: str) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
@@ -518,24 +527,23 @@ def _workspace_status_report(*, target_root: Path, selected_modules: list[str], 
         )
         warnings.append({"path": WORKSPACE_AGENTS_PATH.as_posix(), "message": "workspace workflow pointer block missing"})
 
-    if "memory" in selected_modules:
-        if MEMORY_POINTER_BLOCK in agents_text:
-            actions.append(
-                {
-                    "kind": "current",
-                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
-                    "detail": "memory workflow pointer block present",
-                }
-            )
-        else:
-            actions.append(
-                {
-                    "kind": "warning",
-                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
-                    "detail": "memory workflow pointer block missing",
-                }
-            )
-            warnings.append({"path": WORKSPACE_AGENTS_PATH.as_posix(), "message": "memory workflow pointer block missing"})
+    if "memory" in selected_modules and MEMORY_POINTER_BLOCK in agents_text:
+        actions.append(
+            {
+                "kind": "warning",
+                "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                "detail": (
+                    "redundant top-level memory workflow pointer block still present; "
+                    "shared workspace workflow should delegate to memory-specific guidance"
+                ),
+            }
+        )
+        warnings.append(
+            {
+                "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                "message": "redundant top-level memory workflow pointer block still present",
+            }
+        )
 
     return _workspace_report(
         target_root=target_root,
@@ -634,9 +642,8 @@ def _workspace_init_or_upgrade_report(
             end_marker=WORKSPACE_WORKFLOW_MARKER_END,
         )
         if "memory" in selected_modules:
-            updated_text, memory_changed = _replace_or_insert_fenced_block(
+            updated_text, memory_changed = _remove_fenced_block(
                 text=updated_text,
-                block=MEMORY_POINTER_BLOCK,
                 start_marker=MEMORY_WORKFLOW_MARKER_START,
                 end_marker=MEMORY_WORKFLOW_MARKER_END,
             )
@@ -649,7 +656,7 @@ def _workspace_init_or_upgrade_report(
                 {
                     "kind": _write_action_kind(dry_run=dry_run, existing=existing_agents),
                     "path": WORKSPACE_AGENTS_PATH.as_posix(),
-                    "detail": "patched workflow pointer blocks into AGENTS.md without replacing repo-owned content",
+                    "detail": "patched the shared workspace workflow pointer into AGENTS.md without replacing repo-owned content",
                 }
             )
         elif existing_agents is not None:

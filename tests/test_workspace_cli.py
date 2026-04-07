@@ -327,7 +327,8 @@ def test_install_real_init_creates_combined_memory_and_planning_surfaces(tmp_pat
     agents_text = (target / "AGENTS.md").read_text(encoding="utf-8")
     assert "<!-- agentic-workspace:workflow:start -->" in agents_text
     assert "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules." in agents_text
-    assert "Read `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules." in agents_text
+    assert "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself." in agents_text
+    assert "<!-- agentic-memory:workflow:start -->" not in agents_text
     assert "<PROJECT_NAME>" not in agents_text
 
 
@@ -412,9 +413,7 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
         "<!-- agentic-workspace:workflow:start -->\n"
         "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules.\n"
         "<!-- agentic-workspace:workflow:end -->\n\n"
-        "<!-- agentic-memory:workflow:start -->\n"
-        "Read `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n"
-        "<!-- agentic-memory:workflow:end -->\n",
+        "Local repo instructions.\n",
         encoding="utf-8",
     )
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
@@ -429,6 +428,31 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
     assert payload["needs_review"] == []
     assert payload["generated_artifacts"] == []
     assert payload["registry"][0]["name"] == "planning"
+
+
+def test_status_warns_when_redundant_memory_pointer_block_remains(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    agents_path = target / "AGENTS.md"
+    agents_path.write_text(
+        agents_path.read_text(encoding="utf-8").replace(
+            "<!-- agentic-workspace:workflow:end -->\n",
+            "<!-- agentic-workspace:workflow:end -->\n\n"
+            "<!-- agentic-memory:workflow:start -->\n"
+            "Read `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n"
+            "<!-- agentic-memory:workflow:end -->\n",
+        ),
+        encoding="utf-8",
+    )
+    capsys.readouterr()
+
+    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["health"] == "attention-needed"
+    assert any("redundant top-level memory workflow pointer block still present" in warning for warning in payload["warnings"])
 
 
 def test_doctor_real_init_preserves_package_contract_shortlists_in_reports(tmp_path: Path, capsys) -> None:

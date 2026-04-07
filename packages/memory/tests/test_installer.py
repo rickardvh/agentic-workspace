@@ -12,6 +12,7 @@ from repo_memory_bootstrap._installer_shared import (
     MEMORY_COMPATIBILITY_CONTRACT_FILES,
     MEMORY_LOWER_STABILITY_HELPER_FILES,
     PAYLOAD_REQUIRED_FILES,
+    WORKSPACE_POINTER_BLOCK,
 )
 from repo_memory_bootstrap._ownership import module_root as memory_module_root
 
@@ -1592,8 +1593,10 @@ def test_doctor_flags_legacy_bootstrap_agents_prose_outside_managed_block(tmp_pa
 def test_upgrade_keeps_agents_current_when_workflow_pointer_is_current(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
+    (target / ".agentic-workspace").mkdir(parents=True)
+    (target / ".agentic-workspace" / "WORKFLOW.md").write_text("# Workspace workflow\n", encoding="utf-8")
     (target / "AGENTS.md").write_text(
-        f"# Agent instructions\n\n{installer.WORKFLOW_POINTER_BLOCK}\n\nLocal repo instructions.\n",
+        f"# Agent instructions\n\n{WORKSPACE_POINTER_BLOCK}\n\nLocal repo instructions.\n",
         encoding="utf-8",
     )
     (target / ".agentic-workspace/memory").mkdir(parents=True)
@@ -1603,6 +1606,31 @@ def test_upgrade_keeps_agents_current_when_workflow_pointer_is_current(tmp_path:
 
     assert any(action.path == target / "AGENTS.md" and action.kind == "current" for action in result.actions)
     assert not any(action.path == target / "AGENTS.md" and action.kind == "manual review" for action in result.actions)
+
+
+def test_upgrade_can_remove_redundant_memory_pointer_when_workspace_pointer_is_present(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / ".agentic-workspace").mkdir(parents=True)
+    (target / ".agentic-workspace" / "WORKFLOW.md").write_text("# Workspace workflow\n", encoding="utf-8")
+    (target / "AGENTS.md").write_text(
+        "# Agent instructions\n\n"
+        f"{WORKSPACE_POINTER_BLOCK}\n\n"
+        "<!-- agentic-memory:workflow:start -->\n"
+        "Read `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n"
+        "<!-- agentic-memory:workflow:end -->\n\n"
+        "Local repo instructions.\n",
+        encoding="utf-8",
+    )
+    (target / ".agentic-workspace/memory").mkdir(parents=True)
+    (target / ".agentic-workspace/memory" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
+
+    result = installer.upgrade_bootstrap(target=target, apply_local_entrypoint=True)
+    agents_text = (target / "AGENTS.md").read_text(encoding="utf-8")
+
+    assert "<!-- agentic-memory:workflow:start -->" not in agents_text
+    assert WORKSPACE_POINTER_BLOCK in agents_text
+    assert any(action.path == target / "AGENTS.md" and action.kind == "patched" for action in result.actions)
 
 
 def test_upgrade_migrates_legacy_layout_by_default(tmp_path: Path) -> None:
