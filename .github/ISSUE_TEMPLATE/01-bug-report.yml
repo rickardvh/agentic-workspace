@@ -1,0 +1,105 @@
+name: Bug Report
+description: Report a correctness, reliability, or regression issue in the repo or shipped packages.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for broken behavior, regressions, and reliability failures.
+
+        Before filing, ask:
+        "Could or should this have been found, prevented, or remediated by the product itself?"
+
+  - type: checkboxes
+    id: existing_issue
+    attributes:
+      label: Existing issue check
+      description: Avoid filing duplicate reports.
+      options:
+        - label: I searched the existing issues first
+          required: true
+
+  - type: dropdown
+    id: affected_surface
+    attributes:
+      label: Affected surface
+      options:
+        - planning package
+        - memory package
+        - repo workflow or instructions
+        - docs or contract surfaces
+        - validation or checks
+        - unknown yet
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_behavior
+    attributes:
+      label: Current behavior
+      placeholder: What broke, what failed, or what produced the wrong result?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior
+      placeholder: What should have happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start from...
+        2. Run...
+        3. Open...
+        4. Observe...
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Include logs, file paths, screenshots, linked reviews, or related commits.
+      placeholder: Paste the smallest useful evidence set.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: product_first
+    attributes:
+      label: Should this be addressed in the shipped product first?
+      options:
+        - "Yes: this looks like a package or contract defect"
+        - "Maybe: repo symptom, but product changes may help"
+        - "No: this appears repo-local"
+    validations:
+      required: true
+
+  - type: textarea
+    id: product_reasoning
+    attributes:
+      label: Product-first reasoning
+      placeholder: Could or should this have been found, prevented, or remediated by the product itself?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Urgency
+      options:
+        - Blocking current work
+        - Should be scheduled soon
+        - Useful follow-up, not urgent
+    validations:
+      required: true
+
