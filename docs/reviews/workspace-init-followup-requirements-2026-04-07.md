@@ -86,3 +86,12 @@
 ## Drift Log
 
 - 2026-04-07: Review created after the shared workspace-layer contract landed, to capture remaining requirement and test gaps before the next lifecycle pass.
+
+## Status Footer
+
+- Finding 1 (Partial-adoption requirements): promoted to ROADMAP.md as `Selective-adoption contract clarity`.
+- Finding 2 (Shipped-package requirement for workspace payload files): promoted to ROADMAP.md as `Bootstrap-tooling packaging tests`.
+- Finding 3 (Workspace-layer lifecycle semantics): promoted to ROADMAP.md as `Cross-tool lifecycle-matrix hardening`.
+- Finding 4 (Workspace contract visibility in module discovery surfaces): deferred pending next CLI interface revision.
+
+Review ready for deletion once Findings 1-3 are implemented.

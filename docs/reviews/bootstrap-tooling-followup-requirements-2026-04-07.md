@@ -129,3 +129,14 @@
 ## Drift Log
 
 - 2026-04-07: Review created after the shared workspace-layer fix, broadened to the whole bootstrap-tooling family after clarifying that the requirement question is not root-only.
+
+## Status Footer
+
+- Finding 1 (Packaging fidelity): promoted to ROADMAP.md as `Bootstrap-tooling packaging tests`.
+- Finding 2 (Lifecycle-matrix coverage): promoted to ROADMAP.md as `Cross-tool lifecycle-matrix hardening`.
+- Finding 3 (Migration and legacy-adopter compatibility): promoted to ROADMAP.md as `Legacy-adopter migration fixtures`.
+- Finding 4 (Selective-adoption requirements): promoted to ROADMAP.md as `Selective-adoption contract clarity`.
+- Finding 5 (Cross-tool reporting and discovery surfaces): deferred pending next reporting-shape work.
+- Finding 6 (Product-level smoke tests): deferred pending release-readiness focus.
+
+Review ready for deletion once Findings 1-4 are implemented.

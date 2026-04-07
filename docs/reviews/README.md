@@ -80,3 +80,4 @@ Do not promote every finding. Dismiss weak, duplicate, or low-value findings ins
 - Prefer archiving or deleting stale review artifacts once findings are promoted, dismissed, or superseded.
 - Do not leave top-level `docs/reviews/` full of old speculative notes.
 - If a review repeatedly produces the same finding, prefer fixing the underlying docs, tests, validation, or structure.
+- Add a **Status Footer** at the end of each review document that tracks which findings have been promoted, deferred, or dismissed. Format: list by finding name/number and target (`promoted to ROADMAP.md`, `deferred pending X`, `dismissed as Y`). When all findings are accounted for, delete the review artifact.
