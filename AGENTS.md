@@ -92,3 +92,5 @@ When changing product shape, ownership boundaries, lifecycle behavior, or mainta
 - Prefer promoting the signal into planned work instead of making unauthorised direct package changes solely because the repo exposed the issue.
 - Make direct package or shipped-contract fixes only when they are already in active scope, explicitly requested, or clearly the smallest approved way to complete the current planned work.
 - When a repo-specific symptom does not generalise cleanly, record the signal in memory, docs, roadmap, or an execplan instead of forcing a package change.
+- When a finding surfaces about this repo, explicitly ask whether it could or should have been found, prevented, or remediated by the shipped product itself.
+- If the answer is plausibly yes, record that as part of the checked-in feedback loop and treat the repo-local symptom as a potential package or contract improvement, with the product surface as the preferred remediation target when planning later promotes the work.
