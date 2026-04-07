@@ -45,6 +45,7 @@ If you are maintaining the repo through git commits locally, install hooks with 
 - Use root planning surfaces for active work, roadmap candidates, and execplans.
 - Use root memory notes for durable repo knowledge, decisions, and recurring failure modes.
 - Treat `memory/current/` as weak-authority current context: concise re-orientation only, not the durable home for facts.
+- Use `docs/source-payload-operational-install.md` when one change spans package source, packaged payload, and the root installed surfaces.
 - Leave touched surfaces cleaner than you found them, and route broader cleanup as follow-up instead of treating it as invisible task residue.
 - Use `docs/compatibility-policy.md` for surface-stability questions before deciding whether a doc, manifest, or managed mirror is safe to change directly.
 - Use `docs/init-lifecycle.md` before changing or explaining root `init` behavior so the mode semantics stay canonical.

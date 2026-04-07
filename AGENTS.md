@@ -23,6 +23,7 @@ Resolve instruction conflicts in this order:
 4. Read `ROADMAP.md` only when promoting work.
 5. Load package-local docs only for the package being edited.
 6. Before touching a shipped package, refresh it to the latest checked-in version through that package's canonical update workflow so local work starts from the current package contract.
+7. When a change crosses package source, package payload, and root install boundaries, read `docs/source-payload-operational-install.md` before editing.
 
 Do not start coding from chat context alone when the same information exists in checked-in files.
 Do not bulk-read all planning surfaces.

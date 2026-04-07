@@ -5,7 +5,7 @@
 	format format-workspace format-memory format-planning \
 	format-check format-check-workspace format-check-memory format-check-planning \
 	verify verify-workspace verify-memory verify-planning \
-	memory-freshness memory-freshness-strict planning-surfaces planning-surfaces-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs \
+	memory-freshness memory-freshness-strict planning-surfaces planning-surfaces-strict source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs \
 	check check-memory check-planning check-all
 
 help:
@@ -23,6 +23,7 @@ help:
 	@echo "  verify               Verify workspace CLI wiring and both packaged payload contracts."
 	@echo "  memory-freshness     Run the root memory freshness audit."
 	@echo "  planning-surfaces    Run the root planning surface audit."
+	@echo "  source-payload-operational-install  Run source/payload/root-install boundary checks."
 	@echo "  maintainer-surfaces  Run maintainer-surface freshness and liveness checks."
 	@echo "  render-agent-docs    Regenerate root planning docs from the managed manifest."
 	@echo "  check                Run the full root validation lane."
@@ -123,10 +124,16 @@ planning-surfaces:
 planning-surfaces-strict:
 	uv run python scripts/check/check_planning_surfaces.py --strict
 
-maintainer-surfaces: render-agent-docs planning-surfaces verify-memory verify-planning
+source-payload-operational-install:
+	uv run python scripts/check/check_source_payload_operational_install.py
+
+source-payload-operational-install-strict:
+	uv run python scripts/check/check_source_payload_operational_install.py --strict
+
+maintainer-surfaces: render-agent-docs planning-surfaces source-payload-operational-install verify-memory verify-planning
 	uv run python scripts/check/check_maintainer_surfaces.py
 
-maintainer-surfaces-strict: render-agent-docs planning-surfaces-strict verify-memory verify-planning
+maintainer-surfaces-strict: render-agent-docs planning-surfaces-strict source-payload-operational-install-strict verify-memory verify-planning
 	uv run python scripts/check/check_maintainer_surfaces.py --strict
 
 render-agent-docs:
