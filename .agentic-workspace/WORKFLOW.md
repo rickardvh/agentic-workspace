@@ -28,15 +28,9 @@ Keep this file concise, product-managed, and replaceable.
 
 ## Repo boundary
 
-- Keep `TODO.md`, `ROADMAP.md`, `docs/execplans/`, and repo-owned `memory/` notes as first-class repo surfaces.
-- Do not hide active execution state or durable repo knowledge behind product-managed indirection.
+- Keep repo-owned execution, planning, and knowledge surfaces outside `.agentic-workspace/` unless they use explicit managed fences.
+- Do not hide active execution state or durable repository knowledge behind product-managed indirection.
 - Preserve strict boundaries between planning, memory, routing, checks, and workspace orchestration.
-
-## Dogfooding rule
-
-- Normal development here is product dogfooding.
-- Capture friction, ownership confusion, or handoff failures as explicit improvement signals in plans, roadmap candidates, or routed memory.
-- Generalise from this repo only when the result remains useful in ordinary target repositories.
 
 ## Module delegation
 
