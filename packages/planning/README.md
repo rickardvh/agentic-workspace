@@ -40,6 +40,7 @@ Collaboration shape:
 Bundled skills:
 
 - The package also ships `planning-autopilot` under `skills/` and installs it into `.agentic-workspace/planning/skills/` for bounded milestone execution from the checked-in planning surfaces.
+- It also ships `planning-intake-upstream-task` for tracker-agnostic upstream issue or task intake into checked-in planning.
 
 ## Quick Start
 
@@ -113,6 +114,7 @@ Treat these files as the current planning compatibility contract surfaces that s
 - `docs/execplans/archive/README.md`
 - `docs/reviews/README.md`
 - `docs/reviews/TEMPLATE.md`
+- `docs/upstream-task-intake.md`
 - `.agentic-workspace/planning/agent-manifest.json`
 
 Treat helper scripts and generated mirrors as lower-stability support surfaces unless a stricter promise is stated later. That lower-stability set currently includes the render and check scripts under `scripts/` and `.agentic-workspace/planning/scripts/`, plus generated mirrors such as `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, and `tools/AGENT_ROUTING.md`.
@@ -335,6 +337,18 @@ Its rules are:
 Use review artifacts when a task is a bounded review pass rather than implementation.
 Do not use them as a substitute for durable docs, memory notes, or active execplans.
 
+## Upstream Task Intake
+
+Planning also includes a tracker-agnostic intake contract for work that starts in an external tracker but should execute from checked-in planning.
+
+- `docs/upstream-task-intake.md` owns the intake rules
+- `ROADMAP.md` owns inactive accepted upstream candidates
+- `TODO.md` owns only the active queue
+- `docs/execplans/` own detailed intake metadata for active promoted work
+
+The contract is intentionally neutral across GitHub Issues, Linear, Jira, Notion, and other upstream systems.
+The external tracker may supply the signal, but once the work is promoted, checked-in planning remains the execution authority.
+
 ## What This Is Not
 
 `agentic-planning-bootstrap` is deliberately not primarily:
@@ -366,6 +380,7 @@ The package installs the checked-in planning contract and its supporting surface
 - `docs/execplans/README.md`
 - `docs/execplans/TEMPLATE.md`
 - `docs/execplans/archive/README.md`
+- `docs/upstream-task-intake.md`
 - `.agentic-workspace/planning/UPGRADE-SOURCE.toml`
 - `.agentic-workspace/planning/agent-manifest.json`
 - `.agentic-workspace/planning/scripts/render_agent_docs.py`
@@ -384,6 +399,7 @@ It packages:
 - the module-managed planning manifest and helper scripts
 - generated mirrors and thin root wrappers for repo ergonomics
 - review-artifact contract surfaces under `docs/reviews/`
+- upstream-task intake contract surfaces under `docs/upstream-task-intake.md`
 - file-native helper commands for promotion, archiving, and summary
 - starter surfaces
 - startup docs and manifest wiring

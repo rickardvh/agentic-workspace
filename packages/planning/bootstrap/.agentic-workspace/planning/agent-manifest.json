@@ -14,6 +14,7 @@
     "conditional_reads": [
       "Read the active feature plan in `docs/execplans/` when the task belongs to one.",
       "Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.",
+      "Read `docs/upstream-task-intake.md` when triaging external issues or tasks into checked-in planning.",
       "Before editing files in a subtree, read the nearest relevant descendant `AGENTS.md` for that subtree only.",
       "Read `memory/index.md` and `.agentic-workspace/memory/WORKFLOW.md` only when memory is installed and the plan or manifest does not already route the task, or when changing workflow, planning, or memory itself.",
       "Do not bulk-read all planning surfaces for ordinary execution work; start from `TODO.md` and then the one relevant active plan.",
@@ -55,6 +56,7 @@
     "ROADMAP.md": "long-horizon-roadmap",
     "docs/execplans/README.md": "execplan-convention",
     "docs/execplans/archive/README.md": "execplan-archive-convention",
+    "docs/upstream-task-intake.md": "upstream-task-intake-contract",
     "memory/index.md": "memory-routing",
     ".agentic-workspace/memory/WORKFLOW.md": "shared-memory-workflow-policy",
     ".agentic-workspace/planning/agent-manifest.json": "agent-manifest-source",
@@ -76,6 +78,7 @@
         "AGENTS.md",
         "TODO.md",
         "ROADMAP.md",
+        "docs/upstream-task-intake.md",
         "docs/execplans/",
         "scripts/check/check_maintainer_surfaces.py",
         ".agentic-workspace/planning/scripts/check/check_planning_surfaces.py",

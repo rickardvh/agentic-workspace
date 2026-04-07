@@ -27,3 +27,5 @@ Additional bundled review-discovery skills:
   - run a bounded review pass and capture compact findings under `docs/reviews/`
 - `planning-promote-review-findings`
   - turn selected reviewed findings into roadmap or active-planning candidates without collapsing capture and promotion
+- `planning-intake-upstream-task`
+  - turn an externally tracked issue or task into checked-in planning while keeping the upstream tracker as an intake source only

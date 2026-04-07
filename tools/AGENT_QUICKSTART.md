@@ -17,6 +17,7 @@ Fast path for autonomous agents working on this repo.
 
 - Read the active feature plan in `docs/execplans/` when the task belongs to one.
 - Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.
+- Read `docs/upstream-task-intake.md` when triaging external issues or tasks into checked-in planning.
 - Before editing files in a subtree, read the nearest relevant descendant `AGENTS.md` for that subtree only.
 - Read `memory/index.md` and `.agentic-workspace/memory/WORKFLOW.md` only when memory is installed and the plan or manifest does not already route the task, or when changing workflow, planning, or memory itself.
 - Do not bulk-read all planning surfaces for ordinary execution work; start from `TODO.md` and then the one relevant active plan.
@@ -62,7 +63,7 @@ Fast path for autonomous agents working on this repo.
 - `planning_surface_change`
   Use when: Editing planning-for-execution surfaces, plan templates, or planning-surface checks.
   Prefer this route when: the change affects TODO, ROADMAP, execplans, or the planning bootstrap itself.
-  Touches: `AGENTS.md`, `TODO.md`, `ROADMAP.md`, `docs/execplans/`, `scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/render_agent_docs.py`, `.agentic-workspace/planning/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`
+  Touches: `AGENTS.md`, `TODO.md`, `ROADMAP.md`, `docs/upstream-task-intake.md`, `docs/execplans/`, `scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/render_agent_docs.py`, `.agentic-workspace/planning/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`
   Validate: `make maintainer-surfaces`; `make render-agent-docs`
 
 ## Skills
