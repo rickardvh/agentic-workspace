@@ -8,14 +8,15 @@ Active queue for repository work.
 
 ## Now
 
-- lifecycle-matrix: Define and test install/adopt/upgrade/uninstall/idempotence contract for all 3 bootstrap packages. Surface: docs/execplans/cross-tool-lifecycle-matrix-2026-04-07.md
+- migration-fixtures: Define migration fixture scenarios (legacy adopters, partial conversions, stale residue) and add test suite for upgrade paths. Surface: docs/execplans/legacy-adopter-migration-fixtures-2026-04-07.md
 
 ## Action
 
-- Create execplan defining lifecycle scenarios.
-- Implement test suite for root, planning, and memory lifecycle transitions.
-- Validate all scenarios pass (no broken install/upgrade paths).
+- Define scenarios representing older standalone installs.
+- Implement test suite validating upgrade paths preserve or safely migrate state.
+- Test warning detection for incomplete state.
 
 ## Done
 
-- packaging-tests: Completed ✅ (all 3 packages have wheel/sdist artifact tests passing)
+- packaging-tests: Completed ✅ (wheel/sdist artifact validation for all 3 packages)
+- lifecycle-matrix: Completed ✅ (install/adopt/upgrade/uninstall/idempotence for all 3 packages)
