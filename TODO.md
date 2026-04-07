@@ -8,9 +8,14 @@ Active queue for repository work.
 
 ## Now
 
-- packaging-tests: Add artifact-level tests for root, planning, and memory packages to detect missing payload/skills in wheels/sdists. Surface: docs/execplans/bootstrap-tooling-packaging-tests-2026-04-07.md
+- lifecycle-matrix: Define and test install/adopt/upgrade/uninstall/idempotence contract for all 3 bootstrap packages. Surface: docs/execplans/cross-tool-lifecycle-matrix-2026-04-07.md
 
 ## Action
 
-- Start with root workspace package artifact test.
-- Then plan tests for planning and memory packages in parallel.
+- Create execplan defining lifecycle scenarios.
+- Implement test suite for root, planning, and memory lifecycle transitions.
+- Validate all scenarios pass (no broken install/upgrade paths).
+
+## Done
+
+- packaging-tests: Completed ✅ (all 3 packages have wheel/sdist artifact tests passing)
