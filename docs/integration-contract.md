@@ -73,6 +73,7 @@ Product-managed `.agentic-workspace/` surfaces may support repo execution, but t
 
 Allowed:
 
+- the shared workspace layer: `.agentic-workspace/WORKFLOW.md`, `.agentic-workspace/OWNERSHIP.toml`, and the managed workflow pointer fence in `AGENTS.md`
 - workflow helpers, upgrade sources, managed skills, and check scripts
 - renderers and manifests that regenerate maintainer guidance
 - thin wrappers that preserve package-owned behavior at predictable repo paths

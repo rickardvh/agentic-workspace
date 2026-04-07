@@ -8,9 +8,8 @@ Active queue for repository work.
 
 ## Now
 
-- None.
+- No active work right now.
 
 ## Action
 
-- No active execplan is currently promoted.
-- Promote a new plan from `ROADMAP.md` only when future work becomes active again.
+- Promote the next bounded candidate from `ROADMAP.md` when ready.

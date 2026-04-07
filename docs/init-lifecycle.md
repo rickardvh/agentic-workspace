@@ -8,6 +8,8 @@ Use it when you need the canonical mode matrix for clean install, conservative a
 
 - `init` defaults to the full preset when module selection is omitted.
 - The command bootstraps mechanically, then chooses install or adopt behavior from the detected repository state.
+- The root workspace layer is part of that bootstrap contract, not an incidental repo file copy.
+- Clean installs should seed `.agentic-workspace/WORKFLOW.md`, `.agentic-workspace/OWNERSHIP.toml`, and a coherent root `AGENTS.md` entrypoint for the selected modules.
 - The root CLI can print or write a handoff prompt when finishing work still needs judgment.
 
 ## Mode Matrix
@@ -35,4 +37,5 @@ Use it when you need the canonical mode matrix for clean install, conservative a
 
 - The root README should stay short and point here instead of duplicating the mode matrix.
 - Package-local CLIs still own their own install and adoption behavior; the root layer only centralizes composition and reporting.
+- `status` and `doctor` should treat missing shared workspace-layer files or missing workspace pointer fences as first-class warnings.
 - If the behavior changes, update the root README and maintainer guidance together so the prompt semantics stay aligned.
