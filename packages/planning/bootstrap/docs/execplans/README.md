@@ -27,11 +27,16 @@ Use a plan here when:
 - work will be handed between threads or models
 - implementation should not start from chat context alone
 - architectural drift or validation scope needs explicit tracking
+- the implementing agent needs checked-in context because its own planning tools, context window, or local scratchpad are not sufficient
 
 Keep small direct work in `TODO.md` when one coherent pass can finish it safely.
 A direct task should stay compact and normally use only `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`.
 Promote that task into `docs/execplans/` once it picks up milestone sequencing, blocker management, validation scope, rollback or migration handling, or enough ambiguity that the next contributor would need more than the TODO row to continue.
 Direct execution is a success mode, not a planning failure.
+
+Do not create a plan just because a stronger agent could write one. Use a checked-in plan only when the artifact is expected to reduce rediscovery, restart cost, or handoff risk more than it costs to produce.
+
+Capability-aware delegation is allowed but optional. If the environment supports it, a more capable agent or model may write a compact execplan and then hand implementation to a smaller or less capable agent when that is likely to save tokens without sacrificing quality. Do not assume subagents exist; the same contract must still work for one agent executing end-to-end.
 
 Each active plan should stay compact and include:
 

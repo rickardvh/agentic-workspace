@@ -134,6 +134,8 @@ Treat the direct-task shape as compact by default:
 - `Next action`
 - `Done when`
 
+Do not promote work into an execplan just because a more capable model or agent is available. Advanced agents already have session-local planning; checked-in planning should appear only when it reduces rediscovery, restart cost, or coordination risk more than it costs to write.
+
 Promote the task into `docs/execplans/` when any of the following becomes true:
 
 - the work now spans more than one milestone or session-sized checkpoint
@@ -141,8 +143,11 @@ Promote the task into `docs/execplans/` when any of the following becomes true:
 - validation scope has to be spelled out instead of staying obvious from the change
 - rollback, migration, or ownership-reconciliation detail appears
 - the TODO row starts carrying extra execution fields or long narrative text
+- the implementing agent lacks enough context window, tools, or local planning support to hold the task safely in one pass
 
 Direct execution is an explicit success mode for small local work. The goal is not to force every change through planning; the goal is to promote only when the cheap path stops being safe.
+
+When delegation is useful, keep it capability-aware and optional. If available, a stronger model may draft a compact execplan or handoff for a smaller implementation model, but only when that is likely to save tokens overall without lowering quality. Do not assume subagents or multi-model workflows exist; the contract should still work for a single agent operating alone.
 
 When a direct task completes, remove it from `TODO.md` promptly. If the task changed durable repo knowledge or left important follow-up work, record that residue in memory, canonical docs, `ROADMAP.md`, or a newly promoted execplan rather than leaving chat-only context behind.
 
@@ -157,6 +162,7 @@ Promote into an execplan when any of these cases appears:
 - partial failure or retry handling needs to be spelled out
 - concurrent branch work creates merge, ownership, or sequencing risk
 - stale residue would otherwise be left in `TODO.md` because the task can no longer close in one pass
+- a compact checked-in plan would let a smaller or less capable agent implement safely without re-deriving the whole task
 
 The practical test is simple: if safe continuation depends on more than `Why now`, `Next action`, and `Done when`, the work is no longer a direct task.
 
