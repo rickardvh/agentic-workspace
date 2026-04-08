@@ -500,6 +500,25 @@ def test_doctor_text_output_shows_package_contract_shortlists(tmp_path: Path, ca
     assert "lower-stability helper files:" in output
 
 
+def test_doctor_real_init_reports_stale_planning_generated_residue(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    (target / "tools" / "AGENT_ROUTING.md").write_text("stale generated routing\n", encoding="utf-8")
+    capsys.readouterr()
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["health"] == "attention-needed"
+    assert any(
+        item == "tools/AGENT_ROUTING.md: routing guide is out of sync with .agentic-workspace/planning/agent-manifest.json; run python scripts/render_agent_docs.py"
+        for item in payload["needs_review"]
+    )
+
+
 def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))

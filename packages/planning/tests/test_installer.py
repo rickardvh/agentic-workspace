@@ -365,6 +365,65 @@ def test_upgrade_bootstrap_overwrites_managed_files_but_preserves_root_surfaces(
     assert any(action.kind == "overwritten" and action.path == skill_path for action in result.actions)
 
 
+def test_upgrade_bootstrap_legacy_standalone_install_adds_managed_helpers_without_overwriting_root_surfaces(tmp_path: Path) -> None:
+    _write(tmp_path / "AGENTS.md", "legacy repo-owned agents\n")
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(tmp_path / "docs" / "execplans" / "README.md", "# Execution Plans\n")
+    _write(tmp_path / "docs" / "execplans" / "TEMPLATE.md", "# Plan Title\n")
+    _write(tmp_path / "docs" / "execplans" / "archive" / "README.md", "# Archive\n")
+    _write(tmp_path / "docs" / "reviews" / "README.md", "# Reviews\n")
+    _write(tmp_path / "docs" / "reviews" / "TEMPLATE.md", "# Review Template\n")
+    _write(tmp_path / "docs" / "upstream-task-intake.md", "# Upstream Task Intake\n")
+
+    result = upgrade_bootstrap(target=tmp_path)
+
+    assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+    assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
+    assert (tmp_path / "tools" / "AGENT_ROUTING.md").exists()
+    assert (tmp_path / "AGENTS.md").read_text(encoding="utf-8") == "legacy repo-owned agents\n"
+    assert any(action.kind == "skipped" and action.path == tmp_path / "AGENTS.md" for action in result.actions)
+    assert any(
+        action.kind == "copied" and action.path == tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
+        for action in result.actions
+    )
+
+
+def test_upgrade_bootstrap_recovers_partial_managed_state_without_overwriting_root_surfaces(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    agents_path = tmp_path / "AGENTS.md"
+    manifest_path = tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
+    routing_path = tmp_path / "tools" / "AGENT_ROUTING.md"
+
+    agents_path.write_text("repo-owned agents\n", encoding="utf-8")
+    manifest_path.unlink()
+    routing_path.unlink()
+
+    result = upgrade_bootstrap(target=tmp_path)
+
+    assert manifest_path.exists()
+    assert routing_path.exists()
+    assert agents_path.read_text(encoding="utf-8") == "repo-owned agents\n"
+    assert any(action.kind == "copied" and action.path == manifest_path for action in result.actions)
+    assert any(action.kind == "created" and action.path == routing_path for action in result.actions)
+    assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
+
+
+def test_doctor_reports_stale_generated_routing_residue_for_partial_managed_state(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    routing_path = tmp_path / "tools" / "AGENT_ROUTING.md"
+    routing_path.write_text("stale generated routing\n", encoding="utf-8")
+
+    result = doctor_bootstrap(target=tmp_path)
+
+    assert any(
+        action.kind == "manual review"
+        and action.path == routing_path
+        and "out of sync with .agentic-workspace/planning/agent-manifest.json" in action.detail
+        for action in result.actions
+    )
+
+
 def test_uninstall_bootstrap_removes_pristine_files_and_keeps_modified_surfaces(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     agents_path = tmp_path / "AGENTS.md"

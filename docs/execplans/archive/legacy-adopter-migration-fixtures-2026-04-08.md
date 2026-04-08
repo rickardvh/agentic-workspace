@@ -12,15 +12,15 @@
 
 ## Active Milestone
 
-- Status: in-progress
-- Scope: define the first realistic migration fixture tranche and add focused upgrade-path coverage for legacy installs, partial managed state, and stale residue across the workspace and package layers.
+- Status: completed
+- Scope: defined the first realistic migration fixture tranche and added focused upgrade-path coverage for legacy installs, partial managed state, and stale residue across the workspace and package layers.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Inspect the current upgrade and doctor coverage in the workspace, planning package, and memory package to identify the missing legacy-adopter fixture shapes before adding the first test tranche.
+- None. Archived after the migration-fixture tranche landed and passed the focused validation lane.
 
 ## Blockers
 
@@ -54,3 +54,4 @@
 ## Drift Log
 
 - 2026-04-08: Promoted from ROADMAP after upstream intake, packaging artifact validation, lifecycle matrix hardening, and selective-adoption proof work had already landed and archived.
+- 2026-04-08: Added coverage for legacy standalone planning installs, partial managed planning state, stale generated routing residue, and stale generated planning residue in the workspace doctor path; validated with the focused workspace, planning, and memory pytest lanes.
