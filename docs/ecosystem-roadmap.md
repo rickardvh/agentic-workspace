@@ -2,6 +2,8 @@
 
 This page records the current ecosystem stance without turning it into a promise of more top-level packages.
 
+For the broader long-horizon capability map behind that stance, see `docs/agent-os-capabilities.md`.
+
 ## Current Stable External Products
 
 - Agentic Memory, distributed today as `agentic-memory-bootstrap`
@@ -17,7 +19,7 @@ This page records the current ecosystem stance without turning it into a promise
 - Routing
 - Checks / liveness validation
 
-These capabilities matter, but they are not standalone packages yet.
+These capabilities matter, but they are not standalone packages yet. Keep the fuller capability taxonomy in `docs/agent-os-capabilities.md`; keep this page focused on ecosystem stance and extraction discipline.
 
 ## Evidence Required Before Extraction
 

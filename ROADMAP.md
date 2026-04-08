@@ -11,6 +11,7 @@ Inactive long-horizon candidate work.
 This file is a concise sequencing queue, not the canonical home for product doctrine or long-form maturity framing.
 
 Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraints in `docs/design-principles.md`.
+Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Active Handoff
 
