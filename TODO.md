@@ -14,6 +14,7 @@ Active queue for repository work.
 
 ## Done
 
+- orchestrator-module-contract-finalization: Completed (moved module ordering, preset membership, startup guidance, and root AGENTS cleanup rules into module-owned descriptors so the workspace CLI no longer depends on separate planning/memory globals for first-party extension)
 - memory-context-note-shape-cleanup: Completed (moved repeatable package-context inspection into a runbook, tightened current and package-context notes, and reduced the remaining memory overlap/procedure signal)
 - shared-tooling-extraction: Completed (codified the rule for managed-source reuse versus helper extraction versus broader shared-tooling extraction)
 - extension-boundary-design: Completed (defined the current first-party-only extension boundary and the readiness gates for any future public external-module contract)

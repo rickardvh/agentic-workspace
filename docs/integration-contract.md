@@ -130,6 +130,12 @@ Not allowed:
 - module-specific policy that belongs inside Agentic Memory or Agentic Planning
 - hidden cross-module state that becomes more authoritative than the package-owned surfaces
 
+## Module Descriptor Rule
+
+- The orchestrator should learn first-party module behavior from module descriptors, not from separate planning/memory global tables.
+- Selection order, preset membership, install signals, startup guidance, and root-surface cleanup rules should live on the descriptor when they are truly module-scoped.
+- If adding or changing a first-party module still requires updating parallel orchestrator globals, the module contract is not finished yet.
+
 ## Composition Source Rule
 
 - If a cross-module or shared maintainer behavior needs implementation logic, give it one canonical managed source before exposing thin root or package wrappers.

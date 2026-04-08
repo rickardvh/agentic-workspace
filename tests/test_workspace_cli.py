@@ -616,10 +616,15 @@ def test_invoke_module_command_uses_descriptor_command_args(tmp_path: Path) -> N
         description="planning module",
         commands={"doctor": _doctor_handler},
         detector=lambda detected_root: True,
+        selection_rank=10,
+        include_in_full_preset=True,
         install_signals=(Path("TODO.md"),),
         workflow_surfaces=(Path("TODO.md"),),
         generated_artifacts=(),
         command_args={"doctor": ("target",)},
+        startup_steps=(),
+        sources_of_truth=(),
+        root_agents_cleanup_blocks=(),
     )
 
     report = cli._invoke_module_command(
@@ -633,6 +638,45 @@ def test_invoke_module_command_uses_descriptor_command_args(tmp_path: Path) -> N
 
     assert captured == {"target": str(tmp_path)}
     assert report["module"] == "planning"
+
+
+def test_selected_modules_uses_descriptor_owned_presets(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    descriptors = _fake_descriptors(tmp_path, [])
+
+    selected_modules, preset_name = cli._selected_modules(
+        command_name="init",
+        preset_name="full",
+        module_arg=None,
+        target_root=tmp_path,
+        descriptors=descriptors,
+    )
+
+    assert preset_name == "full"
+    assert selected_modules == ["planning", "memory"]
+
+
+def test_workspace_agents_template_uses_descriptor_guidance(tmp_path: Path) -> None:
+    descriptor = cli.ModuleDescriptor(
+        name="signals",
+        description="signals module",
+        commands={},
+        detector=lambda detected_root: False,
+        selection_rank=30,
+        include_in_full_preset=True,
+        install_signals=(Path("signals.md"),),
+        workflow_surfaces=(Path("signals.md"),),
+        generated_artifacts=(),
+        command_args={},
+        startup_steps=("Read `signals.md` when the signals module is installed.",),
+        sources_of_truth=("Signal routing: `signals.md`",),
+        root_agents_cleanup_blocks=(),
+    )
+
+    rendered = cli._workspace_agents_template(selected_modules=["signals"], descriptors={"signals": descriptor})
+
+    assert "Read `signals.md` when the signals module is installed." in rendered
+    assert "- Signal routing: `signals.md`" in rendered
 
 
 def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, object]]]) -> dict[str, cli.ModuleDescriptor]:
@@ -656,7 +700,13 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
             description=f"{module_name} module",
             commands={command_name: _build_handler(module_name, command_name) for command_name in commands},
             detector=lambda detected_root, module_name=module_name: (detected_root / module_name).exists(),
-            install_signals=cli.MODULE_SIGNAL_PATHS.get(module_name, (Path(module_name),)),
+            selection_rank=10 if module_name == "planning" else 20,
+            include_in_full_preset=True,
+            install_signals=(
+                (Path("TODO.md"), Path("docs/execplans"), Path(".agentic-workspace/planning"))
+                if module_name == "planning"
+                else (Path("memory/index.md"), Path("memory/current"), Path(".agentic-workspace/memory"))
+            ),
             workflow_surfaces=(
                 (
                     Path("AGENTS.md"),
@@ -690,6 +740,20 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
                 "doctor": ("target",),
                 "status": ("target",),
             },
+            startup_steps=(),
+            sources_of_truth=(),
+            root_agents_cleanup_blocks=(
+                (
+                    cli.RootAgentsCleanupBlock(
+                        block=cli.MEMORY_POINTER_BLOCK,
+                        start_marker=cli.MEMORY_WORKFLOW_MARKER_START,
+                        end_marker=cli.MEMORY_WORKFLOW_MARKER_END,
+                        label="memory workflow pointer block",
+                    ),
+                )
+                if module_name == "memory"
+                else ()
+            ),
         )
         for module_name in ("planning", "memory")
     }
@@ -726,7 +790,9 @@ def _descriptors_with_mixed_actions(target_root: Path) -> dict[str, cli.ModuleDe
                 "status": _upgrade_handler,
             },
             detector=lambda detected_root: True,
-            install_signals=cli.MODULE_SIGNAL_PATHS["planning"],
+            selection_rank=10,
+            include_in_full_preset=True,
+            install_signals=(Path("TODO.md"), Path("docs/execplans"), Path(".agentic-workspace/planning")),
             workflow_surfaces=(Path("AGENTS.md"), Path("tools/AGENT_QUICKSTART.md")),
             generated_artifacts=(Path("tools/AGENT_QUICKSTART.md"),),
             command_args={
@@ -737,6 +803,9 @@ def _descriptors_with_mixed_actions(target_root: Path) -> dict[str, cli.ModuleDe
                 "doctor": ("target",),
                 "status": ("target",),
             },
+            startup_steps=(),
+            sources_of_truth=(),
+            root_agents_cleanup_blocks=(),
         )
     }
 
@@ -754,10 +823,15 @@ def _descriptors_with_install_signals(
                 (detected_root / "TODO.md").exists()
                 and (detected_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
             ),
-            install_signals=cli.MODULE_SIGNAL_PATHS["planning"],
+            selection_rank=descriptors["planning"].selection_rank,
+            include_in_full_preset=descriptors["planning"].include_in_full_preset,
+            install_signals=(Path("TODO.md"), Path("docs/execplans"), Path(".agentic-workspace/planning")),
             workflow_surfaces=descriptors["planning"].workflow_surfaces,
             generated_artifacts=descriptors["planning"].generated_artifacts,
             command_args=descriptors["planning"].command_args,
+            startup_steps=descriptors["planning"].startup_steps,
+            sources_of_truth=descriptors["planning"].sources_of_truth,
+            root_agents_cleanup_blocks=descriptors["planning"].root_agents_cleanup_blocks,
         ),
         "memory": cli.ModuleDescriptor(
             name="memory",
@@ -766,10 +840,15 @@ def _descriptors_with_install_signals(
             detector=lambda detected_root: (
                 (detected_root / "memory" / "index.md").exists() and (detected_root / ".agentic-workspace" / "memory").exists()
             ),
-            install_signals=cli.MODULE_SIGNAL_PATHS["memory"],
+            selection_rank=descriptors["memory"].selection_rank,
+            include_in_full_preset=descriptors["memory"].include_in_full_preset,
+            install_signals=(Path("memory/index.md"), Path("memory/current"), Path(".agentic-workspace/memory")),
             workflow_surfaces=descriptors["memory"].workflow_surfaces,
             generated_artifacts=descriptors["memory"].generated_artifacts,
             command_args=descriptors["memory"].command_args,
+            startup_steps=descriptors["memory"].startup_steps,
+            sources_of_truth=descriptors["memory"].sources_of_truth,
+            root_agents_cleanup_blocks=descriptors["memory"].root_agents_cleanup_blocks,
         ),
     }
 

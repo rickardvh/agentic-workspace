@@ -11,24 +11,6 @@ from typing import Any
 from agentic_workspace import __version__
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 
-MODULE_ORDER = ("planning", "memory")
-PRESET_MODULES = {
-    "memory": ["memory"],
-    "planning": ["planning"],
-    "full": ["planning", "memory"],
-}
-MODULE_SIGNAL_PATHS = {
-    "planning": (
-        Path("TODO.md"),
-        Path("docs/execplans"),
-        Path(".agentic-workspace/planning"),
-    ),
-    "memory": (
-        Path("memory/index.md"),
-        Path("memory/current"),
-        Path(".agentic-workspace/memory"),
-    ),
-}
 MODULE_COMMAND_ARGS = {
     "install": ("target", "dry_run", "force"),
     "adopt": ("target", "dry_run"),
@@ -60,15 +42,28 @@ MEMORY_POINTER_BLOCK = (
 
 
 @dataclass(frozen=True)
+class RootAgentsCleanupBlock:
+    block: str
+    start_marker: str
+    end_marker: str
+    label: str
+
+
+@dataclass(frozen=True)
 class ModuleDescriptor:
     name: str
     description: str
     commands: dict[str, Callable[..., Any]]
     detector: Callable[[Path], bool]
+    selection_rank: int
+    include_in_full_preset: bool
     install_signals: tuple[Path, ...]
     workflow_surfaces: tuple[Path, ...]
     generated_artifacts: tuple[Path, ...]
     command_args: dict[str, tuple[str, ...]]
+    startup_steps: tuple[str, ...]
+    sources_of_truth: tuple[str, ...]
+    root_agents_cleanup_blocks: tuple[RootAgentsCleanupBlock, ...]
 
 
 @dataclass(frozen=True)
@@ -151,7 +146,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _add_selection_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--target", help="Target repository path. Defaults to the current directory.")
-    parser.add_argument("--preset", choices=tuple(PRESET_MODULES), help="Named module bundle.")
+    parser.add_argument("--preset", help="Named module bundle.")
     parser.add_argument("--modules", help="Comma-separated module selection.")
     _add_format_argument(parser)
 
@@ -271,11 +266,17 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             uninstall_handler=planning_uninstall_bootstrap,
             doctor_handler=planning_doctor_bootstrap,
             status_handler=planning_collect_status,
+            selection_rank=10,
+            include_in_full_preset=True,
             detector=lambda target_root: (
                 (target_root / "TODO.md").exists()
                 and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
             ),
-            install_signals=MODULE_SIGNAL_PATHS["planning"],
+            install_signals=(
+                Path("TODO.md"),
+                Path("docs/execplans"),
+                Path(".agentic-workspace/planning"),
+            ),
             workflow_surfaces=(
                 Path("AGENTS.md"),
                 Path("TODO.md"),
@@ -292,6 +293,16 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 Path("tools/AGENT_QUICKSTART.md"),
                 Path("tools/AGENT_ROUTING.md"),
             ),
+            startup_steps=(
+                "Read `TODO.md`.",
+                "Read the active feature plan in `docs/execplans/` when the TODO surface points there.",
+                "Read `ROADMAP.md` only when promoting work.",
+            ),
+            sources_of_truth=(
+                "Active queue: `TODO.md`",
+                "Long-horizon candidate work: `ROADMAP.md`",
+            ),
+            root_agents_cleanup_blocks=(),
         ),
         "memory": _build_module_descriptor(
             name="memory",
@@ -302,10 +313,16 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             uninstall_handler=memory_uninstall_bootstrap,
             doctor_handler=memory_doctor_bootstrap,
             status_handler=memory_collect_status,
+            selection_rank=20,
+            include_in_full_preset=True,
             detector=lambda target_root: (
                 (target_root / "memory" / "index.md").exists() and (target_root / ".agentic-workspace" / "memory").exists()
             ),
-            install_signals=MODULE_SIGNAL_PATHS["memory"],
+            install_signals=(
+                Path("memory/index.md"),
+                Path("memory/current"),
+                Path(".agentic-workspace/memory"),
+            ),
             workflow_surfaces=(
                 Path("AGENTS.md"),
                 Path("memory/index.md"),
@@ -313,6 +330,19 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 Path(".agentic-workspace/memory"),
             ),
             generated_artifacts=(),
+            startup_steps=(
+                "Read `memory/index.md` only when memory is installed and the task is not already well-routed.",
+                "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself.",
+            ),
+            sources_of_truth=("Durable routed knowledge, when installed: `memory/index.md`",),
+            root_agents_cleanup_blocks=(
+                RootAgentsCleanupBlock(
+                    block=MEMORY_POINTER_BLOCK,
+                    start_marker=MEMORY_WORKFLOW_MARKER_START,
+                    end_marker=MEMORY_WORKFLOW_MARKER_END,
+                    label="memory workflow pointer block",
+                ),
+            ),
         ),
     }
 
@@ -328,9 +358,14 @@ def _build_module_descriptor(
     doctor_handler: Callable[..., Any],
     status_handler: Callable[..., Any],
     detector: Callable[[Path], bool],
+    selection_rank: int,
+    include_in_full_preset: bool,
     install_signals: tuple[Path, ...],
     workflow_surfaces: tuple[Path, ...],
     generated_artifacts: tuple[Path, ...],
+    startup_steps: tuple[str, ...],
+    sources_of_truth: tuple[str, ...],
+    root_agents_cleanup_blocks: tuple[RootAgentsCleanupBlock, ...],
 ) -> ModuleDescriptor:
     return ModuleDescriptor(
         name=name,
@@ -344,10 +379,15 @@ def _build_module_descriptor(
             "status": lambda *, target: status_handler(target=target),
         },
         detector=detector,
+        selection_rank=selection_rank,
+        include_in_full_preset=include_in_full_preset,
         install_signals=install_signals,
         workflow_surfaces=workflow_surfaces,
         generated_artifacts=generated_artifacts,
         command_args=MODULE_COMMAND_ARGS,
+        startup_steps=startup_steps,
+        sources_of_truth=sources_of_truth,
+        root_agents_cleanup_blocks=root_agents_cleanup_blocks,
     )
 
 
@@ -381,7 +421,7 @@ def _workspace_report(
     }
 
 
-def _workspace_agents_template(*, selected_modules: list[str]) -> str:
+def _workspace_agents_template(*, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]) -> str:
     startup_steps = ["Read `AGENTS.md`."]
     sources_of_truth: list[str] = []
     repo_rules = [
@@ -394,28 +434,10 @@ def _workspace_agents_template(*, selected_modules: list[str]) -> str:
         "Add broader cross-package checks only when the change crosses package boundaries.",
     ]
 
-    if "planning" in selected_modules:
-        startup_steps.extend(
-            [
-                "Read `TODO.md`.",
-                "Read the active feature plan in `docs/execplans/` when the TODO surface points there.",
-                "Read `ROADMAP.md` only when promoting work.",
-            ]
-        )
-        sources_of_truth.extend(
-            [
-                "Active queue: `TODO.md`",
-                "Long-horizon candidate work: `ROADMAP.md`",
-            ]
-        )
-    if "memory" in selected_modules:
-        startup_steps.extend(
-            [
-                "Read `memory/index.md` only when memory is installed and the task is not already well-routed.",
-                "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself.",
-            ]
-        )
-        sources_of_truth.append("Durable routed knowledge, when installed: `memory/index.md`")
+    for module_name in selected_modules:
+        descriptor = descriptors[module_name]
+        startup_steps.extend(descriptor.startup_steps)
+        sources_of_truth.extend(descriptor.sources_of_truth)
 
     startup_steps.append("Load package-local docs only for the package being edited.")
 
@@ -444,7 +466,6 @@ def _workspace_agents_template(*, selected_modules: list[str]) -> str:
     lines.extend(
         [
             "",
-            "Do not bulk-read all planning surfaces.",
             "Do not start coding from chat context alone when the same information exists in checked-in files.",
             "",
             "## Sources Of Truth",
@@ -452,6 +473,8 @@ def _workspace_agents_template(*, selected_modules: list[str]) -> str:
         ]
     )
     lines.extend(f"- {item}" for item in sources_of_truth)
+    if "planning" in selected_modules:
+        lines.extend(["", "Do not bulk-read all planning surfaces."])
     lines.extend(
         [
             "",
@@ -501,7 +524,13 @@ def _remove_fenced_block(*, text: str, start_marker: str, end_marker: str) -> tu
     return updated, True
 
 
-def _workspace_status_report(*, target_root: Path, selected_modules: list[str], command_name: str) -> dict[str, Any]:
+def _workspace_status_report(
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    descriptors: dict[str, ModuleDescriptor],
+    command_name: str,
+) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
 
@@ -549,23 +578,26 @@ def _workspace_status_report(*, target_root: Path, selected_modules: list[str], 
         )
         warnings.append({"path": WORKSPACE_AGENTS_PATH.as_posix(), "message": "workspace workflow pointer block missing"})
 
-    if "memory" in selected_modules and MEMORY_POINTER_BLOCK in agents_text:
-        actions.append(
-            {
-                "kind": "warning",
-                "path": WORKSPACE_AGENTS_PATH.as_posix(),
-                "detail": (
-                    "redundant top-level memory workflow pointer block still present; "
-                    "shared workspace workflow should delegate to memory-specific guidance"
-                ),
-            }
-        )
-        warnings.append(
-            {
-                "path": WORKSPACE_AGENTS_PATH.as_posix(),
-                "message": "redundant top-level memory workflow pointer block still present",
-            }
-        )
+    for module_name in selected_modules:
+        for block in descriptors[module_name].root_agents_cleanup_blocks:
+            if block.block not in agents_text:
+                continue
+            actions.append(
+                {
+                    "kind": "warning",
+                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                    "detail": (
+                        f"redundant top-level {block.label} still present; "
+                        "shared workspace workflow should delegate to module-specific guidance"
+                    ),
+                }
+            )
+            warnings.append(
+                {
+                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                    "message": f"redundant top-level {block.label} still present",
+                }
+            )
 
     return _workspace_report(
         target_root=target_root,
@@ -586,6 +618,7 @@ def _workspace_init_or_upgrade_report(
     *,
     target_root: Path,
     selected_modules: list[str],
+    descriptors: dict[str, ModuleDescriptor],
     dry_run: bool,
     inspection_mode: str,
     command_name: str,
@@ -633,7 +666,7 @@ def _workspace_init_or_upgrade_report(
             )
 
     agents_path = target_root / WORKSPACE_AGENTS_PATH
-    rendered_agents = _workspace_agents_template(selected_modules=selected_modules)
+    rendered_agents = _workspace_agents_template(selected_modules=selected_modules, descriptors=descriptors)
     existing_agents = agents_path.read_text(encoding="utf-8") if agents_path.exists() else None
     if inspection_mode == "install" or command_name == "upgrade":
         if existing_agents != rendered_agents:
@@ -663,13 +696,16 @@ def _workspace_init_or_upgrade_report(
             start_marker=WORKSPACE_WORKFLOW_MARKER_START,
             end_marker=WORKSPACE_WORKFLOW_MARKER_END,
         )
-        if "memory" in selected_modules:
-            updated_text, memory_changed = _remove_fenced_block(
+        cleanup_blocks = [
+            block for module_name in selected_modules for block in descriptors[module_name].root_agents_cleanup_blocks
+        ]
+        for cleanup_block in cleanup_blocks:
+            updated_text, block_changed = _remove_fenced_block(
                 text=updated_text,
-                start_marker=MEMORY_WORKFLOW_MARKER_START,
-                end_marker=MEMORY_WORKFLOW_MARKER_END,
+                start_marker=cleanup_block.start_marker,
+                end_marker=cleanup_block.end_marker,
             )
-            changed = changed or memory_changed
+            changed = changed or block_changed
         if changed:
             if not dry_run:
                 agents_path.parent.mkdir(parents=True, exist_ok=True)
@@ -751,18 +787,23 @@ def _selected_modules(
     target_root: Path,
     descriptors: dict[str, ModuleDescriptor],
 ) -> tuple[list[str], str | None]:
+    ordered_module_names = _ordered_module_names(descriptors)
+    preset_modules = _preset_modules(descriptors)
     if preset_name and module_arg:
         raise ModuleSelectionError("Use either --preset or --modules, not both.")
 
     if preset_name:
-        return [module_name for module_name in PRESET_MODULES[preset_name] if module_name in descriptors], preset_name
+        if preset_name not in preset_modules:
+            supported = ", ".join(preset_modules)
+            raise ModuleSelectionError(f"Unknown preset: {preset_name}. Supported presets: {supported}.")
+        return preset_modules[preset_name], preset_name
 
     if module_arg:
-        requested = _parse_modules(module_arg)
-        return [module_name for module_name in MODULE_ORDER if module_name in requested and module_name in descriptors], None
+        requested = _parse_modules(module_arg, ordered_module_names=ordered_module_names)
+        return [module_name for module_name in ordered_module_names if module_name in requested], None
 
     if command_name in {"init", "prompt"}:
-        return [module_name for module_name in PRESET_MODULES["full"] if module_name in descriptors], "full"
+        return preset_modules["full"], "full"
 
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     detected = [entry.name for entry in registry if entry.installed]
@@ -772,14 +813,30 @@ def _selected_modules(
     raise ModuleSelectionError("No installed modules were detected for this lifecycle command. Use --modules to target modules explicitly.")
 
 
-def _parse_modules(module_arg: str) -> set[str]:
+def _ordered_module_names(descriptors: dict[str, ModuleDescriptor]) -> list[str]:
+    return [
+        descriptor.name
+        for descriptor in sorted(descriptors.values(), key=lambda descriptor: (descriptor.selection_rank, descriptor.name))
+    ]
+
+
+def _preset_modules(descriptors: dict[str, ModuleDescriptor]) -> dict[str, list[str]]:
+    ordered_module_names = _ordered_module_names(descriptors)
+    presets = {module_name: [module_name] for module_name in ordered_module_names}
+    presets["full"] = [
+        module_name for module_name in ordered_module_names if descriptors[module_name].include_in_full_preset
+    ]
+    return presets
+
+
+def _parse_modules(module_arg: str, *, ordered_module_names: list[str]) -> set[str]:
     tokens = [token.strip() for token in module_arg.split(",") if token.strip()]
     if not tokens:
         raise ModuleSelectionError("--modules requires at least one module token.")
 
-    unknown = [token for token in tokens if token not in MODULE_ORDER]
+    unknown = [token for token in tokens if token not in ordered_module_names]
     if unknown:
-        supported = ", ".join(MODULE_ORDER)
+        supported = ", ".join(ordered_module_names)
         unknown_text = ", ".join(sorted(set(unknown)))
         raise ModuleSelectionError(f"Unknown module token(s): {unknown_text}. Supported modules: {supported}.")
 
@@ -836,6 +893,7 @@ def _run_init(
         _workspace_init_or_upgrade_report(
             target_root=target_root,
             selected_modules=selected_modules,
+            descriptors=descriptors,
             dry_run=dry_run,
             inspection_mode=inspection.mode,
             command_name="init",
@@ -1035,12 +1093,20 @@ def _run_lifecycle_command(
         for module_name in selected_modules
     ]
     if command_name in {"status", "doctor"}:
-        reports.append(_workspace_status_report(target_root=target_root, selected_modules=selected_modules, command_name=command_name))
+        reports.append(
+            _workspace_status_report(
+                target_root=target_root,
+                selected_modules=selected_modules,
+                descriptors=descriptors,
+                command_name=command_name,
+            )
+        )
     elif command_name == "upgrade":
         reports.append(
             _workspace_init_or_upgrade_report(
                 target_root=target_root,
                 selected_modules=selected_modules,
+                descriptors=descriptors,
                 dry_run=dry_run,
                 inspection_mode="upgrade",
                 command_name=command_name,
@@ -1358,9 +1424,7 @@ def _module_registry(
     *, descriptors: dict[str, ModuleDescriptor], target_root: Path | None
 ) -> list[ModuleRegistryEntry]:
     entries: list[ModuleRegistryEntry] = []
-    for module_name in MODULE_ORDER:
-        if module_name not in descriptors:
-            continue
+    for module_name in _ordered_module_names(descriptors):
         descriptor = descriptors[module_name]
         lifecycle_commands = tuple(sorted(descriptor.commands))
         dry_run_commands = tuple(

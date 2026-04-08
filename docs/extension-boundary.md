@@ -51,7 +51,7 @@ Opening that boundary too early would risk:
 
 Do not treat external extension as supported until all of the following are true:
 
-1. The first-party module contract is stable enough that new first-party modules could be added without bespoke orchestrator changes.
+1. The first-party module contract is stable enough that new first-party modules could be added from descriptor-owned metadata without bespoke orchestrator globals or hardcoded root-guidance branches.
 2. The registry and lifecycle model are documented in public-contract terms rather than only internal descriptor terms.
 3. Selective adoption still works cleanly when the workspace layer coordinates more than the current first-party pair.
 4. Compatibility, upgrade, uninstall, and doctor expectations are explicit for non-core modules.
