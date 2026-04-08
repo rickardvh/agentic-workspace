@@ -24,7 +24,7 @@ Prioritized from the latest GitHub issue set:
 
 - Landed: Issue #2, tracker-agnostic upstream task ingestion into checked-in planning. The intake contract now lives in `docs/upstream-task-intake.md` and archived planning history.
 - Remaining: Issue #7, make the workspace orchestrator the sole normal public lifecycle entrypoint through a generic module contract. This is a real roadmap candidate and the clearest new architecture-level intake item.
-- Remaining: Issue #6, define a canonical review portfolio for finding high-value follow-up work. The repo already has a shipped review lane and promotion threshold, so the remaining question is whether the issue still implies a broader review-matrix contract beyond the current first slice.
+- Landed locally: Issue #6, define a canonical review portfolio for finding high-value follow-up work. The shipped review lane now includes a canonical named review matrix, bounded mode contract, and template requirements.
 - Landed locally: Issue #5, tighten `memory/current/` so it cannot be mistaken for active planning authority. The weak-authority current-note contract and the remaining high-level framing tail are now implemented in shipped memory surfaces and archived planning history.
 - Landed locally: Issue #3 and Issue #4, clarify `recurring-failures` as anti-trap memory rather than bug tracking. The duplicate recurring-failures wording signal has now landed as one bounded memory-contract slice.
 

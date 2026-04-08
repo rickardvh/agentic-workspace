@@ -14,6 +14,7 @@ Active queue for repository work.
 
 ## Done
 
+- review-portfolio: Completed (shipped the canonical review matrix/playbook, review template mode fields, and planning payload assertions)
 - memory-contract-framing: Completed (clarified recurring-failures as anti-trap memory and tightened high-level memory framing around anti-rediscovery value, one-home ownership, and planning subordination)
 - memory-overlap-audit-hardening: Completed (reduced the repeated installed-system overlap cluster and cleared current-note overlap pressure without suppressing the remaining package-context warning)
 - migration-fixtures: Completed (legacy adopter, partial managed state, and stale generated residue coverage added across workspace and package layers)

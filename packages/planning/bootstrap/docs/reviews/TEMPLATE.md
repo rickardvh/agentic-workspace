@@ -16,6 +16,13 @@ Promote only the findings that justify future work; do not treat this file as an
 
 -
 
+## Review Mode
+
+- Mode:
+- Review question:
+- Default finding cap:
+- Inputs inspected first:
+
 ## Review Method
 
 - Commands used:

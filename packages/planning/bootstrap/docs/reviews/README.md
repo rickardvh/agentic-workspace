@@ -53,6 +53,36 @@ Each review artifact should stay compact and include:
 
 Use the template in this directory and prefer one bounded review question per file.
 
+## Canonical Review Portfolio
+
+Use one primary review mode per artifact. If a review starts surfacing a second substantial mode, split it into another artifact instead of widening the scope.
+
+| Review mode | Purpose | Inspect first | Typical findings | Likely promotion target | Default cap |
+| --- | --- | --- | --- | --- | --- |
+| `contract-integrity` | Check whether repo claims, docs, and enforced surfaces still agree. | Canonical docs, check wrappers, claimed contract files | broken references, docs-code drift, promise-vs-enforcement gaps | `ROADMAP.md` or canonical docs | 3 findings |
+| `planning-surface` | Check whether `TODO.md`, `ROADMAP.md`, execplans, and planning docs still form a coherent execution contract. | `TODO.md`, `ROADMAP.md`, active execplans, planning checks | stale queue state, missing execplan links, contradictory sequencing guidance | `ROADMAP.md` or `TODO.md` | 3 findings |
+| `current-context` | Check whether current-state notes still behave like weak-authority re-orientation rather than shadow planning. | `memory/current/`, shared workflow docs, active planning surface | planner-like drift, authority ambiguity, restart-cost inflation | `ROADMAP.md`, canonical docs, or memory | 2 findings |
+| `memory-boundary` | Check whether memory stays routed, justified, and subordinate to canonical docs and planning. | `memory/index.md`, memory workflow docs, representative notes, freshness output | over-capture, duplicated authority, missing promotion to canonical docs, noisy routing | `ROADMAP.md`, canonical docs, or memory | 3 findings |
+| `maintainer-workflow` | Check whether maintainer-facing commands and docs still describe a real, runnable workflow. | maintainer docs, check wrappers, lifecycle commands, package/root guidance | broken maintainer paths, missing docs, overclaimed checks, boundary confusion | `ROADMAP.md` or canonical docs | 3 findings |
+| `source-payload-install` | Check whether package source, shipped payload, and root operational install still line up. | package sources, bootstrap payload, root installed surfaces, lifecycle tests | source/payload drift, install mismatch, upgrade ambiguity, generated-root confusion | `ROADMAP.md` or `TODO.md` | 3 findings |
+| `generated-surface-trust` | Check whether generated helper surfaces still faithfully reflect their canonical source. | manifest sources, generated docs, render scripts, installer checks | stale generated docs, missing render coverage, misleading derived guidance | `ROADMAP.md` or canonical docs | 2 findings |
+| `validation-lane` | Check whether the documented validation lane still proves the promised contract. | package tests, repo checks, maintainer command docs, failing gaps | missing regression coverage, weak check aggregation, undocumented required steps | `ROADMAP.md` or `TODO.md` | 3 findings |
+| `context-cost` | Check whether startup and handoff surfaces stay cheap enough for routine agent use. | startup docs, agent manifest, memory routing surfaces, review/read requirements | over-reading, oversized startup bundles, repeated low-signal reads | `ROADMAP.md`, memory, or canonical docs | 2 findings |
+| `review-promotion` | Check whether review findings are being promoted, deferred, or deleted with discipline. | `docs/reviews/`, roadmap intake, archived plans, status footers | stale review residue, duplicate candidates, weak promotion hygiene | `ROADMAP.md` or review cleanup | 2 findings |
+
+Treat the first seven modes as the default recurring portfolio. Use `validation-lane`, `context-cost`, and `review-promotion` as occasional audit modes when repeated friction suggests them.
+
+## Review Questions
+
+Every review artifact should state:
+
+- the chosen review mode
+- the specific review question being answered
+- the main inputs inspected first
+- the default finding cap for that mode
+
+If the review needs materially more findings than the default cap, split the work or justify the exception explicitly.
+
 ## Source Classes
 
 Every finding should declare one source class:

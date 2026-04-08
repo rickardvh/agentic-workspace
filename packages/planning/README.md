@@ -340,6 +340,9 @@ Its rules are:
 - friction-confirmed findings remain higher trust than pure analysis findings
 - weak or speculative findings should be dismissed instead of promoted
 
+The shipped review contract now includes a canonical review portfolio with named bounded modes such as `contract-integrity`, `planning-surface`, `current-context`, `memory-boundary`, `maintainer-workflow`, `source-payload-install`, and `generated-surface-trust`, plus occasional audit modes for `validation-lane`, `context-cost`, and `review-promotion`.
+Each mode defines what to inspect first, the typical finding class, the likely promotion target, and a default output cap so reviews do not turn into open-ended critique.
+
 Use review artifacts when a task is a bounded review pass rather than implementation.
 Do not use them as a substitute for durable docs, memory notes, or active execplans.
 

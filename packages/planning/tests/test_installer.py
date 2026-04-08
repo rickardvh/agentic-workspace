@@ -268,6 +268,28 @@ def test_verify_payload_reports_contract_surface_shortlists() -> None:
     )
 
 
+def test_bootstrap_review_readme_includes_canonical_review_portfolio() -> None:
+    text = (installer_mod.payload_root() / "docs" / "reviews" / "README.md").read_text(encoding="utf-8")
+
+    assert "## Canonical Review Portfolio" in text
+    assert "`contract-integrity`" in text
+    assert "`maintainer-workflow`" in text
+    assert "`source-payload-install`" in text
+    assert "`review-promotion`" in text
+    assert "Use one primary review mode per artifact." in text
+    assert "default finding cap" in text
+
+
+def test_bootstrap_review_template_includes_mode_and_cap_fields() -> None:
+    text = (installer_mod.payload_root() / "docs" / "reviews" / "TEMPLATE.md").read_text(encoding="utf-8")
+
+    assert "## Review Mode" in text
+    assert "- Mode:" in text
+    assert "- Review question:" in text
+    assert "- Default finding cap:" in text
+    assert "- Inputs inspected first:" in text
+
+
 def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
 
