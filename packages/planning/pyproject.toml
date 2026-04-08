@@ -50,6 +50,7 @@ include = [
 
 [tool.pytest.ini_options]
 addopts = [
+  "--import-mode=importlib",
   "--cov=repo_planning_bootstrap",
   "--cov-report=term-missing:skip-covered",
 ]

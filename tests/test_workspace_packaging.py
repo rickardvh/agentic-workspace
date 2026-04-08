@@ -8,18 +8,13 @@ import tempfile
 from pathlib import Path
 from zipfile import ZipFile
 
-
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 PAYLOAD_ROOT = WORKSPACE_ROOT / "src" / "agentic_workspace" / "_payload"
 PACKAGE_PREFIX = Path("agentic_workspace") / "_payload"
 
 
 def _source_inventory() -> set[str]:
-    return {
-        path.relative_to(PAYLOAD_ROOT).as_posix()
-        for path in PAYLOAD_ROOT.rglob("*")
-        if path.is_file()
-    }
+    return {path.relative_to(PAYLOAD_ROOT).as_posix() for path in PAYLOAD_ROOT.rglob("*") if path.is_file()}
 
 
 def _build_artifact(tmpdir: str, artifact: str) -> Path:
@@ -66,11 +61,7 @@ def _installed_inventory(wheel_path: Path, tmpdir: str) -> set[str]:
         check=True,
     )
     installed_payload = install_root / PACKAGE_PREFIX
-    return {
-        path.relative_to(installed_payload).as_posix()
-        for path in installed_payload.rglob("*")
-        if path.is_file()
-    }
+    return {path.relative_to(installed_payload).as_posix() for path in installed_payload.rglob("*") if path.is_file()}
 
 
 def test_workspace_artifacts_match_checked_in_payload_inventory() -> None:

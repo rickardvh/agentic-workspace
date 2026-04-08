@@ -8,7 +8,6 @@ import tempfile
 from pathlib import Path
 from zipfile import ZipFile
 
-
 MEMORY_PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_MANAGED_PATHS = {

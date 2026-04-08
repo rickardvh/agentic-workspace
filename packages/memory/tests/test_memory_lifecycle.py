@@ -11,16 +11,16 @@ def test_memory_clean_install() -> None:
         target = Path(tmpdir) / "test_repo"
         target.mkdir()
         memory_root = Path(__file__).resolve().parents[1]
-        
+
         # Install memory bootstrap
-        result = subprocess.run(
+        subprocess.run(
             ["uv", "run", "agentic-memory-bootstrap", "install", "--target", str(target)],
             capture_output=True,
             text=True,
             cwd=memory_root,
             check=True,
         )
-        
+
         # Verify required files exist
         assert (target / "memory").exists(), "memory directory not found after install"
         assert (target / "memory" / "index.md").exists(), "memory/index.md not found after install"
@@ -34,7 +34,7 @@ def test_memory_install_dry_run() -> None:
         target = Path(tmpdir) / "test_repo"
         target.mkdir()
         memory_root = Path(__file__).resolve().parents[1]
-        
+
         # Install with dry-run
         subprocess.run(
             ["uv", "run", "agentic-memory-bootstrap", "install", "--target", str(target), "--dry-run"],
@@ -43,7 +43,7 @@ def test_memory_install_dry_run() -> None:
             cwd=memory_root,
             check=True,
         )
-        
+
         # Verify no files created
         assert not (target / "memory").exists(), "memory directory created during dry-run"
         assert not (target / "AGENTS.md").exists(), "AGENTS.md created during dry-run"
@@ -55,7 +55,7 @@ def test_memory_install_idempotent() -> None:
         target = Path(tmpdir) / "test_repo"
         target.mkdir()
         memory_root = Path(__file__).resolve().parents[1]
-        
+
         # First install
         subprocess.run(
             ["uv", "run", "agentic-memory-bootstrap", "install", "--target", str(target)],
@@ -64,10 +64,10 @@ def test_memory_install_idempotent() -> None:
             cwd=memory_root,
             check=True,
         )
-        
+
         # Get first state
         index_content_1 = (target / "memory" / "index.md").read_text()
-        
+
         # Second install (should fail or overwrite with --force)
         result = subprocess.run(
             ["uv", "run", "agentic-memory-bootstrap", "install", "--target", str(target)],
@@ -75,7 +75,7 @@ def test_memory_install_idempotent() -> None:
             text=True,
             cwd=memory_root,
         )
-        
+
         # If it succeeded, verify state is unchanged
         if result.returncode == 0:
             index_content_2 = (target / "memory" / "index.md").read_text()
@@ -88,7 +88,7 @@ def test_memory_status_after_install() -> None:
         target = Path(tmpdir) / "test_repo"
         target.mkdir()
         memory_root = Path(__file__).resolve().parents[1]
-        
+
         # Install
         subprocess.run(
             ["uv", "run", "agentic-memory-bootstrap", "install", "--target", str(target)],
@@ -97,7 +97,7 @@ def test_memory_status_after_install() -> None:
             cwd=memory_root,
             check=True,
         )
-        
+
         # Check status
         result = subprocess.run(
             ["uv", "run", "agentic-memory-bootstrap", "status", "--target", str(target), "--format", "json"],
@@ -105,7 +105,7 @@ def test_memory_status_after_install() -> None:
             text=True,
             cwd=memory_root,
         )
-        
+
         # Status should indicate bootstrap is installed
         assert result.returncode == 0, "Status command failed after install"
 
@@ -116,7 +116,7 @@ def test_memory_install_with_force() -> None:
         target = Path(tmpdir) / "test_repo"
         target.mkdir()
         memory_root = Path(__file__).resolve().parents[1]
-        
+
         # First install
         subprocess.run(
             ["uv", "run", "agentic-memory-bootstrap", "install", "--target", str(target)],
@@ -125,12 +125,12 @@ def test_memory_install_with_force() -> None:
             cwd=memory_root,
             check=True,
         )
-        
+
         # Modify a file
         index_path = target / "memory" / "index.md"
         original_content = index_path.read_text()
         index_path.write_text("# Modified\n")
-        
+
         # Install with force
         subprocess.run(
             ["uv", "run", "agentic-memory-bootstrap", "install", "--target", str(target), "--force"],
@@ -139,7 +139,7 @@ def test_memory_install_with_force() -> None:
             cwd=memory_root,
             check=True,
         )
-        
+
         # Verify file was restored
         restored_content = index_path.read_text()
         assert restored_content == original_content, "File was not restored by --force"

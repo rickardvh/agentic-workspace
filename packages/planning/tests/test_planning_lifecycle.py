@@ -13,7 +13,7 @@ def test_planning_clean_install() -> None:
         planning_root = Path(__file__).resolve().parents[1]
         
         # Install planning bootstrap
-        result = subprocess.run(
+        subprocess.run(
             ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target), "--format", "json"],
             capture_output=True,
             text=True,

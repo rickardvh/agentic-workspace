@@ -12,7 +12,6 @@ import pytest
 
 from repo_planning_bootstrap import installer
 
-
 PLANNING_PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_PAYLOAD_ENTRIES = {path.as_posix() for path in installer.REQUIRED_PAYLOAD_FILES}
 EXPECTED_SKILL_ENTRIES = {
@@ -39,7 +38,9 @@ def _artifact_entries(path: Path) -> set[str]:
     if path.name.endswith(".whl"):
         with ZipFile(path) as whl:
             names = whl.namelist()
-            return _normalized_contract_entries(names, payload_prefix="repo_planning_bootstrap/_payload/", skills_prefix="repo_planning_bootstrap/_skills/")
+            return _normalized_contract_entries(
+                names, payload_prefix="repo_planning_bootstrap/_payload/", skills_prefix="repo_planning_bootstrap/_skills/"
+            )
 
     with tarfile.open(path, "r:gz") as tar:
         names = tar.getnames()
