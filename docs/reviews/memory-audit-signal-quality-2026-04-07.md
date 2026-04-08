@@ -63,5 +63,5 @@
 
 ## Status Footer
 
-- Finding 1 (Overlap audit still over-reports adjacent durable notes): promoted to ROADMAP.md as `Memory overlap-audit signal hardening`.
+- Finding 1 (Overlap audit still over-reports adjacent durable notes): implemented via `Memory overlap-audit signal hardening`; the installed-system warning cluster is reduced and the current-note overlap-pressure report is now quiet.
 - Finding 2 (Installed-system history is still fragmented across too many durable notes): deferred pending another maintenance cycle that shows restart cost still comes from the same decision-family sprawl rather than from the overlap heuristic itself.

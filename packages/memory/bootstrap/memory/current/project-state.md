@@ -42,6 +42,7 @@ Active
 - A good shape is: current focus, recent meaningful progress, blockers, then a few high-value notes.
 - Prefer replacing stale bullets instead of appending timeline-style progress logs so concurrent edits stay easy to merge.
 - If a fact becomes durable guidance, move it into a primary memory note or canonical doc and leave only a short pointer here.
+- For durable rationale, load the matching note under `memory/decisions/` or `memory/domains/` instead of expanding this overview.
 
 ## Failure signals
 

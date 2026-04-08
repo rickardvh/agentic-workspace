@@ -618,7 +618,10 @@ def _current_note_overlap_pressure(scans: list[NoteScan]) -> list[str]:
     for current_scan in current_scans:
         if current_scan.line_count < CURRENT_NOTE_OVERLAP_MIN_LINES:
             continue
-        current_terms = _significant_terms(current_scan.path.read_text(encoding="utf-8"))
+        current_text = current_scan.path.read_text(encoding="utf-8")
+        if _delegates_durable_context(current_text):
+            continue
+        current_terms = _significant_terms(current_text)
         if len(current_terms) < CURRENT_NOTE_OVERLAP_MIN_SHARED_TERMS:
             continue
         for durable_scan in durable_scans:
@@ -670,6 +673,18 @@ def _significant_terms(text: str) -> set[str]:
         "confirmed",
     }
     return {word for word in words if word not in stop_words}
+
+
+def _delegates_durable_context(text: str) -> bool:
+    lowered = text.lower()
+    delegation_markers = (
+        "instead of expanding this current note",
+        "instead of expanding this overview",
+        "instead of expanding this context note",
+        "not as the primary home for durable knowledge",
+        "do not restate durable routing guidance here",
+    )
+    return any(marker in lowered for marker in delegation_markers)
 
 
 if __name__ == "__main__":

@@ -150,3 +150,56 @@ task_relevance = "optional"
     assert result.returncode == 0
     assert "Current-note overlap pressure:" in result.stdout
     assert "memory/current/project-state.md overlaps durable note memory/domains/api.md" in result.stdout
+
+
+def test_memory_freshness_skips_overlap_pressure_for_current_notes_with_explicit_durable_handoff(
+    tmp_path: Path,
+) -> None:
+    shared = (
+        "service contract boundary request validation response schema compatibility migration rollback observability operator safety"
+    )
+    _write(
+        tmp_path / "memory" / "current" / "project-state.md",
+        _project_state_text(
+            body=(
+                "- "
+                + shared
+                + "\n- For durable rationale, load the matching note under `memory/decisions/` or `memory/domains/` instead of expanding this overview."
+            )
+        ),
+    )
+    _write(tmp_path / "memory" / "domains" / "api.md", f"# API\n\n{shared}\n")
+    _write(
+        tmp_path / "memory" / "manifest.toml",
+        """
+version = 1
+
+[notes."memory/current/project-state.md"]
+note_type = "current-overview"
+canonical_home = "memory/current/project-state.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+
+[notes."memory/domains/api.md"]
+note_type = "domain"
+canonical_home = "memory/domains/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+""",
+    )
+
+    result = subprocess.run(
+        [sys.executable, str(_checker_script_path())],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "Current-note overlap pressure:" in result.stdout
+    assert "memory/current/project-state.md overlaps durable note memory/domains/api.md" not in result.stdout

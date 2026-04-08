@@ -14,6 +14,7 @@ Active queue for repository work.
 
 ## Done
 
+- memory-overlap-audit-hardening: Completed (reduced the repeated installed-system overlap cluster and cleared current-note overlap pressure without suppressing the remaining package-context warning)
 - migration-fixtures: Completed (legacy adopter, partial managed state, and stale generated residue coverage added across workspace and package layers)
 - packaging-tests: Completed (wheel/sdist artifact validation for all 3 packages)
 - lifecycle-matrix: Completed (install/adopt/upgrade/uninstall/idempotence for all 3 packages)

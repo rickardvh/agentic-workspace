@@ -49,6 +49,7 @@ Active docs and collaboration-safety hardening in progress
 
 - Package-local runtime fixtures or payload copies should not become operational authorities.
 - Durable package and architecture facts belong in canonical memory notes or docs, not in `memory/current/`.
+- For durable rationale, load the matching note under `memory/decisions/` or `memory/domains/` instead of expanding this overview.
 - Product-managed additions should stay visibly fenced off from repo-owned instructions.
 
 ## Failure signals

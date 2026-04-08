@@ -652,6 +652,7 @@ def _audit_note_overlap(*, target_root: Path, manifest: MemoryManifest, result) 
         left_path = target_root / left.path
         left_text = left_path.read_text(encoding="utf-8")
         left_terms = _significant_terms(left_text)
+        left_title_terms = _primary_heading_terms(path=left.path, text=left_text)
         left_refs = set(_extract_memory_references(left_text))
         if len(left_terms) < SHADOW_DOC_MIN_SHARED_TERMS:
             continue
@@ -664,8 +665,11 @@ def _audit_note_overlap(*, target_root: Path, manifest: MemoryManifest, result) 
                 continue
             right_path = target_root / right.path
             right_text = right_path.read_text(encoding="utf-8")
+            right_title_terms = _primary_heading_terms(path=right.path, text=right_text)
             right_refs = set(_extract_memory_references(right_text))
             if right.path.as_posix() in left_refs or left.path.as_posix() in right_refs:
+                continue
+            if "decision" in categories and not (left_title_terms & right_title_terms):
                 continue
             shared_terms = sorted(left_terms & _significant_terms(right_text))
             if len(shared_terms) < SHADOW_DOC_MIN_SHARED_TERMS + 2:
@@ -2150,6 +2154,14 @@ def _significant_terms(text: str) -> set[str]:
         "wishlist",
     }
     return {word for word in words if word not in stop_words}
+
+
+def _primary_heading_terms(*, path: Path, text: str) -> set[str]:
+    for line in text.splitlines():
+        match = re.match(r"^\s{0,3}#\s+(.+?)\s*$", line)
+        if match:
+            return _significant_terms(match.group(1))
+    return _significant_terms(path.stem.replace("-", " ").replace("_", " "))
 
 
 def _shadow_doc_paths_related(note_path: Path, doc_path: Path) -> bool:

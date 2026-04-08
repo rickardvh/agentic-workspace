@@ -722,6 +722,60 @@ def test_doctor_overlap_audit_skips_explicit_primary_home_references(
     )
 
 
+def test_doctor_overlap_audit_requires_shared_title_terms_for_decision_family_pairs(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+
+    installed_path = target / "memory" / "decisions" / "installed-system.md"
+    foundation_path = target / "memory" / "decisions" / "foundation-stability.md"
+    shared_text = (
+        "operational orchestration planning root-owned installs validation lifecycle boundaries adopted packages "
+        "managed workspace authority consolidation checks\n"
+    )
+    installed_path.write_text("# Root-Owned Installed Systems\n\n" + shared_text, encoding="utf-8")
+    foundation_path.write_text("# Repository Foundation Stability\n\n" + shared_text, encoding="utf-8")
+
+    manifest_path = target / "memory" / "manifest.toml"
+    manifest_text = manifest_path.read_text(encoding="utf-8")
+    manifest_text += (
+        '\n[notes."memory/decisions/installed-system.md"]\n'
+        'note_type = "decision"\n'
+        'canonical_home = "memory/decisions/installed-system.md"\n'
+        'authority = "canonical"\n'
+        'audience = "human+agent"\n'
+        'canonicality = "agent_only"\n'
+        'task_relevance = "optional"\n'
+        'subsystems = ["orchestration"]\n'
+        'surfaces = ["architecture"]\n'
+        'routes_from = ["AGENTS.md"]\n'
+        'stale_when = ["AGENTS.md"]\n'
+        '\n[notes."memory/decisions/foundation-stability.md"]\n'
+        'note_type = "decision"\n'
+        'canonical_home = "memory/decisions/foundation-stability.md"\n'
+        'authority = "canonical"\n'
+        'audience = "human+agent"\n'
+        'canonicality = "agent_only"\n'
+        'task_relevance = "optional"\n'
+        'subsystems = ["orchestration"]\n'
+        'surfaces = ["architecture"]\n'
+        'routes_from = ["AGENTS.md"]\n'
+        'stale_when = ["AGENTS.md"]\n'
+    )
+    manifest_path.write_text(manifest_text, encoding="utf-8")
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert not any(
+        action.role == "memory-overlap-audit"
+        and action.path in {installed_path, foundation_path}
+        and "foundation-stability.md" in action.detail
+        for action in result.actions
+    )
+
+
 def test_upgrade_reports_customised_seed_notes_as_expected_customisation(
     tmp_path: Path,
 ) -> None:
