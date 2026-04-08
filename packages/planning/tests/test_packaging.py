@@ -1,105 +1,75 @@
 """Test that agentic-planning-bootstrap package artifacts contain required payload files."""
 
+from __future__ import annotations
+
 import subprocess
+import tarfile
 import tempfile
 from pathlib import Path
 from zipfile import ZipFile
 
+import pytest
+
+from repo_planning_bootstrap import installer
+
 
 PLANNING_PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+EXPECTED_PAYLOAD_ENTRIES = {path.as_posix() for path in installer.REQUIRED_PAYLOAD_FILES}
+EXPECTED_SKILL_ENTRIES = {
+    path.relative_to(installer.PLANNING_SKILLS_MANAGED_ROOT).as_posix() for path in installer.PLANNING_BUNDLED_SKILL_FILES
+}
 
 
-def test_planning_wheel_contains_required_payload_files() -> None:
-    """Verify that the built planning wheel contains required payload files."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir_path = Path(tmpdir)
+def _build_artifact(kind: str, output_dir: Path) -> Path:
+    subprocess.run(
+        ["uv", "build", f"--{kind}", "-o", str(output_dir)],
+        cwd=PLANNING_PACKAGE_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
 
-        # Build the wheel
-        subprocess.run(
-            ["uv", "build", "--wheel", "-o", tmpdir],
-            cwd=PLANNING_PACKAGE_ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+    pattern = "agentic_planning_bootstrap-*.whl" if kind == "wheel" else "agentic_planning_bootstrap-*.tar.gz"
+    artifacts = list(output_dir.glob(pattern))
+    assert len(artifacts) == 1, f"Expected exactly 1 {kind}, found {len(artifacts)}"
+    return artifacts[0]
 
-        # Find the built wheel
-        wheels = list(tmpdir_path.glob("agentic_planning_bootstrap-*.whl"))
-        assert len(wheels) == 1, f"Expected exactly 1 wheel, found {len(wheels)}"
-        wheel_path = wheels[0]
 
-        # Extract and verify payload files are present
-        with ZipFile(wheel_path) as whl:
+def _artifact_entries(path: Path) -> set[str]:
+    if path.name.endswith(".whl"):
+        with ZipFile(path) as whl:
             names = whl.namelist()
+            return _normalized_contract_entries(names, payload_prefix="repo_planning_bootstrap/_payload/", skills_prefix="repo_planning_bootstrap/_skills/")
 
-            # Check for required planning payload files
-            required_files = [
-                "repo_planning_bootstrap/_payload/AGENTS.md",
-                "repo_planning_bootstrap/_payload/TODO.md",
-                "repo_planning_bootstrap/_payload/ROADMAP.md",
-                "repo_planning_bootstrap/_payload/docs/execplans/README.md",
-                "repo_planning_bootstrap/_payload/docs/execplans/TEMPLATE.md",
-                "repo_planning_bootstrap/_payload/.agentic-workspace/planning/agent-manifest.json",
-                "repo_planning_bootstrap/_payload/tools/AGENT_QUICKSTART.md",
-                "repo_planning_bootstrap/_payload/tools/AGENT_ROUTING.md",
-            ]
-
-            for req_file in required_files:
-                assert req_file in names, (
-                    f"Required payload file '{req_file}' not found in wheel. "
-                    f"Available payload files: {[n for n in names if 'payload' in n and (n.endswith('.md') or n.endswith('.json') or n.endswith('.toml'))][:10]}"
-                )
+    with tarfile.open(path, "r:gz") as tar:
+        names = tar.getnames()
+        root_dir = next(name.split("/", 1)[0] for name in names if name.startswith("agentic_planning_bootstrap-"))
+        return _normalized_contract_entries(names, payload_prefix=f"{root_dir}/bootstrap/", skills_prefix=f"{root_dir}/skills/")
 
 
-def test_planning_sdist_contains_required_payload_files() -> None:
-    """Verify that the built planning sdist contains required payload files."""
+def _normalized_contract_entries(names: list[str], *, payload_prefix: str, skills_prefix: str) -> set[str]:
+    entries: set[str] = set()
+    for name in names:
+        if name.startswith(payload_prefix):
+            entries.add(name.removeprefix(payload_prefix))
+        elif name.startswith(skills_prefix):
+            entries.add(name.removeprefix(skills_prefix))
+    return entries
+
+
+def _assert_contract_inventory(artifact: Path) -> None:
+    entries = _artifact_entries(artifact)
+    expected_entries = EXPECTED_PAYLOAD_ENTRIES | EXPECTED_SKILL_ENTRIES
+    assert entries == expected_entries, (
+        f"Artifact inventory mismatch for {artifact.name}. "
+        f"Missing: {sorted(expected_entries - entries)}. "
+        f"Unexpected: {sorted(entries - expected_entries)}."
+    )
+
+
+@pytest.mark.parametrize("kind", ("wheel", "sdist"))
+def test_planning_artifacts_contain_required_contract_inventory(kind: str) -> None:
+    """Verify that the built planning wheel and sdist contain the same contract inventory."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir_path = Path(tmpdir)
-
-        # Build the sdist
-        subprocess.run(
-            ["uv", "build", "--sdist", "-o", tmpdir],
-            cwd=PLANNING_PACKAGE_ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-
-        # Find the built sdist
-        sdists = list(tmpdir_path.glob("agentic_planning_bootstrap-*.tar.gz"))
-        assert len(sdists) == 1, f"Expected exactly 1 sdist, found {len(sdists)}"
-        sdist_path = sdists[0]
-
-        # Extract and verify payload files are present
-        import tarfile
-
-        with tarfile.open(sdist_path, "r:gz") as tar:
-            names = tar.getnames()
-
-            # Get the root directory of the sdist (e.g., "agentic_planning_bootstrap-0.1.2")
-            root_dirs = set()
-            for name in names:
-                parts = name.split("/")
-                if len(parts) > 0:
-                    root_dirs.add(parts[0])
-
-            assert len(root_dirs) == 1, f"Expected exactly 1 root directory in sdist, found {root_dirs}"
-            root_dir = list(root_dirs)[0]
-
-            # Check for required planning payload files
-            required_files = [
-                f"{root_dir}/bootstrap/AGENTS.md",
-                f"{root_dir}/bootstrap/TODO.md",
-                f"{root_dir}/bootstrap/ROADMAP.md",
-                f"{root_dir}/bootstrap/docs/execplans/README.md",
-                f"{root_dir}/bootstrap/docs/execplans/TEMPLATE.md",
-                f"{root_dir}/bootstrap/.agentic-workspace/planning/agent-manifest.json",
-                f"{root_dir}/bootstrap/tools/AGENT_QUICKSTART.md",
-                f"{root_dir}/bootstrap/tools/AGENT_ROUTING.md",
-            ]
-
-            for req_file in required_files:
-                assert req_file in names, (
-                    f"Required payload file '{req_file}' not found in sdist. "
-                    f"Available payload files: {[n for n in names if 'bootstrap' in n and (n.endswith('.md') or n.endswith('.json') or n.endswith('.toml'))][:10]}"
-                )
+        artifact = _build_artifact(kind, Path(tmpdir))
+        _assert_contract_inventory(artifact)

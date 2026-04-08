@@ -12,19 +12,19 @@ Add artifact-level packaging tests for all three shipped packages (`agentic-work
 
 ## Active Milestone
 
-- Status: in-progress
+- Status: completed
 - Ready: ready
 - Blocked: none
 
 ## Immediate Next Action
 
-Build a minimal artifact-inspection test helper that can extract and validate payload files from a built wheel/sdist, starting with the root `agentic-workspace` package.
+Archived after the packaging tests were tightened and validated.
 
 ## Touched Paths
 
-- `tests/test_workspace_packaging.py` (new)
-- `packages/planning/tests/test_packaging.py` (new)
-- `packages/memory/tests/test_packaging.py` (new)
+- `tests/test_workspace_packaging.py`
+- `packages/planning/tests/test_packaging.py`
+- `packages/memory/tests/test_packaging.py`
 - `scripts/check/check_packaging_artifacts.py` (helper, optional)
 
 ## Validation Commands
@@ -35,11 +35,11 @@ Build a minimal artifact-inspection test helper that can extract and validate pa
 
 ## Completion Criteria
 
-- [ ] Root workspace package test asserts wheel/sdist contain `.agentic-workspace/WORKFLOW.md` and `.agentic-workspace/OWNERSHIP.toml`
-- [ ] Planning package test asserts wheel/sdist contain required payload files and generated routing docs
-- [ ] Memory package test asserts wheel/sdist contain required payload files and skills
-- [ ] All three tests pass in the CI lane and locally with `make check-all`
-- [ ] Packages produce identical file inventories across clean source builds and artifact installs
+- [x] Root workspace package test asserts wheel/sdist contain `.agentic-workspace/WORKFLOW.md` and `.agentic-workspace/OWNERSHIP.toml`
+- [x] Planning package test asserts wheel/sdist contain required payload files and generated routing docs
+- [x] Memory package test asserts wheel/sdist contain required payload files and skills
+- [x] All three tests pass in the CI lane and locally with `make check-all`
+- [x] Packages produce identical file inventories across clean source builds and artifact installs
 
 ## Invariants
 
@@ -49,3 +49,4 @@ Build a minimal artifact-inspection test helper that can extract and validate pa
 ## Drift Log
 
 - 2026-04-07: Promoted from `docs/reviews/bootstrap-tooling-followup-requirements-2026-04-07.md` as high-priority friction-confirmed finding.
+- 2026-04-08: Archived after the root, planning, and memory packaging tests were validated.
