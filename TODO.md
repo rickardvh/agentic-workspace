@@ -14,6 +14,7 @@ Active queue for repository work.
 
 ## Done
 
+- capability-aware-execution-contract: Completed (shipped the first planning capability-fit contract so agents can classify cheap direct execution, stronger planning first, delegation-friendly work, autopilot suitability, and stop-and-escalate cases in task-shape language)
 - automatic-skill-selection-routing: Completed (added registry-backed activation hints and task-to-skill recommendation so `agentic-workspace skills --task ...` can suggest the right bundled or repo-owned skills without requiring the user to know skill ids)
 - repo-package-skill-discovery-hardening: Completed (made bundled package skills explicitly registered on install/upgrade, gave repo-owned skills a separate registry path, and exposed `agentic-workspace skills` as the trustworthy workspace discovery surface before any raw fallback scan)
 - installed-surface-ambiguity-cleanup: Completed (cleared the remaining package-context ambiguity by tightening the installed notes, adding a checked-in inspection skill, and hardening the memory doctor heuristics against package-context false positives)

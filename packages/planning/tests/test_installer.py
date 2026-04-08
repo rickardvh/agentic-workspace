@@ -79,6 +79,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 
 def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     result = install_bootstrap(target=tmp_path)
+    capability_fit_doc_path = tmp_path / "docs" / "capability-aware-execution.md"
     skill_readme_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "README.md"
     skill_registry_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json"
     skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
@@ -90,6 +91,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert (tmp_path / "AGENTS.md").exists()
     assert (tmp_path / "TODO.md").exists()
     assert (tmp_path / "ROADMAP.md").exists()
+    assert capability_fit_doc_path.exists()
     assert review_readme_path.exists()
     assert review_template_path.exists()
     assert intake_doc_path.exists()
@@ -114,6 +116,7 @@ def test_ownership_module_root_matches_workspace_ledger() -> None:
 def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path("AGENTS.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("TODO.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path("docs/capability-aware-execution.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/execplans/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/reviews/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/upstream-task-intake.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
@@ -297,6 +300,19 @@ def test_bootstrap_review_template_includes_mode_and_cap_fields() -> None:
     assert "- Post-remediation note shape:" in text
 
 
+def test_bootstrap_capability_aware_execution_doc_defines_categories() -> None:
+    text = (installer_mod.payload_root() / "docs" / "capability-aware-execution.md").read_text(encoding="utf-8")
+
+    assert "# Capability-Aware Execution" in text
+    assert "## Task-Shape Dimensions" in text
+    assert "### Cheap Direct Execution" in text
+    assert "### Stronger Planning First" in text
+    assert "### Autopilot-Suitable" in text
+    assert "### Delegation-Friendly" in text
+    assert "### Stop And Escalate" in text
+    assert "task-shape based" in text
+
+
 def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
 
@@ -307,6 +323,7 @@ def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
         and action.kind == "current"
         and "compatibility contract files:" in action.detail
         and "AGENTS.md" in action.detail
+        and "docs/capability-aware-execution.md" in action.detail
         and "docs/execplans/TEMPLATE.md" in action.detail
         and "docs/upstream-task-intake.md" in action.detail
         for action in result.actions

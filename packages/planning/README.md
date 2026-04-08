@@ -131,6 +131,8 @@ Generated mirrors inherit stability from their canonical source relationships, n
 
 ## Direct Execution Or Execplan
 
+`docs/capability-aware-execution.md` is the canonical contract for capability fit: when cheap direct execution is still safe, when medium reasoning is enough, when stronger planning should come first, when bounded autopilot is appropriate, when delegation may save cost, and when the agent should stop and escalate.
+
 Use a direct task in `TODO.md` when the work is small enough to finish in one coherent pass and does not need milestone sequencing, blocker tracking, or a wider validation story.
 
 Treat the direct-task shape as compact by default:
@@ -156,6 +158,7 @@ Promote the task into `docs/execplans/` when any of the following becomes true:
 Direct execution is an explicit success mode for small local work. The goal is not to force every change through planning; the goal is to promote only when the cheap path stops being safe.
 
 When delegation is useful, keep it capability-aware and optional. If available, a stronger model may draft a compact execplan or handoff for a smaller implementation model, but only when that is likely to save tokens overall without lowering quality. Do not assume subagents or multi-model workflows exist; the contract should still work for a single agent operating alone.
+Use the capability-aware execution contract to describe that recommendation in task-shape terms instead of vendor-specific model names.
 
 When a direct task completes, remove it from `TODO.md` promptly. If the task changed durable repo knowledge or left important follow-up work, record that residue in memory, canonical docs, `ROADMAP.md`, or a newly promoted execplan rather than leaving chat-only context behind.
 
