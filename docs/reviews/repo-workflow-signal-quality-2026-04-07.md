@@ -61,3 +61,7 @@
 ## Drift Log
 
 - 2026-04-07: Review created after dogfooding the planning-memory-review loop through repo maintenance and package refinement.
+
+## Status Footer
+
+- Finding 1 (Repo dogfooding still exposes one unresolved product-vs-repo boundary): implemented via the canonical threshold rule in `docs/reviews/README.md` and matching roadmap wording.

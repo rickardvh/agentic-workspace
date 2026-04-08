@@ -76,7 +76,7 @@
 ## Status Footer
 
 - Finding 1 (Repo now has viable closed-loop dogfooding workflow): no promotion needed; documents existing good state.
-- Finding 2 (Promotion threshold from captured signal to planned work): promoted to ROADMAP.md as `Review-finding promotion threshold`.
+- Finding 2 (Promotion threshold from captured signal to planned work): implemented via the canonical threshold rule in `docs/reviews/README.md` and matching roadmap wording.
 - Finding 3 (Memory overlap audit remains the loudest unresolved signal): deferred pending next maintenance cycle that confirms whether overlap audit remains noisy.
 
-Review ready for deletion once Finding 2 is implemented and Finding 3 result is known.
+Review ready for deletion once Finding 3 result is known.

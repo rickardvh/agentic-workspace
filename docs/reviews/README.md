@@ -72,6 +72,12 @@ Use staged promotion:
 3. promote it to `TODO.md` plus an execplan only when explicit maintainer choice, repeated friction, or clear urgency justifies activation
 4. move durable stable guidance into canonical docs or memory when the value is long-lived knowledge rather than future work tracking
 
+Use this threshold before step 2:
+
+- Keep one-off findings in the review artifact unless there is explicit maintainer direction to activate them immediately.
+- Promote to `ROADMAP.md` when the same product-level deficiency appears in at least two independent captures, or in one review artifact plus one repeated maintenance or dogfooding pass, and the issue plausibly generalizes beyond the single local incident.
+- Keep activation into `TODO.md` plus an execplan as a separate decision after roadmap promotion; repeated findings alone do not make work active automatically.
+
 Do not promote every finding. Dismiss weak, duplicate, or low-value findings instead of turning the queue into an analysis backlog.
 
 ## Maintenance

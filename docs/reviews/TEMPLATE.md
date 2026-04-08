@@ -32,7 +32,7 @@ Promote only the findings that justify future work; do not treat this file as an
 - Confidence: low | medium | high
 - Source: static-analysis | friction-confirmed | mixed
 - Promotion target: none | `ROADMAP.md` | `TODO.md` | canonical docs | memory
-- Promotion trigger:
+- Promotion trigger: state the explicit activation rule; for roadmap promotion prefer repeated independent captures, or one review artifact plus one repeated maintenance/dogfooding pass, unless explicit maintainer direction overrides
 
 Add one subsection per finding. Skip empty findings rather than padding the file.
 

@@ -29,8 +29,6 @@ Prioritized from the latest GitHub issue set:
 
 ## Next Candidate Queue
 
-- Legacy-adopter migration fixtures: add migration fixtures representing older standalone installs, partial conversions, and stale residue so the tools can detect, warn about, and upgrade legacy adopter repos without leaving them in an incomplete state. Promote before the next bootstrap release for outside adopters or when another migration failure appears. (friction-confirmed, high-confidence)
-- Review-finding promotion threshold: define when repeated review findings or repeated dogfooding friction should graduate from review or memory capture into `ROADMAP.md`, `TODO.md`, or an execplan so agents do not oscillate between over-eager direct fixes and under-reacting to repeated product deficiencies. Promote when repeated repo-local product friction is captured more than once without a clear activation rule. (mixed, medium-confidence)
 - Review-driven future-work discovery: formalize a deliberate planning lane for bounded review passes, review artifacts, explicit source/confidence labels, and promotion rules that keep analysis-derived findings lower-trust than friction-derived improvement signals until confirmed. Promote when agent-driven future-work discovery needs a canonical contract instead of ad hoc review notes.
 - Contract-integrity review mode: add a canonical review mode for broken references, missing canonical surfaces, docs-code drift, promise-vs-enforcement gaps, and planning-surface coherence so agents can detect repo claims that future contributors would reasonably trust but the checked-in surfaces do not consistently uphold. Promote when the same class of contract drift appears again or current maintainer guidance remains misleading.
 - Maintainer-surface consistency hardening: keep maintainer-facing docs, referenced canonical files, and actual check wiring aligned, including the source/payload/root-install boundary path and any generated-surface or lifecycle claims. Promote when docs reference missing canonical surfaces, command docs overclaim enforcement, or check aggregation drifts from the documented maintainer contract.
@@ -59,6 +57,7 @@ Prioritized from the latest GitHub issue set:
 ## Promotion Rules
 
 - Promote candidate items only when dependencies are clear and the scope fits a short execplan.
+- For review-derived candidates, prefer promotion only after the same product-level deficiency appears in at least two independent captures, or one review artifact plus one repeated maintenance or dogfooding pass, unless explicit maintainer direction justifies immediate activation.
 - Keep detailed execution in `docs/execplans/` once promoted.
 - Prefer collaboration-safe installed-contract work over new top-level concepts when dogfooding shows concurrent-edit ambiguity or merge pressure.
 - Prefer friction-confirmed or repeated review findings over one-off static-analysis neatness.
