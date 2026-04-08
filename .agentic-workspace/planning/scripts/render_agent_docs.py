@@ -167,7 +167,7 @@ def main() -> int:
         REPO_ROOT / "tools" / "AGENT_ROUTING.md": render_routing(manifest),
     }
     for path, text in outputs.items():
-        path.write_text(text, encoding="utf-8")
+        path.write_text(text, encoding="utf-8", newline="\n")
     return 0
 
 

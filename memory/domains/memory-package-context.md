@@ -15,11 +15,10 @@ Capture durable context imported from the previous package-local memory install 
 ## Durable context
 
 - The memory package remains memory-only and planning-system agnostic.
-- Keep bootstrap-managed files under .agentic-memory and repo-owned durable notes under memory.
-- Keep shared memory workflow guidance in .agentic-memory/WORKFLOW.md and keep AGENTS.md repo-local.
-- Keep memory/current/project-state.md as a short orientation note, not a task tracker.
-- Keep task-context optional and sparse, only for active cross-session continuation compression.
-- Prefer route, route-review, route-report, and sync-memory for memory workflow operations before broad note reading.
+- Package source of truth lives under `packages/memory/bootstrap/`; the repo root is only the operational install used for dogfooding.
+- Shared memory workflow guidance lives in `.agentic-workspace/memory/WORKFLOW.md`; repo-local `AGENTS.md` stays a pointer surface.
+- Primary proof surface for package contract changes: `packages/memory/tests/` plus payload verification.
+- Main workflow probes for package behavior: `route`, `route-review`, `route-report`, `promotion-report`, and `sync-memory`.
 
 ## Monorepo adaptation note
 
@@ -37,16 +36,16 @@ Root ownership now contains the installed memory system. For the owning rational
 
 ## Failure signals
 
-- Contributors route package-memory work to root-only notes and miss package-specific constraints.
-- Package behavior diverges from the assumptions captured in this context note.
+- Package-memory work starts from root operational symptoms and skips the package payload, installer, or tests.
+- Package behavior diverges from the package source, bootstrap payload, or contract assertions captured here.
 
 ## Verify
 
-- packages/memory/README.md
-- packages/memory/bootstrap/
-- packages/memory/src/
-- packages/memory/tests/
+- `packages/memory/README.md`
+- `packages/memory/bootstrap/`
+- `packages/memory/src/`
+- `packages/memory/tests/`
 
 ## Last confirmed
 
-2026-04-05 during monorepo installed-system consolidation
+2026-04-08 after improvement-targeting workflow verification

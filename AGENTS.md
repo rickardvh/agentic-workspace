@@ -24,6 +24,7 @@ Resolve instruction conflicts in this order:
 5. Load package-local docs only for the package being edited.
 6. Before touching a shipped package, refresh it to the latest checked-in version through that package's canonical update workflow so local work starts from the current package contract.
 7. When a change crosses package source, package payload, and root install boundaries, read `docs/source-payload-operational-install.md` before editing.
+8. When making claims about GitHub issue state, verify the live issue set with `gh` instead of relying only on checked-in intake notes.
 
 Do not start coding from chat context alone when the same information exists in checked-in files.
 Do not bulk-read all planning surfaces.
@@ -73,6 +74,7 @@ When changing product shape, ownership boundaries, lifecycle behavior, or mainta
 
 - Keep package boundaries explicit.
 - Preserve independent package versioning and CLI entry points.
+- Treat line-ending-only drift in generated `tools/` mirrors as noise unless the canonical manifest or rendered content changed.
 
 ## Validation
 
@@ -80,6 +82,7 @@ When changing product shape, ownership boundaries, lifecycle behavior, or mainta
 - Prefer package-local checks after package import.
 - Add monorepo-wide checks only when cross-package integration changes.
 - As a final repo-level test after package work, refresh the root install to the latest checked-in version of both shipped packages: `uv run agentic-planning-bootstrap upgrade --target .` and `uv run agentic-memory-bootstrap upgrade --target .`.
+- When verifying that the repo is on the latest shipped package contract, distinguish payload freshness from repo-local advisory warnings: run the package upgrade flow, `verify-payload`, package/root doctor surfaces, and report separately whether remaining warnings are package drift or expected repo-local customisation/noise.
 
 ## Dogfooding Rule
 
