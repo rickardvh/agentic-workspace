@@ -18,7 +18,7 @@ Fast path for autonomous agents working on this repo.
 - Read the active feature plan in `docs/execplans/` when the task belongs to one.
 - Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.
 - Read `docs/upstream-task-intake.md` when triaging external issues or tasks into checked-in planning.
-- Read `docs/capability-aware-execution.md` when task capability fit, delegation, or escalation is unclear.
+- Read `docs/capability-aware-execution.md` when task capability fit, delegation, or escalation is unclear, especially when the question is whether to silently reshape the work instead of prompting for a stronger executor.
 - Before editing files in a subtree, read the nearest relevant descendant `AGENTS.md` for that subtree only.
 - Read `memory/index.md` and `.agentic-workspace/memory/WORKFLOW.md` only when memory is installed and the plan or manifest does not already route the task, or when changing workflow, planning, or memory itself.
 - Do not bulk-read all planning surfaces for ordinary execution work; start from `TODO.md` and then the one relevant active plan.
@@ -28,15 +28,16 @@ Fast path for autonomous agents working on this repo.
 
 - For very local changes, skip plans unless this manifest, the active plan, or the nearest descendant `AGENTS.md` says they are needed.
 - Keep direct tasks in `TODO.md` only when one coherent pass can finish them and the row can stay compact: `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`.
-- Use `docs/capability-aware-execution.md` when deciding whether the cheap direct path is still safe or whether medium reasoning is a better fit.
+- Use `docs/capability-aware-execution.md` when deciding whether the cheap direct path is still safe or whether medium reasoning is a better fit; prefer silent task shaping over repeated executor-selection prompts.
 - Do not create a checked-in plan just because a stronger model could write one; escalate only when the artifact should save more rediscovery, restart cost, or coordination risk than it costs to produce.
 
 ## When to create a plan
 
 - Create or update a plan when work spans multiple milestones, will be handed across threads or models, or carries enough ambiguity that implementation should not start from chat context alone.
 - Promote a direct task once it picks up blocker handling, validation scope, rollback or migration detail, ownership reconciliation, enough context pressure that a smaller or less capable agent would need checked-in state, or enough narrative that the TODO row stops being self-sufficient.
-- If the task is no longer a good fit for the current execution capability, use `docs/capability-aware-execution.md` to decide whether stronger planning, delegation, or explicit escalation is the right next step.
+- If the task is no longer a good fit for the current execution capability, use `docs/capability-aware-execution.md` to decide whether stronger planning, delegation, explicit escalation, or quieter task shaping is the right next step.
 - If multi-agent or multi-model delegation is available, a more capable agent may write the compact plan first and hand implementation to a smaller one only when that is likely to save tokens without sacrificing quality.
+- Treat repeated stronger-capability outcomes as improvement-targeting signals for decomposition, validation, docs, or workflow shaping rather than normal steady-state routing.
 
 ## Source of truth
 

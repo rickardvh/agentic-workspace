@@ -23,7 +23,7 @@ Prefer checked-in knowledge over durable chat memory when both exist.
 4. Read the active feature plan in `docs/execplans/` when the task belongs to one.
 5. Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.
 6. Read `docs/upstream-task-intake.md` when triaging external issues or tasks into checked-in planning.
-7. Read `docs/capability-aware-execution.md` when task capability fit, delegation, or escalation is unclear.
+7. Read `docs/capability-aware-execution.md` when task capability fit, delegation, silent shaping, or escalation is unclear.
 8. Prefer `.agentic-workspace/planning/agent-manifest.json` and `tools/AGENT_QUICKSTART.md` before freeform exploration.
 9. Read only the repo docs relevant to the touched subsystem.
 10. Read `memory/index.md` and `\.agentic-workspace/memory/WORKFLOW.md` only when memory is installed and the task is not already well-routed by the plan or manifest, or when changing workflow, planning, or memory itself.
@@ -32,7 +32,8 @@ Do not bulk-read all planning surfaces for ordinary execution work. Start from `
 
 Direct execution is valid when one coherent pass can finish the work and the `TODO.md` item can stay compact with `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`.
 Promote that task into `docs/execplans/` once it needs milestone sequencing, blocker handling, non-obvious validation scope, rollback or migration detail, or enough ambiguity that restart would require more than the TODO row.
-Use `docs/capability-aware-execution.md` when deciding whether the cheapest safe path, stronger planning, delegation, or escalation is appropriate.
+Use `docs/capability-aware-execution.md` when deciding whether the cheapest safe path, stronger planning, silent shaping, delegation, or escalation is appropriate.
+Do not treat that contract as a standing instruction to switch models or override tools that already perform automatic capability selection well.
 
 Do not start coding from chat context alone when the same knowledge should live in checked-in files.
 

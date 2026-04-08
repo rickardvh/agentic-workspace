@@ -6,6 +6,22 @@ Use it when deciding whether a task should stay a cheap direct task, be promoted
 
 This contract is task-shape based. It does not depend on vendor-specific model names.
 
+## Operating Stance
+
+This contract is advisory and tool-agnostic.
+
+Use it to shape work, not to fight assistants that already perform automatic capability selection well.
+
+The normal goal is quiet execution:
+
+- proceed directly when the current path is already safe
+- promote, split, or tighten the task when that would reduce ambiguity
+- delegate only when a compact handoff is likely to cost less than re-derivation
+- escalate only when continuing would likely waste effort or distort a stable boundary
+
+Do not turn this contract into a noisy layer of repeated prompts to switch models, raise reasoning effort, or hunt for a stronger executor by name.
+If the surrounding tool already chooses execution capability automatically, keep this contract focused on checked-in task shape, planning, validation, and escalation discipline.
+
 ## Purpose
 
 Planning already distinguishes:
@@ -53,6 +69,7 @@ Recommended shape:
 
 - keep the task in `TODO.md`
 - use the cheapest safe execution path
+- let the environment auto-select execution capability when it already does that well
 - do not add a plan just because a stronger agent exists
 
 ### Direct Task, Medium Reasoning
@@ -68,6 +85,7 @@ Recommended shape:
 
 - keep the task direct
 - spend moderate reasoning on the implementation
+- prefer silent shaping of the task over interrupting the user with executor-selection advice
 - promote only if ambiguity, validation, or handoff burden keeps growing
 
 ### Stronger Planning First
@@ -82,6 +100,7 @@ Recommended shape:
 
 - promote into `docs/execplans/`
 - write the compact execution contract first
+- use the plan to reduce ambiguity, validation breadth, or restart cost before asking for more execution capability
 - then implement from that checked-in plan
 
 ### Autopilot-Suitable
@@ -111,6 +130,7 @@ Recommended shape:
 - let the stronger path write the compact plan, classification, or handoff
 - let the cheaper path implement if the environment supports delegation
 - keep delegation optional; the same task must still be explainable for a single agent operating alone
+- do not assume the user should have to choose the delegating or implementing executor explicitly
 
 ### Stop And Escalate
 
@@ -128,6 +148,27 @@ Recommended shape:
 - escalate to a stronger planner, clearer human direction, or a tighter checked-in contract
 - record the blocker or missing capability in the active plan when the task is already promoted
 
+## Silent Shaping And Non-Interference
+
+Prefer changing the work shape over interrupting execution with capability advice.
+
+Examples of silent shaping:
+
+- split a broad task into a bounded direct slice plus follow-up
+- promote the work into an execplan before implementation starts
+- narrow touched paths and validation scope
+- make handoff state explicit enough that a cheaper implementer can continue safely
+
+Only surface explicit escalation when the current path is no longer safe or the missing capability cannot be reduced by better task shaping.
+
+When the assistant or tool already performs automatic capability selection:
+
+- do not override it with vendor-specific instructions
+- do not duplicate its routing logic in repo policy
+- do use this contract to decide whether the work should stay direct, be planned first, be delegated, or stop
+
+Capability-aware execution should make tool-local routing easier, not noisier.
+
 ## Relation To Direct Tasks And Execplans
 
 Capability fit sharpens the existing planning boundary; it does not replace it.
@@ -139,6 +180,8 @@ Capability fit sharpens the existing planning boundary; it does not replace it.
 Do not promote work into an execplan merely because a stronger model exists.
 
 Do not keep work direct merely because a smaller model might manage it if the current task shape no longer makes that safe.
+
+When stronger capability keeps seeming necessary, prefer asking whether the task should be decomposed, bounded, or routed differently before treating stronger execution as the default answer.
 
 ## Delegation And Model Neutrality
 
@@ -154,6 +197,33 @@ It should remain useful whether the environment offers:
 The durable question is not which named model to use.
 The durable question is what task shape the current execution path can safely support.
 
+## Complexity-Reduction Feedback
+
+Repeated stronger-capability needs are not only routing outcomes.
+They are also product signals.
+
+When the same subsystem or workflow repeatedly needs stronger planning, stronger reasoning, or repeated escalation, treat that as evidence that the repo could become cheaper to execute over time.
+
+Common complexity-reduction targets include:
+
+- decomposition that keeps direct tasks smaller and more local
+- clearer validation lanes
+- tighter canonical docs
+- cleaner ownership boundaries
+- better runbooks, skills, or scripts for mechanical steps
+- improved planning templates or promotion rules
+
+Route the signal to the narrowest durable surface that fits:
+
+- active execplan when the refinement belongs to work already in progress
+- `TODO.md` only when the immediate active task can absorb the improvement directly
+- `docs/reviews/` when the right remediation still needs bounded analysis
+- `ROADMAP.md` when the improvement is plausible future work but not active now
+- memory or canonical docs only when the signal has stabilized into durable guidance rather than future-work tracking
+
+The long-term goal is not only to pick the right capability for today's task.
+It is to make more future tasks safe for cheaper execution paths.
+
 ## Practical Test
 
 Ask these questions in order:
@@ -162,6 +232,7 @@ Ask these questions in order:
 2. If yes, is the cheapest safe path enough, or does it need medium reasoning?
 3. If no, would a compact checked-in execplan reduce enough ambiguity or restart cost to justify itself?
 4. If a stronger planner is available, would planning first let a cheaper implementer succeed safely?
-5. If not, should execution stop and escalate instead of continuing?
+5. If stronger capability still seems necessary, can better decomposition, validation, or checked-in guidance make the work cheaper first?
+6. If not, should execution stop and escalate instead of continuing?
 
 That is the capability-aware execution contract for the first planning slice.

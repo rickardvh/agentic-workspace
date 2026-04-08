@@ -74,9 +74,10 @@ For execution scaling specifically:
 
 - keep work direct in `TODO.md` when one coherent pass can finish it and the row can stay at `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`
 - promote to an execplan when the work gains milestone sequencing, blocker handling, non-obvious validation scope, rollback or migration detail, enough ambiguity that restart would require more than the TODO row, or enough context pressure that a smaller or less capable agent would otherwise have to rediscover the task
-- use `docs/capability-aware-execution.md` when the missing judgment is capability fit rather than ownership: cheap direct path, medium reasoning direct path, stronger planning first, delegation-friendly, or stop-and-escalate
+- use `docs/capability-aware-execution.md` when the missing judgment is capability fit rather than ownership: cheap direct path, medium reasoning direct path, stronger planning first, silent shaping into a cheaper slice, delegation-friendly, or stop-and-escalate
 - do not create an execplan just because a stronger agent is available; use one when the checked-in artifact is likely to save tokens or reduce coordination risk overall
 - when the environment supports multiple agents or models, a stronger one may write a compact execution contract for a smaller one, but that handoff is optional and should stay cheaper than the rediscovery it prevents
+- if stronger capability keeps seeming necessary for the same class of work, treat that as an improvement-targeting signal for better decomposition, validation, or guidance rather than as a standing instruction to keep raising executor strength
 - treat direct execution as a valid success path, then record only the minimum durable residue that outlives the task
 
 ## Validation Lanes

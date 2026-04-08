@@ -287,6 +287,8 @@ def test_bootstrap_review_readme_includes_canonical_review_portfolio() -> None:
     assert "default finding cap" in text
     assert "## Improvement-targeting workflow" in text
     assert "record the intended post-remediation note shape" in text
+    assert "Repeated findings that work needed stronger execution capability than expected" in text
+    assert "make future work cheaper to execute" in text
 
 
 def test_bootstrap_review_template_includes_mode_and_cap_fields() -> None:
@@ -304,12 +306,18 @@ def test_bootstrap_capability_aware_execution_doc_defines_categories() -> None:
     text = (installer_mod.payload_root() / "docs" / "capability-aware-execution.md").read_text(encoding="utf-8")
 
     assert "# Capability-Aware Execution" in text
+    assert "## Operating Stance" in text
     assert "## Task-Shape Dimensions" in text
     assert "### Cheap Direct Execution" in text
     assert "### Stronger Planning First" in text
     assert "### Autopilot-Suitable" in text
     assert "### Delegation-Friendly" in text
     assert "### Stop And Escalate" in text
+    assert "## Silent Shaping And Non-Interference" in text
+    assert "## Complexity-Reduction Feedback" in text
+    assert "automatic capability selection" in text
+    assert "Prefer changing the work shape over interrupting execution with capability advice." in text
+    assert "make more future tasks safe for cheaper execution paths" in text
     assert "task-shape based" in text
 
 

@@ -130,6 +130,8 @@ Use this workflow when a memory note, review finding, or other feedback signal l
 
 If a symptomatic note keeps surviving without a chosen remediation target, escalate it into review, roadmap, or maintainer triage rather than letting it remain an indefinite workaround note.
 
+Repeated findings that work needed stronger execution capability than expected should usually be treated as symptom signals, not just as justification to keep using stronger executors. Prefer routing them into decomposition, validation-lane, docs, or workflow improvements that can make future work cheaper to execute.
+
 ## Maintenance
 
 - Keep review artifacts feature- or scope-scoped.

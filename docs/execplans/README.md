@@ -33,11 +33,11 @@ Keep small direct work in `TODO.md` when one coherent pass can finish it safely.
 A direct task should stay compact and normally use only `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`.
 Promote that task into `docs/execplans/` once it picks up milestone sequencing, blocker management, validation scope, rollback or migration handling, or enough ambiguity that the next contributor would need more than the TODO row to continue.
 Direct execution is a success mode, not a planning failure.
-Use `docs/capability-aware-execution.md` when deciding whether the task still fits cheap direct execution, should move to stronger planning first, is suitable for bounded autopilot, or should stop and escalate.
+Use `docs/capability-aware-execution.md` when deciding whether the task still fits cheap direct execution, should move to stronger planning first, is suitable for bounded autopilot, should be silently reshaped into a cheaper slice, or should stop and escalate.
 
 Do not create a plan just because a stronger agent could write one. Use a checked-in plan only when the artifact is expected to reduce rediscovery, restart cost, or handoff risk more than it costs to produce.
 
-Capability-aware delegation is allowed but optional. If the environment supports it, a more capable agent or model may write a compact execplan and then hand implementation to a smaller or less capable agent when that is likely to save tokens without sacrificing quality. Do not assume subagents exist; the same contract must still work for one agent executing end-to-end.
+Capability-aware delegation is allowed but optional. If the environment supports it, a more capable agent or model may write a compact execplan and then hand implementation to a smaller or less capable agent when that is likely to save tokens without sacrificing quality. Do not assume subagents exist; the same contract must still work for one agent executing end-to-end. Prefer silent shaping and better planning over repeated prompts to switch executors manually.
 
 Each active plan should stay compact and include:
 
