@@ -60,3 +60,8 @@
 ## Drift Log
 
 - 2026-04-07: Review created after dogfooding the memory audit lane through repo-local maintenance and package fixes.
+
+## Status Footer
+
+- Finding 1 (Overlap audit still over-reports adjacent durable notes): promoted to ROADMAP.md as `Memory overlap-audit signal hardening`.
+- Finding 2 (Installed-system history is still fragmented across too many durable notes): deferred pending another maintenance cycle that shows restart cost still comes from the same decision-family sprawl rather than from the overlap heuristic itself.

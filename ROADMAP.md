@@ -29,6 +29,7 @@ Prioritized from the latest GitHub issue set:
 
 ## Next Candidate Queue
 
+- Memory overlap-audit signal hardening: reduce low-signal overlap warnings around the installed-system decision family and adjacent package-context notes so memory doctor output stays trustworthy during normal maintenance. Promote when another normal maintenance cycle still ends with the overlap audit as the dominant unresolved workflow signal. (mixed, high-confidence)
 - Contract-integrity review mode: add a canonical review mode for broken references, missing canonical surfaces, docs-code drift, promise-vs-enforcement gaps, and planning-surface coherence so agents can detect repo claims that future contributors would reasonably trust but the checked-in surfaces do not consistently uphold. Promote when the same class of contract drift appears again or current maintainer guidance remains misleading.
 - Maintainer-surface consistency hardening: keep maintainer-facing docs, referenced canonical files, and actual check wiring aligned, including the source/payload/root-install boundary path and any generated-surface or lifecycle claims. Promote when docs reference missing canonical surfaces, command docs overclaim enforcement, or check aggregation drifts from the documented maintainer contract.
 - Composition contract hardening: define how modules interact, compose presets, and share lifecycle reporting without blurring ownership. Promote when future composition work needs a stable contract.
