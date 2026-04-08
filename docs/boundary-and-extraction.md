@@ -42,3 +42,5 @@ Do not extract a package when the result would mostly be a shell around one modu
 ## Root Versus Package Workspace Rule
 
 For this monorepo, root installed planning and memory surfaces are authoritative for live operation. Package roots are source, payload, skills, tests, and fixtures; do not recreate package-local operational installs as a workaround for missing product behavior.
+
+Use `docs/source-payload-operational-install.md` when a change crosses package source, package payload, and the root install boundary so the three layers stay separate.

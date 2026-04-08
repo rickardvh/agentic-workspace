@@ -318,10 +318,39 @@ def test_install_real_init_creates_combined_memory_and_planning_surfaces(tmp_pat
 
     assert cli.main(["init", "--target", str(target)]) == 0
 
+    assert (target / ".agentic-workspace" / "WORKFLOW.md").exists()
+    assert (target / ".agentic-workspace" / "OWNERSHIP.toml").exists()
     assert (target / "memory" / "index.md").exists()
     assert (target / ".agentic-workspace" / "memory" / "WORKFLOW.md").exists()
     assert (target / "TODO.md").exists()
     assert (target / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+    agents_text = (target / "AGENTS.md").read_text(encoding="utf-8")
+    assert "<!-- agentic-workspace:workflow:start -->" in agents_text
+    assert "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules." in agents_text
+    assert "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself." in agents_text
+    assert "<!-- agentic-memory:workflow:start -->" not in agents_text
+    assert "<PROJECT_NAME>" not in agents_text
+
+
+def test_status_real_init_reports_workspace_shared_layer_surfaces(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    assert any(
+        action["path"] == ".agentic-workspace/WORKFLOW.md" and action["kind"] == "current"
+        for action in workspace_report["actions"]
+    )
+    assert any(
+        action["path"] == ".agentic-workspace/OWNERSHIP.toml" and action["kind"] == "current"
+        for action in workspace_report["actions"]
+    )
 
 
 def test_status_real_init_reports_workspace_health(tmp_path: Path, capsys) -> None:
@@ -339,11 +368,54 @@ def test_status_real_init_reports_workspace_health(tmp_path: Path, capsys) -> No
     assert "health" in payload
     assert payload["registry"][0]["name"] == "planning"
     assert payload["registry"][1]["installed"] is True
+    assert not any(".agentic-workspace/WORKFLOW.md" in warning for warning in payload["warnings"])
+    assert not any(".agentic-workspace/OWNERSHIP.toml" in warning for warning in payload["warnings"])
+
+
+def test_status_flags_missing_workspace_shared_layer(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    (target / ".agentic-workspace" / "WORKFLOW.md").unlink()
+    capsys.readouterr()
+
+    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["health"] == "attention-needed"
+    assert any(".agentic-workspace/WORKFLOW.md" in warning for warning in payload["warnings"])
+
+
+def test_doctor_flags_missing_workspace_shared_layer(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    (target / ".agentic-workspace" / "OWNERSHIP.toml").unlink()
+    capsys.readouterr()
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["health"] == "attention-needed"
+    assert any(".agentic-workspace/OWNERSHIP.toml" in warning for warning in payload["warnings"])
 
 
 def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
+    (tmp_path / ".agentic-workspace").mkdir(parents=True)
+    (tmp_path / ".agentic-workspace" / "WORKFLOW.md").write_text("# Workflow\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace" / "OWNERSHIP.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / "AGENTS.md").write_text(
+        "# Agent Instructions\n\n"
+        "<!-- agentic-workspace:workflow:start -->\n"
+        "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules.\n"
+        "<!-- agentic-workspace:workflow:end -->\n\n"
+        "Local repo instructions.\n",
+        encoding="utf-8",
+    )
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["doctor", "--modules", "planning,memory", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -356,6 +428,31 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
     assert payload["needs_review"] == []
     assert payload["generated_artifacts"] == []
     assert payload["registry"][0]["name"] == "planning"
+
+
+def test_status_warns_when_redundant_memory_pointer_block_remains(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    agents_path = target / "AGENTS.md"
+    agents_path.write_text(
+        agents_path.read_text(encoding="utf-8").replace(
+            "<!-- agentic-workspace:workflow:end -->\n",
+            "<!-- agentic-workspace:workflow:end -->\n\n"
+            "<!-- agentic-memory:workflow:start -->\n"
+            "Read `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n"
+            "<!-- agentic-memory:workflow:end -->\n",
+        ),
+        encoding="utf-8",
+    )
+    capsys.readouterr()
+
+    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["health"] == "attention-needed"
+    assert any("redundant top-level memory workflow pointer block still present" in warning for warning in payload["warnings"])
 
 
 def test_doctor_real_init_preserves_package_contract_shortlists_in_reports(tmp_path: Path, capsys) -> None:
@@ -553,7 +650,11 @@ def _descriptors_with_mixed_actions(target_root: Path) -> dict[str, cli.ModuleDe
             message="upgrade planning",
             dry_run=bool(kwargs.get("dry_run", False)),
             actions=[
-                FakeAction(kind="would update", path=target_root / "tools" / "AGENT_QUICKSTART.md", detail="render quickstart from manifest"),
+                FakeAction(
+                    kind="would update",
+                    path=target_root / "tools" / "AGENT_QUICKSTART.md",
+                    detail="render quickstart from manifest",
+                ),
                 FakeAction(kind="skipped", path=target_root / "AGENTS.md", detail="repo-owned surface left unchanged"),
                 FakeAction(kind="manual review", path=target_root / "README.md", detail="inspect manually"),
             ],

@@ -4,6 +4,12 @@ Use this page as a compact maintainer-facing record of recent workflow-surface c
 
 Keep this page short and decision-shaped; it is not the full changelog, release notes, or command index.
 
+## 2026-04-07
+
+- Added an explicit source/payload/root-install boundary guide and a standalone advisory checker.
+- Wired `make maintainer-surfaces` to include the new boundary check alongside the existing liveness path.
+- Taught the root and package AGENTS docs, contributor playbook, and maintainer command index to point at the new boundary guide.
+
 ## 2026-04-06
 
 - Added `make maintainer-surfaces` as the single repo-maintainer check path for generated maintainer docs, startup-policy consistency, and packaged planning payload freshness.

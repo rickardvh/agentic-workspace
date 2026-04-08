@@ -36,6 +36,9 @@ REQUIRED_PAYLOAD_FILES = (
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
     Path("docs/execplans/archive/README.md"),
+    Path("docs/reviews/README.md"),
+    Path("docs/reviews/TEMPLATE.md"),
+    Path("docs/upstream-task-intake.md"),
     ROOT_RENDER_SCRIPT_PATH,
     ROOT_CHECKER_SCRIPT_PATH,
     ROOT_MAINTAINER_CHECKER_PATH,
@@ -56,6 +59,9 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
     Path("docs/execplans/archive/README.md"),
+    Path("docs/reviews/README.md"),
+    Path("docs/reviews/TEMPLATE.md"),
+    Path("docs/upstream-task-intake.md"),
     PLANNING_MANIFEST_PATH,
 )
 

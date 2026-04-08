@@ -19,7 +19,8 @@ Use this page when you need the canonical command to run, not the broader routin
 | `make lint` | Run lint checks across workspace and packages |
 | `make typecheck` | Run type checks across workspace and packages |
 | `make render-agent-docs` | Regenerate routing docs from the planning manifest |
-| `make maintainer-surfaces` | Run the maintainer-surface liveness path for generated docs, startup-policy consistency, and both packaged payload contracts |
+| `python scripts/check/check_source_payload_operational_install.py` | Run advisory checks for source/payload/root-install boundary drift |
+| `make maintainer-surfaces` | Run the maintainer-surface liveness path for generated docs, startup-policy consistency, packaged payload contracts, and source/payload/root-install boundary drift |
 | `make planning-surfaces` | Run the underlying planning-surface audit directly |
 
 ## Validation Lanes
@@ -34,6 +35,6 @@ Use this page when you need the canonical command to run, not the broader routin
 ## Policy
 
 - Pre-commit is for formatting and lint, and also runs `make test` for commits on `master`.
-- Full tests should still run in CI and in explicit local validation runs such as `make check-all`.
-- Prefer `make maintainer-surfaces` when a change touches generated maintainer docs, startup routing, or either package's installed contract surfaces.
+- Full tests should run in CI and in explicit local validation runs such as `make check-all`.
+- Prefer `make maintainer-surfaces` when a change touches generated maintainer docs, startup routing, either package's installed contract surfaces, or the source/payload/root-install boundary.
 - Use `docs/generated-surface-trust.md` for the canonical source and freshness rules behind generated maintainer surfaces.

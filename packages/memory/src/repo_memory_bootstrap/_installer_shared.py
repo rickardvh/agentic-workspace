@@ -9,10 +9,12 @@ from repo_memory_bootstrap._ownership import module_root
 PROJECT_MARKERS = ("pyproject.toml", "package.json", "Cargo.toml", ".hg")
 AGENT_ROOT_MARKERS = (Path("AGENTS.md"), Path("memory"))
 MANAGED_ROOT = module_root("memory")
+WORKSPACE_SHARED_ROOT = Path(".agentic-workspace")
 LEGACY_SYSTEM_ROOT = Path("memory/system")
 VERSION_PATH = MANAGED_ROOT / "VERSION.md"
 LEGACY_VERSION_PATH = LEGACY_SYSTEM_ROOT / "VERSION.md"
 WORKFLOW_PATH = MANAGED_ROOT / "WORKFLOW.md"
+WORKSPACE_WORKFLOW_PATH = WORKSPACE_SHARED_ROOT / "WORKFLOW.md"
 LEGACY_WORKFLOW_PATH = LEGACY_SYSTEM_ROOT / "WORKFLOW.md"
 AGENTS_PATH = Path("AGENTS.md")
 MANIFEST_PATH = Path("memory/manifest.toml")
@@ -173,6 +175,11 @@ WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
 WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
 WORKFLOW_POINTER_BLOCK = (
     f"{WORKFLOW_MARKER_START}\nRead `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n{WORKFLOW_MARKER_END}"
+)
+WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
+WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
+WORKSPACE_POINTER_BLOCK = (
+    f"{WORKSPACE_WORKFLOW_MARKER_START}\nRead `.agentic-workspace/WORKFLOW.md` for shared workflow rules.\n{WORKSPACE_WORKFLOW_MARKER_END}"
 )
 EMBEDDED_WORKFLOW_HEADINGS = (
     "## Task system boundary",

@@ -34,6 +34,7 @@ from repo_memory_bootstrap._installer_shared import (
     WORKFLOW_MARKER_END,
     WORKFLOW_MARKER_START,
     WORKFLOW_POINTER_BLOCK,
+    WORKSPACE_POINTER_BLOCK,
 )
 
 SECTION_HEADING_RE = re.compile(r"^\s{0,3}##\s+(.+?)\s*$")
@@ -478,6 +479,20 @@ def _patch_agents_workflow_block(existing: str) -> str:
     return f"{WORKFLOW_POINTER_BLOCK}\n\n{existing.lstrip()}"
 
 
+def _remove_memory_workflow_block(existing: str) -> str:
+    if WORKFLOW_MARKER_START not in existing or WORKFLOW_MARKER_END not in existing:
+        return existing
+    pattern = re.compile(
+        r"\n?" + re.escape(WORKFLOW_MARKER_START) + r".*?" + re.escape(WORKFLOW_MARKER_END) + r"\n?",
+        re.DOTALL,
+    )
+    updated = pattern.sub("\n", existing, count=1)
+    updated = re.sub(r"\n{3,}", "\n\n", updated).lstrip("\n")
+    if updated and not updated.endswith("\n"):
+        updated += "\n"
+    return updated
+
+
 def _has_legacy_bootstrap_agents_prose(text: str) -> bool:
     if WORKFLOW_MARKER_START in text and WORKFLOW_MARKER_END in text:
         pattern = re.compile(
@@ -494,3 +509,7 @@ def _agents_has_current_workflow_pointer(text: str) -> bool:
 
 def _agents_has_legacy_workflow_reference(text: str) -> bool:
     return LEGACY_WORKFLOW_PATH.as_posix() in text
+
+
+def _agents_has_workspace_workflow_pointer(text: str) -> bool:
+    return WORKSPACE_POINTER_BLOCK in text

@@ -38,6 +38,25 @@ MODULE_COMMAND_ARGS = {
     "status": ("target",),
 }
 PLACEHOLDER_RE = re.compile(r"<[A-Z][A-Z0-9_]+>")
+WORKSPACE_PAYLOAD_FILES = (
+    Path(".agentic-workspace/WORKFLOW.md"),
+    Path(".agentic-workspace/OWNERSHIP.toml"),
+)
+WORKSPACE_AGENTS_PATH = Path("AGENTS.md")
+WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
+WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
+WORKSPACE_POINTER_BLOCK = (
+    f"{WORKSPACE_WORKFLOW_MARKER_START}\n"
+    "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules.\n"
+    f"{WORKSPACE_WORKFLOW_MARKER_END}"
+)
+MEMORY_WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
+MEMORY_WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
+MEMORY_POINTER_BLOCK = (
+    f"{MEMORY_WORKFLOW_MARKER_START}\n"
+    "Read `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n"
+    f"{MEMORY_WORKFLOW_MARKER_END}"
+)
 
 
 @dataclass(frozen=True)
@@ -310,6 +329,398 @@ def _build_module_descriptor(
     )
 
 
+def _workspace_payload_root() -> Path:
+    return Path(__file__).resolve().parent / "_payload"
+
+
+def _workspace_payload_source(relative: Path) -> Path:
+    return _workspace_payload_root() / relative
+
+
+def _workspace_payload_bytes(relative: Path) -> bytes:
+    return _workspace_payload_source(relative).read_bytes()
+
+
+def _workspace_report(
+    *,
+    target_root: Path,
+    message: str,
+    dry_run: bool,
+    actions: list[dict[str, str]],
+    warnings: list[dict[str, str]],
+) -> dict[str, Any]:
+    return {
+        "module": "workspace",
+        "message": message,
+        "target_root": target_root.as_posix(),
+        "dry_run": dry_run,
+        "actions": actions,
+        "warnings": warnings,
+    }
+
+
+def _workspace_agents_template(*, selected_modules: list[str]) -> str:
+    startup_steps = ["Read `AGENTS.md`."]
+    sources_of_truth: list[str] = []
+    repo_rules = [
+        "Keep package boundaries explicit.",
+        "Preserve independent package versioning and CLI entry points.",
+    ]
+    validation_rules = [
+        "Run the narrowest validation that proves a change.",
+        "Prefer package-local checks after package import.",
+        "Add broader cross-package checks only when the change crosses package boundaries.",
+    ]
+
+    if "planning" in selected_modules:
+        startup_steps.extend(
+            [
+                "Read `TODO.md`.",
+                "Read the active feature plan in `docs/execplans/` when the TODO surface points there.",
+                "Read `ROADMAP.md` only when promoting work.",
+            ]
+        )
+        sources_of_truth.extend(
+            [
+                "Active queue: `TODO.md`",
+                "Long-horizon candidate work: `ROADMAP.md`",
+            ]
+        )
+    if "memory" in selected_modules:
+        startup_steps.extend(
+            [
+                "Read `memory/index.md` only when memory is installed and the task is not already well-routed.",
+                "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself.",
+            ]
+        )
+        sources_of_truth.append("Durable routed knowledge, when installed: `memory/index.md`")
+
+    startup_steps.append("Load package-local docs only for the package being edited.")
+
+    lines = [
+        "# Agent Instructions",
+        "",
+        WORKSPACE_POINTER_BLOCK,
+    ]
+    lines.extend(
+        [
+            "",
+            "Local bootstrap contract for agents working in this repository.",
+            "",
+            "## Precedence",
+            "",
+            "1. Explicit user request.",
+            "2. `AGENTS.md`.",
+            "3. Package-local `AGENTS.md` under `packages/*/` once imported.",
+            "4. Routed memory or canonical repo docs when present.",
+            "",
+            "## Startup Procedure",
+            "",
+        ]
+    )
+    lines.extend(f"{index}. {step}" for index, step in enumerate(startup_steps, start=1))
+    lines.extend(
+        [
+            "",
+            "Do not bulk-read all planning surfaces.",
+            "Do not start coding from chat context alone when the same information exists in checked-in files.",
+            "",
+            "## Sources Of Truth",
+            "",
+        ]
+    )
+    lines.extend(f"- {item}" for item in sources_of_truth)
+    lines.extend(
+        [
+            "",
+            "## Repo Rules",
+            "",
+        ]
+    )
+    lines.extend(f"- {rule}" for rule in repo_rules)
+    lines.extend(
+        [
+            "",
+            "## Validation",
+            "",
+        ]
+    )
+    lines.extend(f"- {rule}" for rule in validation_rules)
+    return "\n".join(lines) + "\n"
+
+
+def _replace_or_insert_fenced_block(*, text: str, block: str, start_marker: str, end_marker: str) -> tuple[str, bool]:
+    fenced_re = re.compile(re.escape(start_marker) + r".*?" + re.escape(end_marker), re.DOTALL)
+    existing = fenced_re.search(text)
+    if existing:
+        current = existing.group(0).strip()
+        if current == block:
+            return text, False
+        return fenced_re.sub(block, text, count=1), True
+
+    stripped = text.lstrip()
+    if stripped.startswith("# "):
+        lines = text.splitlines()
+        if len(lines) == 1:
+            return f"{lines[0]}\n\n{block}\n", True
+        return "\n".join([lines[0], "", block, *lines[1:]]) + "\n", True
+    prefix = "" if not text else text.rstrip() + "\n\n"
+    return prefix + block + "\n", True
+
+
+def _remove_fenced_block(*, text: str, start_marker: str, end_marker: str) -> tuple[str, bool]:
+    fenced_re = re.compile(r"\n?" + re.escape(start_marker) + r".*?" + re.escape(end_marker) + r"\n?", re.DOTALL)
+    updated, count = fenced_re.subn("\n", text, count=1)
+    if count == 0:
+        return text, False
+    updated = re.sub(r"\n{3,}", "\n\n", updated).lstrip("\n")
+    if updated and not updated.endswith("\n"):
+        updated += "\n"
+    return updated, True
+
+
+def _workspace_status_report(*, target_root: Path, selected_modules: list[str], command_name: str) -> dict[str, Any]:
+    actions: list[dict[str, str]] = []
+    warnings: list[dict[str, str]] = []
+
+    for relative in WORKSPACE_PAYLOAD_FILES:
+        path = target_root / relative
+        exists = path.exists()
+        actions.append(
+            {
+                "kind": "current" if exists else "missing",
+                "path": relative.as_posix(),
+                "detail": "required workspace file present" if exists else "required workspace file missing",
+            }
+        )
+        if not exists:
+            warnings.append({"path": relative.as_posix(), "message": "required workspace file missing"})
+
+    agents_path = target_root / WORKSPACE_AGENTS_PATH
+    if not agents_path.exists():
+        actions.append({"kind": "missing", "path": WORKSPACE_AGENTS_PATH.as_posix(), "detail": "root AGENTS.md entrypoint missing"})
+        warnings.append({"path": WORKSPACE_AGENTS_PATH.as_posix(), "message": "root AGENTS.md entrypoint missing"})
+        return _workspace_report(
+            target_root=target_root,
+            message=f"{command_name.title()} report",
+            dry_run=False,
+            actions=actions,
+            warnings=warnings,
+        )
+
+    agents_text = agents_path.read_text(encoding="utf-8")
+    if WORKSPACE_POINTER_BLOCK in agents_text:
+        actions.append(
+                {
+                    "kind": "current",
+                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                    "detail": "workspace workflow pointer block present",
+                }
+        )
+    else:
+        actions.append(
+                {
+                    "kind": "warning",
+                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                    "detail": "workspace workflow pointer block missing",
+                }
+        )
+        warnings.append({"path": WORKSPACE_AGENTS_PATH.as_posix(), "message": "workspace workflow pointer block missing"})
+
+    if "memory" in selected_modules and MEMORY_POINTER_BLOCK in agents_text:
+        actions.append(
+            {
+                "kind": "warning",
+                "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                "detail": (
+                    "redundant top-level memory workflow pointer block still present; "
+                    "shared workspace workflow should delegate to memory-specific guidance"
+                ),
+            }
+        )
+        warnings.append(
+            {
+                "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                "message": "redundant top-level memory workflow pointer block still present",
+            }
+        )
+
+    return _workspace_report(
+        target_root=target_root,
+        message=f"{command_name.title()} report",
+        dry_run=False,
+        actions=actions,
+        warnings=warnings,
+    )
+
+
+def _write_action_kind(*, dry_run: bool, existing: str | None) -> str:
+    if dry_run:
+        return "would create" if existing is None else "would update"
+    return "created" if existing is None else "updated"
+
+
+def _workspace_init_or_upgrade_report(
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    dry_run: bool,
+    inspection_mode: str,
+    command_name: str,
+) -> dict[str, Any]:
+    actions: list[dict[str, str]] = []
+    warnings: list[dict[str, str]] = []
+    conservative = inspection_mode != "install" and command_name == "init"
+
+    for relative in WORKSPACE_PAYLOAD_FILES:
+        destination = target_root / relative
+        source_bytes = _workspace_payload_bytes(relative)
+        existing = destination.exists()
+        if not existing:
+            if not dry_run:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(source_bytes)
+            actions.append(
+                {
+                    "kind": "would create" if dry_run else "created",
+                    "path": relative.as_posix(),
+                    "detail": "install workspace shared-layer file",
+                }
+            )
+            continue
+        if destination.read_bytes() == source_bytes:
+            actions.append({"kind": "current", "path": relative.as_posix(), "detail": "workspace shared-layer file already current"})
+            continue
+        if conservative:
+            actions.append(
+                {
+                    "kind": "manual review",
+                    "path": relative.as_posix(),
+                    "detail": "existing workspace shared-layer file differs from managed payload",
+                }
+            )
+            continue
+        if not dry_run:
+            destination.write_bytes(source_bytes)
+        actions.append(
+                {
+                    "kind": "would update" if dry_run else "updated",
+                    "path": relative.as_posix(),
+                    "detail": "refresh workspace shared-layer file from package payload",
+                }
+            )
+
+    agents_path = target_root / WORKSPACE_AGENTS_PATH
+    rendered_agents = _workspace_agents_template(selected_modules=selected_modules)
+    existing_agents = agents_path.read_text(encoding="utf-8") if agents_path.exists() else None
+    if inspection_mode == "install" or command_name == "upgrade":
+        if existing_agents != rendered_agents:
+            if not dry_run:
+                agents_path.parent.mkdir(parents=True, exist_ok=True)
+                agents_path.write_text(rendered_agents, encoding="utf-8")
+            actions.append(
+                {
+                    "kind": _write_action_kind(dry_run=dry_run, existing=existing_agents),
+                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                    "detail": "refresh composed root AGENTS.md entrypoint for selected workspace modules",
+                }
+            )
+        else:
+            actions.append(
+                {
+                    "kind": "current",
+                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                    "detail": "composed root AGENTS.md entrypoint already current",
+                }
+            )
+    else:
+        base_text = existing_agents or ""
+        updated_text, changed = _replace_or_insert_fenced_block(
+            text=base_text,
+            block=WORKSPACE_POINTER_BLOCK,
+            start_marker=WORKSPACE_WORKFLOW_MARKER_START,
+            end_marker=WORKSPACE_WORKFLOW_MARKER_END,
+        )
+        if "memory" in selected_modules:
+            updated_text, memory_changed = _remove_fenced_block(
+                text=updated_text,
+                start_marker=MEMORY_WORKFLOW_MARKER_START,
+                end_marker=MEMORY_WORKFLOW_MARKER_END,
+            )
+            changed = changed or memory_changed
+        if changed:
+            if not dry_run:
+                agents_path.parent.mkdir(parents=True, exist_ok=True)
+                agents_path.write_text(updated_text, encoding="utf-8")
+            actions.append(
+                {
+                    "kind": _write_action_kind(dry_run=dry_run, existing=existing_agents),
+                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                    "detail": "patched the shared workspace workflow pointer into AGENTS.md without replacing repo-owned content",
+                }
+            )
+        elif existing_agents is not None:
+            actions.append(
+                {
+                    "kind": "current",
+                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                    "detail": "workflow pointer blocks already present in AGENTS.md",
+                }
+            )
+
+    return _workspace_report(
+        target_root=target_root,
+        message=f"{command_name.title()} report",
+        dry_run=dry_run,
+        actions=actions,
+        warnings=warnings,
+    )
+
+
+def _workspace_uninstall_report(*, target_root: Path, dry_run: bool) -> dict[str, Any]:
+    actions: list[dict[str, str]] = []
+    warnings: list[dict[str, str]] = []
+    removable: list[Path] = []
+
+    for relative in WORKSPACE_PAYLOAD_FILES:
+        destination = target_root / relative
+        if not destination.exists():
+            actions.append({"kind": "skipped", "path": destination.as_posix(), "detail": "already absent"})
+            continue
+        if destination.read_bytes() == _workspace_payload_bytes(relative):
+            removable.append(relative)
+            actions.append(
+                {
+                    "kind": "would remove" if dry_run else "removed",
+                    "path": relative.as_posix(),
+                    "detail": "matches managed workspace payload content",
+                }
+            )
+            continue
+        actions.append(
+            {
+                "kind": "manual review",
+                "path": relative.as_posix(),
+                "detail": "local workspace shared-layer file differs from managed payload; remove manually if intended",
+            }
+        )
+
+    if not dry_run:
+        for relative in removable:
+            destination = target_root / relative
+            if destination.exists():
+                destination.unlink()
+        _prune_empty_parent_dirs(target_root=target_root, relatives=removable)
+
+    return _workspace_report(
+        target_root=target_root,
+        message="Uninstall report",
+        dry_run=dry_run,
+        actions=actions,
+        warnings=warnings,
+    )
+
+
 def _selected_modules(
     *,
     command_name: str,
@@ -381,7 +792,12 @@ def _run_init(
     print_prompt: bool,
     write_prompt: str | None,
 ) -> dict[str, Any]:
-    inspection = _inspect_repo_state(target_root=target_root, selected_modules=selected_modules, descriptors=descriptors, force_adopt=force_adopt)
+    inspection = _inspect_repo_state(
+        target_root=target_root,
+        selected_modules=selected_modules,
+        descriptors=descriptors,
+        force_adopt=force_adopt,
+    )
     module_command = "install" if inspection.mode == "install" else "adopt"
     reports = [
         _invoke_module_command(
@@ -394,6 +810,15 @@ def _run_init(
         )
         for module_name in selected_modules
     ]
+    reports.append(
+        _workspace_init_or_upgrade_report(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            dry_run=dry_run,
+            inspection_mode=inspection.mode,
+            command_name="init",
+        )
+    )
     summary = _build_init_summary(
         target_root=target_root,
         selected_modules=selected_modules,
@@ -502,9 +927,8 @@ def _build_init_summary(
     generated_artifacts: list[str] = []
 
     for report in reports:
-        module_generated_artifacts = {
-            path.as_posix() for path in descriptors[report["module"]].generated_artifacts
-        }
+        descriptor = descriptors.get(str(report.get("module", "")))
+        module_generated_artifacts = {path.as_posix() for path in descriptor.generated_artifacts} if descriptor else set()
         for action in report["actions"]:
             relative_path = _display_path(action.get("path", "."), target_root)
             detail = str(action.get("detail", ""))
@@ -588,6 +1012,20 @@ def _run_lifecycle_command(
         )
         for module_name in selected_modules
     ]
+    if command_name in {"status", "doctor"}:
+        reports.append(_workspace_status_report(target_root=target_root, selected_modules=selected_modules, command_name=command_name))
+    elif command_name == "upgrade":
+        reports.append(
+            _workspace_init_or_upgrade_report(
+                target_root=target_root,
+                selected_modules=selected_modules,
+                dry_run=dry_run,
+                inspection_mode="upgrade",
+                command_name=command_name,
+            )
+        )
+    elif command_name == "uninstall":
+        reports.append(_workspace_uninstall_report(target_root=target_root, dry_run=dry_run))
     summary = _summarise_reports(target_root=target_root, reports=reports, descriptors=descriptors)
     warnings: list[str] = []
     placeholders: list[str] = []
@@ -641,9 +1079,8 @@ def _summarise_reports(
     stale_generated_surfaces: list[str] = []
 
     for report in reports:
-        module_generated_artifacts = {
-            path.as_posix() for path in descriptors[report["module"]].generated_artifacts
-        }
+        descriptor = descriptors.get(str(report.get("module", "")))
+        module_generated_artifacts = {path.as_posix() for path in descriptor.generated_artifacts} if descriptor else set()
         for action in report["actions"]:
             relative_path = _display_path(action.get("path", "."), target_root)
             detail = str(action.get("detail", ""))
@@ -725,7 +1162,14 @@ def _validation_commands(*, target_root: Path) -> list[str]:
     ]
 
 
-def _init_next_steps(*, target_root: Path, mode: str, prompt_requirement: str, needs_review: list[str], placeholders: list[str]) -> list[str]:
+def _init_next_steps(
+    *,
+    target_root: Path,
+    mode: str,
+    prompt_requirement: str,
+    needs_review: list[str],
+    placeholders: list[str],
+) -> list[str]:
     target = target_root.as_posix()
     steps = [f"Run agentic-workspace doctor --target {target} after bootstrap changes settle."]
     if prompt_requirement == "none":
@@ -931,6 +1375,21 @@ def _display_path(path_value: str, target_root: Path) -> str:
         return path.relative_to(target_root).as_posix()
     except ValueError:
         return path.as_posix()
+
+
+def _prune_empty_parent_dirs(*, target_root: Path, relatives: list[Path]) -> None:
+    candidates = sorted(
+        {parent for relative in relatives for parent in relative.parents if parent != Path(".")},
+        key=lambda path: len(path.parts),
+        reverse=True,
+    )
+    for relative_dir in candidates:
+        directory = target_root / relative_dir
+        if directory.exists() and directory.is_dir():
+            try:
+                directory.rmdir()
+            except OSError:
+                continue
 
 
 def _module_workflow_surfaces(

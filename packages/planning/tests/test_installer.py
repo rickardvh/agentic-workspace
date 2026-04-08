@@ -81,16 +81,24 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     result = install_bootstrap(target=tmp_path)
     skill_readme_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "README.md"
     skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
+    intake_skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-intake-upstream-task" / "SKILL.md"
+    review_readme_path = tmp_path / "docs" / "reviews" / "README.md"
+    review_template_path = tmp_path / "docs" / "reviews" / "TEMPLATE.md"
+    intake_doc_path = tmp_path / "docs" / "upstream-task-intake.md"
 
     assert (tmp_path / "AGENTS.md").exists()
     assert (tmp_path / "TODO.md").exists()
     assert (tmp_path / "ROADMAP.md").exists()
+    assert review_readme_path.exists()
+    assert review_template_path.exists()
+    assert intake_doc_path.exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "render_agent_docs.py").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_planning_surfaces.py").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_maintainer_surfaces.py").exists()
     assert skill_readme_path.exists()
     assert skill_path.exists()
+    assert intake_skill_path.exists()
     assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
     assert (tmp_path / "tools" / "AGENT_ROUTING.md").exists()
     assert (tmp_path / "scripts" / "check" / "check_maintainer_surfaces.py").exists()
@@ -105,6 +113,8 @@ def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path("AGENTS.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("TODO.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/execplans/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path("docs/reviews/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path("docs/upstream-task-intake.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("tools/AGENT_QUICKSTART.md") in PLANNING_LOWER_STABILITY_HELPER_FILES
     assert Path("scripts/render_agent_docs.py") in PLANNING_LOWER_STABILITY_HELPER_FILES
     assert set(PLANNING_COMPATIBILITY_CONTRACT_FILES).isdisjoint(PLANNING_LOWER_STABILITY_HELPER_FILES)
@@ -269,6 +279,7 @@ def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
         and "compatibility contract files:" in action.detail
         and "AGENTS.md" in action.detail
         and "docs/execplans/TEMPLATE.md" in action.detail
+        and "docs/upstream-task-intake.md" in action.detail
         for action in result.actions
     )
     assert any(

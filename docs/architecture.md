@@ -30,6 +30,7 @@ In this monorepo:
 - Root planning and memory installs are authoritative for live monorepo operation.
 - `packages/memory/` and `packages/planning/` are package workspaces for source, payloads, tests, and fixtures.
 - Package directories should not grow new package-local operational installs.
+- `docs/source-payload-operational-install.md` names the maintainer boundary between package source, payload, and the root install, and `make maintainer-surfaces` now checks that boundary directly.
 
 ## Why The Workspace Layer Stays Thin
 

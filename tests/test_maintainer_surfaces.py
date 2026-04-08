@@ -246,7 +246,7 @@ def test_maintainer_surface_role_guidance_passes_when_docs_are_scoped(tmp_path: 
 
     warnings = mod.gather_maintainer_warnings(repo_root=tmp_path)
 
-    assert not any(warning.warning_class == "docs_surface_role_drift" for warning in warnings)
+    assert not any(warning.warning_class == "startup_policy_drift" for warning in warnings)
 
 
 def test_maintainer_surface_role_guidance_warns_when_readme_docs_map_drifts(tmp_path: Path) -> None:
@@ -258,6 +258,6 @@ def test_maintainer_surface_role_guidance_warns_when_readme_docs_map_drifts(tmp_
     warnings = mod.gather_maintainer_warnings(repo_root=tmp_path)
 
     assert any(
-        warning.warning_class == "docs_surface_role_drift" and str(warning.path).endswith("README.md")
+        warning.warning_class == "startup_policy_drift" and str(warning.path).endswith("README.md")
         for warning in warnings
     )

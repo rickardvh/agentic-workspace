@@ -11,12 +11,12 @@ members = [
 
 [[package]]
 name = "agentic-memory-bootstrap"
-version = "0.3.9"
+version = "0.3.10"
 source = { editable = "packages/memory" }
 
 [[package]]
 name = "agentic-planning-bootstrap"
-version = "0.1.0"
+version = "0.1.2"
 source = { editable = "packages/planning" }
 
 [[package]]

@@ -38,6 +38,7 @@ from repo_memory_bootstrap._installer_memory import (
     _routing_baseline_paths,
 )
 from repo_memory_bootstrap._installer_output import (
+    _agents_has_workspace_workflow_pointer,
     _current_task_staleness_reason,
     _current_task_structure_findings,
     _existing_version_path,
@@ -103,6 +104,7 @@ from repo_memory_bootstrap._installer_shared import (
     UPGRADE_SOURCE_PATH,
     VERSION_PATH,
     WORKFLOW_POINTER_BLOCK,
+    WORKSPACE_WORKFLOW_PATH,
     Action,
     CurrentNoteView,
     CurrentViewResult,
@@ -1811,7 +1813,13 @@ def migrate_layout(
     agents_path = target_root / AGENTS_PATH
     if agents_path.exists():
         existing = agents_path.read_text(encoding="utf-8")
-        patched = _patch_agents_workflow_block(existing)
+        workspace_shared_layer_present = (target_root / WORKSPACE_WORKFLOW_PATH).exists()
+        if workspace_shared_layer_present and _agents_has_workspace_workflow_pointer(existing):
+            from repo_memory_bootstrap._installer_output import _remove_memory_workflow_block
+
+            patched = _remove_memory_workflow_block(existing)
+        else:
+            patched = _patch_agents_workflow_block(existing)
         if patched != existing:
             if dry_run:
                 result.add(

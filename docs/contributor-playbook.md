@@ -45,6 +45,7 @@ If you are maintaining the repo through git commits locally, install hooks with 
 - Use root planning surfaces for active work, roadmap candidates, and execplans.
 - Use root memory notes for durable repo knowledge, decisions, and recurring failure modes.
 - Treat `memory/current/` as weak-authority current context: concise re-orientation only, not the durable home for facts.
+- Use `docs/source-payload-operational-install.md` when one change spans package source, packaged payload, and the root installed surfaces.
 - Leave touched surfaces cleaner than you found them, and route broader cleanup as follow-up instead of treating it as invisible task residue.
 - Use `docs/compatibility-policy.md` for surface-stability questions before deciding whether a doc, manifest, or managed mirror is safe to change directly.
 - Use `docs/init-lifecycle.md` before changing or explaining root `init` behavior so the mode semantics stay canonical.
@@ -72,7 +73,9 @@ Design guardrails:
 For execution scaling specifically:
 
 - keep work direct in `TODO.md` when one coherent pass can finish it and the row can stay at `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`
-- promote to an execplan when the work gains milestone sequencing, blocker handling, non-obvious validation scope, rollback or migration detail, or enough ambiguity that restart would require more than the TODO row
+- promote to an execplan when the work gains milestone sequencing, blocker handling, non-obvious validation scope, rollback or migration detail, enough ambiguity that restart would require more than the TODO row, or enough context pressure that a smaller or less capable agent would otherwise have to rediscover the task
+- do not create an execplan just because a stronger agent is available; use one when the checked-in artifact is likely to save tokens or reduce coordination risk overall
+- when the environment supports multiple agents or models, a stronger one may write a compact execution contract for a smaller one, but that handoff is optional and should stay cheaper than the rediscovery it prevents
 - treat direct execution as a valid success path, then record only the minimum durable residue that outlives the task
 
 ## Validation Lanes
@@ -87,6 +90,10 @@ Run the narrowest lane that proves the change.
 - Memory note/current-state changes: `uv run python scripts/check/check_memory_freshness.py`
 
 Escalate to `make check-memory`, `make check-planning`, or `make check-all` only when the change crosses package or root orchestration boundaries.
+
+Final repo sync after package work:
+
+- After memory or planning package changes, refresh the root repo install to the latest checked-in version of both packages as a final compatibility test: `uv run agentic-planning-bootstrap upgrade --target .` and `uv run agentic-memory-bootstrap upgrade --target .`
 
 ## Common Routes
 

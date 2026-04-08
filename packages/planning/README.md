@@ -11,6 +11,7 @@ Use it for:
 - keeping a small active queue in `TODO.md`
 - storing inactive future candidates in `ROADMAP.md`
 - attaching bounded execution contracts to active work in `docs/execplans/`
+- capturing analysis-derived future-work findings in `docs/reviews/` before promotion
 - helping agents restart from checked-in execution state instead of chat-only context
 
 Do not use it for:
@@ -39,6 +40,7 @@ Collaboration shape:
 Bundled skills:
 
 - The package also ships `planning-autopilot` under `skills/` and installs it into `.agentic-workspace/planning/skills/` for bounded milestone execution from the checked-in planning surfaces.
+- It also ships `planning-intake-upstream-task` for tracker-agnostic upstream issue or task intake into checked-in planning.
 
 ## Quick Start
 
@@ -110,6 +112,9 @@ Treat these files as the current planning compatibility contract surfaces that s
 - `docs/execplans/README.md`
 - `docs/execplans/TEMPLATE.md`
 - `docs/execplans/archive/README.md`
+- `docs/reviews/README.md`
+- `docs/reviews/TEMPLATE.md`
+- `docs/upstream-task-intake.md`
 - `.agentic-workspace/planning/agent-manifest.json`
 
 Treat helper scripts and generated mirrors as lower-stability support surfaces unless a stricter promise is stated later. That lower-stability set currently includes the render and check scripts under `scripts/` and `.agentic-workspace/planning/scripts/`, plus generated mirrors such as `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, and `tools/AGENT_ROUTING.md`.
@@ -129,6 +134,8 @@ Treat the direct-task shape as compact by default:
 - `Next action`
 - `Done when`
 
+Do not promote work into an execplan just because a more capable model or agent is available. Advanced agents already have session-local planning; checked-in planning should appear only when it reduces rediscovery, restart cost, or coordination risk more than it costs to write.
+
 Promote the task into `docs/execplans/` when any of the following becomes true:
 
 - the work now spans more than one milestone or session-sized checkpoint
@@ -136,8 +143,11 @@ Promote the task into `docs/execplans/` when any of the following becomes true:
 - validation scope has to be spelled out instead of staying obvious from the change
 - rollback, migration, or ownership-reconciliation detail appears
 - the TODO row starts carrying extra execution fields or long narrative text
+- the implementing agent lacks enough context window, tools, or local planning support to hold the task safely in one pass
 
 Direct execution is an explicit success mode for small local work. The goal is not to force every change through planning; the goal is to promote only when the cheap path stops being safe.
+
+When delegation is useful, keep it capability-aware and optional. If available, a stronger model may draft a compact execplan or handoff for a smaller implementation model, but only when that is likely to save tokens overall without lowering quality. Do not assume subagents or multi-model workflows exist; the contract should still work for a single agent operating alone.
 
 When a direct task completes, remove it from `TODO.md` promptly. If the task changed durable repo knowledge or left important follow-up work, record that residue in memory, canonical docs, `ROADMAP.md`, or a newly promoted execplan rather than leaving chat-only context behind.
 
@@ -152,6 +162,7 @@ Promote into an execplan when any of these cases appears:
 - partial failure or retry handling needs to be spelled out
 - concurrent branch work creates merge, ownership, or sequencing risk
 - stale residue would otherwise be left in `TODO.md` because the task can no longer close in one pass
+- a compact checked-in plan would let a smaller or less capable agent implement safely without re-deriving the whole task
 
 The practical test is simple: if safe continuation depends on more than `Why now`, `Next action`, and `Done when`, the work is no longer a direct task.
 
@@ -300,6 +311,7 @@ Planning owns:
 - roadmap state
 - active queue state
 - execplan structure
+- bounded review-artifact structure for future-work discovery
 - milestone sequencing
 - blockers and completion criteria for live work
 - planning-surface lifecycle helpers
@@ -311,6 +323,37 @@ Planning does not own:
 - routing of durable note bundles
 - broad knowledge-base content
 - canonical architecture documentation
+
+## Review-Driven Future Work Discovery
+
+Planning includes a bounded review lane for deliberate future-work discovery:
+
+- `docs/reviews/` captures review artifacts
+- `ROADMAP.md` receives promoted future candidates
+- `TODO.md` plus `docs/execplans/` receive only the findings that are explicitly activated
+
+The review lane exists so analysis-derived findings do not masquerade as friction-confirmed work.
+Its rules are:
+
+- capture and promotion are separate steps
+- each finding carries evidence, confidence, source class, and promotion guidance
+- friction-confirmed findings remain higher trust than pure analysis findings
+- weak or speculative findings should be dismissed instead of promoted
+
+Use review artifacts when a task is a bounded review pass rather than implementation.
+Do not use them as a substitute for durable docs, memory notes, or active execplans.
+
+## Upstream Task Intake
+
+Planning also includes a tracker-agnostic intake contract for work that starts in an external tracker but should execute from checked-in planning.
+
+- `docs/upstream-task-intake.md` owns the intake rules
+- `ROADMAP.md` owns inactive accepted upstream candidates
+- `TODO.md` owns only the active queue
+- `docs/execplans/` own detailed intake metadata for active promoted work
+
+The contract is intentionally neutral across GitHub Issues, Linear, Jira, Notion, and other upstream systems.
+The external tracker may supply the signal, but once the work is promoted, checked-in planning remains the execution authority.
 
 ## What This Is Not
 
@@ -343,6 +386,7 @@ The package installs the checked-in planning contract and its supporting surface
 - `docs/execplans/README.md`
 - `docs/execplans/TEMPLATE.md`
 - `docs/execplans/archive/README.md`
+- `docs/upstream-task-intake.md`
 - `.agentic-workspace/planning/UPGRADE-SOURCE.toml`
 - `.agentic-workspace/planning/agent-manifest.json`
 - `.agentic-workspace/planning/scripts/render_agent_docs.py`
@@ -360,6 +404,8 @@ It packages:
 - the planning contract
 - the module-managed planning manifest and helper scripts
 - generated mirrors and thin root wrappers for repo ergonomics
+- review-artifact contract surfaces under `docs/reviews/`
+- upstream-task intake contract surfaces under `docs/upstream-task-intake.md`
 - file-native helper commands for promotion, archiving, and summary
 - starter surfaces
 - startup docs and manifest wiring

@@ -5,11 +5,13 @@ from pathlib import Path
 
 from repo_memory_bootstrap._installer_output import (
     _agents_has_current_workflow_pointer,
+    _agents_has_workspace_workflow_pointer,
     _embeds_shared_workflow_rules,
     _has_legacy_bootstrap_agents_prose,
     _has_placeholders,
     _is_valid_upgrade_source_text,
     _patch_agents_workflow_block,
+    _remove_memory_workflow_block,
 )
 from repo_memory_bootstrap._installer_shared import (
     AGENTS_PATH,
@@ -24,6 +26,7 @@ from repo_memory_bootstrap._installer_shared import (
     OPTIONAL_APPEND_TARGETS,
     SHIPPED_SKILLS_ROOT,
     UPGRADE_SOURCE_PATH,
+    WORKSPACE_WORKFLOW_PATH,
     PayloadEntry,
 )
 
@@ -366,12 +369,13 @@ def _plan_existing_file_for_upgrade(
             )
         else:
             result.add(
-                "manual review",
+                "customised",
                 destination,
-                ("starter note looks customised; keep as-is if the localised content is intentional, or replace it only after review"),
+                ("starter note differs from payload; preserving repo-local customisation during upgrade"),
                 role=entry.role,
-                safety="manual",
+                safety="safe",
                 source=str(entry.relative_path),
+                category="customisation-present",
             )
         return
 
@@ -396,6 +400,49 @@ def _plan_agents_entrypoint(
     target_layout: str,
 ) -> None:
     embeds_shared_rules = _embeds_shared_workflow_rules(existing)
+    workspace_shared_layer_present = (destination.parent / WORKSPACE_WORKFLOW_PATH).exists()
+    workspace_pointer_present = _agents_has_workspace_workflow_pointer(existing)
+    delegated_through_workspace = workspace_shared_layer_present and workspace_pointer_present
+
+    if delegated_through_workspace:
+        patched = _remove_memory_workflow_block(existing)
+        if patched == existing:
+            result.add(
+                "current",
+                destination,
+                "workspace workflow pointer already routes startup through the shared workspace contract",
+                role="local-entrypoint",
+                safety="safe",
+                source=str(AGENTS_PATH),
+            )
+            return
+        if apply_local_entrypoint and not doctor_mode:
+            _write_text(
+                destination,
+                patched,
+                result,
+                "patched",
+                "would patch",
+                role="local-entrypoint",
+                source=str(AGENTS_PATH),
+                detail=(
+                    "removed the redundant top-level memory workflow pointer block "
+                    "because the shared workspace pointer is already present"
+                ),
+            )
+            return
+        result.add(
+            "manual review",
+            destination,
+            (
+                "redundant top-level memory workflow pointer block is still present; "
+                "use --apply-local-entrypoint to slim AGENTS.md to the shared workspace pointer"
+            ),
+            role="local-entrypoint",
+            safety="manual",
+            source=str(AGENTS_PATH),
+        )
+        return
 
     if _agents_has_current_workflow_pointer(existing) and "<!-- agentic-memory:workflow:start -->" in existing and not embeds_shared_rules:
         result.add(

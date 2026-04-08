@@ -23,6 +23,7 @@ Focused routing reference derived from `.agentic-workspace/planning/agent-manife
   - `AGENTS.md`
   - `TODO.md`
   - `ROADMAP.md`
+  - `docs/upstream-task-intake.md`
   - `docs/execplans/`
   - `scripts/check/check_maintainer_surfaces.py`
   - `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`

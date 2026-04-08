@@ -18,7 +18,7 @@ Capture durable context for the planning bootstrap package and how it fits into 
 
 ## Monorepo adaptation note
 
-Root ownership contains the installed planning and memory systems. Package-local payloads and tests should stay package-scoped and should not become operational authorities.
+Root ownership contains the installed planning and memory systems. For the owning rationale, load `memory/decisions/installed-system-consolidation-2026-04-05.md` instead of expanding this context note.
 
 ## Load when
 

@@ -11,6 +11,7 @@ Package-local contract for work under `packages/memory/`.
 - This package contains the reusable `agentic-memory-bootstrap` source, shipped payload, package-local skills, and tests.
 - Treat `bootstrap/` as packaged payload content for target repositories, not as the active memory system of this monorepo.
 - Treat the root `memory/` tree and root planning surfaces as the operational authority for this repository.
+- When a task crosses package source, shipped payload, and root install boundaries, use `docs/source-payload-operational-install.md` to keep the layers separate.
 
 ## Start Here
 
