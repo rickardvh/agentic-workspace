@@ -24,6 +24,40 @@ The shortest operating model is:
 3. Managed module surfaces support those contracts.
 4. Generated docs mirror managed sources and should be rerendered, not edited.
 
+## Combined-Install Synergy Contract
+
+Repositories that install both modules should get lower restart and token cost than either module alone while keeping ownership boundaries explicit.
+
+### Planning borrows from memory
+
+- Planning surfaces should link to memory notes (or canonical docs) when work depends on durable invariants, traps, runbooks, subsystem context, or authority boundaries.
+- Execplans should avoid re-explaining durable repo context that already has a trustworthy memory or canonical-doc home.
+- Repeated explanatory prose in execplans is a missing-synergy signal: either memory routing is weak or a canonical doc is missing.
+
+### Memory learns from planning residue
+
+- Completed planning threads should promote durable residue (invariants, traps, runbooks, authority boundaries, or durable decisions) into memory or canonical docs.
+- Promotion should stay selective: memory should capture expensive-to-rediscover residue, not become a dump of completed-plan narration.
+- If a promoted fact stabilises as broad repo policy or maintainer guidance, canonical docs should become the primary home and memory should keep only compact routing residue.
+
+### Combined startup and resume model
+
+For combined installs, startup and resume should stay lightweight:
+
+1. Read planning surfaces for active-now state (`TODO.md`, `ROADMAP.md`, active execplan).
+2. Route only the smallest relevant durable memory set for the current task shape.
+3. Start execution without rebuilding durable repo context in chat or plan prose.
+4. On close, promote only durable residue and leave transient execution detail in planning history or git.
+
+### Missing-synergy signals
+
+Treat these as product-quality signals for the interaction contract:
+
+- execplans repeatedly restating the same repo orientation context
+- restart passes still needing broad rereads despite combined installs
+- completed threads leaving durable lessons stranded in planning/chat only
+- memory notes that require too much task-local narration to be reusable
+
 ## Canonical-Source Precedence
 
 When multiple surfaces mention the same concern, prefer the narrowest canonical owner in this order:
@@ -172,5 +206,7 @@ Revisit this contract when you see repeated signs such as:
 
 - memory notes mirroring active TODO or roadmap state
 - execplans accumulating durable subsystem documentation
+- repeated plan prose that should have been a memory or canonical-doc reference
+- completed planning residue repeatedly failing to promote into durable memory or canonical docs
 - workspace commands needing package-internal flags or policy exceptions to stay usable
 - routing or checks becoming more authoritative than the docs and manifests they are supposed to reflect
