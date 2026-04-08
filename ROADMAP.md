@@ -1,6 +1,6 @@
 # Roadmap
 
-Last reviewed: 2026-04-07
+Last reviewed: 2026-04-08
 
 ## Purpose
 
@@ -18,8 +18,18 @@ Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraint
 - Stable policy, lifecycle, and ownership guidance live in canonical docs and active execplans.
 - Promote work only when it is short enough for a focused execplan and narrow validation lane.
 
+## GitHub Issue Intake
+
+Prioritized from the latest GitHub issue set:
+
+- P1: Issue #2, tracker-agnostic upstream task ingestion into checked-in planning. This is the clearest product-gap item because it defines how external tasks become repo-native execution without making GitHub Issues the authority.
+- P2: Issue #5, tighten `memory/current/` so it cannot be mistaken for active planning authority. This is a contract-risk item that affects restart safety and should stay close behind the intake contract work.
+- P3: Issue #6, define a canonical review portfolio for finding high-value follow-up work. This overlaps the existing review-driven roadmap items and should be folded into that tranche instead of drifting as an open-ended review idea.
+- P4: Issue #3 and Issue #4, clarify `recurring-failures` as anti-trap memory rather than bug tracking. These are duplicates in substance and should be consolidated into one memory contract follow-up.
+
 ## Next Candidate Queue
 
+- Tracker-agnostic upstream intake contract: define how GitHub Issues and other external trackers are normalized, triaged, linked, and promoted into `TODO.md` or execplans without making the upstream system the execution authority. Promote when the next external intake flow needs a durable contract instead of ad hoc guidance. (issue-derived, high-confidence)
 - Bootstrap-tooling packaging tests: add artifact-level tests for all three shipped packages (`agentic-workspace`, `agentic-planning-bootstrap`, `agentic-memory-bootstrap`) that build wheels and sdists and verify required payload files, bundled skills, and helper scripts are present and readable from the installed artifacts. Promote to prevent release failures where packages pass source tests but ship incomplete distributions. (friction-confirmed, high-confidence)
 - Cross-tool lifecycle-matrix hardening: define one shared lifecycle matrix (clean install, dry-run non-mutation, conservative adopt, upgrade, uninstall, idempotence) that every bootstrap tool should satisfy, then add tests for the failure-prone paths (adopt, upgrade, uninstall) where regressions tend to land hardest. Promote when lifecycle work resumes. (mixed, high-confidence)
 - Legacy-adopter migration fixtures: add migration fixtures representing older standalone installs, partial conversions, and stale residue so the tools can detect, warn about, and upgrade legacy adopter repos without leaving them in an incomplete state. Promote before the next bootstrap release for outside adopters or when another migration failure appears. (friction-confirmed, high-confidence)

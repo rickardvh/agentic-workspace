@@ -13,7 +13,7 @@ Define and test the install/adopt/upgrade/uninstall/idempotence contract for all
 
 ## Active Milestone
 
-- Status: Not Started
+- Status: completed
 - Scope:
   - Define lifecycle scenarios for each package (install, adopt, upgrade, uninstall, idempotence checks)
   - Implement test suite for each package validating state transitions
@@ -27,7 +27,7 @@ Define and test the install/adopt/upgrade/uninstall/idempotence contract for all
 
 ## Immediate Next Action
 
-Read the bootstrap package CLI interfaces (`packages/planning/src/repo_planning_bootstrap/cli.py` and memory equivalent) to understand install/adopt/upgrade/uninstall commands. Map to test scenarios and determine what state needs to be validated during transitions.
+Archived after the narrow lifecycle validation passed.
 
 ## Blockers
 
@@ -66,15 +66,16 @@ pytest tests/test_*lifecycle*.py packages/*/tests/test_*lifecycle*.py -v
 
 ## Completion Criteria
 
-- [ ] Lifecycle test suite created for root workspace, planning, and memory packages
-- [ ] All install/adopt/upgrade/uninstall scenarios covered
-- [ ] All lifecycle tests passing on clean repository state
-- [ ] Idempotence validated: running twice produces same state
-- [ ] Cross-package sequencing tested (planning+memory install order independence)
-- [ ] Upgrade scenario tests state preservation (memory, planning, config)
-- [ ] Uninstall scenario tests clean removal (no orphaned files)
-- [ ] All tests committed as milestone
+- [x] Lifecycle test suite created for root workspace, planning, and memory packages
+- [x] All install/adopt/upgrade/uninstall scenarios covered
+- [x] All lifecycle tests passing on clean repository state
+- [x] Idempotence validated: running twice produces same state
+- [x] Cross-package sequencing tested (planning+memory install order independence)
+- [x] Upgrade scenario tests state preservation (memory, planning, config)
+- [x] Uninstall scenario tests clean removal (no orphaned files)
+- [x] All tests committed as milestone
 
 ## Drift Log
 
 - 2026-04-07: Initial plan created; activating from ROADMAP promotion.
+- 2026-04-08: Completed after root workspace, planning, and memory lifecycle tests passed in the narrow validation lane.
