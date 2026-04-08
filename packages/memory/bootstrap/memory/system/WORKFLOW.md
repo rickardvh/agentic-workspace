@@ -27,6 +27,8 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Memory may keep a small continuation note for interrupted multi-session work, but that note is only re-orientation support for the next session.
 - Memory complements planning by reducing re-orientation cost and preserving durable lessons; it must never compete with the planning system for ownership of active work.
 - Memory is also a pressure layer: if a note exists because the repo is awkward to understand, operate, or change safely, use the note to suggest the code, docs, tooling, test, or refactor change that would let the note shrink, move, or disappear.
+- When planning is installed too, memory should help plans stay smaller by holding durable context that execplans can reference instead of repeating.
+- Repeated plan re-explanation or restart friction is a missing-synergy signal: either memory routing is too weak, the durable fact belongs in canonical docs, or the work needs better decomposition.
 
 ## Core rules
 
@@ -46,6 +48,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Update a note when its primary home is still correct and the guidance is still valuable.
 - Prune a note when it is obsolete, duplicated, low-value, or easier to recover directly from code or tooling.
 - Move closed work into a durable note only when the detail remains hard to recover from code, docs, or tooling.
+- When closed work came through planning, promote only the durable residue that future work should not have to rediscover; do not absorb plan history or milestone narration into memory.
 - Move procedure-heavy prose into a skill when the durable fact should stay in files but the repeated workflow should become optional execution guidance.
 - Prefer one primary home for the durable fact and a short cross-reference elsewhere rather than parallel note copies.
 - Ask what repo change would eliminate or shrink the note: canonical docs, stronger tests, validation, a script, a skill, or a clearer design boundary.
@@ -118,6 +121,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 ## Capture threshold
 
 - Write to memory only when the fact is hard to recover quickly from code, tests, tooling, or the repository's active planning/status surface.
+- If planning keeps reintroducing the same durable explanation, prefer adding or tightening one memory note or canonical doc instead of repeating the prose in each plan.
 - Good memory captures include invariants, authority boundaries, recurring failure modes, routing hints, operator runbooks, durable consequences, and still-relevant rejected-path boundaries.
 - Do not store milestone status, next-step checklists, backlog state, or execution logs in memory; those belong in the planning/status surface.
 - Keep user-specific preferences, collaboration habits, and stylistic defaults out of repo memory unless they are explicitly adopted as shared technical policy.
@@ -134,6 +138,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - If the same note keeps being needed for safe work on one subsystem, consider whether the repo needs docs promotion, a skill, a script, a regression test, stronger validation, or refactor review.
 - Apply that pressure during normal task work, not only during explicit maintenance passes.
 - When routing or syncing memory exposes repeated friction, note sprawl, or recurring workarounds, propose or make the smallest upstream improvement that would reduce the note when it is safe and in scope.
+- When planning and memory are both installed, repeated restart friction or repeated execplan background prose should be treated as an improvement-targeting signal about the interaction contract, not only as a local writing preference.
 - Prefer emitting a concrete remediation target over a vague hint: suggest where the docs, skill, script, test, validation, or refactor should land, then keep the memory note only as residue, a stub, or a short fallback summary.
 - Treat `promotion-report` as the main elimination workflow: use it to decide the upstream target and the intended post-remediation memory shape before expanding the note further.
 - If remediation lands, explicitly re-evaluate whether the note should shrink, become a stub, or disappear instead of assuming it remains justified.

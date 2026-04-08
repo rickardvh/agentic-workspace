@@ -97,6 +97,7 @@ Delete unused routing examples once the target repository has concrete notes.
 Bootstrap should modify `AGENTS.md` only through the managed workflow pointer block. Repo-specific `AGENTS.md` prose outside that block is repo-owned and should not be treated as shared upgradeable guidance.
 
 This bootstrap is planning-system agnostic. `/memory` owns durable technical knowledge, `memory/current/project-state.md` is the overview note, `memory/current/task-context.md` is optional checked-in continuation compression, repo-owned memory skills can live under `memory/skills/`, and `.agentic-memory/` is the bootstrap-managed surface for shared workflow rules, shipped skills, and temporary bootstrap workspace files.
+When planning is installed too, the combined install should be cheaper than either one alone: planning should borrow durable context from memory, and completed planning work should promote durable residue back into memory or canonical docs instead of re-explaining it forever.
 
 Bundled product skills should stay limited to bootstrap lifecycle operations. Repo-local memory procedures should live in repo-owned `memory/skills/`. General non-memory skills should not.
 
@@ -112,6 +113,7 @@ Treat `.agentic-memory/skills/memory-router/` as the normal entrypoint for day-t
 When `memory/manifest.toml` marks a note as `canonical_elsewhere`, routing should prefer the canonical checked-in doc and keep the memory note as optional fallback context.
 Planning/status surfaces identify touched paths or surfaces; memory routing returns the smallest relevant durable note set.
 If the same note keeps being routed for safe work on one subsystem, that is often a cue to suggest clearer docs, stronger validation, or refactor review.
+In combined installs, memory should reduce what planning has to restate, not become a second plan explanation layer.
 
 Common task bundles:
 
@@ -130,6 +132,7 @@ Interoperability pattern catalogue:
 - loose coupling: planner first, memory routed on demand
 - handoff compression: planner primary, memory holds minimal cross-session continuation context
 - durable capture on close: planner closes work, memory updates only if durable knowledge changed
+- Combined-install leverage: plans borrow durable context from memory, and repeated plan prose becomes a signal that memory or canonical docs should improve
 
 ## Current Decisions
 
@@ -154,6 +157,7 @@ Interoperability pattern catalogue:
 ## When not to write to memory
 
 - do not store: milestone status, next-step checklists, backlog state, execution logs, or plan content already owned by the planning/status surface
+- do not store: archived planning history
 - do not store: user-specific preferences, collaboration habits, or stylistic defaults unless they are shared technical policy
 
 Ask one more question before expanding a note: what repo change would let this note shrink, move, or disappear?

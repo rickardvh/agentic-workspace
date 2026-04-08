@@ -112,12 +112,14 @@ Some AI agents, such as GitHub Copilot, have their own built-in memory, but that
 `agentic-memory-bootstrap` installs a lightweight `memory/` tree that agents load selectively on each task start, giving them the smallest useful slice of durable context without bulk-reading the codebase.
 
 For many users the simplest mental model is: planning tells an agent what matters now; memory tells an agent what is expensive to forget.
+When both modules are installed, the combined install should be cheaper than either one alone: planning borrows durable context from memory, and completed planning work promotes durable residue back into memory or canonical docs instead of re-explaining it forever.
 
 ## How it works
 
 - **Structured taxonomy.** Notes are split into `domains/` for subsystem orientation, `invariants/` for contracts and authority boundaries, `runbooks/` for operator procedures, `mistakes/` for recurring traps and verified failure lessons, `decisions/` for longer-lived rationale, and `current/` for weak-authority project overview, optional task-continuation compression, and compact routing calibration.
 - **Route-indexed, not bulk-loaded.** `memory/index.md` maps task types to minimal note bundles, and a machine-readable `manifest.toml` annotates every note with audience, authority, routing triggers (`routes_from`, `stale_when`), and task relevance so agents read only what matters for the current change. Good memory helps an agent read *less*, not more.
 - **Clear ownership boundary.** Memory owns durable repo knowledge that is expensive to reconstruct from code alone: invariants, authority boundaries, recurring failure modes, operator sequences, and routing hints. The repository's active planning surface (`TODO.md`, issue trackers, and similar systems) keeps ownership of active intent and sequencing. Memory complements planning; it never competes with it.
+- **Combined-install leverage.** When planning is installed too, memory should help execplans stay smaller and restart cheaper: plans borrow durable context instead of restating it, and repeated plan prose becomes a signal that memory or canonical docs should improve.
 - **Improvement pressure without memory dependence.** Each note can declare whether it is *durable truth* or an *improvement signal* - something that exists because the repo still needs better tests, docs, validation, or design. Manifest fields like `preferred_remediation` and `elimination_target` let the `doctor` command, the freshness audit, and the sync workflow surface actionable suggestions that drive improvements into the codebase without assuming memory volume should follow one universal trend.
 - **Explicit improvement-targeting workflow.** Symptomatic notes should move through a concrete path: symptom captured -> remediation target chosen -> follow-up routed -> remediation lands -> note retained, shrunk, stubbed, or deleted. The workflow distinguishes when a signal should stay in memory, become a review artifact, enter issue intake, or promote into roadmap or active planning.
 - **Freshness and hygiene tooling.** A bundled audit script checks for missing metadata, stale confirmations, oversized notes, and manifest/note mismatches. `stale_when` globs catch semantic drift from code changes, not just calendar age.
@@ -149,11 +151,13 @@ Memory does not own:
 - execution logs
 - issue triage or bug-history catch-all
 - broad canonical documentation
+- archived planning history
 
 ## Anti-Blur Rules
 
 - Memory must not become a task tracker or backlog mirror.
 - Memory should complement planning surfaces, not replace them.
+- In combined installs, memory should reduce what planning has to restate, not become a second plan explanation layer.
 - Routing hints inside memory should stay subordinate to the repo's canonical startup and planning contract.
 - Selective adoption must remain valid: memory should still make sense in repos that do not install planning.
 

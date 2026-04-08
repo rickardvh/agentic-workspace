@@ -26,7 +26,6 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 ## Next Candidate Queue
 
 - None. Promote a new bounded candidate only when fresh repeated friction justifies it.
-
 ## Sequencing Recommendation
 
 1. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.

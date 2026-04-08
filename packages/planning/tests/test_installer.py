@@ -321,6 +321,14 @@ def test_bootstrap_capability_aware_execution_doc_defines_categories() -> None:
     assert "task-shape based" in text
 
 
+def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
+    text = (installer_mod.payload_root() / "docs" / "execplans" / "README.md").read_text(encoding="utf-8")
+
+    assert "prefer borrowing durable context from the smallest relevant memory note or canonical doc" in text
+    assert "Repeated background prose in plans is a missing-synergy signal" in text
+    assert "promote it into memory or canonical docs" in text
+
+
 def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
 

@@ -24,6 +24,12 @@ The shortest operating model is:
 3. Managed module surfaces support those contracts.
 4. Generated docs mirror managed sources and should be rerendered, not edited.
 
+In combined installs, the interaction should be stronger than simple compatibility:
+
+5. Planning borrows durable context from Memory instead of re-explaining it.
+6. Completed Planning work promotes durable residue into Memory or canonical docs instead of leaving it in chat or archived plan prose.
+7. Repeated restart friction or repeated plan re-explanation is a product signal that the combined install still needs clearer docs, memory, validation, or decomposition.
+
 ## Canonical-Source Precedence
 
 When multiple surfaces mention the same concern, prefer the narrowest canonical owner in this order:
@@ -61,11 +67,66 @@ Allowed:
 - an execplan links to an invariant, runbook, or recurring-failure note
 - a blocker points at a memory note that explains an authority boundary or operator sequence
 - a completed thread promotes a durable lesson into memory instead of leaving it in planning surfaces
+- a direct task or execplan uses a short memory reference instead of restating the same durable subsystem explanation again
 
 Not allowed:
 
 - moving durable technical guidance into TODO or execplans just because it is active right now
 - making planning the primary home for subsystem orientation or runbooks
+- copying broad memory prose into every execplan when one routed note or canonical doc would do
+
+### Combined-Install Borrow Rule
+
+When both modules are installed, planning should borrow from memory when the active work depends on:
+
+- durable invariants
+- recurring traps
+- operator runbooks
+- subsystem context that should survive the current thread
+- authority boundaries that would otherwise be re-explained in each plan
+
+Prefer a short reference to the relevant memory note or canonical doc over re-stating the same durable background in an execplan.
+
+If an execplan needs to repeat the same repo explanation more than once, treat that as a missing-synergy signal:
+
+- the memory note may be missing, too broad, or too task-local
+- a canonical doc may be missing
+- the task may need better decomposition so the plan can stay local
+
+### Combined-Install Residue Rule
+
+When active execution finishes, classify leftover detail before it drifts into archived plan prose or chat-only residue.
+
+Promote residue into memory when it is:
+
+- a durable invariant
+- a recurring trap
+- a reusable operator sequence
+- a durable subsystem orientation fact
+- an anti-rediscovery lesson that future agents are unlikely to recover cheaply from code alone
+
+Promote residue into canonical docs when it is:
+
+- stable human-facing engineering guidance
+- policy, lifecycle, or maintainer instruction
+- a subsystem explanation that should be primary outside memory
+
+Drop the residue instead of promoting it when it is:
+
+- task-local narration
+- milestone history
+- one-off implementation detail that is already cheap to recover from code or tests
+
+### Combined Startup And Resume Model
+
+For combined installs, the cheap restart path should be:
+
+1. planning surfaces for active-now state
+2. the smallest routed memory bundle needed for durable context
+3. canonical docs only when memory or planning points there as the primary owner
+
+The goal is not to read both systems broadly by default.
+The goal is to let planning say what matters now while memory supplies only the durable context needed to avoid rediscovery.
 
 ### Managed -> Repo-Owned Surfaces
 
@@ -149,6 +210,18 @@ Not allowed:
 - Memory freshness checks should keep current notes weak-authority and durable notes in their primary homes.
 - Package payload verification should keep shipped package surfaces present and structurally consistent before release or upgrade work.
 - Maintainer validation should cover both modules when a change touches shared package contracts or collaboration-sensitive installed surfaces.
+
+## Missing-Synergy Signals
+
+Treat the following as signals that combined installs are not yet reducing restart cost enough:
+
+- execplans repeatedly re-explain the same repo or subsystem background
+- restart still requires broad reading even when both modules are installed
+- durable residue keeps staying in completed plans instead of moving into memory or canonical docs
+- memory notes still need too much task-local context to help active execution
+
+These are not only local habits.
+They are product signals for better decomposition, tighter memory routing, stronger canonical docs, or clearer improvement-targeting.
 
 ## Partial-Adoption Rules
 

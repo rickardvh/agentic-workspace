@@ -162,6 +162,8 @@ Use the capability-aware execution contract to describe that recommendation in t
 
 If stronger capability keeps seeming necessary for the same class of work, treat that as a product signal for cheaper future execution. The next step is often better decomposition, clearer validation, or tighter guidance rather than accepting stronger execution as the permanent answer.
 
+When a repo also installs Agentic Memory, Planning should borrow durable context from routed memory notes instead of re-explaining the same subsystem background inside each execplan. Completed planning residue should promote durable lessons into memory or canonical docs when they remain expensive to rediscover.
+
 When a direct task completes, remove it from `TODO.md` promptly. If the task changed durable repo knowledge or left important follow-up work, record that residue in memory, canonical docs, `ROADMAP.md`, or a newly promoted execplan rather than leaving chat-only context behind.
 
 ## Direct-Task Recovery Cases

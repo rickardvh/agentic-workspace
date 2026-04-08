@@ -19,6 +19,7 @@
 - loose coupling: planning/status surface is primary, memory is routed on demand from touched files or surfaces
 - handoff compression: planning/status surface stays primary, memory keeps only minimal cross-session continuation context
 - durable capture on close: planning/status surface closes the work, memory updates only if durable knowledge changed
+- combined install: planning owns active-now state, memory provides the smallest durable context bundle, and completed planning residue promotes only the durable lessons that future work should not have to rediscover
 
 ## Common task bundles
 
@@ -44,6 +45,7 @@ Prefer the smallest bundle that still covers the task surface.
 - Load `memory/current/routing-feedback.md` only when calibrating routing against a concrete missed-note or over-routing case.
 - When a repository has bootstrap-managed shared skills, check `.agentic-memory/skills/README.md` before inventing a new shared memory-operational procedure.
 - Use touched files, modules, commands, or surfaces to decide which notes to load first.
+- When planning is installed, start from the active planning surface and borrow only the smallest memory bundle needed for durable context; do not read both systems broadly by default.
 
 ## Note type split
 
@@ -83,6 +85,7 @@ Do not add memory for:
 - execution logs
 
 If a recurring procedure is reusable but not itself durable repo knowledge, prefer a skill over a new memory note.
+If a completed plan leaves behind durable residue, decide whether the primary home should be memory, canonical docs, or nowhere; do not let archived plans become the long-term memory layer by default.
 
 ## One-home rule
 

@@ -35,6 +35,9 @@ Promote that task into `docs/execplans/` once it picks up milestone sequencing, 
 Direct execution is a success mode, not a planning failure.
 Use `docs/capability-aware-execution.md` when deciding whether the task still fits cheap direct execution, should move to stronger planning first, is suitable for bounded autopilot, should be silently reshaped into a cheaper slice, or should stop and escalate.
 
+When memory is installed, prefer borrowing durable context from the smallest relevant memory note or canonical doc instead of restating the same subsystem explanation inside each execplan.
+Repeated background prose in plans is a missing-synergy signal: tighten routing, promote the durable fact into memory or canonical docs, or decompose the work so the plan can stay local.
+
 Do not create a plan just because a stronger agent could write one. Use a checked-in plan only when the artifact is expected to reduce rediscovery, restart cost, or handoff risk more than it costs to produce.
 
 Capability-aware delegation is allowed but optional. If the environment supports it, a more capable agent or model may write a compact execplan and then hand implementation to a smaller or less capable agent when that is likely to save tokens without sacrificing quality. Do not assume subagents exist; the same contract must still work for one agent executing end-to-end. Prefer silent shaping and better planning over repeated prompts to switch executors manually.
@@ -62,6 +65,7 @@ Execplans own milestone sequencing, blockers, validation scope, and completion d
 Use stable headings, explicit status markers, and compact bullets so active plans remain merge-friendly under concurrent edits.
 
 Keep durable technical facts and stable subsystem guidance in canonical docs or checked-in memory, not inside active execplans.
+When a completed plan leaves behind durable residue, promote it into memory or canonical docs instead of treating the archived plan as its long-term home.
 
 Prefer refining the existing contract over inventing a second schema. If a proposed improvement makes plans harder to use than the work they are guiding, it is likely the wrong change.
 

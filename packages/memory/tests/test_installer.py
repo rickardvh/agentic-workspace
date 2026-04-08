@@ -2146,6 +2146,9 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
     assert "Judge memory by whether it justifies its cost and reduces rediscovery" in text
     assert "must not autonomously rewrite repo-owned docs, tests, scripts, or code outside the managed bootstrap surface" in text
     assert "prefer a clearer handoff into repo-owned work" in text
+    assert "memory should help plans stay smaller by holding durable context that execplans can reference instead of repeating" in text
+    assert "Repeated plan re-explanation or restart friction is a missing-synergy signal" in text
+    assert "do not absorb plan history or milestone narration into memory" in text
 
 
 def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() -> None:
@@ -2165,6 +2168,9 @@ def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() 
     assert "Prefer durable consequences, constraints, exceptions, and recurring traps" in text
     assert "Treat recurring-failures as anti-trap memory" in text
     assert "optional repo-owned `memory/current/active-decisions.md`" in text
+    assert "combined install: planning owns active-now state" in text
+    assert "start from the active planning surface and borrow only the smallest memory bundle needed" in text
+    assert "do not let archived plans become the long-term memory layer by default" in text
 
 
 def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -> None:
@@ -2178,6 +2184,9 @@ def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -
     assert "When not to write to memory" in text
     assert "## Anti-patterns" in text
     assert "## Minimal Adoption Checklist" in text
+    assert "the combined install should be cheaper than either one alone" in text
+    assert "Combined-install leverage" in text
+    assert "archived planning history" in text
     assert "Good memory systems should help an agent read less, not more." in text
     assert "Memory is a reasoning aid" in text
     assert "mixing user-specific memory with repo-specific technical truth" in text

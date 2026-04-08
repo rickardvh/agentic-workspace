@@ -14,6 +14,7 @@ Active queue for repository work.
 
 ## Done
 
+- memory-planning-synergy: Completed (defined the first explicit combined-install contract so planning borrows durable context from memory, completed planning residue promotes cleanly, and repeated plan re-explanation becomes a missing-synergy signal for cheaper future execution)
 - capability-aware-execution-followup: Completed (refined the planning capability-fit contract so it stays advisory, quiet, and tool-agnostic, and turns repeated stronger-capability outcomes into complexity-reduction signals for planning, reviews, and improvement-targeting)
 - capability-aware-execution-contract: Completed (shipped the first planning capability-fit contract so agents can classify cheap direct execution, stronger planning first, delegation-friendly work, autopilot suitability, and stop-and-escalate cases in task-shape language)
 - automatic-skill-selection-routing: Completed (added registry-backed activation hints and task-to-skill recommendation so `agentic-workspace skills --task ...` can suggest the right bundled or repo-owned skills without requiring the user to know skill ids)
