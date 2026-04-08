@@ -24,14 +24,17 @@ Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraint
 
 ## Next Candidate Queue
 
-No inactive candidates right now.
+- Orchestrator module-contract finalization: make the internal workspace/module contract generic enough that future first-party modules can be added without orchestrator special-casing, especially around lifecycle verbs, shared reporting, and module descriptor assumptions. Promote when a new module-facing behavior still requires direct edits to `src/agentic_workspace/cli.py` instead of flowing through the existing contract.
+- Plugin-ready capability contract: define first-class capability declarations, lifecycle hook expectations, result schema guarantees, and dependency/conflict metadata so the current first-party boundary can later open without freezing private assumptions as a fake public API. Promote when extension-boundary work needs more than first-party-only wording or when a realistic external-module use case appears.
+- Installed-surface ambiguity cleanup: keep tightening repo memory and installed surfaces until the wrong interpretation becomes unnatural, with current focus on the residual package-context overlap/procedure signal in `memory/domains/memory-package-context.md`. Promote when memory doctor still reports that same ambiguity class after another normal maintenance pass.
 
 ## Sequencing Recommendation
 
 1. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.
-2. Formalize the orchestrator-first module-interface contract so future module addition stays generic instead of bespoke.
-3. Keep tightening memory until the cheap path is also the correct path and current-state reading stays subordinate to planning and canonical docs.
-4. Preserve review and issue discipline by keeping it quiet, bounded, and cheaper than the confusion it prevents.
+2. Finish the generic orchestrator-first module contract so first-party extension no longer depends on bespoke CLI assumptions.
+3. Turn the internal module contract into a plugin-ready capability/dependency/result contract before treating external extension as supported.
+4. Keep tightening installed-surface ambiguity, especially in memory, until the cheap path is also the correct path.
+5. Preserve review and issue discipline by keeping it quiet, bounded, and cheaper than the confusion it prevents.
 
 ## Reopen Conditions
 
