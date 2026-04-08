@@ -4,6 +4,8 @@ This directory contains the product's bundled bootstrap-lifecycle skills.
 
 These skills are not part of the mandatory bootstrap payload, but they are part of the product distribution. Runtimes that support packaged skill discovery should be able to use them without a second installation step.
 
+`REGISTRY.json` is the explicit bundled bootstrap-skill registry for this package. Treat it as the machine-readable source of truth for bundled memory bootstrap skill discovery.
+
 If the bundled skill is not already visible, prefer the installed `agentic-memory-bootstrap` command or the repo's checked-in `.agentic-memory/UPGRADE-SOURCE.toml` as the source of truth for any remote `uvx` or `pipx` runner spec.
 
 For maintainers of this repository, `skills/` is the canonical source of truth. Any bundled copy inside an installed package is only a runtime copy for explicit packaging or install-path testing and may be stale until the package is reinstalled.

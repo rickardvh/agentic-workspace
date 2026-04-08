@@ -45,6 +45,7 @@ BOOTSTRAP_WORKSPACE_FILES = (
 )
 CORE_PAYLOAD_SKILL_FILES = (
     SHIPPED_SKILLS_ROOT / "README.md",
+    SHIPPED_SKILLS_ROOT / "REGISTRY.json",
     SHIPPED_SKILLS_ROOT / "memory-capture/SKILL.md",
     SHIPPED_SKILLS_ROOT / "memory-capture/agents/openai.yaml",
     SHIPPED_SKILLS_ROOT / "memory-hygiene/SKILL.md",

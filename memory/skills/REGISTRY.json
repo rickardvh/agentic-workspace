@@ -1,0 +1,35 @@
+{
+  "schema_version": "skill-registry.v1",
+  "owner": "repo-local-memory-skills",
+  "source_kind": "repo-owned-memory-skills",
+  "skills": [
+    {
+      "id": "foundation-stability-check",
+      "path": "foundation-stability-check/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "recheck that root-owned planning and memory remain the monorepo's operational authority"
+    },
+    {
+      "id": "ownership-ledger-check",
+      "path": "ownership-ledger-check/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "recheck the workspace ownership ledger against current planning, memory, and module boundaries"
+    },
+    {
+      "id": "package-context-inspection",
+      "path": "package-context-inspection/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "recheck a package context note without turning it into a workflow dump"
+    },
+    {
+      "id": "path-consolidation-check",
+      "path": "path-consolidation-check/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "verify that root-owned operational paths still align with the package and install boundaries"
+    }
+  ]
+}

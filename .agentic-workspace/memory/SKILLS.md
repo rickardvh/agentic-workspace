@@ -14,6 +14,11 @@ Use three layers inside a repo:
 - bundled product skills = bootstrap lifecycle help such as adoption, populate, and upgrade
 - runtime-local mirrored skill copies = disposable caches for runtimes that copy or mirror skills locally
 
+Explicit registry surfaces:
+
+- bundled installed core skills: `.agentic-workspace/memory/skills/REGISTRY.json`
+- repo-owned memory skills: `memory/skills/REGISTRY.json`
+
 The bootstrap contract remains the always-on minimal file structure that keeps the system understandable even without skills. `.agentic-memory/bootstrap/` is temporary operator workspace, not a durable knowledge surface.
 
 ## Keep in checked-in docs

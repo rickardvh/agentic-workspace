@@ -112,6 +112,23 @@ def test_modules_command_reports_installation_state_for_target(monkeypatch, tmp_
     assert memory_module["installed"] is False
 
 
+def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["skills", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    skill_ids = {entry["id"] for entry in payload["skills"]}
+    assert "planning-autopilot" in skill_ids
+    assert "memory-router" in skill_ids
+    assert all(entry["registration"] == "explicit" for entry in payload["skills"])
+
+
 def test_init_dispatches_to_full_preset_by_default(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)

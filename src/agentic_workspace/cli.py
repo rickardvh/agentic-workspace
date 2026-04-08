@@ -107,6 +107,29 @@ class ModuleRegistryEntry:
     result_contract: ModuleResultContract
 
 
+@dataclass(frozen=True)
+class SkillCatalogSource:
+    name: str
+    registry_path: Path
+    skills_root: Path
+    owner: str
+    source_kind: str
+    default_scope: str
+    default_stability: str
+
+
+@dataclass(frozen=True)
+class RegisteredSkill:
+    skill_id: str
+    path: Path
+    owner: str
+    source_kind: str
+    scope: str
+    stability: str
+    summary: str
+    registration: str
+
+
 class ModuleSelectionError(ValueError):
     """Raised when the orchestrator cannot resolve a safe module set."""
 
@@ -126,6 +149,13 @@ def build_parser() -> argparse.ArgumentParser:
     modules_parser = subparsers.add_parser("modules", help="List workspace modules available to the orchestrator.")
     modules_parser.add_argument("--target", help="Optional repository path used to report installed modules.")
     _add_format_argument(modules_parser)
+
+    skills_parser = subparsers.add_parser(
+        "skills",
+        help="List registered workspace skills from installed package registries and repo-owned skill registries.",
+    )
+    skills_parser.add_argument("--target", help="Optional repository path used to inspect installed and repo-owned skills.")
+    _add_format_argument(skills_parser)
 
     init_parser = subparsers.add_parser("init", help="Bootstrap selected modules into a target repository.")
     _add_selection_arguments(init_parser)
@@ -184,6 +214,13 @@ def main(argv: list[str] | None = None) -> int:
         if target_root is not None:
             _validate_target_root(command_name="modules", target_root=target_root)
         _emit_modules(format_name=args.format, target_root=target_root)
+        return 0
+
+    if args.command == "skills":
+        target_root = _resolve_target_root(args.target) if args.target else None
+        if target_root is not None:
+            _validate_target_root(command_name="skills", target_root=target_root)
+        _emit_skills(format_name=args.format, target_root=target_root)
         return 0
 
     try:
@@ -1528,6 +1565,190 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
         ]
     }
     _emit_payload(payload=payload, format_name=format_name)
+
+
+def _skill_catalog_sources() -> tuple[SkillCatalogSource, ...]:
+    return (
+        SkillCatalogSource(
+            name="planning-bundled",
+            registry_path=Path(".agentic-workspace/planning/skills/REGISTRY.json"),
+            skills_root=Path(".agentic-workspace/planning/skills"),
+            owner="agentic-planning-bootstrap",
+            source_kind="bundled-package-skills",
+            default_scope="bundled",
+            default_stability="package-managed",
+        ),
+        SkillCatalogSource(
+            name="memory-core",
+            registry_path=Path(".agentic-workspace/memory/skills/REGISTRY.json"),
+            skills_root=Path(".agentic-workspace/memory/skills"),
+            owner="agentic-memory-bootstrap",
+            source_kind="installed-core-skills",
+            default_scope="bundled",
+            default_stability="package-managed",
+        ),
+        SkillCatalogSource(
+            name="repo-memory",
+            registry_path=Path("memory/skills/REGISTRY.json"),
+            skills_root=Path("memory/skills"),
+            owner="repo-local",
+            source_kind="repo-owned-memory-skills",
+            default_scope="repo-owned",
+            default_stability="repo-managed",
+        ),
+        SkillCatalogSource(
+            name="repo-tools",
+            registry_path=Path("tools/skills/REGISTRY.json"),
+            skills_root=Path("tools/skills"),
+            owner="repo-local",
+            source_kind="repo-owned-tool-skills",
+            default_scope="repo-owned",
+            default_stability="repo-managed",
+        ),
+    )
+
+
+def _emit_skills(*, format_name: str, target_root: Path | None) -> None:
+    payload = _skills_payload(target_root=target_root)
+    if format_name == "json":
+        print(json.dumps(serialise_value(payload), indent=2))
+        return
+    for skill in payload["skills"]:
+        print(f"{skill['id']}: {skill['summary']}")
+        print(f"  path: {skill['path']}")
+        print(f"  owner: {skill['owner']}")
+        print(f"  source: {skill['source_kind']}")
+        print(f"  registration: {skill['registration']}")
+    if payload["warnings"]:
+        print("Warnings:")
+        for warning in payload["warnings"]:
+            print(f"- {warning}")
+
+
+def _skills_payload(*, target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {"skills": [], "warnings": [], "sources": []}
+    skills, warnings, sources = _discover_registered_skills(target_root=target_root)
+    return {
+        "target": target_root.as_posix(),
+        "skills": [
+            {
+                "id": skill.skill_id,
+                "path": skill.path.as_posix(),
+                "owner": skill.owner,
+                "source_kind": skill.source_kind,
+                "scope": skill.scope,
+                "stability": skill.stability,
+                "summary": skill.summary,
+                "registration": skill.registration,
+            }
+            for skill in skills
+        ],
+        "warnings": warnings,
+        "sources": sources,
+    }
+
+
+def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSkill], list[str], list[dict[str, str]]]:
+    discovered: list[RegisteredSkill] = []
+    warnings: list[str] = []
+    sources: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+
+    for source in _skill_catalog_sources():
+        registry_file = target_root / source.registry_path
+        skills_root = target_root / source.skills_root
+        source_state = "absent"
+        if registry_file.exists():
+            source_state = "registry"
+            for skill in _load_registered_skills(source=source, registry_file=registry_file):
+                key = (skill.skill_id, skill.path.as_posix())
+                if key in seen:
+                    continue
+                seen.add(key)
+                discovered.append(skill)
+        scanned_paths = _scan_skill_paths(skills_root)
+        registered_paths = {
+            (target_root / source.skills_root / skill.path.relative_to(source.skills_root)).resolve()
+            for skill in discovered
+            if skill.path.as_posix().startswith(source.skills_root.as_posix() + "/")
+        }
+        unregistered = [path for path in scanned_paths if path.resolve() not in registered_paths]
+        if unregistered and not registry_file.exists():
+            source_state = "implicit-scan"
+            warnings.append(
+                f"{source.registry_path.as_posix()} is missing; registered discovery for {source.skills_root.as_posix()} is unavailable"
+            )
+        for path in unregistered:
+            relative = path.relative_to(target_root)
+            skill_id = relative.parent.name
+            key = (skill_id, relative.as_posix())
+            if key in seen:
+                continue
+            seen.add(key)
+            discovered.append(
+                RegisteredSkill(
+                    skill_id=skill_id,
+                    path=relative,
+                    owner=source.owner,
+                    source_kind=source.source_kind,
+                    scope=source.default_scope,
+                    stability=source.default_stability,
+                    summary="unregistered skill discovered by directory scan",
+                    registration="implicit-scan",
+                )
+            )
+        if registry_file.exists():
+            missing_files = [
+                skill.path.as_posix()
+                for skill in discovered
+                if skill.registration == "explicit"
+                and skill.path.as_posix().startswith(source.skills_root.as_posix() + "/")
+                and not (target_root / skill.path).exists()
+            ]
+            for missing in missing_files:
+                warnings.append(f"{source.registry_path.as_posix()} points at missing skill file {missing}")
+        if registry_file.exists() or scanned_paths:
+            sources.append(
+                {
+                    "name": source.name,
+                    "registry_path": source.registry_path.as_posix(),
+                    "skills_root": source.skills_root.as_posix(),
+                    "state": source_state,
+                }
+            )
+
+    discovered.sort(key=lambda skill: (skill.source_kind, skill.skill_id, skill.path.as_posix()))
+    return discovered, warnings, sources
+
+
+def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path) -> list[RegisteredSkill]:
+    payload = json.loads(registry_file.read_text(encoding="utf-8"))
+    entries = payload.get("skills", [])
+    skills: list[RegisteredSkill] = []
+    for raw in entries:
+        if not isinstance(raw, dict):
+            continue
+        relative = Path(str(raw.get("path", "")))
+        skills.append(
+            RegisteredSkill(
+                skill_id=str(raw.get("id", "")).strip(),
+                path=(source.skills_root / relative),
+                owner=str(payload.get("owner", source.owner)),
+                source_kind=str(payload.get("source_kind", source.source_kind)),
+                scope=str(raw.get("scope", source.default_scope)),
+                stability=str(raw.get("stability", source.default_stability)),
+                summary=str(raw.get("summary", "")).strip(),
+                registration="explicit",
+            )
+        )
+    return [skill for skill in skills if skill.skill_id and skill.path.as_posix()]
+
+
+def _scan_skill_paths(skills_root: Path) -> list[Path]:
+    if not skills_root.exists():
+        return []
+    return sorted(path for path in skills_root.rglob("SKILL.md") if "__pycache__" not in path.parts)
 
 
 def _module_registry(

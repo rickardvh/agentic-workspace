@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
@@ -772,6 +773,25 @@ def list_bundled_skills() -> InstallResult:
     result = InstallResult(target_root=skills_dir, dry_run=True, message="Bundled skills")
     result.mode = "skills"
     result.detected_version = None
+    registry_path = skills_dir / "REGISTRY.json"
+    if registry_path.exists():
+        payload = json.loads(registry_path.read_text(encoding="utf-8"))
+        for skill in payload.get("skills", []):
+            if not isinstance(skill, dict):
+                continue
+            skill_id = str(skill.get("id", "")).strip()
+            relative = Path(str(skill.get("path", "")).strip())
+            if not skill_id or not relative.as_posix():
+                continue
+            result.add(
+                "bundled skill",
+                skills_dir / relative.parent,
+                "registered packaged product skill",
+                role="skill",
+                safety="safe",
+                source=skill_id,
+            )
+        return result
 
     for skill_dir in sorted(path for path in skills_dir.iterdir() if path.is_dir()):
         if not (skill_dir / "SKILL.md").exists():

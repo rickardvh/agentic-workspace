@@ -1,0 +1,42 @@
+{
+  "schema_version": "skill-registry.v1",
+  "owner": "agentic-memory-bootstrap",
+  "source_kind": "installed-core-skills",
+  "skills": [
+    {
+      "id": "memory-capture",
+      "path": "memory-capture/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "capture durable repo knowledge into checked-in memory"
+    },
+    {
+      "id": "memory-hygiene",
+      "path": "memory-hygiene/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "keep checked-in memory compact, current, and well-routed"
+    },
+    {
+      "id": "memory-refresh",
+      "path": "memory-refresh/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "refresh stale or weakly routed memory notes after relevant repo changes"
+    },
+    {
+      "id": "memory-router",
+      "path": "memory-router/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "route to the narrowest relevant checked-in memory notes for the current task"
+    },
+    {
+      "id": "memory-upgrade",
+      "path": "memory-upgrade/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "run the normal checked-in memory upgrade flow from the installed repo surface"
+    }
+  ]
+}

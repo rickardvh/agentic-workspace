@@ -10,10 +10,11 @@ Active queue for repository work.
 - None.
 
 ## Action
-- No active work items. Promote only when a new bounded candidate is justified.
+- No active work items. Promote the next bounded candidate from `ROADMAP.md` when ready.
 
 ## Done
 
+- repo-package-skill-discovery-hardening: Completed (made bundled package skills explicitly registered on install/upgrade, gave repo-owned skills a separate registry path, and exposed `agentic-workspace skills` as the trustworthy workspace discovery surface before any raw fallback scan)
 - installed-surface-ambiguity-cleanup: Completed (cleared the remaining package-context ambiguity by tightening the installed notes, adding a checked-in inspection skill, and hardening the memory doctor heuristics against package-context false positives)
 - plugin-ready-capability-contract: Completed (made capabilities, dependency/conflict metadata, lifecycle hook expectations, and result-contract guarantees first-class in the workspace registry and enforced declared compatibility rules during module selection)
 - orchestrator-module-contract-finalization: Completed (moved module ordering, preset membership, startup guidance, and root AGENTS cleanup rules into module-owned descriptors so the workspace CLI no longer depends on separate planning/memory globals for first-party extension)

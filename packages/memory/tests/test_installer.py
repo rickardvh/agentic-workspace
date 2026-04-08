@@ -403,6 +403,7 @@ def test_list_bundled_skills_only_includes_bootstrap_skills() -> None:
         "bootstrap-upgrade",
         "bootstrap-uninstall",
     }
+    assert all(action.detail == "registered packaged product skill" for action in result.actions if action.kind == "bundled skill")
 
 
 def test_dev_bundled_skills_tree_only_contains_bootstrap_skill_directories() -> None:

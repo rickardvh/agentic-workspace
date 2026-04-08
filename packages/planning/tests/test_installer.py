@@ -80,6 +80,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     result = install_bootstrap(target=tmp_path)
     skill_readme_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "README.md"
+    skill_registry_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json"
     skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
     intake_skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-intake-upstream-task" / "SKILL.md"
     review_readme_path = tmp_path / "docs" / "reviews" / "README.md"
@@ -97,6 +98,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_planning_surfaces.py").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_maintainer_surfaces.py").exists()
     assert skill_readme_path.exists()
+    assert skill_registry_path.exists()
     assert skill_path.exists()
     assert intake_skill_path.exists()
     assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()

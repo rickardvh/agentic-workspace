@@ -1,0 +1,35 @@
+{
+  "schema_version": "skill-registry.v1",
+  "owner": "agentic-memory-bootstrap",
+  "source_kind": "bundled-bootstrap-skills",
+  "skills": [
+    {
+      "id": "bootstrap-adoption",
+      "path": "bootstrap-adoption/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "adopt the memory bootstrap into an existing repository conservatively"
+    },
+    {
+      "id": "bootstrap-populate",
+      "path": "bootstrap-populate/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "populate the initial memory note set during bootstrap"
+    },
+    {
+      "id": "bootstrap-uninstall",
+      "path": "bootstrap-uninstall/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "finish bootstrap removal conservatively after the CLI removes safe managed files"
+    },
+    {
+      "id": "bootstrap-upgrade",
+      "path": "bootstrap-upgrade/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "upgrade the memory bootstrap package surfaces safely"
+    }
+  ]
+}

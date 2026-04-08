@@ -1,0 +1,42 @@
+{
+  "schema_version": "skill-registry.v1",
+  "owner": "agentic-planning-bootstrap",
+  "source_kind": "bundled-package-skills",
+  "skills": [
+    {
+      "id": "bootstrap-upgrade",
+      "path": "bootstrap-upgrade/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "upgrade planning bootstrap files for an already bootstrapped repository safely"
+    },
+    {
+      "id": "planning-autopilot",
+      "path": "planning-autopilot/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "execute one bounded planning milestone at a time from the checked-in planning surfaces"
+    },
+    {
+      "id": "planning-intake-upstream-task",
+      "path": "planning-intake-upstream-task/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "turn an externally tracked issue or task into checked-in planning while keeping the upstream tracker as intake only"
+    },
+    {
+      "id": "planning-promote-review-findings",
+      "path": "planning-promote-review-findings/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "turn selected review findings into roadmap or active-planning candidates without collapsing capture and promotion"
+    },
+    {
+      "id": "planning-review-pass",
+      "path": "planning-review-pass/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "run a bounded review pass and capture compact findings under docs/reviews"
+    }
+  ]
+}

@@ -105,6 +105,8 @@ agentic-workspace uninstall --target /path/to/repo --preset planning
 
 The root `agentic-workspace modules --format json` surface also exposes the current first-party capability, compatibility, and result-contract metadata that the workspace registry relies on; see `docs/module-capability-contract.md`.
 
+Use `agentic-workspace skills --target /path/to/repo --format json` to inspect the explicit installed bundled-skill registries and any checked-in repo-owned skill registries that complement them.
+
 Use `agentic-workspace` as the normal public lifecycle entrypoint for memory-only, planning-only, and combined installs. Use the module-specific CLIs only for package-local maintainer work, advanced debugging, or when you are working directly on one package contract.
 
 No-install workspace-first prompt lane:
