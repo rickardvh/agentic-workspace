@@ -40,6 +40,7 @@ Promote only the findings that justify future work; do not treat this file as an
 - Source: static-analysis | friction-confirmed | mixed
 - Promotion target: none | `ROADMAP.md` | `TODO.md` | canonical docs | memory
 - Promotion trigger:
+- Post-remediation note shape: retain | shrink | stub | delete | not-applicable
 
 Add one subsection per finding. Skip empty findings rather than padding the file.
 

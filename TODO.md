@@ -14,6 +14,7 @@ Active queue for repository work.
 
 ## Done
 
+- improvement-targeting-workflow: Completed (made symptom-to-remediation routing explicit across memory and review surfaces, including post-remediation note-shape guidance)
 - workspace-first-lifecycle: Completed (made `agentic-workspace` the normal public lifecycle entrypoint, added the root prompt lane, and rewrote the chooser/package docs around workspace presets)
 - review-portfolio: Completed (shipped the canonical review matrix/playbook, review template mode fields, and planning payload assertions)
 - memory-contract-framing: Completed (clarified recurring-failures as anti-trap memory and tightened high-level memory framing around anti-rediscovery value, one-home ownership, and planning subordination)

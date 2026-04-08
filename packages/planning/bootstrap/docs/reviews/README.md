@@ -104,6 +104,30 @@ Use staged promotion:
 
 Do not promote every finding. Dismiss weak, duplicate, or low-value findings instead of turning the queue into an analysis backlog.
 
+## Improvement-targeting workflow
+
+Use this workflow when a memory note, review finding, or other feedback signal looks symptomatic rather than purely durable truth:
+
+1. classify the signal as durable truth or symptom
+2. choose one primary remediation target category:
+   - canonical docs
+   - regression tests
+   - validation/checks
+   - scripts/commands
+   - skills
+   - refactor/cleanup
+   - design-boundary clarification
+3. choose the routing surface:
+   - memory only when the target is obvious and no broader analysis is needed yet
+   - review artifact when target or scope still needs bounded analysis
+   - issue intake when the signal should enter the upstream tracker
+   - `ROADMAP.md` when the remediation is plausible future work
+   - `TODO.md` plus execplan when the remediation is explicitly active now
+4. record the intended post-remediation note shape: retain, shrink, stub, or delete
+5. after remediation lands, revisit the note or review artifact and carry out that shape change instead of leaving workaround residue by default
+
+If a symptomatic note keeps surviving without a chosen remediation target, escalate it into review, roadmap, or maintainer triage rather than letting it remain an indefinite workaround note.
+
 ## Maintenance
 
 - Keep review artifacts feature- or scope-scoped.

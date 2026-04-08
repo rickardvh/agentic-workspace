@@ -23,6 +23,7 @@ Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraint
 Prioritized from the latest GitHub issue set:
 
 - Landed: Issue #2, tracker-agnostic upstream task ingestion into checked-in planning. The intake contract now lives in `docs/upstream-task-intake.md` and archived planning history.
+- Landed locally: Issue #8, make improvement-targeting a first-class workflow so memory notes do not become long-lived workarounds. The shared memory and review docs now define the symptom-to-remediation workflow explicitly.
 - Landed locally: Issue #7, make the workspace orchestrator the sole normal public lifecycle entrypoint through a generic module contract. The root CLI now exposes the prompt lane and the public docs route normal lifecycle through `agentic-workspace` presets.
 - Landed locally: Issue #6, define a canonical review portfolio for finding high-value follow-up work. The shipped review lane now includes a canonical named review matrix, bounded mode contract, and template requirements.
 - Landed locally: Issue #5, tighten `memory/current/` so it cannot be mistaken for active planning authority. The weak-authority current-note contract and the remaining high-level framing tail are now implemented in shipped memory surfaces and archived planning history.

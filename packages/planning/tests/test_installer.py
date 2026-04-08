@@ -278,6 +278,8 @@ def test_bootstrap_review_readme_includes_canonical_review_portfolio() -> None:
     assert "`review-promotion`" in text
     assert "Use one primary review mode per artifact." in text
     assert "default finding cap" in text
+    assert "## Improvement-targeting workflow" in text
+    assert "record the intended post-remediation note shape" in text
 
 
 def test_bootstrap_review_template_includes_mode_and_cap_fields() -> None:
@@ -288,6 +290,7 @@ def test_bootstrap_review_template_includes_mode_and_cap_fields() -> None:
     assert "- Review question:" in text
     assert "- Default finding cap:" in text
     assert "- Inputs inspected first:" in text
+    assert "- Post-remediation note shape:" in text
 
 
 def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:

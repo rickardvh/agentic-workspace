@@ -44,6 +44,7 @@ Use memory in two modes:
 - improvement signal: notes that exist because the repo still needs clearer docs, stronger tests, better tooling, better automation, or simpler structure
 
 Preserve the first kind. Use the second kind to suggest upstream repo improvements instead of treating memory as the default answer to repo complexity.
+Use the explicit improvement-targeting workflow: symptom captured -> remediation target chosen -> follow-up routed -> remediation lands -> note retained, shrunk, stubbed, or deleted.
 Do not assume memory volume should follow one universal trend across repositories or development stages; judge memory by whether it justifies its cost and reduces rediscovery.
 The bootstrap may diagnose, classify, prioritise, and suggest concrete repo-owned remediation targets, but it should remain advisory outside the managed bootstrap surface rather than autonomously rewriting repo-owned docs, tests, scripts, or code.
 If a remediation suggestion starts depending on repo-shape-specific judgement, prefer a clearer handoff into repo-owned work over making the bootstrap itself more invasive.

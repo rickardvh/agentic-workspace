@@ -2034,6 +2034,8 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
     assert "user-specific preferences" in text
     assert "Memory is also a pressure layer" in text
     assert "## Improvement pressure" in text
+    assert "## Improvement-targeting workflow" in text
+    assert "record the intended post-remediation note shape before closing the signal" in text
     assert "## Remediation paths" in text
     assert "Treat `promotion-report` as the main elimination workflow" in text
     assert "Do not assume memory volume should trend downward across all repos or stages" in text
@@ -2077,6 +2079,7 @@ def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -
     assert "mixing user-specific memory with repo-specific technical truth" in text
     assert "durable truth" in text
     assert "improvement signal" in text
+    assert "symptom captured -> remediation target chosen -> follow-up routed -> remediation lands" in text
     assert "## Improvement Paths" in text
     assert "optional repo-owned `memory/current/active-decisions.md`" in text
     assert "promotion-report --mode remediation" in text
