@@ -8,35 +8,65 @@
       "path": "memory-capture/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "capture durable repo knowledge into checked-in memory"
+      "summary": "capture durable repo knowledge into checked-in memory",
+      "activation_hints": {
+        "verbs": ["capture", "record", "store"],
+        "nouns": ["durable knowledge", "trap", "invariant", "runbook", "decision"],
+        "phrases": ["capture this in memory", "record durable knowledge"],
+        "when": ["knowledge should survive the session", "anti-rediscovery capture"]
+      }
     },
     {
       "id": "memory-hygiene",
       "path": "memory-hygiene/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "keep checked-in memory compact, current, and well-routed"
+      "summary": "keep checked-in memory compact, current, and well-routed",
+      "activation_hints": {
+        "verbs": ["clean", "tighten", "prune"],
+        "nouns": ["memory note", "note shape", "overlap", "noise"],
+        "phrases": ["clean up memory", "tighten memory note shape", "prune memory noise"],
+        "when": ["memory hygiene", "note-shape cleanup"]
+      }
     },
     {
       "id": "memory-refresh",
       "path": "memory-refresh/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "refresh stale or weakly routed memory notes after relevant repo changes"
+      "summary": "refresh stale or weakly routed memory notes after relevant repo changes",
+      "activation_hints": {
+        "verbs": ["refresh", "update", "recheck"],
+        "nouns": ["stale memory", "memory notes", "routing drift"],
+        "phrases": ["refresh stale memory", "update memory after changes"],
+        "when": ["relevant repo changes", "weakly routed notes"]
+      }
     },
     {
       "id": "memory-router",
       "path": "memory-router/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "route to the narrowest relevant checked-in memory notes for the current task"
+      "summary": "route to the narrowest relevant checked-in memory notes for the current task",
+      "activation_hints": {
+        "verbs": ["route", "select", "find", "load"],
+        "nouns": ["memory notes", "note set", "memory context"],
+        "phrases": ["route memory for this task", "find the smallest memory note set", "route to relevant memory"],
+        "when": ["smallest relevant note set", "memory for current task"]
+      }
     },
     {
       "id": "memory-upgrade",
       "path": "memory-upgrade/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "run the normal checked-in memory upgrade flow from the installed repo surface"
+      "summary": "run the normal checked-in memory upgrade flow from the installed repo surface",
+      "activation_hints": {
+        "verbs": ["upgrade", "refresh", "sync"],
+        "nouns": ["memory bootstrap", "installed memory", "managed surfaces"],
+        "phrases": ["upgrade memory bootstrap", "refresh installed memory surfaces"],
+        "when": ["managed memory upgrade", "installed surface refresh"]
+      }
     }
   ]
 }

@@ -127,6 +127,65 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
     assert "planning-autopilot" in skill_ids
     assert "memory-router" in skill_ids
     assert all(entry["registration"] == "explicit" for entry in payload["skills"])
+    autopilot = next(entry for entry in payload["skills"] if entry["id"] == "planning-autopilot")
+    assert "run autopilot" in autopilot["activation_hints"]["phrases"]
+
+
+def test_skills_command_recommends_planning_autopilot_for_active_milestone_task(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "run autopilot and implement the current active milestone from the execplan",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["recommendations"][0]["id"] == "planning-autopilot"
+    assert payload["recommendations"][0]["score"] > 0
+    assert any("phrase match" in reason for reason in payload["recommendations"][0]["reasons"])
+
+
+def test_skills_command_recommends_memory_router_for_note_selection_task(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "find the smallest memory note set and route memory for this task",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["recommendations"][0]["id"] == "memory-router"
+    assert payload["recommendations"][0]["source_kind"] == "installed-core-skills"
 
 
 def test_init_dispatches_to_full_preset_by_default(monkeypatch, tmp_path: Path, capsys) -> None:

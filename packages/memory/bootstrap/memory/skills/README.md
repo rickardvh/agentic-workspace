@@ -2,7 +2,7 @@
 
 This directory contains checked-in core memory skills installed by the bootstrap payload.
 
-`REGISTRY.json` is the explicit installed core-skill registry for these package-managed memory skills.
+`REGISTRY.json` is the explicit installed core-skill registry for these package-managed memory skills and their task-matching hints.
 
 When a repository has checked-in memory skills, treat this directory as the default operational interface for memory work:
 

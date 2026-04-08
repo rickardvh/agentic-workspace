@@ -8,35 +8,65 @@
       "path": "bootstrap-upgrade/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "upgrade planning bootstrap files for an already bootstrapped repository safely"
+      "summary": "upgrade planning bootstrap files for an already bootstrapped repository safely",
+      "activation_hints": {
+        "verbs": ["upgrade", "refresh", "sync"],
+        "nouns": ["planning bootstrap", "planning payload", "managed surfaces"],
+        "phrases": ["upgrade planning bootstrap", "refresh planning payload"],
+        "when": ["installed planning surfaces drift", "package payload refresh"]
+      }
     },
     {
       "id": "planning-autopilot",
       "path": "planning-autopilot/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "execute one bounded planning milestone at a time from the checked-in planning surfaces"
+      "summary": "execute one bounded planning milestone at a time from the checked-in planning surfaces",
+      "activation_hints": {
+        "verbs": ["run", "execute", "implement", "continue", "finish", "ship"],
+        "nouns": ["autopilot", "milestone", "execplan", "planned work", "active task"],
+        "phrases": ["run autopilot", "execute active milestone", "implement current milestone", "continue planned work"],
+        "when": ["active milestone", "bounded slice", "checked-in plan"]
+      }
     },
     {
       "id": "planning-intake-upstream-task",
       "path": "planning-intake-upstream-task/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "turn an externally tracked issue or task into checked-in planning while keeping the upstream tracker as intake only"
+      "summary": "turn an externally tracked issue or task into checked-in planning while keeping the upstream tracker as intake only",
+      "activation_hints": {
+        "verbs": ["ingest", "intake", "sync", "import", "triage"],
+        "nouns": ["github issue", "upstream task", "ticket", "tracker"],
+        "phrases": ["ingest github issue", "intake upstream task", "sync issue into roadmap"],
+        "when": ["tracker intake", "external issue promotion"]
+      }
     },
     {
       "id": "planning-promote-review-findings",
       "path": "planning-promote-review-findings/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "turn selected review findings into roadmap or active-planning candidates without collapsing capture and promotion"
+      "summary": "turn selected review findings into roadmap or active-planning candidates without collapsing capture and promotion",
+      "activation_hints": {
+        "verbs": ["promote", "convert", "turn", "prioritize"],
+        "nouns": ["review findings", "roadmap candidate", "follow-up"],
+        "phrases": ["promote review findings", "turn review into roadmap", "promote findings into planning"],
+        "when": ["review follow-up selection", "promotion from review"]
+      }
     },
     {
       "id": "planning-review-pass",
       "path": "planning-review-pass/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "run a bounded review pass and capture compact findings under docs/reviews"
+      "summary": "run a bounded review pass and capture compact findings under docs/reviews",
+      "activation_hints": {
+        "verbs": ["review", "audit", "inspect", "check"],
+        "nouns": ["review pass", "contract integrity", "regression", "change"],
+        "phrases": ["run review pass", "review this change", "review the repo"],
+        "when": ["bounded review", "finding capture"]
+      }
     }
   ]
 }

@@ -8,28 +8,52 @@
       "path": "bootstrap-adoption/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "adopt the memory bootstrap into an existing repository conservatively"
+      "summary": "adopt the memory bootstrap into an existing repository conservatively",
+      "activation_hints": {
+        "verbs": ["adopt", "merge", "bootstrap"],
+        "nouns": ["existing repository", "existing memory", "bootstrap adoption"],
+        "phrases": ["adopt memory bootstrap", "bootstrap into an existing repository"],
+        "when": ["existing repo with pre-existing surfaces", "conservative adoption"]
+      }
     },
     {
       "id": "bootstrap-populate",
       "path": "bootstrap-populate/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "populate the initial memory note set during bootstrap"
+      "summary": "populate the initial memory note set during bootstrap",
+      "activation_hints": {
+        "verbs": ["populate", "seed", "bootstrap"],
+        "nouns": ["initial memory", "starter notes", "bootstrap note set"],
+        "phrases": ["populate initial memory", "seed starter notes"],
+        "when": ["first install", "bootstrap seeding"]
+      }
     },
     {
       "id": "bootstrap-uninstall",
       "path": "bootstrap-uninstall/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "finish bootstrap removal conservatively after the CLI removes safe managed files"
+      "summary": "finish bootstrap removal conservatively after the CLI removes safe managed files",
+      "activation_hints": {
+        "verbs": ["remove", "uninstall", "clean up"],
+        "nouns": ["bootstrap removal", "managed files", "leftover memory surfaces"],
+        "phrases": ["finish bootstrap removal", "clean up after uninstall"],
+        "when": ["conservative uninstall", "post-uninstall cleanup"]
+      }
     },
     {
       "id": "bootstrap-upgrade",
       "path": "bootstrap-upgrade/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "upgrade the memory bootstrap package surfaces safely"
+      "summary": "upgrade the memory bootstrap package surfaces safely",
+      "activation_hints": {
+        "verbs": ["upgrade", "refresh", "sync"],
+        "nouns": ["memory bootstrap", "package surfaces", "managed files"],
+        "phrases": ["upgrade memory bootstrap", "refresh memory package surfaces"],
+        "when": ["package payload refresh", "safe upgrade"]
+      }
     }
   ]
 }

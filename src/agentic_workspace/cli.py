@@ -119,6 +119,14 @@ class SkillCatalogSource:
 
 
 @dataclass(frozen=True)
+class SkillActivationHints:
+    verbs: tuple[str, ...]
+    nouns: tuple[str, ...]
+    phrases: tuple[str, ...]
+    when: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class RegisteredSkill:
     skill_id: str
     path: Path
@@ -127,7 +135,16 @@ class RegisteredSkill:
     scope: str
     stability: str
     summary: str
+    activation_hints: SkillActivationHints
     registration: str
+
+
+@dataclass(frozen=True)
+class SkillRecommendation:
+    skill: RegisteredSkill
+    hint_score: int
+    score: int
+    reasons: tuple[str, ...]
 
 
 class ModuleSelectionError(ValueError):
@@ -155,6 +172,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="List registered workspace skills from installed package registries and repo-owned skill registries.",
     )
     skills_parser.add_argument("--target", help="Optional repository path used to inspect installed and repo-owned skills.")
+    skills_parser.add_argument("--task", help="Optional task description used to recommend likely skills.")
     _add_format_argument(skills_parser)
 
     init_parser = subparsers.add_parser("init", help="Bootstrap selected modules into a target repository.")
@@ -220,7 +238,7 @@ def main(argv: list[str] | None = None) -> int:
         target_root = _resolve_target_root(args.target) if args.target else None
         if target_root is not None:
             _validate_target_root(command_name="skills", target_root=target_root)
-        _emit_skills(format_name=args.format, target_root=target_root)
+        _emit_skills(format_name=args.format, target_root=target_root, task_text=args.task)
         return 0
 
     try:
@@ -1608,11 +1626,22 @@ def _skill_catalog_sources() -> tuple[SkillCatalogSource, ...]:
     )
 
 
-def _emit_skills(*, format_name: str, target_root: Path | None) -> None:
-    payload = _skills_payload(target_root=target_root)
+def _emit_skills(*, format_name: str, target_root: Path | None, task_text: str | None) -> None:
+    payload = _skills_payload(target_root=target_root, task_text=task_text)
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
         return
+    if payload.get("task"):
+        print(f"Task: {payload['task']}")
+    if payload["recommendations"]:
+        print("Recommended:")
+        for recommendation in payload["recommendations"]:
+            print(f"- {recommendation['id']} ({recommendation['score']}): {recommendation['summary']}")
+            print(f"  path: {recommendation['path']}")
+            print(f"  reasons: {', '.join(recommendation['reasons'])}")
+    elif payload.get("task"):
+        print("Recommended:")
+        print("- none")
     for skill in payload["skills"]:
         print(f"{skill['id']}: {skill['summary']}")
         print(f"  path: {skill['path']}")
@@ -1625,24 +1654,22 @@ def _emit_skills(*, format_name: str, target_root: Path | None) -> None:
             print(f"- {warning}")
 
 
-def _skills_payload(*, target_root: Path | None) -> dict[str, Any]:
+def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[str, Any]:
     if target_root is None:
-        return {"skills": [], "warnings": [], "sources": []}
+        return {"skills": [], "recommendations": [], "warnings": [], "sources": []}
     skills, warnings, sources = _discover_registered_skills(target_root=target_root)
+    recommendations = _recommend_skills(task_text=task_text, skills=skills) if task_text else []
     return {
         "target": target_root.as_posix(),
-        "skills": [
+        "task": task_text,
+        "skills": [_skill_payload(skill=skill) for skill in skills],
+        "recommendations": [
             {
-                "id": skill.skill_id,
-                "path": skill.path.as_posix(),
-                "owner": skill.owner,
-                "source_kind": skill.source_kind,
-                "scope": skill.scope,
-                "stability": skill.stability,
-                "summary": skill.summary,
-                "registration": skill.registration,
+                **_skill_payload(skill=recommendation.skill),
+                "score": recommendation.score,
+                "reasons": list(recommendation.reasons),
             }
-            for skill in skills
+            for recommendation in recommendations
         ],
         "warnings": warnings,
         "sources": sources,
@@ -1695,6 +1722,7 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
                     scope=source.default_scope,
                     stability=source.default_stability,
                     summary="unregistered skill discovered by directory scan",
+                    activation_hints=SkillActivationHints(verbs=(), nouns=(), phrases=(), when=()),
                     registration="implicit-scan",
                 )
             )
@@ -1730,6 +1758,9 @@ def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path) 
         if not isinstance(raw, dict):
             continue
         relative = Path(str(raw.get("path", "")))
+        activation_hints = raw.get("activation_hints", {})
+        if not isinstance(activation_hints, dict):
+            activation_hints = {}
         skills.append(
             RegisteredSkill(
                 skill_id=str(raw.get("id", "")).strip(),
@@ -1739,10 +1770,124 @@ def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path) 
                 scope=str(raw.get("scope", source.default_scope)),
                 stability=str(raw.get("stability", source.default_stability)),
                 summary=str(raw.get("summary", "")).strip(),
+                activation_hints=SkillActivationHints(
+                    verbs=tuple(str(value).strip() for value in activation_hints.get("verbs", []) if str(value).strip()),
+                    nouns=tuple(str(value).strip() for value in activation_hints.get("nouns", []) if str(value).strip()),
+                    phrases=tuple(str(value).strip() for value in activation_hints.get("phrases", []) if str(value).strip()),
+                    when=tuple(str(value).strip() for value in activation_hints.get("when", []) if str(value).strip()),
+                ),
                 registration="explicit",
             )
         )
     return [skill for skill in skills if skill.skill_id and skill.path.as_posix()]
+
+
+def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
+    return {
+        "id": skill.skill_id,
+        "path": skill.path.as_posix(),
+        "owner": skill.owner,
+        "source_kind": skill.source_kind,
+        "scope": skill.scope,
+        "stability": skill.stability,
+        "summary": skill.summary,
+        "activation_hints": {
+            "verbs": list(skill.activation_hints.verbs),
+            "nouns": list(skill.activation_hints.nouns),
+            "phrases": list(skill.activation_hints.phrases),
+            "when": list(skill.activation_hints.when),
+        },
+        "registration": skill.registration,
+    }
+
+
+def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[SkillRecommendation]:
+    task_text_lower = task_text.lower()
+    task_tokens = set(_skill_match_tokens(task_text))
+    recommendations: list[SkillRecommendation] = []
+
+    for skill in skills:
+        score = 0
+        hint_score = 0
+        reasons: list[str] = []
+
+        matched_phrases = _matched_skill_terms(
+            terms=skill.activation_hints.phrases,
+            task_text_lower=task_text_lower,
+            task_tokens=task_tokens,
+        )
+        if matched_phrases:
+            phrase_score = len(matched_phrases) * 6
+            score += phrase_score
+            hint_score += phrase_score
+            reasons.append(f"phrase match: {', '.join(matched_phrases)}")
+
+        for label, terms, weight in (
+            ("verb", skill.activation_hints.verbs, 2),
+            ("noun", skill.activation_hints.nouns, 2),
+            ("context", skill.activation_hints.when, 1),
+        ):
+            matched = _matched_skill_terms(terms=terms, task_text_lower=task_text_lower, task_tokens=task_tokens)
+            if matched:
+                matched_score = len(matched) * weight
+                score += matched_score
+                hint_score += matched_score
+                reasons.append(f"{label} match: {', '.join(matched)}")
+
+        summary_overlap = _summary_overlap_tokens(skill=skill, task_tokens=task_tokens)
+        if summary_overlap:
+            score += len(summary_overlap)
+            reasons.append(f"summary overlap: {', '.join(summary_overlap)}")
+
+        if score > 0:
+            recommendations.append(
+                SkillRecommendation(skill=skill, hint_score=hint_score, score=score, reasons=tuple(reasons))
+            )
+
+    if any(recommendation.hint_score > 0 for recommendation in recommendations):
+        recommendations = [recommendation for recommendation in recommendations if recommendation.hint_score > 0]
+
+    recommendations.sort(
+        key=lambda recommendation: (
+            -recommendation.hint_score,
+            -recommendation.score,
+            recommendation.skill.registration != "explicit",
+            recommendation.skill.source_kind,
+            recommendation.skill.skill_id,
+        )
+    )
+    return recommendations
+
+
+def _matched_skill_terms(*, terms: tuple[str, ...], task_text_lower: str, task_tokens: set[str]) -> list[str]:
+    matched = [
+        term
+        for term in terms
+        if _skill_term_matches(term=term, task_text_lower=task_text_lower, task_tokens=task_tokens)
+    ]
+    return sorted(dict.fromkeys(matched))
+
+
+def _skill_term_matches(*, term: str, task_text_lower: str, task_tokens: set[str]) -> bool:
+    normalised = " ".join(_skill_match_tokens(term))
+    if not normalised:
+        return False
+    if " " in normalised:
+        return normalised in task_text_lower
+    return normalised in task_tokens
+
+
+def _summary_overlap_tokens(*, skill: RegisteredSkill, task_tokens: set[str]) -> list[str]:
+    candidate_tokens = {
+        token
+        for token in _skill_match_tokens(f"{skill.skill_id} {skill.summary}")
+        if len(token) >= 4 and token not in {"skill", "skills", "task", "tasks", "repo", "repository", "current"}
+    }
+    return sorted(candidate_tokens & task_tokens)
+
+
+def _skill_match_tokens(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", text.lower())
 
 
 def _scan_skill_paths(skills_root: Path) -> list[Path]:

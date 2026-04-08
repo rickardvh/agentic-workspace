@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 
@@ -20,9 +21,12 @@ def test_bundled_skills_catalog_lists_core_and_review_skills() -> None:
     assert registry_path.exists()
     readme_text = readme_path.read_text(encoding="utf-8")
     registry_text = registry_path.read_text(encoding="utf-8")
+    registry_payload = json.loads(registry_text)
     assert "planning-autopilot" in readme_text
     assert "planning-intake-upstream-task" in readme_text
     assert "planning-review-pass" in readme_text
     assert "planning-promote-review-findings" in readme_text
     assert "planning-autopilot" in registry_text
     assert "planning-review-pass" in registry_text
+    autopilot_entry = next(entry for entry in registry_payload["skills"] if entry["id"] == "planning-autopilot")
+    assert "run autopilot" in autopilot_entry["activation_hints"]["phrases"]

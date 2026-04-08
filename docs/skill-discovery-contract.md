@@ -1,6 +1,6 @@
 # Skill Discovery Contract
 
-This page defines how Agentic Workspace skills should be registered and discovered.
+This page defines how Agentic Workspace skills should be registered, discovered, and selected.
 
 ## Layers
 
@@ -19,6 +19,17 @@ Instead:
 - repo-owned skills should use a separate repo-owned `REGISTRY.json`
 - directory scanning is only a fallback for missing registration and should be treated as incomplete discovery
 
+## Selection Rule
+
+Users should not need to know skill ids.
+
+Instead:
+
+- skill registries should carry explicit activation hints for task matching
+- workspace skill recommendation should prefer those explicit hints over directory or filename inference
+- recommended skills should explain why they matched
+- explicit user-named skill ids remain optional overrides, not the normal operating path
+
 ## Current Registry Surfaces
 
 - planning bundled installed skills: `.agentic-workspace/planning/skills/REGISTRY.json`
@@ -32,3 +43,8 @@ Instead:
 - package-managed registries are updated by install or upgrade from the owning package
 - repo-owned registries are maintained by the repository and should not be overwritten by package upgrades
 - repo-owned skills should be clearly distinct from bundled package skills in both registry metadata and discovery output
+
+## Recommendation Surface
+
+- `agentic-workspace skills --target /path/to/repo --format json` lists the explicit registered catalog
+- `agentic-workspace skills --target /path/to/repo --task "<task text>" --format json` returns the same catalog plus ranked recommendations and matching reasons

@@ -107,6 +107,8 @@ The root `agentic-workspace modules --format json` surface also exposes the curr
 
 Use `agentic-workspace skills --target /path/to/repo --format json` to inspect the explicit installed bundled-skill registries and any checked-in repo-owned skill registries that complement them.
 
+Use `agentic-workspace skills --target /path/to/repo --task "implement the current active milestone" --format json` when the agent needs a registry-backed recommendation for which skill to apply to a task without relying on the user to know skill names.
+
 Use `agentic-workspace` as the normal public lifecycle entrypoint for memory-only, planning-only, and combined installs. Use the module-specific CLIs only for package-local maintainer work, advanced debugging, or when you are working directly on one package contract.
 
 No-install workspace-first prompt lane:

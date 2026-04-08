@@ -8,28 +8,52 @@
       "path": "foundation-stability-check/SKILL.md",
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "recheck that root-owned planning and memory remain the monorepo's operational authority"
+      "summary": "recheck that root-owned planning and memory remain the monorepo's operational authority",
+      "activation_hints": {
+        "verbs": ["recheck", "verify", "confirm"],
+        "nouns": ["planning authority", "memory authority", "operational authority"],
+        "phrases": ["check foundation stability", "recheck planning and memory authority"],
+        "when": ["authority drift", "operating contract recheck"]
+      }
     },
     {
       "id": "ownership-ledger-check",
       "path": "ownership-ledger-check/SKILL.md",
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "recheck the workspace ownership ledger against current planning, memory, and module boundaries"
+      "summary": "recheck the workspace ownership ledger against current planning, memory, and module boundaries",
+      "activation_hints": {
+        "verbs": ["recheck", "verify", "audit"],
+        "nouns": ["ownership ledger", "module boundaries", "workspace ownership"],
+        "phrases": ["check ownership ledger", "audit workspace ownership"],
+        "when": ["ownership drift", "boundary ambiguity"]
+      }
     },
     {
       "id": "package-context-inspection",
       "path": "package-context-inspection/SKILL.md",
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "recheck a package context note without turning it into a workflow dump"
+      "summary": "recheck a package context note without turning it into a workflow dump",
+      "activation_hints": {
+        "verbs": ["recheck", "tighten", "inspect"],
+        "nouns": ["package context", "context note", "note shape"],
+        "phrases": ["recheck package context note", "tighten package context note", "package context note shape"],
+        "when": ["package context drift", "note-shape cleanup"]
+      }
     },
     {
       "id": "path-consolidation-check",
       "path": "path-consolidation-check/SKILL.md",
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "verify that root-owned operational paths still align with the package and install boundaries"
+      "summary": "verify that root-owned operational paths still align with the package and install boundaries",
+      "activation_hints": {
+        "verbs": ["verify", "align", "consolidate"],
+        "nouns": ["operational paths", "install boundaries", "package boundaries"],
+        "phrases": ["check path consolidation", "verify install boundaries align"],
+        "when": ["path drift", "boundary consolidation"]
+      }
     }
   ]
 }
