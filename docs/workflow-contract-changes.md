@@ -4,6 +4,11 @@ Use this page as a compact maintainer-facing record of recent workflow-surface c
 
 Keep this page short and decision-shaped; it is not the full changelog, release notes, or command index.
 
+## 2026-04-08
+
+- Restored the missing canonical source/payload/root-install boundary guide at `docs/source-payload-operational-install.md`.
+- Hardened `scripts/check/check_maintainer_surfaces.py` so the direct wrapper now aggregates planning-surface checks with the boundary checker when that checker exists in the repo.
+
 ## 2026-04-07
 
 - Added an explicit source/payload/root-install boundary guide and a standalone advisory checker.

@@ -38,6 +38,7 @@ Do not bulk-read all planning surfaces.
 ## Product Direction
 
 This repository exists to build agent-first workspace infrastructure: systems that make coding agents more capable, more reliable, and easier to trust in real repositories.
+The one-word summary of the product goal is `efficiency`: maximum quality at minimum token cost over time for a single repository.
 
 Dogfooding is a primary development mode here, not just background context.
 When normal work in this repo reveals friction, ambiguity, noisy maintenance, or repeated agent missteps in the shipped planning or memory systems, treat that as a product signal that should enter the checked-in feedback loop.
@@ -54,6 +55,7 @@ Work in this repo should steer toward these goals:
 - Prefer repository-native state over chat-only or tool-local state.
 - Give agents durable context, explicit execution state, clear routing, narrow validation, and cheap handoff.
 - Optimise for continuity across sessions, tools, models, and contributors.
+- Prefer work that lowers token spend by shrinking rediscovery, cross-checking, and avoidable rereads.
 - Keep systems modular, portable, and selectively adoptable in other repos.
 - Preserve strict boundaries between concerns; do not let planning, memory, routing, checks, or workspace orchestration blur together.
 - Treat internal use as a proving ground, not a licence for repo-specific hacks.
@@ -67,6 +69,7 @@ Work in this repo should steer toward these goals:
 - Keep lifecycle centralized and domain logic package-local so workspace convenience does not erase module responsibility.
 
 The standard for success is not novelty. It is giving agents real operating leverage in a repo: faster restart, safer execution, better continuity, and less wasted context.
+When several plausible improvements compete, prefer the one that most directly removes an efficiency tax from normal repo work.
 
 When changing product shape, ownership boundaries, lifecycle behavior, or maintainer workflow, re-check `docs/design-principles.md` and make sure the change still passes those design tests.
 

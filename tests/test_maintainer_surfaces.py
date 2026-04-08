@@ -261,3 +261,15 @@ def test_maintainer_surface_role_guidance_warns_when_readme_docs_map_drifts(tmp_
         warning.warning_class == "startup_policy_drift" and str(warning.path).endswith("README.md")
         for warning in warnings
     )
+
+
+def test_maintainer_surface_checker_includes_boundary_warnings(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "maintainer_surfaces_boundary")
+    _write_planning_surfaces(tmp_path)
+    _write_generated_agent_surfaces(tmp_path)
+    _write_docs_surfaces(tmp_path)
+    _write(tmp_path / "packages" / "planning" / "tools" / "agent-manifest.json", "{}")
+
+    warnings = mod.gather_maintainer_warnings(repo_root=tmp_path)
+
+    assert any(warning.warning_class == "package_local_install_drift" for warning in warnings)
