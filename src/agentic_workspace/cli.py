@@ -122,6 +122,16 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument("--print-prompt", action="store_true", help="Print the generated handoff prompt.")
     init_parser.add_argument("--write-prompt", help="Write the generated handoff prompt to a file.")
 
+    prompt_parser = subparsers.add_parser("prompt", help="Print a ready-to-paste workspace lifecycle handoff prompt.")
+    prompt_subparsers = prompt_parser.add_subparsers(dest="prompt_command", required=True)
+    prompt_init_parser = prompt_subparsers.add_parser("init", help="Print the workspace bootstrap handoff prompt.")
+    _add_selection_arguments(prompt_init_parser)
+    prompt_init_parser.add_argument("--adopt", action="store_true", help="Force conservative adopt behavior.")
+    prompt_upgrade_parser = prompt_subparsers.add_parser("upgrade", help="Print the workspace upgrade handoff prompt.")
+    _add_selection_arguments(prompt_upgrade_parser)
+    prompt_uninstall_parser = prompt_subparsers.add_parser("uninstall", help="Print the workspace uninstall handoff prompt.")
+    _add_selection_arguments(prompt_uninstall_parser)
+
     status_parser = subparsers.add_parser("status", help="Report installed modules and workspace health summary.")
     _add_selection_arguments(status_parser)
 
@@ -185,6 +195,18 @@ def main(argv: list[str] | None = None) -> int:
             force_adopt=args.adopt,
             print_prompt=args.print_prompt,
             write_prompt=args.write_prompt,
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
+
+    if args.command == "prompt":
+        payload = _run_prompt_command(
+            prompt_command=args.prompt_command,
+            target_root=target_root,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            descriptors=descriptors,
+            force_adopt=bool(getattr(args, "adopt", False)),
         )
         _emit_payload(payload=payload, format_name=args.format)
         return 0
@@ -739,7 +761,7 @@ def _selected_modules(
         requested = _parse_modules(module_arg)
         return [module_name for module_name in MODULE_ORDER if module_name in requested and module_name in descriptors], None
 
-    if command_name == "init":
+    if command_name in {"init", "prompt"}:
         return [module_name for module_name in PRESET_MODULES["full"] if module_name in descriptors], "full"
 
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
@@ -1066,6 +1088,46 @@ def _run_lifecycle_command(
     }
 
 
+def _run_prompt_command(
+    *,
+    prompt_command: str,
+    target_root: Path,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    descriptors: dict[str, ModuleDescriptor],
+    force_adopt: bool,
+) -> dict[str, Any]:
+    if prompt_command == "init":
+        payload = _run_init(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            descriptors=descriptors,
+            dry_run=True,
+            force_adopt=force_adopt,
+            print_prompt=True,
+            write_prompt=None,
+        )
+        return {
+            **payload,
+            "command": "prompt",
+            "prompt_command": "init",
+        }
+
+    payload = _run_lifecycle_command(
+        command_name=prompt_command,
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        dry_run=True,
+    )
+    payload["command"] = "prompt"
+    payload["prompt_command"] = prompt_command
+    payload["handoff_prompt"] = _build_lifecycle_handoff_prompt(payload)
+    return payload
+
+
 def _summarise_reports(
     *, target_root: Path, reports: list[dict[str, Any]], descriptors: dict[str, ModuleDescriptor]
 ) -> dict[str, list[str]]:
@@ -1238,6 +1300,29 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _build_lifecycle_handoff_prompt(payload: dict[str, Any]) -> str:
+    prompt_command = str(payload["prompt_command"])
+    target = str(payload["target"])
+    lines = [f"Run the Agentic Workspace {prompt_command} flow in {target}.", "", "Selected modules:"]
+    lines.extend(f"- {module_name}" for module_name in payload["modules"])
+    lines.extend(
+        [
+            "",
+            "Use the workspace CLI as the lifecycle entrypoint for this repo shape.",
+            "Keep module-specific lifecycle implementation package-local; do not switch to package CLIs unless package-local debugging is required.",
+        ]
+    )
+    review_items = []
+    for heading in ("updated_managed", "preserved_existing", "needs_review", "warnings"):
+        review_items.extend(payload.get(heading, []))
+    if review_items:
+        lines.extend(["", "Review before applying:"])
+        lines.extend(f"- {item}" for item in review_items)
+    lines.extend(["", "Validation:"])
+    lines.extend(f"- {step}" for step in payload["next_steps"] if step)
+    return "\n".join(lines)
+
+
 def _write_prompt_file(*, write_prompt: str, prompt_text: str) -> Path:
     prompt_path = Path(write_prompt).expanduser().resolve()
     prompt_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1306,6 +1391,9 @@ def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
         return
+    if payload.get("command") == "prompt":
+        _emit_prompt_text(payload)
+        return
     if payload.get("command") == "init":
         _emit_init_text(payload)
         return
@@ -1359,6 +1447,19 @@ def _emit_lifecycle_text(payload: dict[str, Any]) -> None:
             detail = f" ({action['detail']})" if action.get("detail") else ""
             print(f"- {action['kind']}: {_display_path(action['path'], Path(payload['target']))}{detail}")
     _print_path_list("Next steps", payload["next_steps"])
+
+
+def _emit_prompt_text(payload: dict[str, Any]) -> None:
+    print(f"Target: {payload['target']}")
+    print(f"Command: prompt {payload['prompt_command']}")
+    print(f"Modules: {', '.join(payload['modules'])}")
+    if payload.get("prompt_requirement"):
+        print(f"Prompt requirement: {payload['prompt_requirement']}")
+    _print_path_list("Needs review", payload.get("needs_review", []))
+    _print_path_list("Warnings", payload.get("warnings", []))
+    print("")
+    print("Handoff Prompt:")
+    print(payload["handoff_prompt"])
 
 
 def _print_path_list(heading: str, values: list[str]) -> None:

@@ -142,7 +142,7 @@ Not allowed:
 - Memory-only repos should not need planning surfaces or planning-specific workflow assumptions.
 - Planning-only repos should not need memory installs to interpret active execution state safely.
 - Repos with both modules should keep memory and planning as separate owners, with references allowed but ownership not merged.
-- The workspace layer should only appear when coordinating multiple installed modules; it is not the primary owner of memory or planning content.
+- The workspace layer may be the public lifecycle entrypoint for single-module or combined installs, but it is still not the primary owner of memory or planning content.
 
 ## Shared Rules
 

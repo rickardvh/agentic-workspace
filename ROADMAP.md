@@ -23,14 +23,13 @@ Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraint
 Prioritized from the latest GitHub issue set:
 
 - Landed: Issue #2, tracker-agnostic upstream task ingestion into checked-in planning. The intake contract now lives in `docs/upstream-task-intake.md` and archived planning history.
-- Remaining: Issue #7, make the workspace orchestrator the sole normal public lifecycle entrypoint through a generic module contract. This is a real roadmap candidate and the clearest new architecture-level intake item.
+- Landed locally: Issue #7, make the workspace orchestrator the sole normal public lifecycle entrypoint through a generic module contract. The root CLI now exposes the prompt lane and the public docs route normal lifecycle through `agentic-workspace` presets.
 - Landed locally: Issue #6, define a canonical review portfolio for finding high-value follow-up work. The shipped review lane now includes a canonical named review matrix, bounded mode contract, and template requirements.
 - Landed locally: Issue #5, tighten `memory/current/` so it cannot be mistaken for active planning authority. The weak-authority current-note contract and the remaining high-level framing tail are now implemented in shipped memory surfaces and archived planning history.
 - Landed locally: Issue #3 and Issue #4, clarify `recurring-failures` as anti-trap memory rather than bug tracking. The duplicate recurring-failures wording signal has now landed as one bounded memory-contract slice.
 
 ## Next Candidate Queue
 
-- Workspace-first module lifecycle contract: make `agentic-workspace` the sole normal public lifecycle entrypoint through a generic module capability and reporting contract, while keeping module lifecycle implementation package-local. Source: GitHub issue `#7`. Promote when lifecycle/platform work resumes or before another first-party or third-party module is added.
 - Contract-integrity review mode: add a canonical review mode for broken references, missing canonical surfaces, docs-code drift, promise-vs-enforcement gaps, and planning-surface coherence so agents can detect repo claims that future contributors would reasonably trust but the checked-in surfaces do not consistently uphold. Promote when the same class of contract drift appears again or current maintainer guidance remains misleading.
 - Maintainer-surface consistency hardening: keep maintainer-facing docs, referenced canonical files, and actual check wiring aligned, including the source/payload/root-install boundary path and any generated-surface or lifecycle claims. Promote when docs reference missing canonical surfaces, command docs overclaim enforcement, or check aggregation drifts from the documented maintainer contract.
 - Composition contract hardening: define how modules interact, compose presets, and share lifecycle reporting without blurring ownership. Promote when future composition work needs a stable contract.

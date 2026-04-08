@@ -163,6 +163,39 @@ def test_init_can_write_prompt_file(monkeypatch, tmp_path: Path, capsys) -> None
     assert "Finish the Agentic Workspace bootstrap" in prompt_path.read_text(encoding="utf-8")
 
 
+def test_prompt_init_uses_dry_run_workspace_bootstrap(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["prompt", "init", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["command"] == "prompt"
+    assert payload["prompt_command"] == "init"
+    assert payload["dry_run"] is True
+    assert "handoff_prompt" in payload
+    assert "Finish the Agentic Workspace bootstrap" in payload["handoff_prompt"]
+    assert calls == [
+        ("planning", "install", {"target": str(tmp_path), "dry_run": True, "force": False}),
+        ("memory", "install", {"target": str(tmp_path), "dry_run": True, "force": False}),
+    ]
+
+
+def test_prompt_upgrade_builds_workspace_handoff_prompt(monkeypatch, tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))
+
+    assert cli.main(["prompt", "upgrade", "--modules", "planning", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["command"] == "prompt"
+    assert payload["prompt_command"] == "upgrade"
+    assert payload["dry_run"] is True
+    assert "Use the workspace CLI as the lifecycle entrypoint" in payload["handoff_prompt"]
+    assert "README.md: inspect manually" in payload["handoff_prompt"]
+
+
 def test_init_uses_recommended_prompt_for_single_existing_surface(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)

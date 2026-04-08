@@ -18,9 +18,9 @@ For the stable-versus-mutable surface policy that underpins this chooser, see `d
 
 | If your main problem is... | Install... | Why |
 | --- | --- | --- |
-| Agents and contributors keep re-discovering stable repo knowledge | `agentic-memory-bootstrap` | It installs checked-in, route-indexed durable repo memory. |
-| Active work keeps drifting, fragmenting, or losing completion discipline | `agentic-planning-bootstrap` | It installs repo-native planning-for-execution surfaces. |
-| You want both durable memory and checked-in execution planning | Both packages, optionally coordinated through `agentic-workspace` | The workspace layer composes both modules without replacing their boundaries. |
+| Agents and contributors keep re-discovering stable repo knowledge | `agentic-workspace --preset memory` | The workspace CLI routes lifecycle through the memory module contract without changing module ownership. |
+| Active work keeps drifting, fragmenting, or losing completion discipline | `agentic-workspace --preset planning` | The workspace CLI routes lifecycle through the planning module contract without making planning depend on memory. |
+| You want both durable memory and checked-in execution planning | `agentic-workspace --preset full` | The workspace layer composes both modules through one public lifecycle entrypoint without replacing their boundaries. |
 
 ## Good Fits
 
@@ -60,7 +60,7 @@ For the stable-versus-mutable surface policy that underpins this chooser, see `d
 | Memory only | Yes | `memory/`, `.agentic-workspace/memory/`, memory skills, memory freshness tooling | Durable `memory/` notes plus optional weak-authority `memory/current/`; no planning dependency |
 | Planning only | Yes | `TODO.md`, `ROADMAP.md`, `docs/execplans/`, `.agentic-workspace/planning/`, generated routing docs, planning checks | Repo planning surfaces; generated `tools/` docs stay rerendered outputs |
 | Memory + Planning | Yes | Both module installs, with planning and memory remaining separate owners | Planning for active-now state, memory for durable knowledge, `memory/current/` for compact re-orientation only |
-| Workspace composition with both modules | Yes | Shared lifecycle entrypoints over the same memory/planning module contracts | Same module-owned writable surfaces, plus thin root orchestration entrypoints |
+| Workspace lifecycle entrypoint with `--preset memory`, `--preset planning`, or `--preset full` | Yes | Shared lifecycle entrypoint over the same memory/planning module contracts | Same module-owned writable surfaces, plus thin root orchestration entrypoints |
 | Workspace layer without memory or planning | No | The workspace layer is intentionally thin and not a standalone domain product | Not applicable |
 
 ## Proof Bar
@@ -68,11 +68,13 @@ For the stable-versus-mutable surface policy that underpins this chooser, see `d
 - Memory-only repos should install and adopt cleanly without planning assumptions.
 - Planning-only repos should install and adopt cleanly without memory assumptions.
 - Repos with both modules should keep ownership separate while the root workspace layer stays thin.
+- Single-module repos may still use the workspace CLI as the public lifecycle entrypoint; selective adoption stays enforced by presets, not by forcing direct package CLIs.
 - Evidence should come from package tests plus at least one real temporary-repo proof for each supported shape.
 
 ## Next Reads
 
 - Memory path: `packages/memory/README.md`
 - Planning path: `packages/planning/README.md`
+- Workspace lifecycle path: `README.md`
 - Architecture and boundaries: `docs/architecture.md`, `docs/boundary-and-extraction.md`
 - Maturity and support expectations: `docs/maturity-model.md`

@@ -41,6 +41,8 @@ The CLI is the delivery mechanism, not the whole product. The product capability
 
 ## Quick Start
 
+For normal repo adoption, prefer `agentic-workspace --preset memory` as the public lifecycle entrypoint. Use the package CLI below for package-local maintainer work, advanced debugging, or when you explicitly want to operate the memory module directly.
+
 Fastest no-install path:
 
 ```bash
@@ -200,6 +202,12 @@ Install and adopt flows may create a temporary `.agentic-workspace/memory/bootst
 In this monorepo checkout, the active operational memory install lives at the repository root. This package directory keeps the reusable package source, bootstrap payload, tests, and fixtures; the paths listed above describe the target-repository structure that `install` or `adopt` writes.
 
 ## Install
+
+Normal public lifecycle path:
+
+```bash
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target /path/to/repo --preset memory
+```
 
 ### Agent workflow for install
 

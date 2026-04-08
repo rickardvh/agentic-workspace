@@ -77,6 +77,21 @@ agentic-workspace uninstall --target /path/to/repo --preset planning
 
 `agentic-workspace doctor` now surfaces each module's frozen compatibility-contract shortlist inside the nested module reports, so maintainers can inspect the current contract boundary from the root CLI without dropping into package-local doctor commands first.
 
+Use `agentic-workspace` as the normal public lifecycle entrypoint for memory-only, planning-only, and combined installs. Use the module-specific CLIs only for package-local maintainer work, advanced debugging, or when you are working directly on one package contract.
+
+No-install workspace-first prompt lane:
+
+```bash
+# Memory-only repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target /path/to/repo --preset memory
+
+# Planning-only repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target /path/to/repo --preset planning
+
+# Combined install
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target /path/to/repo --preset full
+```
+
 Direct module CLIs still exist for maintainers, power users, and package-local workflows:
 
 ```bash
@@ -93,7 +108,7 @@ pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdir
 pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt install --target /path/to/repo
 ```
 
-Use the module-specific CLIs when you want package-local control. Use `agentic-workspace` when you want the thin composition layer to select modules, sequence them, and aggregate the bootstrap report and handoff prompt.
+Use the module-specific CLIs when you want package-local control. Use `agentic-workspace` when you want the public lifecycle entrypoint to select modules, sequence them, and aggregate the bootstrap report and handoff prompt.
 
 ## Maturity Today
 
