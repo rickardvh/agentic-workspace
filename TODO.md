@@ -10,10 +10,15 @@ Active queue for repository work.
 - None.
 
 ## Action
-- No active work items. Promote from `ROADMAP.md` when the next bounded milestone is ready.
+- No active work items. Promote only when a new bounded candidate is justified.
 
 ## Done
 
+- memory-context-note-shape-cleanup: Completed (moved repeatable package-context inspection into a runbook, tightened current and package-context notes, and reduced the remaining memory overlap/procedure signal)
+- shared-tooling-extraction: Completed (codified the rule for managed-source reuse versus helper extraction versus broader shared-tooling extraction)
+- extension-boundary-design: Completed (defined the current first-party-only extension boundary and the readiness gates for any future public external-module contract)
+- composition-contract-hardening: Completed (moved maintainer-surface aggregation into one managed source and returned root/package wrappers to thin delegation)
+- contract-integrity-review-mode: Completed (made the `contract-integrity` review mode explicit enough to use and locked its core failure classes with payload assertions)
 - maintainer-surface-consistency-hardening: Completed (restored the missing source/payload/root-install guide and made the direct maintainer wrapper aggregate boundary drift when available)
 - improvement-targeting-workflow: Completed (made symptom-to-remediation routing explicit across memory and review surfaces, including post-remediation note-shape guidance)
 - workspace-first-lifecycle: Completed (made `agentic-workspace` the normal public lifecycle entrypoint, added the root prompt lane, and rewrote the chooser/package docs around workspace presets)

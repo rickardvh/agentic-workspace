@@ -57,6 +57,8 @@ Use the template in this directory and prefer one bounded review question per fi
 
 Use one primary review mode per artifact. If a review starts surfacing a second substantial mode, split it into another artifact instead of widening the scope.
 
+Choose `contract-integrity` when the core question is whether a repo claim that future contributors would reasonably trust still resolves to a real canonical surface, runnable command, or enforced check path.
+
 | Review mode | Purpose | Inspect first | Typical findings | Likely promotion target | Default cap |
 | --- | --- | --- | --- | --- | --- |
 | `contract-integrity` | Check whether repo claims, docs, and enforced surfaces still agree. | Canonical docs, check wrappers, claimed contract files | broken references, docs-code drift, promise-vs-enforcement gaps | `ROADMAP.md` or canonical docs | 3 findings |

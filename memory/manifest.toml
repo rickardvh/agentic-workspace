@@ -121,6 +121,19 @@ routes_from = ["packages/planning/**", "packages/planning/README.md"]
 stale_when = ["packages/planning/**"]
 memory_role = "durable_truth"
 
+[notes."memory/runbooks/package-context-inspection.md"]
+note_type = "runbook"
+canonical_home = "memory/runbooks/package-context-inspection.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-package", "planning-package", "orchestration"]
+surfaces = ["runtime"]
+routes_from = ["packages/memory/**", "packages/planning/**"]
+stale_when = ["packages/memory/**", "packages/planning/**"]
+memory_role = "durable_truth"
+
 [notes."memory/decisions/installed-system-consolidation-2026-04-05.md"]
 note_type = "decision"
 canonical_home = "memory/decisions/installed-system-consolidation-2026-04-05.md"

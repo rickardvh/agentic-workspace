@@ -20,30 +20,18 @@ Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraint
 
 ## GitHub Issue Intake
 
-Prioritized from the latest GitHub issue set:
-
-- Landed: Issue #2, tracker-agnostic upstream task ingestion into checked-in planning. The intake contract now lives in `docs/upstream-task-intake.md` and archived planning history.
-- Landed locally: Issue #8, make improvement-targeting a first-class workflow so memory notes do not become long-lived workarounds. The shared memory and review docs now define the symptom-to-remediation workflow explicitly.
-- Landed locally: Issue #7, make the workspace orchestrator the sole normal public lifecycle entrypoint through a generic module contract. The root CLI now exposes the prompt lane and the public docs route normal lifecycle through `agentic-workspace` presets.
-- Landed locally: Issue #6, define a canonical review portfolio for finding high-value follow-up work. The shipped review lane now includes a canonical named review matrix, bounded mode contract, and template requirements.
-- Landed locally: Issue #5, tighten `memory/current/` so it cannot be mistaken for active planning authority. The weak-authority current-note contract and the remaining high-level framing tail are now implemented in shipped memory surfaces and archived planning history.
-- Landed locally: Issue #3 and Issue #4, clarify `recurring-failures` as anti-trap memory rather than bug tracking. The duplicate recurring-failures wording signal has now landed as one bounded memory-contract slice.
+- Latest GitHub issue tranche is landed locally; keep detailed closure history in archived execplans and issue comments, not here.
 
 ## Next Candidate Queue
 
-- Contract-integrity review mode: add a canonical review mode for broken references, missing canonical surfaces, docs-code drift, promise-vs-enforcement gaps, and planning-surface coherence so agents can detect repo claims that future contributors would reasonably trust but the checked-in surfaces do not consistently uphold. Promote when the same class of contract drift appears again or current maintainer guidance remains misleading.
-- Composition contract hardening: define how modules interact, compose presets, and share lifecycle reporting without blurring ownership. Promote when future composition work needs a stable contract.
-- Extension boundary design: define the public plugin or external-module contract only after first-party module assumptions have stabilized. Promote when external use becomes a product need.
-- Shared tooling extraction: evaluate a common checker core when duplicated maintenance drag remains a real cost after the lifecycle and adoption phases settle. Promote when duplicated checker and renderer maintenance remains a higher cost than unresolved product-contract ambiguity.
-- Memory context note-shape cleanup: reduce overlap and procedural drift between package-context memory notes, recurring-failures, and current-state summaries; likely first slice is either sharper package-context boundaries or a small repo-owned memory skill/runbook for repeatable package-memory inspection. Promote when memory doctor still reports the same package-context overlap after one direct note cleanup pass.
+No inactive candidates right now.
 
 ## Sequencing Recommendation
 
-1. Finish maintainer-surface contract hardening so docs, checks, and real paths agree.
-2. Promote one bounded roadmap candidate and execute it end to end with narrow validation and prompt archival.
-3. Formalize the orchestrator-first module-interface contract so future module addition stays generic instead of bespoke.
-4. Keep tightening memory until the cheap path is also the correct path and current-state reading stays subordinate to planning and canonical docs.
-5. Preserve review and issue discipline by keeping it quiet, bounded, and cheaper than the confusion it prevents.
+1. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.
+2. Formalize the orchestrator-first module-interface contract so future module addition stays generic instead of bespoke.
+3. Keep tightening memory until the cheap path is also the correct path and current-state reading stays subordinate to planning and canonical docs.
+4. Preserve review and issue discipline by keeping it quiet, bounded, and cheaper than the confusion it prevents.
 
 ## Reopen Conditions
 

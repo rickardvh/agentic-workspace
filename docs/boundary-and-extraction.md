@@ -39,6 +39,16 @@ Extract a new package only when all of the following are true:
 
 Do not extract a package when the result would mostly be a shell around one module's helper logic.
 
+## Shared Tooling Decision Rule
+
+When repeated duplication appears across root wrappers, payload mirrors, and package-local helpers, choose the smallest fix that restores one clear owner:
+
+1. Prefer one canonical managed source when the behavior still belongs to one module contract.
+2. Extract a small internal helper only when two or more owned surfaces need the same logic and the helper still has one clear owner.
+3. Consider broader shared-tooling extraction only when the logic is stable, cross-module, independently valuable, and cheaper to maintain as a shared capability than as explicit module-owned code.
+
+Do not introduce a shared helper layer just because two wrappers look similar. Similarity alone is weaker evidence than ownership and maintenance cost.
+
 ## Root Versus Package Workspace Rule
 
 For this monorepo, root installed planning and memory surfaces are authoritative for live operation. Package roots are source, payload, skills, tests, and fixtures; do not recreate package-local operational installs as a workaround for missing product behavior.

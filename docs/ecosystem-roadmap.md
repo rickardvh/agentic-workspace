@@ -10,6 +10,7 @@ This page records the current ecosystem stance without turning it into a promise
 ## Current Composition Layer
 
 - `agentic-workspace` is the thin workspace-level composition layer for shared lifecycle verbs.
+- External module or plugin extension is not yet a supported public contract; see `docs/extension-boundary.md`.
 
 ## Important Internal Capabilities
 
@@ -36,3 +37,8 @@ Consider extraction only when dogfooding shows all of the following:
 ## Discipline Rule
 
 Prefer sharper documentation, liveness checks, and consistency hardening over adding new top-level concepts unless real reuse pressure proves otherwise.
+
+Current stance on shared tooling:
+
+- prefer one managed source over new shared helpers when one module still clearly owns the behavior
+- extract broader shared tooling only after cross-module reuse and maintenance cost are both clearly proven

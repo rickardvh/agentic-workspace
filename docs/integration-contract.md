@@ -130,6 +130,13 @@ Not allowed:
 - module-specific policy that belongs inside Agentic Memory or Agentic Planning
 - hidden cross-module state that becomes more authoritative than the package-owned surfaces
 
+## Composition Source Rule
+
+- If a cross-module or shared maintainer behavior needs implementation logic, give it one canonical managed source before exposing thin root or package wrappers.
+- Root wrappers, package mirrors, and bootstrap copies may forward to that managed source, but they should not become parallel logic owners.
+- When this rule is violated, the duplicated wrapper logic is a composition-contract bug, not only a maintenance nuisance.
+- If duplication pressure persists after that step and affects more than one owning module, re-evaluate under `docs/boundary-and-extraction.md` before extracting broader shared tooling.
+
 ## Checks And Liveness
 
 - Planning-surface checks should catch drift in TODO, ROADMAP, execplans, startup policy, and generated planning docs.

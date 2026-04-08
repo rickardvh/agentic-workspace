@@ -6,19 +6,14 @@ Active
 
 ## Purpose
 
-Capture durable context imported from the previous package-local memory install so root memory ownership can replace package-local installs.
-
-## Consolidated from
-
-- Previous package-local current-memory notes under packages/memory/memory/current/.
+Durable context for `packages/memory/`.
 
 ## Durable context
 
 - The memory package remains memory-only and planning-system agnostic.
-- Package source of truth lives under `packages/memory/bootstrap/`; the repo root is only the operational install used for dogfooding.
-- Shared memory workflow guidance lives in `.agentic-workspace/memory/WORKFLOW.md`; repo-local `AGENTS.md` stays a pointer surface.
-- Primary proof surface for package contract changes: `packages/memory/tests/` plus payload verification.
-- Main workflow probes for package behavior: `route`, `route-review`, `route-report`, `promotion-report`, and `sync-memory`.
+- Package source of truth lives under `packages/memory/src/`, `packages/memory/bootstrap/`, and `packages/memory/tests/`; the repo root is only the dogfooded install.
+- Primary proof surface for package contract changes is `packages/memory/tests/` plus payload verification.
+- Repeatable inspection steps belong in `memory/runbooks/package-context-inspection.md`, not in this context note.
 
 ## Monorepo adaptation note
 
@@ -26,26 +21,23 @@ Root ownership now contains the installed memory system. For the owning rational
 
 ## Load when
 
-- Editing files under packages/memory.
-- Updating memory bootstrap package boundaries or workflow guidance.
+- Editing files under `packages/memory/`.
 
 ## Review when
 
-- The memory package README or bootstrap payload layout changes materially.
-- Memory bootstrap workflow ownership changes between root and package surfaces.
+- The memory package source, payload, or test layout changes materially.
 
 ## Failure signals
 
-- Package-memory work starts from root operational symptoms and skips the package payload, installer, or tests.
-- Package behavior diverges from the package source, bootstrap payload, or contract assertions captured here.
+- The note starts carrying workflow steps instead of package facts.
 
 ## Verify
 
 - `packages/memory/README.md`
 - `packages/memory/bootstrap/`
-- `packages/memory/src/`
 - `packages/memory/tests/`
+- `memory/runbooks/package-context-inspection.md`
 
 ## Last confirmed
 
-2026-04-08 after improvement-targeting workflow verification
+2026-04-08 after moving repeatable inspection procedure into a runbook

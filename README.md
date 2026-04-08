@@ -24,6 +24,32 @@ Short version:
 | Checked-in execution planning surfaces for active work | Agentic Planning | `packages/planning/README.md` |
 | Both together | Both packages, optionally composed through `agentic-workspace` | `docs/which-package.md` |
 
+## Why adopt this?
+
+Agentic Workspace gives a repository a durable, checked-in operating system for agents.
+
+Instead of relying on chat history, one model's private memory, or a maintainer repeatedly re-explaining the same context, it puts the repo's working contract into versioned files that agents and humans can share.
+
+Adopt it when you want to make work in a repo:
+
+- easier to restart
+- cheaper to continue across sessions
+- less dependent on one specific tool or model
+- more resistant to drift, rediscovery, and partial work
+- easier for multiple agents or contributors to hand off cleanly
+
+What it gives you:
+
+- **Checked-in execution state** through Agentic Planning, so active work stays bounded, resumable, and finishable.
+- **Checked-in anti-rediscovery knowledge** through Agentic Memory, so expensive-to-reconstruct context, traps, invariants, and runbooks stop living only in chat or in one contributor's head.
+- **One public lifecycle entrypoint** through `agentic-workspace`, so install, adopt, doctor, upgrade, and uninstall stay consistent without collapsing module boundaries.
+- **File-native, reviewable state** in Markdown, JSON, and TOML, so the repo's agent contract lives in Git and can be inspected, discussed, and improved like any other code or docs.
+- **Selective adoption**: install Memory only, Planning only, or both together, depending on the repo's actual needs.
+- **Lower token cost over time** by reducing startup friction, repeated reading, repeated reasoning, and chat-only continuity loss.
+- **A built-in improvement loop** that helps turn recurring friction into better docs, checks, scripts, tests, and workflows instead of letting workaround notes accumulate forever.
+
+In short: it helps a repo carry its own context, execution discipline, and agent workflow in checked-in form, so agents can produce higher-quality work with less wasted effort.
+
 ## Product Names
 
 The stable ecosystem names in docs are:
@@ -131,6 +157,7 @@ For boundaries and ecosystem policy:
 
 - `docs/compatibility-policy.md` - understand which surfaces are stable, mutable, or generated before changing a contract.
 - `docs/boundary-and-extraction.md` - decide what belongs in a package, the workspace layer, or a generated surface.
+- `docs/extension-boundary.md` - understand what module extension is and is not supported today.
 - `docs/ecosystem-roadmap.md` - see the long-horizon ecosystem shape; use `ROADMAP.md` as the short sequencing queue.
 - `docs/design-principles.md` - review the product rules that constrain future changes.
 

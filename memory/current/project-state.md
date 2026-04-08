@@ -2,11 +2,11 @@
 
 ## Status
 
-No active execplan; repo is between milestones after closing the April 8 contract tranche set.
+Active execplan: `memory-context-note-shape-cleanup`.
 
 ## Scope
 
-- Lightweight current overview for the monorepo host.
+- Transient handoff note for the current monorepo pass.
 
 ## Load when
 
@@ -21,14 +21,11 @@ No active execplan; repo is between milestones after closing the April 8 contrac
 
 ## Current focus
 
-- Keep the root workspace thin while preserving package-local ownership.
-- Use this monorepo as the dogfooding surface for shipped planning and memory contracts.
+- Finish the final memory note-shape cleanup and leave the roadmap empty.
 
 ## Recent meaningful progress
 
-- Closed the live GitHub issue tranche set for the current contract hardening pass.
-- Refreshed the root planning and memory installs from the latest checked-in package payloads.
-- Remaining follow-up is advisory only: memory-note overlap cleanup and generated-surface line-ending noise.
+- All non-memory roadmap slices are complete.
 
 ## Blockers
 
@@ -36,8 +33,7 @@ No active execplan; repo is between milestones after closing the April 8 contrac
 
 ## High-level notes
 
-- Package-local fixtures or payload copies should not become operational authorities.
-- Durable package and architecture facts belong in canonical notes or docs, not in `memory/current/`.
+- Keep this note short and current.
 
 ## Failure signals
 
@@ -46,18 +42,13 @@ No active execplan; repo is between milestones after closing the April 8 contrac
 
 ## Verify
 
-- Read `memory/index.md` and confirm the routing still matches the memory structure.
-- Confirm the current focus, recent progress, and blockers still reflect the repo.
-- Confirm the latest root package refresh still reports the expected install state.
+- Confirm the current focus and blockers still reflect the repo.
 
 ## Verified against
 
 - `memory/index.md`
-- `.agentic-workspace/memory/WORKFLOW.md`
-- `AGENTS.md`
 - `TODO.md`
-- `README.md`
 
 ## Last confirmed
 
-2026-04-08 after root package refresh verification
+2026-04-08 after promoting the final roadmap slice

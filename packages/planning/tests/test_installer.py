@@ -273,6 +273,8 @@ def test_bootstrap_review_readme_includes_canonical_review_portfolio() -> None:
 
     assert "## Canonical Review Portfolio" in text
     assert "`contract-integrity`" in text
+    assert "future contributors would reasonably trust" in text
+    assert "promise-vs-enforcement gaps" in text
     assert "`maintainer-workflow`" in text
     assert "`source-payload-install`" in text
     assert "`review-promotion`" in text

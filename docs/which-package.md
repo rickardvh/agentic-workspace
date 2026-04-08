@@ -76,5 +76,5 @@ For the stable-versus-mutable surface policy that underpins this chooser, see `d
 - Memory path: `packages/memory/README.md`
 - Planning path: `packages/planning/README.md`
 - Workspace lifecycle path: `README.md`
-- Architecture and boundaries: `docs/architecture.md`, `docs/boundary-and-extraction.md`
+- Architecture and boundaries: `docs/architecture.md`, `docs/boundary-and-extraction.md`, `docs/extension-boundary.md`
 - Maturity and support expectations: `docs/maturity-model.md`

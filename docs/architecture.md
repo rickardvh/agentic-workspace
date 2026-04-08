@@ -22,6 +22,7 @@ flowchart TD
 - Agentic Planning owns active execution state.
 - `agentic-workspace` coordinates module selection and shared lifecycle verbs.
 - Generated docs and checks support the package contracts, but are not standalone products.
+- The public extension boundary is still first-party only; see `docs/extension-boundary.md`.
 
 ## Monorepo Operating Boundary
 
