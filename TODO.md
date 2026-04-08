@@ -14,6 +14,7 @@ Active queue for repository work.
 
 ## Done
 
+- installed-surface-ambiguity-cleanup: Completed (cleared the remaining package-context ambiguity by tightening the installed notes, adding a checked-in inspection skill, and hardening the memory doctor heuristics against package-context false positives)
 - plugin-ready-capability-contract: Completed (made capabilities, dependency/conflict metadata, lifecycle hook expectations, and result-contract guarantees first-class in the workspace registry and enforced declared compatibility rules during module selection)
 - orchestrator-module-contract-finalization: Completed (moved module ordering, preset membership, startup guidance, and root AGENTS cleanup rules into module-owned descriptors so the workspace CLI no longer depends on separate planning/memory globals for first-party extension)
 - memory-context-note-shape-cleanup: Completed (moved repeatable package-context inspection into a runbook, tightened current and package-context notes, and reduced the remaining memory overlap/procedure signal)

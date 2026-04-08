@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Keep repeatable package-context inspection steps out of the durable package-context notes.
+Keep the durable reason for package-context inspection separate from the executable checklist.
 
-Use this runbook when memory doctor or normal work suggests the package context notes have become stale, overly procedural, or overlapping.
+Use `memory/skills/package-context-inspection/SKILL.md` for the actual inspection flow.
 
 ## Load when
 
@@ -15,12 +15,9 @@ Use this runbook when memory doctor or normal work suggests the package context 
 
 - Package layout, validation surfaces, or package-context routing changes materially.
 
-## Steps
+## Rule
 
-1. Confirm which package is being edited and load only that package's `AGENTS.md`, README, source, bootstrap payload, and tests.
-2. Re-check the corresponding package-context note for durable facts only.
-3. Move repeatable verification procedure into this runbook instead of adding it to the package-context note.
-4. If root operational symptoms reveal a product problem, route that signal into planning, docs, or memory instead of expanding the context note.
+The durable package-context note should explain only package-specific authority and boundaries. If an agent needs a checklist, route it to the checked-in skill instead of adding steps here.
 
 ## Failure signals
 
@@ -37,4 +34,4 @@ Use this runbook when memory doctor or normal work suggests the package context 
 
 ## Last confirmed
 
-2026-04-08 during final roadmap cleanup
+2026-04-08 after adding the checked-in package-context inspection skill

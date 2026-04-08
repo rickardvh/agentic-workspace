@@ -6,19 +6,18 @@ Active
 
 ## Purpose
 
-Capture durable context for the planning bootstrap package and how it fits into the root-owned planning and memory systems.
+Capture durable context for the planning bootstrap package and its package-local authority.
 
-## Durable context
+## Durable boundaries
 
 - Planning owns active execution state through TODO.md, ROADMAP.md, and docs/execplans.
 - Memory remains an optional companion for durable technical context and should not own active queue state.
-- Keep planning and memory ownership boundaries explicit in agent startup and routing docs.
 - Package planning contract includes review artifacts, upstream-task intake, and generated routing surfaces in addition to TODO/ROADMAP/execplans.
 - Package planning source of truth lives under `packages/planning/src/`, `packages/planning/bootstrap/`, and `packages/planning/tests/`; the repo root is only the operational install used for dogfooding.
 
-## Monorepo adaptation note
+## Companion skill
 
-Root ownership contains the installed planning and memory systems. For the owning rationale, load `memory/decisions/installed-system-consolidation-2026-04-05.md` instead of expanding this context note.
+Use `memory/skills/package-context-inspection/SKILL.md` for the repeatable package-inspection checklist instead of growing this note.
 
 ## Load when
 
@@ -41,8 +40,8 @@ Root ownership contains the installed planning and memory systems. For the ownin
 - packages/planning/src/
 - packages/planning/bootstrap/
 - packages/planning/tests/
-- memory/runbooks/package-context-inspection.md
+- memory/skills/package-context-inspection/SKILL.md
 
 ## Last confirmed
 
-2026-04-08 after extension-boundary and composition-contract cleanup
+2026-04-08 after narrowing package-context notes and moving the repeatable checklist into a checked-in skill

@@ -776,6 +776,109 @@ def test_doctor_overlap_audit_requires_shared_title_terms_for_decision_family_pa
     )
 
 
+def test_doctor_overlap_audit_skips_distinct_package_context_notes(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "domains" / "memory-package-context.md").write_text(
+        "# Memory Package Context\n\nMemory package authority lives in packages/memory/src and packages/memory/tests.\n",
+        encoding="utf-8",
+    )
+    (target / "memory" / "domains" / "planning-package-context.md").write_text(
+        "# Planning Package Context\n\nPlanning package authority lives in packages/planning/src and packages/planning/tests.\n",
+        encoding="utf-8",
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/memory-package-context.md"]
+note_type = "domain"
+canonical_home = "memory/domains/memory-package-context.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+surfaces = ["architecture"]
+routes_from = ["packages/memory/**"]
+
+[notes."memory/domains/planning-package-context.md"]
+note_type = "domain"
+canonical_home = "memory/domains/planning-package-context.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+surfaces = ["architecture"]
+routes_from = ["packages/planning/**"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert not any(
+        action.role == "memory-overlap-audit"
+        and action.path == target / "memory" / "domains" / "memory-package-context.md"
+        and "planning-package-context.md" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_overlap_audit_skips_package_context_companion_runbook(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "memory" / "runbooks").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "domains" / "memory-package-context.md").write_text(
+        "# Memory Package Context\n\nUse the companion skill for the checklist.\n",
+        encoding="utf-8",
+    )
+    (target / "memory" / "runbooks" / "package-context-inspection.md").write_text(
+        "# Package Context Inspection\n\nUse the skill for execution.\n",
+        encoding="utf-8",
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/memory-package-context.md"]
+note_type = "domain"
+canonical_home = "memory/domains/memory-package-context.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+surfaces = ["architecture"]
+routes_from = ["packages/memory/**"]
+
+[notes."memory/runbooks/package-context-inspection.md"]
+note_type = "runbook"
+canonical_home = "memory/runbooks/package-context-inspection.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+surfaces = ["runtime"]
+routes_from = ["packages/memory/**", "packages/planning/**"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert not any(
+        action.role == "memory-overlap-audit"
+        and action.path == target / "memory" / "domains" / "memory-package-context.md"
+        and "package-context-inspection.md" in action.detail
+        for action in result.actions
+    )
+
+
 def test_upgrade_reports_customised_seed_notes_as_expected_customisation(
     tmp_path: Path,
 ) -> None:
@@ -3769,6 +3872,59 @@ task_relevance = "optional"
         action.role == "memory-multi-home"
         and action.path == target / "memory/domains/api.md"
         and "memory/skills/api/SKILL.md" in action.detail
+        for action in result.actions
+    )
+
+
+def test_doctor_ignores_standard_metadata_sections_when_counting_domain_procedure(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "domains").mkdir(parents=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / "memory" / "domains" / "api.md").write_text(
+        """# API
+
+## Purpose
+
+Durable package boundary.
+
+## Durable boundaries
+
+- API package authority lives in `packages/api/src/`.
+- Tests live in `packages/api/tests/`.
+
+## Companion skill
+
+Use `memory/skills/api/SKILL.md`.
+
+## Verify
+
+- `packages/api/src/`
+- `packages/api/tests/`
+""",
+        encoding="utf-8",
+    )
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/api.md"]
+note_type = "domain"
+canonical_home = "memory/domains/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert not any(
+        action.role == "memory-multi-home"
+        and action.path == target / "memory/domains/api.md"
         for action in result.actions
     )
 

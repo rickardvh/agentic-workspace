@@ -39,6 +39,16 @@ H2_RE = re.compile(r"^\s{0,3}##\s+(.+?)\s*$")
 H3_RE = re.compile(r"^\s{0,3}###\s+(?:Case:\s*)?(.+?)\s*$")
 INVARIANT_SIGNAL_RE = re.compile(r"\b(?:must|must not|never|always|cannot|do not|invariant)\b", re.IGNORECASE)
 RATIONALE_SIGNAL_RE = re.compile(r"\b(?:because|therefore|trade-?off|rejected|decision|rationale)\b", re.IGNORECASE)
+NOTE_METADATA_SECTION_TITLES = {
+    "status",
+    "purpose",
+    "load when",
+    "review when",
+    "failure signals",
+    "verify",
+    "last confirmed",
+    "companion skill",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -661,6 +671,12 @@ def _audit_note_overlap(*, target_root: Path, manifest: MemoryManifest, result) 
             same_family = left.path.parent == right.path.parent or categories in adjacent_categories
             shared_surfaces = set(left.surfaces) & set(right.surfaces)
             shared_routes = set(left.routes_from) & set(right.routes_from)
+            if _is_distinct_package_context_pair(left, right):
+                continue
+            if _is_package_context_companion_pair(left.path, right.path):
+                continue
+            if not same_family and not shared_routes and len(shared_surfaces) < 2:
+                continue
             if not same_family and not shared_surfaces and not shared_routes:
                 continue
             right_path = target_root / right.path
@@ -695,6 +711,36 @@ def _extract_memory_references(text: str) -> list[str]:
     matches = {match.group(0) for match in MEMORY_PATH_RE.finditer(text)}
     matches.update(match.group(1) for match in MARKDOWN_MEMORY_LINK_RE.finditer(text))
     return sorted(match.rstrip(").,`") for match in matches if match.strip())
+
+
+def _is_package_context_note(path: Path) -> bool:
+    return path.parts[:2] == ("memory", "domains") and path.stem.endswith("package-context")
+
+
+def _is_package_context_companion_pair(left_path: Path, right_path: Path) -> bool:
+    package_context_runbook = Path("memory/runbooks/package-context-inspection.md")
+    return (left_path == package_context_runbook and _is_package_context_note(right_path)) or (
+        right_path == package_context_runbook and _is_package_context_note(left_path)
+    )
+
+
+def _package_route_roots(note: MemoryNoteRecord) -> set[str]:
+    roots: set[str] = set()
+    for route in note.routes_from:
+        if not route.startswith("packages/"):
+            continue
+        parts = route.split("/")
+        if len(parts) >= 2:
+            roots.add("/".join(parts[:2]))
+    return roots
+
+
+def _is_distinct_package_context_pair(left: MemoryNoteRecord, right: MemoryNoteRecord) -> bool:
+    if not (_is_package_context_note(left.path) and _is_package_context_note(right.path)):
+        return False
+    left_roots = _package_route_roots(left)
+    right_roots = _package_route_roots(right)
+    return bool(left_roots and right_roots and left_roots.isdisjoint(right_roots))
 
 
 def _iter_promotion_candidates(
@@ -940,7 +986,7 @@ def _note_multi_home_findings(
     note_path: Path,
     text: str,
 ) -> list[tuple[str, str, str, str, str]]:
-    lines = text.splitlines()
+    lines = _analysis_lines(text)
     line_count = len(lines)
     imperative_lines = sum(1 for line in lines if re.match(r"^\s*(?:-|\*|\d+\.)\s+", line) or line.strip().startswith("`"))
     command_lines = sum(1 for line in lines if re.search(r"`[^`]+`", line) or re.match(r"^\s*(?:run|execute|call)\b", line.strip().lower()))
@@ -1064,7 +1110,7 @@ def _build_remediation_recommendation(
 ) -> RemediationRecommendation | None:
     relative = note.path if note is not None else note_path
     relative_str = relative.as_posix()
-    lines = text.splitlines()
+    lines = _analysis_lines(text)
     line_count = len(lines)
     imperative_lines = sum(1 for line in lines if re.match(r"^\s*(?:-|\*|\d+\.)\s+", line) or line.strip().startswith("`"))
     command_lines = sum(1 for line in lines if re.search(r"`[^`]+`", line) or re.match(r"^\s*(?:run|execute|call)\b", line.strip().lower()))
@@ -1147,6 +1193,21 @@ def _build_remediation_recommendation(
     return None
 
 
+def _analysis_lines(text: str) -> list[str]:
+    lines = text.splitlines()
+    filtered: list[str] = []
+    current_h2 = ""
+    for line in lines:
+        match = H2_RE.match(line)
+        if match:
+            current_h2 = match.group(1).strip().lower()
+            continue
+        if current_h2 in NOTE_METADATA_SECTION_TITLES:
+            continue
+        filtered.append(line)
+    return filtered
+
+
 def _explicit_remediation_recommendation(
     note: MemoryNoteRecord,
     *,
@@ -1220,7 +1281,7 @@ def _collect_improvement_hints(
     hints: list[str] = []
     relative = note.path if note is not None else note_path
     relative_str = relative.as_posix()
-    lines = text.splitlines()
+    lines = _analysis_lines(text)
     line_count = len(lines)
     imperative_lines = sum(1 for line in lines if re.match(r"^\s*(?:-|\*|\d+\.)\s+", line) or line.strip().startswith("`"))
     has_failure_entries = _has_concrete_failure_entries(text)

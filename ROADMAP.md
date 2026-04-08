@@ -24,13 +24,12 @@ Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraint
 
 ## Next Candidate Queue
 
-- Installed-surface ambiguity cleanup: keep tightening repo memory and installed surfaces until the wrong interpretation becomes unnatural, with current focus on the residual package-context overlap/procedure signal in `memory/domains/memory-package-context.md`. Promote when memory doctor still reports that same ambiguity class after another normal maintenance pass.
+- None. Promote a new bounded candidate only when fresh repeated friction justifies it.
 
 ## Sequencing Recommendation
 
 1. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.
-2. Keep tightening installed-surface ambiguity, especially in memory, until the cheap path is also the correct path.
-3. Preserve review and issue discipline by keeping it quiet, bounded, and cheaper than the confusion it prevents.
+2. Preserve review and issue discipline by keeping it quiet, bounded, and cheaper than the confusion it prevents.
 
 ## Reopen Conditions
 
