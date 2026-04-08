@@ -75,6 +75,22 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert planning_module["installed"] is None
     assert planning_module["dry_run_commands"] == ["adopt", "install", "uninstall", "upgrade"]
     assert planning_module["force_commands"] == ["install"]
+    assert planning_module["capabilities"] == [
+        "active-execution-state",
+        "execplan-routing",
+        "generated-maintainer-guidance",
+    ]
+    assert planning_module["dependencies"] == []
+    assert planning_module["conflicts"] == []
+    assert planning_module["result_contract"]["schema_version"] == "workspace-module-report/v1"
+    assert planning_module["lifecycle_hook_expectations"] == [
+        "adopt",
+        "doctor",
+        "install",
+        "status",
+        "uninstall",
+        "upgrade",
+    ]
     assert planning_module["command_args"]["install"] == ["target", "dry_run", "force"]
     assert planning_module["command_args"]["doctor"] == ["target"]
 
@@ -625,6 +641,15 @@ def test_invoke_module_command_uses_descriptor_command_args(tmp_path: Path) -> N
         startup_steps=(),
         sources_of_truth=(),
         root_agents_cleanup_blocks=(),
+        capabilities=(),
+        dependencies=(),
+        conflicts=(),
+        result_contract=cli.ModuleResultContract(
+            schema_version="workspace-module-report/v1",
+            guaranteed_fields=("module",),
+            action_fields=("kind",),
+            warning_fields=("message",),
+        ),
     )
 
     report = cli._invoke_module_command(
@@ -656,6 +681,62 @@ def test_selected_modules_uses_descriptor_owned_presets(tmp_path: Path) -> None:
     assert selected_modules == ["planning", "memory"]
 
 
+def test_selected_modules_rejects_declared_missing_dependency(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    descriptors = _fake_descriptors(tmp_path, [])
+    memory_descriptor = descriptors["memory"]
+    descriptors["memory"] = cli.ModuleDescriptor(
+        name=memory_descriptor.name,
+        description=memory_descriptor.description,
+        commands=memory_descriptor.commands,
+        detector=memory_descriptor.detector,
+        selection_rank=memory_descriptor.selection_rank,
+        include_in_full_preset=memory_descriptor.include_in_full_preset,
+        install_signals=memory_descriptor.install_signals,
+        workflow_surfaces=memory_descriptor.workflow_surfaces,
+        generated_artifacts=memory_descriptor.generated_artifacts,
+        command_args=memory_descriptor.command_args,
+        startup_steps=memory_descriptor.startup_steps,
+        sources_of_truth=memory_descriptor.sources_of_truth,
+        root_agents_cleanup_blocks=memory_descriptor.root_agents_cleanup_blocks,
+        capabilities=memory_descriptor.capabilities,
+        dependencies=("planning",),
+        conflicts=(),
+        result_contract=memory_descriptor.result_contract,
+    )
+
+    with pytest.raises(cli.ModuleSelectionError, match="requires: planning"):
+        cli._validate_selected_module_contract(selected_modules=["memory"], descriptors=descriptors)
+
+
+def test_selected_modules_rejects_declared_conflict(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    descriptors = _fake_descriptors(tmp_path, [])
+    planning_descriptor = descriptors["planning"]
+    descriptors["planning"] = cli.ModuleDescriptor(
+        name=planning_descriptor.name,
+        description=planning_descriptor.description,
+        commands=planning_descriptor.commands,
+        detector=planning_descriptor.detector,
+        selection_rank=planning_descriptor.selection_rank,
+        include_in_full_preset=planning_descriptor.include_in_full_preset,
+        install_signals=planning_descriptor.install_signals,
+        workflow_surfaces=planning_descriptor.workflow_surfaces,
+        generated_artifacts=planning_descriptor.generated_artifacts,
+        command_args=planning_descriptor.command_args,
+        startup_steps=planning_descriptor.startup_steps,
+        sources_of_truth=planning_descriptor.sources_of_truth,
+        root_agents_cleanup_blocks=planning_descriptor.root_agents_cleanup_blocks,
+        capabilities=planning_descriptor.capabilities,
+        dependencies=(),
+        conflicts=("memory",),
+        result_contract=planning_descriptor.result_contract,
+    )
+
+    with pytest.raises(cli.ModuleSelectionError, match="conflicts with: memory"):
+        cli._validate_selected_module_contract(selected_modules=["planning", "memory"], descriptors=descriptors)
+
+
 def test_workspace_agents_template_uses_descriptor_guidance(tmp_path: Path) -> None:
     descriptor = cli.ModuleDescriptor(
         name="signals",
@@ -671,6 +752,15 @@ def test_workspace_agents_template_uses_descriptor_guidance(tmp_path: Path) -> N
         startup_steps=("Read `signals.md` when the signals module is installed.",),
         sources_of_truth=("Signal routing: `signals.md`",),
         root_agents_cleanup_blocks=(),
+        capabilities=("signal-routing",),
+        dependencies=(),
+        conflicts=(),
+        result_contract=cli.ModuleResultContract(
+            schema_version="workspace-module-report/v1",
+            guaranteed_fields=("module",),
+            action_fields=("kind",),
+            warning_fields=("message",),
+        ),
     )
 
     rendered = cli._workspace_agents_template(selected_modules=["signals"], descriptors={"signals": descriptor})
@@ -754,6 +844,19 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
                 if module_name == "memory"
                 else ()
             ),
+            capabilities=(
+                ("active-execution-state", "execplan-routing", "generated-maintainer-guidance")
+                if module_name == "planning"
+                else ("durable-repo-knowledge", "anti-rediscovery-memory", "runbook-routing")
+            ),
+            dependencies=(),
+            conflicts=(),
+            result_contract=cli.ModuleResultContract(
+                schema_version="workspace-module-report/v1",
+                guaranteed_fields=("module", "message", "target_root", "dry_run", "actions", "warnings"),
+                action_fields=("kind", "path", "detail"),
+                warning_fields=("path", "message"),
+            ),
         )
         for module_name in ("planning", "memory")
     }
@@ -806,6 +909,15 @@ def _descriptors_with_mixed_actions(target_root: Path) -> dict[str, cli.ModuleDe
             startup_steps=(),
             sources_of_truth=(),
             root_agents_cleanup_blocks=(),
+            capabilities=("active-execution-state",),
+            dependencies=(),
+            conflicts=(),
+            result_contract=cli.ModuleResultContract(
+                schema_version="workspace-module-report/v1",
+                guaranteed_fields=("module", "message", "target_root", "dry_run", "actions", "warnings"),
+                action_fields=("kind", "path", "detail"),
+                warning_fields=("path", "message"),
+            ),
         )
     }
 
@@ -832,6 +944,10 @@ def _descriptors_with_install_signals(
             startup_steps=descriptors["planning"].startup_steps,
             sources_of_truth=descriptors["planning"].sources_of_truth,
             root_agents_cleanup_blocks=descriptors["planning"].root_agents_cleanup_blocks,
+            capabilities=descriptors["planning"].capabilities,
+            dependencies=descriptors["planning"].dependencies,
+            conflicts=descriptors["planning"].conflicts,
+            result_contract=descriptors["planning"].result_contract,
         ),
         "memory": cli.ModuleDescriptor(
             name="memory",
@@ -849,6 +965,10 @@ def _descriptors_with_install_signals(
             startup_steps=descriptors["memory"].startup_steps,
             sources_of_truth=descriptors["memory"].sources_of_truth,
             root_agents_cleanup_blocks=descriptors["memory"].root_agents_cleanup_blocks,
+            capabilities=descriptors["memory"].capabilities,
+            dependencies=descriptors["memory"].dependencies,
+            conflicts=descriptors["memory"].conflicts,
+            result_contract=descriptors["memory"].result_contract,
         ),
     }
 

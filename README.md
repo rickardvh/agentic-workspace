@@ -103,6 +103,8 @@ agentic-workspace uninstall --target /path/to/repo --preset planning
 
 `agentic-workspace doctor` now surfaces each module's frozen compatibility-contract shortlist inside the nested module reports, so maintainers can inspect the current contract boundary from the root CLI without dropping into package-local doctor commands first.
 
+The root `agentic-workspace modules --format json` surface also exposes the current first-party capability, compatibility, and result-contract metadata that the workspace registry relies on; see `docs/module-capability-contract.md`.
+
 Use `agentic-workspace` as the normal public lifecycle entrypoint for memory-only, planning-only, and combined installs. Use the module-specific CLIs only for package-local maintainer work, advanced debugging, or when you are working directly on one package contract.
 
 No-install workspace-first prompt lane:

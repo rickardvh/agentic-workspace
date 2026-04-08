@@ -25,7 +25,10 @@ Not yet supported as a public contract:
 
 The workspace layer may assume first-party modules provide:
 
+- explicit capability declarations
 - explicit lifecycle commands for install, adopt, upgrade, uninstall, doctor, and status
+- dependency/conflict metadata when compatibility rules exist
+- result-contract metadata that the workspace adapter can preserve and report
 - owned writable surfaces
 - install-signal detection
 - generated-artifact classification when generated files are part of the contract
@@ -66,5 +69,6 @@ Do not treat external extension as supported until all of the following are true
 ## Relationship To Other Docs
 
 - Use [`docs/integration-contract.md`](docs/integration-contract.md) for how memory, planning, managed surfaces, and generated docs interact today.
+- Use [`docs/module-capability-contract.md`](docs/module-capability-contract.md) for the current first-party capability/dependency/result contract that prepares the registry for later extension without opening it yet.
 - Use [`docs/boundary-and-extraction.md`](docs/boundary-and-extraction.md) for extraction criteria and ownership rules.
 - Use [`docs/ecosystem-roadmap.md`](docs/ecosystem-roadmap.md) for long-horizon stance without treating it as a promise of immediate extension support.

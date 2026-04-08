@@ -21,6 +21,7 @@ flowchart TD
 - Agentic Memory owns durable repo knowledge.
 - Agentic Planning owns active execution state.
 - `agentic-workspace` coordinates module selection and shared lifecycle verbs.
+- The module registry now exposes first-class capabilities, compatibility metadata, and result-contract guarantees; see `docs/module-capability-contract.md`.
 - Generated docs and checks support the package contracts, but are not standalone products.
 - The public extension boundary is still first-party only; see `docs/extension-boundary.md`.
 

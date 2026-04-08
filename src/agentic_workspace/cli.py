@@ -50,6 +50,14 @@ class RootAgentsCleanupBlock:
 
 
 @dataclass(frozen=True)
+class ModuleResultContract:
+    schema_version: str
+    guaranteed_fields: tuple[str, ...]
+    action_fields: tuple[str, ...]
+    warning_fields: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ModuleDescriptor:
     name: str
     description: str
@@ -64,6 +72,10 @@ class ModuleDescriptor:
     startup_steps: tuple[str, ...]
     sources_of_truth: tuple[str, ...]
     root_agents_cleanup_blocks: tuple[RootAgentsCleanupBlock, ...]
+    capabilities: tuple[str, ...]
+    dependencies: tuple[str, ...]
+    conflicts: tuple[str, ...]
+    result_contract: ModuleResultContract
 
 
 @dataclass(frozen=True)
@@ -81,6 +93,7 @@ class ModuleRegistryEntry:
     name: str
     description: str
     lifecycle_commands: tuple[str, ...]
+    lifecycle_hook_expectations: tuple[str, ...]
     autodetects_installation: bool
     installed: bool | None
     install_signals: tuple[Path, ...]
@@ -88,6 +101,10 @@ class ModuleRegistryEntry:
     generated_artifacts: tuple[Path, ...]
     dry_run_commands: tuple[str, ...]
     force_commands: tuple[str, ...]
+    capabilities: tuple[str, ...]
+    dependencies: tuple[str, ...]
+    conflicts: tuple[str, ...]
+    result_contract: ModuleResultContract
 
 
 class ModuleSelectionError(ValueError):
@@ -158,6 +175,9 @@ def _add_format_argument(parser: argparse.ArgumentParser) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    _configure_parser_contract(parser=parser, descriptors=descriptors)
 
     if args.command == "modules":
         target_root = _resolve_target_root(args.target) if args.target else None
@@ -166,7 +186,6 @@ def main(argv: list[str] | None = None) -> int:
         _emit_modules(format_name=args.format, target_root=target_root)
         return 0
 
-    descriptors = _module_operations()
     try:
         target_root = _resolve_target_root(args.target)
         _validate_target_root(command_name=args.command, target_root=target_root)
@@ -177,6 +196,7 @@ def main(argv: list[str] | None = None) -> int:
             target_root=target_root,
             descriptors=descriptors,
         )
+        _validate_selected_module_contract(selected_modules=selected_modules, descriptors=descriptors)
     except (ModuleSelectionError, WorkspaceUsageError) as exc:
         parser.error(str(exc))
 
@@ -216,6 +236,26 @@ def main(argv: list[str] | None = None) -> int:
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
+
+
+def _configure_parser_contract(*, parser: argparse.ArgumentParser, descriptors: dict[str, ModuleDescriptor]) -> None:
+    preset_choices = tuple(_preset_modules(descriptors))
+    for action in parser._actions:
+        if action.dest == "preset":
+            action.choices = preset_choices
+
+
+def _validate_descriptor_contract(descriptors: dict[str, ModuleDescriptor]) -> None:
+    known_modules = set(descriptors)
+    for descriptor in descriptors.values():
+        unknown_dependencies = [dependency for dependency in descriptor.dependencies if dependency not in known_modules]
+        unknown_conflicts = [conflict for conflict in descriptor.conflicts if conflict not in known_modules]
+        if unknown_dependencies:
+            missing_text = ", ".join(unknown_dependencies)
+            raise WorkspaceUsageError(f"Module '{descriptor.name}' declares unknown dependencies: {missing_text}.")
+        if unknown_conflicts:
+            conflict_text = ", ".join(unknown_conflicts)
+            raise WorkspaceUsageError(f"Module '{descriptor.name}' declares unknown conflicts: {conflict_text}.")
 
 
 def _module_operations() -> dict[str, ModuleDescriptor]:
@@ -303,6 +343,19 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 "Long-horizon candidate work: `ROADMAP.md`",
             ),
             root_agents_cleanup_blocks=(),
+            capabilities=(
+                "active-execution-state",
+                "execplan-routing",
+                "generated-maintainer-guidance",
+            ),
+            dependencies=(),
+            conflicts=(),
+            result_contract=ModuleResultContract(
+                schema_version="workspace-module-report/v1",
+                guaranteed_fields=("module", "message", "target_root", "dry_run", "actions", "warnings"),
+                action_fields=("kind", "path", "detail"),
+                warning_fields=("path", "message"),
+            ),
         ),
         "memory": _build_module_descriptor(
             name="memory",
@@ -343,6 +396,19 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                     label="memory workflow pointer block",
                 ),
             ),
+            capabilities=(
+                "durable-repo-knowledge",
+                "anti-rediscovery-memory",
+                "runbook-routing",
+            ),
+            dependencies=(),
+            conflicts=(),
+            result_contract=ModuleResultContract(
+                schema_version="workspace-module-report/v1",
+                guaranteed_fields=("module", "message", "target_root", "dry_run", "actions", "warnings"),
+                action_fields=("kind", "path", "detail"),
+                warning_fields=("path", "message"),
+            ),
         ),
     }
 
@@ -366,6 +432,10 @@ def _build_module_descriptor(
     startup_steps: tuple[str, ...],
     sources_of_truth: tuple[str, ...],
     root_agents_cleanup_blocks: tuple[RootAgentsCleanupBlock, ...],
+    capabilities: tuple[str, ...],
+    dependencies: tuple[str, ...],
+    conflicts: tuple[str, ...],
+    result_contract: ModuleResultContract,
 ) -> ModuleDescriptor:
     return ModuleDescriptor(
         name=name,
@@ -388,6 +458,10 @@ def _build_module_descriptor(
         startup_steps=startup_steps,
         sources_of_truth=sources_of_truth,
         root_agents_cleanup_blocks=root_agents_cleanup_blocks,
+        capabilities=capabilities,
+        dependencies=dependencies,
+        conflicts=conflicts,
+        result_contract=result_contract,
     )
 
 
@@ -843,6 +917,22 @@ def _parse_modules(module_arg: str, *, ordered_module_names: list[str]) -> set[s
     return set(tokens)
 
 
+def _validate_selected_module_contract(
+    *, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]
+) -> None:
+    selected_set = set(selected_modules)
+    for module_name in selected_modules:
+        descriptor = descriptors[module_name]
+        missing = [dependency for dependency in descriptor.dependencies if dependency not in selected_set]
+        if missing:
+            missing_text = ", ".join(missing)
+            raise ModuleSelectionError(f"Module '{module_name}' requires: {missing_text}.")
+        conflicts = [conflict for conflict in descriptor.conflicts if conflict in selected_set]
+        if conflicts:
+            conflict_text = ", ".join(conflicts)
+            raise ModuleSelectionError(f"Module '{module_name}' conflicts with: {conflict_text}.")
+
+
 def _resolve_target_root(target: str | None) -> Path:
     return Path(target).resolve() if target else Path.cwd().resolve()
 
@@ -1142,10 +1232,20 @@ def _run_lifecycle_command(
                 "name": entry.name,
                 "description": entry.description,
                 "commands": list(entry.lifecycle_commands),
+                "lifecycle_hook_expectations": list(entry.lifecycle_hook_expectations),
                 "autodetects_installation": entry.autodetects_installation,
                 "installed": entry.installed,
                 "dry_run_commands": list(entry.dry_run_commands),
                 "force_commands": list(entry.force_commands),
+                "capabilities": list(entry.capabilities),
+                "dependencies": list(entry.dependencies),
+                "conflicts": list(entry.conflicts),
+                "result_contract": {
+                    "schema_version": entry.result_contract.schema_version,
+                    "guaranteed_fields": list(entry.result_contract.guaranteed_fields),
+                    "action_fields": list(entry.result_contract.action_fields),
+                    "warning_fields": list(entry.result_contract.warning_fields),
+                },
             }
             for entry in registry
         ],
@@ -1405,6 +1505,7 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
                 "name": entry.name,
                 "description": entry.description,
                 "commands": list(entry.lifecycle_commands),
+                "lifecycle_hook_expectations": list(entry.lifecycle_hook_expectations),
                 "autodetects_installation": entry.autodetects_installation,
                 "installed": entry.installed,
                 "install_signals": [path.as_posix() for path in entry.install_signals],
@@ -1412,6 +1513,15 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
                 "generated_artifacts": [path.as_posix() for path in entry.generated_artifacts],
                 "dry_run_commands": list(entry.dry_run_commands),
                 "force_commands": list(entry.force_commands),
+                "capabilities": list(entry.capabilities),
+                "dependencies": list(entry.dependencies),
+                "conflicts": list(entry.conflicts),
+                "result_contract": {
+                    "schema_version": entry.result_contract.schema_version,
+                    "guaranteed_fields": list(entry.result_contract.guaranteed_fields),
+                    "action_fields": list(entry.result_contract.action_fields),
+                    "warning_fields": list(entry.result_contract.warning_fields),
+                },
                 "command_args": {name: list(args) for name, args in descriptors[entry.name].command_args.items()},
             }
             for entry in registry
@@ -1439,6 +1549,7 @@ def _module_registry(
                 name=descriptor.name,
                 description=descriptor.description,
                 lifecycle_commands=lifecycle_commands,
+                lifecycle_hook_expectations=lifecycle_commands,
                 autodetects_installation=True,
                 installed=installed,
                 install_signals=descriptor.install_signals,
@@ -1446,6 +1557,10 @@ def _module_registry(
                 generated_artifacts=descriptor.generated_artifacts,
                 dry_run_commands=dry_run_commands,
                 force_commands=force_commands,
+                capabilities=descriptor.capabilities,
+                dependencies=descriptor.dependencies,
+                conflicts=descriptor.conflicts,
+                result_contract=descriptor.result_contract,
             )
         )
     return entries
@@ -1465,6 +1580,7 @@ def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
         for module_data in payload["modules"]:
             print(f"{module_data['name']}: {module_data['description']}")
             print(f"  commands: {', '.join(module_data['commands'])}")
+            print(f"  capabilities: {', '.join(module_data['capabilities'])}")
         return
     _emit_lifecycle_text(payload)
 
