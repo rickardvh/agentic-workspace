@@ -12,7 +12,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - repository planning/status surface = external owner of active execution state
 - built-in agent planning = short-horizon planning and execution
 - checked-in docs outside `/memory` = canonical repo docs and user-facing engineering guidance
-- `/memory` = assistive durable technical knowledge and lightweight shared context
+- `/memory` = anti-rediscovery knowledge and lightweight shared context, not backlog state or broad fallback documentation
 - `memory/current/project-state.md` = lightweight repo overview
 - `memory/current/task-context.md` = optional checked-in continuation compression
 - `memory/current/routing-feedback.md` = optional routing calibration note for concrete missed-note or over-routing cases
@@ -23,6 +23,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 
 - Memory owns durable repo knowledge: invariants, authority boundaries, recurring failure modes, routing hints, and operator runbooks.
 - The repository's active planning/status surface owns active intent and sequencing: current goal, next action, done criteria, milestone status, and backlog state.
+- `memory/mistakes/recurring-failures.md` is anti-trap memory for repeated or high-likelihood mistakes, not issue tracking or bug triage.
 - Memory may keep a small continuation note for interrupted multi-session work, but that note is only re-orientation support for the next session.
 - Memory complements planning by reducing re-orientation cost and preserving durable lessons; it must never compete with the planning system for ownership of active work.
 - Memory is also a pressure layer: if a note exists because the repo is awkward to understand, operate, or change safely, use the note to suggest the code, docs, tooling, test, or refactor change that would let the note shrink, move, or disappear.

@@ -2,8 +2,10 @@
 
 ## Purpose
 
-- `/memory` is the durable repository memory layer.
+- `/memory` is the anti-rediscovery layer for durable repo knowledge and lightweight shared context.
+- It is not a task tracker, issue mirror, or broad fallback handbook.
 - Checked-in repo docs remain the canonical documentation layer.
+- The repository planning/status surface remains the owner of active intent and sequencing.
 - Read this file after identifying the work from the repository's active planning/status surface or the user's request.
 - Load only the notes relevant to the task at hand.
 - If `memory/manifest.toml` exists, use it as the machine-readable routing and freshness companion to this file.
@@ -65,6 +67,7 @@ High-value memory tends to capture boundaries, invariants, operator sequences, r
 Low-value memory tends to restate code that is easy to inspect directly or to preserve one-off task details.
 Prefer durable consequences, constraints, exceptions, and recurring traps over merely recent state.
 If guidance is stabilising into normal repo documentation, promote it there and leave memory as a short pointer, stub, or residue note.
+Treat recurring-failures as anti-trap memory for repeated or high-likelihood mistakes, not as issue triage or a general bug list.
 
 Store example: `Firestore sync is explicit and not implied by local rebuilds.`
 Do not store example: `Milestone 2 requires rerunning the publish step tomorrow.`

@@ -6,7 +6,7 @@ Active
 
 ## Scope
 
-- Symptom-first recurring failure patterns that matter across tasks in the target repository.
+- Anti-trap notes for repeated or high-likelihood failure patterns that future contributors or agents could plausibly rediscover.
 
 ## Applies to
 
@@ -15,7 +15,7 @@ Active
 ## Load when
 
 - Debugging a regression with familiar symptoms.
-- A behaviour mismatch looks likely to repeat in future work.
+- A verified lesson from one incident looks likely to catch future work in the same way.
 
 ## Review when
 
@@ -25,14 +25,17 @@ Active
 ## Failure signals
 
 - The same failure pattern keeps returning after unrelated changes.
-- Contributors repeatedly ask whether a behaviour is expected or broken.
+- A competent contributor could plausibly repeat the same mistake without a durable warning.
 
 ## Rule or lesson
 
 - No recurring failure pattern is recorded here yet.
-- Add an entry only after the same root problem has appeared more than once or clearly risks recurring.
+- This note is anti-trap memory, not a bug tracker, issue mirror, or backlog.
+- Add an entry after repeated recurrence, or after one verified incident that clearly exposes a trap likely to recur.
+- Prefer stable lessons, verification cues, and practical fixes over incident history or triage detail.
 - Keep entries concise, symptom-driven, and operational.
-- Use one entry per recurring root problem.
+- Use one entry per recurring trap or root lesson.
+- Move one-off bugs, active debugging, and status tracking into tests, canonical docs, issues, or the planning surface instead.
 
 ## Entry format
 

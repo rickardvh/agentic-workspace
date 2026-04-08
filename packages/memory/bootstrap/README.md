@@ -1,10 +1,11 @@
 # Bootstrap Package
 
-This package ships the installed Agentic Memory contract for target repositories: durable repo memory, route metadata, current-note guidance, freshness auditing, and the managed workflow surfaces that support them.
+This package ships the installed Agentic Memory contract for target repositories: anti-rediscovery knowledge, route metadata, current-note guidance, freshness auditing, and the managed workflow surfaces that support them.
 
 Memory owns durable repo knowledge. The repository's active planning/status surface owns active intent and sequencing. Memory complements planning by preserving durable lessons and reducing re-orientation cost, but it must never compete with the planning surface for ownership of active work.
 Good memory systems should help an agent read less, not more.
 Memory is also a pressure layer: if a note exists because the repo is awkward to understand or operate, the note should help the agent suggest the code, docs, tests, tooling, or refactor that would let the note shrink, move, or disappear.
+Treat recurring-failures as anti-trap memory for repeated or high-likelihood mistakes, not as issue triage or a bug backlog.
 
 Treat the CLI as the installer and maintenance entrypoint for this contract, not as the full definition of the product.
 

@@ -1,6 +1,6 @@
 # agentic-memory-bootstrap
 
-Agentic Memory is a checked-in repo-memory contract for durable shared technical knowledge across agents, contributors, sessions, and branches. The `agentic-memory-bootstrap` package and CLI install and maintain that contract inside a repository.
+Agentic Memory is a checked-in repo-memory contract for anti-rediscovery knowledge: durable, shared technical context that is expensive to reconstruct across agents, contributors, sessions, and branches. The `agentic-memory-bootstrap` package and CLI install and maintain that contract inside a repository.
 
 ## At A Glance
 
@@ -10,7 +10,7 @@ Use it for:
 
 - invariants and authority boundaries
 - subsystem orientation that is expensive to rediscover
-- recurring failure modes and operator runbooks
+- recurring traps, verified failure lessons, and operator runbooks
 - compact current-state notes that help an agent restart work faster
 
 Do not use it for:
@@ -18,6 +18,7 @@ Do not use it for:
 - active milestone sequencing
 - backlog tracking
 - execution logs
+- issue triage or bug history
 - broad canonical product documentation
 
 If what you need is active work steering rather than durable repo memory, start with `agentic-planning-bootstrap` instead.
@@ -36,7 +37,7 @@ Collaboration shape:
 - Keep one fact in one durable primary home; current notes should compress, point, or disappear instead of duplicating stable notes.
 - Expect current-state notes to stay compact and easy to replace under concurrent edits.
 
-The CLI is the delivery mechanism, not the whole product. The product capability is a checked-in memory contract with routing, manifests, freshness checks, skills, and explicit improvement pressure around notes that exist because the repository still needs clearer docs, validation, or structure.
+The CLI is the delivery mechanism, not the whole product. The product capability is a checked-in memory contract with routing, manifests, freshness checks, skills, and explicit improvement pressure around notes that exist because the repository still needs clearer docs, validation, or structure. Planning and canonical docs remain primary; memory is the compact anti-rediscovery layer around them.
 
 ## Quick Start
 
@@ -103,7 +104,7 @@ Some AI agents, such as GitHub Copilot, have their own built-in memory, but that
 
 - **Survives agent and tool switches.** Developers move between Copilot, Cursor, Claude Code, custom agents, and others. Checked-in memory travels with the repo, not the tool.
 - **Works across machines and developers.** Built-in agent memory is local to one user's profile. Repository memory is shared through Git, so every contributor and every agent session starts from the same durable knowledge base.
-- **Captures knowledge that no single session owns.** Invariants, authority boundaries, recurring failure modes, and operator procedures accumulate across many sessions and many contributors. No individual agent memory is the right home for team-wide lessons.
+- **Captures anti-rediscovery knowledge that no single session owns.** Invariants, authority boundaries, recurring traps, and operator procedures accumulate across many sessions and many contributors. No individual agent memory is the right home for team-wide lessons.
 - **Stays auditable and reviewable.** Checked-in notes go through normal code review and version history, making it visible when knowledge changes and why.
 
 `agentic-memory-bootstrap` installs a lightweight `memory/` tree that agents load selectively on each task start, giving them the smallest useful slice of durable context without bulk-reading the codebase.
@@ -112,7 +113,7 @@ For many users the simplest mental model is: planning tells an agent what matter
 
 ## How it works
 
-- **Structured taxonomy.** Notes are split into `domains/` for subsystem orientation, `invariants/` for contracts and authority boundaries, `runbooks/` for operator procedures, `mistakes/` for recurring failure modes, `decisions/` for longer-lived rationale, and `current/` for weak-authority project overview, optional task-continuation compression, and compact routing calibration.
+- **Structured taxonomy.** Notes are split into `domains/` for subsystem orientation, `invariants/` for contracts and authority boundaries, `runbooks/` for operator procedures, `mistakes/` for recurring traps and verified failure lessons, `decisions/` for longer-lived rationale, and `current/` for weak-authority project overview, optional task-continuation compression, and compact routing calibration.
 - **Route-indexed, not bulk-loaded.** `memory/index.md` maps task types to minimal note bundles, and a machine-readable `manifest.toml` annotates every note with audience, authority, routing triggers (`routes_from`, `stale_when`), and task relevance so agents read only what matters for the current change. Good memory helps an agent read *less*, not more.
 - **Clear ownership boundary.** Memory owns durable repo knowledge that is expensive to reconstruct from code alone: invariants, authority boundaries, recurring failure modes, operator sequences, and routing hints. The repository's active planning surface (`TODO.md`, issue trackers, and similar systems) keeps ownership of active intent and sequencing. Memory complements planning; it never competes with it.
 - **Improvement pressure without memory dependence.** Each note can declare whether it is *durable truth* or an *improvement signal* - something that exists because the repo still needs better tests, docs, validation, or design. Manifest fields like `preferred_remediation` and `elimination_target` let the `doctor` command, the freshness audit, and the sync workflow surface actionable suggestions that drive improvements into the codebase without assuming memory volume should follow one universal trend.
@@ -143,6 +144,7 @@ Memory does not own:
 - next actions or milestone sequencing
 - backlog state
 - execution logs
+- issue triage or bug-history catch-all
 - broad canonical documentation
 
 ## Anti-Blur Rules

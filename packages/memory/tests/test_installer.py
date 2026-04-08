@@ -854,6 +854,14 @@ def test_install_writes_audit_clean_recurring_failures_seed_date(
     assert "## Last confirmed\n\n20" in text
 
 
+def test_bootstrap_recurring_failures_note_clarifies_anti_trap_contract() -> None:
+    text = (installer.payload_root() / "memory" / "mistakes" / "recurring-failures.md").read_text(encoding="utf-8")
+
+    assert "anti-trap memory, not a bug tracker, issue mirror, or backlog" in text
+    assert "one verified incident that clearly exposes a trap likely to recur" in text
+    assert "Move one-off bugs, active debugging, and status tracking into tests, canonical docs, issues, or the planning surface instead." in text
+
+
 def test_install_writes_upgrade_source_metadata(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
@@ -2018,6 +2026,7 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
     assert "Treat memory as assistive residue by default" in text
     assert "## Interoperability contract" in text
     assert "active planning/status surface owns active intent and sequencing" in text
+    assert "anti-trap memory for repeated or high-likelihood mistakes" in text
     assert "## Capture threshold" in text
     assert "## Anti-patterns" in text
     assert "Optimise for deletion and consolidation" in text
@@ -2042,11 +2051,13 @@ def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() 
     assert "Example: deployment recovery" in text
     assert "## Canonicality rule" in text
     assert "core docs should not depend on memory" in text
+    assert "not a task tracker, issue mirror, or broad fallback handbook" in text
     assert "## Interoperability patterns" in text
     assert "## Integration checklist" in text
     assert "Planning identifies touched paths or surfaces" in text
     assert "help an agent read less, not more" in text
     assert "Prefer durable consequences, constraints, exceptions, and recurring traps" in text
+    assert "Treat recurring-failures as anti-trap memory" in text
     assert "optional repo-owned `memory/current/active-decisions.md`" in text
 
 
@@ -2056,6 +2067,7 @@ def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -
     assert "Optional repo pattern only" in text
     assert "current focus, recent meaningful progress, blockers" in text
     assert "Memory owns durable repo knowledge" in text
+    assert "anti-trap memory for repeated or high-likelihood mistakes" in text
     assert "When to write to memory" in text
     assert "When not to write to memory" in text
     assert "## Anti-patterns" in text

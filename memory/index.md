@@ -2,8 +2,10 @@
 
 ## Purpose
 
-- `/memory` is the durable repository memory layer.
+- `/memory` is the anti-rediscovery layer for durable repo knowledge and lightweight shared context.
+- It is not a task tracker, issue mirror, or broad fallback handbook.
 - Checked-in repo docs remain the canonical documentation layer.
+- The repository planning/status surface remains the owner of active intent and sequencing.
 - Read this file after identifying the work from the repository's active planning/status surface or the user's request.
 - Load only the notes relevant to the task at hand.
 - If `memory/manifest.toml` exists, use it as the machine-readable routing and freshness companion to this file.
