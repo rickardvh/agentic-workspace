@@ -10,7 +10,7 @@ Use `docs/maintainer-commands.md` for command lookup and `docs/workflow-contract
 - Edit repo-owned planning and durable memory surfaces directly; edit product-managed `.agentic-workspace/` surfaces only through their owning package or managed source.
 - Do not edit generated routing docs under `tools/` by hand; update the manifest source and rerender.
 - Keep root planning and memory installs authoritative for monorepo operation in this monorepo.
-- Let local pre-commit hooks handle formatting and lint; keep full test execution in CI or explicit validation runs.
+- Let local pre-commit hooks handle formatting and lint, and let master-bound commits run tests in the hook as well; keep broader test execution in CI or explicit validation runs.
 - When pre-commit rewrites files, restage them and rerun the commit instead of fighting the formatter.
 - Record meaningful follow-up work in planning or memory instead of leaving it in chat-only residue.
 

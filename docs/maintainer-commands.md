@@ -33,7 +33,7 @@ Use this page when you need the canonical command to run, not the broader routin
 
 ## Policy
 
-- Pre-commit is for formatting and lint.
-- Full tests should run in CI and in explicit local validation runs such as `make check-all`.
+- Pre-commit is for formatting and lint, and also runs `make test` for commits on `master`.
+- Full tests should still run in CI and in explicit local validation runs such as `make check-all`.
 - Prefer `make maintainer-surfaces` when a change touches generated maintainer docs, startup routing, or either package's installed contract surfaces.
 - Use `docs/generated-surface-trust.md` for the canonical source and freshness rules behind generated maintainer surfaces.

@@ -11,3 +11,8 @@ repos:
         entry: make lint
         language: system
         pass_filenames: false
+      - id: master-tests
+        name: master tests
+        entry: uv run python scripts/check/check_master_tests.py
+        language: system
+        pass_filenames: false

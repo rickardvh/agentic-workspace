@@ -46,6 +46,7 @@ WARNING_ROADMAP_MISSING_REOPEN_SIGNAL = "roadmap_missing_reopen_signal"
 WARNING_ROADMAP_STALE_CANDIDATE_PRESSURE = "roadmap_stale_candidate_pressure"
 WARNING_PROMOTION_LINKAGE_DRIFT = "promotion_linkage_drift"
 WARNING_STARTUP_POLICY_DRIFT = "startup_policy_drift"
+WARNING_DOCS_SURFACE_ROLE_DRIFT = "docs_surface_role_drift"
 WARNING_GENERATED_DOCS_DRIFT = "generated_docs_drift"
 WARNING_ARCHIVE_ACCUMULATION_DRIFT = "archive_accumulation_drift"
 WARNING_PLANNING_MEMORY_BOUNDARY_BLUR = "planning_memory_boundary_blur"
@@ -605,6 +606,37 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     return warnings
 
 
+def _check_docs_surface_roles(repo_root: Path) -> list[PlanningWarning]:
+    warnings: list[PlanningWarning] = []
+    readme_path = repo_root / "README.md"
+    if not readme_path.exists():
+        return warnings
+
+    text = "\n".join(_read_lines(readme_path)).lower()
+    if "## docs map" not in text:
+        return warnings
+
+    required_fragments = (
+        "for maintainers:",
+        "`docs/contributor-playbook.md`",
+        "`docs/maintainer-commands.md`",
+        "`docs/collaboration-safety.md`",
+        "`docs/installed-contract-design-checklist.md`",
+        "`docs/dogfooding-feedback.md`",
+        "`docs/workflow-contract-changes.md`",
+    )
+    if not all(fragment in text for fragment in required_fragments):
+        warnings.append(
+            PlanningWarning(
+                WARNING_DOCS_SURFACE_ROLE_DRIFT,
+                _render_path(readme_path),
+                "Root README docs map is missing required role separation or maintainer page coverage.",
+            )
+        )
+
+    return warnings
+
+
 def _check_generated_agent_docs(repo_root: Path) -> list[PlanningWarning]:
     warnings: list[PlanningWarning] = []
     source_manifest_path = repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json"
@@ -1135,6 +1167,7 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
     warnings.extend(_check_roadmap(roadmap_path, todo_active_ids | execplan_active_ids))
     warnings.extend(_check_promotion_linkage(roadmap_path=roadmap_path, active_items=todo_active_items))
     warnings.extend(_check_startup_policy(repo_root))
+    warnings.extend(_check_docs_surface_roles(repo_root))
     warnings.extend(_check_generated_agent_docs(repo_root))
     return warnings
 
