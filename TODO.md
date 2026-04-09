@@ -9,7 +9,6 @@ Active queue for repository work.
 ## Now
 
 - No active work right now.
-
 ## Action
 
 - Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.

@@ -324,6 +324,19 @@ def test_bootstrap_capability_aware_execution_doc_defines_categories() -> None:
     assert "present it as a promotion or escalation decision" in text
 
 
+def test_bootstrap_delegated_judgment_doc_is_part_of_contract() -> None:
+    text = (installer_mod.payload_root() / "docs" / "delegated-judgment-contract.md").read_text(encoding="utf-8")
+
+    assert "# Delegated Judgment Contract" in text
+    assert "## What The Human Sets" in text
+    assert "## What The Agent May Decide Locally" in text
+    assert "## What Requires Promotion Or Escalation" in text
+    assert "## Scope-Expansion Rule" in text
+    assert "Improve means locally" in text
+    assert "The agent must not silently widen" in text
+    assert Path("docs/delegated-judgment-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+
+
 def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
     text = (installer_mod.payload_root() / "docs" / "execplans" / "README.md").read_text(encoding="utf-8")
 

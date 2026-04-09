@@ -162,9 +162,12 @@ That surface is the queryable contract for:
 - supported intents
 - canonical external-agent handoff
 - canonical bootstrap next action
+- delegated judgment boundaries
 - skill discovery
 - validation
 - combined-install operation
+
+For the bounded "human sets direction, agent owns local means" contract, use [`docs/delegated-judgment-contract.md`](docs/delegated-judgment-contract.md).
 
 For agent maintainers, the primary operating path is:
 

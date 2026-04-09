@@ -60,6 +60,7 @@ If bootstrap completes cleanly and no bootstrap handoff file remains, switch to 
 1. Read `AGENTS.md`.
 2. Continue through `TODO.md`.
 3. Read the active execplan only when `TODO.md` points to one.
+4. Use `docs/delegated-judgment-contract.md` when the user is setting direction and constraints and the missing question is what the agent may decide locally versus what should be escalated.
 
 ## Success criteria
 

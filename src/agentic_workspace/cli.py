@@ -1854,6 +1854,32 @@ def _defaults_payload() -> dict[str, Any]:
                 "Direct package CLIs stay available, but they are not the normal path for combined installs.",
             ],
         },
+        "delegated_judgment": {
+            "canonical_doc": "docs/delegated-judgment-contract.md",
+            "rule": "Improve means locally; do not silently rewrite ends locally.",
+            "human_sets": [
+                "requested outcome",
+                "priorities",
+                "hard constraints",
+                "explicit approvals or prohibitions",
+            ],
+            "agent_may_decide": [
+                "bounded decomposition",
+                "narrower touched-path selection",
+                "tighter validation",
+                "skill or workflow selection",
+                "promotion to an execplan when direct execution stops being safe",
+                "residue routing into the correct checked-in surface",
+            ],
+            "escalate_when": [
+                "the better-looking solution changes the requested outcome",
+                "the better-looking solution changes the owned surface",
+                "the better-looking solution changes the time horizon",
+                "the requested path is blocked or unsafe as stated",
+                "validation would be meaningless without added scope",
+                "confidence is too low for silent continuation",
+            ],
+        },
     }
 
 
@@ -1879,6 +1905,9 @@ def _emit_defaults(*, format_name: str) -> None:
         print(f"- {label}: {command}")
     print("Combined install:")
     print(f"- {payload['combined_install']['primary']}")
+    print("Delegated judgment:")
+    print(f"- doc: {payload['delegated_judgment']['canonical_doc']}")
+    print(f"- rule: {payload['delegated_judgment']['rule']}")
 
 
 def _skill_catalog_sources() -> tuple[SkillCatalogSource, ...]:

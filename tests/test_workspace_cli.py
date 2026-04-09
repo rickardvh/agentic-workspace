@@ -105,6 +105,11 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["lifecycle"]["canonical_bootstrap_next_action"] == ".agentic-workspace/bootstrap-handoff.md"
     assert payload["validation"]["default_routes"]["planning_package"] == "cd packages/planning && uv run pytest tests/test_installer.py"
     assert payload["combined_install"]["primary"] == "agentic-workspace init --target ./repo --preset full"
+    assert payload["delegated_judgment"]["canonical_doc"] == "docs/delegated-judgment-contract.md"
+    assert payload["delegated_judgment"]["rule"] == "Improve means locally; do not silently rewrite ends locally."
+    assert "requested outcome" in payload["delegated_judgment"]["human_sets"]
+    assert "bounded decomposition" in payload["delegated_judgment"]["agent_may_decide"]
+    assert "the better-looking solution changes the requested outcome" in payload["delegated_judgment"]["escalate_when"]
     assert any("ROADMAP.md" in step for step in payload["startup"]["secondary"])
     assert any("skills --target ./repo --task" in step for step in payload["skill_discovery"]["primary"])
 
@@ -117,6 +122,8 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Lifecycle:" in text
     assert "primary entrypoint: agentic-workspace" in text
     assert "Combined install:" in text
+    assert "Delegated judgment:" in text
+    assert "docs/delegated-judgment-contract.md" in text
     assert "make maintainer-surfaces" in text
 
 

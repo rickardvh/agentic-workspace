@@ -39,9 +39,12 @@ That surface is the queryable contract for:
 - supported intents
 - canonical external-agent handoff
 - canonical bootstrap next action
+- delegated judgment boundaries
 - skill discovery
 - validation
 - combined-install operation
+
+Use `docs/delegated-judgment-contract.md` when the question is not which command to run, but what the human should specify, what the agent may decide locally, and what should force promotion or escalation.
 
 ## Secondary Paths
 
