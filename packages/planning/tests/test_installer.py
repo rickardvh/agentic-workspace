@@ -615,6 +615,46 @@ def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_p
     assert any(action.kind == "updated" and action.path == tmp_path / "ROADMAP.md" for action in result.actions)
 
 
+def test_archive_execplan_apply_cleanup_removes_active_todo_pointer_to_same_plan(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Now
+
+- ID: bounded-delegated-judgment-contract
+  Status: in-progress
+  Surface: docs/execplans/bounded-delegated-judgment-contract-2026-04-09.md
+  Why now: finish the bounded contract update.
+
+## Action
+
+- Complete `bounded-delegated-judgment-contract`, then archive it and return the active queue to empty.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / "docs" / "execplans" / "bounded-delegated-judgment-contract-2026-04-09.md"
+    _write(plan_path, _minimal_execplan(status="completed").replace("plan-alpha", "bounded-delegated-judgment-contract"))
+
+    result = archive_execplan("bounded-delegated-judgment-contract-2026-04-09", target=tmp_path, apply_cleanup=True)
+
+    todo_text = (tmp_path / "TODO.md").read_text(encoding="utf-8")
+    assert "Surface: docs/execplans/bounded-delegated-judgment-contract-2026-04-09.md" not in todo_text
+    assert "- No active work right now." in todo_text
+    assert (
+        "Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation."
+        in todo_text
+    )
+    assert any(
+        action.kind == "updated"
+        and action.path == tmp_path / "TODO.md"
+        and "remove TODO item 'bounded-delegated-judgment-contract'" in action.detail
+        for action in result.actions
+    )
+    assert (tmp_path / "docs" / "execplans" / "archive" / "bounded-delegated-judgment-contract-2026-04-09.md").exists()
+
+
 def test_archive_execplan_apply_cleanup_updates_compact_now_todo_shape(tmp_path: Path) -> None:
     _write(
         tmp_path / "TODO.md",

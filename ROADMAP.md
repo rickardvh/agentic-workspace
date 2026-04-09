@@ -21,10 +21,6 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Next Candidate Queue
 
-- `Archive cleanup follow-through for active execplan pointers` - promote when normal archive flow still requires manual TODO pre-cleanup for an active item that points at the plan being archived
-  - Why: dogfooding still shows `archive-plan --apply-cleanup` failing closed when the standard active TODO pointer exists
-  - First slice: make archive cleanup remove or rewrite the normal active TODO pointer before blocking on the same reference, while preserving explicit fail-closed behavior for unrelated residue
-
 ## Sequencing Recommendation
 
 1. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.

@@ -503,8 +503,25 @@ def archive_execplan(
         result.add("manual review", plan_path, "archive requires the active milestone status to be completed/done/closed")
         return result
 
+    cleanup_todo_lines: list[str] | None = None
     todo_ref_items = _todo_referencing_items(target_root / "TODO.md", plan_path, target_root)
-    blocking_todo_refs = [item for item in todo_ref_items if _normalize_status(item.fields.get("status", "")) != "completed"]
+    if apply_cleanup and todo_ref_items:
+        cleanup_todo_lines = _remove_todo_items(target_root / "TODO.md", todo_ref_items)
+        for item in todo_ref_items:
+            result.add(
+                "would update" if dry_run else "updated",
+                target_root / "TODO.md",
+                (f"remove TODO item '{item.item_id}' while archiving its plan"),
+            )
+    elif apply_cleanup:
+        compact_cleanup = _cleanup_compact_todo_archive_followup(target_root / "TODO.md", plan_path, target_root)
+        if compact_cleanup["changed"]:
+            cleanup_todo_lines = compact_cleanup["text"].splitlines()
+            for detail in compact_cleanup["details"]:
+                result.add("would update" if dry_run else "updated", target_root / "TODO.md", detail)
+
+    remaining_todo_refs = [] if cleanup_todo_lines is not None else todo_ref_items
+    blocking_todo_refs = [item for item in remaining_todo_refs if _normalize_status(item.fields.get("status", "")) != "completed"]
     if blocking_todo_refs:
         for item in blocking_todo_refs:
             item_id = item.item_id or "?"
@@ -522,23 +539,6 @@ def archive_execplan(
     if destination.exists():
         result.add("manual review", destination, "archive destination already exists")
         return result
-
-    cleanup_todo_lines: list[str] | None = None
-    completed_todo_refs = [item for item in todo_ref_items if _normalize_status(item.fields.get("status", "")) == "completed"]
-    if apply_cleanup and completed_todo_refs:
-        cleanup_todo_lines = _remove_todo_items(target_root / "TODO.md", completed_todo_refs)
-        for item in completed_todo_refs:
-            result.add(
-                "would update" if dry_run else "updated",
-                target_root / "TODO.md",
-                (f"remove completed TODO item '{item.item_id}' while archiving its plan"),
-            )
-    elif apply_cleanup:
-        compact_cleanup = _cleanup_compact_todo_archive_followup(target_root / "TODO.md", plan_path, target_root)
-        if compact_cleanup["changed"]:
-            cleanup_todo_lines = compact_cleanup["text"].splitlines()
-            for detail in compact_cleanup["details"]:
-                result.add("would update" if dry_run else "updated", target_root / "TODO.md", detail)
 
     cleanup_roadmap = _cleanup_roadmap_archive_followup(target_root / "ROADMAP.md", plan_path)
     if cleanup_roadmap["changed"] and apply_cleanup:
@@ -860,25 +860,7 @@ def _read_lines(path: Path) -> list[str]:
     return path.read_text(encoding="utf-8").splitlines()
 
 
-def _section_lines(lines: list[str], heading: str) -> list[str]:
-    target = f"## {heading}".lower()
-    start = -1
-    for index, line in enumerate(lines):
-        if line.strip().lower() == target:
-            start = index + 1
-            break
-    if start < 0:
-        return []
-    end = len(lines)
-    for index in range(start, len(lines)):
-        if lines[index].startswith("## "):
-            end = index
-            break
-    return lines[start:end]
-
-
-def _read_todo_items(path: Path) -> tuple[list[str], list[TodoItem]]:
-    lines = _read_lines(path)
+def _read_todo_items_from_lines(lines: list[str]) -> list[TodoItem]:
     items: list[TodoItem] = []
     index = 0
     while index < len(lines):
@@ -907,7 +889,29 @@ def _read_todo_items(path: Path) -> tuple[list[str], list[TodoItem]]:
                 break
         items.append(TodoItem(fields=fields, field_order=field_order, start=start, end=index))
         index += 1
-    return lines, items
+    return items
+
+
+def _section_lines(lines: list[str], heading: str) -> list[str]:
+    target = f"## {heading}".lower()
+    start = -1
+    for index, line in enumerate(lines):
+        if line.strip().lower() == target:
+            start = index + 1
+            break
+    if start < 0:
+        return []
+    end = len(lines)
+    for index in range(start, len(lines)):
+        if lines[index].startswith("## "):
+            end = index
+            break
+    return lines[start:end]
+
+
+def _read_todo_items(path: Path) -> tuple[list[str], list[TodoItem]]:
+    lines = _read_lines(path)
+    return lines, _read_todo_items_from_lines(lines)
 
 
 def _rewrite_todo_item(lines: list[str], item: TodoItem, updated_fields: dict[str, str]) -> list[str]:
@@ -1056,13 +1060,32 @@ def _remove_todo_items(todo_path: Path, items_to_remove: list[TodoItem]) -> list
     filtered_lines = [line for index, line in enumerate(lines) if index not in indexes_to_remove]
     while filtered_lines and filtered_lines[-1] == "":
         filtered_lines.pop()
-    return _restore_todo_empty_state(filtered_lines)
+    restored = _restore_todo_empty_state(filtered_lines)
+    if not _read_todo_items_from_lines(restored):
+        restored = _restore_todo_default_action(restored)
+    return restored
 
 
 def _restore_todo_empty_state(lines: list[str]) -> list[str]:
     for heading in ("Now", "Next"):
         lines = _restore_todo_empty_state_for_heading(lines, heading)
     return lines
+
+
+def _restore_todo_default_action(lines: list[str]) -> list[str]:
+    heading_index = next((index for index, line in enumerate(lines) if line.strip().lower() == "## action"), -1)
+    if heading_index < 0:
+        return lines
+    section_end = len(lines)
+    for index in range(heading_index + 1, len(lines)):
+        if lines[index].startswith("## "):
+            section_end = index
+            break
+    replacement = [
+        "",
+        "- Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.",
+    ]
+    return lines[: heading_index + 1] + replacement + lines[section_end:]
 
 
 def _restore_todo_empty_state_for_heading(lines: list[str], heading: str) -> list[str]:
