@@ -9,6 +9,4 @@ Do not put general coding or planning workflows here.
 
 Current repo-specific skills:
 
-- `path-consolidation-check`
-- `foundation-stability-check`
-- `ownership-ledger-check`
+- `package-context-inspection`

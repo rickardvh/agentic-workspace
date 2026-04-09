@@ -1,6 +1,6 @@
 # Roadmap
 
-Last reviewed: 2026-04-08
+Last reviewed: 2026-04-09
 
 ## Purpose
 
@@ -20,8 +20,6 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Latest GitHub issue tranche is landed locally; keep detailed closure history in archived execplans and issue comments, not here.
 
 ## Next Candidate Queue
-
-- None. Promote a new bounded candidate only when fresh repeated friction justifies it.
 ## Sequencing Recommendation
 
 1. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.

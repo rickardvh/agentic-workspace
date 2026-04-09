@@ -52,6 +52,37 @@ Expected routing signal
 Status
 - resolved on 2026-04-08 by explicit bundled-skill and repo-owned skill registries plus the `agentic-workspace skills` discovery surface.
 
+### Case: review-skill-routing-missed-review-shaped-requests
+
+Task surface summary
+- User asked the agent to perform reviews and later pointed out that the review skill should have been used automatically.
+
+Files
+- `AGENTS.md`
+- `docs/reviews/README.md`
+- `.agentic-workspace/planning/skills/planning-review-pass/SKILL.md`
+- `packages/planning/skills/planning-review-pass/SKILL.md`
+
+Surfaces
+- planning-skill discovery
+- task-to-skill recommendation
+- review workflow routing
+
+Routed notes returned
+- General repo reasoning only; no review skill lookup or routing decision was made.
+
+Expected missing note
+- `.agentic-workspace/planning/skills/planning-review-pass/SKILL.md`
+
+Why it was needed
+- Review-shaped requests should route to the bundled review workflow without requiring the user to know that a review skill exists or to mention it explicitly.
+
+Expected routing signal
+- When the task asks for a review or clearly describes a bounded review pass, search the bundled planning review skill and prefer it over generic repo reasoning.
+
+Status
+- open as of 2026-04-09; current skill discovery and recommendation are still not strong enough to infer review-skill use from natural review requests alone.
+
 ## Over-routing entries
 
 - Add a case only when routing repeatedly returns an unnecessary note.
@@ -67,4 +98,4 @@ Status
 
 ## Last confirmed
 
-2026-04-08 during roadmap autopilot follow-through
+2026-04-09 during review-skill dogfooding follow-up

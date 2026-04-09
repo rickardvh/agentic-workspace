@@ -12,22 +12,15 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
 
 ## Available skills
 
-- `bootstrap-adoption`
-  - introduce the planning bootstrap into an existing repository conservatively
 - `bootstrap-upgrade`
   - upgrade planning bootstrap files for an already bootstrapped repository safely
-- `bootstrap-uninstall`
-  - finish bootstrap removal conservatively after the CLI removes safe managed files
 - `planning-autopilot`
   - execute one bounded planning milestone at a time from the checked-in planning surfaces
-
-These bundled skills cover bootstrap lifecycle work and the bounded planning execution operator.
-
-Additional bundled review-discovery skills:
-
-- `planning-review-pass`
-  - run a bounded review pass and capture compact findings under `docs/reviews/`
-- `planning-promote-review-findings`
-  - turn selected reviewed findings into roadmap or active-planning candidates without collapsing capture and promotion
 - `planning-intake-upstream-task`
   - turn an externally tracked issue or task into checked-in planning while keeping the upstream tracker as an intake source only
+- `planning-promote-review-findings`
+  - turn selected reviewed findings into roadmap or active-planning candidates without collapsing capture and promotion
+- `planning-review-pass`
+  - run a bounded review pass and capture compact findings under `docs/reviews/`
+
+These bundled skills cover payload refresh, bounded planning execution, review capture, review-to-plan promotion, and upstream-task intake.

@@ -213,6 +213,91 @@ def test_skills_command_recommends_memory_router_for_note_selection_task(tmp_pat
     assert payload["recommendations"][0]["source_kind"] == "installed-core-skills"
 
 
+def test_skills_command_recommends_review_skill_for_natural_review_request(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "perform a review of the planning package",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["recommendations"][0]["id"] == "planning-review-pass"
+    assert any("verb match" in reason or "phrase match" in reason for reason in payload["recommendations"][0]["reasons"])
+
+
+def test_skills_command_keeps_repo_owned_memory_and_general_skill_sources_distinct(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write_json(
+        target / "memory" / "skills" / "REGISTRY.json",
+        {
+            "schema_version": "skill-registry.v1",
+            "owner": "repo-local-memory-skills",
+            "source_kind": "repo-owned-memory-skills",
+            "skills": [
+                {
+                    "id": "package-context-inspection",
+                    "path": "package-context-inspection/SKILL.md",
+                    "summary": "inspect package context notes",
+                }
+            ],
+        },
+    )
+    _write(
+        target / "memory" / "skills" / "README.md",
+        "# Memory skills\n",
+    )
+    _write(
+        target / "memory" / "skills" / "package-context-inspection" / "SKILL.md",
+        "# Skill\n",
+    )
+    _write_json(
+        target / "tools" / "skills" / "REGISTRY.json",
+        {
+            "schema_version": "skill-registry.v1",
+            "owner": "repo-local-tool-skills",
+            "source_kind": "repo-owned-tool-skills",
+            "skills": [
+                {
+                    "id": "foundation-stability-check",
+                    "path": "foundation-stability-check/SKILL.md",
+                    "summary": "recheck operational authority",
+                }
+            ],
+        },
+    )
+    _write(target / "tools" / "skills" / "README.md", "# Tool skills\n")
+    _write(target / "tools" / "skills" / "foundation-stability-check" / "SKILL.md", "# Skill\n")
+
+    assert cli.main(["skills", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    memory_skill = next(entry for entry in payload["skills"] if entry["id"] == "package-context-inspection")
+    tool_skill = next(entry for entry in payload["skills"] if entry["id"] == "foundation-stability-check")
+
+    assert memory_skill["source_kind"] == "repo-owned-memory-skills"
+    assert memory_skill["path"] == "memory/skills/package-context-inspection/SKILL.md"
+    assert tool_skill["source_kind"] == "repo-owned-tool-skills"
+    assert tool_skill["path"] == "tools/skills/foundation-stability-check/SKILL.md"
+
+
 def test_init_dispatches_to_full_preset_by_default(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
@@ -1093,3 +1178,12 @@ def _descriptors_with_install_signals(
 
 def _init_git_repo(target: Path) -> None:
     (target / ".git").mkdir(exist_ok=True)
+
+
+def _write(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+def _write_json(path: Path, payload: dict[str, object]) -> None:
+    _write(path, json.dumps(payload, indent=2) + "\n")

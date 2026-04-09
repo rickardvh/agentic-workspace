@@ -62,10 +62,18 @@
       "stability": "package-managed",
       "summary": "run a bounded review pass and capture compact findings under docs/reviews",
       "activation_hints": {
-        "verbs": ["review", "audit", "inspect", "check"],
-        "nouns": ["review pass", "contract integrity", "regression", "change"],
-        "phrases": ["run review pass", "review this change", "review the repo"],
-        "when": ["bounded review", "finding capture"]
+        "verbs": ["review", "audit", "inspect", "check", "perform"],
+        "nouns": ["review", "review pass", "code review", "package review", "contract integrity", "regression", "change"],
+        "phrases": [
+          "run review pass",
+          "review this change",
+          "review the repo",
+          "perform a review",
+          "perform reviews",
+          "review the planning package",
+          "do a review"
+        ],
+        "when": ["bounded review", "finding capture", "review-shaped request"]
       }
     }
   ]

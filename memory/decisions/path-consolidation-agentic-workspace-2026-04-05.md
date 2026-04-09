@@ -34,7 +34,7 @@ This path move required coordinated package-version updates, payload updates, an
 
 ## Durable evidence
 
-The package constants, payloads, and test fixtures were updated to the consolidated paths, and end-to-end CLI verification confirmed install plans at the new locations. Use [path-consolidation-check](../skills/path-consolidation-check/SKILL.md) for the repeatable validation workflow instead of expanding this decision note.
+The package constants, payloads, and test fixtures were updated to the consolidated paths, and end-to-end CLI verification confirmed install plans at the new locations. Use [path-consolidation-check](../../tools/skills/path-consolidation-check/SKILL.md) for the repeatable validation workflow instead of expanding this decision note.
 
 ## Verify
 

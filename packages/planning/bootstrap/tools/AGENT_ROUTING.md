@@ -15,6 +15,19 @@ Focused routing reference derived from `.agentic-workspace/planning/agent-manife
 
 ## Task Routes
 
+### `review_workflow`
+
+- Use when: Handling a bounded review, audit, or review-shaped request that should capture findings without activating work automatically.
+- Prefer when: the request asks for a review, audit, or compact finding capture over one repo area or change.
+- Touches:
+  - `docs/reviews/`
+  - `docs/skill-discovery-contract.md`
+  - `.agentic-workspace/planning/skills/planning-review-pass/SKILL.md`
+  - `.agentic-workspace/planning/skills/REGISTRY.json`
+- Validation:
+  - `uv run agentic-workspace skills --target ./repo --task "<task>" --format json`
+  - `make maintainer-surfaces`
+
 ### `planning_surface_change`
 
 - Use when: Editing planning-for-execution surfaces, plan templates, or planning-surface checks.

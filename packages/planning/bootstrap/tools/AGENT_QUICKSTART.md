@@ -18,6 +18,7 @@ Fast path for autonomous agents working on this repo.
 - Read the active feature plan in `docs/execplans/` when the task belongs to one.
 - Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.
 - Read `docs/upstream-task-intake.md` when triaging external issues or tasks into checked-in planning.
+- When the task is clearly review-shaped, check `agentic-workspace skills --target ./repo --task "<task>" --format json` before falling back to generic reasoning so bundled review skills stay cheaper to use than rediscovery.
 - Read `docs/capability-aware-execution.md` when task capability fit, delegation, or escalation is unclear, especially when the question is whether to silently reshape the work instead of prompting for a stronger executor.
 - Before editing files in a subtree, read the nearest relevant descendant `AGENTS.md` for that subtree only.
 - Read `memory/index.md` and `.agentic-workspace/memory/WORKFLOW.md` only when memory is installed and the plan or manifest does not already route the task, or when changing workflow, planning, or memory itself.
@@ -66,6 +67,11 @@ Fast path for autonomous agents working on this repo.
 
 ## Common task classes
 
+- `review_workflow`
+  Use when: Handling a bounded review, audit, or review-shaped request that should capture findings without activating work automatically.
+  Prefer this route when: the request asks for a review, audit, or compact finding capture over one repo area or change.
+  Touches: `docs/reviews/`, `docs/skill-discovery-contract.md`, `.agentic-workspace/planning/skills/planning-review-pass/SKILL.md`, `.agentic-workspace/planning/skills/REGISTRY.json`
+  Validate: `uv run agentic-workspace skills --target ./repo --task "<task>" --format json`; `make maintainer-surfaces`
 - `planning_surface_change`
   Use when: Editing planning-for-execution surfaces, plan templates, or planning-surface checks.
   Prefer this route when: the change affects TODO, ROADMAP, execplans, or the planning bootstrap itself.
