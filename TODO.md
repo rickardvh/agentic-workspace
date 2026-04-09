@@ -7,11 +7,11 @@ Last pruned: 2026-04-09
 Active queue for repository work.
 
 ## Now
-- None.
 
+- No active work right now.
 ## Action
-- Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.
 
+- Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.
 ## Done
 
 - front-door-defaults-tranche: Completed (compressed the front-door docs, added `agentic-workspace defaults` as the machine-readable default-route contract, captured bounded default-path and cheap-execution audits, and removed the clearest transitional startup/path-selection scaffolding)

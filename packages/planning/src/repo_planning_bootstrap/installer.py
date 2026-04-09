@@ -533,6 +533,12 @@ def archive_execplan(
                 target_root / "TODO.md",
                 (f"remove completed TODO item '{item.item_id}' while archiving its plan"),
             )
+    elif apply_cleanup:
+        compact_cleanup = _cleanup_compact_todo_archive_followup(target_root / "TODO.md", plan_path, target_root)
+        if compact_cleanup["changed"]:
+            cleanup_todo_lines = compact_cleanup["text"].splitlines()
+            for detail in compact_cleanup["details"]:
+                result.add("would update" if dry_run else "updated", target_root / "TODO.md", detail)
 
     cleanup_roadmap = _cleanup_roadmap_archive_followup(target_root / "ROADMAP.md", plan_path)
     if cleanup_roadmap["changed"] and apply_cleanup:
@@ -1020,6 +1026,15 @@ def _execplan_status(path: Path) -> str:
     return ""
 
 
+def _execplan_item_id(path: Path) -> str:
+    lines = _read_lines(path)
+    for line in _section_lines(lines, "Active Milestone"):
+        match = re.match(r"^\s*-\s*ID\s*:\s*(.*)\s*$", line, re.IGNORECASE)
+        if match:
+            return match.group(1).strip().lower()
+    return ""
+
+
 def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path) -> list[TodoItem]:
     _, items = _read_todo_items(todo_path)
     relative = plan_path.relative_to(target_root).as_posix()
@@ -1045,23 +1060,107 @@ def _remove_todo_items(todo_path: Path, items_to_remove: list[TodoItem]) -> list
 
 
 def _restore_todo_empty_state(lines: list[str]) -> list[str]:
-    next_heading = next((index for index, line in enumerate(lines) if line.strip().lower() == "## next"), -1)
-    if next_heading < 0:
+    for heading in ("Now", "Next"):
+        lines = _restore_todo_empty_state_for_heading(lines, heading)
+    return lines
+
+
+def _restore_todo_empty_state_for_heading(lines: list[str], heading: str) -> list[str]:
+    heading_index = next((index for index, line in enumerate(lines) if line.strip().lower() == f"## {heading.lower()}"), -1)
+    if heading_index < 0:
         return lines
     section_end = len(lines)
-    for index in range(next_heading + 1, len(lines)):
+    for index in range(heading_index + 1, len(lines)):
         if lines[index].startswith("## "):
             section_end = index
             break
 
-    section_body = lines[next_heading + 1 : section_end]
+    section_body = lines[heading_index + 1 : section_end]
     if any(line.strip() and line.strip() != TODO_EMPTY_STATE_LINE for line in section_body):
         return lines
 
-    normalized_lines = lines[: next_heading + 1] + ["", TODO_EMPTY_STATE_LINE] + lines[section_end:]
+    normalized_lines = lines[: heading_index + 1] + ["", TODO_EMPTY_STATE_LINE] + lines[section_end:]
     while len(normalized_lines) > 2 and normalized_lines[-1] == "" and normalized_lines[-2] == "":
         normalized_lines.pop()
     return normalized_lines
+
+
+def _cleanup_compact_todo_archive_followup(todo_path: Path, plan_path: Path, target_root: Path) -> dict[str, Any]:
+    if not todo_path.exists():
+        return {"changed": False, "text": None, "details": []}
+
+    lines = _read_lines(todo_path)
+    relative = plan_path.relative_to(target_root).as_posix()
+    queue_id = _execplan_item_id(plan_path) or plan_path.stem.lower()
+    changed = False
+    details: list[str] = []
+
+    action_lines, action_removed = _cleanup_todo_action_section(lines, relative)
+    if action_removed:
+        lines = action_lines
+        changed = True
+        details.append("remove Action reference to the archived plan")
+
+    now_lines, now_removed = _cleanup_todo_now_section(lines, queue_id)
+    if now_removed:
+        lines = now_lines
+        changed = True
+        details.append("remove compact Now item tied to the archived plan")
+
+    if not changed:
+        return {"changed": False, "text": None, "details": []}
+    lines = _restore_todo_empty_state(lines)
+    return {"changed": True, "text": "\n".join(lines).rstrip() + "\n", "details": details}
+
+
+def _cleanup_todo_action_section(lines: list[str], relative_plan_path: str) -> tuple[list[str], bool]:
+    section = _section_lines(lines, "Action")
+    if not section:
+        return lines, False
+    heading_index = next((index for index, line in enumerate(lines) if line.strip().lower() == "## action"), -1)
+    if heading_index < 0:
+        return lines, False
+    section_start = heading_index + 1
+    section_end = section_start + len(section)
+
+    kept_lines: list[str] = []
+    removed = False
+    for line in section:
+        if relative_plan_path in line:
+            removed = True
+            continue
+        kept_lines.append(line)
+
+    if not removed:
+        return lines, False
+    if not any(line.strip() for line in kept_lines):
+        kept_lines = ["", "- Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation."]
+    return lines[:section_start] + kept_lines + lines[section_end:], True
+
+
+def _cleanup_todo_now_section(lines: list[str], plan_stem: str) -> tuple[list[str], bool]:
+    section = _section_lines(lines, "Now")
+    if not section:
+        return lines, False
+    heading_index = next((index for index, line in enumerate(lines) if line.strip().lower() == "## now"), -1)
+    if heading_index < 0:
+        return lines, False
+    section_start = heading_index + 1
+    section_end = section_start + len(section)
+
+    compact_pattern = re.compile(r"^\s*-\s*([a-z0-9._-]+)\s*:\s*(.*)$", re.IGNORECASE)
+    kept_lines: list[str] = []
+    removed = False
+    for line in section:
+        match = compact_pattern.match(line)
+        if match and match.group(1).strip().lower() == plan_stem:
+            removed = True
+            continue
+        kept_lines.append(line)
+
+    if not removed:
+        return lines, False
+    return lines[:section_start] + kept_lines + lines[section_end:], True
 
 
 def _plan_stem_tokens(plan_path: Path) -> list[str]:

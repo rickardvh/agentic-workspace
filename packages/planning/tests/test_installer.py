@@ -611,6 +611,37 @@ def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_p
     assert any(action.kind == "updated" and action.path == tmp_path / "ROADMAP.md" for action in result.actions)
 
 
+def test_archive_execplan_apply_cleanup_updates_compact_now_todo_shape(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Purpose
+
+Active queue for repository work.
+
+## Now
+- front-door-defaults-tranche: Active - compress front-door docs and land the defaults contract.
+
+## Action
+- Execute `docs/execplans/front-door-defaults-tranche-2026-04-09.md` and archive it once validation is complete.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / "docs" / "execplans" / "front-door-defaults-tranche-2026-04-09.md"
+    _write(plan_path, _minimal_execplan(status="completed").replace("plan-alpha", "front-door-defaults-tranche"))
+
+    result = archive_execplan("front-door-defaults-tranche-2026-04-09", target=tmp_path, apply_cleanup=True)
+
+    todo_text = (tmp_path / "TODO.md").read_text(encoding="utf-8")
+    assert "front-door-defaults-tranche: Active" not in todo_text
+    assert "docs/execplans/front-door-defaults-tranche-2026-04-09.md" not in todo_text
+    assert "- No active work right now." in todo_text
+    assert "Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation." in todo_text
+    assert any(action.kind == "updated" and action.path == tmp_path / "TODO.md" for action in result.actions)
+
+
 def test_archive_execplan_apply_cleanup_removes_matching_candidate_queue_entry(tmp_path: Path) -> None:
     _write(
         tmp_path / "TODO.md",

@@ -14,11 +14,7 @@ Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraint
 Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Active Handoff
-
 - The roadmap now only tracks bounded future candidates and promotion triggers.
-- Stable policy, lifecycle, and ownership guidance live in canonical docs and active execplans.
-- Promote work only when it is short enough for a focused execplan and narrow validation lane.
-
 ## GitHub Issue Intake
 
 - Latest GitHub issue tranche is landed locally; keep detailed closure history in archived execplans and issue comments, not here.
