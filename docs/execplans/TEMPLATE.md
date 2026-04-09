@@ -23,6 +23,15 @@ Prefer replacing resolved status lines instead of appending pass-by-pass history
 Use `none` only when this slice actually completes the larger intended outcome.
 If the larger intended outcome is still unfinished, point `Continuation surface` at the checked-in surface that now owns follow-through.
 
+## Required Continuation
+
+- Required follow-on for the larger intended outcome:
+- Owner surface:
+- Activation trigger:
+
+Use `no` / `none` only when this slice actually finishes the larger intended outcome.
+If required follow-on remains, record its checked-in owner and what should cause activation.
+
 ## Active Milestone
 
 - Status:

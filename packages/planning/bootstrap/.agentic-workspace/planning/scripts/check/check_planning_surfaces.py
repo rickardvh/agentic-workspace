@@ -55,6 +55,7 @@ EXPECTED_EXECPLAN_SECTIONS = [
     "Goal",
     "Non-Goals",
     "Intent Continuity",
+    "Required Continuation",
     "Active Milestone",
     "Immediate Next Action",
     "Blockers",
@@ -820,10 +821,14 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
     active_milestone_section = _section_content(lines, "Active Milestone")
     active_milestone_fields = _extract_kv_fields(active_milestone_section)
     intent_continuity_fields = _extract_kv_fields(_section_content(lines, "Intent Continuity"))
+    required_continuation_fields = _extract_kv_fields(_section_content(lines, "Required Continuation"))
     is_active_execplan = not has_only_non_active_status
     larger_intended_outcome = intent_continuity_fields.get("larger intended outcome", "").strip()
     completes_larger_outcome = intent_continuity_fields.get("this slice completes the larger intended outcome", "").strip().lower()
     continuation_surface = intent_continuity_fields.get("continuation surface", "").strip()
+    required_follow_on = required_continuation_fields.get("required follow-on for the larger intended outcome", "").strip().lower()
+    required_owner_surface = required_continuation_fields.get("owner surface", "").strip()
+    activation_trigger = required_continuation_fields.get("activation trigger", "").strip()
 
     if not larger_intended_outcome:
         warnings.append(
@@ -856,6 +861,60 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 WARNING_EXECPLAN_UNDER_SPECIFIED,
                 _render_path(path),
                 "Execplan leaves the larger intended outcome unfinished without naming a continuation surface.",
+            )
+        )
+
+    if required_follow_on not in {"yes", "no"}:
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_UNDER_SPECIFIED,
+                _render_path(path),
+                "Execplan must set `Required follow-on for the larger intended outcome` to yes or no.",
+            )
+        )
+    elif required_follow_on == "yes":
+        if not required_owner_surface or required_owner_surface.lower() in {"none", "n/a"}:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Execplan records required follow-on but does not name the owner surface.",
+                )
+            )
+        if not activation_trigger or activation_trigger.lower() in {"none", "n/a"}:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Execplan records required follow-on but does not state the activation trigger.",
+                )
+            )
+    elif required_follow_on == "no" and (
+        (required_owner_surface and required_owner_surface.lower() not in {"none", "n/a"})
+        or (activation_trigger and activation_trigger.lower() not in {"none", "n/a"})
+    ):
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_UNDER_SPECIFIED,
+                _render_path(path),
+                "Execplan marks required follow-on absent but still carries an owner surface or activation trigger.",
+            )
+        )
+
+    if completes_larger_outcome == "no" and required_follow_on != "yes":
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_UNDER_SPECIFIED,
+                _render_path(path),
+                "Execplan leaves the larger intended outcome unfinished but does not record required follow-on explicitly.",
+            )
+        )
+    if completes_larger_outcome == "yes" and required_follow_on == "yes":
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_UNDER_SPECIFIED,
+                _render_path(path),
+                "Execplan marks the larger intended outcome complete but still records required follow-on.",
             )
         )
 

@@ -48,6 +48,7 @@ Each active plan should stay compact and include:
 - goal
 - non-goals
 - intent continuity
+- required continuation
 - active milestone
 - immediate next action
 - touched paths
@@ -70,6 +71,16 @@ Intent continuity belongs under `## Intent Continuity` for active plans:
 
 Use this section to keep a safe first slice from masquerading as the full requested outcome.
 If a completed slice does not finish the larger intended outcome, archive should only happen after the continuation surface is explicit.
+
+Required follow-on routing belongs under `## Required Continuation` for active plans:
+
+- `Required follow-on for the larger intended outcome`: `yes` or `no`
+- `Owner surface`: `none` only when no required continuation remains
+- `Activation trigger`: `none` only when no required continuation remains
+
+Use this section to distinguish required continuation from optional nice-to-have follow-up.
+If a completed slice leaves the larger intended outcome unfinished, record the required next owner and activation trigger here before archiving.
+Do not rely on drift-log prose, completion-note prose, or chat residue to carry mandatory follow-through.
 
 Keep the drift log decision-shaped and brief. Do not turn an active or completed execplan into a changelog when the same detail is already recoverable from archived plans and git.
 Execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work. `TODO.md` should only expose that the work is active and point here.

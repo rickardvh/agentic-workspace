@@ -507,6 +507,10 @@ def archive_execplan(
     intent_continuity = _execplan_intent_continuity(plan_path)
     completes_larger_outcome = intent_continuity.get("this slice completes the larger intended outcome", "").strip().lower()
     continuation_surface = intent_continuity.get("continuation surface", "").strip()
+    required_continuation = _execplan_required_continuation(plan_path)
+    required_follow_on = required_continuation.get("required follow-on for the larger intended outcome", "").strip().lower()
+    required_owner_surface = required_continuation.get("owner surface", "").strip()
+    activation_trigger = required_continuation.get("activation trigger", "").strip()
     if completes_larger_outcome == "no" and (not continuation_surface or continuation_surface.lower() in {"none", "n/a"}):
         result.warnings.append(
             {
@@ -519,6 +523,39 @@ def archive_execplan(
             "manual review",
             plan_path,
             "larger intended outcome is unfinished; set Continuation surface before archiving",
+        )
+        return result
+    if completes_larger_outcome == "no" and required_follow_on != "yes":
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_required_follow_on",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Execplan leaves the larger intended outcome incomplete but does not record required follow-on explicitly.",
+            }
+        )
+        result.add(
+            "manual review",
+            plan_path,
+            "larger intended outcome is unfinished; record Required Continuation before archiving",
+        )
+        return result
+    if required_follow_on == "yes" and (
+        not required_owner_surface
+        or required_owner_surface.lower() in {"none", "n/a"}
+        or not activation_trigger
+        or activation_trigger.lower() in {"none", "n/a"}
+    ):
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_required_follow_on",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Execplan records required follow-on but does not name both the owner surface and activation trigger.",
+            }
+        )
+        result.add(
+            "manual review",
+            plan_path,
+            "required follow-on needs both owner surface and activation trigger before archiving",
         )
         return result
 
@@ -1003,6 +1040,10 @@ def _render_execplan_from_todo_item(
         f"- Larger intended outcome: {goal}\n"
         "- This slice completes the larger intended outcome: yes\n"
         "- Continuation surface: none\n\n"
+        "## Required Continuation\n\n"
+        "- Required follow-on for the larger intended outcome: no\n"
+        "- Owner surface: none\n"
+        "- Activation trigger: none\n\n"
         "## Active Milestone\n\n"
         f"- ID: {item_id}\n"
         f"- Status: {status}\n"
@@ -1076,6 +1117,11 @@ def _execplan_item_id(path: Path) -> str:
 def _execplan_intent_continuity(path: Path) -> dict[str, str]:
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Intent Continuity"))
+
+
+def _execplan_required_continuation(path: Path) -> dict[str, str]:
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Required Continuation"))
 
 
 def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path) -> list[TodoItem]:

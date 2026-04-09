@@ -44,6 +44,12 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 - This slice completes the larger intended outcome: yes
 - Continuation surface: none
 
+## Required Continuation
+
+- Required follow-on for the larger intended outcome: no
+- Owner surface: none
+- Activation trigger: none
+
 ## Active Milestone
 
 - ID: plan-alpha
@@ -352,6 +358,8 @@ def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
     assert "must not silently widen the requested outcome" in text
     assert "Continuation surface" in text
     assert "larger intended outcome" in text
+    assert "Required follow-on for the larger intended outcome" in text
+    assert "Activation trigger" in text
 
 
 def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
@@ -555,8 +563,10 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
     plan_text = plan_path.read_text(encoding="utf-8")
     todo_text = (tmp_path / "TODO.md").read_text(encoding="utf-8")
     assert "## Intent Continuity" in plan_text
+    assert "## Required Continuation" in plan_text
     assert "- This slice completes the larger intended outcome: yes" in plan_text
     assert "- Continuation surface: none" in plan_text
+    assert "- Required follow-on for the larger intended outcome: no" in plan_text
     assert "Surface: docs/execplans/direct-item.md" in todo_text
     assert "Next Action:" not in todo_text
     assert "Done When:" not in todo_text
@@ -615,6 +625,27 @@ def test_archive_execplan_blocks_unfinished_larger_intent_without_continuation_s
     assert any(warning["warning_class"] == "archive_missing_intent_continuity" for warning in result.warnings)
     assert any(
         action.kind == "manual review" and action.path == plan_path and "Continuation surface" in action.detail for action in result.actions
+    )
+
+
+def test_archive_execplan_blocks_missing_required_follow_on_when_parent_intent_is_unfinished(tmp_path: Path) -> None:
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
+    _write(
+        plan_path,
+        _minimal_execplan(status="completed")
+        .replace("- This slice completes the larger intended outcome: yes", "- This slice completes the larger intended outcome: no")
+        .replace("- Continuation surface: none", "- Continuation surface: `ROADMAP.md` candidate `next-slice`"),
+    )
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_missing_required_follow_on" for warning in result.warnings)
+    assert any(
+        action.kind == "manual review" and action.path == plan_path and "Required Continuation" in action.detail
+        for action in result.actions
     )
 
 

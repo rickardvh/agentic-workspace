@@ -54,6 +54,12 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
 - This slice completes the larger intended outcome: yes
 - Continuation surface: none
 
+## Required Continuation
+
+- Required follow-on for the larger intended outcome: no
+- Owner surface: none
+- Activation trigger: none
+
 ## Active Milestone
 
 - ID: plan-alpha
@@ -349,6 +355,12 @@ def test_execplan_under_specified_and_notebook_warnings(tmp_path: Path) -> None:
 - This slice completes the larger intended outcome: no
 - Continuation surface: none
 
+## Required Continuation
+
+- Required follow-on for the larger intended outcome: no
+- Owner surface: none
+- Activation trigger: none
+
 ## Active Milestone
 
 - Status: in-progress
@@ -413,6 +425,27 @@ def test_execplan_intent_continuity_requires_continuation_surface_when_parent_in
         .replace(
             "- This slice completes the larger intended outcome: yes",
             "- This slice completes the larger intended outcome: no",
+        )
+    )
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
+
+    classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
+    assert "execplan_under_specified" in classes
+
+
+def test_execplan_requires_structured_required_follow_on_when_parent_intent_is_unfinished(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_required_follow_on")
+    plan = (
+        _minimal_execplan()
+        .replace(
+            "- This slice completes the larger intended outcome: yes",
+            "- This slice completes the larger intended outcome: no",
+        )
+        .replace(
+            "- Continuation surface: none",
+            "- Continuation surface: ROADMAP.md candidate next-slice",
         )
     )
     _write(tmp_path / "TODO.md", _baseline_todo())
