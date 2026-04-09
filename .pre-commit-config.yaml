@@ -16,3 +16,8 @@ repos:
         entry: uv run python scripts/check/check_master_tests.py
         language: system
         pass_filenames: false
+      - id: no-absolute-paths
+        name: no absolute paths
+        entry: uv run python scripts/check/check_no_absolute_paths.py
+        language: system
+        pass_filenames: false

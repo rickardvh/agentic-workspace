@@ -250,7 +250,7 @@ def _preferred_runner(source: UpgradeSource) -> str | None:
 
 
 def _managed_skills_path(target: str | None) -> str:
-    target_root = target or "/path/to/repo"
+    target_root = target or "./repo"
     return f"{target_root}/skills"
 
 

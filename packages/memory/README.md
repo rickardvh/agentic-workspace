@@ -48,10 +48,10 @@ Fastest no-install path:
 
 ```bash
 # Preferred when uvx is available
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target /path/to/repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target ./repo
 
 # Alternative when pipx is available instead
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target /path/to/repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target ./repo
 ```
 
 Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no-install path when it is the runner a repo already uses.
@@ -212,7 +212,7 @@ In this monorepo checkout, the active operational memory install lives at the re
 Normal public lifecycle path:
 
 ```bash
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target /path/to/repo --preset memory
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target ./repo --preset memory
 ```
 
 ### Agent workflow for install
@@ -221,16 +221,16 @@ If you want an agent to perform the setup and do not want to install the CLI loc
 
 ```bash
 # Preferred when uvx is available
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target /path/to/repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target ./repo
 
 # Fallback when pipx is available instead
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target /path/to/repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target ./repo
 
 # Conservative adoption into an existing repo
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt adopt --target ./repo
 
 # Fallback when pipx is available instead
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt adopt --target /path/to/repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt adopt --target ./repo
 ```
 
 Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. The printed prompt is designed for an agent to execute the bootstrap flow without asking you to install or clone this repo first. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but normal upgrades should route through the checked-in `memory-upgrade` skill under `.agentic-workspace/memory/skills/`, which runs the packaged upgrade flow using `.agentic-workspace/memory/UPGRADE-SOURCE.toml`. Treat that file as the source of truth for remote runner specs instead of scattering raw Git URLs through local workflow docs.
@@ -241,7 +241,7 @@ Typical lifecycle for a fresh bootstrap:
 2. If new current-memory files were created, populate them conservatively.
 3. Run `bootstrap-cleanup` when bootstrap lifecycle work is complete.
 
-After the agent finishes install or adopt lifecycle work, run `agentic-memory-bootstrap bootstrap-cleanup --target /path/to/repo`, or let the agent run it, to remove the temporary `.agentic-workspace/memory/bootstrap/` workspace.
+After the agent finishes install or adopt lifecycle work, run `agentic-memory-bootstrap bootstrap-cleanup --target ./repo`, or let the agent run it, to remove the temporary `.agentic-workspace/memory/bootstrap/` workspace.
 
 If you omit the placeholder flags such as `--project-name` or `--project-purpose`, your `AGENTS.md` will contain unfilled placeholders. Run `doctor` after install to identify them.
 
@@ -264,12 +264,12 @@ Then run:
 
 ```bash
 # First-time install
-agentic-memory-bootstrap doctor --target /path/to/repo
-agentic-memory-bootstrap install --target /path/to/repo
+agentic-memory-bootstrap doctor --target ./repo
+agentic-memory-bootstrap install --target ./repo
 
 # Conservative adoption into an existing repo
-agentic-memory-bootstrap doctor --target /path/to/repo
-agentic-memory-bootstrap adopt --target /path/to/repo
+agentic-memory-bootstrap doctor --target ./repo
+agentic-memory-bootstrap adopt --target ./repo
 ```
 
 If you are working from a local clone, replace the Git URL with `.`.
@@ -282,10 +282,10 @@ If you want an agent to perform the upgrade without a local CLI install, print a
 
 ```bash
 # Preferred when uvx is available
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt upgrade --target ./repo
 
 # Fallback when pipx is available instead
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt upgrade --target /path/to/repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt upgrade --target ./repo
 ```
 
 This is the preferred upgrade path for the primary agent-first workflow. The prompt tells the agent to use the checked-in `memory-upgrade` skill as the single repo-local upgrade entrypoint; the skill then runs the packaged upgrade flow using `.agentic-workspace/memory/UPGRADE-SOURCE.toml`.
@@ -295,9 +295,9 @@ This is the preferred upgrade path for the primary agent-first workflow. The pro
 After installation, run:
 
 ```bash
-agentic-memory-bootstrap doctor --target /path/to/repo
-agentic-memory-bootstrap upgrade --dry-run --target /path/to/repo
-agentic-memory-bootstrap upgrade --target /path/to/repo
+agentic-memory-bootstrap doctor --target ./repo
+agentic-memory-bootstrap upgrade --dry-run --target ./repo
+agentic-memory-bootstrap upgrade --target ./repo
 ```
 
 ## Uninstall
@@ -308,10 +308,10 @@ If you want an agent to perform the uninstall without a local CLI install, print
 
 ```bash
 # Preferred when uvx is available
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt uninstall --target /path/to/repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt uninstall --target ./repo
 
 # Fallback when pipx is available instead
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt uninstall --target /path/to/repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt uninstall --target ./repo
 ```
 
 This runs the uninstall flow conservatively and points the agent to the bundled `bootstrap-uninstall` skill when manual-review items remain.
@@ -321,8 +321,8 @@ This runs the uninstall flow conservatively and points the agent to the bundled 
 If the tool is already installed, run:
 
 ```bash
-agentic-memory-bootstrap uninstall --dry-run --target /path/to/repo
-agentic-memory-bootstrap uninstall --target /path/to/repo
+agentic-memory-bootstrap uninstall --dry-run --target ./repo
+agentic-memory-bootstrap uninstall --target ./repo
 ```
 
 `uninstall` removes safe bootstrap-managed files and reports remaining repo-local memory files for manual review instead of deleting them blindly.

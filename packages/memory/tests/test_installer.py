@@ -1178,13 +1178,15 @@ def test_upgrade_preserves_existing_local_source_metadata(tmp_path: Path) -> Non
     installer.install_bootstrap(target=target)
     source_path = target / ".agentic-workspace/memory" / "UPGRADE-SOURCE.toml"
     source_path.write_text(
-        'source_type = "local"\nsource_ref = "C:/src/agentic-memory"\n',
+        'source_type = "local"\nsource_ref = "./local/agentic-memory"\n',
         encoding="utf-8",
     )
 
     result = installer.upgrade_bootstrap(target=target, dry_run=True)
 
-    assert source_path.read_text(encoding="utf-8") == ('source_type = "local"\nsource_ref = "C:/src/agentic-memory"\n')
+    assert source_path.read_text(encoding="utf-8") == (
+        'source_type = "local"\nsource_ref = "./local/agentic-memory"\n'
+    )
     assert any(
         action.path == source_path and action.kind == "current" and "preserving repo-local source selection" in action.detail
         for action in result.actions
@@ -1806,7 +1808,7 @@ def test_upgrade_migrates_legacy_layout_by_default(tmp_path: Path) -> None:
     (target / "memory" / "system" / "WORKFLOW.md").write_text("legacy workflow\n", encoding="utf-8")
     (target / "memory" / "system" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
     (target / "memory" / "system" / "UPGRADE-SOURCE.toml").write_text(
-        'source_type = "local"\nsource_ref = "C:/src/agentic-memory"\n',
+        'source_type = "local"\nsource_ref = "./local/agentic-memory"\n',
         encoding="utf-8",
     )
     (target / "memory" / "bootstrap" / "README.md").write_text("legacy bootstrap\n", encoding="utf-8")
@@ -1837,7 +1839,7 @@ def test_upgrade_dry_run_simulates_default_migration_for_legacy_layout(tmp_path:
     (target / "memory" / "system" / "WORKFLOW.md").write_text("legacy workflow\n", encoding="utf-8")
     (target / "memory" / "system" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
     (target / "memory" / "system" / "UPGRADE-SOURCE.toml").write_text(
-        'source_type = "local"\nsource_ref = "C:/src/agentic-memory"\n',
+        'source_type = "local"\nsource_ref = "./local/agentic-memory"\n',
         encoding="utf-8",
     )
     (target / "AGENTS.md").write_text(
@@ -1866,7 +1868,7 @@ def test_migrate_layout_moves_legacy_managed_files_into_agentic_memory_root(tmp_
     (target / "memory" / "system" / "WORKFLOW.md").write_text("workflow\n", encoding="utf-8")
     (target / "memory" / "system" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
     (target / "memory" / "system" / "UPGRADE-SOURCE.toml").write_text(
-        'source_type = "local"\nsource_ref = "C:/src/agentic-memory"\n',
+        'source_type = "local"\nsource_ref = "./local/agentic-memory"\n',
         encoding="utf-8",
     )
     (target / "memory" / "bootstrap" / "README.md").write_text("bootstrap\n", encoding="utf-8")
@@ -1900,10 +1902,10 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     migrate_args = parser.parse_args(["migrate-layout", "--target", ".", "--dry-run", "--format", "json"])
     uninstall_args = parser.parse_args(["uninstall", "--target", ".", "--dry-run", "--format", "json"])
     doctor_args = parser.parse_args(["doctor", "--target", ".", "--strict-doc-ownership"])
-    prompt_install_args = parser.parse_args(["prompt", "install", "--target", "C:/repo"])
-    prompt_args = parser.parse_args(["prompt", "adopt", "--target", "C:/repo"])
-    prompt_populate_args = parser.parse_args(["prompt", "populate", "--target", "C:/repo"])
-    prompt_uninstall_args = parser.parse_args(["prompt", "uninstall", "--target", "C:/repo"])
+    prompt_install_args = parser.parse_args(["prompt", "install", "--target", "./repo"])
+    prompt_args = parser.parse_args(["prompt", "adopt", "--target", "./repo"])
+    prompt_populate_args = parser.parse_args(["prompt", "populate", "--target", "./repo"])
+    prompt_uninstall_args = parser.parse_args(["prompt", "uninstall", "--target", "./repo"])
     route_args = parser.parse_args(["route", "--files", "src/app.py"])
     sync_args = parser.parse_args(["sync-memory", "--notes", "memory/index.md"])
     promotion_args = parser.parse_args(["promotion-report", "--notes", "memory/domains/api.md", "--mode", "remediation"])
@@ -2021,7 +2023,7 @@ def test_cli_version_flag_prints_package_version(capsys) -> None:
     [
         (["list-files", "--target", ".", "--format", "json"], False),
         (["list-skills", "--format", "json"], False),
-        (["prompt", "upgrade", "--target", "C:/repo"], False),
+        (["prompt", "upgrade", "--target", "./repo"], False),
         (["install", "--target", ".", "--dry-run", "--format", "json"], False),
         (["adopt", "--target", ".", "--dry-run", "--format", "json"], False),
         (["status", "--target", ".", "--format", "json"], False),
@@ -2456,13 +2458,13 @@ improvement_candidate = true
 def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
-    prompt = cli._build_agent_prompt("install", target="C:/repo")
+    monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
+    prompt = cli._build_agent_prompt("install", target="./repo")
 
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
-    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap init --target C:/repo" in prompt
-    assert "`install` skill at `C:/repo/.agentic-workspace/memory/bootstrap/skills`" in prompt
-    assert "bootstrap-cleanup --target C:/repo" in prompt
+    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap init --target ./repo" in prompt
+    assert "`install` skill at `./repo/.agentic-workspace/memory/bootstrap/skills`" in prompt
+    assert "bootstrap-cleanup --target ./repo" in prompt
     assert ".agentic-workspace/memory/" in prompt
     assert "memory notes stay under `memory/`" in prompt
 
@@ -2470,53 +2472,53 @@ def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(
 def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
-    prompt = cli._build_agent_prompt("adopt", target="C:/repo")
+    monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
+    prompt = cli._build_agent_prompt("adopt", target="./repo")
 
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
-    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap adopt --target C:/repo" in prompt
-    assert "`install` skill at `C:/repo/.agentic-workspace/memory/bootstrap/skills`" in prompt
+    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap adopt --target ./repo" in prompt
+    assert "`install` skill at `./repo/.agentic-workspace/memory/bootstrap/skills`" in prompt
     assert "`populate` from the same path" in prompt
-    assert "bootstrap-cleanup --target C:/repo" in prompt
+    assert "bootstrap-cleanup --target ./repo" in prompt
     assert ".agentic-workspace/memory/" in prompt
     assert "memory notes stay under `memory/`" in prompt
-    assert "C:/repo" in prompt
+    assert "./repo" in prompt
 
 
 def test_build_populate_prompt_mentions_task_context_heuristic(monkeypatch) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
-    prompt = cli._build_agent_prompt("populate", target="C:/repo")
+    monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
+    prompt = cli._build_agent_prompt("populate", target="./repo")
 
-    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap current show --target C:/repo" in prompt
-    assert "`populate` skill at `C:/repo/.agentic-workspace/memory/bootstrap/skills`" in prompt
+    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap current show --target ./repo" in prompt
+    assert "`populate` skill at `./repo/.agentic-workspace/memory/bootstrap/skills`" in prompt
     assert "overview note only" in prompt
     assert "task-context.md" in prompt
-    assert "C:/repo" in prompt
+    assert "./repo" in prompt
 
 
 def test_build_upgrade_prompt_mentions_local_bootstrap_skills(monkeypatch) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
-    prompt = cli._build_agent_prompt("upgrade", target="C:/repo")
+    monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
+    prompt = cli._build_agent_prompt("upgrade", target="./repo")
 
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
     assert "Use the checked-in `memory-upgrade` skill" in prompt
     assert "memory-upgrade" in prompt
-    assert "C:/repo/.agentic-workspace/memory/skills/" in prompt
+    assert "./repo/.agentic-workspace/memory/skills/" in prompt
     assert "recorded upgrade source automatically" in prompt
     assert "packaged upgrade flow for this repo" in prompt
     assert "prefer the installed `agentic-memory-bootstrap` CLI when available" in prompt
     assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap upgrade --target <repo>" in prompt
-    assert "bootstrap-cleanup --target C:/repo" not in prompt
+    assert "bootstrap-cleanup --target ./repo" not in prompt
     assert not prompt.startswith("Run `")
 
 
 def test_build_upgrade_prompt_uses_local_source_when_recorded(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
+    monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     installer.install_bootstrap(target=target)
     (target / ".agentic-workspace/memory" / "UPGRADE-SOURCE.toml").write_text(
-        'source_type = "local"\nsource_ref = "C:/src/agentic-memory"\n',
+        'source_type = "local"\nsource_ref = "./local/agentic-memory"\n',
         encoding="utf-8",
     )
 
@@ -2526,26 +2528,26 @@ def test_build_upgrade_prompt_uses_local_source_when_recorded(monkeypatch, tmp_p
     assert "Use the checked-in `memory-upgrade` skill" in prompt
     assert "recorded upgrade source automatically" in prompt
     assert "packaged upgrade flow for this repo" in prompt
-    assert "uvx --from C:/src/agentic-memory agentic-memory-bootstrap upgrade --target <repo>" in prompt
+    assert "uvx --from ./local/agentic-memory agentic-memory-bootstrap upgrade --target <repo>" in prompt
     assert MEMORY_GIT_SOURCE_REF not in prompt
 
 
 def test_build_uninstall_prompt_mentions_bundled_skill(monkeypatch) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda name: f"C:/tools/{name}.exe")
-    prompt = cli._build_agent_prompt("uninstall", target="C:/repo")
+    monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
+    prompt = cli._build_agent_prompt("uninstall", target="./repo")
 
-    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap uninstall --target C:/repo" in prompt
+    assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap uninstall --target ./repo" in prompt
     assert "bootstrap-uninstall" in prompt
 
 
 def test_build_prompt_falls_back_to_pipx_when_uvx_is_missing(monkeypatch) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda name: None if name == "uvx" else "C:/tools/pipx.exe")
+    monkeypatch.setattr(cli.shutil, "which", lambda name: None if name == "uvx" else "./tools/pipx")
 
-    prompt = cli._build_agent_prompt("upgrade", target="C:/repo")
+    prompt = cli._build_agent_prompt("upgrade", target="./repo")
 
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
     assert "Use the checked-in `memory-upgrade` skill" in prompt
-    assert "C:/repo/.agentic-workspace/memory/skills/" in prompt
+    assert "./repo/.agentic-workspace/memory/skills/" in prompt
     assert "recorded upgrade source automatically" in prompt
     assert f"pipx run --spec {MEMORY_GIT_SOURCE_REF} agentic-memory-bootstrap upgrade --target <repo>" in prompt
     assert "uvx --from" not in prompt

@@ -804,9 +804,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
     planned_only_rows = [line for line in all_status_rows if re.search(r"\b(planned|not-started|pending)\b", line)]
     completed_only_rows = [line for line in all_status_rows if re.search(r"\b(completed|done|closed)\b", line)]
     has_only_completed_status = bool(all_status_rows) and len(completed_only_rows) == len(all_status_rows)
-    has_only_non_active_status = bool(all_status_rows) and (
-        len(planned_only_rows) == len(all_status_rows) or has_only_completed_status
-    )
+    has_only_non_active_status = bool(all_status_rows) and (len(planned_only_rows) == len(all_status_rows) or has_only_completed_status)
 
     # Enforce exactly one active milestone for active execplans; planned-only contracts are allowed.
     if not has_only_non_active_status and len(active_status_rows) != 1:

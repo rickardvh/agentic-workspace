@@ -78,6 +78,7 @@ When changing product shape, ownership boundaries, lifecycle behavior, or mainta
 - Keep package boundaries explicit.
 - Preserve independent package versioning and CLI entry points.
 - Treat line-ending-only drift in generated `tools/` mirrors as noise unless the canonical manifest or rendered content changed.
+- In checked-in human-facing docs, keep links clickable but use repo-relative paths only; do not commit absolute filesystem paths in Markdown links or prose path references unless a non-repo absolute path is the subject of the documentation itself.
 
 ## Validation
 

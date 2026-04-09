@@ -1602,11 +1602,11 @@ def _defaults_payload() -> dict[str, Any]:
         },
         "lifecycle": {
             "primary_entrypoint": "agentic-workspace",
-            "default_install_command": "agentic-workspace init --target /path/to/repo --preset <memory|planning|full>",
+            "default_install_command": "agentic-workspace init --target ./repo --preset <memory|planning|full>",
             "default_operating_commands": [
-                "agentic-workspace status --target /path/to/repo",
-                "agentic-workspace doctor --target /path/to/repo",
-                "agentic-workspace upgrade --target /path/to/repo",
+                "agentic-workspace status --target ./repo",
+                "agentic-workspace doctor --target ./repo",
+                "agentic-workspace upgrade --target ./repo",
             ],
             "secondary": [
                 "Package CLIs are for package-local maintainer work, advanced debugging, or explicit module-level control.",
@@ -1614,8 +1614,8 @@ def _defaults_payload() -> dict[str, Any]:
         },
         "skill_discovery": {
             "primary": [
-                "agentic-workspace skills --target /path/to/repo --format json",
-                'agentic-workspace skills --target /path/to/repo --task "<task>" --format json',
+                "agentic-workspace skills --target ./repo --format json",
+                'agentic-workspace skills --target ./repo --task "<task>" --format json',
             ],
             "secondary": [
                 "Read skill registries or SKILL.md files directly only when debugging, authoring, or validating skills.",
@@ -1634,7 +1634,7 @@ def _defaults_payload() -> dict[str, Any]:
             ],
         },
         "combined_install": {
-            "primary": "agentic-workspace init --target /path/to/repo --preset full",
+            "primary": "agentic-workspace init --target ./repo --preset full",
             "operating_model": [
                 "Planning owns active-now state.",
                 "Memory owns durable anti-rediscovery knowledge.",

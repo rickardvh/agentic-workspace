@@ -10,7 +10,7 @@ export UV_CACHE_DIR
 	format format-workspace format-memory format-planning \
 	format-check format-check-workspace format-check-memory format-check-planning \
 	verify verify-workspace verify-memory verify-planning \
-	memory-freshness memory-freshness-strict planning-surfaces planning-surfaces-strict source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs \
+	memory-freshness memory-freshness-strict planning-surfaces planning-surfaces-strict source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs absolute-paths \
 	check check-memory check-planning check-all
 
 help:
@@ -31,6 +31,7 @@ help:
 	@echo "  source-payload-operational-install  Run source/payload/root-install boundary checks."
 	@echo "  maintainer-surfaces  Run maintainer-surface freshness and liveness checks."
 	@echo "  render-agent-docs    Regenerate root planning docs from the managed manifest."
+	@echo "  absolute-paths       Fail if tracked files contain absolute filesystem paths."
 	@echo "  check                Run the full root validation lane."
 	@echo "  check-memory         Run package-local checks for packages/memory."
 	@echo "  check-planning       Run package-local checks for packages/planning."
@@ -144,10 +145,13 @@ maintainer-surfaces-strict: render-agent-docs planning-surfaces-strict source-pa
 render-agent-docs:
 	uv run python scripts/render_agent_docs.py
 
+absolute-paths:
+	uv run python scripts/check/check_no_absolute_paths.py
+
 check-memory: sync-all test-memory lint-memory typecheck-memory verify-memory memory-freshness-strict
 
 check-planning: sync-all test-planning lint-planning typecheck-planning maintainer-surfaces memory-freshness
 
-check: sync-all test lint typecheck format-check verify memory-freshness-strict maintainer-surfaces
+check: sync-all test lint typecheck format-check verify memory-freshness-strict maintainer-surfaces absolute-paths
 
 check-all: check-memory check-planning

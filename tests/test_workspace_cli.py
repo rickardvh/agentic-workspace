@@ -46,7 +46,7 @@ class DictAction:
 
 
 def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) -> None:
-    repo_root = Path("C:/repo")
+    repo_root = Path("./repo")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(repo_root, []))
 
     assert cli.main(["modules", "--format", "json"]) == 0
@@ -101,12 +101,12 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     payload = json.loads(capsys.readouterr().out)
     assert payload["lifecycle"]["primary_entrypoint"] == "agentic-workspace"
     assert (
-        "agentic-workspace init --target /path/to/repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
+        "agentic-workspace init --target ./repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
     )
     assert payload["validation"]["default_routes"]["planning_package"] == "cd packages/planning && uv run pytest tests/test_installer.py"
-    assert payload["combined_install"]["primary"] == "agentic-workspace init --target /path/to/repo --preset full"
+    assert payload["combined_install"]["primary"] == "agentic-workspace init --target ./repo --preset full"
     assert any("ROADMAP.md" in step for step in payload["startup"]["secondary"])
-    assert any("skills --target /path/to/repo --task" in step for step in payload["skill_discovery"]["primary"])
+    assert any("skills --target ./repo --task" in step for step in payload["skill_discovery"]["primary"])
 
 
 def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -> None:

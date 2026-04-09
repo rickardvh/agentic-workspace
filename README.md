@@ -20,7 +20,7 @@ The goal is efficiency: higher-quality work with less rereading, rediscovery, an
 Normal install path:
 
 ```bash
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target /path/to/repo --preset full
+uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target ./repo --preset full
 ```
 
 If you only want one module, switch `--preset full` to `--preset memory` or `--preset planning`.
@@ -29,10 +29,10 @@ If you use `pipx` instead of `uvx`, keep the same command shape.
 Normal next commands:
 
 ```bash
-agentic-workspace status --target /path/to/repo
-agentic-workspace skills --target /path/to/repo --task "implement the current active milestone" --format json
-agentic-workspace doctor --target /path/to/repo
-agentic-workspace upgrade --target /path/to/repo
+agentic-workspace status --target ./repo
+agentic-workspace skills --target ./repo --task "implement the current active milestone" --format json
+agentic-workspace doctor --target ./repo
+agentic-workspace upgrade --target ./repo
 ```
 
 ## Why Adopt It

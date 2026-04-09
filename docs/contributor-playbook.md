@@ -26,6 +26,7 @@ Default startup path for an agent maintainer:
 Prefer repository-native state over chat-only context. If a follow-up matters after the current turn, record it in planning or memory instead of relying on conversational residue.
 
 If you are maintaining the repo through git commits locally, install hooks with `uv run pre-commit install`. The current pre-commit hooks run the shared `make format` and `make lint` lanes, and add `make test` when the commit is on `master`: apply automatic formatting fixes locally, then enforce lint before commit, and run the full test lane for master-bound commits. If formatting rewrites files, restage them and rerun the commit.
+The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`, so tracked files cannot introduce absolute filesystem paths.
 
 ## Start Here
 
@@ -54,6 +55,7 @@ If you are maintaining the repo through git commits locally, install hooks with 
 - Keep the root `agentic-workspace` CLI thin; push module-specific lifecycle logic back into the module packages.
 - Treat `.agentic-workspace/` module trees as product-managed surfaces; change them through the owning package or managed source rather than as freehand repo docs.
 - Treat `tools/` agent docs as generated mirrors; change `.agentic-workspace/planning/agent-manifest.json` and rerender instead of editing them directly.
+- In checked-in human-facing docs, prefer clickable Markdown links for navigation, but keep the target paths repo-relative. Do not introduce absolute filesystem paths into links or prose unless the absolute external path is itself the documented subject.
 
 As a maintainer rule of thumb:
 
@@ -90,6 +92,7 @@ Run the narrowest lane that proves the change.
 - Maintainer-surface, generated-doc, or installed-contract payload changes: `make maintainer-surfaces`
 - Planning-surface changes only: `make planning-surfaces`; rerun `make render-agent-docs` when the planning manifest or generated routing docs change
 - Memory note/current-state changes: `uv run python scripts/check/check_memory_freshness.py`
+- Absolute-path hygiene across tracked files: `make absolute-paths`
 
 Escalate to `make check-memory`, `make check-planning`, or `make check-all` only when the change crosses package or root orchestration boundaries.
 

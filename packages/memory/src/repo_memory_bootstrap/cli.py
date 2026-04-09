@@ -650,7 +650,7 @@ def _created_current_memory_notes(result) -> bool:
 
 
 def _build_agent_prompt(command: str, *, target: str | None) -> str:
-    target_root = target or "/path/to/repo"
+    target_root = target or "./repo"
     source = resolve_upgrade_source(target)
     runner = _preferred_git_runner_command(source)
     target_args = _target_args(target)
@@ -736,12 +736,12 @@ def _target_args(target: str | None) -> str:
 
 
 def _bootstrap_skills_path(target: str | None) -> str:
-    target_root = target or "/path/to/repo"
+    target_root = target or "./repo"
     return f"{target_root}/{BOOTSTRAP_WORKSPACE_ROOT.as_posix()}/skills"
 
 
 def _managed_skills_path(target: str | None) -> str:
-    target_root = target or "/path/to/repo"
+    target_root = target or "./repo"
     if target and Path(target).exists():
         if detect_bootstrap_layout(Path(target).resolve()) == "legacy":
             return f"{target_root}/memory/skills"

@@ -46,5 +46,5 @@ Instead:
 
 ## Recommendation Surface
 
-- `agentic-workspace skills --target /path/to/repo --format json` lists the explicit registered catalog
-- `agentic-workspace skills --target /path/to/repo --task "<task text>" --format json` returns the same catalog plus ranked recommendations and matching reasons
+- `agentic-workspace skills --target ./repo --format json` lists the explicit registered catalog
+- `agentic-workspace skills --target ./repo --task "<task text>" --format json` returns the same catalog plus ranked recommendations and matching reasons
