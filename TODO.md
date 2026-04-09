@@ -14,6 +14,7 @@ Active queue for repository work.
 - Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.
 ## Done
 
+- bootstrap-intent-handoff-tranche: Completed (shipped explicit repo-state and inferred-policy reporting in the workspace bootstrap front door, added `llms.txt` as the canonical external-agent handoff surface plus `.agentic-workspace/bootstrap-handoff.md` as the finishing brief path, aligned the root/package docs around intent-first bootstrap, and covered the new contract with workspace CLI regression tests)
 - front-door-defaults-tranche: Completed (compressed the front-door docs, added `agentic-workspace defaults` as the machine-readable default-route contract, captured bounded default-path and cheap-execution audits, and removed the clearest transitional startup/path-selection scaffolding)
 - memory-planning-synergy: Completed (defined the first explicit combined-install contract so planning borrows durable context from memory, completed planning residue promotes cleanly, and repeated plan re-explanation becomes a missing-synergy signal for cheaper future execution)
 - capability-aware-execution-followup: Completed (refined the planning capability-fit contract so it stays advisory, quiet, and tool-agnostic, and turns repeated stronger-capability outcomes into complexity-reduction signals for planning, reviews, and improvement-targeting)

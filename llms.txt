@@ -1,0 +1,27 @@
+# Agentic Workspace External-Agent Handoff
+
+Use Agentic Workspace as the lifecycle front door for this repository.
+
+Required steps:
+- Read AGENTS.md first.
+- For normal work, continue through TODO.md and the active execplan only when TODO points to one.
+- For lifecycle work, use agentic-workspace rather than package-specific CLIs unless package-local debugging is required.
+
+Preferred install or adopt intent:
+- agentic-workspace init --target ./repo --preset full
+
+Preferred follow-up commands:
+- agentic-workspace status --target ./repo
+- agentic-workspace doctor --target ./repo
+- agentic-workspace skills --target ./repo --task "<task>" --format json
+- agentic-workspace upgrade --target ./repo
+
+Rules:
+- Prefer conservative review over replacing repo-owned workflow surfaces in ambiguous repos.
+- Keep planning and memory ownership boundaries explicit.
+- If bootstrap writes .agentic-workspace/bootstrap-handoff.md, treat that file as the immediate next-action brief before normal work resumes.
+
+Success means:
+- the workspace lifecycle runs through agentic-workspace
+- AGENTS.md remains the repo startup entrypoint
+- llms.txt stays aligned with the installed workspace contract

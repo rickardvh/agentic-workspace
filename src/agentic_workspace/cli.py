@@ -24,6 +24,8 @@ WORKSPACE_PAYLOAD_FILES = (
     Path(".agentic-workspace/WORKFLOW.md"),
     Path(".agentic-workspace/OWNERSHIP.toml"),
 )
+WORKSPACE_EXTERNAL_AGENT_PATH = Path("llms.txt")
+WORKSPACE_BOOTSTRAP_HANDOFF_PATH = Path(".agentic-workspace/bootstrap-handoff.md")
 WORKSPACE_AGENTS_PATH = Path("AGENTS.md")
 WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
@@ -76,6 +78,8 @@ class ModuleDescriptor:
 
 @dataclass(frozen=True)
 class RepoInspection:
+    repo_state: str
+    inferred_policy: str
     mode: str
     prompt_requirement: str
     detected_surfaces: list[str]
@@ -667,6 +671,7 @@ def _workspace_status_report(
 ) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
+    expected_handoff = _external_agent_handoff_text(selected_modules=selected_modules)
 
     for relative in WORKSPACE_PAYLOAD_FILES:
         path = target_root / relative
@@ -733,6 +738,44 @@ def _workspace_status_report(
                 }
             )
 
+    handoff_path = target_root / WORKSPACE_EXTERNAL_AGENT_PATH
+    if not handoff_path.exists():
+        actions.append(
+            {
+                "kind": "warning",
+                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
+                "detail": "canonical external-agent handoff file missing",
+            }
+        )
+        warnings.append(
+            {
+                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
+                "message": "canonical external-agent handoff file missing",
+            }
+        )
+    elif handoff_path.read_text(encoding="utf-8") != expected_handoff:
+        actions.append(
+            {
+                "kind": "warning",
+                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
+                "detail": "external-agent handoff file differs from the current workspace contract",
+            }
+        )
+        warnings.append(
+            {
+                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
+                "message": "external-agent handoff file differs from the current workspace contract",
+            }
+        )
+    else:
+        actions.append(
+            {
+                "kind": "current",
+                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
+                "detail": "canonical external-agent handoff file present",
+            }
+        )
+
     return _workspace_report(
         target_root=target_root,
         message=f"{command_name.title()} report",
@@ -748,6 +791,59 @@ def _write_action_kind(*, dry_run: bool, existing: str | None) -> str:
     return "created" if existing is None else "updated"
 
 
+def _external_agent_handoff_text(*, selected_modules: list[str]) -> str:
+    lines = [
+        "# Agentic Workspace External-Agent Handoff",
+        "",
+        "Use Agentic Workspace as the lifecycle front door for this repository.",
+        "",
+        "Required steps:",
+        "- Read AGENTS.md first.",
+        "- For normal work, continue through TODO.md and the active execplan only when TODO points to one.",
+        "- For lifecycle work, use agentic-workspace rather than package-specific CLIs unless package-local debugging is required.",
+        "",
+        "Preferred install or adopt intent:",
+    ]
+    if selected_modules == ["planning"]:
+        lines.append("- agentic-workspace init --target ./repo --preset planning")
+    elif selected_modules == ["memory"]:
+        lines.append("- agentic-workspace init --target ./repo --preset memory")
+    else:
+        lines.append("- agentic-workspace init --target ./repo --preset full")
+    lines.extend(
+        [
+            "",
+            "Preferred follow-up commands:",
+            "- agentic-workspace status --target ./repo",
+            "- agentic-workspace doctor --target ./repo",
+            "- agentic-workspace skills --target ./repo --task \"<task>\" --format json",
+            "- agentic-workspace upgrade --target ./repo",
+            "",
+            "Rules:",
+            "- Prefer conservative review over replacing repo-owned workflow surfaces in ambiguous repos.",
+            "- Keep planning and memory ownership boundaries explicit.",
+            (
+                "- If bootstrap writes .agentic-workspace/bootstrap-handoff.md, "
+                "treat that file as the immediate next-action brief before normal work resumes."
+            ),
+            "",
+            "Success means:",
+            "- the workspace lifecycle runs through agentic-workspace",
+            "- AGENTS.md remains the repo startup entrypoint",
+            "- llms.txt stays aligned with the installed workspace contract",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _write_generated_text(*, destination: Path, text: str, dry_run: bool) -> None:
+    if dry_run:
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(text, encoding="utf-8")
+
+
 def _workspace_init_or_upgrade_report(
     *,
     target_root: Path,
@@ -760,6 +856,7 @@ def _workspace_init_or_upgrade_report(
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     conservative = inspection_mode != "install" and command_name == "init"
+    handoff_text = _external_agent_handoff_text(selected_modules=selected_modules)
 
     for relative in WORKSPACE_PAYLOAD_FILES:
         destination = target_root / relative
@@ -857,6 +954,34 @@ def _workspace_init_or_upgrade_report(
                     "detail": "workflow pointer blocks already present in AGENTS.md",
                 }
             )
+
+    handoff_destination = target_root / WORKSPACE_EXTERNAL_AGENT_PATH
+    existing_handoff = handoff_destination.read_text(encoding="utf-8") if handoff_destination.exists() else None
+    if existing_handoff == handoff_text:
+        actions.append(
+            {
+                "kind": "current",
+                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
+                "detail": "canonical external-agent handoff already current",
+            }
+        )
+    elif conservative and existing_handoff is not None:
+        actions.append(
+            {
+                "kind": "manual review",
+                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
+                "detail": "existing external-agent handoff differs from the managed workspace contract",
+            }
+        )
+    else:
+        _write_generated_text(destination=handoff_destination, text=handoff_text, dry_run=dry_run)
+        actions.append(
+            {
+                "kind": _write_action_kind(dry_run=dry_run, existing=existing_handoff),
+                "path": WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(),
+                "detail": "refresh canonical external-agent handoff surface",
+            }
+        )
 
     return _workspace_report(
         target_root=target_root,
@@ -1051,7 +1176,11 @@ def _run_init(
         reports=reports,
     )
     prompt_text = _build_handoff_prompt(summary)
-    prompt_path = _write_prompt_file(write_prompt=write_prompt, prompt_text=prompt_text) if write_prompt else None
+    prompt_path = _default_handoff_prompt_path(target_root=target_root) if summary["prompt_requirement"] != "none" else None
+    if write_prompt:
+        prompt_path = Path(write_prompt).expanduser().resolve()
+    if prompt_path is not None and (write_prompt or not dry_run):
+        _write_prompt_file(prompt_path=prompt_path, prompt_text=prompt_text, dry_run=dry_run)
     payload: dict[str, Any] = summary | {
         "dry_run": dry_run,
         "module_reports": reports,
@@ -1087,28 +1216,26 @@ def _inspect_repo_state(
     placeholders = _detect_placeholder_surfaces(target_root=target_root, surfaces=detected_surfaces)
     overlap_count = len(preserved_existing)
     managed_root_present = (target_root / ".agentic-workspace").exists()
-    high_ambiguity = bool(partial_state) or bool(placeholders) or overlap_count >= 4 or (managed_root_present and overlap_count >= 2)
-
-    if not preserved_existing and not force_adopt:
-        mode = "install"
-    elif high_ambiguity:
-        mode = "adopt_high_ambiguity"
-    else:
-        mode = "adopt"
-
-    prompt_requirement = {
-        "install": "none",
-        "adopt": "recommended",
-        "adopt_high_ambiguity": "required",
-    }[mode]
-    if partial_state or placeholders:
-        prompt_requirement = "required"
+    repo_state, mode, inferred_policy = _classify_repo_state(
+        force_adopt=force_adopt,
+        managed_root_present=managed_root_present,
+        overlap_count=overlap_count,
+        partial_state=partial_state,
+        placeholders=placeholders,
+    )
+    prompt_requirement = _prompt_requirement_for_mode(
+        mode=mode,
+        partial_state=partial_state,
+        placeholders=placeholders,
+    )
 
     needs_review = [f"{path}: partial module state detected" for path in _dedupe(partial_state)]
     if mode == "adopt_high_ambiguity":
         needs_review.extend(f"{path}: reconcile existing workflow surface ownership" for path in preserved_existing)
 
     return RepoInspection(
+        repo_state=repo_state,
+        inferred_policy=inferred_policy,
         mode=mode,
         prompt_requirement=prompt_requirement,
         detected_surfaces=detected_surfaces,
@@ -1116,6 +1243,34 @@ def _inspect_repo_state(
         needs_review=_dedupe(needs_review),
         placeholders=_dedupe(placeholders),
     )
+
+
+def _classify_repo_state(
+    *,
+    force_adopt: bool,
+    managed_root_present: bool,
+    overlap_count: int,
+    partial_state: list[str],
+    placeholders: list[str],
+) -> tuple[str, str, str]:
+    if partial_state or placeholders:
+        return ("partial_or_placeholder_state", "adopt_high_ambiguity", "require_explicit_handoff")
+    if not overlap_count and not force_adopt:
+        return ("blank_or_unmanaged_repo", "install", "install_direct")
+    if overlap_count >= 4 or (managed_root_present and overlap_count >= 2):
+        return ("docs_heavy_existing_repo", "adopt_high_ambiguity", "require_explicit_handoff")
+    return ("light_existing_workflow", "adopt", "preserve_existing_and_adopt")
+
+
+def _prompt_requirement_for_mode(*, mode: str, partial_state: list[str], placeholders: list[str]) -> str:
+    prompt_requirement = {
+        "install": "none",
+        "adopt": "recommended",
+        "adopt_high_ambiguity": "required",
+    }[mode]
+    if partial_state or placeholders:
+        return "required"
+    return prompt_requirement
 
 
 def _detect_placeholder_surfaces(*, target_root: Path, surfaces: list[str]) -> list[str]:
@@ -1194,6 +1349,9 @@ def _build_init_summary(
         "target": target_root.as_posix(),
         "modules": selected_modules,
         "preset": resolved_preset,
+        "intent": _bootstrap_intent_payload(selected_modules=selected_modules, resolved_preset=resolved_preset),
+        "repo_state": inspection.repo_state,
+        "inferred_policy": inspection.inferred_policy,
         "mode": inspection.mode,
         "prompt_requirement": prompt_requirement,
         "detected_surfaces": inspection.detected_surfaces,
@@ -1206,6 +1364,8 @@ def _build_init_summary(
         "validation": _validation_commands(target_root=target_root),
         "next_steps": _init_next_steps(
             target_root=target_root,
+            repo_state=inspection.repo_state,
+            inferred_policy=inspection.inferred_policy,
             mode=inspection.mode,
             prompt_requirement=prompt_requirement,
             needs_review=needs_review,
@@ -1305,6 +1465,20 @@ def _run_lifecycle_command(
         "next_steps": _lifecycle_next_steps(command_name=command_name, target_root=target_root, warnings=warnings),
         "reports": reports,
     }
+
+
+def _bootstrap_intent_payload(*, selected_modules: list[str], resolved_preset: str | None) -> dict[str, str]:
+    if resolved_preset == "memory":
+        return {"key": "memory", "summary": "set up this repo for Agentic Memory"}
+    if resolved_preset == "planning":
+        return {"key": "planning", "summary": "set up this repo for Agentic Planning"}
+    if resolved_preset == "full":
+        return {"key": "full", "summary": "set up this repo for both Planning and Memory"}
+    if selected_modules == ["memory"]:
+        return {"key": "memory", "summary": "set up this repo for Agentic Memory"}
+    if selected_modules == ["planning"]:
+        return {"key": "planning", "summary": "set up this repo for Agentic Planning"}
+    return {"key": "custom", "summary": f"set up this repo for: {', '.join(selected_modules)}"}
 
 
 def _run_prompt_command(
@@ -1446,6 +1620,8 @@ def _validation_commands(*, target_root: Path) -> list[str]:
 def _init_next_steps(
     *,
     target_root: Path,
+    repo_state: str,
+    inferred_policy: str,
     mode: str,
     prompt_requirement: str,
     needs_review: list[str],
@@ -1453,14 +1629,20 @@ def _init_next_steps(
 ) -> list[str]:
     target = target_root.as_posix()
     steps = [f"Run agentic-workspace doctor --target {target} after bootstrap changes settle."]
+    if prompt_requirement != "none":
+        steps.append(
+            f"Use the generated finishing brief at {WORKSPACE_BOOTSTRAP_HANDOFF_PATH.as_posix()} "
+            "for the next bounded bootstrap action."
+        )
     if prompt_requirement == "none":
-        steps.append("Tell your coding agent to use the installed workflow surfaces directly for normal work.")
+        steps.append("Tell your coding agent to use AGENTS.md for normal work and llms.txt for lifecycle/front-door guidance.")
         return steps
     if mode == "adopt_high_ambiguity":
-        steps.append("Paste the generated handoff prompt into your coding agent and treat the finishing pass as required.")
+        steps.append("Treat the finishing brief as required before normal work resumes.")
     else:
         steps.append("Review preserved and review-needed workflow surfaces before treating bootstrap as complete.")
-        steps.append("Paste the generated handoff prompt into your coding agent if repo-specific reconciliation is still needed.")
+    if inferred_policy == "require_explicit_handoff" or repo_state == "docs_heavy_existing_repo":
+        steps.append("Prefer explicit review and merge decisions over replacing repo-owned workflow surfaces.")
     if placeholders:
         steps.append("Resolve remaining placeholders or bootstrap markers before normal workflow begins.")
     elif needs_review:
@@ -1482,9 +1664,25 @@ def _lifecycle_next_steps(*, command_name: str, target_root: Path, warnings: lis
 
 
 def _build_handoff_prompt(summary: dict[str, Any]) -> str:
-    lines = [f"Finish the Agentic Workspace bootstrap in {summary['target']}.", "", "Selected modules:"]
+    lines = [
+        f"Finish the Agentic Workspace bootstrap in {summary['target']}.",
+        "",
+        "User intent:",
+        f"- {summary['intent']['summary']}",
+        "",
+        "Repo state:",
+        f"- {summary['repo_state']}",
+        "",
+        "Inferred policy:",
+        f"- {summary['inferred_policy']}",
+        "",
+        "Lifecycle mode:",
+        f"- {summary['mode']}",
+        "",
+        "Selected modules:",
+    ]
     lines.extend(f"- {module_name}" for module_name in summary["modules"])
-    lines.extend(["", "Bootstrap mode:", f"- {summary['mode']}", "", "The CLI already:"])
+    lines.extend(["", "The CLI already:"])
     for path in summary["created"]:
         lines.append(f"- created {path}")
     for path in summary["updated_managed"]:
@@ -1502,6 +1700,7 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
         [
             "",
             "Rules:",
+            "- keep agentic-workspace as the lifecycle entrypoint; do not improvise package-level install flows",
             "- do not overwrite preserved repo-owned surfaces blindly",
             "- prefer conservative merge over replacement when existing docs overlap",
             "- do not edit generated files manually when a canonical source exists",
@@ -1515,6 +1714,7 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
     lines.extend(["", "When done:"])
     if summary["placeholders"]:
         lines.append("- remove or resolve any remaining placeholders before closing the bootstrap task")
+    lines.append("- keep llms.txt current as the canonical external-agent handoff surface")
     lines.append("- leave only durable workflow residue; do not keep temporary bootstrap notes around")
     return "\n".join(lines)
 
@@ -1545,10 +1745,14 @@ def _build_lifecycle_handoff_prompt(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _write_prompt_file(*, write_prompt: str, prompt_text: str) -> Path:
-    prompt_path = Path(write_prompt).expanduser().resolve()
-    prompt_path.parent.mkdir(parents=True, exist_ok=True)
-    prompt_path.write_text(prompt_text + "\n", encoding="utf-8")
+def _default_handoff_prompt_path(*, target_root: Path) -> Path:
+    return (target_root / WORKSPACE_BOOTSTRAP_HANDOFF_PATH).resolve()
+
+
+def _write_prompt_file(*, prompt_path: Path, prompt_text: str, dry_run: bool) -> Path:
+    if not dry_run:
+        prompt_path.parent.mkdir(parents=True, exist_ok=True)
+        prompt_path.write_text(prompt_text + "\n", encoding="utf-8")
     return prompt_path
 
 
@@ -1603,11 +1807,18 @@ def _defaults_payload() -> dict[str, Any]:
         "lifecycle": {
             "primary_entrypoint": "agentic-workspace",
             "default_install_command": "agentic-workspace init --target ./repo --preset <memory|planning|full>",
+            "supported_intents": [
+                "set up this repo for Agentic Memory",
+                "set up this repo for Agentic Planning",
+                "set up this repo for both Planning and Memory",
+            ],
             "default_operating_commands": [
                 "agentic-workspace status --target ./repo",
                 "agentic-workspace doctor --target ./repo",
                 "agentic-workspace upgrade --target ./repo",
             ],
+            "canonical_external_agent_handoff": "llms.txt",
+            "canonical_bootstrap_next_action": ".agentic-workspace/bootstrap-handoff.md",
             "secondary": [
                 "Package CLIs are for package-local maintainer work, advanced debugging, or explicit module-level control.",
             ],
@@ -1658,6 +1869,8 @@ def _emit_defaults(*, format_name: str) -> None:
     print("Lifecycle:")
     print(f"- primary entrypoint: {payload['lifecycle']['primary_entrypoint']}")
     print(f"- install: {payload['lifecycle']['default_install_command']}")
+    print(f"- external-agent handoff: {payload['lifecycle']['canonical_external_agent_handoff']}")
+    print(f"- bootstrap next action: {payload['lifecycle']['canonical_bootstrap_next_action']}")
     print("Skill discovery:")
     for step in payload["skill_discovery"]["primary"]:
         print(f"- {step}")
