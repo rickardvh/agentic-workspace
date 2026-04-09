@@ -35,6 +35,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path("ROADMAP.md"),
     Path("docs/capability-aware-execution.md"),
     Path("docs/delegated-judgment-contract.md"),
+    Path("docs/execution-summary-contract.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
     Path("docs/execplans/archive/README.md"),
@@ -60,6 +61,7 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("ROADMAP.md"),
     Path("docs/capability-aware-execution.md"),
     Path("docs/delegated-judgment-contract.md"),
+    Path("docs/execution-summary-contract.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
     Path("docs/execplans/archive/README.md"),
@@ -511,6 +513,11 @@ def archive_execplan(
     required_follow_on = required_continuation.get("required follow-on for the larger intended outcome", "").strip().lower()
     required_owner_surface = required_continuation.get("owner surface", "").strip()
     activation_trigger = required_continuation.get("activation trigger", "").strip()
+    execution_summary = _execplan_execution_summary(plan_path)
+    outcome_delivered = execution_summary.get("outcome delivered", "").strip()
+    validation_confirmed = execution_summary.get("validation confirmed", "").strip()
+    follow_on_routed_to = execution_summary.get("follow-on routed to", "").strip()
+    resume_from = execution_summary.get("resume from", "").strip()
     if completes_larger_outcome == "no" and (not continuation_surface or continuation_surface.lower() in {"none", "n/a"}):
         result.warnings.append(
             {
@@ -557,6 +564,46 @@ def archive_execplan(
             plan_path,
             "required follow-on needs both owner surface and activation trigger before archiving",
         )
+        return result
+    if not outcome_delivered or outcome_delivered.lower() in {"pending", "not completed yet", "todo", "tbd"}:
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_execution_summary",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Completed execplan is missing an explicit delivered-outcome summary.",
+            }
+        )
+        result.add("manual review", plan_path, "fill `Execution Summary` with the delivered outcome before archiving")
+        return result
+    if not validation_confirmed or validation_confirmed.lower() in {"pending", "tbd", "todo"}:
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_execution_summary",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Completed execplan is missing an explicit validation summary.",
+            }
+        )
+        result.add("manual review", plan_path, "fill `Execution Summary` with the validation confirmation before archiving")
+        return result
+    if not follow_on_routed_to or follow_on_routed_to.lower() in {"pending", "tbd", "todo", "none yet"}:
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_execution_summary",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Completed execplan is missing an explicit follow-on routing summary.",
+            }
+        )
+        result.add("manual review", plan_path, "fill `Execution Summary` with the follow-on routing before archiving")
+        return result
+    if not resume_from or resume_from.lower() in {"pending", "tbd", "todo", "current milestone"}:
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_execution_summary",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Completed execplan is missing an explicit resume cue.",
+            }
+        )
+        result.add("manual review", plan_path, "fill `Execution Summary` with the post-archive resume cue before archiving")
         return result
 
     cleanup_todo_lines: list[str] | None = None
@@ -1063,6 +1110,11 @@ def _render_execplan_from_todo_item(
         "- Fill in the narrowest command that proves the promoted work.\n\n"
         "## Completion Criteria\n\n"
         f"- {completion}\n\n"
+        "## Execution Summary\n\n"
+        "- Outcome delivered: not completed yet\n"
+        "- Validation confirmed: pending\n"
+        "- Follow-on routed to: none yet\n"
+        "- Resume from: current milestone\n\n"
         "## Drift Log\n\n"
         f"- {date.today().isoformat()}: Promoted from TODO direct-task shape into an execplan.\n"
     )
@@ -1122,6 +1174,11 @@ def _execplan_intent_continuity(path: Path) -> dict[str, str]:
 def _execplan_required_continuation(path: Path) -> dict[str, str]:
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Required Continuation"))
+
+
+def _execplan_execution_summary(path: Path) -> dict[str, str]:
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Execution Summary"))
 
 
 def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path) -> list[TodoItem]:

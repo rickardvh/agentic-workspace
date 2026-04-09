@@ -4,6 +4,7 @@ Checked-in execution plans for multi-milestone or multi-thread work live in this
 
 Use `python scripts/check/check_planning_surfaces.py` for advisory shape and drift warnings across `TODO.md`, active execplans, and `ROADMAP.md`.
 Use `agentic-planning-bootstrap summary`, `promote-to-plan`, and `archive-plan` as thin file-native helpers around the same checked-in contract.
+Use `docs/execution-summary-contract.md` for the compact outcome shape that completed slices should leave behind before archive.
 Use `archive-plan --apply-cleanup` only when you want the helper to also remove completed TODO references and compress matching `ROADMAP.md` Active Handoff residue for the same archived thread.
 
 This planning system is for execution. It is not intended to become a generic tracker, backlog database, or Jira replacement.
@@ -55,6 +56,7 @@ Each active plan should stay compact and include:
 - invariants
 - validation commands
 - completion criteria
+- execution summary
 - drift log
 
 Readiness fields belong under `## Active Milestone` for active plans:
@@ -81,6 +83,17 @@ Required follow-on routing belongs under `## Required Continuation` for active p
 Use this section to distinguish required continuation from optional nice-to-have follow-up.
 If a completed slice leaves the larger intended outcome unfinished, record the required next owner and activation trigger here before archiving.
 Do not rely on drift-log prose, completion-note prose, or chat residue to carry mandatory follow-through.
+
+Execution summaries belong under `## Execution Summary` for completed or nearly-complete plans:
+
+- `Outcome delivered`
+- `Validation confirmed`
+- `Follow-on routed to`
+- `Resume from`
+
+Keep this section compact and decision-shaped.
+It exists so later contributors do not have to reconstruct what the slice achieved, how it was proved, and where follow-through now lives.
+Do not turn it into a second drift log, a notebook, or a memory note.
 
 Keep the drift log decision-shaped and brief. Do not turn an active or completed execplan into a changelog when the same detail is already recoverable from archived plans and git.
 Execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work. `TODO.md` should only expose that the work is active and point here.

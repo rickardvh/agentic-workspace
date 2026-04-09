@@ -37,6 +37,17 @@ def _write(path: Path, text: str) -> None:
 
 
 def _minimal_execplan(*, status: str = "in-progress") -> str:
+    execution_summary = (
+        "- Outcome delivered: Added one bounded planning improvement.\n"
+        "- Validation confirmed: uv run pytest tests/test_check_planning_surfaces.py\n"
+        "- Follow-on routed to: none; slice complete\n"
+        "- Resume from: no further action in this plan\n"
+        if status in {"completed", "done", "closed"}
+        else "- Outcome delivered: not completed yet\n"
+        "- Validation confirmed: pending\n"
+        "- Follow-on routed to: none yet\n"
+        "- Resume from: current milestone\n"
+    )
     return """
 # Plan Alpha
 
@@ -93,10 +104,14 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
 
 - Warning classes are emitted for known drift.
 
+## Execution Summary
+
+{execution_summary}
+
 ## Drift Log
 
 - 2026-04-04: Initial plan created.
-""".format(status=status)
+""".format(status=status, execution_summary=execution_summary)
 
 
 def _baseline_todo(surface: str = "docs/execplans/plan-alpha.md") -> str:
@@ -464,6 +479,22 @@ def test_completed_execplan_left_active_warns_archive_drift(tmp_path: Path) -> N
 
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "archive_accumulation_drift" in classes
+
+
+def test_completed_execplan_without_execution_summary_warns_under_specified(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_completed_summary")
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(
+        tmp_path / "docs" / "execplans" / "plan-alpha.md",
+        _minimal_execplan(status="completed").replace(
+            "- Outcome delivered: Added one bounded planning improvement.",
+            "- Outcome delivered: not completed yet",
+        ),
+    )
+
+    classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
+    assert "execplan_under_specified" in classes
 
 
 def test_active_execplan_set_pressure_warns(tmp_path: Path) -> None:

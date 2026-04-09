@@ -27,6 +27,17 @@ def _write(path: Path, text: str) -> None:
 
 
 def _minimal_execplan(status: str = "in-progress") -> str:
+    execution_summary = (
+        "- Outcome delivered: Added one bounded planning improvement.\n"
+        "- Validation confirmed: uv run pytest tests/test_check_planning_surfaces.py\n"
+        "- Follow-on routed to: none; slice complete\n"
+        "- Resume from: no further action in this plan\n"
+        if status in {"completed", "done", "closed"}
+        else "- Outcome delivered: not completed yet\n"
+        "- Validation confirmed: pending\n"
+        "- Follow-on routed to: none yet\n"
+        "- Resume from: current milestone\n"
+    )
     return f"""
 # Plan Alpha
 
@@ -83,6 +94,10 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 
 - Warning classes are emitted for known drift.
 
+## Execution Summary
+
+{execution_summary}
+
 ## Drift Log
 
 - 2026-04-04: Initial plan created.
@@ -92,6 +107,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     result = install_bootstrap(target=tmp_path)
     capability_fit_doc_path = tmp_path / "docs" / "capability-aware-execution.md"
+    execution_summary_doc_path = tmp_path / "docs" / "execution-summary-contract.md"
     skill_readme_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "README.md"
     skill_registry_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json"
     skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
@@ -104,6 +120,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert (tmp_path / "TODO.md").exists()
     assert (tmp_path / "ROADMAP.md").exists()
     assert capability_fit_doc_path.exists()
+    assert execution_summary_doc_path.exists()
     assert review_readme_path.exists()
     assert review_template_path.exists()
     assert intake_doc_path.exists()
@@ -353,8 +370,9 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     readme_text = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
     bootstrap_agents_text = (installer_mod.payload_root() / "AGENTS.md").read_text(encoding="utf-8")
 
-    assert "Execplans now treat two fields as first-class" in readme_text
+    assert "Execplans now treat three fields as first-class" in readme_text
     assert "`Required Continuation`" in readme_text
+    assert "`Execution Summary`" in readme_text
     assert "Required continuation for an unfinished larger intended outcome" in readme_text
     assert "the execplan must record both `Intent Continuity` and `Required Continuation` before archive" in bootstrap_agents_text
     assert "record the required next owner and activation trigger explicitly before archive" in bootstrap_agents_text
@@ -371,6 +389,20 @@ def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
     assert "larger intended outcome" in text
     assert "Required follow-on for the larger intended outcome" in text
     assert "Activation trigger" in text
+    assert "## Execution Summary" in text
+    assert "Outcome delivered" in text
+
+
+def test_bootstrap_execution_summary_contract_is_part_of_payload() -> None:
+    text = (installer_mod.payload_root() / "docs" / "execution-summary-contract.md").read_text(encoding="utf-8")
+
+    assert "# Execution Summary Contract" in text
+    assert "## Canonical Shape" in text
+    assert "Outcome delivered" in text
+    assert "Validation confirmed" in text
+    assert "Follow-on routed to" in text
+    assert "Resume from" in text
+    assert Path("docs/execution-summary-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
 def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
@@ -657,6 +689,27 @@ def test_archive_execplan_blocks_missing_required_follow_on_when_parent_intent_i
     assert any(
         action.kind == "manual review" and action.path == plan_path and "Required Continuation" in action.detail
         for action in result.actions
+    )
+
+
+def test_archive_execplan_blocks_missing_execution_summary(tmp_path: Path) -> None:
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
+    _write(
+        plan_path,
+        _minimal_execplan(status="completed").replace(
+            "- Outcome delivered: Added one bounded planning improvement.",
+            "- Outcome delivered: not completed yet",
+        ),
+    )
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_missing_execution_summary" for warning in result.warnings)
+    assert any(
+        action.kind == "manual review" and action.path == plan_path and "Execution Summary" in action.detail for action in result.actions
     )
 
 

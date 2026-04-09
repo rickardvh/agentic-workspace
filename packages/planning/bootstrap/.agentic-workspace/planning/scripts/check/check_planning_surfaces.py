@@ -63,6 +63,7 @@ EXPECTED_EXECPLAN_SECTIONS = [
     "Invariants",
     "Validation Commands",
     "Completion Criteria",
+    "Execution Summary",
     "Drift Log",
 ]
 
@@ -1031,6 +1032,30 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 "Completion Criteria is missing or vague.",
             )
         )
+
+    execution_summary, execution_summary_bullets = _extract_section_stats(lines, "Execution Summary")
+    execution_summary_fields = _extract_kv_fields(execution_summary)
+    if has_only_completed_status:
+        if execution_summary_bullets == 0:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Completed execplan is missing an Execution Summary.",
+                )
+            )
+        else:
+            for field_name in ("outcome delivered", "validation confirmed", "follow-on routed to", "resume from"):
+                value = execution_summary_fields.get(field_name, "").strip().lower()
+                if not value or value in {"pending", "tbd", "todo", "not completed yet", "none yet", "current milestone"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_UNDER_SPECIFIED,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Execution Summary field: {field_name}.",
+                        )
+                    )
+                    break
 
     validation_commands, validation_bullets = _extract_section_stats(lines, "Validation Commands")
     if not [line for line in validation_commands if line.strip()] or validation_bullets == 0:

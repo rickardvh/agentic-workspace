@@ -75,6 +75,16 @@ Keep invariants contract-shaped and brief.
 
 -
 
+## Execution Summary
+
+- Outcome delivered:
+- Validation confirmed:
+- Follow-on routed to:
+- Resume from:
+
+Keep this compact and completion-shaped.
+Before archiving a completed plan, replace placeholders with the durable summary a later contributor should not have to reconstruct from chat or drift prose.
+
 ## Drift Log
 
 - 2026-01-01: Initial plan created.

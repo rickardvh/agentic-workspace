@@ -137,6 +137,7 @@ Generated mirrors inherit stability from their canonical source relationships, n
 `docs/capability-aware-execution.md` is the canonical contract for capability fit: when cheap direct execution is still safe, when medium reasoning is enough, when stronger planning should come first, when bounded autopilot is appropriate, when delegation may save cost, when silent shaping should replace noisy executor-prompting, and when the agent should stop and escalate.
 It also defines the bounded-initiative rule: improve means locally, but do not silently widen the requested outcome, owned surface, or time horizon.
 `docs/delegated-judgment-contract.md` is the front-door companion: what the human should specify, what the agent may decide locally, and what should become an explicit promotion or escalation decision.
+`docs/execution-summary-contract.md` defines the compact completion summary that archived slices should leave behind.
 
 Use a direct task in `TODO.md` when the work is small enough to finish in one coherent pass and does not need milestone sequencing, blocker tracking, or a wider validation story.
 
@@ -171,12 +172,14 @@ When a repo also installs Agentic Memory, Planning should borrow durable context
 
 When a direct task completes, remove it from `TODO.md` promptly. If the task changed durable repo knowledge or left important follow-up work, record that residue in memory, canonical docs, `ROADMAP.md`, or a newly promoted execplan rather than leaving chat-only context behind.
 When a bounded slice completes only part of a larger intended outcome, do not close it with required continuation only in prose.
-Execplans now treat two fields as first-class:
+Execplans now treat three fields as first-class:
 
 - `Intent Continuity`: whether the larger intended outcome is actually complete and what checked-in surface now owns it if not
 - `Required Continuation`: whether follow-on is mandatory for that larger outcome, plus the owner surface and activation trigger
+- `Execution Summary`: what the slice delivered, how validation was confirmed, where follow-on was routed, and how later work should resume
 
 If required follow-on remains, archive should happen only after those fields point at a checked-in next owner.
+Completed plans should also leave an explicit execution summary before archive so later contributors do not have to reconstruct the outcome from drift prose or chat.
 Optional nice-to-have follow-up can still stay out of the archive gate.
 
 ## Direct-Task Recovery Cases
