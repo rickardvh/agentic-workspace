@@ -34,7 +34,7 @@ Root `AGENTS.md` can stay thin, lifecycle behavior should converge on the owners
 
 ## Expected downstream impact
 
-Planning-managed startup assets should remain behind the workspace orchestrator, installer behavior should continue converging on the ledger, and repo-owned execution surfaces should stay at root with minimal fenced insertions. Use [ownership-ledger-check](C:/Users/ricka/src/agentic-workspace/memory/skills/ownership-ledger-check/SKILL.md) for the repeatable validation workflow.
+Planning-managed startup assets should remain behind the workspace orchestrator, installer behavior should continue converging on the ledger, and repo-owned execution surfaces should stay at root with minimal fenced insertions. Use [ownership-ledger-check](../skills/ownership-ledger-check/SKILL.md) for the repeatable validation workflow.
 
 ## Verify
 

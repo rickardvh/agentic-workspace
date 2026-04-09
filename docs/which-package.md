@@ -53,7 +53,7 @@ Use them when you explicitly need module-level control, not for normal adoption.
 
 ## Read Next
 
-- Memory path: [`packages/memory/README.md`](/C:/Users/ricka/Documents/src/agentic-workspace/packages/memory/README.md)
-- Planning path: [`packages/planning/README.md`](/C:/Users/ricka/Documents/src/agentic-workspace/packages/planning/README.md)
-- Shared defaults: [`docs/default-path-contract.md`](/C:/Users/ricka/Documents/src/agentic-workspace/docs/default-path-contract.md)
-- Architecture: [`docs/architecture.md`](/C:/Users/ricka/Documents/src/agentic-workspace/docs/architecture.md)
+- Memory path: [`packages/memory/README.md`](../packages/memory/README.md)
+- Planning path: [`packages/planning/README.md`](../packages/planning/README.md)
+- Shared defaults: [`docs/default-path-contract.md`](default-path-contract.md)
+- Architecture: [`docs/architecture.md`](architecture.md)

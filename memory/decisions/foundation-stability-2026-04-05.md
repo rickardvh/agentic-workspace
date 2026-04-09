@@ -34,7 +34,7 @@ The monorepo host is the normal source of truth for ongoing work, package mainta
 
 ## Ongoing stance
 
-Keep archived execplans lightweight, keep new TODO entries bounded and roadmap-driven, and treat future work as product evolution rather than repository stabilization. Use [foundation-stability-check](C:/Users/ricka/src/agentic-workspace/memory/skills/foundation-stability-check/SKILL.md) for the repeatable recheck workflow.
+Keep archived execplans lightweight, keep new TODO entries bounded and roadmap-driven, and treat future work as product evolution rather than repository stabilization. Use [foundation-stability-check](../skills/foundation-stability-check/SKILL.md) for the repeatable recheck workflow.
 
 ## Verify
 

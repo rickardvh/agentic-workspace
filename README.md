@@ -61,7 +61,7 @@ What it adds:
 | Active work keeps drifting or losing completion discipline | `agentic-workspace --preset planning` |
 | You want both together | `agentic-workspace --preset full` |
 
-If you need more than that table, use [`docs/which-package.md`](/C:/Users/ricka/Documents/src/agentic-workspace/docs/which-package.md).
+If you need more than that table, use [`docs/which-package.md`](docs/which-package.md).
 
 ## Machine-Readable Defaults
 
@@ -81,10 +81,10 @@ That surface is the queryable contract for:
 
 For agent maintainers, the primary operating path is:
 
-- read [`AGENTS.md`](/C:/Users/ricka/Documents/src/agentic-workspace/AGENTS.md)
-- read [`TODO.md`](/C:/Users/ricka/Documents/src/agentic-workspace/TODO.md)
+- read [`AGENTS.md`](AGENTS.md)
+- read [`TODO.md`](TODO.md)
 - read the active execplan when `TODO.md` points at one
-- then use [`docs/contributor-playbook.md`](/C:/Users/ricka/Documents/src/agentic-workspace/docs/contributor-playbook.md) for the maintainer workflow details
+- then use [`docs/contributor-playbook.md`](docs/contributor-playbook.md) for the maintainer workflow details
 
 ## Advanced Paths
 
@@ -109,19 +109,19 @@ The `-bootstrap` names are still the current package and CLI identities.
 - `agentic-memory-bootstrap`: beta
 - `agentic-planning-bootstrap`: alpha
 
-See [`docs/maturity-model.md`](/C:/Users/ricka/Documents/src/agentic-workspace/docs/maturity-model.md) for the current maturity expectations.
+See [`docs/maturity-model.md`](docs/maturity-model.md) for the current maturity expectations.
 
 ## Read Next
 
 Start here:
 
-- [`docs/which-package.md`](/C:/Users/ricka/Documents/src/agentic-workspace/docs/which-package.md)
-- [`docs/default-path-contract.md`](/C:/Users/ricka/Documents/src/agentic-workspace/docs/default-path-contract.md)
+- [`docs/which-package.md`](docs/which-package.md)
+- [`docs/default-path-contract.md`](docs/default-path-contract.md)
 
 Then, if needed:
 
-- [`docs/init-lifecycle.md`](/C:/Users/ricka/Documents/src/agentic-workspace/docs/init-lifecycle.md)
-- [`docs/architecture.md`](/C:/Users/ricka/Documents/src/agentic-workspace/docs/architecture.md)
-- [`docs/integration-contract.md`](/C:/Users/ricka/Documents/src/agentic-workspace/docs/integration-contract.md)
-- [`docs/contributor-playbook.md`](/C:/Users/ricka/Documents/src/agentic-workspace/docs/contributor-playbook.md)
-- [`docs/maintainer-commands.md`](/C:/Users/ricka/Documents/src/agentic-workspace/docs/maintainer-commands.md)
+- [`docs/init-lifecycle.md`](docs/init-lifecycle.md)
+- [`docs/architecture.md`](docs/architecture.md)
+- [`docs/integration-contract.md`](docs/integration-contract.md)
+- [`docs/contributor-playbook.md`](docs/contributor-playbook.md)
+- [`docs/maintainer-commands.md`](docs/maintainer-commands.md)
