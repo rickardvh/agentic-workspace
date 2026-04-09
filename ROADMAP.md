@@ -21,6 +21,10 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Next Candidate Queue
 
+- Intent continuity follow-through: promote when another larger user outcome
+    needs multiple bounded slices so Planning can preserve unfinished parent
+    intent across archival without re-explaining the purpose in chat.
+
 ## Sequencing Recommendation
 
 1. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.

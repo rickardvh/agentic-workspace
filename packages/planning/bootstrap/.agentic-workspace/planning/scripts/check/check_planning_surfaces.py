@@ -54,6 +54,7 @@ WARNING_PLANNING_MEMORY_BOUNDARY_BLUR = "planning_memory_boundary_blur"
 EXPECTED_EXECPLAN_SECTIONS = [
     "Goal",
     "Non-Goals",
+    "Intent Continuity",
     "Active Milestone",
     "Immediate Next Action",
     "Blockers",
@@ -818,7 +819,46 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
 
     active_milestone_section = _section_content(lines, "Active Milestone")
     active_milestone_fields = _extract_kv_fields(active_milestone_section)
+    intent_continuity_fields = _extract_kv_fields(_section_content(lines, "Intent Continuity"))
     is_active_execplan = not has_only_non_active_status
+    larger_intended_outcome = intent_continuity_fields.get("larger intended outcome", "").strip()
+    completes_larger_outcome = intent_continuity_fields.get("this slice completes the larger intended outcome", "").strip().lower()
+    continuation_surface = intent_continuity_fields.get("continuation surface", "").strip()
+
+    if not larger_intended_outcome:
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_UNDER_SPECIFIED,
+                _render_path(path),
+                "Execplan is missing `Larger intended outcome` in Intent Continuity.",
+            )
+        )
+
+    if completes_larger_outcome not in {"yes", "no"}:
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_UNDER_SPECIFIED,
+                _render_path(path),
+                "Execplan must set `This slice completes the larger intended outcome` to yes or no.",
+            )
+        )
+    elif completes_larger_outcome == "yes" and continuation_surface and continuation_surface.lower() not in {"none", "n/a"}:
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_UNDER_SPECIFIED,
+                _render_path(path),
+                "Execplan marks the larger intended outcome complete but still names a continuation surface.",
+            )
+        )
+    elif completes_larger_outcome == "no" and (not continuation_surface or continuation_surface.lower() in {"none", "n/a"}):
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_UNDER_SPECIFIED,
+                _render_path(path),
+                "Execplan leaves the larger intended outcome unfinished without naming a continuation surface.",
+            )
+        )
+
     if is_active_execplan:
         ready_value = active_milestone_fields.get("ready", "").strip().lower()
         blocked_value = active_milestone_fields.get("blocked", "").strip().lower()

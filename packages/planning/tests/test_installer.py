@@ -38,6 +38,12 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 
 - No runtime changes.
 
+## Intent Continuity
+
+- Larger intended outcome: Land plan alpha end to end.
+- This slice completes the larger intended outcome: yes
+- Continuation surface: none
+
 ## Active Milestone
 
 - ID: plan-alpha
@@ -344,6 +350,8 @@ def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
     assert "Repeated background prose in plans is a missing-synergy signal" in text
     assert "promote it into memory or canonical docs" in text
     assert "must not silently widen the requested outcome" in text
+    assert "Continuation surface" in text
+    assert "larger intended outcome" in text
 
 
 def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
@@ -544,7 +552,11 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
     plan_path = tmp_path / "docs" / "execplans" / "direct-item.md"
 
     assert plan_path.exists()
+    plan_text = plan_path.read_text(encoding="utf-8")
     todo_text = (tmp_path / "TODO.md").read_text(encoding="utf-8")
+    assert "## Intent Continuity" in plan_text
+    assert "- This slice completes the larger intended outcome: yes" in plan_text
+    assert "- Continuation surface: none" in plan_text
     assert "Surface: docs/execplans/direct-item.md" in todo_text
     assert "Next Action:" not in todo_text
     assert "Done When:" not in todo_text
@@ -584,6 +596,26 @@ def test_archive_execplan_moves_completed_plan(tmp_path: Path) -> None:
     assert archived_path.exists()
     assert not plan_path.exists()
     assert any(action.kind == "moved" and action.path == archived_path for action in result.actions)
+
+
+def test_archive_execplan_blocks_unfinished_larger_intent_without_continuation_surface(tmp_path: Path) -> None:
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
+    _write(
+        plan_path,
+        _minimal_execplan(status="completed").replace(
+            "- This slice completes the larger intended outcome: yes", "- This slice completes the larger intended outcome: no"
+        ),
+    )
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_missing_intent_continuity" for warning in result.warnings)
+    assert any(
+        action.kind == "manual review" and action.path == plan_path and "Continuation surface" in action.detail for action in result.actions
+    )
 
 
 def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_path: Path) -> None:
@@ -668,6 +700,35 @@ def test_archive_execplan_apply_cleanup_removes_active_todo_pointer_to_same_plan
     assert (tmp_path / "docs" / "execplans" / "archive" / "bounded-delegated-judgment-contract-2026-04-09.md").exists()
 
 
+def test_archive_execplan_apply_cleanup_handles_active_todo_without_blank_before_action_heading(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Now
+
+- ID: intent-continuity-across-slices
+  Status: in-progress
+  Surface: docs/execplans/intent-continuity-across-slices-2026-04-09.md
+  Why now: keep larger intent alive across bounded slices.
+## Action
+
+- Complete `intent-continuity-across-slices`, then archive it and return the active queue to empty.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / "docs" / "execplans" / "intent-continuity-across-slices-2026-04-09.md"
+    _write(plan_path, _minimal_execplan(status="completed").replace("plan-alpha", "intent-continuity-across-slices"))
+
+    archive_execplan("intent-continuity-across-slices-2026-04-09", target=tmp_path, apply_cleanup=True)
+
+    todo_text = (tmp_path / "TODO.md").read_text(encoding="utf-8")
+    assert "## Action" in todo_text
+    assert "- No active work right now." in todo_text
+    assert "Complete `intent-continuity-across-slices`" not in todo_text
+
+
 def test_archive_execplan_apply_cleanup_updates_compact_now_todo_shape(tmp_path: Path) -> None:
     _write(
         tmp_path / "TODO.md",
@@ -744,6 +805,41 @@ def test_archive_execplan_apply_cleanup_removes_matching_candidate_queue_entry(t
         action.kind == "updated" and action.path == tmp_path / "ROADMAP.md" and "Next Candidate Queue" in action.detail
         for action in result.actions
     )
+
+
+def test_archive_execplan_preserves_explicit_roadmap_continuation_candidate(tmp_path: Path) -> None:
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Next Candidate Queue
+
+- Intent continuity follow-through: promote when another larger user outcome
+    needs multiple bounded slices so Planning can preserve unfinished parent
+    intent across archival without re-explaining the purpose in chat.
+""",
+    )
+    plan_path = tmp_path / "docs" / "execplans" / "intent-continuity-across-slices-2026-04-09.md"
+    plan_text = (
+        _minimal_execplan(status="completed")
+        .replace("plan-alpha", "intent-continuity-across-slices")
+        .replace(
+            "- Continuation surface: none",
+            "- Continuation surface: `ROADMAP.md` candidate `Intent continuity follow-through`",
+        )
+        .replace(
+            "- This slice completes the larger intended outcome: yes",
+            "- This slice completes the larger intended outcome: no",
+        )
+    )
+    _write(plan_path, plan_text)
+
+    archive_execplan("intent-continuity-across-slices-2026-04-09", target=tmp_path, apply_cleanup=True)
+
+    roadmap_text = (tmp_path / "ROADMAP.md").read_text(encoding="utf-8")
+    assert "Intent continuity follow-through:" in roadmap_text
 
 
 def test_archive_execplan_without_cleanup_only_suggests_roadmap_followup(tmp_path: Path) -> None:

@@ -47,6 +47,7 @@ Each active plan should stay compact and include:
 
 - goal
 - non-goals
+- intent continuity
 - active milestone
 - immediate next action
 - touched paths
@@ -60,6 +61,15 @@ Readiness fields belong under `## Active Milestone` for active plans:
 - `Ready`: one of `ready`, `blocked`, `conditional` (or `true`/`false`)
 - `Blocked`: short blocker detail (`none` when not blocked)
 - `optional_deps`: optional dependency hints (`none` when unused)
+
+Intent continuity belongs under `## Intent Continuity` for active plans:
+
+- `Larger intended outcome`: the parent user or product intent this slice serves
+- `This slice completes the larger intended outcome`: `yes` or `no`
+- `Continuation surface`: `none` only when the larger intended outcome is complete; otherwise the checked-in surface that now owns continuation
+
+Use this section to keep a safe first slice from masquerading as the full requested outcome.
+If a completed slice does not finish the larger intended outcome, archive should only happen after the continuation surface is explicit.
 
 Keep the drift log decision-shaped and brief. Do not turn an active or completed execplan into a changelog when the same detail is already recoverable from archived plans and git.
 Execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work. `TODO.md` should only expose that the work is active and point here.

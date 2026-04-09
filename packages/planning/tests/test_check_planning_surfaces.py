@@ -48,8 +48,15 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
 
 - No runtime changes.
 
+## Intent Continuity
+
+- Larger intended outcome: Land plan alpha end to end.
+- This slice completes the larger intended outcome: yes
+- Continuation surface: none
+
 ## Active Milestone
 
+- ID: plan-alpha
 - Status: {status}
 - Scope: maintain planning discipline.
 - Ready: ready
@@ -336,6 +343,12 @@ def test_execplan_under_specified_and_notebook_warnings(tmp_path: Path) -> None:
 
 - No runtime changes.
 
+## Intent Continuity
+
+- Larger intended outcome:
+- This slice completes the larger intended outcome: no
+- Continuation surface: none
+
 ## Active Milestone
 
 - Status: in-progress
@@ -387,6 +400,27 @@ Long narrative status update line eleven.
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "execplan_under_specified" in classes
     assert "execplan_notebook_drift" in classes
+
+
+def test_execplan_intent_continuity_requires_continuation_surface_when_parent_intent_is_unfinished(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_intent_continuity")
+    plan = (
+        _minimal_execplan()
+        .replace(
+            "- Continuation surface: none",
+            "- Continuation surface: none",
+        )
+        .replace(
+            "- This slice completes the larger intended outcome: yes",
+            "- This slice completes the larger intended outcome: no",
+        )
+    )
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
+
+    classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
+    assert "execplan_under_specified" in classes
 
 
 def test_completed_execplan_left_active_warns_archive_drift(tmp_path: Path) -> None:

@@ -14,6 +14,15 @@ Prefer replacing resolved status lines instead of appending pass-by-pass history
 
 -
 
+## Intent Continuity
+
+- Larger intended outcome:
+- This slice completes the larger intended outcome:
+- Continuation surface:
+
+Use `none` only when this slice actually completes the larger intended outcome.
+If the larger intended outcome is still unfinished, point `Continuation surface` at the checked-in surface that now owns follow-through.
+
 ## Active Milestone
 
 - Status:

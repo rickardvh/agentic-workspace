@@ -504,6 +504,23 @@ def archive_execplan(
     if status not in {"completed", "done", "closed"}:
         result.add("manual review", plan_path, "archive requires the active milestone status to be completed/done/closed")
         return result
+    intent_continuity = _execplan_intent_continuity(plan_path)
+    completes_larger_outcome = intent_continuity.get("this slice completes the larger intended outcome", "").strip().lower()
+    continuation_surface = intent_continuity.get("continuation surface", "").strip()
+    if completes_larger_outcome == "no" and (not continuation_surface or continuation_surface.lower() in {"none", "n/a"}):
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_intent_continuity",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": ("Execplan leaves the larger intended outcome incomplete but does not name the continuation surface."),
+            }
+        )
+        result.add(
+            "manual review",
+            plan_path,
+            "larger intended outcome is unfinished; set Continuation surface before archiving",
+        )
+        return result
 
     cleanup_todo_lines: list[str] | None = None
     todo_ref_items = _todo_referencing_items(target_root / "TODO.md", plan_path, target_root)
@@ -878,6 +895,8 @@ def _read_todo_items_from_lines(lines: list[str]) -> list[TodoItem]:
             row = lines[index]
             if index != start and re.match(r"^\s*-\s*ID\s*:\s*\S+", row):
                 break
+            if index != start and row.startswith("## "):
+                break
             match = re.match(r"^\s*(?:-\s*)?([^:]+):\s*(.*)\s*$", row)
             if match:
                 key = match.group(1).strip().lower()
@@ -909,6 +928,15 @@ def _section_lines(lines: list[str], heading: str) -> list[str]:
             end = index
             break
     return lines[start:end]
+
+
+def _extract_kv_fields(lines: list[str]) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for line in lines:
+        match = re.match(r"^\s*-\s*([^:]+):\s*(.*)\s*$", line)
+        if match:
+            fields[match.group(1).strip().lower()] = match.group(2).strip()
+    return fields
 
 
 def _read_todo_items(path: Path) -> tuple[list[str], list[TodoItem]]:
@@ -971,6 +999,10 @@ def _render_execplan_from_todo_item(
         f"- {goal}\n\n"
         "## Non-Goals\n\n"
         "- Leave adjacent backlog or follow-on work out of this plan.\n\n"
+        "## Intent Continuity\n\n"
+        f"- Larger intended outcome: {goal}\n"
+        "- This slice completes the larger intended outcome: yes\n"
+        "- Continuation surface: none\n\n"
         "## Active Milestone\n\n"
         f"- ID: {item_id}\n"
         f"- Status: {status}\n"
@@ -1039,6 +1071,11 @@ def _execplan_item_id(path: Path) -> str:
         if match:
             return match.group(1).strip().lower()
     return ""
+
+
+def _execplan_intent_continuity(path: Path) -> dict[str, str]:
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Intent Continuity"))
 
 
 def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path) -> list[TodoItem]:
@@ -1195,21 +1232,48 @@ def _plan_stem_tokens(plan_path: Path) -> list[str]:
     return [token for token in re.split(r"[^a-z0-9]+", plan_path.stem.lower()) if len(token) >= 4 and not token.isdigit()]
 
 
+def _label_tokens(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [token for token in re.split(r"[^a-z0-9]+", value.lower()) if len(token) >= 4 and not token.isdigit()]
+
+
+def _roadmap_continuation_label(plan_path: Path) -> str | None:
+    continuation_surface = _execplan_intent_continuity(plan_path).get("continuation surface", "").strip()
+    match = re.search(r"`?roadmap\.md`?\s+candidate\s+`?([^`]+?)`?$", continuation_surface, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
 def _cleanup_roadmap_archive_followup(roadmap_path: Path, plan_path: Path) -> dict[str, Any]:
     if not roadmap_path.exists():
         return {"changed": False, "text": None, "details": [], "note": None}
 
     lines = _read_lines(roadmap_path)
     tokens = _plan_stem_tokens(plan_path)
+    continuation_label = _roadmap_continuation_label(plan_path)
     details: list[str] = []
     changed = False
 
-    lines, handoff_removed = _cleanup_roadmap_section(lines, "Active Handoff", tokens, empty_line="- No active handoff right now.")
+    lines, handoff_removed = _cleanup_roadmap_section(
+        lines,
+        "Active Handoff",
+        tokens,
+        empty_line="- No active handoff right now.",
+        preserve_label=None,
+    )
     if handoff_removed:
         changed = True
         details.append("compress Active Handoff residue tied to the archived plan")
 
-    lines, queue_removed = _cleanup_roadmap_section(lines, "Next Candidate Queue", tokens, empty_line=None)
+    lines, queue_removed = _cleanup_roadmap_section(
+        lines,
+        "Next Candidate Queue",
+        tokens,
+        empty_line=None,
+        preserve_label=continuation_label,
+    )
     if queue_removed:
         changed = True
         details.append("remove archived-plan candidate residue from Next Candidate Queue")
@@ -1224,7 +1288,14 @@ def _cleanup_roadmap_archive_followup(roadmap_path: Path, plan_path: Path) -> di
     }
 
 
-def _cleanup_roadmap_section(lines: list[str], heading: str, tokens: list[str], *, empty_line: str | None) -> tuple[list[str], bool]:
+def _cleanup_roadmap_section(
+    lines: list[str],
+    heading: str,
+    tokens: list[str],
+    *,
+    empty_line: str | None,
+    preserve_label: str | None,
+) -> tuple[list[str], bool]:
     section = _section_lines(lines, heading)
     if not section:
         return lines, False
@@ -1237,11 +1308,15 @@ def _cleanup_roadmap_section(lines: list[str], heading: str, tokens: list[str], 
 
     kept_lines: list[str] = []
     removed = False
+    preserved_tokens = _label_tokens(preserve_label)
     for line in section:
         if not re.match(r"^\s*-\s+", line):
             kept_lines.append(line)
             continue
         lowered = line.lower()
+        if preserved_tokens and all(token in lowered for token in preserved_tokens):
+            kept_lines.append(line)
+            continue
         if tokens and any(token in lowered for token in tokens):
             removed = True
             continue
