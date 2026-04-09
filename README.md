@@ -1,42 +1,26 @@
 # agentic-workspace
 
-Monorepo host for two distributable packages:
+Agentic Workspace gives a repository a durable, checked-in operating system for agents.
 
-- `agentic-memory-bootstrap`
-- `agentic-planning-bootstrap`
+It helps agents and humans work in a repo with less rediscovery, less chat-only continuity loss, and lower restart cost over time by keeping the repo's working contract in versioned files instead of scattering it across sessions, tools, or one maintainer's head.
 
 This repository is the packaging source and dogfooding home for two external products:
 
-- Agentic Memory, currently distributed as `agentic-memory-bootstrap`
-- Agentic Planning, currently distributed as `agentic-planning-bootstrap`
+- Agentic Memory
+- Agentic Planning
 
-## Start Here
-
-If you are landing here for the first time, start with the chooser page:
-
-- `docs/which-package.md`
-
-Short version:
-
-| If you want to add... | Use... | Start with... |
-| --- | --- | --- |
-| Shared durable repo memory for agents and humans | Agentic Memory | `packages/memory/README.md` |
-| Checked-in execution planning surfaces for active work | Agentic Planning | `packages/planning/README.md` |
-| Both together | Both packages, optionally composed through `agentic-workspace` | `docs/which-package.md` |
+The root `agentic-workspace` CLI is the normal public lifecycle entrypoint that composes those modules through one thin workspace layer.
 
 ## Why adopt this?
 
-Agentic Workspace gives a repository a durable, checked-in operating system for agents.
-
-Instead of relying on chat history, one model's private memory, or a maintainer repeatedly re-explaining the same context, it puts the repo's working contract into versioned files that agents and humans can share.
-
-Adopt it when you want to make work in a repo:
+Adopt Agentic Workspace when you want work in a repo to become:
 
 - easier to restart
 - cheaper to continue across sessions
 - less dependent on one specific tool or model
 - more resistant to drift, rediscovery, and partial work
 - easier for multiple agents or contributors to hand off cleanly
+- more efficient over time in token usage and reasoning effort
 
 What it gives you:
 
@@ -48,51 +32,55 @@ What it gives you:
 - **Lower token cost over time** by reducing startup friction, repeated reading, repeated reasoning, and chat-only continuity loss.
 - **A built-in improvement loop** that helps turn recurring friction into better docs, checks, scripts, tests, and workflows instead of letting workaround notes accumulate forever.
 
-In short: it helps a repo carry its own context, execution discipline, and agent workflow in checked-in form, so agents can produce higher-quality work with less wasted effort.
+In short:
 
-## Product Names
+- **Memory helps future agents understand the repo.**
+- **Planning helps agents start, do, resume, and finish work in the repo.**
+- **Together they make execution restartable, bounded, and cheaper over time.**
 
-The stable ecosystem names in docs are:
+## Choose your install shape
 
-- Agentic Memory
-- Agentic Planning
+| If your main problem is... | Use... | What you get |
+| --- | --- | --- |
+| Agents and contributors keep rediscovering stable repo knowledge | `agentic-workspace --preset memory` | Durable anti-rediscovery knowledge without adopting a planning system |
+| Active work keeps drifting, fragmenting, or losing completion discipline | `agentic-workspace --preset planning` | Checked-in execution steering without adopting a memory system |
+| You want both durable memory and checked-in execution planning | `agentic-workspace --preset full` | One public lifecycle entrypoint over both module contracts |
 
-The current package and CLI names remain:
+Memory and Planning are also supported independently. The workspace layer is intentionally thin and is not a standalone domain product by itself.
 
-- `agentic-memory-bootstrap`
-- `agentic-planning-bootstrap`
+## Quick start
 
-Treat `-bootstrap` as the current distribution identity for the checked-in contract installers, not as the only human-facing product name.
+The normal public bootstrap path is the root workspace CLI.
 
-## Quick Start
-
-The default public bootstrap path is the root workspace CLI:
+### With uvx
 
 ```bash
-# Preferred when uv is available: Agentic Memory only
+# Memory only
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target /path/to/repo --preset memory
 
-# Preferred when uv is available: Agentic Planning only
+# Planning only
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target /path/to/repo --preset planning
 
-# Preferred when uv is available: both together
+# Both together
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target /path/to/repo --preset full
+````
 
-# Alternative when pipx is available instead: Agentic Memory only
+### With pipx
+
+```bash
+# Memory only
 pipx run --spec git+https://github.com/rickardvh/agentic-workspace agentic-workspace init --target /path/to/repo --preset memory
 
-# Alternative when pipx is available instead: Agentic Planning only
+# Planning only
 pipx run --spec git+https://github.com/rickardvh/agentic-workspace agentic-workspace init --target /path/to/repo --preset planning
 
-# Alternative when pipx is available instead: both together
+# Both together
 pipx run --spec git+https://github.com/rickardvh/agentic-workspace agentic-workspace init --target /path/to/repo --preset full
 ```
 
-Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no-install path when it is the runner a repo already uses.
+`init` defaults to the full preset if you omit module selection. It bootstraps mechanically, then chooses a clean install, conservative adopt, or high-ambiguity adopt path based on the repo state.
 
-`init` defaults to the full preset when you omit module selection. It bootstraps mechanically, then chooses clean install, conservative adopt, or high-ambiguity adopt based on the repo state. See `docs/init-lifecycle.md` for the mode matrix and prompt requirement semantics.
-
-After bootstrap, use the same root CLI for the shared lifecycle verbs:
+After bootstrap, keep using the same root CLI for normal lifecycle work:
 
 ```bash
 agentic-workspace status --target /path/to/repo
@@ -101,82 +89,157 @@ agentic-workspace upgrade --target /path/to/repo
 agentic-workspace uninstall --target /path/to/repo --preset planning
 ```
 
-`agentic-workspace doctor` now surfaces each module's frozen compatibility-contract shortlist inside the nested module reports, so maintainers can inspect the current contract boundary from the root CLI without dropping into package-local doctor commands first.
-
-The root `agentic-workspace modules --format json` surface also exposes the current first-party capability, compatibility, and result-contract metadata that the workspace registry relies on; see `docs/module-capability-contract.md`.
-
-Use `agentic-workspace skills --target /path/to/repo --format json` to inspect the explicit installed bundled-skill registries and any checked-in repo-owned skill registries that complement them.
-
-Use `agentic-workspace skills --target /path/to/repo --task "implement the current active milestone" --format json` when the agent needs a registry-backed recommendation for which skill to apply to a task without relying on the user to know skill names.
-
-Use `agentic-workspace` as the normal public lifecycle entrypoint for memory-only, planning-only, and combined installs. Use the module-specific CLIs only for package-local maintainer work, advanced debugging, or when you are working directly on one package contract.
-
-No-install workspace-first prompt lane:
+If you want a no-install handoff prompt for an external agent, use:
 
 ```bash
-# Memory-only repo
+# Memory only
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target /path/to/repo --preset memory
 
-# Planning-only repo
+# Planning only
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target /path/to/repo --preset planning
 
-# Combined install
+# Both together
 uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target /path/to/repo --preset full
 ```
 
-Direct module CLIs still exist for maintainers, power users, and package-local workflows:
+## What each module does
+
+### Agentic Memory
+
+Use Agentic Memory when the repo needs a durable, shared knowledge layer for things that are expensive to rediscover.
+
+Good fit for:
+
+- invariants and authority boundaries
+- subsystem orientation
+- recurring traps and verified failure lessons
+- operator procedures and runbooks
+- compact weak-authority reorientation notes
+
+Not for:
+
+- active task state
+- backlog or milestone tracking
+- execution logs
+- issue triage or bug-history catch-all
+- broad canonical product documentation
+
+Memory is the anti-rediscovery layer around code, docs, and planning. It is designed to help agents read less, not more.
+
+### Agentic Planning
+
+Use Agentic Planning when the repo needs a checked-in execution layer for active work.
+
+Good fit for:
+
+- a small active queue in `TODO.md`
+- bounded execution contracts in `docs/execplans/`
+- inactive future candidates in `ROADMAP.md`
+- review artifacts in `docs/reviews/` before promotion
+- restartable execution across fragmented sessions
+
+Not for:
+
+- durable technical knowledge
+- subsystem documentation or runbooks
+- a full project-management or ticketing system
+
+Planning is the execution layer for what matters now, what comes next, and what counts as done.
+
+## How the modules work together
+
+When both are installed:
+
+- **Planning owns active execution state**
+- **Memory owns durable repo knowledge**
+- **The workspace layer coordinates lifecycle**
+- **Generated maintainer docs mirror canonical managed sources and should be rerendered, not edited**
+
+The shortest interaction model is:
+
+1. Planning says what matters now.
+2. Memory says what is expensive to forget.
+3. Managed module surfaces support those contracts.
+4. Generated docs mirror managed sources and should be rerendered, not edited.
+
+The system is intentionally designed so that:
+
+- Planning can reference Memory when active work depends on durable context.
+- Completed Planning work can promote durable residue into Memory or canonical docs.
+- Neither module has to absorb the other's job.
+
+## Public shape
+
+The current ecosystem shape is:
+
+- **Agentic Memory** - durable repo knowledge
+- **Agentic Planning** - active execution state
+- **agentic-workspace** - thin workspace orchestrator for shared lifecycle verbs
+
+The workspace layer stays thin on purpose. It composes modules; it does not absorb their domain logic.
+
+## Skills and discovery
+
+The workspace CLI exposes registry-backed discovery surfaces so agents do not need to infer everything from prose.
+
+Useful commands:
 
 ```bash
-# Preferred when uv is available: Agentic Memory advanced path
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target /path/to/repo
+# Inspect first-party module capability and contract metadata
+agentic-workspace modules --format json
 
-# Preferred when uv is available: Agentic Planning advanced path
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt install --target /path/to/repo
+# Inspect installed bundled and repo-owned skill registries
+agentic-workspace skills --target /path/to/repo --format json
 
-# Alternative when pipx is available instead: Agentic Memory advanced path
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory-bootstrap prompt install --target /path/to/repo
-
-# Alternative when pipx is available instead: Agentic Planning advanced path
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning-bootstrap prompt install --target /path/to/repo
+# Ask for a registry-backed skill recommendation for a task
+agentic-workspace skills --target /path/to/repo --task "implement the current active milestone" --format json
 ```
 
-Use the module-specific CLIs when you want package-local control. Use `agentic-workspace` when you want the public lifecycle entrypoint to select modules, sequence them, and aggregate the bootstrap report and handoff prompt.
+Use these when the agent needs structured discovery instead of guessing from docs alone.
 
-## Maturity Today
+## Advanced and maintainer paths
+
+Direct module CLIs still exist for maintainers, power users, and package-local workflows.
+
+Use them when you want package-local control, advanced debugging, or direct work on one package contract.
+
+For normal repo adoption and lifecycle work, prefer the root `agentic-workspace` CLI.
+
+## Maturity today
 
 - `agentic-memory-bootstrap`: beta
 - `agentic-planning-bootstrap`: alpha
 
-See `docs/maturity-model.md` for what `alpha` and `beta` mean here.
+See `docs/maturity-model.md` for the support expectations behind those labels.
 
-## Docs Map
+## Start here next
 
-For adopters:
+### For adopters
 
-- `docs/which-package.md` - choose Memory, Planning, or both.
-- `docs/init-lifecycle.md` - understand the root `init` mode matrix and prompt requirements.
-- `docs/architecture.md` - see the public ecosystem shape and thin-workspace boundary.
-- `docs/integration-contract.md` - understand how memory, planning, managed surfaces, and generated docs interact.
-- `docs/maturity-model.md` - understand current alpha/beta expectations.
+- `docs/which-package.md`
+- `docs/init-lifecycle.md`
+- `docs/architecture.md`
+- `docs/integration-contract.md`
+- `docs/maturity-model.md`
 
-For boundaries and ecosystem policy:
+### For boundaries and ecosystem policy
 
-- `docs/compatibility-policy.md` - understand which surfaces are stable, mutable, or generated before changing a contract.
-- `docs/boundary-and-extraction.md` - decide what belongs in a package, the workspace layer, or a generated surface.
-- `docs/extension-boundary.md` - understand what module extension is and is not supported today.
-- `docs/ecosystem-roadmap.md` - see the long-horizon ecosystem shape; use `ROADMAP.md` as the short sequencing queue.
-- `docs/design-principles.md` - review the product rules that constrain future changes.
+- `docs/compatibility-policy.md`
+- `docs/boundary-and-extraction.md`
+- `docs/extension-boundary.md`
+- `docs/ecosystem-roadmap.md`
+- `docs/design-principles.md`
 
-For maintainers:
+### For maintainers
 
-- `docs/contributor-playbook.md` - choose the right ownership surface and validation lane before editing.
-- `docs/maintainer-commands.md` - canonical command index for routine maintenance.
-- `docs/generated-surface-trust.md` - understand the canonical sources and freshness rules for generated maintainer surfaces.
-- `docs/collaboration-safety.md` - concurrent-edit and git hygiene rules.
-- `docs/installed-contract-design-checklist.md` - review bar for new or changed shipped surfaces.
-- `docs/dogfooding-feedback.md` - classify internal friction before routing it onward.
-- `docs/workflow-contract-changes.md` - compact record of recent workflow-surface changes.
+- `docs/contributor-playbook.md`
+- `docs/maintainer-commands.md`
+- `docs/generated-surface-trust.md`
+- `docs/collaboration-safety.md`
+- `docs/installed-contract-design-checklist.md`
+- `docs/dogfooding-feedback.md`
+- `docs/workflow-contract-changes.md`
 
-For agent maintainers, the primary operating path is `AGENTS.md`, `TODO.md`, the active execplan, and `docs/contributor-playbook.md`.
+For agent maintainers, the primary operating path is:
 
-For maintainer workflow, command routing, and generated-surface checks, go straight to `docs/contributor-playbook.md` and `docs/maintainer-commands.md`.
+`AGENTS.md -> TODO.md -> active execplan -> docs/contributor-playbook.md`
