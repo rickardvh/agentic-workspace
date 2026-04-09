@@ -311,11 +311,17 @@ def test_bootstrap_capability_aware_execution_doc_defines_categories() -> None:
     assert "### Delegation-Friendly" in text
     assert "### Stop And Escalate" in text
     assert "## Silent Shaping And Non-Interference" in text
+    assert "## Bounded Initiative And Scope Expansion" in text
     assert "## Complexity-Reduction Feedback" in text
     assert "automatic capability selection" in text
     assert "Prefer changing the work shape over interrupting execution with capability advice." in text
     assert "make more future tasks safe for cheaper execution paths" in text
     assert "task-shape based" in text
+    assert "Intent is sticky" in text
+    assert "do not silently replace the requested outcome" in text
+    assert "improve means locally" in text
+    assert "do not rewrite ends locally" in text
+    assert "present it as a promotion or escalation decision" in text
 
 
 def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
@@ -324,6 +330,7 @@ def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
     assert "prefer borrowing durable context from the smallest relevant memory note or canonical doc" in text
     assert "Repeated background prose in plans is a missing-synergy signal" in text
     assert "promote it into memory or canonical docs" in text
+    assert "must not silently widen the requested outcome" in text
 
 
 def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:

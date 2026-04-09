@@ -19,6 +19,12 @@ The normal goal is quiet execution:
 - delegate only when a compact handoff is likely to cost less than re-derivation
 - escalate only when continuing would likely waste effort or distort a stable boundary
 
+Intent is sticky:
+
+- improve how to reach the requested outcome when a better bounded path is obvious
+- do not silently replace the requested outcome with a broader or more ambitious one
+- treat a better answer that widens requested scope, ownership surface, or time horizon as a promotion or escalation decision
+
 Do not turn this contract into a noisy layer of repeated prompts to switch models, raise reasoning effort, or hunt for a stronger executor by name.
 If the surrounding tool already chooses execution capability automatically, keep this contract focused on checked-in task shape, planning, validation, and escalation discipline.
 
@@ -169,6 +175,36 @@ When the assistant or tool already performs automatic capability selection:
 
 Capability-aware execution should make tool-local routing easier, not noisier.
 
+## Bounded Initiative And Scope Expansion
+
+Capability-aware execution permits bounded initiative, not open-ended initiative.
+
+Local optimization is encouraged when it stays inside the user's stated outcome and constraints.
+Good examples include:
+
+- choosing a narrower touched-path slice
+- tightening validation
+- decomposing the work into a smaller direct step plus explicit follow-up
+- promoting into an execplan before implementation when that makes continuation cheaper
+- improving a weak local implementation approach without changing the requested end state
+
+Silent goal substitution is not acceptable.
+Do not quietly turn a small fix into a redesign, a local request into a product program, or a bounded implementation task into a broader architecture campaign.
+
+Expand scope only when at least one of these is true:
+
+- the requested path is blocked and cannot complete safely as stated
+- the requested path is unsafe or would violate a stable contract
+- the validation story would be meaningless without the added step
+- the user explicitly asked for broader initiative
+
+When a better answer requires scope expansion, present it as a promotion or escalation decision instead of smuggling it into execution.
+
+The practical boundary is simple:
+
+- improve means locally
+- do not rewrite ends locally
+
 ## Relation To Direct Tasks And Execplans
 
 Capability fit sharpens the existing planning boundary; it does not replace it.
@@ -180,6 +216,9 @@ Capability fit sharpens the existing planning boundary; it does not replace it.
 Do not promote work into an execplan merely because a stronger model exists.
 
 Do not keep work direct merely because a smaller model might manage it if the current task shape no longer makes that safe.
+
+Do not widen a direct task or execplan silently just because a broader solution looks cleaner.
+If the cleaner solution changes the requested outcome, the owned surface, or the time horizon, promote or escalate explicitly.
 
 When stronger capability keeps seeming necessary, prefer asking whether the task should be decomposed, bounded, or routed differently before treating stronger execution as the default answer.
 
@@ -233,6 +272,8 @@ Ask these questions in order:
 3. If no, would a compact checked-in execplan reduce enough ambiguity or restart cost to justify itself?
 4. If a stronger planner is available, would planning first let a cheaper implementer succeed safely?
 5. If stronger capability still seems necessary, can better decomposition, validation, or checked-in guidance make the work cheaper first?
-6. If not, should execution stop and escalate instead of continuing?
+6. Would the better-looking solution silently widen the requested outcome, owned surface, or time horizon?
+7. If yes, should that widening be promoted or escalated explicitly instead of being done implicitly?
+8. If not, should execution stop and escalate instead of continuing?
 
 That is the capability-aware execution contract for the first planning slice.

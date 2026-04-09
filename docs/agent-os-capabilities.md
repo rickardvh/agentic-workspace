@@ -46,6 +46,7 @@ The composition layer is intentionally thin. It exists to centralize lifecycle e
 
 - Checks / proof surfaces
 - Ownership / authority mapping
+- Bounded delegated judgment
 - Generated-surface trust
 - Review / audit lane
 - Intake / triage
@@ -91,6 +92,15 @@ These capabilities are architecturally important today, but they are not automat
 - Current home: workspace ownership surfaces, lifecycle docs, and module contracts
 - Promotion stance: important internal capability, not currently a standalone product target
 - Evidence required for further promotion: repeated cross-repo demand for a reusable ownership contract with stable schemas and selective-adoption value
+
+### Bounded Delegated Judgment
+
+- Current category: `internal capability`
+- Problem solved: repositories lose efficiency when humans must micromanage routine execution or when agents continue confidently past the point where escalation is warranted
+- Why an agent wants it in checked-in form: explicit decision authority, confidence-sensitive escalation, and constraint-driven execution make it possible for humans to set direction while agents own bounded local judgment
+- Current home: planning and workflow contracts, capability-aware execution guidance, and startup instructions that define when to proceed, when to improve the proposed approach, and when to stop and ask
+- Promotion stance: future candidate, but only if the contract proves stable enough to stand apart from planning rather than duplicating it
+- Evidence required for further promotion: repeated dogfooding showing that task intent, local authority, and escalation boundaries can be expressed portably across repos and tools without vendor-specific routing assumptions
 
 ### Capability / Module Registry
 
@@ -154,6 +164,30 @@ These capabilities are architecturally important today, but they are not automat
 - Current home: planning outputs, lifecycle reports, and selected memory or review surfaces
 - Promotion stance: supporting capability, not a standalone product target today
 - Evidence required for further promotion: repeated proof that a reusable summary contract has independent value across repos without simply duplicating planning state
+
+## Human Direction And Agent Judgment
+
+The long-horizon target is not unrestricted autonomy. It is bounded delegated judgment.
+
+The intended operating shape is:
+
+- humans provide direction, priorities, and constraints
+- agents improve local execution plans when a better bounded path is apparent
+- agents proceed autonomously when the contract makes that safe
+- agents escalate promptly when confidence, authority, or validation conditions are no longer strong enough
+
+In the ideal case, a maintainer can hand an agent a durable product or architectural direction surface and rely on the checked-in system to do most of the remaining routing and shaping work.
+
+That requires the ecosystem to encode, cheaply and explicitly:
+
+- what the human is setting versus what the agent may decide locally
+- what kinds of tasks should stay simple and direct
+- what requires stronger planning or decomposition first
+- what should be improved rather than followed literally when the original suggestion is weak
+- what conditions require stopping and asking instead of continuing wastefully
+
+This is primarily a planning and workflow-contract concern today, not a separate product promise.
+The value of the capability is that it lets humans step back to intent and constraints while keeping agent judgment bounded, auditable, and restartable.
 
 ## Extraction / Productization Criteria
 
