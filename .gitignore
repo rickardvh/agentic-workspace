@@ -1,5 +1,6 @@
 # Local Python environment
 .venv/
+.env.local
 
 # Python caches
 **/__pycache__/
@@ -8,6 +9,8 @@
 # Common test and tooling caches
 **/.pytest_cache/
 **/.ruff_cache/
+.uv-cache-root/
+**/.uv-cache-root/
 
 # Coverage reports
 **/.coverage

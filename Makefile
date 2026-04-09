@@ -1,3 +1,8 @@
+-include .env.local
+
+UV_CACHE_DIR ?= $(CURDIR)/.uv-cache-root
+export UV_CACHE_DIR
+
 .PHONY: help sync-all sync-memory sync-planning \
 	test test-workspace test-memory test-planning \
 	lint lint-workspace lint-memory lint-planning markdownlint markdownlint-memory \
