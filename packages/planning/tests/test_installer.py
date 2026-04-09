@@ -349,6 +349,17 @@ def test_bootstrap_delegated_judgment_doc_is_part_of_contract() -> None:
     assert Path("docs/delegated-judgment-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
+def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routing() -> None:
+    readme_text = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
+    bootstrap_agents_text = (installer_mod.payload_root() / "AGENTS.md").read_text(encoding="utf-8")
+
+    assert "Execplans now treat two fields as first-class" in readme_text
+    assert "`Required Continuation`" in readme_text
+    assert "Required continuation for an unfinished larger intended outcome" in readme_text
+    assert "the execplan must record both `Intent Continuity` and `Required Continuation` before archive" in bootstrap_agents_text
+    assert "record the required next owner and activation trigger explicitly before archive" in bootstrap_agents_text
+
+
 def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
     text = (installer_mod.payload_root() / "docs" / "execplans" / "README.md").read_text(encoding="utf-8")
 

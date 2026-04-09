@@ -34,6 +34,7 @@ Direct execution is valid when one coherent pass can finish the work and the `TO
 Promote that task into `docs/execplans/` once it needs milestone sequencing, blocker handling, non-obvious validation scope, rollback or migration detail, or enough ambiguity that restart would require more than the TODO row.
 Use `docs/capability-aware-execution.md` when deciding whether the cheapest safe path, stronger planning, silent shaping, delegation, or escalation is appropriate.
 Do not treat that contract as a standing instruction to switch models or override tools that already perform automatic capability selection well.
+When a bounded slice completes only part of a larger intended outcome, the execplan must record both `Intent Continuity` and `Required Continuation` before archive so the next owner and activation trigger live in checked-in planning, not only in prose or chat.
 
 Do not start coding from chat context alone when the same knowledge should live in checked-in files.
 
@@ -73,3 +74,4 @@ Do not start coding from chat context alone when the same knowledge should live 
 2. Update the active plan in `docs/execplans/` when working from one.
 3. If a task leaves meaningful follow-up work, record it in the appropriate planning surface before closing the task.
 4. Remove completed task detail from `TODO.md` once it no longer changes the next contributor's queue decision.
+5. If the larger intended outcome is still unfinished, record the required next owner and activation trigger explicitly before archive.

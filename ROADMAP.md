@@ -21,10 +21,6 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Next Candidate Queue
 
-- Required follow-on routing follow-through: promote when another bounded slice
-    finishes part of a larger intended outcome so Planning can prove that the
-    required next owner survives archive cleanup as first-class planned work.
-
 ## Sequencing Recommendation
 
 1. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.

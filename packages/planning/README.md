@@ -170,6 +170,14 @@ If stronger capability keeps seeming necessary for the same class of work, treat
 When a repo also installs Agentic Memory, Planning should borrow durable context from routed memory notes instead of re-explaining the same subsystem background inside each execplan. Completed planning residue should promote durable lessons into memory or canonical docs when they remain expensive to rediscover.
 
 When a direct task completes, remove it from `TODO.md` promptly. If the task changed durable repo knowledge or left important follow-up work, record that residue in memory, canonical docs, `ROADMAP.md`, or a newly promoted execplan rather than leaving chat-only context behind.
+When a bounded slice completes only part of a larger intended outcome, do not close it with required continuation only in prose.
+Execplans now treat two fields as first-class:
+
+- `Intent Continuity`: whether the larger intended outcome is actually complete and what checked-in surface now owns it if not
+- `Required Continuation`: whether follow-on is mandatory for that larger outcome, plus the owner surface and activation trigger
+
+If required follow-on remains, archive should happen only after those fields point at a checked-in next owner.
+Optional nice-to-have follow-up can still stay out of the archive gate.
 
 ## Direct-Task Recovery Cases
 
@@ -283,6 +291,7 @@ New ideas and follow-ups are routed into:
 - the active plan, if immediately relevant
 
 without breaking execution focus.
+Required continuation for an unfinished larger intended outcome must be routed into a checked-in owner before the current slice closes; it should not survive only as drift-log prose or chat residue.
 
 ### 7. Keeps active surfaces clean
 
@@ -497,6 +506,7 @@ Once done:
 ### No duplication of intent
 
 Each idea should have one primary home.
+If a slice leaves required continuation behind, that continuation should also have one explicit checked-in owner and trigger.
 
 ### Plans are contracts, not notebooks
 
