@@ -79,7 +79,7 @@ Use this review to assess whether the repo's current front-door/default-path sto
 
 - `agentic-workspace defaults --format json`
 - `agentic-workspace modules --format json`
-- `agentic-workspace skills --target /path/to/repo --task "implement the current active milestone" --format json`
+- `agentic-workspace skills --target ./repo --task "implement the current active milestone" --format json`
 
 ## Drift Log
 

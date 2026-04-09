@@ -63,7 +63,7 @@
       "summary": "run a bounded review pass and capture compact findings under docs/reviews",
       "activation_hints": {
         "verbs": ["review", "audit", "inspect", "check", "perform"],
-        "nouns": ["review", "review pass", "code review", "package review", "contract integrity", "regression", "change"],
+        "nouns": ["review", "review pass", "review mode", "review portfolio", "code review", "package review", "contract integrity", "regression", "change"],
         "phrases": [
           "run review pass",
           "review this change",
