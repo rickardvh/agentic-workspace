@@ -4,7 +4,6 @@ import importlib.util
 import json
 from pathlib import Path
 
-
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -174,7 +173,8 @@ For agent maintainers, the primary operating path is `AGENTS.md`, `TODO.md`, the
 
 Use this playbook to choose the right package, planning surface, and validation lane before making changes in `agentic-workspace`.
 
-Use `docs/maintainer-commands.md` when you need the literal command to run; use this playbook when you need routing, ownership, or validation guidance.
+Use `docs/maintainer-commands.md` when you need the literal command to run; use this playbook when you need routing,
+ownership, or validation guidance.
 
 ## Agent Maintainer Path
 
@@ -203,7 +203,8 @@ Use this page when you need the canonical command to run, not the broader routin
 
 Use these rules when multiple agents or contributors are working through git.
 
-Use `docs/maintainer-commands.md` for command lookup and `docs/workflow-contract-changes.md` for compact workflow history; this page is only for concurrent-edit and merge-safety rules.
+Use `docs/maintainer-commands.md` for command lookup and `docs/workflow-contract-changes.md` for compact workflow
+history; this page is only for concurrent-edit and merge-safety rules.
 """,
     )
     _write(
@@ -213,7 +214,8 @@ Use `docs/maintainer-commands.md` for command lookup and `docs/workflow-contract
 
 Use this checklist when adding or materially changing a shipped installed surface in a package payload.
 
-Use `docs/maintainer-commands.md` for commands and `docs/contributor-playbook.md` for routing; this page is only the review bar for collaboration-sensitive installed surfaces.
+Use `docs/maintainer-commands.md` for commands and `docs/contributor-playbook.md` for routing; this page is only the
+review bar for collaboration-sensitive installed surfaces.
 """,
     )
     _write(
@@ -223,7 +225,8 @@ Use `docs/maintainer-commands.md` for commands and `docs/contributor-playbook.md
 
 Use this convention when internal use reveals friction.
 
-Use planning surfaces when the signal changes active execution; this page is only for classifying and routing the signal, not for keeping a backlog.
+Use planning surfaces when the signal changes active execution; this page is only for classifying and routing the
+signal, not for keeping a backlog.
 """,
     )
     _write(
@@ -257,10 +260,7 @@ def test_maintainer_surface_role_guidance_warns_when_readme_docs_map_drifts(tmp_
 
     warnings = mod.gather_maintainer_warnings(repo_root=tmp_path)
 
-    assert any(
-        warning.warning_class == "startup_policy_drift" and str(warning.path).endswith("README.md")
-        for warning in warnings
-    )
+    assert any(warning.warning_class == "startup_policy_drift" and str(warning.path).endswith("README.md") for warning in warnings)
 
 
 def test_maintainer_surface_checker_includes_boundary_warnings(tmp_path: Path) -> None:

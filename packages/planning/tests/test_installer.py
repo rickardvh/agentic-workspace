@@ -169,8 +169,7 @@ def test_adopt_bootstrap_docs_heavy_repo_preserves_root_surfaces_and_installs_he
         for action in result.actions
     )
     assert any(
-        action.kind in {"copied", "created", "updated"}
-        and action.path == tmp_path / "tools" / "AGENT_QUICKSTART.md"
+        action.kind in {"copied", "created", "updated"} and action.path == tmp_path / "tools" / "AGENT_QUICKSTART.md"
         for action in result.actions
     )
 
@@ -187,9 +186,7 @@ def test_adopt_bootstrap_preserves_existing_manifest_in_partial_managed_state(tm
     assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
     assert any(action.kind == "skipped" and action.path == manifest_path for action in result.actions)
     assert any(
-        action.kind in {"created", "updated"}
-        and action.path == tmp_path / "tools" / "agent-manifest.json"
-        for action in result.actions
+        action.kind in {"created", "updated"} and action.path == tmp_path / "tools" / "agent-manifest.json" for action in result.actions
     )
 
 
@@ -362,15 +359,15 @@ def test_verify_payload_flags_missing_collaboration_safe_template_guidance(tmp_p
     _write(payload_root / "docs" / "execplans" / "README.md", "# Execution Plans\n")
     _write(payload_root / "docs" / "execplans" / "TEMPLATE.md", "# Plan Title\n")
     _write(payload_root / "docs" / "execplans" / "archive" / "README.md", "# Archive\n")
-    _write(payload_root / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml", "source_type = \"git\"\n")
+    _write(payload_root / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml", 'source_type = "git"\n')
     _write(payload_root / ".agentic-workspace" / "planning" / "agent-manifest.json", "{}\n")
     _write(
         payload_root / ".agentic-workspace" / "planning" / "scripts" / "render_agent_docs.py",
         (
             "def render_quickstart(_manifest):\n"
-            "    return \"generated file\\n\"\n\n"
+            '    return "generated file\\n"\n\n'
             "def render_routing(_manifest):\n"
-            "    return \"generated file\\n\"\n"
+            '    return "generated file\\n"\n'
         ),
     )
     _write(payload_root / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_planning_surfaces.py", "print('ok')\n")
@@ -638,7 +635,10 @@ Active queue for repository work.
     assert "front-door-defaults-tranche: Active" not in todo_text
     assert "docs/execplans/front-door-defaults-tranche-2026-04-09.md" not in todo_text
     assert "- No active work right now." in todo_text
-    assert "Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation." in todo_text
+    assert (
+        "Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation."
+        in todo_text
+    )
     assert any(action.kind == "updated" and action.path == tmp_path / "TODO.md" for action in result.actions)
 
 

@@ -451,9 +451,7 @@ def main() -> int:
     current_durable_truth_drift = sorted(
         note_path
         for note_path, raw in manifest_notes.items()
-        if isinstance(raw, dict)
-        and note_path.startswith("memory/current/")
-        and str(raw.get("memory_role", "")).strip()
+        if isinstance(raw, dict) and note_path.startswith("memory/current/") and str(raw.get("memory_role", "")).strip()
     )
     current_note_overlap_pressure = _current_note_overlap_pressure(scans)
     incomplete_improvement_signals = sorted(
@@ -625,9 +623,7 @@ def _current_note_overlap_pressure(scans: list[NoteScan]) -> list[str]:
         if len(current_terms) < CURRENT_NOTE_OVERLAP_MIN_SHARED_TERMS:
             continue
         for durable_scan in durable_scans:
-            shared_terms = sorted(
-                current_terms & _significant_terms(durable_scan.path.read_text(encoding="utf-8"))
-            )
+            shared_terms = sorted(current_terms & _significant_terms(durable_scan.path.read_text(encoding="utf-8")))
             if len(shared_terms) >= CURRENT_NOTE_OVERLAP_MIN_SHARED_TERMS:
                 findings.append(
                     (

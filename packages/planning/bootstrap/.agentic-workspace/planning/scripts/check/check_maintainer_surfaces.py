@@ -28,9 +28,7 @@ def _load_module(path: Path, module_name: str):
 
 
 _PLANNING_MODULE = _load_module(PLANNING_MODULE_SCRIPT, "workspace_planning_checker")
-_BOUNDARY_MODULE = (
-    _load_module(BOUNDARY_MODULE_SCRIPT, "workspace_boundary_checker") if BOUNDARY_MODULE_SCRIPT.exists() else None
-)
+_BOUNDARY_MODULE = _load_module(BOUNDARY_MODULE_SCRIPT, "workspace_boundary_checker") if BOUNDARY_MODULE_SCRIPT.exists() else None
 PlanningWarning = MaintainerWarning
 
 
@@ -51,15 +49,9 @@ def _normalize_warning(warning: object) -> MaintainerWarning:
 def gather_maintainer_warnings(*, repo_root: Path | None = None) -> list[MaintainerWarning]:
     effective_root = REPO_ROOT if repo_root is None else repo_root
     _sync_repo_root(effective_root)
-    warnings = [
-        _normalize_warning(warning)
-        for warning in _PLANNING_MODULE.gather_planning_warnings(repo_root=effective_root)
-    ]
+    warnings = [_normalize_warning(warning) for warning in _PLANNING_MODULE.gather_planning_warnings(repo_root=effective_root)]
     if _BOUNDARY_MODULE is not None:
-        warnings.extend(
-            _normalize_warning(warning)
-            for warning in _BOUNDARY_MODULE.gather_boundary_warnings(repo_root=effective_root)
-        )
+        warnings.extend(_normalize_warning(warning) for warning in _BOUNDARY_MODULE.gather_boundary_warnings(repo_root=effective_root))
     return warnings
 
 
@@ -70,9 +62,7 @@ def gather_maintainer_summary(*, repo_root: Path | None = None) -> dict[str, Any
         "warning_count": len(warnings),
         "warnings": [warning._asdict() for warning in warnings],
         "planning": _PLANNING_MODULE.gather_planning_summary(repo_root=effective_root),
-        "boundary": _BOUNDARY_MODULE.gather_boundary_summary(repo_root=effective_root)
-        if _BOUNDARY_MODULE is not None
-        else None,
+        "boundary": _BOUNDARY_MODULE.gather_boundary_summary(repo_root=effective_root) if _BOUNDARY_MODULE is not None else None,
     }
     return summary
 

@@ -111,7 +111,7 @@ def test_workspace_status_after_init() -> None:
 
 def test_workspace_modules_list() -> None:
     """Test modules command lists available modules."""
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory():
         workspace_root = Path(__file__).resolve().parents[1]
 
         # List available modules

@@ -136,6 +136,7 @@ def _add_contract_surface_summary(result: InstallResult, target_root: Path) -> N
         category="safe-update",
     )
 
+
 __all__ = [
     "subprocess",
     "AGENTS_PATH",

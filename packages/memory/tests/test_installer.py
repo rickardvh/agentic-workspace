@@ -653,9 +653,7 @@ def test_doctor_overlap_audit_ignores_generic_ownership_terms(
     result = installer.doctor_bootstrap(target=target)
 
     assert not any(
-        action.role == "memory-overlap-audit"
-        and action.path in {domain_path, decision_path}
-        and "ownership-decision.md" in action.detail
+        action.role == "memory-overlap-audit" and action.path in {domain_path, decision_path} and "ownership-decision.md" in action.detail
         for action in result.actions
     )
 
@@ -678,10 +676,7 @@ def test_doctor_overlap_audit_skips_explicit_primary_home_references(
         encoding="utf-8",
     )
     decision_path.write_text(
-        (
-            "# Package Context Decision\n\n"
-            "This note keeps the durable decision about the package boundary.\n"
-        ),
+        ("# Package Context Decision\n\nThis note keeps the durable decision about the package boundary.\n"),
         encoding="utf-8",
     )
 
@@ -963,7 +958,10 @@ def test_bootstrap_recurring_failures_note_clarifies_anti_trap_contract() -> Non
 
     assert "anti-trap memory, not a bug tracker, issue mirror, or backlog" in text
     assert "one verified incident that clearly exposes a trap likely to recur" in text
-    assert "Move one-off bugs, active debugging, and status tracking into tests, canonical docs, issues, or the planning surface instead." in text
+    assert (
+        "Move one-off bugs, active debugging, and status tracking into tests, canonical docs, issues, or the planning surface instead."
+        in text
+    )
 
 
 def test_install_writes_upgrade_source_metadata(tmp_path: Path) -> None:
@@ -2084,7 +2082,7 @@ def test_verify_payload_flags_missing_current_note_collaboration_guidance(tmp_pa
     (payload / ".agentic-workspace/memory").mkdir(parents=True)
     (payload / ".agentic-workspace/memory" / "VERSION.md").write_text(f"Version: {installer.BOOTSTRAP_VERSION}\n", encoding="utf-8")
     (payload / ".agentic-workspace/memory" / "UPGRADE-SOURCE.toml").write_text(
-        "source_type = \"git\"\nsource_ref = \"example\"\nsource_label = \"Example\"\nrecorded_at = \"2026-04-06\"\n",
+        'source_type = "git"\nsource_ref = "example"\nsource_label = "Example"\nrecorded_at = "2026-04-06"\n',
         encoding="utf-8",
     )
     (payload / "AGENTS.md").write_text("# Agent Instructions\n", encoding="utf-8")
@@ -3932,11 +3930,7 @@ task_relevance = "optional"
 
     result = installer.doctor_bootstrap(target=target)
 
-    assert not any(
-        action.role == "memory-multi-home"
-        and action.path == target / "memory/domains/api.md"
-        for action in result.actions
-    )
+    assert not any(action.role == "memory-multi-home" and action.path == target / "memory/domains/api.md" for action in result.actions)
 
 
 def test_doctor_emits_multi_home_pressure_for_invariant_heavy_runbook(tmp_path: Path) -> None:

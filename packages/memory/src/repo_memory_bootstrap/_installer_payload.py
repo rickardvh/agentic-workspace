@@ -426,8 +426,7 @@ def _plan_agents_entrypoint(
                 role="local-entrypoint",
                 source=str(AGENTS_PATH),
                 detail=(
-                    "removed the redundant top-level memory workflow pointer block "
-                    "because the shared workspace pointer is already present"
+                    "removed the redundant top-level memory workflow pointer block because the shared workspace pointer is already present"
                 ),
             )
             return

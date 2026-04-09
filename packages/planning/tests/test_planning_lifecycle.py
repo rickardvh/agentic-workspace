@@ -11,7 +11,7 @@ def test_planning_clean_install() -> None:
         target = Path(tmpdir) / "test_repo"
         target.mkdir()
         planning_root = Path(__file__).resolve().parents[1]
-        
+
         # Install planning bootstrap
         subprocess.run(
             ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target), "--format", "json"],
@@ -20,7 +20,7 @@ def test_planning_clean_install() -> None:
             cwd=planning_root,
             check=True,
         )
-        
+
         # Verify required files exist
         assert (target / "TODO.md").exists(), "TODO.md not found after install"
         assert (target / "ROADMAP.md").exists(), "ROADMAP.md not found after install"
@@ -33,7 +33,7 @@ def test_planning_install_dry_run() -> None:
         target = Path(tmpdir) / "test_repo"
         target.mkdir()
         planning_root = Path(__file__).resolve().parents[1]
-        
+
         # Install with dry-run
         subprocess.run(
             ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target), "--dry-run"],
@@ -42,7 +42,7 @@ def test_planning_install_dry_run() -> None:
             cwd=planning_root,
             check=True,
         )
-        
+
         # Verify no files created
         assert not (target / "TODO.md").exists(), "TODO.md created during dry-run"
         assert not (target / "ROADMAP.md").exists(), "ROADMAP.md created during dry-run"
@@ -54,7 +54,7 @@ def test_planning_install_idempotent() -> None:
         target = Path(tmpdir) / "test_repo"
         target.mkdir()
         planning_root = Path(__file__).resolve().parents[1]
-        
+
         # First install
         subprocess.run(
             ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target)],
@@ -63,10 +63,10 @@ def test_planning_install_idempotent() -> None:
             cwd=planning_root,
             check=True,
         )
-        
+
         # Get first state
         todo_content_1 = (target / "TODO.md").read_text()
-        
+
         # Second install (should fail or overwrite with --force)
         result = subprocess.run(
             ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target)],
@@ -74,7 +74,7 @@ def test_planning_install_idempotent() -> None:
             text=True,
             cwd=planning_root,
         )
-        
+
         # If it succeeded, verify state is unchanged
         if result.returncode == 0:
             todo_content_2 = (target / "TODO.md").read_text()
@@ -87,7 +87,7 @@ def test_planning_status_after_install() -> None:
         target = Path(tmpdir) / "test_repo"
         target.mkdir()
         planning_root = Path(__file__).resolve().parents[1]
-        
+
         # Install
         subprocess.run(
             ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target)],
@@ -96,7 +96,7 @@ def test_planning_status_after_install() -> None:
             cwd=planning_root,
             check=True,
         )
-        
+
         # Check status
         result = subprocess.run(
             ["uv", "run", "agentic-planning-bootstrap", "status", "--target", str(target), "--format", "json"],
@@ -104,7 +104,7 @@ def test_planning_status_after_install() -> None:
             text=True,
             cwd=planning_root,
         )
-        
+
         # Status should indicate bootstrap is installed
         assert result.returncode == 0, "Status command failed after install"
 
@@ -115,7 +115,7 @@ def test_planning_install_with_force() -> None:
         target = Path(tmpdir) / "test_repo"
         target.mkdir()
         planning_root = Path(__file__).resolve().parents[1]
-        
+
         # First install
         subprocess.run(
             ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target)],
@@ -124,12 +124,12 @@ def test_planning_install_with_force() -> None:
             cwd=planning_root,
             check=True,
         )
-        
+
         # Modify a file
         todo_path = target / "TODO.md"
         original_content = todo_path.read_text()
         todo_path.write_text("# Modified\n")
-        
+
         # Install with force
         subprocess.run(
             ["uv", "run", "agentic-planning-bootstrap", "install", "--target", str(target), "--force"],
@@ -138,7 +138,7 @@ def test_planning_install_with_force() -> None:
             cwd=planning_root,
             check=True,
         )
-        
+
         # Verify file was restored
         restored_content = todo_path.read_text()
         assert restored_content == original_content, "File was not restored by --force"

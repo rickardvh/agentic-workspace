@@ -1134,7 +1134,10 @@ def _cleanup_todo_action_section(lines: list[str], relative_plan_path: str) -> t
     if not removed:
         return lines, False
     if not any(line.strip() for line in kept_lines):
-        kept_lines = ["", "- Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation."]
+        kept_lines = [
+            "",
+            "- Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.",
+        ]
     return lines[:section_start] + kept_lines + lines[section_end:], True
 
 

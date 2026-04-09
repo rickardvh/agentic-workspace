@@ -111,9 +111,7 @@ memory_role = "durable_truth"
 
 
 def test_memory_freshness_reports_current_note_overlap_pressure(tmp_path: Path) -> None:
-    shared = (
-        "service contract boundary request validation response schema compatibility migration rollback observability operator safety"
-    )
+    shared = "service contract boundary request validation response schema compatibility migration rollback observability operator safety"
     _write(tmp_path / "memory" / "current" / "project-state.md", _project_state_text(body=f"- {shared}"))
     _write(tmp_path / "memory" / "domains" / "api.md", f"# API\n\n{shared}\n")
     _write(
@@ -155,16 +153,17 @@ task_relevance = "optional"
 def test_memory_freshness_skips_overlap_pressure_for_current_notes_with_explicit_durable_handoff(
     tmp_path: Path,
 ) -> None:
-    shared = (
-        "service contract boundary request validation response schema compatibility migration rollback observability operator safety"
-    )
+    shared = "service contract boundary request validation response schema compatibility migration rollback observability operator safety"
     _write(
         tmp_path / "memory" / "current" / "project-state.md",
         _project_state_text(
             body=(
                 "- "
                 + shared
-                + "\n- For durable rationale, load the matching note under `memory/decisions/` or `memory/domains/` instead of expanding this overview."
+                + (
+                    "\n- For durable rationale, load the matching note under `memory/decisions/` "
+                    "or `memory/domains/` instead of expanding this overview."
+                )
             )
         ),
     )

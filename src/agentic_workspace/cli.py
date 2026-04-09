@@ -11,7 +11,7 @@ from typing import Any
 from agentic_workspace import __version__
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 
-MODULE_COMMAND_ARGS = {
+MODULE_COMMAND_ARGS: dict[str, tuple[str, ...]] = {
     "install": ("target", "dry_run", "force"),
     "adopt": ("target", "dry_run"),
     "upgrade": ("target", "dry_run"),
@@ -28,16 +28,12 @@ WORKSPACE_AGENTS_PATH = Path("AGENTS.md")
 WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
 WORKSPACE_POINTER_BLOCK = (
-    f"{WORKSPACE_WORKFLOW_MARKER_START}\n"
-    "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules.\n"
-    f"{WORKSPACE_WORKFLOW_MARKER_END}"
+    f"{WORKSPACE_WORKFLOW_MARKER_START}\nRead `.agentic-workspace/WORKFLOW.md` for shared workflow rules.\n{WORKSPACE_WORKFLOW_MARKER_END}"
 )
 MEMORY_WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
 MEMORY_WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
 MEMORY_POINTER_BLOCK = (
-    f"{MEMORY_WORKFLOW_MARKER_START}\n"
-    "Read `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n"
-    f"{MEMORY_WORKFLOW_MARKER_END}"
+    f"{MEMORY_WORKFLOW_MARKER_START}\nRead `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n{MEMORY_WORKFLOW_MARKER_END}"
 )
 
 
@@ -374,8 +370,7 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             selection_rank=10,
             include_in_full_preset=True,
             detector=lambda target_root: (
-                (target_root / "TODO.md").exists()
-                and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+                (target_root / "TODO.md").exists() and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
             ),
             install_signals=(
                 Path("TODO.md"),
@@ -701,19 +696,19 @@ def _workspace_status_report(
     agents_text = agents_path.read_text(encoding="utf-8")
     if WORKSPACE_POINTER_BLOCK in agents_text:
         actions.append(
-                {
-                    "kind": "current",
-                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
-                    "detail": "workspace workflow pointer block present",
-                }
+            {
+                "kind": "current",
+                "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                "detail": "workspace workflow pointer block present",
+            }
         )
     else:
         actions.append(
-                {
-                    "kind": "warning",
-                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
-                    "detail": "workspace workflow pointer block missing",
-                }
+            {
+                "kind": "warning",
+                "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                "detail": "workspace workflow pointer block missing",
+            }
         )
         warnings.append({"path": WORKSPACE_AGENTS_PATH.as_posix(), "message": "workspace workflow pointer block missing"})
 
@@ -797,12 +792,12 @@ def _workspace_init_or_upgrade_report(
         if not dry_run:
             destination.write_bytes(source_bytes)
         actions.append(
-                {
-                    "kind": "would update" if dry_run else "updated",
-                    "path": relative.as_posix(),
-                    "detail": "refresh workspace shared-layer file from package payload",
-                }
-            )
+            {
+                "kind": "would update" if dry_run else "updated",
+                "path": relative.as_posix(),
+                "detail": "refresh workspace shared-layer file from package payload",
+            }
+        )
 
     agents_path = target_root / WORKSPACE_AGENTS_PATH
     rendered_agents = _workspace_agents_template(selected_modules=selected_modules, descriptors=descriptors)
@@ -835,9 +830,7 @@ def _workspace_init_or_upgrade_report(
             start_marker=WORKSPACE_WORKFLOW_MARKER_START,
             end_marker=WORKSPACE_WORKFLOW_MARKER_END,
         )
-        cleanup_blocks = [
-            block for module_name in selected_modules for block in descriptors[module_name].root_agents_cleanup_blocks
-        ]
+        cleanup_blocks = [block for module_name in selected_modules for block in descriptors[module_name].root_agents_cleanup_blocks]
         for cleanup_block in cleanup_blocks:
             updated_text, block_changed = _remove_fenced_block(
                 text=updated_text,
@@ -954,17 +947,14 @@ def _selected_modules(
 
 def _ordered_module_names(descriptors: dict[str, ModuleDescriptor]) -> list[str]:
     return [
-        descriptor.name
-        for descriptor in sorted(descriptors.values(), key=lambda descriptor: (descriptor.selection_rank, descriptor.name))
+        descriptor.name for descriptor in sorted(descriptors.values(), key=lambda descriptor: (descriptor.selection_rank, descriptor.name))
     ]
 
 
 def _preset_modules(descriptors: dict[str, ModuleDescriptor]) -> dict[str, list[str]]:
     ordered_module_names = _ordered_module_names(descriptors)
     presets = {module_name: [module_name] for module_name in ordered_module_names}
-    presets["full"] = [
-        module_name for module_name in ordered_module_names if descriptors[module_name].include_in_full_preset
-    ]
+    presets["full"] = [module_name for module_name in ordered_module_names if descriptors[module_name].include_in_full_preset]
     return presets
 
 
@@ -982,9 +972,7 @@ def _parse_modules(module_arg: str, *, ordered_module_names: list[str]) -> set[s
     return set(tokens)
 
 
-def _validate_selected_module_contract(
-    *, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]
-) -> None:
+def _validate_selected_module_contract(*, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]) -> None:
     selected_set = set(selected_modules)
     for module_name in selected_modules:
         descriptor = descriptors[module_name]
@@ -1540,7 +1528,10 @@ def _build_lifecycle_handoff_prompt(payload: dict[str, Any]) -> str:
         [
             "",
             "Use the workspace CLI as the lifecycle entrypoint for this repo shape.",
-            "Keep module-specific lifecycle implementation package-local; do not switch to package CLIs unless package-local debugging is required.",
+            (
+                "Keep module-specific lifecycle implementation package-local; "
+                "do not switch to package CLIs unless package-local debugging is required."
+            ),
         ]
     )
     review_items = []
@@ -1933,9 +1924,7 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
             reasons.append(f"summary overlap: {', '.join(summary_overlap)}")
 
         if score > 0:
-            recommendations.append(
-                SkillRecommendation(skill=skill, hint_score=hint_score, score=score, reasons=tuple(reasons))
-            )
+            recommendations.append(SkillRecommendation(skill=skill, hint_score=hint_score, score=score, reasons=tuple(reasons)))
 
     if any(recommendation.hint_score > 0 for recommendation in recommendations):
         recommendations = [recommendation for recommendation in recommendations if recommendation.hint_score > 0]
@@ -1953,11 +1942,7 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
 
 
 def _matched_skill_terms(*, terms: tuple[str, ...], task_text_lower: str, task_tokens: set[str]) -> list[str]:
-    matched = [
-        term
-        for term in terms
-        if _skill_term_matches(term=term, task_text_lower=task_text_lower, task_tokens=task_tokens)
-    ]
+    matched = [term for term in terms if _skill_term_matches(term=term, task_text_lower=task_text_lower, task_tokens=task_tokens)]
     return sorted(dict.fromkeys(matched))
 
 
@@ -1989,19 +1974,13 @@ def _scan_skill_paths(skills_root: Path) -> list[Path]:
     return sorted(path for path in skills_root.rglob("SKILL.md") if "__pycache__" not in path.parts)
 
 
-def _module_registry(
-    *, descriptors: dict[str, ModuleDescriptor], target_root: Path | None
-) -> list[ModuleRegistryEntry]:
+def _module_registry(*, descriptors: dict[str, ModuleDescriptor], target_root: Path | None) -> list[ModuleRegistryEntry]:
     entries: list[ModuleRegistryEntry] = []
     for module_name in _ordered_module_names(descriptors):
         descriptor = descriptors[module_name]
         lifecycle_commands = tuple(sorted(descriptor.commands))
-        dry_run_commands = tuple(
-            command_name for command_name in lifecycle_commands if "dry_run" in descriptor.command_args[command_name]
-        )
-        force_commands = tuple(
-            command_name for command_name in lifecycle_commands if "force" in descriptor.command_args[command_name]
-        )
+        dry_run_commands = tuple(command_name for command_name in lifecycle_commands if "dry_run" in descriptor.command_args[command_name])
+        force_commands = tuple(command_name for command_name in lifecycle_commands if "force" in descriptor.command_args[command_name])
         installed = descriptor.detector(target_root) if target_root is not None else None
         entries.append(
             ModuleRegistryEntry(
@@ -2132,9 +2111,7 @@ def _prune_empty_parent_dirs(*, target_root: Path, relatives: list[Path]) -> Non
                 continue
 
 
-def _module_workflow_surfaces(
-    *, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]
-) -> tuple[Path, ...]:
+def _module_workflow_surfaces(*, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]) -> tuple[Path, ...]:
     ordered: list[Path] = []
     for module_name in selected_modules:
         for path in descriptors[module_name].workflow_surfaces:
@@ -2143,9 +2120,7 @@ def _module_workflow_surfaces(
     return tuple(ordered)
 
 
-def _module_generated_artifacts(
-    *, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]
-) -> set[str]:
+def _module_generated_artifacts(*, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]) -> set[str]:
     generated: set[str] = set()
     for module_name in selected_modules:
         generated.update(path.as_posix() for path in descriptors[module_name].generated_artifacts)

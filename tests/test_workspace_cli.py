@@ -100,9 +100,9 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["lifecycle"]["primary_entrypoint"] == "agentic-workspace"
-    assert "agentic-workspace init --target /path/to/repo --preset <memory|planning|full>" == payload["lifecycle"][
-        "default_install_command"
-    ]
+    assert (
+        "agentic-workspace init --target /path/to/repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
+    )
     assert payload["validation"]["default_routes"]["planning_package"] == "cd packages/planning && uv run pytest tests/test_installer.py"
     assert payload["combined_install"]["primary"] == "agentic-workspace init --target /path/to/repo --preset full"
     assert any("ROADMAP.md" in step for step in payload["startup"]["secondary"])
@@ -493,13 +493,9 @@ def test_status_real_init_reports_workspace_shared_layer_surfaces(tmp_path: Path
 
     payload = json.loads(capsys.readouterr().out)
     workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    assert any(action["path"] == ".agentic-workspace/WORKFLOW.md" and action["kind"] == "current" for action in workspace_report["actions"])
     assert any(
-        action["path"] == ".agentic-workspace/WORKFLOW.md" and action["kind"] == "current"
-        for action in workspace_report["actions"]
-    )
-    assert any(
-        action["path"] == ".agentic-workspace/OWNERSHIP.toml" and action["kind"] == "current"
-        for action in workspace_report["actions"]
+        action["path"] == ".agentic-workspace/OWNERSHIP.toml" and action["kind"] == "current" for action in workspace_report["actions"]
     )
 
 
@@ -664,7 +660,11 @@ def test_doctor_real_init_reports_stale_planning_generated_residue(tmp_path: Pat
     payload = json.loads(capsys.readouterr().out)
     assert payload["health"] == "attention-needed"
     assert any(
-        item == "tools/AGENT_ROUTING.md: routing guide is out of sync with .agentic-workspace/planning/agent-manifest.json; run python scripts/render_agent_docs.py"
+        item
+        == (
+            "tools/AGENT_ROUTING.md: routing guide is out of sync with "
+            ".agentic-workspace/planning/agent-manifest.json; run python scripts/render_agent_docs.py"
+        )
         for item in payload["needs_review"]
     )
 

@@ -244,10 +244,10 @@ def test_todo_shape_drift_for_checklist_and_missing_execplan(tmp_path: Path) -> 
 
 
 def test_todo_shape_drift_for_finished_work_section(tmp_path: Path) -> None:
-        mod = _load_module(_checker_script_path(), "planning_todo_finished_work")
-        _write(
-                tmp_path / "TODO.md",
-                """
+    mod = _load_module(_checker_script_path(), "planning_todo_finished_work")
+    _write(
+        tmp_path / "TODO.md",
+        """
 # TODO
 
 ## Now
@@ -261,12 +261,12 @@ def test_todo_shape_drift_for_finished_work_section(tmp_path: Path) -> None:
 
 - Completed prior tranche details live here.
 """,
-        )
-        _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-        _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+    )
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
 
-        classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
-        assert "todo_shape_drift" in classes
+    classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
+    assert "todo_shape_drift" in classes
 
 
 def test_execplan_readiness_missing_warning(tmp_path: Path) -> None:
@@ -302,10 +302,10 @@ def test_direct_task_can_trigger_plan_required_hint(tmp_path: Path) -> None:
 
 
 def test_direct_task_handoff_and_recovery_language_triggers_plan_hint(tmp_path: Path) -> None:
-        mod = _load_module(_checker_script_path(), "planning_plan_required_recovery")
-        _write(
-                tmp_path / "TODO.md",
-                """
+    mod = _load_module(_checker_script_path(), "planning_plan_required_recovery")
+    _write(
+        tmp_path / "TODO.md",
+        """
 # TODO
 
 ## Next
@@ -317,10 +317,10 @@ def test_direct_task_handoff_and_recovery_language_triggers_plan_hint(tmp_path: 
     Next action: resume from the last checkpoint and recover the partial failure path.
     Done when: concurrent branch work can land without extra restart notes.
 """,
-        )
-        _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-        classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
-        assert "todo_plan_required_hint" in classes
+    )
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
+    assert "todo_plan_required_hint" in classes
 
 
 def test_execplan_under_specified_and_notebook_warnings(tmp_path: Path) -> None:
