@@ -15,7 +15,10 @@ Use it when you want the shortest correct answer for startup, lifecycle, skill d
 | Question | Default path | Secondary path |
 | --- | --- | --- |
 | How do I install? | `agentic-workspace init --preset <memory|planning|full>` | Package CLIs for package-local maintainer work or debugging |
+| How do I express intent? | Pick the preset that matches the outcome you want and let `init` infer install vs adopt vs review-required handoff | Manually reasoning about lifecycle verbs before asking the tool |
 | How do I start in a repo? | `AGENTS.md` -> `TODO.md` -> active execplan when relevant | `ROADMAP.md` only when promoting work |
+| Where should I point an external agent? | `llms.txt` | Richer docs only when the handoff file points there |
+| Where is the post-bootstrap next action? | `.agentic-workspace/bootstrap-handoff.md` when bootstrap says review is still needed | Ad hoc chat instructions |
 | How do I inspect modules? | `agentic-workspace modules --format json` | Read package docs directly when working on one package contract |
 | How do I discover skills? | `agentic-workspace skills --format json` or `--task ...` | Read registries or `SKILL.md` files directly only when debugging or authoring skills |
 | How do I validate? | Use the narrowest proving lane from the contributor playbook or machine-readable defaults | Broader package/root lanes only when the change crosses boundaries |
@@ -33,6 +36,9 @@ That surface is the queryable contract for:
 
 - startup
 - lifecycle
+- supported intents
+- canonical external-agent handoff
+- canonical bootstrap next action
 - skill discovery
 - validation
 - combined-install operation

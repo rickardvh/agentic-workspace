@@ -1,24 +1,35 @@
-# Init Lifecycle And Adoption Modes
+# Init Lifecycle, Repo State, And Handoff
 
 This page captures the root `agentic-workspace init` behavior that is otherwise easy to reconstruct from code and reports.
 
-Use it when you need the canonical mode matrix for clean install, conservative adopt, or high-ambiguity adopt.
+Use it when you need the canonical intent, repo-state, policy, and handoff contract for `init`.
 
 ## Default Behavior
 
 - `init` defaults to the full preset when module selection is omitted.
-- The command bootstraps mechanically, then chooses install or adopt behavior from the detected repository state.
+- The user intent is the selected preset: `memory`, `planning`, or `full`.
+- The command bootstraps mechanically, classifies repo state, then chooses the safest lifecycle mode automatically.
 - The root workspace layer is part of that bootstrap contract, not an incidental repo file copy.
 - Clean installs should seed `.agentic-workspace/WORKFLOW.md`, `.agentic-workspace/OWNERSHIP.toml`, and a coherent root `AGENTS.md` entrypoint for the selected modules.
-- The root CLI can print or write a handoff prompt when finishing work still needs judgment.
+- The root CLI also keeps one checked-in external-agent handoff surface at `llms.txt`.
+- When bootstrap still needs judgment, the CLI writes the next-action brief to `.agentic-workspace/bootstrap-handoff.md`.
+
+## Intent Contract
+
+| User intent | Command shape |
+| --- | --- |
+| Set up this repo for Agentic Memory | `agentic-workspace init --preset memory` |
+| Set up this repo for Agentic Planning | `agentic-workspace init --preset planning` |
+| Set up this repo for both | `agentic-workspace init --preset full` |
 
 ## Mode Matrix
 
-| Mode | When it applies | Prompt requirement |
-| --- | --- | --- |
-| Clean install | No preserved workflow surfaces are detected and the repo does not need adopt behavior | `none` |
-| Conservative adopt | Existing workflow surfaces are present, but the repo is not ambiguous enough to require a full finishing prompt | `recommended` |
-| High-ambiguity adopt | Partial module state, placeholders, or heavy overlap make the finishing pass need explicit judgment | `required` |
+| Repo state | Inferred policy | Lifecycle mode | Prompt requirement |
+| --- | --- | --- | --- |
+| `blank_or_unmanaged_repo` | `install_direct` | Clean install | `none` |
+| `light_existing_workflow` | `preserve_existing_and_adopt` | Conservative adopt | `recommended` |
+| `docs_heavy_existing_repo` | `require_explicit_handoff` | High-ambiguity adopt | `required` |
+| `partial_or_placeholder_state` | `require_explicit_handoff` | High-ambiguity adopt | `required` |
 
 ## High-Ambiguity Signals
 
@@ -27,11 +38,13 @@ Use it when you need the canonical mode matrix for clean install, conservative a
 - Existing workflow surfaces overlap strongly enough that the repo needs reconciliation before normal work continues.
 - Managed root state already exists and the overlap suggests the repo should be treated as a finishing pass instead of a fresh install.
 
-## Prompt Semantics
+## Handoff Surfaces
 
-- `none` means the CLI can bootstrap without generating a finishing prompt.
-- `recommended` means a prompt is useful but not mandatory.
-- `required` means the prompt should be used to finish the handoff before normal work resumes.
+- `llms.txt` is the canonical external-agent handoff file for the repo.
+- `.agentic-workspace/bootstrap-handoff.md` is the canonical post-bootstrap next-action brief when `prompt_requirement` is not `none`.
+- `none` means bootstrap can finish without a handoff brief.
+- `recommended` means the brief is useful but not mandatory.
+- `required` means the brief should be followed before normal work resumes.
 
 ## Maintainer Notes
 

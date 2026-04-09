@@ -45,6 +45,7 @@ Bundled skills:
 ## Quick Start
 
 Default path: use `agentic-workspace init --preset planning`.
+Treat the preset as the user intent: "set up this repo for Agentic Planning" and let the workspace CLI choose the safe install vs adopt path from repo state.
 Use the package CLI below only for package-local maintainer work, advanced debugging, or when you explicitly need module-level control.
 
 Fastest no-install path:
@@ -60,6 +61,7 @@ pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdir
 Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no-install path when it is the runner a repo already uses.
 
 Use `prompt install` for a clean bootstrap. Use `adopt` when the repository already has planning-like docs and you want the package to merge conservatively around existing surfaces.
+After workspace bootstrap, `llms.txt` is the canonical external-agent handoff surface and `.agentic-workspace/bootstrap-handoff.md` is the next-action brief when the repo still needs review.
 
 ## Advanced Package Path
 

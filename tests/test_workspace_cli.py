@@ -103,6 +103,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert (
         "agentic-workspace init --target ./repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
     )
+    assert payload["lifecycle"]["canonical_external_agent_handoff"] == "llms.txt"
+    assert payload["lifecycle"]["canonical_bootstrap_next_action"] == ".agentic-workspace/bootstrap-handoff.md"
     assert payload["validation"]["default_routes"]["planning_package"] == "cd packages/planning && uv run pytest tests/test_installer.py"
     assert payload["combined_install"]["primary"] == "agentic-workspace init --target ./repo --preset full"
     assert any("ROADMAP.md" in step for step in payload["startup"]["secondary"])
@@ -255,10 +257,16 @@ def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_p
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["repo_state"] == "partial_or_placeholder_state"
+    assert payload["inferred_policy"] == "require_explicit_handoff"
     assert payload["mode"] == "adopt_high_ambiguity"
     assert payload["prompt_requirement"] == "required"
     assert sorted(payload["detected_surfaces"]) == ["AGENTS.md", "TODO.md", "docs/execplans", "memory/index.md"]
+    assert payload["handoff_prompt_path"] == (tmp_path / ".agentic-workspace" / "bootstrap-handoff.md").as_posix()
     assert "handoff_prompt" in payload
+    assert "User intent:" in payload["handoff_prompt"]
+    assert (tmp_path / ".agentic-workspace" / "bootstrap-handoff.md").exists()
+    assert (tmp_path / "llms.txt").exists()
     assert calls == [
         ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
         ("memory", "adopt", {"target": str(tmp_path), "dry_run": False}),
@@ -322,6 +330,8 @@ def test_init_uses_recommended_prompt_for_single_existing_surface(monkeypatch, t
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["repo_state"] == "light_existing_workflow"
+    assert payload["inferred_policy"] == "preserve_existing_and_adopt"
     assert payload["mode"] == "adopt"
     assert payload["prompt_requirement"] == "recommended"
     assert payload["detected_surfaces"] == ["AGENTS.md"]
@@ -345,6 +355,8 @@ def test_init_reports_docs_heavy_repo_as_high_ambiguity(monkeypatch, tmp_path: P
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["repo_state"] == "partial_or_placeholder_state"
+    assert payload["inferred_policy"] == "require_explicit_handoff"
     assert payload["mode"] == "adopt_high_ambiguity"
     assert payload["prompt_requirement"] == "required"
     assert sorted(payload["detected_surfaces"]) == [
@@ -372,6 +384,8 @@ def test_init_marks_partial_module_state_for_review(monkeypatch, tmp_path: Path,
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["repo_state"] == "partial_or_placeholder_state"
+    assert payload["inferred_policy"] == "require_explicit_handoff"
     assert payload["mode"] == "adopt_high_ambiguity"
     assert payload["prompt_requirement"] == "required"
     assert payload["needs_review"] == [
@@ -390,6 +404,8 @@ def test_init_marks_partial_planning_state_for_review(monkeypatch, tmp_path: Pat
     assert cli.main(["init", "--modules", "planning", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["repo_state"] == "partial_or_placeholder_state"
+    assert payload["inferred_policy"] == "require_explicit_handoff"
     assert payload["mode"] == "adopt_high_ambiguity"
     assert payload["prompt_requirement"] == "required"
     assert payload["needs_review"] == [
@@ -415,6 +431,8 @@ def test_init_marks_mixed_module_partial_state_for_review(monkeypatch, tmp_path:
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["repo_state"] == "partial_or_placeholder_state"
+    assert payload["inferred_policy"] == "require_explicit_handoff"
     assert payload["mode"] == "adopt_high_ambiguity"
     assert payload["prompt_requirement"] == "required"
     assert payload["needs_review"] == [
@@ -562,6 +580,7 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
         "Local repo instructions.\n",
         encoding="utf-8",
     )
+    (tmp_path / "llms.txt").write_text(cli._external_agent_handoff_text(selected_modules=["planning", "memory"]), encoding="utf-8")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["doctor", "--modules", "planning,memory", "--target", str(tmp_path), "--format", "json"]) == 0

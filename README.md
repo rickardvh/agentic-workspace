@@ -10,12 +10,13 @@ The goal is efficiency: higher-quality work with less rereading, rediscovery, an
 
 ## Default Path
 
-1. Choose a preset:
-   - `memory`
-   - `planning`
-   - `full`
-2. Install through `agentic-workspace init`.
-3. Keep using `agentic-workspace` for the normal lifecycle.
+1. Express the outcome once with `--preset`:
+   - `memory`: set up this repo for Agentic Memory
+   - `planning`: set up this repo for Agentic Planning
+   - `full`: set up this repo for both
+2. Run `agentic-workspace init`.
+3. Let the workspace CLI infer the safest lifecycle path for the repo shape.
+4. Keep using `agentic-workspace` for the normal lifecycle.
 
 Normal install path:
 
@@ -25,6 +26,11 @@ uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-wor
 
 If you only want one module, switch `--preset full` to `--preset memory` or `--preset planning`.
 If you use `pipx` instead of `uvx`, keep the same command shape.
+
+Canonical handoff surfaces after install:
+
+- [`llms.txt`](llms.txt) is the checked-in external-agent front door.
+- `.agentic-workspace/bootstrap-handoff.md` is the bounded next-action brief when bootstrap reports that review or reconciliation is still required.
 
 Normal next commands:
 
@@ -57,9 +63,9 @@ What it adds:
 
 | If your main problem is... | Use... |
 | --- | --- |
-| Durable repo knowledge keeps getting rediscovered | `agentic-workspace --preset memory` |
-| Active work keeps drifting or losing completion discipline | `agentic-workspace --preset planning` |
-| You want both together | `agentic-workspace --preset full` |
+| Durable repo knowledge keeps getting rediscovered | `agentic-workspace init --preset memory` |
+| Active work keeps drifting or losing completion discipline | `agentic-workspace init --preset planning` |
+| You want both together | `agentic-workspace init --preset full` |
 
 If you need more than that table, use [`docs/which-package.md`](docs/which-package.md).
 
