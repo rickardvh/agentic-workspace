@@ -816,7 +816,7 @@ def _external_agent_handoff_text(*, selected_modules: list[str]) -> str:
             "Preferred follow-up commands:",
             "- agentic-workspace status --target ./repo",
             "- agentic-workspace doctor --target ./repo",
-            "- agentic-workspace skills --target ./repo --task \"<task>\" --format json",
+            '- agentic-workspace skills --target ./repo --task "<task>" --format json',
             "- agentic-workspace upgrade --target ./repo",
             "",
             "Rules:",
@@ -1631,8 +1631,7 @@ def _init_next_steps(
     steps = [f"Run agentic-workspace doctor --target {target} after bootstrap changes settle."]
     if prompt_requirement != "none":
         steps.append(
-            f"Use the generated finishing brief at {WORKSPACE_BOOTSTRAP_HANDOFF_PATH.as_posix()} "
-            "for the next bounded bootstrap action."
+            f"Use the generated finishing brief at {WORKSPACE_BOOTSTRAP_HANDOFF_PATH.as_posix()} for the next bounded bootstrap action."
         )
     if prompt_requirement == "none":
         steps.append("Tell your coding agent to use AGENTS.md for normal work and llms.txt for lifecycle/front-door guidance.")

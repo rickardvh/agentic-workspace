@@ -100,9 +100,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["lifecycle"]["primary_entrypoint"] == "agentic-workspace"
-    assert (
-        "agentic-workspace init --target ./repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
-    )
+    assert "agentic-workspace init --target ./repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
     assert payload["lifecycle"]["canonical_external_agent_handoff"] == "llms.txt"
     assert payload["lifecycle"]["canonical_bootstrap_next_action"] == ".agentic-workspace/bootstrap-handoff.md"
     assert payload["validation"]["default_routes"]["planning_package"] == "cd packages/planning && uv run pytest tests/test_installer.py"

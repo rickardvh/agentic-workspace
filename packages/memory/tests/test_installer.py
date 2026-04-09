@@ -1184,9 +1184,7 @@ def test_upgrade_preserves_existing_local_source_metadata(tmp_path: Path) -> Non
 
     result = installer.upgrade_bootstrap(target=target, dry_run=True)
 
-    assert source_path.read_text(encoding="utf-8") == (
-        'source_type = "local"\nsource_ref = "./local/agentic-memory"\n'
-    )
+    assert source_path.read_text(encoding="utf-8") == ('source_type = "local"\nsource_ref = "./local/agentic-memory"\n')
     assert any(
         action.path == source_path and action.kind == "current" and "preserving repo-local source selection" in action.detail
         for action in result.actions
