@@ -167,6 +167,12 @@ def build_parser() -> argparse.ArgumentParser:
     modules_parser.add_argument("--target", help="Optional repository path used to report installed modules.")
     _add_format_argument(modules_parser)
 
+    defaults_parser = subparsers.add_parser(
+        "defaults",
+        help="Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
+    )
+    _add_format_argument(defaults_parser)
+
     skills_parser = subparsers.add_parser(
         "skills",
         help="List registered workspace skills from installed package registries and repo-owned skill registries.",
@@ -232,6 +238,10 @@ def main(argv: list[str] | None = None) -> int:
         if target_root is not None:
             _validate_target_root(command_name="modules", target_root=target_root)
         _emit_modules(format_name=args.format, target_root=target_root)
+        return 0
+
+    if args.command == "defaults":
+        _emit_defaults(format_name=args.format)
         return 0
 
     if args.command == "skills":
@@ -1583,6 +1593,89 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
         ]
     }
     _emit_payload(payload=payload, format_name=format_name)
+
+
+def _defaults_payload() -> dict[str, Any]:
+    return {
+        "startup": {
+            "primary": [
+                "Read `AGENTS.md`.",
+                "Read `TODO.md`.",
+                "Read the active execplan only when `TODO.md` points to one.",
+            ],
+            "secondary": [
+                "Read `ROADMAP.md` only when promoting work.",
+                "Read package-local `AGENTS.md` only for the package being edited.",
+                "Read memory only when installed and the task needs durable context.",
+            ],
+        },
+        "lifecycle": {
+            "primary_entrypoint": "agentic-workspace",
+            "default_install_command": "agentic-workspace init --target /path/to/repo --preset <memory|planning|full>",
+            "default_operating_commands": [
+                "agentic-workspace status --target /path/to/repo",
+                "agentic-workspace doctor --target /path/to/repo",
+                "agentic-workspace upgrade --target /path/to/repo",
+            ],
+            "secondary": [
+                "Package CLIs are for package-local maintainer work, advanced debugging, or explicit module-level control.",
+            ],
+        },
+        "skill_discovery": {
+            "primary": [
+                "agentic-workspace skills --target /path/to/repo --format json",
+                'agentic-workspace skills --target /path/to/repo --task "<task>" --format json',
+            ],
+            "secondary": [
+                "Read skill registries or SKILL.md files directly only when debugging, authoring, or validating skills.",
+            ],
+        },
+        "validation": {
+            "rule": "Run the narrowest proving lane that matches the touched surface.",
+            "default_routes": {
+                "workspace_cli": "uv run pytest tests/test_workspace_cli.py",
+                "planning_package": "cd packages/planning && uv run pytest tests/test_installer.py",
+                "memory_package": "cd packages/memory && uv run pytest tests/test_installer.py",
+                "maintainer_surfaces": "make maintainer-surfaces",
+            },
+            "secondary": [
+                "Use broader package or repo-wide lanes only when the change crosses boundaries or invalidates the narrower proof.",
+            ],
+        },
+        "combined_install": {
+            "primary": "agentic-workspace init --target /path/to/repo --preset full",
+            "operating_model": [
+                "Planning owns active-now state.",
+                "Memory owns durable anti-rediscovery knowledge.",
+                "Use the shared workspace lifecycle verbs as the normal operating path.",
+            ],
+            "secondary": [
+                "Direct package CLIs stay available, but they are not the normal path for combined installs.",
+            ],
+        },
+    }
+
+
+def _emit_defaults(*, format_name: str) -> None:
+    payload = _defaults_payload()
+    if format_name == "json":
+        print(json.dumps(serialise_value(payload), indent=2))
+        return
+    print("Startup:")
+    for step in payload["startup"]["primary"]:
+        print(f"- {step}")
+    print("Lifecycle:")
+    print(f"- primary entrypoint: {payload['lifecycle']['primary_entrypoint']}")
+    print(f"- install: {payload['lifecycle']['default_install_command']}")
+    print("Skill discovery:")
+    for step in payload["skill_discovery"]["primary"]:
+        print(f"- {step}")
+    print("Validation:")
+    print(f"- rule: {payload['validation']['rule']}")
+    for label, command in payload["validation"]["default_routes"].items():
+        print(f"- {label}: {command}")
+    print("Combined install:")
+    print(f"- {payload['combined_install']['primary']}")
 
 
 def _skill_catalog_sources() -> tuple[SkillCatalogSource, ...]:

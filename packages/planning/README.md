@@ -44,7 +44,8 @@ Bundled skills:
 
 ## Quick Start
 
-For normal repo adoption, prefer `agentic-workspace --preset planning` as the public lifecycle entrypoint. Use the package CLI below for package-local maintainer work, advanced debugging, or when you explicitly want to operate the planning module directly.
+Default path: use `agentic-workspace init --preset planning`.
+Use the package CLI below only for package-local maintainer work, advanced debugging, or when you explicitly need module-level control.
 
 Fastest no-install path:
 
@@ -60,7 +61,7 @@ Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no
 
 Use `prompt install` for a clean bootstrap. Use `adopt` when the repository already has planning-like docs and you want the package to merge conservatively around existing surfaces.
 
-## Agent Workflow Commands
+## Advanced Package Path
 
 Normal public lifecycle path:
 

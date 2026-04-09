@@ -95,6 +95,31 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert planning_module["command_args"]["doctor"] == ["target"]
 
 
+def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys) -> None:
+    assert cli.main(["defaults", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["lifecycle"]["primary_entrypoint"] == "agentic-workspace"
+    assert "agentic-workspace init --target /path/to/repo --preset <memory|planning|full>" == payload["lifecycle"][
+        "default_install_command"
+    ]
+    assert payload["validation"]["default_routes"]["planning_package"] == "cd packages/planning && uv run pytest tests/test_installer.py"
+    assert payload["combined_install"]["primary"] == "agentic-workspace init --target /path/to/repo --preset full"
+    assert any("ROADMAP.md" in step for step in payload["startup"]["secondary"])
+    assert any("skills --target /path/to/repo --task" in step for step in payload["skill_discovery"]["primary"])
+
+
+def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -> None:
+    assert cli.main(["defaults"]) == 0
+
+    text = capsys.readouterr().out
+    assert "Startup:" in text
+    assert "Lifecycle:" in text
+    assert "primary entrypoint: agentic-workspace" in text
+    assert "Combined install:" in text
+    assert "make maintainer-surfaces" in text
+
+
 def test_modules_command_reports_installation_state_for_target(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)

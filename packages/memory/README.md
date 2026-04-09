@@ -41,7 +41,8 @@ The CLI is the delivery mechanism, not the whole product. The product capability
 
 ## Quick Start
 
-For normal repo adoption, prefer `agentic-workspace --preset memory` as the public lifecycle entrypoint. Use the package CLI below for package-local maintainer work, advanced debugging, or when you explicitly want to operate the memory module directly.
+Default path: use `agentic-workspace init --preset memory`.
+Use the package CLI below only for package-local maintainer work, advanced debugging, or when you explicitly need module-level control.
 
 Fastest no-install path:
 

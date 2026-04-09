@@ -1,6 +1,6 @@
 # TODO
 
-Last pruned: 2026-04-08
+Last pruned: 2026-04-09
 
 ## Purpose
 
@@ -10,10 +10,11 @@ Active queue for repository work.
 - None.
 
 ## Action
-- No active work items. Promote the next bounded candidate from `ROADMAP.md` when ready.
+- Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.
 
 ## Done
 
+- front-door-defaults-tranche: Completed (compressed the front-door docs, added `agentic-workspace defaults` as the machine-readable default-route contract, captured bounded default-path and cheap-execution audits, and removed the clearest transitional startup/path-selection scaffolding)
 - memory-planning-synergy: Completed (defined the first explicit combined-install contract so planning borrows durable context from memory, completed planning residue promotes cleanly, and repeated plan re-explanation becomes a missing-synergy signal for cheaper future execution)
 - capability-aware-execution-followup: Completed (refined the planning capability-fit contract so it stays advisory, quiet, and tool-agnostic, and turns repeated stronger-capability outcomes into complexity-reduction signals for planning, reviews, and improvement-targeting)
 - capability-aware-execution-contract: Completed (shipped the first planning capability-fit contract so agents can classify cheap direct execution, stronger planning first, delegation-friendly work, autopilot suitability, and stop-and-escalate cases in task-shape language)
