@@ -8,6 +8,9 @@ It is the durable home for the capability structure of an agent-oriented checked
 
 This document is not a bounded roadmap, backlog, or implementation plan.
 
+Long-horizon direction can change as the product evolves.
+When a capability description, promotion stance, or architectural emphasis no longer matches current dogfooding reality, update this document directly and route any newly-bounded follow-on into `ROADMAP.md` instead of leaving stale intent embedded here.
+
 ## How To Read This
 
 Use these categories when reading the capability map:
@@ -19,6 +22,14 @@ Use these categories when reading the capability map:
 - `unlikely to stand alone`: a capability that matters, but is more useful as supporting infrastructure than as its own package
 
 These categories describe architectural position, not delivery priority.
+
+## Doctrine Maintenance
+
+Treat this page as durable doctrine, not frozen doctrine.
+
+- Refresh it when major shipped contracts land, when dogfooding changes what matters most, or when a capability's current category no longer matches real usage.
+- Prefer changing or deleting stale long-horizon statements over preserving historical wording that no longer drives the product.
+- When a doctrinal change reveals concrete next work, record that work in `ROADMAP.md` as a bounded candidate instead of letting this document become a shadow queue.
 
 ## Current Shipped Modules
 

@@ -4,6 +4,8 @@ This page records the current ecosystem stance without turning it into a promise
 
 For the broader long-horizon capability map behind that stance, see `docs/agent-os-capabilities.md`.
 
+When the current stance changes, update this page and move any concrete next work into `ROADMAP.md` instead of accumulating latent backlog prose here.
+
 ## Current Stable External Products
 
 - Agentic Memory, distributed today as `agentic-memory-bootstrap`
