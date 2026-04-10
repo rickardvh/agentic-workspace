@@ -200,6 +200,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_format_argument(defaults_parser)
 
+    proof_parser = subparsers.add_parser(
+        "proof",
+        help="Show the canonical proof routes and current workspace proof summary.",
+    )
+    proof_parser.add_argument("--target", help="Optional repository path used to inspect installed modules and proof state.")
+    _add_format_argument(proof_parser)
+
+    ownership_parser = subparsers.add_parser(
+        "ownership",
+        help="Show the canonical ownership and authority mapping for the target repository.",
+    )
+    ownership_parser.add_argument("--target", help="Optional repository path used to inspect the ownership ledger.")
+    _add_format_argument(ownership_parser)
+
     config_parser = subparsers.add_parser(
         "config",
         help="Show the resolved repo-owned workspace config layered onto product defaults.",
@@ -276,6 +290,18 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "defaults":
         _emit_defaults(format_name=args.format)
+        return 0
+
+    if args.command == "proof":
+        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+        _validate_target_root(command_name="proof", target_root=target_root)
+        _emit_proof(format_name=args.format, target_root=target_root, descriptors=descriptors)
+        return 0
+
+    if args.command == "ownership":
+        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+        _validate_target_root(command_name="ownership", target_root=target_root)
+        _emit_ownership(format_name=args.format, target_root=target_root, descriptors=descriptors)
         return 0
 
     if args.command == "config":
@@ -1967,6 +1993,40 @@ def _defaults_payload() -> dict[str, Any]:
                 "Use broader package or repo-wide lanes only when the change crosses boundaries or invalidates the narrower proof.",
             ],
         },
+        "proof_surfaces": {
+            "canonical_doc": "docs/proof-surfaces-contract.md",
+            "command": "agentic-workspace proof --target ./repo --format json",
+            "rule": "Use the narrowest proof lane that answers the current trust question.",
+            "default_routes": {
+                "workspace_proof": "agentic-workspace proof --target ./repo --format json",
+                "workspace_status": "agentic-workspace status --target ./repo",
+                "workspace_doctor": "agentic-workspace doctor --target ./repo",
+                "planning_surfaces": "uv run python scripts/check/check_planning_surfaces.py",
+                "maintainer_surfaces": "make maintainer-surfaces",
+                "source_payload_install": "uv run pytest tests/test_source_payload_operational_install.py",
+                "planning_payload": "uv run agentic-planning-bootstrap upgrade --target .",
+                "memory_payload": "uv run agentic-memory-bootstrap upgrade --target .",
+            },
+            "secondary": [
+                "Use package-local tests or payload verification only when the trust question is package-specific.",
+            ],
+        },
+        "ownership_mapping": {
+            "canonical_doc": "docs/ownership-authority-contract.md",
+            "command": "agentic-workspace ownership --target ./repo --format json",
+            "rule": "Resolve the owner and authoritative surface before changing or trusting a contract.",
+            "ledger": ".agentic-workspace/OWNERSHIP.toml",
+            "default_routes": {
+                "workspace_ownership": "agentic-workspace ownership --target ./repo --format json",
+                "workflow_contract": ".agentic-workspace/WORKFLOW.md",
+                "ownership_ledger": ".agentic-workspace/OWNERSHIP.toml",
+                "compatibility_policy": "docs/compatibility-policy.md",
+                "generated_surface_trust": "docs/generated-surface-trust.md",
+            },
+            "secondary": [
+                "Read package-local docs only after the ownership map identifies the package as the primary owner.",
+            ],
+        },
         "combined_install": {
             "primary": "agentic-workspace init --target ./repo --preset full",
             "operating_model": [
@@ -2048,6 +2108,14 @@ def _emit_defaults(*, format_name: str) -> None:
     print(f"- rule: {payload['validation']['rule']}")
     for label, command in payload["validation"]["default_routes"].items():
         print(f"- {label}: {command}")
+    print("Proof surfaces:")
+    print(f"- doc: {payload['proof_surfaces']['canonical_doc']}")
+    print(f"- command: {payload['proof_surfaces']['command']}")
+    print(f"- rule: {payload['proof_surfaces']['rule']}")
+    print("Ownership mapping:")
+    print(f"- doc: {payload['ownership_mapping']['canonical_doc']}")
+    print(f"- command: {payload['ownership_mapping']['command']}")
+    print(f"- rule: {payload['ownership_mapping']['rule']}")
     print("Combined install:")
     print(f"- {payload['combined_install']['primary']}")
     print("Recovery:")
@@ -2183,6 +2251,168 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
         default_preset=configured_preset,
         update_modules=update_modules,
     )
+
+
+def _emit_proof(*, format_name: str, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> None:
+    payload = _proof_payload(target_root=target_root, descriptors=descriptors)
+    if format_name == "json":
+        print(json.dumps(serialise_value(payload), indent=2))
+        return
+    print(f"Target: {payload['target']}")
+    print(f"Rule: {payload['rule']}")
+    print(f"Doc: {payload['canonical_doc']}")
+    print("Routes:")
+    for label, command in payload["default_routes"].items():
+        print(f"- {label}: {command}")
+    print("Current:")
+    installed_modules = payload["current"]["installed_modules"]
+    print(f"- installed modules: {', '.join(installed_modules) if installed_modules else 'none'}")
+    print(f"- status health: {payload['current']['status_health']}")
+    print(f"- doctor health: {payload['current']['doctor_health']}")
+    if payload["current"]["warnings"]:
+        print("Warnings:")
+        for warning in payload["current"]["warnings"]:
+            print(f"- {warning}")
+    if payload["current"]["needs_review"]:
+        print("Needs review:")
+        for item in payload["current"]["needs_review"]:
+            print(f"- {item}")
+    if payload["current"]["stale_generated_surfaces"]:
+        print("Stale generated surfaces:")
+        for item in payload["current"]["stale_generated_surfaces"]:
+            print(f"- {item}")
+
+
+def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> dict[str, Any]:
+    defaults = _defaults_payload()["proof_surfaces"]
+    installed_modules = [
+        module_name
+        for module_name in _ordered_module_names(descriptors)
+        if descriptors[module_name].detector(target_root)
+    ]
+    current: dict[str, Any] = {
+        "installed_modules": installed_modules,
+        "status_health": "not-run",
+        "doctor_health": "not-run",
+        "warnings": [],
+        "needs_review": [],
+        "stale_generated_surfaces": [],
+    }
+    if not installed_modules:
+        current["status_health"] = "not-installed"
+        current["doctor_health"] = "not-installed"
+    else:
+        config = _load_workspace_config(target_root=target_root, descriptors=descriptors)
+        status_payload = _run_lifecycle_command(
+            command_name="status",
+            target_root=target_root,
+            selected_modules=installed_modules,
+            resolved_preset=None,
+            descriptors=descriptors,
+            dry_run=False,
+            config=config,
+        )
+        doctor_payload = _run_lifecycle_command(
+            command_name="doctor",
+            target_root=target_root,
+            selected_modules=installed_modules,
+            resolved_preset=None,
+            descriptors=descriptors,
+            dry_run=False,
+            config=config,
+        )
+        current = {
+            "installed_modules": installed_modules,
+            "status_health": status_payload["health"],
+            "doctor_health": doctor_payload["health"],
+            "warnings": _dedupe([*status_payload["warnings"], *doctor_payload["warnings"]]),
+            "needs_review": _dedupe([*status_payload["needs_review"], *doctor_payload["needs_review"]]),
+            "stale_generated_surfaces": _dedupe(
+                [*status_payload["stale_generated_surfaces"], *doctor_payload["stale_generated_surfaces"]]
+            ),
+        }
+    return {
+        "target": target_root.as_posix(),
+        "canonical_doc": defaults["canonical_doc"],
+        "command": defaults["command"],
+        "rule": defaults["rule"],
+        "default_routes": defaults["default_routes"],
+        "current": current,
+    }
+
+
+def _emit_ownership(*, format_name: str, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> None:
+    payload = _ownership_payload(target_root=target_root, descriptors=descriptors)
+    if format_name == "json":
+        print(json.dumps(serialise_value(payload), indent=2))
+        return
+    print(f"Target: {payload['target']}")
+    print(f"Rule: {payload['rule']}")
+    print(f"Doc: {payload['canonical_doc']}")
+    print(f"Ledger: {payload['ledger_path']}")
+    print("Authority surfaces:")
+    for entry in payload["authority_surfaces"]:
+        print(
+            f"- {entry['concern']}: {entry['surface']} "
+            f"({entry['owner']}, {entry['ownership']}, authority={entry['authority']})"
+        )
+    if payload["warnings"]:
+        print("Warnings:")
+        for warning in payload["warnings"]:
+            print(f"- {warning}")
+
+
+def _ownership_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> dict[str, Any]:
+    defaults = _defaults_payload()["ownership_mapping"]
+    ledger_path = target_root / defaults["ledger"]
+    warnings: list[str] = []
+    ownership_classes: dict[str, Any] = {}
+    module_roots: list[dict[str, Any]] = []
+    managed_surfaces: list[dict[str, Any]] = []
+    fences: list[dict[str, Any]] = []
+    authority_surfaces: list[dict[str, Any]] = []
+
+    if not ledger_path.exists():
+        warnings.append(f"{defaults['ledger']}: ownership ledger missing")
+    else:
+        payload = tomllib.loads(ledger_path.read_text(encoding="utf-8"))
+        ownership_classes = {
+            key: value
+            for key, value in (payload.get("ownership_classes") or {}).items()
+            if isinstance(value, dict)
+        }
+        module_roots = [
+            entry for entry in (payload.get("module_roots") or []) if isinstance(entry, dict)
+        ]
+        managed_surfaces = [
+            entry for entry in (payload.get("managed_surfaces") or []) if isinstance(entry, dict)
+        ]
+        fences = [entry for entry in (payload.get("fences") or []) if isinstance(entry, dict)]
+        authority_surfaces = [
+            entry for entry in (payload.get("authority_surfaces") or []) if isinstance(entry, dict)
+        ]
+        if not authority_surfaces:
+            warnings.append(f"{defaults['ledger']}: authority_surfaces entries missing")
+
+    installed_modules = [
+        module_name
+        for module_name in _ordered_module_names(descriptors)
+        if descriptors[module_name].detector(target_root)
+    ]
+    return {
+        "target": target_root.as_posix(),
+        "canonical_doc": defaults["canonical_doc"],
+        "command": defaults["command"],
+        "rule": defaults["rule"],
+        "ledger_path": defaults["ledger"],
+        "installed_modules": installed_modules,
+        "ownership_classes": ownership_classes,
+        "module_roots": module_roots,
+        "managed_surfaces": managed_surfaces,
+        "fences": fences,
+        "authority_surfaces": authority_surfaces,
+        "warnings": warnings,
+    }
 
 
 def _module_update_policy_payload(*, config: WorkspaceConfig, target_root: Path | None) -> list[dict[str, Any]]:

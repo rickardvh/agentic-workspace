@@ -32,6 +32,8 @@ Use:
 ```bash
 agentic-workspace defaults --format json
 agentic-workspace config --target ./repo --format json
+agentic-workspace proof --target ./repo --format json
+agentic-workspace ownership --target ./repo --format json
 ```
 
 That surface is the queryable contract for:
@@ -44,11 +46,15 @@ That surface is the queryable contract for:
 - delegated judgment boundaries
 - skill discovery
 - validation
+- proof surfaces
+- ownership mapping
 - combined-install operation
 - repo-owned lifecycle defaults and update intent
 
 Use `docs/delegated-judgment-contract.md` when the question is not which command to run, but what the human should specify, what the agent may decide locally, and what should force promotion or escalation.
 Use `docs/environment-recovery-contract.md` when the question is how to recover cheaply from repo-state ambiguity, lifecycle warnings, or interrupted bootstrap/maintenance work.
+Use `docs/proof-surfaces-contract.md` when the question is which proof lane answers the current trust question and what the current proof state already says.
+Use `docs/ownership-authority-contract.md` when the question is which surface owns a concern and which checked-in contract is authoritative.
 
 ## Secondary Paths
 

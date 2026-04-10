@@ -104,6 +104,12 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["lifecycle"]["canonical_external_agent_handoff"] == "llms.txt"
     assert payload["lifecycle"]["canonical_bootstrap_next_action"] == ".agentic-workspace/bootstrap-handoff.md"
     assert payload["validation"]["default_routes"]["planning_package"] == "cd packages/planning && uv run pytest tests/test_installer.py"
+    assert payload["proof_surfaces"]["canonical_doc"] == "docs/proof-surfaces-contract.md"
+    assert payload["proof_surfaces"]["command"] == "agentic-workspace proof --target ./repo --format json"
+    assert payload["proof_surfaces"]["default_routes"]["workspace_proof"] == "agentic-workspace proof --target ./repo --format json"
+    assert payload["ownership_mapping"]["canonical_doc"] == "docs/ownership-authority-contract.md"
+    assert payload["ownership_mapping"]["command"] == "agentic-workspace ownership --target ./repo --format json"
+    assert payload["ownership_mapping"]["ledger"] == ".agentic-workspace/OWNERSHIP.toml"
     assert payload["combined_install"]["primary"] == "agentic-workspace init --target ./repo --preset full"
     assert payload["recovery"]["canonical_doc"] == "docs/environment-recovery-contract.md"
     assert payload["recovery"]["rule"] == "Inspect state first, refresh contract second, re-run the narrowest proving lane third."
@@ -131,6 +137,10 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Startup:" in text
     assert "Lifecycle:" in text
     assert "primary entrypoint: agentic-workspace" in text
+    assert "Proof surfaces:" in text
+    assert "docs/proof-surfaces-contract.md" in text
+    assert "Ownership mapping:" in text
+    assert "docs/ownership-authority-contract.md" in text
     assert "Combined install:" in text
     assert "Recovery:" in text
     assert "docs/environment-recovery-contract.md" in text
@@ -150,6 +160,83 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["workspace"]["default_preset"] == "full"
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
+
+
+def test_proof_command_reports_routes_and_current_health(tmp_path: Path, monkeypatch, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    (tmp_path / "planning").mkdir()
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+    monkeypatch.setattr(
+        cli,
+        "_run_lifecycle_command",
+        lambda **kwargs: {
+            "health": "healthy",
+            "warnings": [],
+            "needs_review": [],
+            "stale_generated_surfaces": [],
+        },
+    )
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["canonical_doc"] == "docs/proof-surfaces-contract.md"
+    assert payload["command"] == "agentic-workspace proof --target ./repo --format json"
+    assert payload["default_routes"]["planning_surfaces"] == "uv run python scripts/check/check_planning_surfaces.py"
+    assert payload["current"]["installed_modules"] == ["planning"]
+    assert payload["current"]["status_health"] == "healthy"
+    assert payload["current"]["doctor_health"] == "healthy"
+    assert payload["current"]["warnings"] == []
+    assert payload["current"]["needs_review"] == []
+    assert calls == []
+
+
+def test_ownership_command_reports_authority_map(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace" / "OWNERSHIP.toml").write_text(
+        'schema_version = 1\n\n'
+        '[ownership_classes.repo_owned]\n'
+        'summary = "repo-owned"\n\n'
+        '[[module_roots]]\n'
+        'module = "planning"\n'
+        'path = ".agentic-workspace/planning/"\n'
+        'ownership = "module_managed"\n'
+        'uninstall_policy = "remove-managed-files-only"\n\n'
+        '[[managed_surfaces]]\n'
+        'module = "workspace"\n'
+        'path = ".agentic-workspace/OWNERSHIP.toml"\n'
+        'kind = "ownership-ledger"\n'
+        'ownership = "module_managed"\n'
+        'uninstall_policy = "remove-if-owned"\n\n'
+        '[[fences]]\n'
+        'name = "workspace-workflow-pointer"\n'
+        'module = "workspace"\n'
+        'file = "AGENTS.md"\n'
+        'start = "<!-- agentic-workspace:workflow:start -->"\n'
+        'end = "<!-- agentic-workspace:workflow:end -->"\n'
+        'ownership = "managed_fence"\n'
+        'uninstall_policy = "remove-fence-only"\n\n'
+        '[[authority_surfaces]]\n'
+        'concern = "active-execution-state"\n'
+        'surface = "TODO.md"\n'
+        'owner = "repo"\n'
+        'ownership = "repo_owned"\n'
+        'authority = "primary"\n'
+        'summary = "current work"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, []))
+
+    assert cli.main(["ownership", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["canonical_doc"] == "docs/ownership-authority-contract.md"
+    assert payload["ledger_path"] == ".agentic-workspace/OWNERSHIP.toml"
+    assert payload["authority_surfaces"][0]["concern"] == "active-execution-state"
+    assert payload["authority_surfaces"][0]["surface"] == "TODO.md"
+    assert payload["warnings"] == []
 
 
 def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> None:
