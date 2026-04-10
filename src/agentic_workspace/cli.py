@@ -3,8 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import tomllib
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -24,9 +26,14 @@ WORKSPACE_PAYLOAD_FILES = (
     Path(".agentic-workspace/WORKFLOW.md"),
     Path(".agentic-workspace/OWNERSHIP.toml"),
 )
+WORKSPACE_CONFIG_PATH = Path("agentic-workspace.toml")
 WORKSPACE_EXTERNAL_AGENT_PATH = Path("llms.txt")
 WORKSPACE_BOOTSTRAP_HANDOFF_PATH = Path(".agentic-workspace/bootstrap-handoff.md")
 WORKSPACE_AGENTS_PATH = Path("AGENTS.md")
+MODULE_UPGRADE_SOURCE_PATHS = {
+    "planning": Path(".agentic-workspace/planning/UPGRADE-SOURCE.toml"),
+    "memory": Path(".agentic-workspace/memory/UPGRADE-SOURCE.toml"),
+}
 WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
 WORKSPACE_POINTER_BLOCK = (
@@ -147,6 +154,26 @@ class SkillRecommendation:
     reasons: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class ModuleUpdatePolicy:
+    module: str
+    source_type: str
+    source_ref: str
+    source_label: str
+    recommended_upgrade_after_days: int
+    source: str
+
+
+@dataclass(frozen=True)
+class WorkspaceConfig:
+    target_root: Path | None
+    path: Path | None
+    exists: bool
+    schema_version: int
+    default_preset: str
+    update_modules: dict[str, ModuleUpdatePolicy]
+
+
 class ModuleSelectionError(ValueError):
     """Raised when the orchestrator cannot resolve a safe module set."""
 
@@ -172,6 +199,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
     )
     _add_format_argument(defaults_parser)
+
+    config_parser = subparsers.add_parser(
+        "config",
+        help="Show the resolved repo-owned workspace config layered onto product defaults.",
+    )
+    config_parser.add_argument("--target", help="Optional repository path used to resolve repo-owned config.")
+    _add_format_argument(config_parser)
 
     skills_parser = subparsers.add_parser(
         "skills",
@@ -244,6 +278,12 @@ def main(argv: list[str] | None = None) -> int:
         _emit_defaults(format_name=args.format)
         return 0
 
+    if args.command == "config":
+        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+        _validate_target_root(command_name="config", target_root=target_root)
+        _emit_config(format_name=args.format, config=_load_workspace_config(target_root=target_root, descriptors=descriptors))
+        return 0
+
     if args.command == "skills":
         target_root = _resolve_target_root(args.target) if args.target else None
         if target_root is not None:
@@ -254,12 +294,14 @@ def main(argv: list[str] | None = None) -> int:
     try:
         target_root = _resolve_target_root(args.target)
         _validate_target_root(command_name=args.command, target_root=target_root)
+        config = _load_workspace_config(target_root=target_root, descriptors=descriptors)
         selected_modules, resolved_preset = _selected_modules(
             command_name=args.command,
             preset_name=args.preset,
             module_arg=args.modules,
             target_root=target_root,
             descriptors=descriptors,
+            config=config,
         )
         _validate_selected_module_contract(selected_modules=selected_modules, descriptors=descriptors)
     except (ModuleSelectionError, WorkspaceUsageError) as exc:
@@ -275,6 +317,7 @@ def main(argv: list[str] | None = None) -> int:
             force_adopt=args.adopt,
             print_prompt=args.print_prompt,
             write_prompt=args.write_prompt,
+            config=config,
         )
         _emit_payload(payload=payload, format_name=args.format)
         return 0
@@ -287,6 +330,7 @@ def main(argv: list[str] | None = None) -> int:
             resolved_preset=resolved_preset,
             descriptors=descriptors,
             force_adopt=bool(getattr(args, "adopt", False)),
+            config=config,
         )
         _emit_payload(payload=payload, format_name=args.format)
         return 0
@@ -298,6 +342,7 @@ def main(argv: list[str] | None = None) -> int:
         resolved_preset=resolved_preset,
         descriptors=descriptors,
         dry_run=bool(getattr(args, "dry_run", False)),
+        config=config,
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
@@ -668,6 +713,7 @@ def _workspace_status_report(
     selected_modules: list[str],
     descriptors: dict[str, ModuleDescriptor],
     command_name: str,
+    config: WorkspaceConfig,
 ) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
@@ -776,6 +822,17 @@ def _workspace_status_report(
             }
         )
 
+    policy_actions, policy_warnings = _sync_update_policy_actions(
+        target_root=target_root,
+        selected_modules=selected_modules,
+        dry_run=False,
+        command_name=command_name,
+        config=config,
+        apply=False,
+    )
+    actions.extend(policy_actions)
+    warnings.extend(policy_warnings)
+
     return _workspace_report(
         target_root=target_root,
         message=f"{command_name.title()} report",
@@ -852,6 +909,7 @@ def _workspace_init_or_upgrade_report(
     dry_run: bool,
     inspection_mode: str,
     command_name: str,
+    config: WorkspaceConfig,
 ) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
@@ -983,6 +1041,17 @@ def _workspace_init_or_upgrade_report(
             }
         )
 
+    policy_actions, policy_warnings = _sync_update_policy_actions(
+        target_root=target_root,
+        selected_modules=selected_modules,
+        dry_run=dry_run,
+        command_name=command_name,
+        config=config,
+        apply=True,
+    )
+    actions.extend(policy_actions)
+    warnings.extend(policy_warnings)
+
     return _workspace_report(
         target_root=target_root,
         message=f"{command_name.title()} report",
@@ -1043,6 +1112,7 @@ def _selected_modules(
     module_arg: str | None,
     target_root: Path,
     descriptors: dict[str, ModuleDescriptor],
+    config: WorkspaceConfig,
 ) -> tuple[list[str], str | None]:
     ordered_module_names = _ordered_module_names(descriptors)
     preset_modules = _preset_modules(descriptors)
@@ -1060,7 +1130,7 @@ def _selected_modules(
         return [module_name for module_name in ordered_module_names if module_name in requested], None
 
     if command_name in {"init", "prompt"}:
-        return preset_modules["full"], "full"
+        return preset_modules[config.default_preset], config.default_preset
 
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     detected = [entry.name for entry in registry if entry.installed]
@@ -1138,6 +1208,7 @@ def _run_init(
     force_adopt: bool,
     print_prompt: bool,
     write_prompt: str | None,
+    config: WorkspaceConfig,
 ) -> dict[str, Any]:
     inspection = _inspect_repo_state(
         target_root=target_root,
@@ -1165,6 +1236,7 @@ def _run_init(
             dry_run=dry_run,
             inspection_mode=inspection.mode,
             command_name="init",
+            config=config,
         )
     )
     summary = _build_init_summary(
@@ -1184,6 +1256,7 @@ def _run_init(
     payload: dict[str, Any] = summary | {
         "dry_run": dry_run,
         "module_reports": reports,
+        "config": _config_payload(config=config),
     }
     should_include_prompt = print_prompt or prompt_path is not None or summary["prompt_requirement"] != "none"
     if should_include_prompt:
@@ -1382,6 +1455,7 @@ def _run_lifecycle_command(
     resolved_preset: str | None,
     descriptors: dict[str, ModuleDescriptor],
     dry_run: bool,
+    config: WorkspaceConfig,
 ) -> dict[str, Any]:
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     reports = [
@@ -1402,6 +1476,7 @@ def _run_lifecycle_command(
                 selected_modules=selected_modules,
                 descriptors=descriptors,
                 command_name=command_name,
+                config=config,
             )
         )
     elif command_name == "upgrade":
@@ -1413,6 +1488,7 @@ def _run_lifecycle_command(
                 dry_run=dry_run,
                 inspection_mode="upgrade",
                 command_name=command_name,
+                config=config,
             )
         )
     elif command_name == "uninstall":
@@ -1464,6 +1540,7 @@ def _run_lifecycle_command(
         ],
         "next_steps": _lifecycle_next_steps(command_name=command_name, target_root=target_root, warnings=warnings),
         "reports": reports,
+        "config": _config_payload(config=config),
     }
 
 
@@ -1489,6 +1566,7 @@ def _run_prompt_command(
     resolved_preset: str | None,
     descriptors: dict[str, ModuleDescriptor],
     force_adopt: bool,
+    config: WorkspaceConfig,
 ) -> dict[str, Any]:
     if prompt_command == "init":
         payload = _run_init(
@@ -1500,6 +1578,7 @@ def _run_prompt_command(
             force_adopt=force_adopt,
             print_prompt=True,
             write_prompt=None,
+            config=config,
         )
         return {
             **payload,
@@ -1514,6 +1593,7 @@ def _run_prompt_command(
         resolved_preset=resolved_preset,
         descriptors=descriptors,
         dry_run=True,
+        config=config,
     )
     payload["command"] = "prompt"
     payload["prompt_command"] = prompt_command
@@ -1681,6 +1761,16 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
         "Selected modules:",
     ]
     lines.extend(f"- {module_name}" for module_name in summary["modules"])
+    config_payload = summary.get("config")
+    if isinstance(config_payload, dict) and config_payload.get("exists"):
+        lines.extend(
+            [
+                "",
+                "Repo-owned config:",
+                f"- {config_payload['config_path']}",
+                "- Treat agentic-workspace.toml as the repo-owned source of lifecycle defaults and update intent.",
+            ]
+        )
     lines.extend(["", "The CLI already:"])
     for path in summary["created"]:
         lines.append(f"- created {path}")
@@ -1733,6 +1823,24 @@ def _build_lifecycle_handoff_prompt(payload: dict[str, Any]) -> str:
             ),
         ]
     )
+    config_payload = payload.get("config")
+    if isinstance(config_payload, dict) and config_payload.get("exists"):
+        lines.extend(
+            [
+                "",
+                f"Respect the repo-owned config at {config_payload['config_path']}.",
+                "Treat that file as the source of lifecycle defaults and module update intent.",
+            ]
+        )
+        selected_policy_lines = []
+        for module_policy in config_payload.get("update", {}).get("modules", []):
+            if module_policy.get("module") in payload["modules"]:
+                selected_policy_lines.append(
+                    f"- {module_policy['module']}: {module_policy['source_type']} {module_policy['source_ref']}"
+                )
+        if selected_policy_lines:
+            lines.extend(["Configured update sources:"])
+            lines.extend(selected_policy_lines)
     review_items = []
     for heading in ("updated_managed", "preserved_existing", "needs_review", "warnings"):
         review_items.extend(payload.get(heading, []))
@@ -1822,6 +1930,22 @@ def _defaults_payload() -> dict[str, Any]:
                 "Package CLIs are for package-local maintainer work, advanced debugging, or explicit module-level control.",
             ],
         },
+        "config": {
+            "path": "agentic-workspace.toml",
+            "command": "agentic-workspace config --target ./repo --format json",
+            "supported_fields": [
+                "workspace.default_preset",
+                "update.modules.<module>.source_type",
+                "update.modules.<module>.source_ref",
+                "update.modules.<module>.source_label",
+                "update.modules.<module>.recommended_upgrade_after_days",
+            ],
+            "rules": [
+                "Missing fields use product defaults.",
+                "Normal update execution stays behind agentic-workspace.",
+                "Repo config may change module update intent without creating separate public module upgrade entrypoints.",
+            ],
+        },
         "skill_discovery": {
             "primary": [
                 "agentic-workspace skills --target ./repo --format json",
@@ -1896,6 +2020,9 @@ def _emit_defaults(*, format_name: str) -> None:
     print(f"- install: {payload['lifecycle']['default_install_command']}")
     print(f"- external-agent handoff: {payload['lifecycle']['canonical_external_agent_handoff']}")
     print(f"- bootstrap next action: {payload['lifecycle']['canonical_bootstrap_next_action']}")
+    print("Config:")
+    print(f"- path: {payload['config']['path']}")
+    print(f"- inspect: {payload['config']['command']}")
     print("Skill discovery:")
     for step in payload["skill_discovery"]["primary"]:
         print(f"- {step}")
@@ -1908,6 +2035,310 @@ def _emit_defaults(*, format_name: str) -> None:
     print("Delegated judgment:")
     print(f"- doc: {payload['delegated_judgment']['canonical_doc']}")
     print(f"- rule: {payload['delegated_judgment']['rule']}")
+
+
+def _default_module_update_policies() -> dict[str, ModuleUpdatePolicy]:
+    from repo_memory_bootstrap._installer_output import resolve_upgrade_source as resolve_memory_upgrade_source
+    from repo_planning_bootstrap._source import resolve_upgrade_source as resolve_planning_upgrade_source
+
+    missing_target = Path(".agentic-workspace-workspace-defaults-missing")
+    planning_default = resolve_planning_upgrade_source(missing_target)
+    memory_default = resolve_memory_upgrade_source(missing_target)
+    return {
+        "planning": ModuleUpdatePolicy(
+            module="planning",
+            source_type=planning_default.source_type,
+            source_ref=planning_default.source_ref,
+            source_label=planning_default.source_label,
+            recommended_upgrade_after_days=planning_default.recommended_upgrade_after_days,
+            source="product-default",
+        ),
+        "memory": ModuleUpdatePolicy(
+            module="memory",
+            source_type=str(memory_default["source_type"]),
+            source_ref=str(memory_default["source_ref"]),
+            source_label=str(memory_default["source_label"]),
+            recommended_upgrade_after_days=int(memory_default["recommended_upgrade_after_days"]),
+            source="product-default",
+        ),
+    }
+
+
+def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> WorkspaceConfig:
+    defaults = _default_module_update_policies()
+    config_path = target_root / WORKSPACE_CONFIG_PATH
+    default_preset = "full"
+    if not config_path.exists():
+        return WorkspaceConfig(
+            target_root=target_root,
+            path=config_path,
+            exists=False,
+            schema_version=1,
+            default_preset=default_preset,
+            update_modules=defaults,
+        )
+
+    try:
+        payload = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as exc:
+        raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} is invalid TOML: {exc}.") from exc
+
+    schema_version = payload.get("schema_version")
+    if schema_version != 1:
+        raise WorkspaceUsageError(
+            f"{WORKSPACE_CONFIG_PATH.as_posix()} must set schema_version = 1 for the current workspace config contract."
+        )
+
+    raw_workspace = payload.get("workspace", {})
+    if raw_workspace is None:
+        raw_workspace = {}
+    if not isinstance(raw_workspace, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} [workspace] section must be a table.")
+
+    configured_preset = str(raw_workspace.get("default_preset", default_preset)).strip() or default_preset
+    valid_presets = set(_preset_modules(descriptors))
+    if configured_preset not in valid_presets:
+        supported = ", ".join(sorted(valid_presets))
+        raise WorkspaceUsageError(
+            f"{WORKSPACE_CONFIG_PATH.as_posix()} workspace.default_preset must be one of: {supported}."
+        )
+
+    update_modules = dict(defaults)
+    raw_update = payload.get("update", {})
+    if raw_update is None:
+        raw_update = {}
+    if not isinstance(raw_update, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} [update] section must be a table.")
+    raw_module_updates = raw_update.get("modules", {})
+    if raw_module_updates is None:
+        raw_module_updates = {}
+    if not isinstance(raw_module_updates, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} [update.modules] section must be a table.")
+
+    unknown_modules = [module_name for module_name in raw_module_updates if module_name not in defaults]
+    if unknown_modules:
+        supported = ", ".join(sorted(defaults))
+        unknown = ", ".join(sorted(unknown_modules))
+        raise WorkspaceUsageError(
+            f"{WORKSPACE_CONFIG_PATH.as_posix()} update.modules contains unknown module(s): {unknown}. Supported modules: {supported}."
+        )
+
+    for module_name, module_payload in raw_module_updates.items():
+        if not isinstance(module_payload, dict):
+            raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} [update.modules.{module_name}] must be a table.")
+        default_policy = defaults[module_name]
+        source_type = str(module_payload.get("source_type", default_policy.source_type)).strip() or default_policy.source_type
+        if source_type not in {"git", "local"}:
+            raise WorkspaceUsageError(
+                f"{WORKSPACE_CONFIG_PATH.as_posix()} update.modules.{module_name}.source_type must be `git` or `local`."
+            )
+        source_ref = str(module_payload.get("source_ref", default_policy.source_ref)).strip()
+        if not source_ref:
+            raise WorkspaceUsageError(
+                f"{WORKSPACE_CONFIG_PATH.as_posix()} update.modules.{module_name}.source_ref must be a non-empty string."
+            )
+        source_label = str(module_payload.get("source_label", default_policy.source_label)).strip() or default_policy.source_label
+        recommended_upgrade_after_days = module_payload.get(
+            "recommended_upgrade_after_days", default_policy.recommended_upgrade_after_days
+        )
+        if not isinstance(recommended_upgrade_after_days, int):
+            raise WorkspaceUsageError(
+                f"{WORKSPACE_CONFIG_PATH.as_posix()} update.modules.{module_name}.recommended_upgrade_after_days must be an integer."
+            )
+        update_modules[module_name] = ModuleUpdatePolicy(
+            module=module_name,
+            source_type=source_type,
+            source_ref=source_ref,
+            source_label=source_label,
+            recommended_upgrade_after_days=recommended_upgrade_after_days,
+            source="repo-config",
+        )
+
+    return WorkspaceConfig(
+        target_root=target_root,
+        path=config_path,
+        exists=True,
+        schema_version=1,
+        default_preset=configured_preset,
+        update_modules=update_modules,
+    )
+
+
+def _module_update_policy_payload(*, config: WorkspaceConfig, target_root: Path | None) -> list[dict[str, Any]]:
+    payload: list[dict[str, Any]] = []
+    for module_name in sorted(config.update_modules):
+        policy = config.update_modules[module_name]
+        metadata_relative = MODULE_UPGRADE_SOURCE_PATHS[module_name]
+        sync_status = "unknown"
+        current_source: dict[str, Any] | None = None
+        if target_root is not None:
+            current_source, sync_status = _current_module_upgrade_source_state(target_root=target_root, module_name=module_name, policy=policy)
+        payload.append(
+            {
+                "module": module_name,
+                "source_type": policy.source_type,
+                "source_ref": policy.source_ref,
+                "source_label": policy.source_label,
+                "recommended_upgrade_after_days": policy.recommended_upgrade_after_days,
+                "source": policy.source,
+                "metadata_path": metadata_relative.as_posix(),
+                "sync_status": sync_status,
+                "current_source": current_source,
+            }
+        )
+    return payload
+
+
+def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    return {
+        "target": config.target_root.as_posix() if config.target_root is not None else None,
+        "config_path": config.path.as_posix() if config.path is not None else WORKSPACE_CONFIG_PATH.as_posix(),
+        "exists": config.exists,
+        "schema_version": config.schema_version,
+        "workspace": {"default_preset": config.default_preset},
+        "update": {
+            "wrapper_rule": "normal update execution stays behind agentic-workspace",
+            "modules": _module_update_policy_payload(config=config, target_root=config.target_root),
+        },
+    }
+
+
+def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
+    payload = _config_payload(config=config)
+    if format_name == "json":
+        print(json.dumps(serialise_value(payload), indent=2))
+        return
+    print(f"Target: {payload['target']}")
+    print(f"Config path: {payload['config_path']}")
+    print(f"Exists: {payload['exists']}")
+    print(f"Default preset: {payload['workspace']['default_preset']}")
+    print(f"Wrapper rule: {payload['update']['wrapper_rule']}")
+    print("Update modules:")
+    for module in payload["update"]["modules"]:
+        print(f"- {module['module']}: {module['source_type']} {module['source_ref']}")
+        print(f"  label: {module['source_label']}")
+        print(f"  metadata: {module['metadata_path']} ({module['sync_status']})")
+
+
+def _current_module_upgrade_source_state(
+    *, target_root: Path, module_name: str, policy: ModuleUpdatePolicy
+) -> tuple[dict[str, Any] | None, str]:
+    metadata_path = target_root / MODULE_UPGRADE_SOURCE_PATHS[module_name]
+    if module_name == "planning":
+        from repo_planning_bootstrap._source import resolve_upgrade_source as resolve_planning_upgrade_source
+
+        current = resolve_planning_upgrade_source(target_root)
+        current_payload = {
+            "source_type": current.source_type,
+            "source_ref": current.source_ref,
+            "source_label": current.source_label,
+            "recommended_upgrade_after_days": current.recommended_upgrade_after_days,
+            "recorded_at": current.recorded_at,
+            "path": current.path.as_posix() if current.path is not None else None,
+        }
+    else:
+        from repo_memory_bootstrap._installer_output import resolve_upgrade_source as resolve_memory_upgrade_source
+
+        current = resolve_memory_upgrade_source(target_root)
+        current_payload = {
+            "source_type": current["source_type"],
+            "source_ref": current["source_ref"],
+            "source_label": current["source_label"],
+            "recommended_upgrade_after_days": current["recommended_upgrade_after_days"],
+            "recorded_at": current.get("recorded_at"),
+            "path": current["path"].as_posix() if current.get("path") is not None else None,
+        }
+    if not metadata_path.exists():
+        return current_payload, "missing"
+    if (
+        current_payload["source_type"] == policy.source_type
+        and current_payload["source_ref"] == policy.source_ref
+        and current_payload["source_label"] == policy.source_label
+        and current_payload["recommended_upgrade_after_days"] == policy.recommended_upgrade_after_days
+    ):
+        return current_payload, "current"
+    return current_payload, "drift"
+
+
+def _render_upgrade_source_text(*, policy: ModuleUpdatePolicy, recorded_at: str) -> str:
+    return (
+        f'source_type = "{policy.source_type}"\n'
+        f'source_ref = "{policy.source_ref}"\n'
+        f'source_label = "{policy.source_label}"\n'
+        f'recorded_at = "{recorded_at}"\n'
+        f"recommended_upgrade_after_days = {policy.recommended_upgrade_after_days}\n"
+    )
+
+
+def _sync_update_policy_actions(
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    dry_run: bool,
+    command_name: str,
+    config: WorkspaceConfig,
+    apply: bool,
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    actions: list[dict[str, str]] = []
+    warnings: list[dict[str, str]] = []
+    for module_name in selected_modules:
+        policy = config.update_modules[module_name]
+        relative = MODULE_UPGRADE_SOURCE_PATHS[module_name]
+        destination = target_root / relative
+        current_payload, sync_status = _current_module_upgrade_source_state(
+            target_root=target_root,
+            module_name=module_name,
+            policy=policy,
+        )
+        if sync_status == "current":
+            actions.append(
+                {
+                    "kind": "current",
+                    "path": relative.as_posix(),
+                    "detail": "module upgrade source metadata already matches the resolved workspace policy",
+                }
+            )
+            continue
+
+        if not apply and sync_status == "missing" and not config.exists:
+            continue
+
+        detail = "sync module upgrade source metadata from the resolved workspace policy"
+        if not apply:
+            actions.append(
+                {
+                    "kind": "warning" if command_name in {"status", "doctor"} else "manual review",
+                    "path": relative.as_posix(),
+                    "detail": "module upgrade source metadata differs from agentic-workspace.toml or the product default policy",
+                }
+            )
+            warnings.append(
+                {
+                    "path": relative.as_posix(),
+                    "message": "module upgrade source metadata differs from agentic-workspace.toml or the product default policy",
+                }
+            )
+            continue
+
+        recorded_at = current_payload.get("recorded_at") if current_payload else None
+        if sync_status != "current" or not recorded_at:
+            recorded_at = date.today().isoformat()
+        rendered = _render_upgrade_source_text(policy=policy, recorded_at=str(recorded_at))
+        existing = destination.read_text(encoding="utf-8") if destination.exists() else None
+        if existing == rendered:
+            actions.append({"kind": "current", "path": relative.as_posix(), "detail": detail})
+            continue
+        if not dry_run:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(rendered, encoding="utf-8")
+        actions.append(
+            {
+                "kind": _write_action_kind(dry_run=dry_run, existing=existing),
+                "path": relative.as_posix(),
+                "detail": detail,
+            }
+        )
+    return actions, warnings
 
 
 def _skill_catalog_sources() -> tuple[SkillCatalogSource, ...]:
@@ -2268,6 +2699,8 @@ def _emit_init_text(payload: dict[str, Any]) -> None:
     print(f"Target: {payload['target']}")
     print(f"Command: init{' (dry-run)' if payload.get('dry_run') else ''}")
     print(f"Modules: {', '.join(payload['modules'])}")
+    if isinstance(payload.get("config"), dict):
+        print(f"Config: {payload['config']['config_path']}")
     print(f"Mode: {payload['mode']}")
     print(f"Prompt requirement: {payload['prompt_requirement']}")
     _print_path_list("Detected surfaces", payload["detected_surfaces"])
@@ -2291,6 +2724,8 @@ def _emit_lifecycle_text(payload: dict[str, Any]) -> None:
     print(f"Target: {payload['target']}")
     print(f"Command: {payload['command']}{' (dry-run)' if payload.get('dry_run') else ''}")
     print(f"Modules: {', '.join(payload['modules'])}")
+    if isinstance(payload.get("config"), dict):
+        print(f"Config: {payload['config']['config_path']}")
     print(f"Health: {payload['health']}")
     _print_path_list("Created", payload["created"])
     _print_path_list("Updated managed", payload["updated_managed"])
@@ -2312,6 +2747,8 @@ def _emit_prompt_text(payload: dict[str, Any]) -> None:
     print(f"Target: {payload['target']}")
     print(f"Command: prompt {payload['prompt_command']}")
     print(f"Modules: {', '.join(payload['modules'])}")
+    if isinstance(payload.get("config"), dict):
+        print(f"Config: {payload['config']['config_path']}")
     if payload.get("prompt_requirement"):
         print(f"Prompt requirement: {payload['prompt_requirement']}")
     _print_path_list("Needs review", payload.get("needs_review", []))

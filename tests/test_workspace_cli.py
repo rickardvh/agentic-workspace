@@ -110,6 +110,9 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "requested outcome" in payload["delegated_judgment"]["human_sets"]
     assert "bounded decomposition" in payload["delegated_judgment"]["agent_may_decide"]
     assert "the better-looking solution changes the requested outcome" in payload["delegated_judgment"]["escalate_when"]
+    assert payload["config"]["path"] == "agentic-workspace.toml"
+    assert payload["config"]["command"] == "agentic-workspace config --target ./repo --format json"
+    assert "workspace.default_preset" in payload["config"]["supported_fields"]
     assert any("ROADMAP.md" in step for step in payload["startup"]["secondary"])
     assert any("skills --target ./repo --task" in step for step in payload["skill_discovery"]["primary"])
 
@@ -122,9 +125,50 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Lifecycle:" in text
     assert "primary entrypoint: agentic-workspace" in text
     assert "Combined install:" in text
+    assert "Config:" in text
     assert "Delegated judgment:" in text
     assert "docs/delegated-judgment-contract.md" in text
     assert "make maintainer-surfaces" in text
+
+
+def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["exists"] is False
+    assert payload["workspace"]["default_preset"] == "full"
+    assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
+    assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
+
+
+def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "agentic-workspace.toml").write_text(
+        'schema_version = 1\n\n'
+        '[workspace]\n'
+        'default_preset = "planning"\n\n'
+        '[update.modules.planning]\n'
+        'source_type = "git"\n'
+        'source_ref = "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"\n'
+        'source_label = "planning feature ref"\n'
+        'recommended_upgrade_after_days = 14\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["exists"] is True
+    assert payload["workspace"]["default_preset"] == "planning"
+    planning_policy = next(item for item in payload["update"]["modules"] if item["module"] == "planning")
+    assert planning_policy["source"] == "repo-config"
+    assert planning_policy["source_ref"] == "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"
+    assert planning_policy["source_label"] == "planning feature ref"
+    assert planning_policy["recommended_upgrade_after_days"] == 14
 
 
 def test_modules_command_reports_installation_state_for_target(monkeypatch, tmp_path: Path, capsys) -> None:
@@ -319,6 +363,25 @@ def test_init_dispatches_to_full_preset_by_default(monkeypatch, tmp_path: Path, 
     assert calls == [
         ("planning", "install", {"target": str(tmp_path), "dry_run": True, "force": False}),
         ("memory", "install", {"target": str(tmp_path), "dry_run": True, "force": False}),
+    ]
+
+
+def test_init_uses_default_preset_from_repo_config(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    (tmp_path / "agentic-workspace.toml").write_text(
+        'schema_version = 1\n\n[workspace]\ndefault_preset = "planning"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["init", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["preset"] == "planning"
+    assert payload["modules"] == ["planning"]
+    assert calls == [
+        ("planning", "install", {"target": str(tmp_path), "dry_run": True, "force": False}),
     ]
 
 
@@ -794,6 +857,61 @@ def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, c
     assert payload["stale_generated_surfaces"] == ["tools/AGENT_QUICKSTART.md"]
 
 
+def test_upgrade_dry_run_syncs_module_update_source_metadata_from_repo_config(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--modules", "planning", "--target", str(target)]) == 0
+    capsys.readouterr()
+    (target / "agentic-workspace.toml").write_text(
+        'schema_version = 1\n\n'
+        '[workspace]\n'
+        'default_preset = "planning"\n\n'
+        '[update.modules.planning]\n'
+        'source_type = "git"\n'
+        'source_ref = "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"\n'
+        'source_label = "planning feature ref"\n'
+        'recommended_upgrade_after_days = 14\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["upgrade", "--modules", "planning", "--target", str(target), "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert ".agentic-workspace/planning/UPGRADE-SOURCE.toml" in payload["updated_managed"]
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    assert any(
+        action["path"] == ".agentic-workspace/planning/UPGRADE-SOURCE.toml"
+        and action["kind"] == "would update"
+        for action in workspace_report["actions"]
+    )
+
+
+def test_status_warns_when_module_update_source_metadata_drifts_from_repo_config(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--modules", "planning", "--target", str(target)]) == 0
+    capsys.readouterr()
+    (target / "agentic-workspace.toml").write_text(
+        'schema_version = 1\n\n'
+        '[workspace]\n'
+        'default_preset = "planning"\n\n'
+        '[update.modules.planning]\n'
+        'source_type = "git"\n'
+        'source_ref = "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"\n'
+        'source_label = "planning feature ref"\n'
+        'recommended_upgrade_after_days = 14\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["status", "--modules", "planning", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["health"] == "attention-needed"
+    assert any(".agentic-workspace/planning/UPGRADE-SOURCE.toml" in warning for warning in payload["warnings"])
+
+
 def test_adapt_action_supports_slotted_dataclass(tmp_path: Path) -> None:
     action = SlottedAction(kind="copied", path=tmp_path / "demo.txt", detail="ok")
 
@@ -878,6 +996,7 @@ def test_invoke_module_command_uses_descriptor_command_args(tmp_path: Path) -> N
 def test_selected_modules_uses_descriptor_owned_presets(tmp_path: Path) -> None:
     _init_git_repo(tmp_path)
     descriptors = _fake_descriptors(tmp_path, [])
+    config = cli._load_workspace_config(target_root=tmp_path, descriptors=descriptors)
 
     selected_modules, preset_name = cli._selected_modules(
         command_name="init",
@@ -885,6 +1004,7 @@ def test_selected_modules_uses_descriptor_owned_presets(tmp_path: Path) -> None:
         module_arg=None,
         target_root=tmp_path,
         descriptors=descriptors,
+        config=config,
     )
 
     assert preset_name == "full"
