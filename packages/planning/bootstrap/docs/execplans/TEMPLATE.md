@@ -32,6 +32,16 @@ If the larger intended outcome is still unfinished, point `Continuation surface`
 Use `no` / `none` only when this slice actually finishes the larger intended outcome.
 If required follow-on remains, record its checked-in owner and what should cause activation.
 
+## Delegated Judgment
+
+- Requested outcome:
+- Hard constraints:
+- Agent may decide locally:
+- Escalate when:
+
+Use `none` only when the slice is so local that delegated-judgment framing would add no value.
+Otherwise keep this section compact and specific so later contributors do not have to reconstruct the intended end state, allowed local latitude, or escalation triggers from chat residue.
+
 ## Active Milestone
 
 - Status:

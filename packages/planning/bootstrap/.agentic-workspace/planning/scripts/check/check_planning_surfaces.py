@@ -56,6 +56,7 @@ EXPECTED_EXECPLAN_SECTIONS = [
     "Non-Goals",
     "Intent Continuity",
     "Required Continuation",
+    "Delegated Judgment",
     "Active Milestone",
     "Immediate Next Action",
     "Blockers",
@@ -839,6 +840,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
     active_milestone_fields = _extract_kv_fields(active_milestone_section)
     intent_continuity_fields = _extract_kv_fields(_section_content(lines, "Intent Continuity"))
     required_continuation_fields = _extract_kv_fields(_section_content(lines, "Required Continuation"))
+    delegated_judgment_fields = _extract_kv_fields(_section_content(lines, "Delegated Judgment"))
     is_active_execplan = not has_only_non_active_status
     larger_intended_outcome = intent_continuity_fields.get("larger intended outcome", "").strip()
     completes_larger_outcome = intent_continuity_fields.get("this slice completes the larger intended outcome", "").strip().lower()
@@ -846,6 +848,10 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
     required_follow_on = required_continuation_fields.get("required follow-on for the larger intended outcome", "").strip().lower()
     required_owner_surface = required_continuation_fields.get("owner surface", "").strip()
     activation_trigger = required_continuation_fields.get("activation trigger", "").strip()
+    requested_outcome = delegated_judgment_fields.get("requested outcome", "").strip()
+    hard_constraints = delegated_judgment_fields.get("hard constraints", "").strip()
+    agent_may_decide = delegated_judgment_fields.get("agent may decide locally", "").strip()
+    escalate_when = delegated_judgment_fields.get("escalate when", "").strip()
 
     if not larger_intended_outcome:
         warnings.append(
@@ -934,6 +940,40 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 "Execplan marks the larger intended outcome complete but still records required follow-on.",
             )
         )
+
+    if is_active_execplan:
+        if not requested_outcome:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Active execplan is missing `Requested outcome` in Delegated Judgment.",
+                )
+            )
+        if not hard_constraints:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Active execplan is missing `Hard constraints` in Delegated Judgment.",
+                )
+            )
+        if not agent_may_decide:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Active execplan is missing `Agent may decide locally` in Delegated Judgment.",
+                )
+            )
+        if not escalate_when:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Active execplan is missing `Escalate when` in Delegated Judgment.",
+                )
+            )
 
     if is_active_execplan:
         ready_value = active_milestone_fields.get("ready", "").strip().lower()

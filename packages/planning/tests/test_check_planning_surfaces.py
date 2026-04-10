@@ -71,6 +71,13 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
 - Owner surface: none
 - Activation trigger: none
 
+## Delegated Judgment
+
+- Requested outcome: Land plan alpha end to end.
+- Hard constraints: Keep scope clear and local.
+- Agent may decide locally: Bounded decomposition and validation tightening.
+- Escalate when: The requested outcome, owned surface, or time horizon would change.
+
 ## Active Milestone
 
 - ID: plan-alpha
@@ -469,6 +476,27 @@ def test_execplan_requires_structured_required_follow_on_when_parent_intent_is_u
 
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "execplan_under_specified" in classes
+
+
+def test_execplan_requires_delegated_judgment_when_active(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_delegated_judgment")
+    plan = _minimal_execplan().replace(
+        "## Delegated Judgment\n\n"
+        "- Requested outcome: Land plan alpha end to end.\n"
+        "- Hard constraints: Keep scope clear and local.\n"
+        "- Agent may decide locally: Bounded decomposition and validation tightening.\n"
+        "- Escalate when: The requested outcome, owned surface, or time horizon would change.\n\n",
+        "",
+    )
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
+
+    messages = [warning.message for warning in mod.gather_planning_warnings(repo_root=tmp_path)]
+    assert any("Requested outcome" in message for message in messages)
+    assert any("Hard constraints" in message for message in messages)
+    assert any("Agent may decide locally" in message for message in messages)
+    assert any("Escalate when" in message for message in messages)
 
 
 def test_completed_execplan_left_active_warns_archive_drift(tmp_path: Path) -> None:

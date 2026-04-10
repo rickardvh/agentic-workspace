@@ -50,6 +50,7 @@ Each active plan should stay compact and include:
 - non-goals
 - intent continuity
 - required continuation
+- delegated judgment
 - active milestone
 - immediate next action
 - touched paths
@@ -85,6 +86,17 @@ Required follow-on routing belongs under `## Required Continuation` for active p
 Use this section to distinguish required continuation from optional nice-to-have follow-up.
 If a completed slice leaves the larger intended outcome unfinished, record the required next owner and activation trigger here before archiving.
 Do not rely on drift-log prose, completion-note prose, or chat residue to carry mandatory follow-through.
+
+Delegated judgment belongs under `## Delegated Judgment` for active plans that should preserve broad direction across sessions:
+
+- `Requested outcome`
+- `Hard constraints`
+- `Agent may decide locally`
+- `Escalate when`
+
+Keep this section compact.
+It exists to preserve the intended end state, the allowed local latitude, and the escalation boundary when a safe first slice might otherwise drift into a substitute for the larger request.
+Use `none` only when the slice is so local that delegated-judgment framing would add no value beyond the surrounding plan.
 
 Execution summaries belong under `## Execution Summary` for completed or nearly-complete plans:
 

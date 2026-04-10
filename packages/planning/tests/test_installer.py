@@ -61,6 +61,13 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 - Owner surface: none
 - Activation trigger: none
 
+## Delegated Judgment
+
+- Requested outcome: Keep scope clear.
+- Hard constraints: Keep scope bounded to the promoted TODO item and its touched paths.
+- Agent may decide locally: Bounded decomposition, validation tightening, and plan-local residue routing.
+- Escalate when: The requested outcome, owned surface, time horizon, or meaningful validation story would change.
+
 ## Active Milestone
 
 - ID: plan-alpha
@@ -366,6 +373,7 @@ def test_bootstrap_delegated_judgment_doc_is_part_of_contract() -> None:
     assert "## Scope-Expansion Rule" in text
     assert "Improve means locally" in text
     assert "The agent must not silently widen" in text
+    assert "active execplans should carry a compact delegated-judgment section" in text
     assert Path("docs/delegated-judgment-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
@@ -404,6 +412,9 @@ def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
     assert "larger intended outcome" in text
     assert "Required follow-on for the larger intended outcome" in text
     assert "Activation trigger" in text
+    assert "## Delegated Judgment" in text
+    assert "Requested outcome" in text
+    assert "Agent may decide locally" in text
     assert "## Execution Summary" in text
     assert "Outcome delivered" in text
 
@@ -622,9 +633,11 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
     todo_text = (tmp_path / "TODO.md").read_text(encoding="utf-8")
     assert "## Intent Continuity" in plan_text
     assert "## Required Continuation" in plan_text
+    assert "## Delegated Judgment" in plan_text
     assert "- This slice completes the larger intended outcome: yes" in plan_text
     assert "- Continuation surface: none" in plan_text
     assert "- Required follow-on for the larger intended outcome: no" in plan_text
+    assert "- Requested outcome: this thread needs a bounded execution contract." in plan_text
     assert "Surface: docs/execplans/direct-item.md" in todo_text
     assert "Next Action:" not in todo_text
     assert "Done When:" not in todo_text
@@ -725,6 +738,32 @@ def test_archive_execplan_blocks_missing_execution_summary(tmp_path: Path) -> No
     assert any(warning["warning_class"] == "archive_missing_execution_summary" for warning in result.warnings)
     assert any(
         action.kind == "manual review" and action.path == plan_path and "Execution Summary" in action.detail for action in result.actions
+    )
+
+
+def test_archive_execplan_blocks_missing_delegated_judgment(tmp_path: Path) -> None:
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
+    _write(
+        plan_path,
+        _minimal_execplan(status="completed").replace(
+            "## Delegated Judgment\n\n"
+            "- Requested outcome: Keep scope clear.\n"
+            "- Hard constraints: Keep scope bounded to the promoted TODO item and its touched paths.\n"
+            "- Agent may decide locally: Bounded decomposition, validation tightening, and plan-local residue routing.\n"
+            "- Escalate when: The requested outcome, owned surface, time horizon, or meaningful validation story would change.\n\n",
+            "",
+        ),
+    )
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_missing_delegated_judgment" for warning in result.warnings)
+    assert any(
+        action.kind == "manual review" and action.path == plan_path and "Delegated Judgment" in action.detail
+        for action in result.actions
     )
 
 
