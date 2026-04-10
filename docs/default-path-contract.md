@@ -48,6 +48,7 @@ That surface is the queryable contract for:
 - repo-owned lifecycle defaults and update intent
 
 Use `docs/delegated-judgment-contract.md` when the question is not which command to run, but what the human should specify, what the agent may decide locally, and what should force promotion or escalation.
+Use `docs/environment-recovery-contract.md` when the question is how to recover cheaply from repo-state ambiguity, lifecycle warnings, or interrupted bootstrap/maintenance work.
 
 ## Secondary Paths
 

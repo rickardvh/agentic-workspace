@@ -1,5 +1,7 @@
 # Extension Boundary
 
+Last readiness review: 2026-04-10
+
 This page is the canonical statement of the current extension boundary for Agentic Workspace.
 
 Use it when you need to know what kinds of modules or integrations are supported today, what the workspace layer may assume about them, and what must be true before any external module or plugin contract is treated as public.
@@ -50,6 +52,16 @@ Opening that boundary too early would risk:
 - pushing plugin pressure into the workspace layer before module seams are fully stable
 - raising support and compatibility expectations faster than the repo can justify
 
+## Current Readiness Assessment
+
+- Gate 1 is now materially stronger: first-party modules are descriptor-owned and no longer depend on separate orchestrator globals for ordering, presets, startup guidance, capabilities, or result-contract reporting.
+- Gate 2 is only partially met: the module-capability and lifecycle contract is explicit, but it is still documented as a first-party internal contract rather than a supported third-party public contract.
+- Gate 3 is only proven for the current first-party pair. Selective adoption is strong for Memory and Planning, but not yet exercised with a realistic non-core module.
+- Gate 4 remains unmet for external extension: compatibility, upgrade, uninstall, and doctor expectations are explicit for first-party modules, not for hypothetical non-core modules.
+- Gate 5 remains unmet: there is still no concrete external-use-case pressure that is clearly better solved by opening the boundary than by keeping the capability package-local or internal.
+
+Current result: keep the public extension boundary closed.
+
 ## Readiness Gates For A Public Extension Contract
 
 Do not treat external extension as supported until all of the following are true:
@@ -65,6 +77,7 @@ Do not treat external extension as supported until all of the following are true
 - Treat extension-boundary work as design work until those readiness gates are met.
 - Prefer sharpening first-party module seams, docs, tests, and lifecycle reporting over inventing a plugin API.
 - If a new capability is only useful as a helper to memory or planning, keep it package-local or capability-local instead of making it look like an external module surface.
+- Re-run a bounded readiness review when first-party module contracts change materially or when real downstream extension pressure appears.
 
 ## Relationship To Other Docs
 

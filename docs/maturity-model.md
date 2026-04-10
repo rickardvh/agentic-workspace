@@ -1,5 +1,7 @@
 # Maturity Model
 
+Last doctrinal review: 2026-04-10
+
 This page explains what current maturity labels mean in this ecosystem.
 
 ## Alpha
@@ -29,3 +31,5 @@ Beta implies:
 | Agentic Memory | beta | durable repo-memory contract is usable and should evolve incrementally |
 | Agentic Planning | alpha | planning is now a real, useful, and strongly dogfooded execution contract, but the package is still stabilizing explicit follow-through behavior such as handoff/summary shape and recovery guidance before the contract should be treated as broadly boring |
 | `agentic-workspace` | internal composition layer | thin workspace composition exists and is useful, but the primary external products are still memory and planning |
+
+Refresh this page through a doctrine-refresh review when major shipped contracts change what “alpha”, “beta”, or “internal composition layer” mean in practice.

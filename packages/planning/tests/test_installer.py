@@ -308,13 +308,16 @@ def test_bootstrap_review_readme_includes_canonical_review_portfolio() -> None:
     assert "promise-vs-enforcement gaps" in text
     assert "`maintainer-workflow`" in text
     assert "`source-payload-install`" in text
+    assert "`doctrine-refresh`" in text
     assert "`review-promotion`" in text
     assert "Use one primary review mode per artifact." in text
     assert "default finding cap" in text
+    assert "long-horizon doctrine still matches current dogfooding reality" in text
     assert "## Improvement-targeting workflow" in text
     assert "record the intended post-remediation note shape" in text
     assert "Repeated findings that work needed stronger execution capability than expected" in text
     assert "make future work cheaper to execute" in text
+    assert "Last doctrinal review" in text
 
 
 def test_bootstrap_review_template_includes_mode_and_cap_fields() -> None:
@@ -364,6 +367,18 @@ def test_bootstrap_delegated_judgment_doc_is_part_of_contract() -> None:
     assert "Improve means locally" in text
     assert "The agent must not silently widen" in text
     assert Path("docs/delegated-judgment-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+
+
+def test_bootstrap_environment_recovery_doc_is_part_of_contract() -> None:
+    text = (installer_mod.payload_root() / "docs" / "environment-recovery-contract.md").read_text(encoding="utf-8")
+
+    assert "# Environment And Recovery Contract" in text
+    assert "## Ordered Recovery Path" in text
+    assert "agentic-workspace status --target ./repo" in text
+    assert "agentic-workspace doctor --target ./repo" in text
+    assert "uv run agentic-planning-bootstrap upgrade --target ." in text
+    assert ".agentic-workspace/bootstrap-handoff.md" in text
+    assert Path("docs/environment-recovery-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
 def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routing() -> None:

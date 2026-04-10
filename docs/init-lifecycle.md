@@ -49,6 +49,7 @@ Use it when you need the canonical intent, repo-state, policy, and handoff contr
 
 ## Maintainer Notes
 
+- Recovery after interrupted bootstrap or lifecycle ambiguity should follow `docs/environment-recovery-contract.md` so the ordered remediation path stays centralized.
 - The root README should stay short and point here instead of duplicating the mode matrix.
 - Package-local CLIs still own their own install and adoption behavior; the root layer only centralizes composition and reporting.
 - Repo-owned lifecycle defaults and update intent belong in `agentic-workspace.toml`, not under `.agentic-workspace/`.

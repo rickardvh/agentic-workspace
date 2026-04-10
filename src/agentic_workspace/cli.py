@@ -1978,6 +1978,24 @@ def _defaults_payload() -> dict[str, Any]:
                 "Direct package CLIs stay available, but they are not the normal path for combined installs.",
             ],
         },
+        "recovery": {
+            "canonical_doc": "docs/environment-recovery-contract.md",
+            "rule": "Inspect state first, refresh contract second, re-run the narrowest proving lane third.",
+            "ordered_path": [
+                "agentic-workspace status --target ./repo",
+                "agentic-workspace doctor --target ./repo",
+                "agentic-workspace defaults --format json",
+                "agentic-workspace config --target ./repo --format json",
+            ],
+            "refresh_contract": [
+                "uv run agentic-planning-bootstrap upgrade --target .",
+                "uv run agentic-memory-bootstrap upgrade --target .",
+            ],
+            "handoff_surfaces": [
+                "llms.txt",
+                ".agentic-workspace/bootstrap-handoff.md",
+            ],
+        },
         "delegated_judgment": {
             "canonical_doc": "docs/delegated-judgment-contract.md",
             "rule": "Improve means locally; do not silently rewrite ends locally.",
@@ -2032,6 +2050,9 @@ def _emit_defaults(*, format_name: str) -> None:
         print(f"- {label}: {command}")
     print("Combined install:")
     print(f"- {payload['combined_install']['primary']}")
+    print("Recovery:")
+    print(f"- doc: {payload['recovery']['canonical_doc']}")
+    print(f"- rule: {payload['recovery']['rule']}")
     print("Delegated judgment:")
     print(f"- doc: {payload['delegated_judgment']['canonical_doc']}")
     print(f"- rule: {payload['delegated_judgment']['rule']}")

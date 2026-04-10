@@ -138,6 +138,7 @@ Generated mirrors inherit stability from their canonical source relationships, n
 It also defines the bounded-initiative rule: improve means locally, but do not silently widen the requested outcome, owned surface, or time horizon.
 `docs/delegated-judgment-contract.md` is the front-door companion: what the human should specify, what the agent may decide locally, and what should become an explicit promotion or escalation decision.
 `docs/execution-summary-contract.md` defines the compact completion summary that archived slices should leave behind.
+`docs/environment-recovery-contract.md` defines the ordered recovery path when lifecycle work, repo-state inspection, or validation restart becomes ambiguous.
 
 Use a direct task in `TODO.md` when the work is small enough to finish in one coherent pass and does not need milestone sequencing, blocker tracking, or a wider validation story.
 
