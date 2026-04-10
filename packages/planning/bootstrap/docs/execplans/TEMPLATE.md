@@ -67,6 +67,22 @@ Avoid large hand-maintained tables in active plans; compact bullets are easier t
 
 Keep invariants contract-shaped and brief.
 
+## Contract Decisions To Freeze
+
+-
+
+Use this section when the slice is primarily deciding product shape, schema, or policy rather than implementing it.
+Record only the decisions that the next implementation tranche must be able to trust without reopening debate.
+Omit the section for straightforward implementation-only slices.
+
+## Open Questions To Close
+
+-
+
+Use this section when unresolved contract questions still block safe implementation.
+List only the questions this slice must answer; move optional future ideas to `ROADMAP.md` or canonical docs instead.
+Omit the section when no implementation-blocking questions remain.
+
 ## Validation Commands
 
 -

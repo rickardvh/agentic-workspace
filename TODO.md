@@ -8,10 +8,10 @@ Active queue for repository work.
 
 ## Now
 
-- No active work right now.
+- repo-owned-config-and-update-policy: Active - define the bounded v1 repo-owned config and provenance-aware update-policy contract in `docs/execplans/repo-owned-config-and-update-policy-2026-04-10.md`.
 ## Action
 
-- Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.
+- Execute `docs/execplans/repo-owned-config-and-update-policy-2026-04-10.md` and keep follow-on implementation work bounded behind its accepted contract decisions.
 ## Done
 
 - archive-cleanup-follow-through: Completed (fixed `archive-plan --apply-cleanup` so it removes the plan's own active TODO pointer, restores the default Action hint when the queue empties, and archives the slice cleanly without manual TODO pre-cleanup)

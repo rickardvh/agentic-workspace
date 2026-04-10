@@ -120,6 +120,17 @@ PROMOTION_REASON_HINTS = (
     "failed",
 )
 
+CONTRACT_SHAPING_HINTS = (
+    "contract",
+    "policy",
+    "schema",
+    "precedence",
+    "resolution",
+    "provenance",
+    "product shape",
+    "ownership model",
+)
+
 GENERATED_DOC_NOTICE_FRAGMENT = "generated file"
 
 
@@ -742,6 +753,11 @@ def _contains_durable_technical_fact_shape(lines: list[str]) -> bool:
     return dense_tech_signals >= 3
 
 
+def _looks_contract_shaping_execplan(*, goal_lines: list[str], scope_value: str) -> bool:
+    haystack = "\n".join(goal_lines + [scope_value]).lower()
+    return any(hint in haystack for hint in CONTRACT_SHAPING_HINTS)
+
+
 def _active_execplans(execplan_dir: Path) -> list[Path]:
     if not execplan_dir.exists():
         return []
@@ -1012,6 +1028,30 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 "Invariants is empty; record the contract statements that must stay true while executing this plan.",
             )
         )
+
+    if _looks_contract_shaping_execplan(
+        goal_lines=_section_content(lines, "Goal"),
+        scope_value=active_milestone_fields.get("scope", ""),
+    ):
+        contract_decisions, contract_decision_bullets = _extract_section_stats(lines, "Contract Decisions To Freeze")
+        if not [line for line in contract_decisions if line.strip()] or contract_decision_bullets == 0:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Contract-shaping execplan should record `Contract Decisions To Freeze` before implementation starts.",
+                )
+            )
+
+        open_questions, open_question_bullets = _extract_section_stats(lines, "Open Questions To Close")
+        if not [line for line in open_questions if line.strip()] or open_question_bullets == 0:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Contract-shaping execplan should record `Open Questions To Close` or make clear that no blocking questions remain.",
+                )
+            )
 
     blockers, blocker_bullets = _extract_section_stats(lines, "Blockers")
     if len(blockers) > 10 and blocker_bullets <= 1:

@@ -91,6 +91,8 @@ When changing product shape, ownership boundaries, lifecycle behavior, or mainta
 ## Dogfooding Rule
 
 - Treat this monorepo as the proving ground for shipped agent workflows.
+- When normal work exposes a plausible product-level deficiency, explicitly ask whether the repo symptom should be dogfooded into a product improvement even if the user did not request that step.
+- Do not wait for an explicit prompt before suggesting the checked-in dogfooding path when the answer is plausibly yes.
 - If repo-local work exposes a real product deficiency in planning, memory, routing, checks, or lifecycle behavior, capture it in the checked-in planning or memory system so the signal survives the current session.
 - Prefer promoting the signal into planned work instead of making unauthorised direct package changes solely because the repo exposed the issue.
 - Make direct package or shipped-contract fixes only when they are already in active scope, explicitly requested, or clearly the smallest approved way to complete the current planned work.

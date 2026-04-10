@@ -54,6 +54,8 @@ Each active plan should stay compact and include:
 - immediate next action
 - touched paths
 - invariants
+- contract decisions to freeze when the slice is product-shaping
+- open questions to close when unresolved contract decisions still block implementation
 - validation commands
 - completion criteria
 - execution summary

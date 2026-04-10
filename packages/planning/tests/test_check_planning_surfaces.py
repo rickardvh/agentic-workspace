@@ -576,6 +576,50 @@ def test_promotion_linkage_still_warns_for_vague_activation(tmp_path: Path) -> N
     assert "promotion_linkage_drift" in classes
 
 
+def test_contract_shaping_execplan_without_decision_sections_warns_under_specified(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_contract_shaping_missing_sections")
+    plan = _minimal_execplan().replace(
+        "- Keep scope clear.",
+        "- Freeze the contract decisions for a provenance-aware update policy.",
+    ).replace(
+        "- Scope: maintain planning discipline.",
+        "- Scope: close the schema, precedence, and policy decisions before implementation.",
+    )
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    matching = [warning for warning in warnings if warning.warning_class == "execplan_under_specified"]
+    assert any("Contract Decisions To Freeze" in warning.message for warning in matching)
+    assert any("Open Questions To Close" in warning.message for warning in matching)
+
+
+def test_contract_shaping_execplan_with_decision_sections_passes(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_contract_shaping_complete")
+    plan = (
+        _minimal_execplan()
+        .replace(
+            "- Keep scope clear.",
+            "- Freeze the contract decisions for a provenance-aware update policy.",
+        )
+        .replace(
+            "- Scope: maintain planning discipline.",
+            "- Scope: close the schema, precedence, and policy decisions before implementation.",
+        )
+        .replace(
+            "## Validation Commands",
+            "## Contract Decisions To Freeze\n\n- Canonical config lives at repo root.\n\n## Open Questions To Close\n\n- What wins when workspace and module pins disagree?\n\n## Validation Commands",
+        )
+    )
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    assert not [warning for warning in warnings if warning.warning_class == "execplan_under_specified"]
+
+
 def test_main_json_format_outputs_payload(tmp_path: Path, capsys) -> None:
     mod = _load_module(_checker_script_path(), "planning_json")
     _write(tmp_path / "TODO.md", _baseline_todo())
