@@ -34,7 +34,6 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 | Candidate | Source | Why now | Promote when |
 | --- | --- | --- | --- |
-| `Generated-surface trust follow-through` | GitHub issue `#26`; `docs/design-principles.md`; `docs/agent-os-capabilities.md`; `docs/generated-surface-trust.md` | Generated routing and maintainer surfaces are central to cheap startup now, so any remaining mismatch between canonical docs, generated mirrors, and front-door messaging is a priority trust bug. | Another docs/generated-surface mismatch appears, or a maintainer pass finds that generated surfaces are no longer the cheapest trustworthy startup path. |
 | `Cross-agent handoff quality audit` | GitHub issue `#25`; `llms.txt`; `.agentic-workspace/bootstrap-handoff.md`; `docs/default-path-contract.md` | The repo now needs repeated evidence that intent, active state, durable context, and success criteria survive cheap handoff between strong frontier agents, weaker local/open models, and human maintainers. | Another mixed-agent task completes with noticeable restart or handoff friction, or a dogfooding pass suggests the checked-in surfaces are still too expensive for weaker agents to reconstruct. |
 | `Delegated-judgment practical follow-through` | GitHub issue `#25`; `docs/delegated-judgment-contract.md`; `docs/execplans/README.md` | Delegated judgment is now good on paper; the next work is proving it in repeated real workflows and tightening places where agents still silently widen ends, fail to escalate, or need too much user steering to stay bounded. | Another delegated task shows ambiguity around local latitude, escalation boundaries, or requested-end preservation. |
 | `Repo-state classifier hardening` | GitHub issue `#27`; `llms.txt`; `.agentic-workspace/bootstrap-handoff.md` | Intent-first bootstrap and inferred-policy reporting are landed, but repo-state classification still needs proof across fresh, partial, ambiguous, customized, and conflicting repos. | Another bootstrap pass hits ambiguous repo state, or a new fixture/review shows classifier output is not yet conservative enough. |
@@ -56,7 +55,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 1. Prefer proof, refinement, and trust-hardening over new capability invention.
 2. Start with one real strong-planner / cheap-implementer dogfooding pass, then use the evidence to sharpen synergy, selective-adoption, and portability follow-through.
-3. Treat generated-surface trust, bootstrap hardening, and mixed-agent handoff quality as the second wave once the first proof tranche shows where ambiguity still leaks.
+3. Treat bootstrap hardening and mixed-agent handoff quality as the second wave once the first proof tranche shows where ambiguity still leaks.
 4. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.
 
 ## Reopen Conditions

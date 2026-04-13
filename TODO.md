@@ -11,9 +11,10 @@ Active queue for repository work.
 - No active work right now.
 ## Action
 
-- Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.
+- Promote the next bounded roadmap candidate when another proof or trust-hardening slice is ready.
 ## Done
 
+- strong-planner-cheap-implementer-dogfood-pass: Completed (used `agentic-workspace config --format json` and `agentic-workspace defaults --format json` as the mixed-agent contract, ran a real generated-surface trust pass through the maintainer-surface validation lane, confirmed `make maintainer-surfaces` stayed the cheapest trustworthy proof path, and archived the result after closing the stale generated-surface trust backlog item)
 - planning-beta-surface-alignment: Completed (rechecked current public maturity surfaces, found no remaining public `alpha` claim for planning outside archived historical review artifacts, and removed the stale roadmap candidate)
 - validation-defaults-refinement: Completed (enriched `agentic-workspace defaults` with structured validation lanes that say what proof is enough, when broader checks are needed, and when to escalate, then aligned the front-door docs with the richer surface)
 - mixed-agent-local-override-contract: Completed (shipped a narrow supported `agentic-workspace.local.toml` contract, added source-attributed mixed-agent posture reporting to `agentic-workspace config`, aligned the config docs, and gitignored the local-only surface)
