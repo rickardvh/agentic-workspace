@@ -14,6 +14,7 @@ Active queue for repository work.
 - Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.
 ## Done
 
+- validation-defaults-refinement: Completed (enriched `agentic-workspace defaults` with structured validation lanes that say what proof is enough, when broader checks are needed, and when to escalate, then aligned the front-door docs with the richer surface)
 - mixed-agent-local-override-contract: Completed (shipped a narrow supported `agentic-workspace.local.toml` contract, added source-attributed mixed-agent posture reporting to `agentic-workspace config`, aligned the config docs, and gitignored the local-only surface)
 - mixed-agent-config-boundaries-and-reporting: Completed (froze the mixed-agent contract boundary, shipped reporting-only mixed-agent output in `agentic-workspace defaults` and `agentic-workspace config`, aligned the front-door/config docs with the shipped surface, and archived the slice)
 - extension-boundary-readiness-review: Completed (reviewed the extension-boundary gates against the current first-party contract, added a live readiness snapshot plus re-review triggers to the canonical boundary doc, recorded the bounded review artifact, and removed the roadmap candidate)

@@ -90,6 +90,8 @@ For execution scaling specifically:
 
 Run the narrowest lane that proves the change.
 
+Use `agentic-workspace defaults --format json` first when you need the structured default answer for which lane is enough, when broader checks are needed, and when the work should escalate beyond the narrow proving path.
+
 - Root workspace CLI changes: `uv run pytest tests/test_workspace_cli.py`, `uv run ruff check src tests`, `uv run ty check src`
 - Memory package changes: `make sync-memory` once, then `cd packages/memory && uv run pytest <path>` for a focused repro or `make test-memory` for the parallel full-suite lane; use `cd packages/memory && uv run ruff check .` for lint and escalate to `make check-memory` for the full package lane
 - Planning package changes: `make sync-planning` once, then `cd packages/planning && uv run pytest <path>` for a focused repro or `make test-planning` for the parallel full-suite lane; use `cd packages/planning && uv run ruff check .` for lint and escalate to `make check-planning` for the full package lane

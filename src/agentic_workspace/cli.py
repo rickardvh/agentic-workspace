@@ -1937,6 +1937,98 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
 
 
 def _defaults_payload() -> dict[str, Any]:
+    validation_lanes = [
+        {
+            "id": "workspace_cli",
+            "when": [
+                "root workspace CLI changes",
+                "tests/test_workspace_cli.py changes",
+                "root src/agentic_workspace changes",
+            ],
+            "enough_proof": [
+                "uv run pytest tests/test_workspace_cli.py -q",
+                "uv run ruff check src tests",
+            ],
+            "broaden_when": [
+                "the change also touches generated maintainer docs",
+                "the change also touches installed package payloads or shared orchestration boundaries",
+            ],
+            "escalate_when": [
+                "the narrow lane cannot prove the change on its own",
+                "package or repo-wide behavior is now part of the trust question",
+            ],
+        },
+        {
+            "id": "planning_package",
+            "when": [
+                "package-local planning source or tests change",
+                "the behavior remains inside packages/planning",
+            ],
+            "enough_proof": [
+                "cd packages/planning && uv run pytest tests/test_installer.py",
+                "cd packages/planning && uv run ruff check .",
+            ],
+            "broaden_when": [
+                "the change also touches root workspace orchestration",
+                "the change also affects generated maintainer surfaces or installed contract boundaries",
+            ],
+            "escalate_when": [
+                "the package-local lane no longer covers the trust question",
+                "the change crosses package, payload, and root install boundaries together",
+            ],
+        },
+        {
+            "id": "memory_package",
+            "when": [
+                "package-local memory source or tests change",
+                "the behavior remains inside packages/memory",
+            ],
+            "enough_proof": [
+                "cd packages/memory && uv run pytest tests/test_installer.py",
+                "cd packages/memory && uv run ruff check .",
+            ],
+            "broaden_when": [
+                "the change also touches root workspace orchestration",
+                "the change also affects generated maintainer surfaces or installed contract boundaries",
+            ],
+            "escalate_when": [
+                "the package-local lane no longer covers the trust question",
+                "the change crosses package, payload, and root install boundaries together",
+            ],
+        },
+        {
+            "id": "planning_surfaces",
+            "when": [
+                "TODO.md, ROADMAP.md, or execplans change without broader code changes",
+                "the trust question is planning-surface shape or drift only",
+            ],
+            "enough_proof": [
+                "uv run python scripts/check/check_planning_surfaces.py",
+            ],
+            "broaden_when": [
+                "the same change also edits generated maintainer docs or workspace CLI behavior",
+            ],
+            "escalate_when": [
+                "the planning-surface lane no longer proves the touched contract by itself",
+            ],
+        },
+        {
+            "id": "maintainer_surfaces",
+            "when": [
+                "generated maintainer docs, startup routing, or installed contract mirrors change",
+                "the trust question is generated-surface freshness or startup-policy consistency",
+            ],
+            "enough_proof": [
+                "make maintainer-surfaces",
+            ],
+            "broaden_when": [
+                "the same change also alters root workspace CLI behavior or package-local logic",
+            ],
+            "escalate_when": [
+                "source, payload, and installed-surface boundaries all changed together",
+            ],
+        },
+    ]
     return {
         "startup": {
             "primary": [
@@ -2055,6 +2147,10 @@ def _defaults_payload() -> dict[str, Any]:
                 "memory_package": "cd packages/memory && uv run pytest tests/test_installer.py",
                 "maintainer_surfaces": "make maintainer-surfaces",
             },
+            "lanes": validation_lanes,
+            "escalation_rule": (
+                "Broaden validation only when the narrower lane stops proving the touched contract or the change crosses boundaries."
+            ),
             "secondary": [
                 "Use broader package or repo-wide lanes only when the change crosses boundaries or invalidates the narrower proof.",
             ],
@@ -2177,6 +2273,7 @@ def _emit_defaults(*, format_name: str) -> None:
     print(f"- rule: {payload['validation']['rule']}")
     for label, command in payload["validation"]["default_routes"].items():
         print(f"- {label}: {command}")
+    print(f"- escalation: {payload['validation']['escalation_rule']}")
     print("Proof surfaces:")
     print(f"- doc: {payload['proof_surfaces']['canonical_doc']}")
     print(f"- command: {payload['proof_surfaces']['command']}")

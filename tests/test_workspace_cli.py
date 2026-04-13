@@ -104,6 +104,19 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["lifecycle"]["canonical_external_agent_handoff"] == "llms.txt"
     assert payload["lifecycle"]["canonical_bootstrap_next_action"] == ".agentic-workspace/bootstrap-handoff.md"
     assert payload["validation"]["default_routes"]["planning_package"] == "cd packages/planning && uv run pytest tests/test_installer.py"
+    workspace_lane = next(lane for lane in payload["validation"]["lanes"] if lane["id"] == "workspace_cli")
+    assert "root workspace CLI changes" in workspace_lane["when"]
+    assert workspace_lane["enough_proof"] == [
+        "uv run pytest tests/test_workspace_cli.py -q",
+        "uv run ruff check src tests",
+    ]
+    assert "the change also touches generated maintainer docs" in workspace_lane["broaden_when"]
+    assert "the narrow lane cannot prove the change on its own" in workspace_lane["escalate_when"]
+    planning_surface_lane = next(lane for lane in payload["validation"]["lanes"] if lane["id"] == "planning_surfaces")
+    assert planning_surface_lane["enough_proof"] == ["uv run python scripts/check/check_planning_surfaces.py"]
+    assert payload["validation"]["escalation_rule"] == (
+        "Broaden validation only when the narrower lane stops proving the touched contract or the change crosses boundaries."
+    )
     assert payload["proof_surfaces"]["canonical_doc"] == "docs/proof-surfaces-contract.md"
     assert payload["proof_surfaces"]["command"] == "agentic-workspace proof --target ./repo --format json"
     assert payload["proof_surfaces"]["default_routes"]["workspace_proof"] == "agentic-workspace proof --target ./repo --format json"
