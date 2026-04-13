@@ -141,6 +141,21 @@ class PlanningWarning(NamedTuple):
     message: str
 
 
+def _readme_claims_maintainer_startup_guidance(text: str) -> bool:
+    lowered = text.lower()
+    return any(
+        fragment in lowered
+        for fragment in (
+            "for agent maintainers",
+            "primary operating path",
+            "maintainer startup",
+            "`agents.md`",
+            "`todo.md`",
+            "`docs/contributor-playbook.md`",
+        )
+    )
+
+
 def _surface_execplan_reference(surface_value: str) -> str | None:
     """Extract a docs/execplans path from TODO Surface text if present."""
 
@@ -427,7 +442,8 @@ def _check_todo(path: Path, *, repo_root: Path = REPO_ROOT) -> tuple[list[Planni
                 )
             )
 
-    if "milestone" in lowered and "## next" in lowered:
+    activation_section_lines = _section_content(lines, "Now") + _section_content(lines, "Next") + _section_content(lines, "Action")
+    if "milestone" in "\n".join(activation_section_lines).lower():
         warnings.append(
             PlanningWarning(
                 WARNING_TODO_SHAPE_DRIFT,
@@ -545,7 +561,11 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         "active execplan",
         "`docs/contributor-playbook.md`",
     )
-    if readme_text and not all(fragment in readme_text for fragment in required_readme_fragments):
+    if (
+        readme_text
+        and _readme_claims_maintainer_startup_guidance(readme_text)
+        and not all(fragment in readme_text for fragment in required_readme_fragments)
+    ):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,

@@ -676,7 +676,7 @@ def test_main_json_format_outputs_payload(tmp_path: Path, capsys) -> None:
     assert payload["execplans"]["active_count"] == 1
 
 
-def test_startup_policy_warns_for_readme_and_contributor_drift(tmp_path: Path) -> None:
+def test_startup_policy_ignores_generic_readme_but_warns_for_contributor_drift(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_startup_policy")
     _write_startup_surfaces(
         tmp_path,
@@ -687,7 +687,7 @@ def test_startup_policy_warns_for_readme_and_contributor_drift(tmp_path: Path) -
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     startup_warnings = [warning for warning in warnings if warning.warning_class == "startup_policy_drift"]
 
-    assert _has_warning_path_suffix(startup_warnings, "README.md")
+    assert not _has_warning_path_suffix(startup_warnings, "README.md")
     assert _has_warning_path_suffix(startup_warnings, "docs/contributor-playbook.md")
 
 

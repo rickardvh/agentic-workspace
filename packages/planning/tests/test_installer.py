@@ -464,6 +464,35 @@ def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
     )
 
 
+def test_doctor_ignores_generic_repo_readme_without_startup_claims(tmp_path: Path) -> None:
+    (tmp_path / "README.md").write_text("planning proof repo\n", encoding="utf-8")
+    install_bootstrap(target=tmp_path)
+
+    result = doctor_bootstrap(target=tmp_path)
+
+    assert not any(action.path == tmp_path / "README.md" and "agent-startup guidance" in action.detail for action in result.actions)
+
+
+def test_doctor_flags_partial_readme_startup_guidance(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    (tmp_path / "README.md").write_text(
+        "# Repo\n\nFor agent maintainers, the primary operating path is `AGENTS.md`.\n",
+        encoding="utf-8",
+    )
+
+    result = doctor_bootstrap(target=tmp_path)
+
+    assert any(action.path == tmp_path / "README.md" and "agent-startup guidance" in action.detail for action in result.actions)
+
+
+def test_doctor_does_not_flag_starter_todo_for_milestone_word_in_hygiene_rules(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+
+    result = doctor_bootstrap(target=tmp_path)
+
+    assert not any(action.path == tmp_path / "TODO.md" and "milestone-level narrative" in action.detail for action in result.actions)
+
+
 def test_verify_payload_flags_missing_collaboration_safe_template_guidance(tmp_path: Path, monkeypatch) -> None:
     payload_root = tmp_path / "payload"
     _write(payload_root / "AGENTS.md", "# Agent Instructions\n")

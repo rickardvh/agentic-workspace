@@ -596,6 +596,36 @@ def test_doctor_reports_customised_seed_notes_as_expected_customisation(
     )
 
 
+def test_memory_status_does_not_flag_absent_optional_append_targets_in_clean_repo(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+
+    result = installer.collect_status(target=target)
+
+    assert any(
+        action.path == target / "CONTRIBUTING.md" and action.kind == "current" and action.detail == "optional target absent"
+        for action in result.actions
+    )
+    assert not any(action.path == target / "CONTRIBUTING.md" and action.kind == "missing" for action in result.actions)
+
+
+def test_memory_doctor_does_not_flag_absent_optional_append_targets_in_clean_repo(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.path == target / ".github" / "pull_request_template.md"
+        and action.kind == "current"
+        and action.detail == "optional target absent"
+        for action in result.actions
+    )
+    assert not any(action.path == target / ".github" / "pull_request_template.md" and action.kind == "missing" for action in result.actions)
+
+
 def test_doctor_overlap_audit_ignores_generic_ownership_terms(
     tmp_path: Path,
 ) -> None:

@@ -579,9 +579,9 @@ def _plan_optional_appends(
         fragment_description = OPTIONAL_APPEND_DESCRIPTIONS.get(target_file, f"optional fragment from {fragment_path.name}")
         if not destination.exists():
             result.add(
-                "skipped" if not status_only else "missing",
+                "skipped" if not status_only else "current",
                 destination,
-                "target file not present",
+                "target file not present" if not status_only else "optional target absent",
                 role="append-target",
                 safety="safe",
                 source=str(fragment_path),
