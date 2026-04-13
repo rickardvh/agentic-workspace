@@ -35,15 +35,15 @@
 ## Active Milestone
 
 - ID: mixed-agent-config-boundaries-and-reporting
-- Status: in-progress
-- Scope: promote the mixed-agent config/reporting contract into active planning and land the canonical doc guidance that future implementation should follow.
+- Status: completed
+- Scope: freeze the mixed-agent contract boundary, ship reporting-only mixed-agent output in the workspace CLI, and align the canonical docs with the shipped surface.
 - Ready: ready
 - Blocked: none
 - optional_deps: GitHub issue `#27`
 
 ## Immediate Next Action
 
-- Turn the frozen boundary into the smallest implementable workspace contract changes: effective mixed-agent reporting first, then narrow config expansion only where repeated use proves it necessary.
+- None. Slice completed; promote the next narrow mixed-agent implementation plan only when ready to change behavior beyond reporting.
 
 ## Blockers
 
@@ -102,11 +102,12 @@
 
 ## Execution Summary
 
-- Outcome delivered: none yet; active contract freeze and doc-shaping slice in progress.
-- Validation confirmed: pending.
-- Follow-on routed to: `TODO.md`.
-- Resume from: implement the smallest effective mixed-agent reporting surface before any broader config expansion.
+- Outcome delivered: active planning captured the mixed-agent product boundary, `agentic-workspace defaults` and `agentic-workspace config` now expose a reporting-only mixed-agent contract, and the README/default-path/config docs now match that shipped surface.
+- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`.
+- Follow-on routed to: `ROADMAP.md`.
+- Resume from: promote a new execplan for the smallest behavior-changing mixed-agent slice, most likely careful config expansion or conservative policy-selection follow-through.
 
 ## Drift Log
 
 - 2026-04-13: Promoted from GitHub issue `#27` and the roadmap mixed-agent operating-mode tranche after explicit maintainer direction to encode the product stance before implementation.
+- 2026-04-13: Completed by shipping reporting-only mixed-agent JSON/text output in the workspace CLI, adding focused regression coverage, and aligning the front-door docs with the new contract.

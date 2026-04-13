@@ -8,12 +8,13 @@ Active queue for repository work.
 
 ## Now
 
-- mixed-agent-config-boundaries-and-reporting: Active (`docs/execplans/mixed-agent-config-boundaries-and-reporting-2026-04-13.md`) - Freeze the contract for token-efficient mixed-agent operation so implementation can add bounded config/reporting support without turning the repo into a runtime scheduler.
+- No active work right now.
 ## Action
 
-- Execute the active mixed-agent config/reporting contract slice and keep follow-on implementation bounded to checked-in infrastructure, not runtime orchestration.
+- Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.
 ## Done
 
+- mixed-agent-config-boundaries-and-reporting: Completed (froze the mixed-agent contract boundary, shipped reporting-only mixed-agent output in `agentic-workspace defaults` and `agentic-workspace config`, aligned the front-door/config docs with the shipped surface, and archived the slice)
 - extension-boundary-readiness-review: Completed (reviewed the extension-boundary gates against the current first-party contract, added a live readiness snapshot plus re-review triggers to the canonical boundary doc, recorded the bounded review artifact, and removed the roadmap candidate)
 - environment-recovery-guidance-contract: Completed (shipped a canonical planning-side environment and recovery contract, wired it into the planning package payload and generated routing surfaces, refreshed the root install from the checked-in package contract, and removed the roadmap candidate)
 - doctrine-refresh-discipline: Completed (made the capability map, ecosystem stance, and maturity docs state their role boundaries and refresh triggers explicitly, then removed the doctrine-refresh candidate from `ROADMAP.md` and archived the slice)

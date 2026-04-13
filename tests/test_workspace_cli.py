@@ -123,6 +123,23 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "requested outcome" in payload["delegated_judgment"]["human_sets"]
     assert "bounded decomposition" in payload["delegated_judgment"]["agent_may_decide"]
     assert "the better-looking solution changes the requested outcome" in payload["delegated_judgment"]["escalate_when"]
+    assert payload["mixed_agent"]["rule"] == "Prefer runtime/task inference first, then stable policy, then explicit prompting."
+    assert payload["mixed_agent"]["decision_order"] == [
+        "runtime/task inference",
+        "repo-owned policy",
+        "optional local capability/cost override",
+        "explicit prompting when still unsafe",
+    ]
+    assert payload["mixed_agent"]["local_override"]["path"] == "agentic-workspace.local.toml"
+    assert payload["mixed_agent"]["local_override"]["supported"] is False
+    assert payload["mixed_agent"]["runtime_inference"]["tool_owned"] is True
+    assert payload["mixed_agent"]["handoff_quality"]["must_recover"] == [
+        "current intent",
+        "hard constraints",
+        "relevant durable context",
+        "proof expectations",
+        "immediate next action",
+    ]
     assert payload["config"]["path"] == "agentic-workspace.toml"
     assert payload["config"]["command"] == "agentic-workspace config --target ./repo --format json"
     assert "workspace.default_preset" in payload["config"]["supported_fields"]
@@ -146,6 +163,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "docs/environment-recovery-contract.md" in text
     assert "Config:" in text
     assert "Delegated judgment:" in text
+    assert "Mixed-agent:" in text
     assert "docs/delegated-judgment-contract.md" in text
     assert "make maintainer-surfaces" in text
 
@@ -160,6 +178,20 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["workspace"]["default_preset"] == "full"
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
+    assert payload["mixed_agent"]["status"] == "reporting-only"
+    assert payload["mixed_agent"]["repo_policy"]["source"] == "product-defaults"
+    assert payload["mixed_agent"]["repo_policy"]["path"] == "agentic-workspace.toml"
+    assert payload["mixed_agent"]["local_override"]["path"] == "agentic-workspace.local.toml"
+    assert payload["mixed_agent"]["local_override"]["exists"] is False
+    assert payload["mixed_agent"]["local_override"]["applied"] is False
+    assert payload["mixed_agent"]["runtime_inference"]["tool_owned"] is True
+    assert payload["mixed_agent"]["runtime_inference"]["reported_here"] is False
+    assert payload["mixed_agent"]["success_measures"] == [
+        "lower long-run token cost",
+        "lower restart and handoff cost",
+        "cheap switching across agents and subscriptions",
+        "persisted shared knowledge beats rediscovery",
+    ]
 
 
 def test_proof_command_reports_routes_and_current_health(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -265,6 +297,24 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
     assert planning_policy["source_ref"] == "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"
     assert planning_policy["source_label"] == "planning feature ref"
     assert planning_policy["recommended_upgrade_after_days"] == 14
+    assert payload["mixed_agent"]["repo_policy"]["source"] == "repo-config"
+
+
+def test_config_command_reports_reserved_local_override_presence_without_applying_it(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "agentic-workspace.local.toml").write_text(
+        "schema_version = 1\n\n[runtime]\nsupports_internal_delegation = true\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mixed_agent"]["local_override"]["exists"] is True
+    assert payload["mixed_agent"]["local_override"]["applied"] is False
+    assert payload["mixed_agent"]["local_override"]["status"] == "reserved-not-applied"
 
 
 def test_modules_command_reports_installation_state_for_target(monkeypatch, tmp_path: Path, capsys) -> None:

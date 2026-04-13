@@ -74,6 +74,7 @@ That surface reports:
 - the resolved default preset
 - the effective per-module update policy
 - whether each module's `UPGRADE-SOURCE.toml` metadata matches the resolved policy
+- the current mixed-agent reporting boundary: repo-policy source, reserved local-override status, and the fact that runtime orchestration remains tool-owned
 
 If mixed-agent policy grows beyond the v1 surface, effective reporting should also make clear:
 

@@ -14,9 +14,7 @@ Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraint
 Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Active Handoff
-
-- Active mixed-agent config/reporting contract slice: `docs/execplans/mixed-agent-config-boundaries-and-reporting-2026-04-13.md` (from GitHub issue `#27`).
-
+- No active handoff right now.
 ## GitHub Issue Intake
 
 - Latest intake tranche: GitHub issues `#25` through `#27`.

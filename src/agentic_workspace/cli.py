@@ -27,6 +27,7 @@ WORKSPACE_PAYLOAD_FILES = (
     Path(".agentic-workspace/OWNERSHIP.toml"),
 )
 WORKSPACE_CONFIG_PATH = Path("agentic-workspace.toml")
+WORKSPACE_LOCAL_CONFIG_PATH = Path("agentic-workspace.local.toml")
 WORKSPACE_EXTERNAL_AGENT_PATH = Path("llms.txt")
 WORKSPACE_BOOTSTRAP_HANDOFF_PATH = Path(".agentic-workspace/bootstrap-handoff.md")
 WORKSPACE_AGENTS_PATH = Path("AGENTS.md")
@@ -1970,6 +1971,58 @@ def _defaults_payload() -> dict[str, Any]:
                 "Repo config may change module update intent without creating separate public module upgrade entrypoints.",
             ],
         },
+        "mixed_agent": {
+            "rule": "Prefer runtime/task inference first, then stable policy, then explicit prompting.",
+            "decision_order": [
+                "runtime/task inference",
+                "repo-owned policy",
+                "optional local capability/cost override",
+                "explicit prompting when still unsafe",
+            ],
+            "repo_policy": {
+                "path": WORKSPACE_CONFIG_PATH.as_posix(),
+                "scope": [
+                    "stable repo policy",
+                    "reviewable checked-in defaults",
+                    "ownership and validation boundaries",
+                ],
+            },
+            "local_override": {
+                "path": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
+                "supported": False,
+                "status": "reserved",
+                "intended_scope": [
+                    "machine-specific capability posture",
+                    "account- or cost-profile asymmetry",
+                    "local execution preferences that do not redefine repo semantics",
+                ],
+            },
+            "runtime_inference": {
+                "tool_owned": True,
+                "report_when_behavior_changes": True,
+                "scope": [
+                    "delegation strategy",
+                    "model choice",
+                    "reasoning depth",
+                    "task shaping when safe",
+                ],
+            },
+            "handoff_quality": {
+                "must_recover": [
+                    "current intent",
+                    "hard constraints",
+                    "relevant durable context",
+                    "proof expectations",
+                    "immediate next action",
+                ],
+            },
+            "success_measures": [
+                "lower long-run token cost",
+                "lower restart and handoff cost",
+                "cheap switching across agents and subscriptions",
+                "persisted shared knowledge beats rediscovery",
+            ],
+        },
         "skill_discovery": {
             "primary": [
                 "agentic-workspace skills --target ./repo --format json",
@@ -2099,6 +2152,9 @@ def _emit_defaults(*, format_name: str) -> None:
     print("Config:")
     print(f"- path: {payload['config']['path']}")
     print(f"- inspect: {payload['config']['command']}")
+    print("Mixed-agent:")
+    print(f"- rule: {payload['mixed_agent']['rule']}")
+    print(f"- local override: {payload['mixed_agent']['local_override']['path']} ({payload['mixed_agent']['local_override']['status']})")
     print("Skill discovery:")
     for step in payload["skill_discovery"]["primary"]:
         print(f"- {step}")
@@ -2417,6 +2473,40 @@ def _module_update_policy_payload(*, config: WorkspaceConfig, target_root: Path 
     return payload
 
 
+def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    defaults = _defaults_payload()["mixed_agent"]
+    local_override_exists = False
+    if config.target_root is not None:
+        local_override_exists = (config.target_root / WORKSPACE_LOCAL_CONFIG_PATH).exists()
+    return {
+        "status": "reporting-only",
+        "rule": defaults["rule"],
+        "decision_order": defaults["decision_order"],
+        "repo_policy": {
+            "path": WORKSPACE_CONFIG_PATH.as_posix(),
+            "source": "repo-config" if config.exists else "product-defaults",
+            "authoritative": True,
+            "supported_fields": [],
+        },
+        "local_override": {
+            "path": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
+            "supported": False,
+            "exists": local_override_exists,
+            "applied": False,
+            "status": "reserved-not-applied" if local_override_exists else "reserved",
+            "rule": "reserved for future machine/account/cost posture only; current workspace ignores it",
+        },
+        "runtime_inference": {
+            "tool_owned": defaults["runtime_inference"]["tool_owned"],
+            "reported_here": False,
+            "auditable_when_behavior_changes": defaults["runtime_inference"]["report_when_behavior_changes"],
+            "scope": defaults["runtime_inference"]["scope"],
+        },
+        "handoff_quality": defaults["handoff_quality"],
+        "success_measures": defaults["success_measures"],
+    }
+
+
 def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     return {
         "target": config.target_root.as_posix() if config.target_root is not None else None,
@@ -2428,6 +2518,7 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "wrapper_rule": "normal update execution stays behind agentic-workspace",
             "modules": _module_update_policy_payload(config=config, target_root=config.target_root),
         },
+        "mixed_agent": _mixed_agent_payload(config=config),
     }
 
 
@@ -2446,6 +2537,10 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
         print(f"- {module['module']}: {module['source_type']} {module['source_ref']}")
         print(f"  label: {module['source_label']}")
         print(f"  metadata: {module['metadata_path']} ({module['sync_status']})")
+    print("Mixed-agent:")
+    print(f"- rule: {payload['mixed_agent']['rule']}")
+    print(f"- repo policy: {payload['mixed_agent']['repo_policy']['path']} ({payload['mixed_agent']['repo_policy']['source']})")
+    print(f"- local override: {payload['mixed_agent']['local_override']['path']} ({payload['mixed_agent']['local_override']['status']})")
 
 
 def _current_module_upgrade_source_state(
