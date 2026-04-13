@@ -17,7 +17,7 @@ Use it when you want the shortest correct answer for startup, lifecycle, skill d
 | How do I install? | `agentic-workspace init --preset <memory|planning|full>` | Package CLIs for package-local maintainer work or debugging |
 | How do I express intent? | Pick the preset that matches the outcome you want and let `init` infer install vs adopt vs review-required handoff | Manually reasoning about lifecycle verbs before asking the tool |
 | How do I start in a repo? | `AGENTS.md` -> `TODO.md` -> active execplan when relevant | `ROADMAP.md` only when promoting work |
-| Where should I point an external agent? | `llms.txt` | Richer docs only when the handoff file points there |
+| Where should I point an external agent? | The repository's `llms.txt` | Richer docs only when that handoff file points there |
 | Where is the post-bootstrap next action? | `.agentic-workspace/bootstrap-handoff.md` when bootstrap says review is still needed | Ad hoc chat instructions |
 | How do I customize lifecycle defaults or update intent? | `agentic-workspace.toml` plus `agentic-workspace config --format json` | Ad hoc chat instructions or direct module metadata edits |
 | How do I inspect modules? | `agentic-workspace modules --format json` | Read package docs directly when working on one package contract |

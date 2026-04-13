@@ -58,7 +58,7 @@ pipx run --spec git+https://github.com/rickardvh/agentic-workspace agentic-works
 If you want an external coding agent to bootstrap Agentic Workspace into another repository, give it this prompt:
 
 ```text
-Install or adopt Agentic Workspace in this repository by following the instructions in https://raw.githubusercontent.com/rickardvh/agentic-workspace/master/llms.txt. Use the workspace lifecycle path described there as the default bootstrap route.
+Install or adopt Agentic Workspace in the repository you are working in by following the instructions in that repository's `llms.txt`. Do not assume `agentic-workspace` is already installed. Use the workspace lifecycle path described there as the default bootstrap route.
 ```
 
 Canonical handoff surfaces after install:

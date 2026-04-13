@@ -193,6 +193,14 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "make maintainer-surfaces" in text
 
 
+def test_external_agent_handoff_text_names_target_repository_and_no_install_assumption() -> None:
+    text = cli._external_agent_handoff_text(selected_modules=["planning"])
+
+    assert "repository that contains this file" in text
+    assert "Target repository:" in text
+    assert "Do not assume agentic-workspace is already installed" in text
+
+
 def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
