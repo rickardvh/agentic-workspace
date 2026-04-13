@@ -9,8 +9,8 @@ Use this page when you need the canonical command to run, not the broader routin
 | Command | Purpose |
 | --- | --- |
 | `make setup` | Sync the shared root environment and install local git hooks |
+| `make install-hooks` | Reinstall the repo-managed local git hooks for this clone |
 | `make sync-all` | Sync the shared root environment for all workspace packages |
-| `uv run pre-commit install` | Install the local git hooks without resyncing the environment |
 
 ## Local Maintenance
 
@@ -36,7 +36,8 @@ Use this page when you need the canonical command to run, not the broader routin
 
 ## Policy
 
-- Pre-commit is for formatting and lint, and also runs `make test` for commits on `master`.
+- The repo-managed pre-commit Git hook formats staged Ruff-managed files, stages those formatter edits, and then runs the configured lint, branch-specific test gate, and absolute-path checks.
+- Reinstall hooks with `make install-hooks`; do not use `uv run pre-commit install` directly unless you intentionally want the stock pre-commit wrapper instead of the repo-managed hook behavior.
 - `make test`, `make test-workspace`, `make test-memory`, `make test-planning`, and the package `make test` lanes run pytest with xdist (`-n auto`) by default; override `PYTEST_PARALLEL_ARGS` when you need a different worker count or a serial run.
 - Full tests should run in CI and in explicit local validation runs such as `make check-all`.
 - Use `python scripts/check/check_maintainer_surfaces.py` when you want the aggregate maintainer wrapper directly; it includes the planning maintainer checks and the boundary checker when that checker exists in the repo.

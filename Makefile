@@ -5,7 +5,7 @@ export UV_CACHE_DIR
 PYTEST_PARALLEL_ARGS ?= -n auto
 
 .PHONY: help sync-all sync-memory sync-planning \
-	setup \
+	setup install-hooks \
 	test test-workspace test-memory test-planning \
 	lint lint-workspace lint-memory lint-planning markdownlint markdownlint-memory \
 	typecheck typecheck-workspace typecheck-memory typecheck-planning \
@@ -19,6 +19,7 @@ help:
 	@echo "Available targets:"
 	@echo "  help                 Show this help."
 	@echo "  setup                Sync the dev environment and install local git hooks."
+	@echo "  install-hooks        Install the repo-managed local git hooks for this clone."
 	@echo "  sync-all             Sync merged root environment for all workspace packages."
 	@echo "  sync-memory          Sync consolidated root dev environment for memory package checks."
 	@echo "  sync-planning        Sync consolidated root dev environment for planning package checks."
@@ -44,8 +45,10 @@ help:
 sync-all:
 	uv sync --all-packages --all-groups
 
-setup: sync-all
-	uv run pre-commit install
+install-hooks:
+	uv run python scripts/install_git_hooks.py
+
+setup: sync-all install-hooks
 
 sync-memory:
 	uv sync --all-packages --group dev
