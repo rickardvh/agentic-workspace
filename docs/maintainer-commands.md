@@ -36,6 +36,7 @@ Use this page when you need the canonical command to run, not the broader routin
 ## Policy
 
 - Pre-commit is for formatting and lint, and also runs `make test` for commits on `master`.
+- `make test`, `make test-workspace`, `make test-memory`, `make test-planning`, and the package `make test` lanes run pytest with xdist (`-n auto`) by default; override `PYTEST_PARALLEL_ARGS` when you need a different worker count or a serial run.
 - Full tests should run in CI and in explicit local validation runs such as `make check-all`.
 - Use `python scripts/check/check_maintainer_surfaces.py` when you want the aggregate maintainer wrapper directly; it includes the planning maintainer checks and the boundary checker when that checker exists in the repo.
 - Prefer `make maintainer-surfaces` when a change touches generated maintainer docs, startup routing, either package's installed contract surfaces, or the source/payload/root-install boundary.

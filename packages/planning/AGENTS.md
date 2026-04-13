@@ -42,6 +42,7 @@ Package-local contract for work under `packages/planning/`.
 
 - Run the narrowest package-local validation that proves the change.
 - Prefer `uv run pytest packages/planning/tests` for behavior changes.
+- Prefer `make test` for the package-wide suite now that the package Makefile runs pytest with xdist by default; keep direct `uv run pytest <path>` for tiny focused repros.
 - Prefer `uv run ruff check packages/planning` for lint validation.
 - Run `make maintainer-surfaces` when a change also affects generated maintainer docs, startup routing, or the root planning contract.
 - Escalate to `make check-planning` or `make check-all` only when the change crosses package or root orchestration boundaries.

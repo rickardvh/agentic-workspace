@@ -2,6 +2,7 @@
 
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache-root
 export UV_CACHE_DIR
+PYTEST_PARALLEL_ARGS ?= -n auto
 
 .PHONY: help sync-all sync-memory sync-planning \
 	test test-workspace test-memory test-planning \
@@ -19,7 +20,8 @@ help:
 	@echo "  sync-all             Sync merged root environment for all workspace packages."
 	@echo "  sync-memory          Sync consolidated root dev environment for memory package checks."
 	@echo "  sync-planning        Sync consolidated root dev environment for planning package checks."
-	@echo "  test                 Run workspace and package test suites."
+	@echo "  test                 Run workspace and package test suites with pytest-xdist."
+	@echo "                       Override worker selection with PYTEST_PARALLEL_ARGS='-n <count>' or empty."
 	@echo "  lint                 Run non-mutating lint checks across workspace and packages."
 	@echo "  markdownlint         Run Markdown lint checks for the memory package surfaces."
 	@echo "  typecheck            Run ty type checks across workspace and packages."
@@ -47,13 +49,13 @@ sync-planning:
 	uv sync --all-packages --group dev
 
 test-workspace:
-	uv run pytest tests
+	uv run pytest $(PYTEST_PARALLEL_ARGS) tests
 
 test-memory:
-	cd packages/memory && uv run pytest
+	cd packages/memory && uv run pytest $(PYTEST_PARALLEL_ARGS)
 
 test-planning:
-	cd packages/planning && uv run pytest
+	cd packages/planning && uv run pytest $(PYTEST_PARALLEL_ARGS)
 
 test: sync-all test-workspace test-memory test-planning
 

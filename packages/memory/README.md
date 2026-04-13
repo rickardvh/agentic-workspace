@@ -393,7 +393,10 @@ Useful maintainer commands:
 
 ```bash
 make sync-memory
-cd packages/memory && uv run pytest
+cd packages/memory && make test
+
+# For a tiny focused repro where xdist startup would dominate
+cd packages/memory && uv run pytest tests/test_installer.py
 make check-memory
 
 # Or sync the shared workspace environment directly

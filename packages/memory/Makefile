@@ -2,6 +2,7 @@ MEMORY_CHECK_SCRIPT := scripts/check/check_memory_freshness.py
 ifeq (,$(wildcard $(MEMORY_CHECK_SCRIPT)))
 MEMORY_CHECK_SCRIPT := ../../scripts/check/check_memory_freshness.py
 endif
+PYTEST_PARALLEL_ARGS ?= -n auto
 
 help:
 	@echo "Available targets:"
@@ -18,10 +19,10 @@ help:
 	@echo "  typecheck       Run ty type checking."
 
 test:
-	uv run pytest tests/test_installer.py
+	uv run pytest $(PYTEST_PARALLEL_ARGS) tests/test_installer.py
 
 coverage:
-	uv run pytest
+	uv run pytest $(PYTEST_PARALLEL_ARGS)
 
 doctor:
 	uv run agentic-memory-bootstrap doctor --target .

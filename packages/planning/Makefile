@@ -1,4 +1,5 @@
 .PHONY: test lint check-planning-surfaces check-planning-surfaces-json check-planning-surfaces-strict plan-check plan-check-json plan-check-strict plan-summary render-agent-docs check-memory
+PYTEST_PARALLEL_ARGS ?= -n auto
 
 PLANNING_CHECK_SCRIPT := scripts/check/check_planning_surfaces.py
 ifeq (,$(wildcard $(PLANNING_CHECK_SCRIPT)))
@@ -16,7 +17,7 @@ RENDER_AGENT_DOCS_SCRIPT := ../../scripts/render_agent_docs.py
 endif
 
 test:
-	uv run pytest
+	uv run pytest $(PYTEST_PARALLEL_ARGS)
 
 lint:
 	uv run ruff check .

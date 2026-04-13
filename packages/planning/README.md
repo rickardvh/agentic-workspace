@@ -609,7 +609,10 @@ The system is working when:
 
 ```bash
 make sync-planning
-cd packages/planning && uv run pytest
+cd packages/planning && make test
+
+# For a tiny focused repro where xdist startup would dominate
+cd packages/planning && uv run pytest tests/test_installer.py
 make render-agent-docs
 make maintainer-surfaces
 
