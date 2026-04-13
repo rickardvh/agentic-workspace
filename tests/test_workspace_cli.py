@@ -131,7 +131,13 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "explicit prompting when still unsafe",
     ]
     assert payload["mixed_agent"]["local_override"]["path"] == "agentic-workspace.local.toml"
-    assert payload["mixed_agent"]["local_override"]["supported"] is False
+    assert payload["mixed_agent"]["local_override"]["supported"] is True
+    assert payload["mixed_agent"]["local_override"]["supported_fields"] == [
+        "runtime.supports_internal_delegation",
+        "runtime.strong_planner_available",
+        "runtime.cheap_bounded_executor_available",
+        "handoff.prefer_internal_delegation_when_available",
+    ]
     assert payload["mixed_agent"]["runtime_inference"]["tool_owned"] is True
     assert payload["mixed_agent"]["handoff_quality"]["must_recover"] == [
         "current intent",
@@ -182,10 +188,13 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["mixed_agent"]["repo_policy"]["source"] == "product-defaults"
     assert payload["mixed_agent"]["repo_policy"]["path"] == "agentic-workspace.toml"
     assert payload["mixed_agent"]["local_override"]["path"] == "agentic-workspace.local.toml"
+    assert payload["mixed_agent"]["local_override"]["supported"] is True
     assert payload["mixed_agent"]["local_override"]["exists"] is False
     assert payload["mixed_agent"]["local_override"]["applied"] is False
     assert payload["mixed_agent"]["runtime_inference"]["tool_owned"] is True
     assert payload["mixed_agent"]["runtime_inference"]["reported_here"] is False
+    assert payload["mixed_agent"]["effective_posture"]["supports_internal_delegation"] == {"value": None, "source": "unset"}
+    assert payload["mixed_agent"]["effective_posture"]["strong_planner_available"] == {"value": None, "source": "unset"}
     assert payload["mixed_agent"]["success_measures"] == [
         "lower long-run token cost",
         "lower restart and handoff cost",
@@ -313,8 +322,46 @@ def test_config_command_reports_reserved_local_override_presence_without_applyin
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["mixed_agent"]["local_override"]["exists"] is True
-    assert payload["mixed_agent"]["local_override"]["applied"] is False
-    assert payload["mixed_agent"]["local_override"]["status"] == "reserved-not-applied"
+    assert payload["mixed_agent"]["local_override"]["applied"] is True
+    assert payload["mixed_agent"]["local_override"]["status"] == "applied"
+    assert payload["mixed_agent"]["effective_posture"]["supports_internal_delegation"] == {
+        "value": True,
+        "source": "local-override",
+    }
+
+
+def test_config_command_reports_narrow_local_override_fields_with_source_attribution(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "agentic-workspace.local.toml").write_text(
+        "schema_version = 1\n\n"
+        "[runtime]\n"
+        "supports_internal_delegation = true\n"
+        "strong_planner_available = true\n"
+        "cheap_bounded_executor_available = true\n\n"
+        "[handoff]\n"
+        "prefer_internal_delegation_when_available = true\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mixed_agent"]["effective_posture"]["strong_planner_available"] == {
+        "value": True,
+        "source": "local-override",
+    }
+    assert payload["mixed_agent"]["effective_posture"]["cheap_bounded_executor_available"] == {
+        "value": True,
+        "source": "local-override",
+    }
+    assert payload["mixed_agent"]["effective_posture"]["prefer_internal_delegation_when_available"] == {
+        "value": True,
+        "source": "local-override",
+    }
+    assert payload["mixed_agent"]["derived_mode"]["planner_executor_pattern"] == "strong-planner-cheap-executor-available"
+    assert payload["mixed_agent"]["derived_mode"]["handoff_preference"] == "prefer-internal-when-safe"
 
 
 def test_modules_command_reports_installation_state_for_target(monkeypatch, tmp_path: Path, capsys) -> None:

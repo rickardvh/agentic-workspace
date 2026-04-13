@@ -174,7 +174,7 @@ agentic-workspace config --target ./repo --format json
 ```
 
 That surface layers `agentic-workspace.toml` over product defaults and reports the effective default preset plus per-module update intent.
-It also reports the current mixed-agent contract boundary: repo policy source, reserved local-override status, and whether runtime inference is still tool-owned rather than workspace-controlled.
+It also reports the current mixed-agent contract boundary: repo policy source, optional local-override posture from `agentic-workspace.local.toml`, and whether runtime inference is still tool-owned rather than workspace-controlled.
 
 For the repo-owned config contract itself, use [`docs/workspace-config-contract.md`](docs/workspace-config-contract.md).
 

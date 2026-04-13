@@ -22,6 +22,12 @@ MODULE_COMMAND_ARGS: dict[str, tuple[str, ...]] = {
     "status": ("target",),
 }
 PLACEHOLDER_RE = re.compile(r"<[A-Z][A-Z0-9_]+>")
+MIXED_AGENT_LOCAL_OVERRIDE_FIELDS = (
+    "runtime.supports_internal_delegation",
+    "runtime.strong_planner_available",
+    "runtime.cheap_bounded_executor_available",
+    "handoff.prefer_internal_delegation_when_available",
+)
 WORKSPACE_PAYLOAD_FILES = (
     Path(".agentic-workspace/WORKFLOW.md"),
     Path(".agentic-workspace/OWNERSHIP.toml"),
@@ -173,6 +179,18 @@ class WorkspaceConfig:
     schema_version: int
     default_preset: str
     update_modules: dict[str, ModuleUpdatePolicy]
+    local_override: "MixedAgentLocalOverride"
+
+
+@dataclass(frozen=True)
+class MixedAgentLocalOverride:
+    path: Path | None
+    exists: bool
+    applied: bool
+    supports_internal_delegation: bool | None
+    strong_planner_available: bool | None
+    cheap_bounded_executor_available: bool | None
+    prefer_internal_delegation_when_available: bool | None
 
 
 class ModuleSelectionError(ValueError):
@@ -293,23 +311,19 @@ def main(argv: list[str] | None = None) -> int:
         _emit_defaults(format_name=args.format)
         return 0
 
-    if args.command == "proof":
-        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-        _validate_target_root(command_name="proof", target_root=target_root)
-        _emit_proof(format_name=args.format, target_root=target_root, descriptors=descriptors)
-        return 0
-
-    if args.command == "ownership":
-        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-        _validate_target_root(command_name="ownership", target_root=target_root)
-        _emit_ownership(format_name=args.format, target_root=target_root, descriptors=descriptors)
-        return 0
-
-    if args.command == "config":
-        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-        _validate_target_root(command_name="config", target_root=target_root)
-        _emit_config(format_name=args.format, config=_load_workspace_config(target_root=target_root, descriptors=descriptors))
-        return 0
+    if args.command in {"proof", "ownership", "config"}:
+        try:
+            target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+            _validate_target_root(command_name=args.command, target_root=target_root)
+            if args.command == "proof":
+                _emit_proof(format_name=args.format, target_root=target_root, descriptors=descriptors)
+            elif args.command == "ownership":
+                _emit_ownership(format_name=args.format, target_root=target_root, descriptors=descriptors)
+            else:
+                _emit_config(format_name=args.format, config=_load_workspace_config(target_root=target_root, descriptors=descriptors))
+            return 0
+        except WorkspaceUsageError as exc:
+            parser.error(str(exc))
 
     if args.command == "skills":
         target_root = _resolve_target_root(args.target) if args.target else None
@@ -1989,8 +2003,9 @@ def _defaults_payload() -> dict[str, Any]:
             },
             "local_override": {
                 "path": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
-                "supported": False,
-                "status": "reserved",
+                "supported": True,
+                "status": "supported-local-only",
+                "supported_fields": list(MIXED_AGENT_LOCAL_OVERRIDE_FIELDS),
                 "intended_scope": [
                     "machine-specific capability posture",
                     "account- or cost-profile asymmetry",
@@ -2210,6 +2225,7 @@ def _default_module_update_policies() -> dict[str, ModuleUpdatePolicy]:
 def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> WorkspaceConfig:
     defaults = _default_module_update_policies()
     config_path = target_root / WORKSPACE_CONFIG_PATH
+    local_override = _load_mixed_agent_local_override(target_root=target_root)
     default_preset = "full"
     if not config_path.exists():
         return WorkspaceConfig(
@@ -2219,6 +2235,7 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
             schema_version=1,
             default_preset=default_preset,
             update_modules=defaults,
+            local_override=local_override,
         )
 
     try:
@@ -2300,6 +2317,7 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
         schema_version=1,
         default_preset=configured_preset,
         update_modules=update_modules,
+        local_override=local_override,
     )
 
 
@@ -2473,11 +2491,110 @@ def _module_update_policy_payload(*, config: WorkspaceConfig, target_root: Path 
     return payload
 
 
+def _empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> MixedAgentLocalOverride:
+    return MixedAgentLocalOverride(
+        path=path,
+        exists=exists,
+        applied=False,
+        supports_internal_delegation=None,
+        strong_planner_available=None,
+        cheap_bounded_executor_available=None,
+        prefer_internal_delegation_when_available=None,
+    )
+
+
+def _require_optional_bool(*, payload: dict[str, Any], key: str, config_path: Path) -> bool | None:
+    if key not in payload:
+        return None
+    value = payload[key]
+    if not isinstance(value, bool):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be a boolean.")
+    return value
+
+
+def _load_mixed_agent_local_override(*, target_root: Path) -> MixedAgentLocalOverride:
+    local_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
+    if not local_path.exists():
+        return _empty_mixed_agent_local_override(path=local_path, exists=False)
+
+    try:
+        payload = tomllib.loads(local_path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as exc:
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} is invalid TOML: {exc}.") from exc
+
+    schema_version = payload.get("schema_version")
+    if schema_version != 1:
+        raise WorkspaceUsageError(
+            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} must set schema_version = 1 for the current local mixed-agent override contract."
+        )
+
+    unknown_top_level = sorted(set(payload) - {"schema_version", "runtime", "handoff"})
+    if unknown_top_level:
+        unknown_text = ", ".join(unknown_top_level)
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} contains unsupported top-level field(s): {unknown_text}.")
+
+    raw_runtime = payload.get("runtime", {})
+    if raw_runtime is None:
+        raw_runtime = {}
+    if not isinstance(raw_runtime, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [runtime] section must be a table.")
+    unknown_runtime = sorted(
+        set(raw_runtime) - {"supports_internal_delegation", "strong_planner_available", "cheap_bounded_executor_available"}
+    )
+    if unknown_runtime:
+        unknown_text = ", ".join(unknown_runtime)
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [runtime] contains unsupported field(s): {unknown_text}.")
+
+    raw_handoff = payload.get("handoff", {})
+    if raw_handoff is None:
+        raw_handoff = {}
+    if not isinstance(raw_handoff, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [handoff] section must be a table.")
+    unknown_handoff = sorted(set(raw_handoff) - {"prefer_internal_delegation_when_available"})
+    if unknown_handoff:
+        unknown_text = ", ".join(unknown_handoff)
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [handoff] contains unsupported field(s): {unknown_text}.")
+
+    return MixedAgentLocalOverride(
+        path=local_path,
+        exists=True,
+        applied=True,
+        supports_internal_delegation=_require_optional_bool(
+            payload=raw_runtime,
+            key="supports_internal_delegation",
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        ),
+        strong_planner_available=_require_optional_bool(
+            payload=raw_runtime,
+            key="strong_planner_available",
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        ),
+        cheap_bounded_executor_available=_require_optional_bool(
+            payload=raw_runtime,
+            key="cheap_bounded_executor_available",
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        ),
+        prefer_internal_delegation_when_available=_require_optional_bool(
+            payload=raw_handoff,
+            key="prefer_internal_delegation_when_available",
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        ),
+    )
+
+
+def _sourced_value(value: bool | None, *, source: str) -> dict[str, Any]:
+    return {"value": value, "source": source if value is not None else "unset"}
+
+
 def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     defaults = _defaults_payload()["mixed_agent"]
-    local_override_exists = False
-    if config.target_root is not None:
-        local_override_exists = (config.target_root / WORKSPACE_LOCAL_CONFIG_PATH).exists()
+    local_override = config.local_override
+    planner_executor_pattern = "unspecified"
+    if local_override.strong_planner_available and local_override.cheap_bounded_executor_available:
+        planner_executor_pattern = "strong-planner-cheap-executor-available"
+    handoff_preference = "unspecified"
+    if local_override.supports_internal_delegation and local_override.prefer_internal_delegation_when_available:
+        handoff_preference = "prefer-internal-when-safe"
     return {
         "status": "reporting-only",
         "rule": defaults["rule"],
@@ -2490,17 +2607,40 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         },
         "local_override": {
             "path": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
-            "supported": False,
-            "exists": local_override_exists,
-            "applied": False,
-            "status": "reserved-not-applied" if local_override_exists else "reserved",
-            "rule": "reserved for future machine/account/cost posture only; current workspace ignores it",
+            "supported": defaults["local_override"]["supported"],
+            "supported_fields": defaults["local_override"]["supported_fields"],
+            "exists": local_override.exists,
+            "applied": local_override.applied,
+            "status": "applied" if local_override.applied else "available-not-set",
+            "rule": "local-only capability/cost posture; may not override repo-owned semantics",
         },
         "runtime_inference": {
             "tool_owned": defaults["runtime_inference"]["tool_owned"],
             "reported_here": False,
             "auditable_when_behavior_changes": defaults["runtime_inference"]["report_when_behavior_changes"],
             "scope": defaults["runtime_inference"]["scope"],
+        },
+        "effective_posture": {
+            "supports_internal_delegation": _sourced_value(
+                local_override.supports_internal_delegation,
+                source="local-override",
+            ),
+            "strong_planner_available": _sourced_value(
+                local_override.strong_planner_available,
+                source="local-override",
+            ),
+            "cheap_bounded_executor_available": _sourced_value(
+                local_override.cheap_bounded_executor_available,
+                source="local-override",
+            ),
+            "prefer_internal_delegation_when_available": _sourced_value(
+                local_override.prefer_internal_delegation_when_available,
+                source="local-override",
+            ),
+        },
+        "derived_mode": {
+            "planner_executor_pattern": planner_executor_pattern,
+            "handoff_preference": handoff_preference,
         },
         "handoff_quality": defaults["handoff_quality"],
         "success_measures": defaults["success_measures"],
@@ -2541,6 +2681,12 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
     print(f"- rule: {payload['mixed_agent']['rule']}")
     print(f"- repo policy: {payload['mixed_agent']['repo_policy']['path']} ({payload['mixed_agent']['repo_policy']['source']})")
     print(f"- local override: {payload['mixed_agent']['local_override']['path']} ({payload['mixed_agent']['local_override']['status']})")
+    print(
+        "- effective posture: "
+        f"internal delegation={payload['mixed_agent']['effective_posture']['supports_internal_delegation']['value']}, "
+        f"strong planner={payload['mixed_agent']['effective_posture']['strong_planner_available']['value']}, "
+        f"cheap bounded executor={payload['mixed_agent']['effective_posture']['cheap_bounded_executor_available']['value']}"
+    )
 
 
 def _current_module_upgrade_source_state(

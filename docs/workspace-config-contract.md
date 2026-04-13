@@ -60,6 +60,36 @@ Future config expansion should stay narrow.
 - Persisted checked-in state should remain the primary way to make agent switching cheap; config should only tune stable preferences and capability asymmetries around that core contract.
 - Mixed-agent extensions should be justified by measured or repeatedly observed restart, handoff, or token-cost improvement rather than preference alone.
 
+## Local Override Contract
+
+The workspace now supports one optional local-only mixed-agent override file:
+
+- `agentic-workspace.local.toml`
+
+This file is for machine-, account-, and cost-profile-specific capability posture.
+It is not part of checked-in repo policy and should stay gitignored.
+
+Current supported fields:
+
+```toml
+schema_version = 1
+
+[runtime]
+supports_internal_delegation = true
+strong_planner_available = true
+cheap_bounded_executor_available = true
+
+[handoff]
+prefer_internal_delegation_when_available = true
+```
+
+Rules:
+
+- The file is optional.
+- Supported fields are intentionally narrow and capability-shaped.
+- The local file may affect effective reporting, but it must not silently change repo-owned semantics.
+- The current workspace surface reports these values; it does not turn them into scheduler control.
+
 ## Effective Config
 
 Use:
@@ -75,6 +105,7 @@ That surface reports:
 - the effective per-module update policy
 - whether each module's `UPGRADE-SOURCE.toml` metadata matches the resolved policy
 - the current mixed-agent reporting boundary: repo-policy source, reserved local-override status, and the fact that runtime orchestration remains tool-owned
+- the effective local mixed-agent posture when `agentic-workspace.local.toml` is present
 
 If mixed-agent policy grows beyond the v1 surface, effective reporting should also make clear:
 
