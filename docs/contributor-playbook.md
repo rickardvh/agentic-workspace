@@ -27,7 +27,7 @@ Default startup path for an agent maintainer:
 
 Prefer repository-native state over chat-only context. If a follow-up matters after the current turn, record it in planning or memory instead of relying on conversational residue.
 
-If you are maintaining the repo through git commits locally, install hooks with `uv run pre-commit install`. The current pre-commit hooks run the shared `make format` and `make lint` lanes, and add `make test` when the commit is on `master`: apply automatic formatting fixes locally, then enforce lint before commit, and run the full test lane for master-bound commits. If formatting rewrites files, restage them and rerun the commit.
+If you are maintaining the repo through git commits locally, run `make setup` to sync the shared environment and install hooks for this clone. If the environment is already synced and you only need to restore the hook, run `uv run pre-commit install`. The current pre-commit hooks run the shared `make format` and `make lint` lanes, and add `make test` when the commit is on `master`: apply automatic formatting fixes locally, then enforce lint before commit, and run the full test lane for master-bound commits. If formatting rewrites files, restage them and rerun the commit.
 The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`, so tracked files cannot introduce absolute filesystem paths.
 
 ## Start Here

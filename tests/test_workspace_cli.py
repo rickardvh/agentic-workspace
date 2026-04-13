@@ -196,21 +196,21 @@ def test_ownership_command_reports_authority_map(tmp_path: Path, monkeypatch, ca
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace").mkdir()
     (tmp_path / ".agentic-workspace" / "OWNERSHIP.toml").write_text(
-        'schema_version = 1\n\n'
-        '[ownership_classes.repo_owned]\n'
+        "schema_version = 1\n\n"
+        "[ownership_classes.repo_owned]\n"
         'summary = "repo-owned"\n\n'
-        '[[module_roots]]\n'
+        "[[module_roots]]\n"
         'module = "planning"\n'
         'path = ".agentic-workspace/planning/"\n'
         'ownership = "module_managed"\n'
         'uninstall_policy = "remove-managed-files-only"\n\n'
-        '[[managed_surfaces]]\n'
+        "[[managed_surfaces]]\n"
         'module = "workspace"\n'
         'path = ".agentic-workspace/OWNERSHIP.toml"\n'
         'kind = "ownership-ledger"\n'
         'ownership = "module_managed"\n'
         'uninstall_policy = "remove-if-owned"\n\n'
-        '[[fences]]\n'
+        "[[fences]]\n"
         'name = "workspace-workflow-pointer"\n'
         'module = "workspace"\n'
         'file = "AGENTS.md"\n'
@@ -218,7 +218,7 @@ def test_ownership_command_reports_authority_map(tmp_path: Path, monkeypatch, ca
         'end = "<!-- agentic-workspace:workflow:end -->"\n'
         'ownership = "managed_fence"\n'
         'uninstall_policy = "remove-fence-only"\n\n'
-        '[[authority_surfaces]]\n'
+        "[[authority_surfaces]]\n"
         'concern = "active-execution-state"\n'
         'surface = "TODO.md"\n'
         'owner = "repo"\n'
@@ -244,14 +244,14 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
     target.mkdir()
     _init_git_repo(target)
     (target / "agentic-workspace.toml").write_text(
-        'schema_version = 1\n\n'
-        '[workspace]\n'
+        "schema_version = 1\n\n"
+        "[workspace]\n"
         'default_preset = "planning"\n\n'
-        '[update.modules.planning]\n'
+        "[update.modules.planning]\n"
         'source_type = "git"\n'
         'source_ref = "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"\n'
         'source_label = "planning feature ref"\n'
-        'recommended_upgrade_after_days = 14\n',
+        "recommended_upgrade_after_days = 14\n",
         encoding="utf-8",
     )
 
@@ -960,14 +960,14 @@ def test_upgrade_dry_run_syncs_module_update_source_metadata_from_repo_config(tm
     assert cli.main(["init", "--modules", "planning", "--target", str(target)]) == 0
     capsys.readouterr()
     (target / "agentic-workspace.toml").write_text(
-        'schema_version = 1\n\n'
-        '[workspace]\n'
+        "schema_version = 1\n\n"
+        "[workspace]\n"
         'default_preset = "planning"\n\n'
-        '[update.modules.planning]\n'
+        "[update.modules.planning]\n"
         'source_type = "git"\n'
         'source_ref = "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"\n'
         'source_label = "planning feature ref"\n'
-        'recommended_upgrade_after_days = 14\n',
+        "recommended_upgrade_after_days = 14\n",
         encoding="utf-8",
     )
 
@@ -977,8 +977,7 @@ def test_upgrade_dry_run_syncs_module_update_source_metadata_from_repo_config(tm
     assert ".agentic-workspace/planning/UPGRADE-SOURCE.toml" in payload["updated_managed"]
     workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
     assert any(
-        action["path"] == ".agentic-workspace/planning/UPGRADE-SOURCE.toml"
-        and action["kind"] == "would update"
+        action["path"] == ".agentic-workspace/planning/UPGRADE-SOURCE.toml" and action["kind"] == "would update"
         for action in workspace_report["actions"]
     )
 
@@ -990,14 +989,14 @@ def test_status_warns_when_module_update_source_metadata_drifts_from_repo_config
     assert cli.main(["init", "--modules", "planning", "--target", str(target)]) == 0
     capsys.readouterr()
     (target / "agentic-workspace.toml").write_text(
-        'schema_version = 1\n\n'
-        '[workspace]\n'
+        "schema_version = 1\n\n"
+        "[workspace]\n"
         'default_preset = "planning"\n\n'
-        '[update.modules.planning]\n'
+        "[update.modules.planning]\n"
         'source_type = "git"\n'
         'source_ref = "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"\n'
         'source_label = "planning feature ref"\n'
-        'recommended_upgrade_after_days = 14\n',
+        "recommended_upgrade_after_days = 14\n",
         encoding="utf-8",
     )
 

@@ -1861,9 +1861,7 @@ def _build_lifecycle_handoff_prompt(payload: dict[str, Any]) -> str:
         selected_policy_lines = []
         for module_policy in config_payload.get("update", {}).get("modules", []):
             if module_policy.get("module") in payload["modules"]:
-                selected_policy_lines.append(
-                    f"- {module_policy['module']}: {module_policy['source_type']} {module_policy['source_ref']}"
-                )
+                selected_policy_lines.append(f"- {module_policy['module']}: {module_policy['source_type']} {module_policy['source_ref']}")
         if selected_policy_lines:
             lines.extend(["Configured update sources:"])
             lines.extend(selected_policy_lines)
@@ -2188,9 +2186,7 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
     valid_presets = set(_preset_modules(descriptors))
     if configured_preset not in valid_presets:
         supported = ", ".join(sorted(valid_presets))
-        raise WorkspaceUsageError(
-            f"{WORKSPACE_CONFIG_PATH.as_posix()} workspace.default_preset must be one of: {supported}."
-        )
+        raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} workspace.default_preset must be one of: {supported}.")
 
     update_modules = dict(defaults)
     raw_update = payload.get("update", {})
@@ -2227,9 +2223,7 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
                 f"{WORKSPACE_CONFIG_PATH.as_posix()} update.modules.{module_name}.source_ref must be a non-empty string."
             )
         source_label = str(module_payload.get("source_label", default_policy.source_label)).strip() or default_policy.source_label
-        recommended_upgrade_after_days = module_payload.get(
-            "recommended_upgrade_after_days", default_policy.recommended_upgrade_after_days
-        )
+        recommended_upgrade_after_days = module_payload.get("recommended_upgrade_after_days", default_policy.recommended_upgrade_after_days)
         if not isinstance(recommended_upgrade_after_days, int):
             raise WorkspaceUsageError(
                 f"{WORKSPACE_CONFIG_PATH.as_posix()} update.modules.{module_name}.recommended_upgrade_after_days must be an integer."
@@ -2286,9 +2280,7 @@ def _emit_proof(*, format_name: str, target_root: Path, descriptors: dict[str, M
 def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> dict[str, Any]:
     defaults = _defaults_payload()["proof_surfaces"]
     installed_modules = [
-        module_name
-        for module_name in _ordered_module_names(descriptors)
-        if descriptors[module_name].detector(target_root)
+        module_name for module_name in _ordered_module_names(descriptors) if descriptors[module_name].detector(target_root)
     ]
     current: dict[str, Any] = {
         "installed_modules": installed_modules,
@@ -2327,9 +2319,7 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
             "doctor_health": doctor_payload["health"],
             "warnings": _dedupe([*status_payload["warnings"], *doctor_payload["warnings"]]),
             "needs_review": _dedupe([*status_payload["needs_review"], *doctor_payload["needs_review"]]),
-            "stale_generated_surfaces": _dedupe(
-                [*status_payload["stale_generated_surfaces"], *doctor_payload["stale_generated_surfaces"]]
-            ),
+            "stale_generated_surfaces": _dedupe([*status_payload["stale_generated_surfaces"], *doctor_payload["stale_generated_surfaces"]]),
         }
     return {
         "target": target_root.as_posix(),
@@ -2352,10 +2342,7 @@ def _emit_ownership(*, format_name: str, target_root: Path, descriptors: dict[st
     print(f"Ledger: {payload['ledger_path']}")
     print("Authority surfaces:")
     for entry in payload["authority_surfaces"]:
-        print(
-            f"- {entry['concern']}: {entry['surface']} "
-            f"({entry['owner']}, {entry['ownership']}, authority={entry['authority']})"
-        )
+        print(f"- {entry['concern']}: {entry['surface']} ({entry['owner']}, {entry['ownership']}, authority={entry['authority']})")
     if payload["warnings"]:
         print("Warnings:")
         for warning in payload["warnings"]:
@@ -2376,28 +2363,16 @@ def _ownership_payload(*, target_root: Path, descriptors: dict[str, ModuleDescri
         warnings.append(f"{defaults['ledger']}: ownership ledger missing")
     else:
         payload = tomllib.loads(ledger_path.read_text(encoding="utf-8"))
-        ownership_classes = {
-            key: value
-            for key, value in (payload.get("ownership_classes") or {}).items()
-            if isinstance(value, dict)
-        }
-        module_roots = [
-            entry for entry in (payload.get("module_roots") or []) if isinstance(entry, dict)
-        ]
-        managed_surfaces = [
-            entry for entry in (payload.get("managed_surfaces") or []) if isinstance(entry, dict)
-        ]
+        ownership_classes = {key: value for key, value in (payload.get("ownership_classes") or {}).items() if isinstance(value, dict)}
+        module_roots = [entry for entry in (payload.get("module_roots") or []) if isinstance(entry, dict)]
+        managed_surfaces = [entry for entry in (payload.get("managed_surfaces") or []) if isinstance(entry, dict)]
         fences = [entry for entry in (payload.get("fences") or []) if isinstance(entry, dict)]
-        authority_surfaces = [
-            entry for entry in (payload.get("authority_surfaces") or []) if isinstance(entry, dict)
-        ]
+        authority_surfaces = [entry for entry in (payload.get("authority_surfaces") or []) if isinstance(entry, dict)]
         if not authority_surfaces:
             warnings.append(f"{defaults['ledger']}: authority_surfaces entries missing")
 
     installed_modules = [
-        module_name
-        for module_name in _ordered_module_names(descriptors)
-        if descriptors[module_name].detector(target_root)
+        module_name for module_name in _ordered_module_names(descriptors) if descriptors[module_name].detector(target_root)
     ]
     return {
         "target": target_root.as_posix(),
@@ -2423,7 +2398,9 @@ def _module_update_policy_payload(*, config: WorkspaceConfig, target_root: Path 
         sync_status = "unknown"
         current_source: dict[str, Any] | None = None
         if target_root is not None:
-            current_source, sync_status = _current_module_upgrade_source_state(target_root=target_root, module_name=module_name, policy=policy)
+            current_source, sync_status = _current_module_upgrade_source_state(
+                target_root=target_root, module_name=module_name, policy=policy
+            )
         payload.append(
             {
                 "module": module_name,

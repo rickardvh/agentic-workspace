@@ -770,8 +770,7 @@ def test_archive_execplan_blocks_missing_delegated_judgment(tmp_path: Path) -> N
     assert plan_path.exists()
     assert any(warning["warning_class"] == "archive_missing_delegated_judgment" for warning in result.warnings)
     assert any(
-        action.kind == "manual review" and action.path == plan_path and "Delegated Judgment" in action.detail
-        for action in result.actions
+        action.kind == "manual review" and action.path == plan_path and "Delegated Judgment" in action.detail for action in result.actions
     )
 
 

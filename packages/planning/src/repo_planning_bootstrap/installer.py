@@ -577,7 +577,10 @@ def archive_execplan(
             {
                 "warning_class": "archive_missing_delegated_judgment",
                 "path": plan_path.relative_to(target_root).as_posix(),
-                "message": "Execplan is missing one or more delegated-judgment fields needed to preserve intended outcome and escalation boundaries.",
+                "message": (
+                    "Execplan is missing one or more delegated-judgment fields needed "
+                    "to preserve intended outcome and escalation boundaries."
+                ),
             }
         )
         result.add(
@@ -1115,8 +1118,10 @@ def _render_execplan_from_todo_item(
         "## Delegated Judgment\n\n"
         f"- Requested outcome: {goal}\n"
         "- Hard constraints: Keep scope bounded to the promoted TODO item and its stated touched paths.\n"
-        "- Agent may decide locally: Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.\n"
-        "- Escalate when: A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.\n\n"
+        "- Agent may decide locally: Bounded decomposition, touched-path narrowing, "
+        "validation tightening, and plan-local residue routing.\n"
+        "- Escalate when: A better-looking fix changes the requested outcome, owned "
+        "surface, time horizon, or meaningful validation story.\n\n"
         "## Active Milestone\n\n"
         f"- ID: {item_id}\n"
         f"- Status: {status}\n"

@@ -8,8 +8,9 @@ Use this page when you need the canonical command to run, not the broader routin
 
 | Command | Purpose |
 | --- | --- |
+| `make setup` | Sync the shared root environment and install local git hooks |
 | `make sync-all` | Sync the shared root environment for all workspace packages |
-| `uv run pre-commit install` | Install the local format and lint hooks |
+| `uv run pre-commit install` | Install the local git hooks without resyncing the environment |
 
 ## Local Maintenance
 

@@ -606,12 +606,16 @@ def test_promotion_linkage_still_warns_for_vague_activation(tmp_path: Path) -> N
 
 def test_contract_shaping_execplan_without_decision_sections_warns_under_specified(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_contract_shaping_missing_sections")
-    plan = _minimal_execplan().replace(
-        "- Keep scope clear.",
-        "- Freeze the contract decisions for a provenance-aware update policy.",
-    ).replace(
-        "- Scope: maintain planning discipline.",
-        "- Scope: close the schema, precedence, and policy decisions before implementation.",
+    plan = (
+        _minimal_execplan()
+        .replace(
+            "- Keep scope clear.",
+            "- Freeze the contract decisions for a provenance-aware update policy.",
+        )
+        .replace(
+            "- Scope: maintain planning discipline.",
+            "- Scope: close the schema, precedence, and policy decisions before implementation.",
+        )
     )
     _write(tmp_path / "TODO.md", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
@@ -637,7 +641,9 @@ def test_contract_shaping_execplan_with_decision_sections_passes(tmp_path: Path)
         )
         .replace(
             "## Validation Commands",
-            "## Contract Decisions To Freeze\n\n- Canonical config lives at repo root.\n\n## Open Questions To Close\n\n- What wins when workspace and module pins disagree?\n\n## Validation Commands",
+            "## Contract Decisions To Freeze\n\n- Canonical config lives at repo root.\n\n"
+            "## Open Questions To Close\n\n- What wins when workspace and module pins disagree?\n\n"
+            "## Validation Commands",
         )
     )
     _write(tmp_path / "TODO.md", _baseline_todo())
