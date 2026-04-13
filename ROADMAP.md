@@ -23,7 +23,6 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 | Candidate | Source | Why now | Promote when |
 | --- | --- | --- | --- |
-| `Environment and recovery guidance contract` | `docs/agent-os-capabilities.md`, `docs/reviews/planning-beta-readiness-review-2026-04-09.md` | Recovery guidance still exists mostly as scattered module-local prose even though environment dead-ends are a recurring cost surface in real use. | The next long-horizon slice should reduce restart or recovery friction, or repeated environment/setup failures appear in dogfooding. |
 | `Extension-boundary readiness review` | `docs/extension-boundary.md` | The public extension boundary remains intentionally closed, but the readiness gates now need periodic reality checks so the doc does not become a static promise or a stale blocker. | New plugin/module pressure appears, or first-party module-contract changes materially move one of the readiness gates. |
 
 ## Sequencing Recommendation

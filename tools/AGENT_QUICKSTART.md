@@ -20,6 +20,7 @@ Fast path for autonomous agents working on this repo.
 - Read `docs/upstream-task-intake.md` when triaging external issues or tasks into checked-in planning.
 - When the task is clearly review-shaped, check `agentic-workspace skills --target ./repo --task "<task>" --format json` before falling back to generic reasoning so bundled review skills stay cheaper to use than rediscovery.
 - Read `docs/capability-aware-execution.md` when task capability fit, delegation, or escalation is unclear, especially when the question is whether to silently reshape the work instead of prompting for a stronger executor.
+- Read `docs/environment-recovery-contract.md` when interruption handling, environment assumptions, or recovery shape is unclear.
 - Before editing files in a subtree, read the nearest relevant descendant `AGENTS.md` for that subtree only.
 - Read `memory/index.md` and `.agentic-workspace/memory/WORKFLOW.md` only when memory is installed and the plan or manifest does not already route the task, or when changing workflow, planning, or memory itself.
 - Do not bulk-read all planning surfaces for ordinary execution work; start from `TODO.md` and then the one relevant active plan.
@@ -75,7 +76,7 @@ Fast path for autonomous agents working on this repo.
 - `planning_surface_change`
   Use when: Editing planning-for-execution surfaces, plan templates, or planning-surface checks.
   Prefer this route when: the change affects TODO, ROADMAP, execplans, or the planning bootstrap itself.
-  Touches: `AGENTS.md`, `TODO.md`, `ROADMAP.md`, `docs/upstream-task-intake.md`, `docs/execplans/`, `scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/render_agent_docs.py`, `.agentic-workspace/planning/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`
+  Touches: `AGENTS.md`, `TODO.md`, `ROADMAP.md`, `docs/upstream-task-intake.md`, `docs/environment-recovery-contract.md`, `docs/execplans/`, `scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/render_agent_docs.py`, `.agentic-workspace/planning/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`
   Validate: `make maintainer-surfaces`; `make render-agent-docs`
 
 ## Skills

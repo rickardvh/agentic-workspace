@@ -107,6 +107,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     result = install_bootstrap(target=tmp_path)
     capability_fit_doc_path = tmp_path / "docs" / "capability-aware-execution.md"
+    environment_recovery_doc_path = tmp_path / "docs" / "environment-recovery-contract.md"
     execution_summary_doc_path = tmp_path / "docs" / "execution-summary-contract.md"
     skill_readme_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "README.md"
     skill_registry_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json"
@@ -120,6 +121,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert (tmp_path / "TODO.md").exists()
     assert (tmp_path / "ROADMAP.md").exists()
     assert capability_fit_doc_path.exists()
+    assert environment_recovery_doc_path.exists()
     assert execution_summary_doc_path.exists()
     assert review_readme_path.exists()
     assert review_template_path.exists()
@@ -146,6 +148,7 @@ def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path("AGENTS.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("TODO.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/capability-aware-execution.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path("docs/environment-recovery-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/execplans/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/reviews/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/upstream-task-intake.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
@@ -364,6 +367,18 @@ def test_bootstrap_delegated_judgment_doc_is_part_of_contract() -> None:
     assert "Improve means locally" in text
     assert "The agent must not silently widen" in text
     assert Path("docs/delegated-judgment-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+
+
+def test_bootstrap_environment_recovery_contract_is_part_of_payload() -> None:
+    text = (installer_mod.payload_root() / "docs" / "environment-recovery-contract.md").read_text(encoding="utf-8")
+
+    assert "# Environment And Recovery Contract" in text
+    assert "## Canonical Shape" in text
+    assert "Immediate Next Action" in text
+    assert "Validation Commands" in text
+    assert "Do not add a new dedicated recovery section to every execplan." in text
+    assert "Do not stretch TODO rows into shadow execplans." in text
+    assert Path("docs/environment-recovery-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
 def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routing() -> None:

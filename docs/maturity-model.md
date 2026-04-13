@@ -52,5 +52,5 @@ Beta implies:
 | Surface | Current maturity | Meaning here |
 | --- | --- | --- |
 | Agentic Memory | beta | durable repo-memory contract is usable and should evolve incrementally |
-| Agentic Planning | alpha | planning is now a real, useful, and strongly dogfooded execution contract, but the package is still stabilizing explicit follow-through behavior such as handoff/summary shape and recovery guidance before the contract should be treated as broadly boring |
+| Agentic Planning | beta | planning now has explicit capability-fit, delegated-judgment, execution-summary, and environment-recovery contracts, so remaining changes should mostly refine the execution surface rather than define missing core behavior |
 | `agentic-workspace` | internal composition layer | thin workspace composition exists and is useful, but the primary external products are still memory and planning |

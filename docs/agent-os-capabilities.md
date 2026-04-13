@@ -188,7 +188,7 @@ These capabilities are architecturally important today, but they are not automat
 - Current category: `internal capability`
 - Problem solved: agents lose time when environment constraints, recovery paths, or maintenance preconditions must be rediscovered manually
 - Why an agent wants it in checked-in form: concise recovery guidance lowers operational dead-ends and reduces repeated diagnosis cost
-- Current home: module docs, maintainer docs, and selected workflow contracts
+- Current home: the planning-side recovery contract plus module docs, maintainer docs, and selected workflow contracts
 - Promotion stance: future candidate at most; likely to stay supporting infrastructure
 - Evidence required for further promotion: repeated, reusable need for a stable checked-in recovery contract that is not better served by module-local docs
 

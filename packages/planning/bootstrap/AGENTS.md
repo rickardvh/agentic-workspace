@@ -24,15 +24,17 @@ Prefer checked-in knowledge over durable chat memory when both exist.
 5. Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.
 6. Read `docs/upstream-task-intake.md` when triaging external issues or tasks into checked-in planning.
 7. Read `docs/capability-aware-execution.md` when task capability fit, delegation, silent shaping, or escalation is unclear.
-8. Prefer `.agentic-workspace/planning/agent-manifest.json` and `tools/AGENT_QUICKSTART.md` before freeform exploration.
-9. Read only the repo docs relevant to the touched subsystem.
-10. Read `memory/index.md` and `\.agentic-workspace/memory/WORKFLOW.md` only when memory is installed and the task is not already well-routed by the plan or manifest, or when changing workflow, planning, or memory itself.
+8. Read `docs/environment-recovery-contract.md` when interruption handling, environment assumptions, or recovery shape is unclear.
+9. Prefer `.agentic-workspace/planning/agent-manifest.json` and `tools/AGENT_QUICKSTART.md` before freeform exploration.
+10. Read only the repo docs relevant to the touched subsystem.
+11. Read `memory/index.md` and `\.agentic-workspace/memory/WORKFLOW.md` only when memory is installed and the task is not already well-routed by the plan or manifest, or when changing workflow, planning, or memory itself.
 
 Do not bulk-read all planning surfaces for ordinary execution work. Start from `TODO.md`, then read at most one relevant active execplan.
 
 Direct execution is valid when one coherent pass can finish the work and the `TODO.md` item can stay compact with `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`.
 Promote that task into `docs/execplans/` once it needs milestone sequencing, blocker handling, non-obvious validation scope, rollback or migration detail, or enough ambiguity that restart would require more than the TODO row.
 Use `docs/capability-aware-execution.md` when deciding whether the cheapest safe path, stronger planning, silent shaping, delegation, or escalation is appropriate.
+Use `docs/environment-recovery-contract.md` when deciding whether task-local recovery belongs in the active plan or should remain in module-local docs.
 Do not treat that contract as a standing instruction to switch models or override tools that already perform automatic capability selection well.
 When a bounded slice completes only part of a larger intended outcome, the execplan must record both `Intent Continuity` and `Required Continuation` before archive so the next owner and activation trigger live in checked-in planning, not only in prose or chat.
 
@@ -45,6 +47,7 @@ Do not start coding from chat context alone when the same knowledge should live 
 - Long-horizon planning: `ROADMAP.md`
 - Upstream task intake contract: `docs/upstream-task-intake.md`
 - Capability-fit execution contract: `docs/capability-aware-execution.md`
+- Environment and recovery contract: `docs/environment-recovery-contract.md`
 - Durable routed knowledge, when installed: `memory/index.md`
 - Shared memory workflow policy, when installed: `\.agentic-workspace/memory/WORKFLOW.md`
 - Machine-readable routing and command bundles: `.agentic-workspace/planning/agent-manifest.json`
