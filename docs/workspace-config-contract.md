@@ -45,6 +45,21 @@ recommended_upgrade_after_days = 30
 - Normal update execution stays behind `agentic-workspace`.
 - Config does not own active state, long instructions, free-form prompts, or scheduler semantics.
 
+## Mixed-Agent Expansion Discipline
+
+Future config expansion should stay narrow.
+
+- Repo-owned checked-in config should continue to own only stable repo policy that deserves review and portability.
+- The main motivation for any mixed-agent extension is lower long-run token cost plus smoother switching across subscriptions, agent tools, and future local models.
+- Runtime model choice, internal delegation strategy, and reasoning-depth selection should remain tool-owned unless a future surface can express them as capability-oriented hints without turning the repo into a scheduler.
+- The product should prefer task/runtime inference first, config second, and explicit prompting last.
+- If a future local override is added for machine-, account-, or cost-profile-specific preferences, it should stay optional, untracked, layered on top of repo policy, and observable through effective reporting.
+- Local override is for environment asymmetry and capability/cost posture, not a broad hidden user-preference layer.
+- Local/runtime preferences must not silently rewrite ownership boundaries, delegated-judgment limits, done criteria, or other checked-in repo semantics.
+- Mixed-agent config should describe capability and cost posture rather than vendor-specific routing rules.
+- Persisted checked-in state should remain the primary way to make agent switching cheap; config should only tune stable preferences and capability asymmetries around that core contract.
+- Mixed-agent extensions should be justified by measured or repeatedly observed restart, handoff, or token-cost improvement rather than preference alone.
+
 ## Effective Config
 
 Use:
@@ -59,6 +74,17 @@ That surface reports:
 - the resolved default preset
 - the effective per-module update policy
 - whether each module's `UPGRADE-SOURCE.toml` metadata matches the resolved policy
+
+If mixed-agent policy grows beyond the v1 surface, effective reporting should also make clear:
+
+- what comes from checked-in repo policy
+- what comes from optional local override
+- what comes from product defaults
+- what is inferred from the current runtime or task shape
+
+When runtime inference materially changes behavior, reporting should make that inference auditable rather than hidden.
+
+Do not add broader mixed-agent config without a reporting surface that preserves this distinction.
 
 ## Upgrade Semantics
 

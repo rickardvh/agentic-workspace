@@ -15,7 +15,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Active Handoff
 
-- No active handoff right now.
+- Active mixed-agent config/reporting contract slice: `docs/execplans/mixed-agent-config-boundaries-and-reporting-2026-04-13.md` (from GitHub issue `#27`).
 
 ## GitHub Issue Intake
 
@@ -49,8 +49,6 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 | Candidate | Source | Why now | Promote when |
 | --- | --- | --- | --- |
 | `Conservative automatic policy selection follow-through` | GitHub issue `#27`; `agentic-workspace.toml`; `llms.txt` | The workspace should keep reducing required user input, but only where inference is safe. The next refinement is proving when to install, adopt, emit review-required handoff, or preserve repo-owned surfaces aggressively. | Another bootstrap or adoption pass shows policy inference is either too eager or not explicit enough about review-required boundaries. |
-| `Expand the effective config carefully` | GitHub issue `#27`; `agentic-workspace.toml`; `docs/design-principles.md` | The config surface now exists and should stay narrow. The best next additions are only the highest-value mixed-agent defaults such as local/open-runner preferences, handoff style defaults, stronger-planning / cheaper-execution bias, or stricter escalation posture for weaker agents. | Repeated mixed-agent work reveals the same repo-owned preference gap more than once and the answer fits a narrow config addition better than new workflow prose. |
-| `Effective mixed-agent mode reporting` | GitHub issue `#27`; `docs/delegated-judgment-contract.md`; `docs/default-path-contract.md` | The workspace may need a clearer machine-readable answer to what the human must set, what weaker agents may decide, what should go to a stronger planner, and what must stop and escalate. | Another mixed-agent execution pass shows that capability-fit and delegated-judgment surfaces still require too much inference to route safely. |
 
 ## Ongoing Maintenance Expectations
 

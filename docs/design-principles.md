@@ -21,6 +21,12 @@ Agentic Workspace should:
 - reduce unnecessary token use by cutting rediscovery and over-reading
 - improve the codebase, documentation, and tooling over time by steering work toward better repository practice
 
+It should also make agent switching economically sane:
+
+- changing subscriptions, tools, or model tiers should not force broad rediscovery
+- shared persisted knowledge should be cheaper than repeated re-explanation
+- cross-agent continuation should preserve quality while minimizing long-run token spend
+
 It should remain:
 
 - unobtrusive
@@ -40,6 +46,8 @@ A successful Agentic Workspace should provide leverage without noise. It should 
 Important operational knowledge should live in checked-in repository surfaces rather than in transient chat history, tool-local memory, or one contributor's working context.
 
 If a fact materially affects future work, restart cost, or safe execution, the repository should be able to carry it.
+
+If the same context is likely to matter across agents, sessions, or contributors, durable checked-in state should beat repeated chat summaries and re-explanation.
 
 ### 2. Reduce reading, not increase it
 
@@ -221,6 +229,11 @@ That means:
 
 A good repository system should degrade gracefully under normal collaborative pressure.
 
+Shared continuity should also survive tool diversity:
+
+- one contributor's agent choice should not become another contributor's restart tax
+- persisted repository state should let different subscriptions, vendors, or local models continue work without broad rediscovery
+
 ### 14. Dogfooding is a proving ground, not a special exception
 
 This repository should validate the product through real use.
@@ -248,6 +261,59 @@ Prefer:
 
 Avoid solutions that only feel elegant inside one particularly well-understood monorepo.
 
+### 16. Repository leverage should complement runtime leverage
+
+Agentic Workspace should assume that a capable coding assistant may already have better internal tools for delegation, model selection, reasoning depth, or execution shaping than the repository can or should prescribe.
+
+The product should therefore focus on checked-in leverage:
+
+- explicit execution contracts
+- durable handoff state
+- smaller restart surfaces
+- machine-readable validation expectations
+- clear escalation boundaries
+- durable residue promotion
+
+It should help runtimes do better work without trying to replace their native orchestration.
+
+That means:
+
+- prefer inference and checked-in guidance over hard orchestration rules
+- use capability language instead of vendor-specific routing
+- empower weaker agents by reducing ambiguity and rereading
+- keep repo semantics authoritative even when local/runtime preferences differ
+- treat smooth switching between agents, subscriptions, and future local models as a first-class continuity goal
+
+The system is succeeding when a strong agent can ignore optional preferences and still benefit from the repo, while a weaker agent can rely on the same checked-in surfaces to perform above its base capability.
+
+### 17. Proof should beat preference
+
+Mixed-agent features should earn their place through repeated ordinary work, not intuition alone.
+
+If a feature claims to save tokens, reduce restart cost, or improve handoff quality, the product should be able to evaluate that claim through real dogfooding, bounded review, or repeated workflow evidence.
+
+Preference without proof is not enough when the product goal is efficiency.
+
+### 18. Continuity quality matters more than artifact count
+
+A handoff artifact is useful only when the next agent or human can continue with minimal rereading and without reconstructing hidden assumptions.
+
+Smooth switching means the next contributor can recover:
+
+- current intent
+- hard constraints
+- relevant durable context
+- proof expectations
+- immediate next action
+
+without broad startup rereads.
+
+### 19. Do not save model tokens by creating human bureaucracy
+
+A feature fails if it reduces model-side token use but shifts comparable or greater cost onto humans through extra prompting, triage, cleanup, or hidden configuration burden.
+
+The product should reduce total operating cost, not merely move it between participants.
+
 ## Design Tests
 
 A proposed feature is moving in the right direction if it helps answer yes to questions like:
@@ -256,12 +322,14 @@ A proposed feature is moving in the right direction if it helps answer yes to qu
 - Does this reduce rediscovery?
 - Does this make the repo easier to understand?
 - Does this lower context or reasoning cost?
+- Does this lower total restart, handoff, and correction cost over time rather than only in one run?
 - Does this preserve or sharpen ownership boundaries?
 - Does this improve the repo itself over time?
 - Can it remain quiet in normal use?
 - Can it be adopted selectively?
 - Can it be removed cleanly if needed?
 - Would it still make sense outside this monorepo?
+- Does this strengthen checked-in leverage without trying to out-orchestrate the runtime?
 
 A proposed feature is suspicious if it tends to:
 
@@ -270,9 +338,11 @@ A proposed feature is suspicious if it tends to:
 - require broad reading
 - hide ownership
 - add ceremony to simple work
+- save agent tokens mainly by shifting work onto humans
 - depend on special knowledge of this repo
 - make the workspace layer absorb module logic
 - leave behind high-churn residue that outlives its value
+- try to schedule runtime model choice or delegation from checked-in policy
 
 ## Practical Standard
 

@@ -8,10 +8,10 @@ Active queue for repository work.
 
 ## Now
 
-- No active work right now.
+- mixed-agent-config-boundaries-and-reporting: Active (`docs/execplans/mixed-agent-config-boundaries-and-reporting-2026-04-13.md`) - Freeze the contract for token-efficient mixed-agent operation so implementation can add bounded config/reporting support without turning the repo into a runtime scheduler.
 ## Action
 
-- Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.
+- Execute the active mixed-agent config/reporting contract slice and keep follow-on implementation bounded to checked-in infrastructure, not runtime orchestration.
 ## Done
 
 - extension-boundary-readiness-review: Completed (reviewed the extension-boundary gates against the current first-party contract, added a live readiness snapshot plus re-review triggers to the canonical boundary doc, recorded the bounded review artifact, and removed the roadmap candidate)
