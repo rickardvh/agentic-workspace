@@ -36,6 +36,7 @@ Use it when you need the canonical intent, repo-state, policy, and handoff contr
 
 - Partial module state for a selected module.
 - Placeholder markers or bootstrap markers still present in workflow surfaces.
+- Existing canonical handoff surfaces overlap with workflow surfaces and need reconciliation before normal work continues.
 - Existing workflow surfaces overlap strongly enough that the repo needs reconciliation before normal work continues.
 - Managed root state already exists and the overlap suggests the repo should be treated as a finishing pass instead of a fresh install.
 

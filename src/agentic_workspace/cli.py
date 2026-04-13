@@ -37,6 +37,10 @@ WORKSPACE_LOCAL_CONFIG_PATH = Path("agentic-workspace.local.toml")
 WORKSPACE_EXTERNAL_AGENT_PATH = Path("llms.txt")
 WORKSPACE_BOOTSTRAP_HANDOFF_PATH = Path(".agentic-workspace/bootstrap-handoff.md")
 WORKSPACE_AGENTS_PATH = Path("AGENTS.md")
+WORKSPACE_HANDOFF_SURFACES = (
+    WORKSPACE_EXTERNAL_AGENT_PATH,
+    WORKSPACE_BOOTSTRAP_HANDOFF_PATH,
+)
 MODULE_UPGRADE_SOURCE_PATHS = {
     "planning": Path(".agentic-workspace/planning/UPGRADE-SOURCE.toml"),
     "memory": Path(".agentic-workspace/memory/UPGRADE-SOURCE.toml"),
@@ -1317,7 +1321,9 @@ def _inspect_repo_state(
 ) -> RepoInspection:
     workflow_surfaces = _module_workflow_surfaces(selected_modules=selected_modules, descriptors=descriptors)
     generated_artifacts = _module_generated_artifacts(selected_modules=selected_modules, descriptors=descriptors)
-    detected_surfaces = [path.as_posix() for path in workflow_surfaces if (target_root / path).exists()]
+    detected_workflow_surfaces = [path.as_posix() for path in workflow_surfaces if (target_root / path).exists()]
+    detected_state_surfaces = [path.as_posix() for path in WORKSPACE_HANDOFF_SURFACES if (target_root / path).exists()]
+    detected_surfaces = _dedupe([*detected_workflow_surfaces, *detected_state_surfaces])
     preserved_existing = [path for path in detected_surfaces if path not in generated_artifacts]
     partial_state: list[str] = []
     for module_name in selected_modules:
@@ -1334,6 +1340,12 @@ def _inspect_repo_state(
         force_adopt=force_adopt,
         managed_root_present=managed_root_present,
         overlap_count=overlap_count,
+        workflow_overlap_count=len(detected_workflow_surfaces),
+        handoff_surface_count=sum(
+            1
+            for surface in detected_state_surfaces
+            if surface in {WORKSPACE_EXTERNAL_AGENT_PATH.as_posix(), WORKSPACE_BOOTSTRAP_HANDOFF_PATH.as_posix()}
+        ),
         partial_state=partial_state,
         placeholders=placeholders,
     )
@@ -1364,6 +1376,8 @@ def _classify_repo_state(
     force_adopt: bool,
     managed_root_present: bool,
     overlap_count: int,
+    workflow_overlap_count: int,
+    handoff_surface_count: int,
     partial_state: list[str],
     placeholders: list[str],
 ) -> tuple[str, str, str]:
@@ -1371,7 +1385,12 @@ def _classify_repo_state(
         return ("partial_or_placeholder_state", "adopt_high_ambiguity", "require_explicit_handoff")
     if not overlap_count and not force_adopt:
         return ("blank_or_unmanaged_repo", "install", "install_direct")
-    if overlap_count >= 4 or (managed_root_present and overlap_count >= 2):
+    if (
+        overlap_count >= 4
+        or (managed_root_present and overlap_count >= 2)
+        or handoff_surface_count >= 2
+        or (handoff_surface_count >= 1 and workflow_overlap_count >= 1)
+    ):
         return ("docs_heavy_existing_repo", "adopt_high_ambiguity", "require_explicit_handoff")
     return ("light_existing_workflow", "adopt", "preserve_existing_and_adopt")
 

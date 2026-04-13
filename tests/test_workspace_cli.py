@@ -700,6 +700,26 @@ def test_init_uses_recommended_prompt_for_single_existing_surface(monkeypatch, t
     ]
 
 
+def test_init_treats_existing_llms_file_as_existing_workspace_surface(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    (tmp_path / "llms.txt").write_text("# External agent handoff\n", encoding="utf-8")
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["repo_state"] == "light_existing_workflow"
+    assert payload["inferred_policy"] == "preserve_existing_and_adopt"
+    assert payload["mode"] == "adopt"
+    assert payload["prompt_requirement"] == "recommended"
+    assert payload["detected_surfaces"] == ["llms.txt"]
+    assert calls == [
+        ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
+        ("memory", "adopt", {"target": str(tmp_path), "dry_run": False}),
+    ]
+
+
 def test_init_reports_docs_heavy_repo_as_high_ambiguity(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
@@ -727,6 +747,29 @@ def test_init_reports_docs_heavy_repo_as_high_ambiguity(monkeypatch, tmp_path: P
     ]
     assert "AGENTS.md: reconcile existing workflow surface ownership" in payload["needs_review"]
     assert "docs/contributor-playbook.md: reconcile existing workflow surface ownership" in payload["needs_review"]
+    assert calls == [
+        ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
+        ("memory", "adopt", {"target": str(tmp_path), "dry_run": False}),
+    ]
+
+
+def test_init_reports_existing_handoff_plus_workflow_surface_as_high_ambiguity(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    (tmp_path / "AGENTS.md").write_text("# Existing\n", encoding="utf-8")
+    (tmp_path / "llms.txt").write_text("# External agent handoff\n", encoding="utf-8")
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["repo_state"] == "docs_heavy_existing_repo"
+    assert payload["inferred_policy"] == "require_explicit_handoff"
+    assert payload["mode"] == "adopt_high_ambiguity"
+    assert payload["prompt_requirement"] == "required"
+    assert sorted(payload["detected_surfaces"]) == ["AGENTS.md", "llms.txt"]
+    assert "AGENTS.md: reconcile existing workflow surface ownership" in payload["needs_review"]
+    assert "llms.txt: reconcile existing workflow surface ownership" in payload["needs_review"]
     assert calls == [
         ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
         ("memory", "adopt", {"target": str(tmp_path), "dry_run": False}),
