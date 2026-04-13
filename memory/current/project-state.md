@@ -1,29 +1,29 @@
 # Project State
 ## Status
-Active execplan: `memory-context-note-shape-cleanup`.
+- Proof/refinement phase in the root monorepo.
 ## Scope
-- Transient handoff note for the current monorepo pass.
+- Shared repo overview only.
 ## Applies to
 - Root monorepo operation only.
 ## Load when
-- Starting work and needing a short current overview.
-- Returning to the repository after a break.
+- Starting work or returning after a break.
 ## Review when
 - Current focus or blockers change.
 ## Current focus
-- Finish the final memory note-shape cleanup and leave the roadmap empty.
+- Execute the highest-priority roadmap proof queue in order, starting with repeated ordinary-use Memory/Planning synergy proof.
 ## Recent meaningful progress
-- All non-memory roadmap slices are complete.
+- Mixed-agent reporting and validation-default reporting are landed, the first strong-planner / cheap-implementer dogfood pass is archived, and current-memory freshness now flags explicit planning-state residue in `memory/current/*`.
 ## Blockers
 - None.
 ## High-level notes
-- Keep this note short and current.
+- Keep current-memory notes subordinate to `TODO.md` and active execplans.
 ## Failure signals
 - The overview becomes a task list instead of a short current-state note.
 - The note drifts away from the current repository reality.
 ## Verify
-- Confirm the current focus and blockers still reflect the repo.
+- Confirm the overview still matches `TODO.md` and `ROADMAP.md`.
 ## Verified against
 - `TODO.md`
+- `ROADMAP.md`
 ## Last confirmed
-2026-04-08 after promoting the final roadmap slice
+2026-04-13 after refreshing current-memory notes during the repeated ordinary-use synergy proof slice

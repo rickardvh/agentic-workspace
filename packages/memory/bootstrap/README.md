@@ -106,7 +106,7 @@ Ownership split:
 - bootstrap-managed and upgrade-replaceable: the workflow pointer block in `AGENTS.md`, `.agentic-memory/`, and other shared replaceable payload files
 - repo-owned and expected to diverge: `AGENTS.md` content outside the managed pointer block, repo-added sibling skills under `memory/skills/`, and ordinary notes outside the product-managed shared directories
 
-`memory/current/project-state.md` should stay aggressively summary-shaped and weak-authority: current focus, recent meaningful progress, blockers, and a few high-value notes are usually enough. If a fact becomes durable, move it into a primary home and leave only a short pointer or remove it.
+`memory/current/project-state.md` should stay aggressively summary-shaped and weak-authority: current focus, recent meaningful progress, blockers, and a few high-value notes are usually enough. If it starts carrying explicit planning-state residue such as an active execplan pointer, move that ownership back to the planning surface and leave only re-orientation context here. If a fact becomes durable, move it into a primary home and leave only a short pointer or remove it.
 
 Small routing layers work better than summary-heavy indexes. A good `memory/index.md` points to a few likely-relevant notes rather than trying to restate them.
 Treat `.agentic-memory/skills/memory-router/` as the normal entrypoint for day-to-day note selection, with `memory/index.md` and `memory/manifest.toml` providing the visible routing contract behind it.

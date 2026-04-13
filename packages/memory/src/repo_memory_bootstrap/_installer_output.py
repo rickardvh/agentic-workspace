@@ -38,6 +38,10 @@ from repo_memory_bootstrap._installer_shared import (
 )
 
 SECTION_HEADING_RE = re.compile(r"^\s{0,3}##\s+(.+?)\s*$")
+CURRENT_CONTEXT_PLANNING_RESIDUE_RE = re.compile(
+    r"^\s*(?:-|\*)?\s*Active (?:execplan|plan|milestone)\s*:",
+    re.IGNORECASE | re.MULTILINE,
+)
 
 
 def build_substitutions(
@@ -306,6 +310,15 @@ def _current_note_structure_findings(*, text: str, expected_sections: tuple[str,
             (
                 f"{note_name} note includes chronological task-log style bullets "
                 f"({chronological_lines} entries); review for execution-log drift"
+            )
+        )
+
+    if note_name in {"project-state", "task-context"} and CURRENT_CONTEXT_PLANNING_RESIDUE_RE.search(text):
+        findings.append(
+            (
+                f"{note_name} note includes explicit planning-state residue "
+                "(for example, 'Active execplan'); keep active execution ownership "
+                "in the repo planning surface and leave only re-orientation context here"
             )
         )
 

@@ -1086,6 +1086,38 @@ def test_current_check_flags_task_context_structure_drift_and_planner_signals(tm
     assert any("task-log style bullets" in action.detail for action in result.actions)
 
 
+def test_current_check_flags_project_state_planning_state_residue(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    (target / "memory" / "current").mkdir(parents=True)
+    (target / "memory" / "current" / "project-state.md").write_text(
+        "# Project State\n\n"
+        "## Status\n\n"
+        "- Active execplan: `docs/execplans/example.md`.\n\n"
+        "## Scope\n\n- Shared overview only.\n\n"
+        "## Applies to\n\n- Root monorepo operation.\n\n"
+        "## Load when\n\n- Starting work.\n\n"
+        "## Review when\n\n- Current focus changes.\n\n"
+        "## Current focus\n\n- Ordinary work.\n\n"
+        "## Recent meaningful progress\n\n- One thing changed.\n\n"
+        "## Blockers\n\n- None.\n\n"
+        "## High-level notes\n\n- Keep this note short.\n\n"
+        "## Failure signals\n\n- It becomes a planner.\n\n"
+        "## Verify\n\n- Confirm overview still matches repo reality.\n\n"
+        "## Verified against\n\n- `TODO.md`\n\n"
+        "## Last confirmed\n\n2026-04-13\n",
+        encoding="utf-8",
+    )
+    (target / "memory" / "current" / "task-context.md").write_text(_task_context_text(), encoding="utf-8")
+
+    result = installer.check_current_memory(target=target)
+
+    assert any(
+        action.path == target / "memory" / "current" / "project-state.md" and "explicit planning-state residue" in action.detail
+        for action in result.actions
+    )
+
+
 def test_current_check_allows_next_validation_heading(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
@@ -2006,6 +2038,42 @@ def test_memory_freshness_strict_can_fail_on_bootstrap_placeholders_when_request
     assert result.returncode == 1
     assert "Uncustomised routing placeholders:" in result.stdout
     assert "starter placeholder route examples" in result.stdout
+
+
+def test_memory_freshness_reports_current_planning_state_residue(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+    (target / "memory" / "current" / "project-state.md").write_text(
+        "# Project State\n\n"
+        "## Status\n\n"
+        "- Active execplan: `docs/execplans/example.md`.\n\n"
+        "## Scope\n\n- Shared overview only.\n\n"
+        "## Applies to\n\n- Root monorepo operation.\n\n"
+        "## Load when\n\n- Starting work.\n\n"
+        "## Review when\n\n- Current focus changes.\n\n"
+        "## Current focus\n\n- Ordinary work.\n\n"
+        "## Recent meaningful progress\n\n- One thing changed.\n\n"
+        "## Blockers\n\n- None.\n\n"
+        "## High-level notes\n\n- Keep this note short.\n\n"
+        "## Failure signals\n\n- It becomes a planner.\n\n"
+        "## Verify\n\n- Confirm overview still matches repo reality.\n\n"
+        "## Verified against\n\n- `TODO.md`\n\n"
+        "## Last confirmed\n\n2026-04-13\n",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [sys.executable, "scripts/check/check_memory_freshness.py"],
+        cwd=target,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "Current-context drift signals:" in result.stdout
+    assert "memory/current/project-state.md" in result.stdout
 
 
 def test_cli_version_flag_prints_package_version(capsys) -> None:

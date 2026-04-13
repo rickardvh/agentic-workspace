@@ -23,6 +23,7 @@ RE_LAST_CONFIRMED_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2})\b")
 RE_STATUS_VALUE = re.compile(r"^(Stable|Active|Needs verification|Deprecated)\s*$", re.IGNORECASE)
 RE_SECTION = re.compile(r"^\s{0,3}##\s+(.+?)\s*$")
 RE_CHRONOLOGY = re.compile(r"^\s*(?:-|\*|\d+\.)\s+20\d{2}-\d{2}-\d{2}\b")
+RE_PLANNING_RESIDUE = re.compile(r"^\s*(?:-|\*)?\s*Active (?:execplan|plan|milestone)\s*:", re.IGNORECASE | re.MULTILINE)
 
 MEMORY_ROOT = Path("memory")
 MANIFEST_PATH = MEMORY_ROOT / "manifest.toml"
@@ -340,7 +341,11 @@ def _suspicious_current_context(path: Path, lines: list[str], sections: set[str]
     lowered_sections = {section.lower() for section in sections}
     if lowered_sections & SUSPICIOUS_CURRENT_HEADINGS:
         return True
-    return sum(1 for line in lines if RE_CHRONOLOGY.match(line)) >= 3
+    if sum(1 for line in lines if RE_CHRONOLOGY.match(line)) >= 3:
+        return True
+    if path.as_posix() != "memory/current/routing-feedback.md" and RE_PLANNING_RESIDUE.search("\n".join(lines)):
+        return True
+    return False
 
 
 def _print_section(title: str, items: list[str]) -> None:
