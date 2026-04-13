@@ -25,7 +25,6 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 | Candidate | Source | Why now | Promote when |
 | --- | --- | --- | --- |
-| `Cross-agent handoff quality audit` | GitHub issue `#25`; `llms.txt`; `.agentic-workspace/bootstrap-handoff.md`; `docs/default-path-contract.md` | Cost pressure and multi-tool switching make cheap restart across agents a first-class product requirement. After the first narrow dogfood pass, the next evidence gap is whether intent, active state, durable context, and success criteria survive handoff between different agents and contributors without broad rereading. | Another mixed-agent task completes with noticeable restart or handoff friction, or a dogfooding pass suggests the checked-in surfaces are still too expensive for weaker agents to reconstruct. |
 | `Selective-adoption proof refresh` | GitHub issue `#25`; `docs/design-principles.md`; `docs/ecosystem-roadmap.md`; `docs/extension-boundary.md` | Selective adoption is a core product requirement, but recent proof is still too tied to this monorepo's well-understood combined install rather than a fresh bounded check of memory-only, planning-only, and combined adoption quality. | Another adoption-related friction pass, lifecycle review, or maintainer question shows that selective-adoption confidence is starting to rely on doctrine more than recent evidence. |
 | `Portability evidence review` | GitHub issue `#25`; `docs/design-principles.md`; `docs/agent-os-capabilities.md`; `docs/ecosystem-roadmap.md` | The doctrine emphasizes portability and cheaper restart outside this repo, but the strongest evidence is still dogfooding here. A bounded review should identify which current contracts are genuinely portable and which still rely too much on local familiarity. | Repeated adopter-facing questions appear, another repo tries the stack, or new features start leaning on assumptions that are only cheap inside this monorepo. |
 
@@ -52,8 +51,8 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 ## Sequencing Recommendation
 
 1. Prefer proof, refinement, and trust-hardening over new capability invention.
-2. After the first bounded dogfood pass and the first ordinary-use synergy proof, prioritize cross-agent continuity, selective-adoption follow-through, and portability claims before widening into broader bootstrap hardening.
-3. Treat strong-planner / cheap-implementer proof as established enough for this queue unless new ordinary work reopens ambiguity about bounded handoff quality.
+2. After the first bounded dogfood pass, the ordinary-use synergy proof, and the external-agent handoff audit, prioritize selective-adoption follow-through and portability claims before widening into broader bootstrap hardening.
+3. Treat bounded strong-planner / cheap-implementer proof and the current external-agent handoff lane as established enough for this queue unless new ordinary work reopens ambiguity.
 4. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.
 
 ## Reopen Conditions

@@ -1,83 +1,27 @@
-# Agentic Workspace Bootstrap Handoff
+# Agentic Workspace External-Agent Handoff
 
-This file tells an external agent how to install or adopt Agentic Workspace in the current repository.
+Use Agentic Workspace as the lifecycle front door for this repository.
 
-Use this file only for bootstrap and adoption.
-After bootstrap is complete, switch to the normal repo operating path in `AGENTS.md`.
+Required steps:
+- Read AGENTS.md first.
+- For normal work, continue through TODO.md and the active execplan only when TODO points to one.
+- For lifecycle work, use agentic-workspace rather than package-specific CLIs unless package-local debugging is required.
 
-## Choose the preset by repo need
+Preferred install or adopt intent:
+- agentic-workspace init --target ./repo --preset full
 
-- `memory` -> add Agentic Memory only
-- `planning` -> add Agentic Planning only
-- `full` -> add both
+Preferred follow-up commands:
+- agentic-workspace status --target ./repo
+- agentic-workspace doctor --target ./repo
+- agentic-workspace skills --target ./repo --task "<task>" --format json
+- agentic-workspace upgrade --target ./repo
 
-If the user did not specify a preset, prefer `full`.
-
-## Default bootstrap path
-
-Do not assume `agentic-workspace` is already installed locally.
-
-Use a no-install runner first.
-
-### Preferred when `uvx` is available
-
-```bash
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace init --target . --preset full
-````
-
-If only one module is wanted, replace `--preset full` with `--preset memory` or `--preset planning`.
-
-### Alternative when `pipx` is available instead
-
-```bash id="49155"
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace agentic-workspace init --target . --preset full
-```
-
-Again, replace `--preset full` if the user requested only one module.
-
-## Bootstrap rules
-
-* Use `agentic-workspace init` as the default bootstrap path.
-* Let `init` infer the safest lifecycle path for the current repo shape.
-* Do not manually choose install vs adopt unless the tool explicitly requires it.
-* Do not default to package-specific CLIs such as `agentic-memory-bootstrap` or `agentic-planning-bootstrap`.
-* Do not invent an alternate install workflow when the workspace path is available.
-* Prefer conservative review over replacing repo-owned workflow surfaces in ambiguous repos.
-
-## After bootstrap
-
-If bootstrap succeeds, run:
-
-```bash id="02727"
-agentic-workspace status --target .
-agentic-workspace doctor --target .
-```
-
-If `.agentic-workspace/bootstrap-handoff.md` exists after bootstrap, treat that file as the immediate next-action brief and follow it before normal repo work resumes.
-
-If bootstrap completes cleanly and no bootstrap handoff file remains, switch to the normal repo operating path:
-
-1. Read `AGENTS.md`.
-2. Continue through `TODO.md`.
-3. Read the active execplan only when `TODO.md` points to one.
-4. Use `docs/delegated-judgment-contract.md` when the user is setting direction and constraints and the missing question is what the agent may decide locally versus what should be escalated.
-
-## Success criteria
+Rules:
+- Prefer conservative review over replacing repo-owned workflow surfaces in ambiguous repos.
+- Keep planning and memory ownership boundaries explicit.
+- If bootstrap writes .agentic-workspace/bootstrap-handoff.md, treat that file as the immediate next-action brief before normal work resumes.
 
 Success means:
-
-* Agentic Workspace was installed or adopted through the workspace lifecycle front door.
-* The chosen preset matches the repo need or explicit user instruction.
-* The repo now has the expected checked-in surfaces for that install shape.
-* `status` and `doctor` were run after bootstrap.
-* Any remaining ambiguity or reconciliation work is reported clearly instead of guessed through.
-
-## Secondary paths
-
-Package-specific CLIs and package-local maintainer workflows are secondary.
-
-Use them only when:
-
-* the user explicitly asks for package-local control, or
-* workspace-level bootstrap is unavailable, or
-* you are debugging package-level behavior rather than bootstrapping normal repo adoption.
+- the workspace lifecycle runs through agentic-workspace
+- AGENTS.md remains the repo startup entrypoint
+- llms.txt stays aligned with the installed workspace contract
