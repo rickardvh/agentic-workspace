@@ -31,6 +31,31 @@ Treat this page as durable doctrine, not frozen doctrine.
 - Prefer changing or deleting stale long-horizon statements over preserving historical wording that no longer drives the product.
 - When a doctrinal change reveals concrete next work, record that work in `ROADMAP.md` as a bounded candidate instead of letting this document become a shadow queue.
 
+## Role Boundary
+
+This page owns the capability taxonomy and the current architectural role of those capabilities.
+
+It does not own:
+
+- bounded sequencing decisions
+- current ecosystem packaging stance
+- the current maturity label of each shipped surface
+
+Route those concerns to:
+
+- `ROADMAP.md` for bounded future candidates
+- `docs/ecosystem-roadmap.md` for ecosystem stance and extraction discipline
+- `docs/maturity-model.md` for maturity labels and the rationale behind them
+
+## Refresh Triggers
+
+Update this page directly when any of the following happens:
+
+- a shipped surface materially changes which internal capabilities matter most
+- a capability changes category, current home, or extraction stance
+- dogfooding reveals that the capability map is missing a recurring pressure or still reflects retired work
+- another long-horizon page starts carrying capability-taxonomy content that belongs here instead
+
 ## Current Shipped Modules
 
 ### Agentic Memory

@@ -2,6 +2,31 @@
 
 This page explains what current maturity labels mean in this ecosystem.
 
+## Role Boundary
+
+This page owns maturity labels and the rationale for the current label of each shipped surface.
+
+It does not own:
+
+- the full capability map
+- ecosystem packaging stance
+- bounded future work
+
+Route those concerns to:
+
+- `docs/agent-os-capabilities.md` for capability taxonomy and architectural role
+- `docs/ecosystem-roadmap.md` for ecosystem stance and extraction discipline
+- `ROADMAP.md` for bounded follow-on work revealed by maturity review
+
+## Refresh Triggers
+
+Update this page directly when any of the following happens:
+
+- a shipped surface changes maturity
+- the reason for the current maturity label is materially different after recent dogfooding
+- a maturity explanation starts depending on stale historical wording instead of current blockers
+- another doctrine page starts carrying maturity rationale that belongs here instead
+
 ## Alpha
 
 Use `alpha` when the product contract is real and dogfooded, but naming, schema shape, or guidance may still change noticeably as maintainers learn from adoption.

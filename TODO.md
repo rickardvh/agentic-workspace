@@ -14,6 +14,7 @@ Active queue for repository work.
 - Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.
 ## Done
 
+- doctrine-refresh-discipline: Completed (made the capability map, ecosystem stance, and maturity docs state their role boundaries and refresh triggers explicitly, then removed the doctrine-refresh candidate from `ROADMAP.md` and archived the slice)
 - archive-cleanup-follow-through: Completed (fixed `archive-plan --apply-cleanup` so it removes the plan's own active TODO pointer, restores the default Action hint when the queue empties, and archives the slice cleanly without manual TODO pre-cleanup)
 - bounded-delegated-judgment-contract: Completed (defined bounded delegated judgment as a first-class capability, made intent sticky in capability-aware execution, and codified that agents may improve means locally but must not silently widen requested ends)
 - bootstrap-intent-handoff-tranche: Completed (shipped explicit repo-state and inferred-policy reporting in the workspace bootstrap front door, added `llms.txt` as the canonical external-agent handoff surface plus `.agentic-workspace/bootstrap-handoff.md` as the finishing brief path, aligned the root/package docs around intent-first bootstrap, and covered the new contract with workspace CLI regression tests)

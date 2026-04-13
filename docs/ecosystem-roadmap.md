@@ -6,6 +6,35 @@ For the broader long-horizon capability map behind that stance, see `docs/agent-
 
 When the current stance changes, update this page and move any concrete next work into `ROADMAP.md` instead of accumulating latent backlog prose here.
 
+## Role Boundary
+
+This page owns current ecosystem stance:
+
+- what is shipped externally today
+- what remains internal for now
+- what evidence is required before extraction
+
+It does not own:
+
+- the full capability taxonomy
+- the bounded future-work queue
+- current maturity labels
+
+Route those concerns to:
+
+- `docs/agent-os-capabilities.md` for the capability map
+- `ROADMAP.md` for bounded next candidates
+- `docs/maturity-model.md` for maturity framing
+
+## Refresh Triggers
+
+Update this page directly when any of the following happens:
+
+- a new first-party shipped module appears
+- an internal capability clearly moves toward or away from extraction
+- the extraction discipline changes enough that current stance would otherwise become stale
+- another doctrine page starts carrying ecosystem-packaging claims that belong here instead
+
 ## Current Stable External Products
 
 - Agentic Memory, distributed today as `agentic-memory-bootstrap`
