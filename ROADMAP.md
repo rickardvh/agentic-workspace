@@ -23,9 +23,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Highest Priority Queue
 
-| Candidate | Source | Why now | Promote when |
-| --- | --- | --- | --- |
-| `Portability evidence review` | GitHub issue `#25`; `docs/design-principles.md`; `docs/agent-os-capabilities.md`; `docs/ecosystem-roadmap.md` | The doctrine emphasizes portability and cheaper restart outside this repo, but the strongest evidence is still dogfooding here. A bounded review should identify which current contracts are genuinely portable and which still rely too much on local familiarity. | Repeated adopter-facing questions appear, another repo tries the stack, or new features start leaning on assumptions that are only cheap inside this monorepo. |
+- No remaining highest-priority candidates right now.
 
 ## Second Priority Queue
 
@@ -50,8 +48,8 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 ## Sequencing Recommendation
 
 1. Prefer proof, refinement, and trust-hardening over new capability invention.
-2. After the first bounded dogfood pass, the ordinary-use synergy proof, the external-agent handoff audit, and the selective-adoption refresh, prioritize portability claims before widening into broader bootstrap hardening.
-3. Treat bounded strong-planner / cheap-implementer proof, current external-agent handoff, and the current selective-adoption lane as established enough for this queue unless new ordinary work reopens ambiguity.
+2. The first proof tranche is now complete: bounded dogfooding, synergy proof, external-agent handoff trust, selective adoption, and first-party portability all have current evidence.
+3. Next promotions should come from delegated-judgment follow-through or bootstrap-hardening lanes when new active work is needed.
 4. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.
 
 ## Reopen Conditions

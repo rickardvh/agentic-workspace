@@ -1,6 +1,6 @@
 # Ecosystem Roadmap
 
-Last doctrinal review: 2026-04-10
+Last doctrinal review: 2026-04-13
 
 This page records the current ecosystem stance without turning it into a promise of more top-level packages.
 
@@ -48,6 +48,11 @@ Update this page directly when any of the following happens:
 - `agentic-workspace` is the thin workspace-level composition layer for shared lifecycle verbs.
 - External module or plugin extension is not yet a supported public contract; see `docs/extension-boundary.md`.
 
+## Current Portability Read
+
+- Proven now: the current first-party pair is portable across clean repos through the shared workspace lifecycle front door. Fresh `memory`, `planning`, and `full` installs have current clean-room proof, and selective adoption is real for those first-party shapes.
+- Not yet proven: broader ecosystem portability beyond that first-party pair. The repo does not yet have evidence for third-party extension, non-core module composition, or a wider module ecosystem that keeps the same guarantees outside closely related first-party contracts.
+
 ## Important Internal Capabilities
 
 - Routing
@@ -67,7 +72,7 @@ Consider extraction only when dogfooding shows all of the following:
 ## What Should Stay Internal For Now
 
 - module-specific installer helpers
-- workspace glue that only exists to compose memory and planning in this monorepo
+- workspace glue that only exists to compose the current first-party pair or still depends on sibling internals
 - checks that still derive their real behavior from one module's internal contract
 
 ## Discipline Rule

@@ -1,6 +1,6 @@
 # Extension Boundary
 
-Last readiness review: 2026-04-10
+Last readiness review: 2026-04-13
 
 This page is the canonical statement of the current extension boundary for Agentic Workspace.
 
@@ -76,7 +76,7 @@ Opening that boundary too early would risk:
 
 - Gate 1 is now materially stronger: first-party modules are descriptor-owned and no longer depend on separate orchestrator globals for ordering, presets, startup guidance, capabilities, or result-contract reporting.
 - Gate 2 is only partially met: the module-capability and lifecycle contract is explicit, but it is still documented as a first-party internal contract rather than a supported third-party public contract.
-- Gate 3 is only proven for the current first-party pair. Selective adoption is strong for Memory and Planning, but not yet exercised with a realistic non-core module.
+- Gate 3 is only proven for the current first-party pair. Fresh clean-room proof now shows selective adoption is strong for Memory and Planning through the shared workspace lifecycle, but it is still not exercised with a realistic non-core module.
 - Gate 4 remains unmet for external extension: compatibility, upgrade, uninstall, and doctor expectations are explicit for first-party modules, not for hypothetical non-core modules.
 - Gate 5 remains unmet: there is still no concrete external-use-case pressure that is clearly better solved by opening the boundary than by keeping the capability package-local or internal.
 
@@ -98,7 +98,7 @@ Do not treat external extension as supported until all of the following are true
 | --- | --- | --- | --- |
 | 1. First-party module contract is stable enough for another first-party module without bespoke orchestrator globals. | `conditional` | The descriptor-owned first-party contract is much stronger than before, but it is still only proven on the current shipped pair plus workspace composition. | Another first-party module lands or a new module-contract change still requires orchestrator special-casing. |
 | 2. Registry and lifecycle model are documented in public-contract terms. | `not yet` | The registry and module contract are documented honestly as first-party-only internal structure, not as a public external contract. | Maintainer pressure or external demand requires describing the contract in public, non-internal terms. |
-| 3. Selective adoption still works cleanly beyond the current first-party pair. | `not yet` | Selective adoption is well established for Memory and Planning, but not yet demonstrated across a broader module set. | A third first-party module or equivalent composition pressure appears. |
+| 3. Selective adoption still works cleanly beyond the current first-party pair. | `not yet` | Selective adoption is now freshly proven for Memory and Planning through clean-room `memory`, `planning`, and `full` installs, but not yet demonstrated across a broader module set. | A third first-party module or equivalent composition pressure appears. |
 | 4. Compatibility, upgrade, uninstall, and doctor expectations are explicit for non-core modules. | `not yet` | Current lifecycle and doctor expectations are explicit for the existing first-party modules only. | A realistic non-core module candidate exists and its lifecycle behavior needs to be described end to end. |
 | 5. A realistic external-use case is better solved by extension than by keeping capability inside an existing module. | `not yet` | Current dogfooding still points toward sharpening first-party seams instead of opening extension. | Repeated real requests or internal pressure show that keeping the capability package-local is the worse design. |
 
