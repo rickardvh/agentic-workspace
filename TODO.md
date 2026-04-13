@@ -14,6 +14,7 @@ Active queue for repository work.
 - Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.
 ## Done
 
+- extension-boundary-readiness-review: Completed (reviewed the extension-boundary gates against the current first-party contract, added a live readiness snapshot plus re-review triggers to the canonical boundary doc, recorded the bounded review artifact, and removed the roadmap candidate)
 - environment-recovery-guidance-contract: Completed (shipped a canonical planning-side environment and recovery contract, wired it into the planning package payload and generated routing surfaces, refreshed the root install from the checked-in package contract, and removed the roadmap candidate)
 - doctrine-refresh-discipline: Completed (made the capability map, ecosystem stance, and maturity docs state their role boundaries and refresh triggers explicitly, then removed the doctrine-refresh candidate from `ROADMAP.md` and archived the slice)
 - archive-cleanup-follow-through: Completed (fixed `archive-plan --apply-cleanup` so it removes the plan's own active TODO pointer, restores the default Action hint when the queue empties, and archives the slice cleanly without manual TODO pre-cleanup)
