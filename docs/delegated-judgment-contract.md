@@ -115,3 +115,11 @@ The structured surface should answer:
 - what forces promotion or escalation
 
 That keeps the contract queryable for agents that should not have to rely on richer prose first.
+
+## Operational Follow-Through
+
+The contract should show up in repeated work, not only in doctrine.
+
+- Use a checked-in execplan when the requested outcome must survive across sessions.
+- Preserve escalation boundaries in machine-readable defaults when a task is broad enough to need them.
+- Route durable residue into the correct checked-in surface instead of leaving it in chat.

@@ -2262,6 +2262,11 @@ def _defaults_payload() -> dict[str, Any]:
                 "validation would be meaningless without added scope",
                 "confidence is too low for silent continuation",
             ],
+            "operational_follow_through": [
+                "use a checked-in execplan when the requested outcome must survive across sessions",
+                "preserve escalation boundaries in the machine-readable defaults when the task is broad enough to need them",
+                "route durable residue into the correct checked-in surface instead of leaving it in chat",
+            ],
         },
     }
 
@@ -2309,6 +2314,9 @@ def _emit_defaults(*, format_name: str) -> None:
     print("Delegated judgment:")
     print(f"- doc: {payload['delegated_judgment']['canonical_doc']}")
     print(f"- rule: {payload['delegated_judgment']['rule']}")
+    print("Delegated judgment follow-through:")
+    for item in payload["delegated_judgment"]["operational_follow_through"]:
+        print(f"- {item}")
 
 
 def _default_module_update_policies() -> dict[str, ModuleUpdatePolicy]:

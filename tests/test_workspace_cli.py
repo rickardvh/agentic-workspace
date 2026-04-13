@@ -136,6 +136,11 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "requested outcome" in payload["delegated_judgment"]["human_sets"]
     assert "bounded decomposition" in payload["delegated_judgment"]["agent_may_decide"]
     assert "the better-looking solution changes the requested outcome" in payload["delegated_judgment"]["escalate_when"]
+    assert payload["delegated_judgment"]["operational_follow_through"] == [
+        "use a checked-in execplan when the requested outcome must survive across sessions",
+        "preserve escalation boundaries in the machine-readable defaults when the task is broad enough to need them",
+        "route durable residue into the correct checked-in surface instead of leaving it in chat",
+    ]
     assert payload["mixed_agent"]["rule"] == "Prefer runtime/task inference first, then stable policy, then explicit prompting."
     assert payload["mixed_agent"]["decision_order"] == [
         "runtime/task inference",
@@ -182,6 +187,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "docs/environment-recovery-contract.md" in text
     assert "Config:" in text
     assert "Delegated judgment:" in text
+    assert "Delegated judgment follow-through:" in text
     assert "Mixed-agent:" in text
     assert "docs/delegated-judgment-contract.md" in text
     assert "make maintainer-surfaces" in text
