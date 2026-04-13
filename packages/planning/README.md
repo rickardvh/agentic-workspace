@@ -173,6 +173,7 @@ If stronger capability keeps seeming necessary for the same class of work, treat
 When a repo also installs Agentic Memory, Planning should borrow durable context from routed memory notes instead of re-explaining the same subsystem background inside each execplan. Completed planning residue should promote durable lessons into memory or canonical docs when they remain expensive to rediscover.
 
 When a direct task completes, remove it from `TODO.md` promptly. If the task changed durable repo knowledge or left important follow-up work, record that residue in memory, canonical docs, `ROADMAP.md`, or a newly promoted execplan rather than leaving chat-only context behind.
+If the completed slice came from `TODO.md` or `ROADMAP.md`, clear the matched queue residue in the same pass instead of leaving stale completed entries behind.
 When a bounded slice completes only part of a larger intended outcome, do not close it with required continuation only in prose.
 Execplans now treat three fields as first-class:
 

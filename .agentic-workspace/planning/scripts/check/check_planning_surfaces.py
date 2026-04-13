@@ -442,11 +442,7 @@ def _check_todo(path: Path, *, repo_root: Path = REPO_ROOT) -> tuple[list[Planni
                 )
             )
 
-    activation_section_lines = (
-        _section_content(lines, "Now")
-        + _section_content(lines, "Next")
-        + _section_content(lines, "Action")
-    )
+    activation_section_lines = _section_content(lines, "Now") + _section_content(lines, "Next") + _section_content(lines, "Action")
     if "milestone" in "\n".join(activation_section_lines).lower():
         warnings.append(
             PlanningWarning(

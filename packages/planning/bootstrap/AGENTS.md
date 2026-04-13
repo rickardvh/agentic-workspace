@@ -77,4 +77,5 @@ Do not start coding from chat context alone when the same knowledge should live 
 2. Update the active plan in `docs/execplans/` when working from one.
 3. If a task leaves meaningful follow-up work, record it in the appropriate planning surface before closing the task.
 4. Remove completed task detail from `TODO.md` once it no longer changes the next contributor's queue decision.
-5. If the larger intended outcome is still unfinished, record the required next owner and activation trigger explicitly before archive.
+5. If the completed slice came from `TODO.md` or `ROADMAP.md`, remove or archive the matched planning residue in the same pass rather than leaving stale completed queue state behind.
+6. If the larger intended outcome is still unfinished, record the required next owner and activation trigger explicitly before archive.
