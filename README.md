@@ -197,7 +197,7 @@ The `-bootstrap` names are still the current package and CLI identities.
 ## Maturity
 
 - `agentic-memory-bootstrap`: beta
-- `agentic-planning-bootstrap`: alpha
+- `agentic-planning-bootstrap`: beta
 
 See [`docs/maturity-model.md`](docs/maturity-model.md) for the current maturity expectations.
 
