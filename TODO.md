@@ -14,6 +14,7 @@ Active queue for repository work.
 - Promote the next bounded roadmap candidate from the highest-priority queue and execute one milestone at a time.
 ## Done
 
+- strong-planner-cheap-implementer-proof-refresh: Completed (reassessed the archived mixed-agent proof set against the live mixed-agent contract surfaces, concluded the standalone lane is now satisfied, retired it from `ROADMAP.md`, and left the remaining continuity question under the narrower cross-agent handoff audit lane)
 - repeated-ordinary-use-synergy-proof: Completed (used ordinary repo work to prove the combined install against a real stale-current-memory failure, tightened the shipped freshness and current-memory checks so explicit planning-state residue in `memory/current/*` is flagged, refreshed the root current-memory notes to a smaller current shape, and archived the slice)
 - strong-planner-cheap-implementer-dogfood-pass: Completed (used `agentic-workspace config --format json` and `agentic-workspace defaults --format json` as the mixed-agent contract, ran a real generated-surface trust pass through the maintainer-surface validation lane, confirmed `make maintainer-surfaces` stayed the cheapest trustworthy proof path, and archived the result after closing the stale generated-surface trust backlog item)
 - planning-beta-surface-alignment: Completed (rechecked current public maturity surfaces, found no remaining public `alpha` claim for planning outside archived historical review artifacts, and removed the stale roadmap candidate)
