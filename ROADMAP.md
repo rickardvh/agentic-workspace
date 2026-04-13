@@ -25,7 +25,6 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 | Candidate | Source | Why now | Promote when |
 | --- | --- | --- | --- |
-| `Validation-defaults refinement` | GitHub issue `#26`; `docs/reviews/default-path-and-combined-execution-review-2026-04-09.md`; `docs/default-path-contract.md` | Validation is still the weakest part of the machine-readable default path. Cheaper agents should be able to tell what proof is enough, when broader checks are needed, and when they must escalate. | Another cheap-execution or restart pass still has to infer validation from prose, or a maintainer/docs pass touches default-route or review guidance anyway. |
 | `Strong-planner / cheap-implementer dogfooding` | GitHub issue `#25`; `docs/delegated-judgment-contract.md`; `docs/agent-os-capabilities.md` | Current cost pressure makes mixed-agent proof the highest-value evidence track: a stronger planner writes or sharpens the contract, a cheaper model executes the bounded slice, and escalation happens only at explicit delegated-judgment boundaries. | Another real task is ready to be run end-to-end through a strong-planner / cheap-implementer handoff, or repeated local work shows the checked-in surfaces still leave too much ambiguity for weaker implementers. |
 | `Repeated ordinary-use proof of Memory/Planning synergy` | GitHub issue `#25`; `docs/default-path-contract.md`; `docs/agent-os-capabilities.md` | The combined-install contract is strong on paper, but it still needs repeated ordinary-work proof that Memory shortens plans, restart uses the smallest useful bundle, residue promotes out of Planning cleanly, and combined installs reduce restart cost more than either module alone. | Another ordinary task completes with both modules installed, or repeated plan restatement and restart friction suggest the synergy claim is relying on doctrine more than fresh evidence. |
 | `Selective-adoption proof refresh` | GitHub issue `#25`; `docs/design-principles.md`; `docs/ecosystem-roadmap.md`; `docs/extension-boundary.md` | Selective adoption is a core product requirement, but recent proof is still too tied to this monorepo's well-understood combined install rather than a fresh bounded check of memory-only, planning-only, and combined adoption quality. | Another adoption-related friction pass, lifecycle review, or maintainer question shows that selective-adoption confidence is starting to rely on doctrine more than recent evidence. |
@@ -56,7 +55,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 ## Sequencing Recommendation
 
 1. Prefer proof, refinement, and trust-hardening over new capability invention.
-2. Start with validation-defaults refinement plus one real strong-planner / cheap-implementer dogfooding pass, then use the evidence to sharpen synergy, selective-adoption, and portability follow-through.
+2. Start with one real strong-planner / cheap-implementer dogfooding pass, then use the evidence to sharpen synergy, selective-adoption, and portability follow-through.
 3. Treat generated-surface trust, bootstrap hardening, and mixed-agent handoff quality as the second wave once the first proof tranche shows where ambiguity still leaks.
 4. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.
 
