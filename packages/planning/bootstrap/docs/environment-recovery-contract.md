@@ -1,19 +1,22 @@
 # Environment And Recovery Contract
 
-This page defines the planning-side contract for environment assumptions, interruption handling, and recovery paths.
+This page defines the checked-in contract for environment assumptions, interruption handling, and recovery paths.
 
-Use it when active work depends on non-obvious tooling state, bootstrap preconditions, partial-failure handling, or a restart path that would otherwise have to be rediscovered from chat or scattered docs.
+Use it in two closely related cases:
+
+- when active planning work depends on non-obvious environment state or a compact resume path
+- when workspace lifecycle work is blocked by repo-state ambiguity, interrupted bootstrap, or warnings that need an ordered remediation path
 
 This contract is intentionally compact.
-It exists to reduce dead-ends and restart cost without turning planning into a full runbook system or duplicating module-local operational docs.
+It exists to reduce dead-ends and restart cost without turning planning into a full runbook system or duplicating package-local operational docs.
 
 ## Purpose
 
-- Make environment-sensitive work restartable from checked-in planning state.
-- Keep recovery guidance small enough to stay cheaper than rediscovery.
-- Clarify when module-local runbooks are enough and when active planning must carry the current recovery path.
+- Keep environment-sensitive work restartable from checked-in state.
+- Prefer one canonical recovery path over scattered troubleshooting prose.
+- Make both task-local planning recovery and repo-level remediation cheaper than rediscovery.
 
-## What This Contract Should Capture
+## Planning-Side Recovery Contract
 
 For an active planning slice, capture only the environment and recovery facts that materially affect safe continuation:
 
@@ -52,18 +55,58 @@ Promote the work into an execplan or strengthen the active plan when any of thes
 
 If module-local docs already fully answer the operational question and the current task does not add a task-specific recovery wrinkle, link or rely on those docs instead of copying them into the plan.
 
-## What This Contract Is Not
+## Ordered Recovery Path
 
-Do not use planning recovery guidance as:
+Use this ordered path when normal work is blocked by repo-state ambiguity, interrupted bootstrap, lifecycle warnings, or a local environment that no longer matches the checked-in contract.
 
-- a full troubleshooting handbook
-- a substitute for package or subsystem runbooks
-- a broad environment inventory
+1. Inspect the current workspace state:
+   - `agentic-workspace status --target ./repo`
+   - `agentic-workspace doctor --target ./repo`
+2. Reconfirm the default operating contract:
+   - `agentic-workspace defaults --format json`
+   - `agentic-workspace config --target ./repo --format json`
+3. If the issue is package-contract freshness rather than repo-owned customization, refresh the shipped contract:
+   - `uv run agentic-planning-bootstrap upgrade --target .`
+   - `uv run agentic-memory-bootstrap upgrade --target .`
+4. Re-run the narrowest proving lane for the touched surface:
+   - workspace CLI changes -> `uv run pytest tests/test_workspace_cli.py`
+   - planning package changes -> `uv run pytest packages/planning/tests/test_installer.py`
+   - memory package changes -> `uv run pytest packages/memory/tests/test_installer.py`
+   - cross-boundary maintainer work -> `make maintainer-surfaces`
+5. If bootstrap or adopt work still requires judgment, follow the checked-in handoff:
+   - `llms.txt` for the external-agent entry surface
+   - `.agentic-workspace/bootstrap-handoff.md` when bootstrap says review is still needed
+
+## What This Contract Covers
+
+Use this contract for:
+
+- interrupted install, adopt, or upgrade work
+- repo-state ambiguity after lifecycle commands
+- warnings about missing shared workspace files or managed surfaces
+- uncertainty about the correct next proving lane
+- restart after a broken or partial maintenance pass
+- active execution work whose next safe step depends on task-local recovery context
+
+Do not stretch it into:
+
+- package-specific domain troubleshooting
+- broad incident response
+- a replacement for package READMEs or maintainer check docs
 - a memory note for durable technical facts
 - a narrative log of every failed attempt
 
-Durable environment knowledge still belongs in canonical docs or memory.
-Planning carries only the task-local recovery facts that change what the next contributor should do now.
+## Recovery Rules
+
+- Prefer `agentic-workspace` as the public recovery entrypoint.
+- Treat `status` and `doctor` as the first inspection lane, not direct file spelunking.
+- Use `defaults` and `config` when the question is "what is the normal contract here?" rather than "what failed?"
+- Distinguish package drift from repo-local warnings:
+  - package drift means the shipped payload is stale relative to checked-in package source
+  - repo-local warnings may still be expected customization, nested-repo noise, or optional-surface absence
+- Re-run only the narrowest validation that can prove the recovery worked.
+- If recovery still needs human judgment, route through the checked-in handoff surfaces instead of chat-only interpretation.
+- Do not stretch TODO rows into shadow execplans.
 
 ## Relationship To Direct Tasks
 
@@ -72,8 +115,7 @@ The direct-task contract remains intentionally small.
 If the current work can still restart safely from `Why now`, `Next action`, and `Done when`, keep it direct.
 If interruption, environment drift, or partial failure means the TODO row no longer answers "how do I continue safely?", promote the work into an execplan.
 
-That promotion is the recovery contract.
-Do not stretch TODO rows into shadow execplans.
+That promotion is the planning-side recovery contract.
 
 ## Relationship To Module Docs
 
@@ -92,6 +134,14 @@ Use module docs or memory to capture:
 - recurring environment traps
 - long-lived setup guidance
 - subsystem-specific maintenance procedures
+
+## Relationship To Other Docs
+
+- [`docs/default-path-contract.md`](docs/default-path-contract.md) says which route is primary.
+- [`docs/init-lifecycle.md`](docs/init-lifecycle.md) explains the init/adopt state machine and handoff signals.
+- [`docs/delegated-judgment-contract.md`](docs/delegated-judgment-contract.md) explains what the agent may decide locally during recovery and when it must escalate.
+
+This doc owns the recovery contract itself: both the compact planning-side shape and the ordered repo-level remediation path.
 
 ## Archive Rule
 

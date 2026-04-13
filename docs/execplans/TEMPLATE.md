@@ -32,6 +32,16 @@ If the larger intended outcome is still unfinished, point `Continuation surface`
 Use `no` / `none` only when this slice actually finishes the larger intended outcome.
 If required follow-on remains, record its checked-in owner and what should cause activation.
 
+## Delegated Judgment
+
+- Requested outcome:
+- Hard constraints:
+- Agent may decide locally:
+- Escalate when:
+
+Use `none` only when the slice is so local that delegated-judgment framing would add no value.
+Otherwise keep this section compact and specific so later contributors do not have to reconstruct the intended end state, allowed local latitude, or escalation triggers from chat residue.
+
 ## Active Milestone
 
 - Status:
@@ -66,6 +76,22 @@ Avoid large hand-maintained tables in active plans; compact bullets are easier t
 -
 
 Keep invariants contract-shaped and brief.
+
+## Contract Decisions To Freeze
+
+-
+
+Use this section when the slice is primarily deciding product shape, schema, or policy rather than implementing it.
+Record only the decisions that the next implementation tranche must be able to trust without reopening debate.
+Omit the section for straightforward implementation-only slices.
+
+## Open Questions To Close
+
+-
+
+Use this section when unresolved contract questions still block safe implementation.
+List only the questions this slice must answer; move optional future ideas to `ROADMAP.md` or canonical docs instead.
+Omit the section when no implementation-blocking questions remain.
 
 ## Validation Commands
 

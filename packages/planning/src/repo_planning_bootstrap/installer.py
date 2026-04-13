@@ -515,6 +515,11 @@ def archive_execplan(
     required_follow_on = required_continuation.get("required follow-on for the larger intended outcome", "").strip().lower()
     required_owner_surface = required_continuation.get("owner surface", "").strip()
     activation_trigger = required_continuation.get("activation trigger", "").strip()
+    delegated_judgment = _execplan_delegated_judgment(plan_path)
+    requested_outcome = delegated_judgment.get("requested outcome", "").strip()
+    hard_constraints = delegated_judgment.get("hard constraints", "").strip()
+    agent_may_decide = delegated_judgment.get("agent may decide locally", "").strip()
+    escalate_when = delegated_judgment.get("escalate when", "").strip()
     execution_summary = _execplan_execution_summary(plan_path)
     outcome_delivered = execution_summary.get("outcome delivered", "").strip()
     validation_confirmed = execution_summary.get("validation confirmed", "").strip()
@@ -565,6 +570,20 @@ def archive_execplan(
             "manual review",
             plan_path,
             "required follow-on needs both owner surface and activation trigger before archiving",
+        )
+        return result
+    if not requested_outcome or not hard_constraints or not agent_may_decide or not escalate_when:
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_delegated_judgment",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Execplan is missing one or more delegated-judgment fields needed to preserve intended outcome and escalation boundaries.",
+            }
+        )
+        result.add(
+            "manual review",
+            plan_path,
+            "fill `Delegated Judgment` before archiving",
         )
         return result
     if not outcome_delivered or outcome_delivered.lower() in {"pending", "not completed yet", "todo", "tbd"}:
@@ -1093,6 +1112,11 @@ def _render_execplan_from_todo_item(
         "- Required follow-on for the larger intended outcome: no\n"
         "- Owner surface: none\n"
         "- Activation trigger: none\n\n"
+        "## Delegated Judgment\n\n"
+        f"- Requested outcome: {goal}\n"
+        "- Hard constraints: Keep scope bounded to the promoted TODO item and its stated touched paths.\n"
+        "- Agent may decide locally: Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.\n"
+        "- Escalate when: A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.\n\n"
         "## Active Milestone\n\n"
         f"- ID: {item_id}\n"
         f"- Status: {status}\n"
@@ -1176,6 +1200,11 @@ def _execplan_intent_continuity(path: Path) -> dict[str, str]:
 def _execplan_required_continuation(path: Path) -> dict[str, str]:
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Required Continuation"))
+
+
+def _execplan_delegated_judgment(path: Path) -> dict[str, str]:
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Delegated Judgment"))
 
 
 def _execplan_execution_summary(path: Path) -> dict[str, str]:

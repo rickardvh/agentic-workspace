@@ -69,11 +69,12 @@ Choose `contract-integrity` when the core question is whether a repo claim that 
 | `source-payload-install` | Check whether package source, shipped payload, and root operational install still line up. | package sources, bootstrap payload, root installed surfaces, lifecycle tests | source/payload drift, install mismatch, upgrade ambiguity, generated-root confusion | `ROADMAP.md` or `TODO.md` | 3 findings |
 | `generated-surface-trust` | Check whether generated helper surfaces still faithfully reflect their canonical source. | manifest sources, generated docs, render scripts, installer checks | stale generated docs, missing render coverage, misleading derived guidance | `ROADMAP.md` or canonical docs | 2 findings |
 | `skill-system` | Check whether skill discovery, naming, routing, and arsenal boundaries still make skills cheaper to use than generic reasoning for stable workflows. | skill registries, skill catalog docs, recommendation output, skill placement/ownership surfaces | registry drift, misleading skill docs, routing misses, muddled skill ownership, missing or badly placed repeatable workflows | `ROADMAP.md`, canonical docs, or skills | 3 findings |
+| `doctrine-refresh` | Check whether long-horizon doctrine still matches current dogfooding reality without turning into stale narrative or hidden backlog. | doctrine pages, maturity framing, ecosystem stance, recent archived execplans and review outcomes | stale direction, conflicting doctrine, hidden queue residue, outdated maturity claims | canonical docs or `ROADMAP.md` | 2 findings |
 | `validation-lane` | Check whether the documented validation lane still proves the promised contract. | package tests, repo checks, maintainer command docs, failing gaps | missing regression coverage, weak check aggregation, undocumented required steps | `ROADMAP.md` or `TODO.md` | 3 findings |
 | `context-cost` | Check whether startup and handoff surfaces stay cheap enough for routine agent use. | startup docs, agent manifest, memory routing surfaces, review/read requirements | over-reading, oversized startup bundles, repeated low-signal reads | `ROADMAP.md`, memory, or canonical docs | 2 findings |
 | `review-promotion` | Check whether review findings are being promoted, deferred, or deleted with discipline. | `docs/reviews/`, roadmap intake, archived plans, status footers | stale review residue, duplicate candidates, weak promotion hygiene | `ROADMAP.md` or review cleanup | 2 findings |
 
-Treat the first eight modes as the default recurring portfolio. Use `validation-lane`, `context-cost`, and `review-promotion` as occasional audit modes when repeated friction suggests them.
+Treat the first nine modes as the default recurring portfolio. Use `validation-lane`, `context-cost`, and `review-promotion` as occasional audit modes when repeated friction suggests them.
 
 ## Mode Selection Heuristics
 
@@ -84,6 +85,7 @@ Choose the narrowest primary mode that matches the first question you need answe
 - Use `source-payload-install` when the main question is “are source, shipped payload, and root install still aligned?”
 - Use `generated-surface-trust` when the main question is “does this rendered or mirrored surface still reflect its canonical source?”
 - Use `skill-system` when the main question is about skill discovery, naming, recommendation quality, arsenal coverage, or whether a skill belongs in one ownership domain versus another.
+- Use `doctrine-refresh` when the main question is whether long-horizon direction, maturity framing, or ecosystem stance still matches current dogfooding reality.
 - Use `context-cost` when the main question is reading cost or restart cost rather than contract correctness.
 
 If two modes both seem plausible, pick the one that best describes the first surface you would inspect. If that later proves wrong, split the review instead of widening the artifact.
@@ -152,3 +154,4 @@ Repeated findings that work needed stronger execution capability than expected s
 - Prefer archiving or deleting stale review artifacts once findings are promoted, dismissed, or superseded.
 - Do not leave top-level `docs/reviews/` full of old speculative notes.
 - If a review repeatedly produces the same finding, prefer fixing the underlying docs, tests, validation, or structure.
+- When a doctrine page records long-horizon product direction, keep a lightweight `Last doctrinal review` marker on the page and refresh it whenever a doctrine-refresh pass materially confirms or revises that page.

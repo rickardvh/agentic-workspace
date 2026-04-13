@@ -167,6 +167,16 @@ That surface is the queryable contract for:
 - validation
 - combined-install operation
 
+For the resolved repo-owned customization layer, use:
+
+```bash
+agentic-workspace config --target ./repo --format json
+```
+
+That surface layers `agentic-workspace.toml` over product defaults and reports the effective default preset plus per-module update intent.
+
+For the repo-owned config contract itself, use [`docs/workspace-config-contract.md`](docs/workspace-config-contract.md).
+
 For the bounded "human sets direction, agent owns local means" contract, use [`docs/delegated-judgment-contract.md`](docs/delegated-judgment-contract.md).
 
 For agent maintainers, the primary operating path is:
@@ -207,6 +217,7 @@ Start here:
 
 - [`docs/which-package.md`](docs/which-package.md)
 - [`docs/default-path-contract.md`](docs/default-path-contract.md)
+- [`docs/workspace-config-contract.md`](docs/workspace-config-contract.md)
 
 Then, if needed:
 

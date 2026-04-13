@@ -1,5 +1,7 @@
 # Agent OS Capabilities
 
+Last doctrinal review: 2026-04-10
+
 ## Purpose
 
 This document records the long-horizon capability model for the Agentic Workspace ecosystem.
@@ -30,6 +32,7 @@ Treat this page as durable doctrine, not frozen doctrine.
 - Refresh it when major shipped contracts land, when dogfooding changes what matters most, or when a capability's current category no longer matches real usage.
 - Prefer changing or deleting stale long-horizon statements over preserving historical wording that no longer drives the product.
 - When a doctrinal change reveals concrete next work, record that work in `ROADMAP.md` as a bounded candidate instead of letting this document become a shadow queue.
+- Treat a doctrine-refresh review as the normal audit lane for revisiting this page rather than relying on ad hoc memory or chat residue.
 
 ## Role Boundary
 

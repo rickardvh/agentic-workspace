@@ -1,10 +1,13 @@
 # Ecosystem Roadmap
 
+Last doctrinal review: 2026-04-10
+
 This page records the current ecosystem stance without turning it into a promise of more top-level packages.
 
 For the broader long-horizon capability map behind that stance, see `docs/agent-os-capabilities.md`.
 
 When the current stance changes, update this page and move any concrete next work into `ROADMAP.md` instead of accumulating latent backlog prose here.
+Use a doctrine-refresh review when the current ecosystem stance may have drifted from actual shipped behavior or extraction discipline.
 
 ## Role Boundary
 

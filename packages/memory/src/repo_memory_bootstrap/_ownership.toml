@@ -69,5 +69,85 @@ end = "<!-- agentic-workspace:workflow:end -->"
 ownership = "managed_fence"
 uninstall_policy = "remove-fence-only"
 
+[[authority_surfaces]]
+concern = "startup-instructions"
+surface = "AGENTS.md"
+owner = "repo"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Repo-level startup instructions and local operating constraints."
+
+[[authority_surfaces]]
+concern = "active-execution-state"
+surface = "TODO.md"
+owner = "repo"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Active queue and next-action state for current work."
+
+[[authority_surfaces]]
+concern = "long-horizon-candidates"
+surface = "ROADMAP.md"
+owner = "repo"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Bounded inactive candidate queue for future promotion."
+
+[[authority_surfaces]]
+concern = "design-constraints"
+surface = "docs/design-principles.md"
+owner = "repo"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Design tests for product-shape, ownership, and lifecycle changes."
+
+[[authority_surfaces]]
+concern = "workspace-config"
+surface = "agentic-workspace.toml"
+owner = "repo"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Repo-owned lifecycle defaults and module update intent."
+
+[[authority_surfaces]]
+concern = "shared-workflow-contract"
+surface = ".agentic-workspace/WORKFLOW.md"
+owner = "workspace"
+ownership = "module_managed"
+authority = "primary"
+summary = "Shared workflow rules installed by the workspace layer."
+
+[[authority_surfaces]]
+concern = "ownership-ledger"
+surface = ".agentic-workspace/OWNERSHIP.toml"
+owner = "workspace"
+ownership = "module_managed"
+authority = "primary"
+summary = "Ownership ledger for managed paths, fences, and authority surfaces."
+
+[[authority_surfaces]]
+concern = "planning-install-tree"
+surface = ".agentic-workspace/planning/"
+owner = "planning"
+ownership = "module_managed"
+authority = "primary"
+summary = "Planning-owned installed workflow and helper surfaces."
+
+[[authority_surfaces]]
+concern = "memory-install-tree"
+surface = ".agentic-workspace/memory/"
+owner = "memory"
+ownership = "module_managed"
+authority = "primary"
+summary = "Memory-owned installed workflow and helper surfaces."
+
+[[authority_surfaces]]
+concern = "workspace-workflow-pointer"
+surface = "AGENTS.md#agentic-workspace:workflow"
+owner = "workspace"
+ownership = "managed_fence"
+authority = "fenced"
+summary = "Managed pointer block inside the repo-owned AGENTS file."
+
 [notes]
-purpose = "This file defines the initial ownership-ledger format. Installers should converge on this ledger instead of maintaining duplicated managed-path heuristics."
+purpose = "This file defines the workspace ownership ledger and authority map. Installers should converge on this ledger instead of maintaining duplicated managed-path heuristics."

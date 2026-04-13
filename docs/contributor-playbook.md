@@ -12,6 +12,8 @@ Use `docs/design-principles.md` when a change affects product shape, ownership, 
 Use `docs/compatibility-policy.md` when you need to judge whether a surface is stable, mutable, or generated before making the change.
 Use `docs/init-lifecycle.md` when you need the canonical root `init` mode matrix or prompt semantics.
 Use `docs/generated-surface-trust.md` when a change touches generated docs, mirrors, or rerender expectations.
+Use `docs/proof-surfaces-contract.md` when the missing judgment is which proof lane actually answers the current trust question.
+Use `docs/ownership-authority-contract.md` when the missing judgment is who owns a concern or which checked-in surface is authoritative.
 
 ## Agent Maintainer Path
 

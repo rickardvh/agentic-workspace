@@ -1,0 +1,16 @@
+schema_version = 1
+
+[workspace]
+default_preset = "full"
+
+[update.modules.planning]
+source_type = "git"
+source_ref = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning"
+source_label = "agentic-planning-bootstrap monorepo master"
+recommended_upgrade_after_days = 30
+
+[update.modules.memory]
+source_type = "git"
+source_ref = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory"
+source_label = "agentic-memory-bootstrap monorepo master"
+recommended_upgrade_after_days = 30

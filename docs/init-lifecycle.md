@@ -7,6 +7,7 @@ Use it when you need the canonical intent, repo-state, policy, and handoff contr
 ## Default Behavior
 
 - `init` defaults to the full preset when module selection is omitted.
+- If `agentic-workspace.toml` exists, `workspace.default_preset` becomes the default preset when the user omits `--preset` and `--modules`.
 - The user intent is the selected preset: `memory`, `planning`, or `full`.
 - The command bootstraps mechanically, classifies repo state, then chooses the safest lifecycle mode automatically.
 - The root workspace layer is part of that bootstrap contract, not an incidental repo file copy.
@@ -48,7 +49,10 @@ Use it when you need the canonical intent, repo-state, policy, and handoff contr
 
 ## Maintainer Notes
 
+- Recovery after interrupted bootstrap or lifecycle ambiguity should follow `docs/environment-recovery-contract.md` so the ordered remediation path stays centralized.
 - The root README should stay short and point here instead of duplicating the mode matrix.
 - Package-local CLIs still own their own install and adoption behavior; the root layer only centralizes composition and reporting.
+- Repo-owned lifecycle defaults and update intent belong in `agentic-workspace.toml`, not under `.agentic-workspace/`.
+- `upgrade` should treat `agentic-workspace.toml` as the repo-owned source of update intent and keep module `UPGRADE-SOURCE.toml` metadata aligned with it.
 - `status` and `doctor` should treat missing shared workspace-layer files or missing workspace pointer fences as first-class warnings.
 - If the behavior changes, update the root README and maintainer guidance together so the prompt semantics stay aligned.

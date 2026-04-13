@@ -99,6 +99,7 @@ Planning is the current home of this contract.
 - direct tasks stay direct when the request remains self-sufficient
 - execplans appear when the checked-in execution contract reduces ambiguity or restart cost
 - escalation appears when safe continuation is no longer justified
+- active execplans should carry a compact delegated-judgment section when preserving the intended end state and escalation boundary across sessions matters
 
 Delegated judgment does not replace planning.
 It defines how much local decision-making is safe before planning, promotion, or escalation should take over.

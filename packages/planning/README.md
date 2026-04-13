@@ -140,6 +140,7 @@ It also defines the bounded-initiative rule: improve means locally, but do not s
 `docs/delegated-judgment-contract.md` is the front-door companion: what the human should specify, what the agent may decide locally, and what should become an explicit promotion or escalation decision.
 `docs/environment-recovery-contract.md` defines how task-local environment assumptions and recovery paths should be expressed without growing a second plan schema.
 `docs/execution-summary-contract.md` defines the compact completion summary that archived slices should leave behind.
+`docs/environment-recovery-contract.md` defines the ordered recovery path when lifecycle work, repo-state inspection, or validation restart becomes ambiguous.
 
 Use a direct task in `TODO.md` when the work is small enough to finish in one coherent pass and does not need milestone sequencing, blocker tracking, or a wider validation story.
 
@@ -179,6 +180,13 @@ Execplans now treat three fields as first-class:
 - `Intent Continuity`: whether the larger intended outcome is actually complete and what checked-in surface now owns it if not
 - `Required Continuation`: whether follow-on is mandatory for that larger outcome, plus the owner surface and activation trigger
 - `Execution Summary`: what the slice delivered, how validation was confirmed, where follow-on was routed, and how later work should resume
+
+When an execplan is carrying broad direction across sessions, it should also record a compact `Delegated Judgment` section:
+
+- `Requested outcome`
+- `Hard constraints`
+- `Agent may decide locally`
+- `Escalate when`
 
 If required follow-on remains, archive should happen only after those fields point at a checked-in next owner.
 Completed plans should also leave an explicit execution summary before archive so later contributors do not have to reconstruct the outcome from drift prose or chat.

@@ -71,6 +71,13 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
 - Owner surface: none
 - Activation trigger: none
 
+## Delegated Judgment
+
+- Requested outcome: Land plan alpha end to end.
+- Hard constraints: Keep scope clear and local.
+- Agent may decide locally: Bounded decomposition and validation tightening.
+- Escalate when: The requested outcome, owned surface, or time horizon would change.
+
 ## Active Milestone
 
 - ID: plan-alpha
@@ -471,6 +478,27 @@ def test_execplan_requires_structured_required_follow_on_when_parent_intent_is_u
     assert "execplan_under_specified" in classes
 
 
+def test_execplan_requires_delegated_judgment_when_active(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_delegated_judgment")
+    plan = _minimal_execplan().replace(
+        "## Delegated Judgment\n\n"
+        "- Requested outcome: Land plan alpha end to end.\n"
+        "- Hard constraints: Keep scope clear and local.\n"
+        "- Agent may decide locally: Bounded decomposition and validation tightening.\n"
+        "- Escalate when: The requested outcome, owned surface, or time horizon would change.\n\n",
+        "",
+    )
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
+
+    messages = [warning.message for warning in mod.gather_planning_warnings(repo_root=tmp_path)]
+    assert any("Requested outcome" in message for message in messages)
+    assert any("Hard constraints" in message for message in messages)
+    assert any("Agent may decide locally" in message for message in messages)
+    assert any("Escalate when" in message for message in messages)
+
+
 def test_completed_execplan_left_active_warns_archive_drift(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_completed_active")
     _write(tmp_path / "TODO.md", _baseline_todo())
@@ -574,6 +602,50 @@ def test_promotion_linkage_still_warns_for_vague_activation(tmp_path: Path) -> N
     _write(tmp_path / "docs" / "execplans" / "vague-thread-2026-04-05.md", _minimal_execplan())
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "promotion_linkage_drift" in classes
+
+
+def test_contract_shaping_execplan_without_decision_sections_warns_under_specified(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_contract_shaping_missing_sections")
+    plan = _minimal_execplan().replace(
+        "- Keep scope clear.",
+        "- Freeze the contract decisions for a provenance-aware update policy.",
+    ).replace(
+        "- Scope: maintain planning discipline.",
+        "- Scope: close the schema, precedence, and policy decisions before implementation.",
+    )
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    matching = [warning for warning in warnings if warning.warning_class == "execplan_under_specified"]
+    assert any("Contract Decisions To Freeze" in warning.message for warning in matching)
+    assert any("Open Questions To Close" in warning.message for warning in matching)
+
+
+def test_contract_shaping_execplan_with_decision_sections_passes(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_contract_shaping_complete")
+    plan = (
+        _minimal_execplan()
+        .replace(
+            "- Keep scope clear.",
+            "- Freeze the contract decisions for a provenance-aware update policy.",
+        )
+        .replace(
+            "- Scope: maintain planning discipline.",
+            "- Scope: close the schema, precedence, and policy decisions before implementation.",
+        )
+        .replace(
+            "## Validation Commands",
+            "## Contract Decisions To Freeze\n\n- Canonical config lives at repo root.\n\n## Open Questions To Close\n\n- What wins when workspace and module pins disagree?\n\n## Validation Commands",
+        )
+    )
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    assert not [warning for warning in warnings if warning.warning_class == "execplan_under_specified"]
 
 
 def test_main_json_format_outputs_payload(tmp_path: Path, capsys) -> None:
