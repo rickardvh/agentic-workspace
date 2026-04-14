@@ -273,3 +273,10 @@ def test_maintainer_surface_checker_includes_boundary_warnings(tmp_path: Path) -
     warnings = mod.gather_maintainer_warnings(repo_root=tmp_path)
 
     assert any(warning.warning_class == "package_local_install_drift" for warning in warnings)
+
+
+def test_render_wrapper_keeps_backward_compatible_entrypoint_alias() -> None:
+    mod = _load_module(_render_script_path(), "maintainer_render_alias")
+
+    assert mod.REPO_ROOT == WORKSPACE_ROOT
+    assert mod.render_readme_entrypoints is mod.render_quickstart

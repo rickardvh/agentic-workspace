@@ -159,6 +159,9 @@ def render_routing(manifest: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+render_readme_entrypoints = render_quickstart
+
+
 def main() -> int:
     manifest = load_manifest()
     outputs = {

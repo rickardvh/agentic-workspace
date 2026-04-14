@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 
@@ -27,6 +28,15 @@ from repo_planning_bootstrap.installer import (
 def _write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text.strip() + "\n", encoding="utf-8")
+
+
+def _load_module(path: Path, module_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise AssertionError(f"Unable to load module from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _minimal_execplan(status: str = "in-progress") -> str:
@@ -218,6 +228,15 @@ def test_adopt_bootstrap_docs_heavy_repo_preserves_root_surfaces_and_installs_he
         action.kind in {"copied", "created", "updated"} and action.path == tmp_path / "tools" / "AGENT_QUICKSTART.md"
         for action in result.actions
     )
+
+
+def test_render_wrapper_install_keeps_backward_compatible_entrypoint_alias(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+
+    mod = _load_module(tmp_path / "scripts" / "render_agent_docs.py", "planning_render_alias")
+
+    assert mod.REPO_ROOT == tmp_path
+    assert mod.render_readme_entrypoints is mod.render_quickstart
 
 
 def test_adopt_bootstrap_preserves_existing_manifest_in_partial_managed_state(tmp_path: Path) -> None:
