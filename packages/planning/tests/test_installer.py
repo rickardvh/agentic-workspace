@@ -464,6 +464,7 @@ def test_bootstrap_execution_summary_contract_is_part_of_payload() -> None:
 def test_bootstrap_intent_contract_is_part_of_payload() -> None:
     text = (installer_mod.payload_root() / "docs" / "intent-contract.md").read_text(encoding="utf-8")
 
+    assert "planning_record" in text
     assert "active_contract" in text
     assert "agentic-planning-bootstrap summary --format json" in text
     assert Path("docs/intent-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
@@ -472,6 +473,7 @@ def test_bootstrap_intent_contract_is_part_of_payload() -> None:
 def test_bootstrap_resumable_execution_contract_is_part_of_payload() -> None:
     text = (installer_mod.payload_root() / "docs" / "resumable-execution-contract.md").read_text(encoding="utf-8")
 
+    assert "planning_record" in text
     assert "resumable_contract" in text
     assert "current_next_action" in text
     assert Path("docs/resumable-execution-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
