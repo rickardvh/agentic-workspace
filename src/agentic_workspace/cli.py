@@ -332,6 +332,11 @@ def _add_selection_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--target", help="Target repository path. Defaults to the current directory.")
     parser.add_argument("--preset", help="Named module bundle.")
     parser.add_argument("--modules", help="Comma-separated module selection.")
+    parser.add_argument(
+        "--non-interactive",
+        action="store_true",
+        help="Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+    )
     _add_format_argument(parser)
 
 
@@ -490,6 +495,7 @@ def main(argv: list[str] | None = None) -> int:
             descriptors=descriptors,
             dry_run=args.dry_run,
             force_adopt=args.adopt,
+            non_interactive=args.non_interactive,
             print_prompt=args.print_prompt,
             write_prompt=args.write_prompt,
             config=config,
@@ -505,6 +511,7 @@ def main(argv: list[str] | None = None) -> int:
             resolved_preset=resolved_preset,
             descriptors=descriptors,
             force_adopt=bool(getattr(args, "adopt", False)),
+            non_interactive=args.non_interactive,
             config=config,
         )
         _emit_payload(payload=payload, format_name=args.format)
@@ -517,6 +524,7 @@ def main(argv: list[str] | None = None) -> int:
         resolved_preset=resolved_preset,
         descriptors=descriptors,
         dry_run=bool(getattr(args, "dry_run", False)),
+        non_interactive=args.non_interactive,
         config=config,
     )
     _emit_payload(payload=payload, format_name=args.format)
@@ -1430,6 +1438,7 @@ def _run_init(
     descriptors: dict[str, ModuleDescriptor],
     dry_run: bool,
     force_adopt: bool,
+    non_interactive: bool,
     print_prompt: bool,
     write_prompt: str | None,
     config: WorkspaceConfig,
@@ -1476,6 +1485,7 @@ def _run_init(
         reports=reports,
         config=config,
     )
+    summary["non_interactive"] = non_interactive
     prompt_text = _build_handoff_prompt(summary)
     prompt_path = _default_handoff_prompt_path(target_root=target_root) if summary["prompt_requirement"] != "none" else None
     handoff_record = _build_bootstrap_handoff_record(summary) if summary["prompt_requirement"] != "none" else None
@@ -1488,6 +1498,7 @@ def _run_init(
         _write_json_file(destination=handoff_record_path, payload=handoff_record, dry_run=dry_run)
     payload: dict[str, Any] = summary | {
         "dry_run": dry_run,
+        "non_interactive": non_interactive,
         "module_reports": reports,
         "config": _config_payload(config=config),
     }
@@ -1715,6 +1726,7 @@ def _run_lifecycle_command(
     resolved_preset: str | None,
     descriptors: dict[str, ModuleDescriptor],
     dry_run: bool,
+    non_interactive: bool,
     config: WorkspaceConfig,
 ) -> dict[str, Any]:
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
@@ -1770,6 +1782,7 @@ def _run_lifecycle_command(
         "modules": selected_modules,
         "preset": resolved_preset,
         "dry_run": dry_run,
+        "non_interactive": non_interactive,
         "health": "healthy" if not warnings else "attention-needed",
         "created": summary["created"],
         "updated_managed": summary["updated_managed"],
@@ -2018,6 +2031,7 @@ def _run_prompt_command(
     resolved_preset: str | None,
     descriptors: dict[str, ModuleDescriptor],
     force_adopt: bool,
+    non_interactive: bool,
     config: WorkspaceConfig,
 ) -> dict[str, Any]:
     if prompt_command == "init":
@@ -2028,6 +2042,7 @@ def _run_prompt_command(
             descriptors=descriptors,
             dry_run=True,
             force_adopt=force_adopt,
+            non_interactive=non_interactive,
             print_prompt=True,
             write_prompt=None,
             config=config,
@@ -2045,6 +2060,7 @@ def _run_prompt_command(
         resolved_preset=resolved_preset,
         descriptors=descriptors,
         dry_run=True,
+        non_interactive=non_interactive,
         config=config,
     )
     payload["command"] = "prompt"
@@ -2273,10 +2289,11 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
             "- do not edit generated files manually when a canonical source exists",
             "- keep planning and memory boundaries explicit",
             "- avoid creating duplicate source-of-truth workflow surfaces",
-            "",
-            "Validation:",
         ]
     )
+    if summary.get("non_interactive"):
+        lines.append("- keep the finishing pass non-interactive; do not assume a human can answer prompts or unblock a PTY")
+    lines.extend(["", "Validation:"])
     lines.extend(f"- {command}" for command in summary["validation"])
     lines.extend(["", "When done:"])
     if summary["placeholders"]:
@@ -2301,6 +2318,7 @@ def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
             "inferred_policy": summary["inferred_policy"],
             "mode": summary["mode"],
             "prompt_requirement": summary["prompt_requirement"],
+            "non_interactive": bool(summary.get("non_interactive")),
             "review_items": review_items,
         },
         "next": {
@@ -2384,6 +2402,13 @@ def _build_lifecycle_handoff_prompt(payload: dict[str, Any]) -> str:
             ),
         ]
     )
+    if payload.get("non_interactive"):
+        lines.extend(
+            [
+                "Run this flow with `--non-interactive` and avoid command paths that would wait for human confirmation.",
+                "Keep the lifecycle pass prompt-free and safe for unattended Windows/PowerShell execution.",
+            ]
+        )
     config_payload = payload.get("config")
     if isinstance(config_payload, dict) and config_payload.get("exists"):
         lines.extend(

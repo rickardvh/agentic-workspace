@@ -11,6 +11,7 @@ Use it when you need the canonical intent, repo-state, policy, and handoff contr
 - If `agentic-workspace.toml` exists, `workspace.agent_instructions_file` becomes the canonical root startup-entrypoint filename.
 - The user intent is the selected preset: `memory`, `planning`, or `full`.
 - The command bootstraps mechanically, classifies repo state, then chooses the safest lifecycle mode automatically.
+- `--non-interactive` is the explicit no-prompt posture for unattended agents and PowerShell-heavy environments.
 - The root workspace layer is part of that bootstrap contract, not an incidental repo file copy.
 - Clean installs should seed `.agentic-workspace/WORKFLOW.md`, `.agentic-workspace/OWNERSHIP.toml`, and a coherent root startup entrypoint for the selected modules.
 - The root CLI also keeps one checked-in external-agent handoff surface at `llms.txt`.
@@ -57,6 +58,7 @@ Use it when you need the canonical intent, repo-state, policy, and handoff contr
 ## Maintainer Notes
 
 - Recovery after interrupted bootstrap or lifecycle ambiguity should follow `docs/environment-recovery-contract.md` so the ordered remediation path stays centralized.
+- Lifecycle handoff prompts and suggested runner commands should prefer `--non-interactive` when the work is being prepared for another unattended agent.
 - The root README should stay short and point here instead of duplicating the mode matrix.
 - Package-local CLIs still own their own install and adoption behavior; the root layer only centralizes composition and reporting.
 - Repo-owned lifecycle defaults and update intent belong in `agentic-workspace.toml`, not under `.agentic-workspace/`.

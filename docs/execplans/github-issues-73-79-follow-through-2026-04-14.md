@@ -39,7 +39,7 @@
 
 ## Immediate Next Action
 
-- Validate the already-landed model-permissions contract, archive stale active plan residue, and close `#76` before starting the remaining unimplemented issue slices.
+- Implement explicit tool-verification state for execplans so smaller agents can cheaply tell when a task should stop or escalate before wasting tokens.
 
 ## Blockers
 
@@ -99,3 +99,4 @@
 ## Drift Log
 
 - 2026-04-14: Replaced the stale `#69`-`#72` active issue tranche with the live `#73`-`#79` queue after confirming upstream closure drift.
+- 2026-04-14: Closed `#76` after validating the shipped safety contract and cleaned up stale active-plan residue; closed `#75` after adding the explicit `--non-interactive` lifecycle posture and prompt-safe handoff guidance.

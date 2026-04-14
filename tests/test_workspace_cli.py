@@ -994,6 +994,18 @@ def test_init_can_write_prompt_file(monkeypatch, tmp_path: Path, capsys) -> None
     assert "Finish the Agentic Workspace bootstrap" in prompt_path.read_text(encoding="utf-8")
 
 
+def test_selection_commands_accept_non_interactive_flag() -> None:
+    parser = cli.build_parser()
+
+    init_args = parser.parse_args(["init", "--target", ".", "--non-interactive"])
+    status_args = parser.parse_args(["status", "--target", ".", "--non-interactive"])
+    prompt_args = parser.parse_args(["prompt", "upgrade", "--modules", "planning", "--target", ".", "--non-interactive"])
+
+    assert init_args.non_interactive is True
+    assert status_args.non_interactive is True
+    assert prompt_args.non_interactive is True
+
+
 def test_prompt_init_uses_dry_run_workspace_bootstrap(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
@@ -1012,6 +1024,18 @@ def test_prompt_init_uses_dry_run_workspace_bootstrap(monkeypatch, tmp_path: Pat
         ("planning", "install", {"target": str(tmp_path), "dry_run": True, "force": False}),
         ("memory", "install", {"target": str(tmp_path), "dry_run": True, "force": False}),
     ]
+
+
+def test_prompt_init_non_interactive_marks_prompt_free_handoff(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["prompt", "init", "--target", str(tmp_path), "--non-interactive", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["non_interactive"] is True
+    assert "do not assume a human can answer prompts or unblock a PTY" in payload["handoff_prompt"]
 
 
 def test_prompt_init_returns_structured_handoff_record_for_high_ambiguity_repo(monkeypatch, tmp_path: Path, capsys) -> None:
@@ -1040,6 +1064,17 @@ def test_prompt_upgrade_builds_workspace_handoff_prompt(monkeypatch, tmp_path: P
     assert payload["dry_run"] is True
     assert "Use the workspace CLI as the lifecycle entrypoint" in payload["handoff_prompt"]
     assert "README.md: inspect manually" in payload["handoff_prompt"]
+
+
+def test_prompt_upgrade_non_interactive_mentions_prompt_free_execution(monkeypatch, tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))
+
+    assert cli.main(["prompt", "upgrade", "--modules", "planning", "--target", str(tmp_path), "--non-interactive", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["non_interactive"] is True
+    assert "Run this flow with `--non-interactive`" in payload["handoff_prompt"]
 
 
 def test_init_uses_recommended_prompt_for_single_existing_surface(monkeypatch, tmp_path: Path, capsys) -> None:

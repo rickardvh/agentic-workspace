@@ -62,3 +62,4 @@ def test_build_prompt_upgrade_mentions_old_execplan_contract_shape(monkeypatch, 
     assert "older active execplans" in prompt
     assert "Intent Continuity" in prompt
     assert "Execution Summary" in prompt
+    assert "--non-interactive" in prompt
