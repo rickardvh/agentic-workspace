@@ -694,7 +694,7 @@ def _audit_note_overlap(*, target_root: Path, manifest: MemoryManifest, result) 
             if shared_routes and not same_family:
                 recommendation = "keep separate with distinct primary homes"
             result.add(
-                "manual review",
+                "consider",
                 left_path,
                 (
                     f"possible note overlap with {right.path.as_posix()} "
@@ -1438,7 +1438,7 @@ def _emit_memory_shape_pressure(
         if not warning:
             continue
         result.add(
-            "manual review",
+            "consider" if relative.as_posix().startswith("memory/current/") else "manual review",
             note_path,
             warning,
             role="memory-size-audit",

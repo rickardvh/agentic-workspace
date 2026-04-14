@@ -153,7 +153,7 @@ def _infer_action_category(*, kind: str, path: Path, detail: str, role: str, saf
     if "placeholder" in detail_lower:
         return "placeholder-review"
     if any(path_str.endswith(current_path.as_posix()) for current_path in CURRENT_MEMORY_BASELINE):
-        if kind in {"missing", "manual review"}:
+        if kind in {"missing", "manual review", "consider"}:
             return "current-memory-review"
     if role in {"payload-contract", "local-entrypoint"} or role.startswith("shared-"):
         if kind in {"manual review", "missing"}:

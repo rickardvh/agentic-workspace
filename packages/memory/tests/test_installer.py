@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from repo_memory_bootstrap import cli, installer
+from repo_memory_bootstrap._installer_output import _infer_action_category
 from repo_memory_bootstrap._installer_shared import (
     MEMORY_COMPATIBILITY_CONTRACT_FILES,
     MEMORY_LOWER_STABILITY_HELPER_FILES,
@@ -3911,6 +3912,19 @@ task_relevance = "optional"
     assert any(
         action.role == "memory-size-audit" and "invariant note is oversized" in action.detail and "expected <= 80" in action.detail
         for action in result.actions
+    )
+
+
+def test_current_note_size_pressure_is_classified_as_current_memory_review() -> None:
+    assert (
+        _infer_action_category(
+            kind="consider",
+            path=Path("memory/current/task-context.md"),
+            detail="task-context note is oversized (92 lines, expected <= 80); remove planner/log spillover",
+            role="memory-size-audit",
+            safety="manual",
+        )
+        == "current-memory-review"
     )
 
 
