@@ -30,6 +30,12 @@ That command is the workspace-level query surface for:
 
 It reports existing proof lanes. It does not replace them.
 
+When the question is which proof lane is enough, use the proof-selection section in the machine-readable defaults contract:
+
+```bash
+agentic-workspace defaults --section proof_selection --format json
+```
+
 When the question is already narrow, prefer the compact selector path:
 
 ```bash

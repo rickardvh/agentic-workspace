@@ -2497,6 +2497,39 @@ def _defaults_payload() -> dict[str, Any]:
                 "Use package-local tests or payload verification only when the trust question is package-specific.",
             ],
         },
+        "proof_selection": {
+            "canonical_doc": "docs/proof-surfaces-contract.md",
+            "command": "agentic-workspace defaults --section proof_selection --format json",
+            "rule": "Make proof choice cheap by naming the narrowest lane that still answers the trust question.",
+            "recommended_lanes": [
+                {
+                    "id": "workspace_proof",
+                    "use_when": "The question is what proves the workspace contract here.",
+                    "enough_proof": "agentic-workspace proof --target ./repo --format json",
+                    "broaden_when": "The current workspace proof answer is not specific enough for the trust question.",
+                    "escalate_when": "The proof question crosses into package-specific or repo-wide contract changes.",
+                },
+                {
+                    "id": "workspace_current",
+                    "use_when": "The question is the current workspace health or installed-module state.",
+                    "enough_proof": "agentic-workspace proof --target ./repo --current --format json",
+                    "broaden_when": "Current health alone does not answer the trust question.",
+                    "escalate_when": "A deeper package or repo-wide proof lane is required.",
+                },
+                {
+                    "id": "validation_lane",
+                    "use_when": "The question is whether a touched contract change is proved by narrow validation.",
+                    "enough_proof": "Use the narrowest validation lane from `validation` that covers the touched surface.",
+                    "broaden_when": "The narrower validation lane stops proving the touched contract or the change crosses boundaries.",
+                    "escalate_when": "Validation would be meaningless without broader scope.",
+                },
+            ],
+            "rule_of_thumb": [
+                "Prefer the smallest queryable proof answer first.",
+                "Broaden only when the narrow lane stops answering the trust question.",
+                "Escalate when proof would need broader scope than the current trust question justifies.",
+            ],
+        },
         "ownership_mapping": {
             "canonical_doc": "docs/ownership-authority-contract.md",
             "command": "agentic-workspace ownership --target ./repo --format json",
@@ -2705,6 +2738,10 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- doc: {payload['proof_surfaces']['canonical_doc']}")
     print(f"- command: {payload['proof_surfaces']['command']}")
     print(f"- rule: {payload['proof_surfaces']['rule']}")
+    print("Proof selection:")
+    print(f"- doc: {payload['proof_selection']['canonical_doc']}")
+    print(f"- command: {payload['proof_selection']['command']}")
+    print(f"- rule: {payload['proof_selection']['rule']}")
     print("Ownership mapping:")
     print(f"- doc: {payload['ownership_mapping']['canonical_doc']}")
     print(f"- command: {payload['ownership_mapping']['command']}")

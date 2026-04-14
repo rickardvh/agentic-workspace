@@ -19,6 +19,7 @@ Use it when you want the shortest correct answer for startup, lifecycle, skill d
 | How do I start in a repo? | The configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`) -> `TODO.md` -> active execplan when relevant | `ROADMAP.md` only when promoting work |
 | How do I inspect current active planning state? | `agentic-planning-bootstrap summary --format json` and its `planning_record` object | Reading raw `TODO.md` or execplan prose first |
 | Where is the bounded post-bootstrap jumpstart contract? | [`docs/jumpstart-contract.md`](docs/jumpstart-contract.md) and `agentic-workspace defaults --section jumpstart --format json` | Treating jumpstart as a wider `init` path or a repo-local checklist |
+| Where is the proof-selection contract? | `agentic-workspace defaults --section proof_selection --format json` and [`docs/proof-surfaces-contract.md`](docs/proof-surfaces-contract.md) | Mining prose for the narrowest proof lane first |
 | Where is the delegation posture contract? | [`docs/delegation-posture-contract.md`](docs/delegation-posture-contract.md) and `agentic-workspace defaults --section delegation_posture --format json` | Treating config as a scheduler or ignoring the effective mixed-agent posture |
 | Where should I point an external agent? | The repository's `llms.txt` | Richer docs only when that handoff file points there |
 | Where is the post-bootstrap next action? | `.agentic-workspace/bootstrap-handoff.md` when bootstrap says review is still needed | Ad hoc chat instructions |
@@ -69,6 +70,7 @@ agentic-workspace ownership --target ./repo --concern active-execution-state --f
 Use [`docs/compact-contract-profile.md`](docs/compact-contract-profile.md) for the compact answer envelope and the first narrow-selector contract.
 Use `docs/delegated-judgment-contract.md` when the question is not which command to run, but what the human should specify, what the agent may decide locally, and what should force promotion or escalation.
 Use the `validation` section in `agentic-workspace defaults --format json` when the missing judgment is which proving lane is enough, when broader checks are required, and when the change should escalate beyond the narrow lane.
+Use `agentic-workspace defaults --section proof_selection --format json` when the missing judgment is which proof lane is enough, when broader proof is required, or when proof should escalate.
 Use `docs/environment-recovery-contract.md` when the question is how to recover cheaply from repo-state ambiguity, lifecycle warnings, or interrupted bootstrap/maintenance work.
 Use `docs/proof-surfaces-contract.md` when the question is which proof lane answers the current trust question and what the current proof state already says.
 Use `docs/ownership-authority-contract.md` when the question is which surface owns a concern and which checked-in contract is authoritative.

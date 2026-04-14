@@ -27,17 +27,16 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 | Candidate | Source | Why now | Promote when |
 | --- | --- | --- | --- |
-| `Nearly automatic proof selection` | GitHub issue `#35`; compact intent/resumable contract follow-through | The active execution contract is now smaller, but a major remaining supervision cost is proof choice. The next highest-value refinement is making the narrowest sufficient proof lane and its escalation boundary cheaper to retrieve than human steering. | Ordinary work still requires human interpretation to decide what proof is enough, when broader proof is required, or when the narrow lane has stopped being meaningful. |
+| `Cross-agent handoff as an ordinary-work mode` | GitHub issue `#36`; ordinary-work continuity follow-through | The repo already proves checked-in continuity for startup and active work, but ordinary work still treats cross-agent handoff as exceptional rather than a normal operating mode. | The repo can preserve intent, proof, and next-action state cheaply enough that ordinary cross-agent continuation no longer needs special steering. |
 
 ## Second Priority Queue
 
-- `Cross-agent handoff as an ordinary-work mode` from GitHub issue `#36`
+- `Repeated-human-steering improvement signal` from GitHub issue `#37`
 
 ## Third Priority Queue
 
 | Candidate | Source | Why now | Promote when |
 | --- | --- | --- | --- |
-| `Repeated-human-steering improvement signal` | GitHub issue `#37`; improvement-targeting workflow | Repeated human correction should become explicit product pressure, but that follow-through is lower urgency than shrinking the active execution contract and proof/handoff ambiguity first. | The same class of human steering still repeats after the intent, resumable-execution, proof, or handoff contracts improve. |
 | `Cross-agent workflow robustness hardening` | Archived execplan `docs/execplans/archive/cross-agent-workflow-robustness-hardening-2026-04-13.md`; mixed-agent dogfooding feedback | The first machine-readable hardening slice landed, but the broader goal stays open until future mixed-agent passes show startup routing, package-managed paths, and same-pass planning cleanup are no longer missed in ordinary use. | Another mixed-agent pass still misses startup routing, package-managed paths, or same-pass planning cleanup after the current machine-readable hardening slice. |
 
 ## Fourth Priority Queue

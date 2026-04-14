@@ -141,6 +141,15 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["proof_surfaces"]["canonical_doc"] == "docs/proof-surfaces-contract.md"
     assert payload["proof_surfaces"]["command"] == "agentic-workspace proof --target ./repo --format json"
     assert payload["proof_surfaces"]["default_routes"]["workspace_proof"] == "agentic-workspace proof --target ./repo --format json"
+    assert payload["proof_selection"]["canonical_doc"] == "docs/proof-surfaces-contract.md"
+    assert payload["proof_selection"]["command"] == "agentic-workspace defaults --section proof_selection --format json"
+    assert payload["proof_selection"]["rule"] == (
+        "Make proof choice cheap by naming the narrowest lane that still answers the trust question."
+    )
+    assert payload["proof_selection"]["recommended_lanes"][0]["id"] == "workspace_proof"
+    assert payload["proof_selection"]["recommended_lanes"][0]["enough_proof"] == "agentic-workspace proof --target ./repo --format json"
+    assert payload["proof_selection"]["recommended_lanes"][2]["id"] == "validation_lane"
+    assert "Prefer the smallest queryable proof answer first." in payload["proof_selection"]["rule_of_thumb"]
     assert payload["ownership_mapping"]["canonical_doc"] == "docs/ownership-authority-contract.md"
     assert payload["ownership_mapping"]["command"] == "agentic-workspace ownership --target ./repo --format json"
     assert payload["ownership_mapping"]["ledger"] == ".agentic-workspace/OWNERSHIP.toml"
@@ -244,6 +253,8 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "docs/compact-contract-profile.md" in text
     assert "Proof surfaces:" in text
     assert "docs/proof-surfaces-contract.md" in text
+    assert "Proof selection:" in text
+    assert "defaults --section proof_selection" in text
     assert "Ownership mapping:" in text
     assert "docs/ownership-authority-contract.md" in text
     assert "Combined install:" in text
