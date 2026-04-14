@@ -11,6 +11,7 @@ Use it when one bounded answer is enough and loading a broad contract object wou
 Prefer a narrow selector over a whole-surface dump when the task only needs one answer.
 
 Keep the full JSON surface available for broad inspection, but make the normal retrieval path cheap when the question is already narrow.
+Use stable concern-shaped selectors so the agent can ask one question without loading unrelated contract domains.
 
 ## Profile
 
@@ -69,3 +70,4 @@ These selectors should answer:
 - Use [`docs/default-path-contract.md`](docs/default-path-contract.md) for the front-door route selection contract.
 - Use [`docs/proof-surfaces-contract.md`](docs/proof-surfaces-contract.md) for proof-lane semantics.
 - Use [`docs/ownership-authority-contract.md`](docs/ownership-authority-contract.md) for ownership semantics.
+- Use [`docs/lazy-discovery-measurements.md`](docs/lazy-discovery-measurements.md) when you want to verify that the selector path is actually cheaper than the broad dump.

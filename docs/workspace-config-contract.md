@@ -62,6 +62,7 @@ Future config expansion should stay narrow.
 - Mixed-agent config should describe capability and cost posture rather than vendor-specific routing rules.
 - Persisted checked-in state should remain the primary way to make agent switching cheap; config should only tune stable preferences and capability asymmetries around that core contract.
 - Mixed-agent extensions should be justified by measured or repeatedly observed restart, handoff, or token-cost improvement rather than preference alone.
+- Those extensions should also stay aligned with the product boundary in [`docs/design-principles.md`](docs/design-principles.md): help the agent do the job, do not script the job.
 
 ## Local Override Contract
 

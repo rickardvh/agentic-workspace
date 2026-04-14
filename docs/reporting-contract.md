@@ -9,6 +9,7 @@ Use it when you want one derived inspection surface for combined workspace state
 - Keep workspace reporting compact, machine-readable, and comparable.
 - Derive workspace and module summaries from canonical module-owned surfaces.
 - Expose next-action guidance without turning reporting into a new source-of-truth store.
+- Prefer one bounded question at a time when the report can answer it cheaply.
 
 ## Shared Schema
 
@@ -56,3 +57,10 @@ Use the machine-readable report first when the question is:
 - Do not require raw module files before the report when the report already answers the question.
 - Keep findings, warnings, and next-action guidance separate.
 - Keep module reports compact and derived.
+- Keep concern-shaped subobjects narrow enough that one question does not force unrelated contract domains to load.
+
+## Relationship To Lazy Discovery
+
+Use [`docs/compact-contract-profile.md`](docs/compact-contract-profile.md) for the selector-shaped answer envelope that should sit underneath the report surface when one answer is enough.
+
+Use [`docs/lazy-discovery-measurements.md`](docs/lazy-discovery-measurements.md) when you want to check whether a narrow query is actually cheaper than a broad dump.

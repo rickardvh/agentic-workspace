@@ -247,6 +247,24 @@ That means:
 
 Dogfooding is valuable only if it produces better general systems.
 
+### 15. Help the agent do the job, do not script the job
+
+The product should make bounded work easier, not turn the repository into a workflow script that dictates every local decision.
+
+Prefer:
+
+- thin guidance that helps the agent proceed safely
+- capability-shaped contracts that leave room for local judgment
+- explicit escalation boundaries when the task shape changes
+
+Avoid:
+
+- over-prescriptive execution choreography
+- scheduler-like repo policy
+- broad local workflows that only work when the agent follows a long script
+
+If a proposed surface mostly tells the agent exactly how to work rather than helping it work better, ask whether it is actually reducing repository operating cost.
+
 ### 15. Portability matters more than local cleverness
 
 A feature is stronger when it works in many repos, with different codebases, different contributors, and different agent tools.
