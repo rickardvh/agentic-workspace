@@ -74,6 +74,19 @@
 - Should the first slice define the ranking policy now or defer it to the discovery/reporting follow-on?
 - What is the smallest report or artifact needed to make jumpstart auditable without becoming noisy?
 
+## Seed Targets
+
+- Memory seed targets: `docs/delegated-judgment-contract.md`, `docs/resumable-execution-contract.md`, `docs/capability-aware-execution.md`, `docs/execution-summary-contract.md`
+- Planning seed targets: `TODO.md`, the active execplan itself, and the current jumpstart discovery report
+- Ambiguous/no-action surfaces: `ROADMAP.md` and nested cache warnings from the report surface
+
+## Fast Payoff Ranking
+
+- Prefer the highest-confidence durable contracts first.
+- Prefer anti-rediscovery value over prose completeness.
+- Keep the seed set small enough to review in one pass.
+- Make skipped candidates explicit in the discovery report instead of hiding them inside the seed set.
+
 ## Validation Commands
 
 - `python scripts/check/check_planning_surfaces.py`

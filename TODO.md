@@ -8,7 +8,7 @@ Active queue for repository work.
 
 ## Now
 
-- `bounded-post-install-jumpstart-phase`: `Status: active`; `Surface: docs/execplans/bounded-post-install-jumpstart-phase-2026-04-14.md`; `Why now: the bounded post-install jumpstart phase is still in flight and needs the next implementation step to keep the mature-repo follow-through visible.`
+- `bounded-post-install-jumpstart-phase`: `Status: active`; `Surface: docs/execplans/bounded-post-install-jumpstart-phase-2026-04-14.md`; `Why now: the bounded post-install jumpstart phase now has a pre-write discovery report and the next implementation step is to seed the smallest useful Memory and Planning surfaces from it.`
 ## Done
 
 - resumable-execution-contract: Completed (projected the current active execplan into `agentic-planning-bootstrap summary` as `resumable_contract`, added the canonical resumable-execution contract doc, refreshed the root planning install, and dogfooded the smaller restart contract against this repo's live active execplan)

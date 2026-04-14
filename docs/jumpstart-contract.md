@@ -16,6 +16,16 @@ Use it when safe install/adopt has finished and the repo should get a small amou
 - Jumpstart does not replace `init`.
 - Jumpstart does not bulk-import repo context or become a generic analysis pass.
 
+## Seed Order
+
+When jumpstart identifies candidate surfaces, prefer:
+
+- durable Memory boundaries first
+- the smallest useful Planning picture second
+- ambiguous or long-horizon follow-ons only when they are explicit no-action cases
+
+Use the highest-confidence, lowest-noise candidates first so the first visible value stays small and reviewable.
+
 ## Canonical Shape
 
 Use `agentic-workspace defaults --section jumpstart --format json` for the machine-readable contract surface.

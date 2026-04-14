@@ -186,6 +186,33 @@ routes_from = ["AGENTS.md", ".agentic-workspace/**/*.md", ".agentic-workspace/OW
 stale_when = ["AGENTS.md", ".agentic-workspace/**/*.md", ".agentic-workspace/OWNERSHIP.toml", "packages/**"]
 memory_role = "durable_truth"
 
+[notes."memory/decisions/mature-repo-jumpstart-seed-candidates-2026-04-14.md"]
+note_type = "decision"
+canonical_home = "memory/decisions/mature-repo-jumpstart-seed-candidates-2026-04-14.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["planning", "memory-system"]
+surfaces = ["decision", "architecture"]
+routes_from = [
+  "docs/delegated-judgment-contract.md",
+  "docs/resumable-execution-contract.md",
+  "docs/capability-aware-execution.md",
+  "docs/execution-summary-contract.md",
+  "docs/reporting-contract.md",
+  "docs/jumpstart-contract.md",
+]
+stale_when = [
+  "docs/delegated-judgment-contract.md",
+  "docs/resumable-execution-contract.md",
+  "docs/capability-aware-execution.md",
+  "docs/execution-summary-contract.md",
+  "docs/reporting-contract.md",
+  "docs/jumpstart-contract.md",
+]
+memory_role = "durable_truth"
+
 [notes.".agentic-workspace/memory/WORKFLOW.md"]
 note_type = "workflow-policy"
 canonical_home = ".agentic-workspace/memory/WORKFLOW.md"
