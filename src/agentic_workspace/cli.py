@@ -270,6 +270,12 @@ def build_parser() -> argparse.ArgumentParser:
     skills_parser.add_argument("--task", help="Optional task description used to recommend likely skills.")
     _add_format_argument(skills_parser)
 
+    report_parser = subparsers.add_parser(
+        "report",
+        help="Show a compact combined workspace report for installed modules, mixed-agent posture, and next-action guidance.",
+    )
+    _add_selection_arguments(report_parser)
+
     init_parser = subparsers.add_parser("init", help="Bootstrap selected modules into a target repository.")
     _add_selection_arguments(init_parser)
     init_parser.add_argument(
@@ -428,6 +434,17 @@ def main(argv: list[str] | None = None) -> int:
         _validate_selected_module_contract(selected_modules=selected_modules, descriptors=descriptors)
     except (ModuleSelectionError, WorkspaceUsageError) as exc:
         parser.error(str(exc))
+
+    if args.command == "report":
+        payload = _run_report_command(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            descriptors=descriptors,
+            config=config,
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
 
     if args.command == "init":
         payload = _run_init(
@@ -1298,6 +1315,11 @@ def _selected_modules(
     if command_name in {"init", "prompt"}:
         return preset_modules[config.default_preset], config.default_preset
 
+    if command_name == "report":
+        registry = _module_registry(descriptors=descriptors, target_root=target_root)
+        detected = [entry.name for entry in registry if entry.installed]
+        return detected, None
+
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     detected = [entry.name for entry in registry if entry.installed]
     if detected:
@@ -1749,6 +1771,74 @@ def _run_lifecycle_command(
     }
 
 
+def _run_report_command(
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    descriptors: dict[str, ModuleDescriptor],
+    config: WorkspaceConfig,
+) -> dict[str, Any]:
+    status_payload = _run_lifecycle_command(
+        command_name="status",
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        dry_run=False,
+        config=config,
+    )
+    warnings = list(status_payload.get("warnings", []))
+    findings: list[dict[str, Any]] = []
+    seen_findings: set[tuple[str, str, str | None, str | None]] = set()
+
+    def _add_finding(*, severity: str, module: str, message: str, path: str | None = None) -> None:
+        key = (severity, module, path, message)
+        if key in seen_findings:
+            return
+        seen_findings.add(key)
+        finding: dict[str, Any] = {
+            "severity": severity,
+            "module": module,
+            "message": message,
+        }
+        if path is not None:
+            finding["path"] = path
+        findings.append(finding)
+
+    for warning in warnings:
+        _add_finding(severity="warning", module="workspace", message=warning)
+    for report in status_payload.get("reports", []):
+        module_name = str(report.get("module", ""))
+        for warning in report.get("warnings", []):
+            _add_finding(
+                severity="warning",
+                module=module_name,
+                path=warning.get("path"),
+                message=str(warning.get("message", "")),
+            )
+    next_steps = list(status_payload.get("next_steps", []))
+    next_action = {
+        "summary": next_steps[0] if next_steps else "No immediate action",
+        "commands": next_steps,
+    }
+    installed_modules = [entry["name"] for entry in status_payload.get("registry", []) if entry.get("installed")]
+    return {
+        "kind": "workspace-report/v1",
+        "schema": _reporting_schema_payload(),
+        "command": "report",
+        "target": target_root.as_posix(),
+        "selected_modules": selected_modules,
+        "installed_modules": installed_modules,
+        "health": status_payload["health"],
+        "findings": findings,
+        "next_action": next_action,
+        "registry": status_payload["registry"],
+        "config": status_payload["config"],
+        "reports": status_payload["reports"],
+    }
+
+
 def _bootstrap_intent_payload(*, selected_modules: list[str], resolved_preset: str | None) -> dict[str, str]:
     if resolved_preset == "memory":
         return {"key": "memory", "summary": "set up this repo for Agentic Memory"}
@@ -2088,6 +2178,34 @@ def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
             "docs/init-lifecycle.md",
             "agentic-workspace defaults --format json",
             "agentic-workspace config --target ./repo --format json",
+        ],
+    }
+
+
+def _reporting_schema_payload() -> dict[str, Any]:
+    return {
+        "schema_version": "workspace-reporting-schema/v1",
+        "canonical_doc": "docs/reporting-contract.md",
+        "command": "agentic-workspace report --target ./repo --format json",
+        "shared_fields": [
+            "kind",
+            "schema",
+            "command",
+            "target",
+            "selected_modules",
+            "installed_modules",
+            "health",
+            "findings",
+            "next_action",
+            "registry",
+            "config",
+            "reports",
+        ],
+        "report_principles": [
+            "keep the shared report compact and machine-readable",
+            "derive module and workspace summaries from canonical surfaces",
+            "prefer one report surface over reading raw module files first",
+            "keep findings, warnings, and next-action guidance explicitly separated",
         ],
     }
 
@@ -3909,6 +4027,9 @@ def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
     if payload.get("command") == "init":
         _emit_init_text(payload)
         return
+    if payload.get("command") == "report":
+        _emit_report_text(payload)
+        return
     if "modules" in payload and "reports" not in payload and "command" not in payload:
         for module_data in payload["modules"]:
             print(f"{module_data['name']}: {module_data['description']}")
@@ -3970,6 +4091,36 @@ def _emit_lifecycle_text(payload: dict[str, Any]) -> None:
             detail = f" ({action['detail']})" if action.get("detail") else ""
             print(f"- {action['kind']}: {_display_path(action['path'], Path(payload['target']))}{detail}")
     _print_path_list("Next steps", payload["next_steps"])
+
+
+def _emit_report_text(payload: dict[str, Any]) -> None:
+    print(f"Target: {payload['target']}")
+    print("Command: report")
+    print(f"Health: {payload['health']}")
+    installed = ", ".join(payload.get("installed_modules", []))
+    selected = ", ".join(payload.get("selected_modules", []))
+    print(f"Installed modules: {installed if installed else '(none)'}")
+    if selected:
+        print(f"Selected modules: {selected}")
+    next_action = payload.get("next_action", {})
+    if isinstance(next_action, dict):
+        summary = next_action.get("summary")
+        if summary:
+            print(f"Next action: {summary}")
+        commands = next_action.get("commands", [])
+        if isinstance(commands, list) and commands:
+            print("Commands:")
+            for command in commands:
+                print(f"- {command}")
+    findings = payload.get("findings", [])
+    if isinstance(findings, list) and findings:
+        print("Findings:")
+        for finding in findings:
+            if not isinstance(finding, dict):
+                continue
+            module = f"[{finding['module']}] " if finding.get("module") else ""
+            path = f"{finding['path']}: " if finding.get("path") else ""
+            print(f"- {finding.get('severity', 'info')}: {module}{path}{finding.get('message', '')}")
 
 
 def _emit_prompt_text(payload: dict[str, Any]) -> None:

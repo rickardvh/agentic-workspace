@@ -22,5 +22,7 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
   - turn selected reviewed findings into roadmap or active-planning candidates without collapsing capture and promotion
 - `planning-review-pass`
   - run a bounded review pass and capture compact findings under `docs/reviews/`
+- `planning-reporting`
+  - report active planning state, proof expectations, and next-action guidance from the canonical summary JSON
 
 These bundled skills cover payload refresh, bounded planning execution, review capture, review-to-plan promotion, and upstream-task intake.

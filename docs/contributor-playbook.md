@@ -84,6 +84,7 @@ For execution scaling specifically:
 - do not create an execplan just because a stronger agent is available; use one when the checked-in artifact is likely to save tokens or reduce coordination risk overall
 - when the environment supports multiple agents or models, a stronger one may write a compact execution contract for a smaller one, but that handoff is optional and should stay cheaper than the rediscovery it prevents
 - if stronger capability keeps seeming necessary for the same class of work, treat that as an improvement-targeting signal for better decomposition, validation, or guidance rather than as a standing instruction to keep raising executor strength
+- if the same human correction keeps repeating for the same class of work, treat that as an improvement-targeting signal for better defaults, contracts, proof, ownership, or handoff rather than as normal conversational steering
 - treat direct execution as a valid success path, then record only the minimum durable residue that outlives the task
 
 ## Validation Lanes

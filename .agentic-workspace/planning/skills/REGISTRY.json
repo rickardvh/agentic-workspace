@@ -75,6 +75,25 @@
         ],
         "when": ["bounded review", "finding capture", "review-shaped request"]
       }
+    },
+    {
+      "id": "planning-reporting",
+      "path": "planning-reporting/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "report active planning state, proof expectations, and next-action guidance from the canonical summary JSON",
+      "activation_hints": {
+        "verbs": ["report", "summarize", "inspect", "check"],
+        "nouns": ["planning state", "active work", "next action", "proof posture", "blockers"],
+        "phrases": [
+          "planning report",
+          "summarize planning state",
+          "what is active",
+          "what should happen next",
+          "proof expectations"
+        ],
+        "when": ["active state inspection", "handoff summary", "restart orientation"]
+      }
     }
   ]
 }

@@ -27,17 +27,15 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 | Candidate | Source | Why now | Promote when |
 | --- | --- | --- | --- |
-| `Cross-agent handoff as an ordinary-work mode` | GitHub issue `#36`; ordinary-work continuity follow-through | The repo already proves checked-in continuity for startup and active work, but ordinary work still treats cross-agent handoff as exceptional rather than a normal operating mode. | The repo can preserve intent, proof, and next-action state cheaply enough that ordinary cross-agent continuation no longer needs special steering. |
+| `Help the agent do the job, do not script the job` | GitHub issue `#45`; product boundary refinement | The repo needs an explicit boundary for when reporting, guidance, and contracts should help the agent execute rather than script the entire job. | The repo can state that boundary compactly enough to keep guidance helpful without turning it into over-prescriptive workflow ceremony. |
 
 ## Second Priority Queue
 
-- `Repeated-human-steering improvement signal` from GitHub issue `#37`
+- `Prove the strong-planner / cheap-implementer loop in ordinary work` from GitHub issue `#46`
 
 ## Third Priority Queue
 
-| Candidate | Source | Why now | Promote when |
-| --- | --- | --- | --- |
-| `Cross-agent workflow robustness hardening` | Archived execplan `docs/execplans/archive/cross-agent-workflow-robustness-hardening-2026-04-13.md`; mixed-agent dogfooding feedback | The first machine-readable hardening slice landed, but the broader goal stays open until future mixed-agent passes show startup routing, package-managed paths, and same-pass planning cleanup are no longer missed in ordinary use. | Another mixed-agent pass still misses startup routing, package-managed paths, or same-pass planning cleanup after the current machine-readable hardening slice. |
+`Make lazy discovery the primary optimization target across machine-readable workspace surfaces` from GitHub issue `#47`
 
 ## Fourth Priority Queue
 

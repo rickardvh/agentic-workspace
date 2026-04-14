@@ -679,6 +679,7 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
     skill_ids = {entry["id"] for entry in payload["skills"]}
     assert "planning-autopilot" in skill_ids
     assert "memory-router" in skill_ids
+    assert "planning-reporting" in skill_ids
     assert all(entry["registration"] == "explicit" for entry in payload["skills"])
     autopilot = next(entry for entry in payload["skills"] if entry["id"] == "planning-autopilot")
     assert "run autopilot" in autopilot["activation_hints"]["phrases"]
@@ -784,7 +785,12 @@ def test_skills_command_keeps_repo_owned_memory_and_general_skill_sources_distin
                     "id": "package-context-inspection",
                     "path": "package-context-inspection/SKILL.md",
                     "summary": "inspect package context notes",
-                }
+                },
+                {
+                    "id": "memory-reporting",
+                    "path": "memory-reporting/SKILL.md",
+                    "summary": "report memory freshness and cleanup signals",
+                },
             ],
         },
     )
@@ -794,6 +800,10 @@ def test_skills_command_keeps_repo_owned_memory_and_general_skill_sources_distin
     )
     _write(
         target / "memory" / "skills" / "package-context-inspection" / "SKILL.md",
+        "# Skill\n",
+    )
+    _write(
+        target / "memory" / "skills" / "memory-reporting" / "SKILL.md",
         "# Skill\n",
     )
     _write_json(
@@ -818,10 +828,13 @@ def test_skills_command_keeps_repo_owned_memory_and_general_skill_sources_distin
 
     payload = json.loads(capsys.readouterr().out)
     memory_skill = next(entry for entry in payload["skills"] if entry["id"] == "package-context-inspection")
+    memory_reporting_skill = next(entry for entry in payload["skills"] if entry["id"] == "memory-reporting")
     tool_skill = next(entry for entry in payload["skills"] if entry["id"] == "foundation-stability-check")
 
     assert memory_skill["source_kind"] == "repo-owned-memory-skills"
     assert memory_skill["path"] == "memory/skills/package-context-inspection/SKILL.md"
+    assert memory_reporting_skill["source_kind"] == "repo-owned-memory-skills"
+    assert memory_reporting_skill["path"] == "memory/skills/memory-reporting/SKILL.md"
     assert tool_skill["source_kind"] == "repo-owned-tool-skills"
     assert tool_skill["path"] == "tools/skills/foundation-stability-check/SKILL.md"
 
@@ -1311,6 +1324,28 @@ def test_status_real_init_reports_workspace_shared_layer_surfaces(tmp_path: Path
     assert any(
         action["path"] == ".agentic-workspace/OWNERSHIP.toml" and action["kind"] == "current" for action in workspace_report["actions"]
     )
+
+
+def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "workspace-report/v1"
+    assert payload["command"] == "report"
+    assert payload["schema"]["schema_version"] == "workspace-reporting-schema/v1"
+    assert payload["schema"]["command"] == "agentic-workspace report --target ./repo --format json"
+    assert payload["selected_modules"] == ["planning", "memory"]
+    assert payload["installed_modules"] == ["planning", "memory"]
+    assert payload["health"] == "healthy"
+    assert payload["next_action"]["summary"] == "No immediate action"
+    assert payload["reports"][0]["module"] == "planning"
+    assert payload["config"]["mixed_agent"]["status"] == "reporting-only"
 
 
 def test_status_real_init_reports_workspace_health(tmp_path: Path, capsys) -> None:

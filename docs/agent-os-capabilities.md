@@ -80,6 +80,7 @@ Update this page directly when any of the following happens:
 - Current home: `agentic-workspace`
 
 The composition layer is intentionally thin. It exists to centralize lifecycle entrypoints and cross-module reporting without absorbing module-owned domain logic.
+Its shared workspace report now gives a compact combined-state view for installed modules, mixed-agent posture, and next-action guidance so agents do not need to inspect raw module files first.
 
 ## Important Internal Capabilities
 
