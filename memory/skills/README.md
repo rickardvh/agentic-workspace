@@ -10,3 +10,4 @@ Do not put general coding or planning workflows here.
 Current repo-specific skills:
 
 - `package-context-inspection`
+- `memory-reporting`

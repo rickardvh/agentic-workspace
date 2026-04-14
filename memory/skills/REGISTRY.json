@@ -15,6 +15,26 @@
         "phrases": ["recheck package context note", "tighten package context note", "package context note shape"],
         "when": ["package context drift", "note-shape cleanup"]
       }
+    },
+    {
+      "id": "memory-reporting",
+      "path": "memory-reporting/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "use canonical memory reporting commands (status/doctor/freshness/routing/promotion) instead of reading raw memory files",
+      "activation_hints": {
+        "verbs": ["report", "inspect", "summarize", "audit", "check"],
+        "nouns": ["memory", "freshness", "staleness", "routing", "cleanup", "promotion"],
+        "phrases": [
+          "memory report",
+          "memory freshness",
+          "memory staleness",
+          "memory routing health",
+          "memory cleanup signals",
+          "promotion report"
+        ],
+        "when": ["need memory status without reading notes", "handoff memory state", "memory hygiene pass", "post-change memory check"]
+      }
     }
   ]
 }
