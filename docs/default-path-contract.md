@@ -17,6 +17,7 @@ Use it when you want the shortest correct answer for startup, lifecycle, skill d
 | How do I install? | `agentic-workspace init --preset <memory|planning|full>` | Package CLIs for package-local maintainer work or debugging |
 | How do I express intent? | Pick the preset that matches the outcome you want and let `init` infer install vs adopt vs review-required handoff | Manually reasoning about lifecycle verbs before asking the tool |
 | How do I start in a repo? | The configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`) -> `TODO.md` -> active execplan when relevant | `ROADMAP.md` only when promoting work |
+| Where is the bounded post-bootstrap jumpstart contract? | [`docs/jumpstart-contract.md`](docs/jumpstart-contract.md) and `agentic-workspace defaults --section jumpstart --format json` | Treating jumpstart as a wider `init` path or a repo-local checklist |
 | Where should I point an external agent? | The repository's `llms.txt` | Richer docs only when that handoff file points there |
 | Where is the post-bootstrap next action? | `.agentic-workspace/bootstrap-handoff.md` when bootstrap says review is still needed | Ad hoc chat instructions |
 | Where is the compact bootstrap handoff contract? | `.agentic-workspace/bootstrap-handoff.json` when bootstrap writes a checked-in finishing handoff | Mining the prose brief for scope or escalation boundaries |
@@ -41,6 +42,7 @@ That surface is the queryable contract for:
 
 - startup
 - lifecycle
+- post-bootstrap jumpstart
 - supported intents
 - canonical external-agent handoff
 - canonical bootstrap next action
@@ -67,6 +69,7 @@ Use the `validation` section in `agentic-workspace defaults --format json` when 
 Use `docs/environment-recovery-contract.md` when the question is how to recover cheaply from repo-state ambiguity, lifecycle warnings, or interrupted bootstrap/maintenance work.
 Use `docs/proof-surfaces-contract.md` when the question is which proof lane answers the current trust question and what the current proof state already says.
 Use `docs/ownership-authority-contract.md` when the question is which surface owns a concern and which checked-in contract is authoritative.
+Use [`docs/jumpstart-contract.md`](docs/jumpstart-contract.md) when the question is how to do the bounded post-bootstrap follow-through after safe install/adopt without widening `init`.
 
 ## Secondary Paths
 

@@ -111,6 +111,19 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["lifecycle"]["canonical_external_agent_handoff"] == "llms.txt"
     assert payload["lifecycle"]["canonical_bootstrap_next_action"] == ".agentic-workspace/bootstrap-handoff.md"
     assert payload["lifecycle"]["canonical_bootstrap_handoff_record"] == ".agentic-workspace/bootstrap-handoff.json"
+    assert payload["jumpstart"]["canonical_doc"] == "docs/jumpstart-contract.md"
+    assert payload["jumpstart"]["command"] == "agentic-workspace defaults --section jumpstart --format json"
+    assert payload["jumpstart"]["rule"] == "Jumpstart is a bounded post-bootstrap phase that stays separate from init."
+    assert payload["jumpstart"]["phase"] == "post-bootstrap"
+    assert payload["jumpstart"]["scope"] == [
+        "seed one or two high-value surfaces",
+        "keep follow-through bounded and reviewable",
+    ]
+    assert payload["jumpstart"]["secondary"] == [
+        "Do not widen init.",
+        "Do not bulk-import repo context.",
+        "Do not turn jumpstart into generic analysis.",
+    ]
     assert payload["validation"]["default_routes"]["planning_package"] == "cd packages/planning && uv run pytest tests/test_installer.py"
     workspace_lane = next(lane for lane in payload["validation"]["lanes"] if lane["id"] == "workspace_cli")
     assert "root workspace CLI changes" in workspace_lane["when"]
@@ -205,6 +218,8 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Lifecycle:" in text
     assert "primary entrypoint: agentic-workspace" in text
     assert "bootstrap handoff record: .agentic-workspace/bootstrap-handoff.json" in text
+    assert "Jumpstart:" in text
+    assert "docs/jumpstart-contract.md" in text
     assert "Compact contract profile:" in text
     assert "docs/compact-contract-profile.md" in text
     assert "Proof surfaces:" in text
@@ -291,6 +306,20 @@ def test_defaults_section_selector_returns_compact_contract_answer(capsys) -> No
     assert payload["matched"] is True
     assert payload["answer"]["rule"] == "Run the narrowest proving lane that matches the touched surface."
     assert "docs/compact-contract-profile.md" in payload["refs"]
+    assert "agentic-workspace defaults --format json" in payload["refs"]
+
+
+def test_defaults_jumpstart_section_selector_returns_compact_contract_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "jumpstart", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "jumpstart"}
+    assert payload["matched"] is True
+    assert payload["answer"]["canonical_doc"] == "docs/jumpstart-contract.md"
+    assert payload["answer"]["phase"] == "post-bootstrap"
+    assert "docs/jumpstart-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 

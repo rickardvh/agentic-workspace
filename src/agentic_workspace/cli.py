@@ -2345,6 +2345,21 @@ def _defaults_payload() -> dict[str, Any]:
                 "Package CLIs are for package-local maintainer work, advanced debugging, or explicit module-level control.",
             ],
         },
+        "jumpstart": {
+            "canonical_doc": "docs/jumpstart-contract.md",
+            "command": "agentic-workspace defaults --section jumpstart --format json",
+            "rule": "Jumpstart is a bounded post-bootstrap phase that stays separate from init.",
+            "phase": "post-bootstrap",
+            "scope": [
+                "seed one or two high-value surfaces",
+                "keep follow-through bounded and reviewable",
+            ],
+            "secondary": [
+                "Do not widen init.",
+                "Do not bulk-import repo context.",
+                "Do not turn jumpstart into generic analysis.",
+            ],
+        },
         "config": {
             "path": "agentic-workspace.toml",
             "command": "agentic-workspace config --target ./repo --format json",
@@ -2632,6 +2647,13 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- external-agent handoff: {payload['lifecycle']['canonical_external_agent_handoff']}")
     print(f"- bootstrap next action: {payload['lifecycle']['canonical_bootstrap_next_action']}")
     print(f"- bootstrap handoff record: {payload['lifecycle']['canonical_bootstrap_handoff_record']}")
+    print("Jumpstart:")
+    print(f"- doc: {payload['jumpstart']['canonical_doc']}")
+    print(f"- command: {payload['jumpstart']['command']}")
+    print(f"- rule: {payload['jumpstart']['rule']}")
+    print(f"- phase: {payload['jumpstart']['phase']}")
+    for step in payload["jumpstart"]["scope"]:
+        print(f"- scope: {step}")
     print("Compact contract profile:")
     print(f"- doc: {payload['compact_contract_profile']['canonical_doc']}")
     print(f"- rule: {payload['compact_contract_profile']['rule']}")

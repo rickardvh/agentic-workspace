@@ -29,6 +29,14 @@ Resolve instruction conflicts in this order:
 Do not start coding from chat context alone when the same information exists in checked-in files.
 Do not bulk-read all planning surfaces.
 
+## Execution Posture
+
+- Prefer task-by-task judgment about whether work should stay direct, be split into planner/implementer/validator subtasks, or be escalated to a stronger planner.
+- Use the effective mixed-agent posture from `agentic-workspace config --target . --format json` when deciding how much to delegate and how much reasoning to spend.
+- Treat `agentic-workspace.local.toml` as the control surface for capability/cost posture: if it says internal delegation or a strong planner is available, prefer that mode when it reduces cost or risk; if it does not, stay direct unless the task shape clearly justifies promotion or escalation.
+- Do not require the user to restate this preference every session when the config already makes the posture clear.
+- Keep the chosen execution shape bounded and explicit in checked-in planning when the task is broad enough to survive across sessions.
+
 ## Sources Of Truth
 
 - Active queue: `TODO.md`
