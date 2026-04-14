@@ -421,6 +421,8 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         resumable_contract=resumable_contract,
     )
     return {
+        "kind": "planning-summary/v1",
+        "schema": _planning_summary_schema(),
         "target_root": str(target_root),
         "adoption_mode": _detect_adoption_mode(target_root),
         "todo": {
@@ -442,6 +444,72 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         },
         "warnings": [warning.copy() for warning in warnings],
         "warning_count": len(warnings),
+    }
+
+
+def _planning_summary_schema() -> dict[str, Any]:
+    return {
+        "schema_version": "planning-summary-schema/v1",
+        "canonical_docs": [
+            "docs/intent-contract.md",
+            "docs/resumable-execution-contract.md",
+            "docs/execplans/README.md",
+        ],
+        "command": "agentic-planning-bootstrap summary --format json",
+        "shared_fields": [
+            "kind",
+            "schema",
+            "target_root",
+            "adoption_mode",
+            "todo",
+            "execplans",
+            "planning_record",
+            "active_contract",
+            "resumable_contract",
+            "roadmap",
+            "warnings",
+            "warning_count",
+        ],
+        "view_fields": {
+            "planning_record": [
+                "task",
+                "requested_outcome",
+                "hard_constraints",
+                "agent_may_decide",
+                "next_action",
+                "proof_expectations",
+                "tool_verification",
+                "escalate_when",
+                "continuation_owner",
+                "touched_scope",
+                "completion_criteria",
+                "blockers",
+                "minimal_refs",
+            ],
+            "active_contract": [
+                "todo_item",
+                "intent",
+                "touched_scope",
+                "proof_expectations",
+                "tool_verification",
+                "minimal_refs",
+            ],
+            "resumable_contract": [
+                "current_next_action",
+                "active_milestone",
+                "completion_criteria",
+                "proof_expectations",
+                "tool_verification",
+                "escalate_when",
+                "blockers",
+                "minimal_refs",
+            ],
+        },
+        "rules": [
+            "planning_record is the canonical compact active planning state when it is available",
+            "active_contract and resumable_contract remain thinner projections over that state",
+            "prefer the summary schema over raw TODO or execplan parsing when one structured answer is enough",
+        ],
     }
 
 

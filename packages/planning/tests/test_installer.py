@@ -494,6 +494,7 @@ def test_bootstrap_intent_contract_is_part_of_payload() -> None:
 
     assert "planning_record" in text
     assert "active_contract" in text
+    assert "planning-summary-schema/v1" in text
     assert "tool_verification" in text
     assert "agentic-planning-bootstrap summary --format json" in text
     assert Path("docs/intent-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
@@ -505,6 +506,7 @@ def test_bootstrap_resumable_execution_contract_is_part_of_payload() -> None:
     assert "planning_record" in text
     assert "resumable_contract" in text
     assert "current_next_action" in text
+    assert "planning-summary-schema/v1" in text
     assert "tool_verification" in text
     assert Path("docs/resumable-execution-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
@@ -1277,6 +1279,10 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
 
     summary = planning_summary(target=tmp_path)
 
+    assert summary["kind"] == "planning-summary/v1"
+    assert summary["schema"]["schema_version"] == "planning-summary-schema/v1"
+    assert summary["schema"]["command"] == "agentic-planning-bootstrap summary --format json"
+    assert "planning_record" in summary["schema"]["shared_fields"]
     assert summary["todo"]["active_count"] == 1
     assert summary["execplans"]["active_count"] == 1
     assert summary["planning_record"]["status"] == "present"
@@ -1354,6 +1360,18 @@ def test_planning_summary_can_expose_active_contract_from_execplan_without_todo_
     assert summary["resumable_contract"]["status"] == "present"
     assert summary["active_contract"]["todo_item"]["id"] == ""
     assert summary["active_contract"]["minimal_refs"] == ["TODO.md", "docs/execplans/plan-alpha.md"]
+
+
+def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+
+    summary = planning_summary(target=tmp_path)
+
+    assert summary["schema"]["view_fields"]["planning_record"][0] == "task"
+    assert "tool_verification" in summary["schema"]["view_fields"]["planning_record"]
+    assert "tool_verification" in summary["schema"]["view_fields"]["resumable_contract"]
 
 
 def test_planning_summary_human_view_starts_with_planning_record(tmp_path: Path, capsys) -> None:

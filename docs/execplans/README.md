@@ -103,7 +103,7 @@ Delegated judgment belongs under `## Delegated Judgment` for active plans that s
 Keep this section compact.
 It exists to preserve the intended end state, the allowed local latitude, and the escalation boundary when a safe first slice might otherwise drift into a substitute for the larger request.
 Use `none` only when the slice is so local that delegated-judgment framing would add no value beyond the surrounding plan.
-`agentic-planning-bootstrap summary --format json` exposes `planning_record` as the canonical active planning record when planning has one active TODO item and one active execplan. `active_contract` is the narrower intent projection over that record.
+`agentic-planning-bootstrap summary --format json` exposes a typed `planning-summary/v1` payload. Inside that payload, `planning_record` is the canonical active planning record when planning has one active TODO item and one active execplan. `active_contract` is the narrower intent projection over that record.
 
 Current-state restart belongs in the compact `resumable_contract` projection:
 

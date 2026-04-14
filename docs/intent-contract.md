@@ -18,6 +18,11 @@ Use:
 agentic-planning-bootstrap summary --format json
 ```
 
+That summary now carries a top-level schema envelope:
+
+- `kind = "planning-summary/v1"`
+- `schema.schema_version = "planning-summary-schema/v1"`
+
 The `planning_record` object is the compact machine-readable active record for current work when planning has one active TODO item and one active execplan. The `active_contract` object remains as the narrower intent view over that canonical record.
 
 The canonical planning record currently carries:
