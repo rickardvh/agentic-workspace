@@ -49,6 +49,8 @@ Do not create a plan just because a stronger agent could write one. Use a checke
 
 Capability-aware delegation is allowed but optional. If the environment supports it, a more capable agent or model may write a compact execplan and then hand implementation to a smaller or less capable agent when that is likely to save tokens without sacrificing quality. Do not assume subagents exist; the same contract must still work for one agent executing end-to-end. Prefer silent shaping and better planning over repeated prompts to switch executors manually.
 
+Native runtime artifacts such as `implementation_plan.md`, `task.md`, or `walkthrough.md` may exist when an agent UI provides them, but they must not become a second durable source of truth. Before review, handoff, or session end, mirror any durable execution state back into `TODO.md` and the active execplan so the next agent can continue from repo-owned surfaces alone.
+
 Each active plan should stay compact and include:
 
 - goal
@@ -63,6 +65,7 @@ Each active plan should stay compact and include:
 - contract decisions to freeze when the slice is product-shaping
 - open questions to close when unresolved contract decisions still block implementation
 - validation commands
+- required tools when the task depends on a capability that may be absent in some runtimes
 - completion criteria
 - execution summary
 - drift log
@@ -102,7 +105,7 @@ Delegated judgment belongs under `## Delegated Judgment` for active plans that s
 Keep this section compact.
 It exists to preserve the intended end state, the allowed local latitude, and the escalation boundary when a safe first slice might otherwise drift into a substitute for the larger request.
 Use `none` only when the slice is so local that delegated-judgment framing would add no value beyond the surrounding plan.
-`agentic-planning-bootstrap summary --format json` exposes `planning_record` as the canonical active planning record when planning has one active TODO item and one active execplan. `active_contract` is the narrower intent projection over that record.
+`agentic-planning-bootstrap summary --format json` exposes a typed `planning-summary/v1` payload. Inside that payload, `planning_record` is the canonical active planning record when planning has one active TODO item and one active execplan. `active_contract` is the narrower intent projection over that record.
 
 Current-state restart belongs in the compact `resumable_contract` projection:
 
@@ -116,6 +119,14 @@ Current-state restart belongs in the compact `resumable_contract` projection:
 
 That object should stay smaller than the full execplan and answer "how do I continue safely right now?" without broad rereading.
 
+Tool verification belongs in the compact planning contract when the task needs a capability that may not be present:
+
+- `required_tools`
+- advisory rule: stop or escalate when a required tool is unavailable instead of attempting an impossible substitute
+
+Keep the first slice advisory.
+The goal is to save tokens by preventing doomed attempts, not to turn execplans into a full runtime capability detector.
+
 Execution summaries belong under `## Execution Summary` for completed or nearly-complete plans:
 
 - `Outcome delivered`
@@ -126,6 +137,12 @@ Execution summaries belong under `## Execution Summary` for completed or nearly-
 Keep this section compact and decision-shaped.
 It exists so later contributors do not have to reconstruct what the slice achieved, how it was proved, and where follow-through now lives.
 Do not turn it into a second drift log, a notebook, or a memory note.
+
+Closure discipline should stay cheap and explicit:
+
+- when a slice renames, moves, retires, or refactors a named surface, include a stale-reference sweep in `Validation Commands`
+- prefer a narrow search or checker over broad rereads
+- if required follow-on remains, route it into checked-in planning instead of leaving it implicit in chat or drift prose
 
 Keep the drift log decision-shaped and brief. Do not turn an active or completed execplan into a changelog when the same detail is already recoverable from archived plans and git.
 Execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work. `TODO.md` should only expose that the work is active and point here.

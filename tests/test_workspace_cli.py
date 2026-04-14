@@ -111,18 +111,18 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["lifecycle"]["canonical_external_agent_handoff"] == "llms.txt"
     assert payload["lifecycle"]["canonical_bootstrap_next_action"] == ".agentic-workspace/bootstrap-handoff.md"
     assert payload["lifecycle"]["canonical_bootstrap_handoff_record"] == ".agentic-workspace/bootstrap-handoff.json"
-    assert payload["jumpstart"]["canonical_doc"] == "docs/jumpstart-contract.md"
-    assert payload["jumpstart"]["command"] == "agentic-workspace jumpstart --target ./repo --format json"
-    assert payload["jumpstart"]["rule"] == "Jumpstart is a bounded post-bootstrap phase that stays separate from init."
-    assert payload["jumpstart"]["phase"] == "post-bootstrap"
-    assert payload["jumpstart"]["scope"] == [
+    assert payload["setup"]["canonical_doc"] == "docs/jumpstart-contract.md"
+    assert payload["setup"]["command"] == "agentic-workspace setup --target ./repo --format json"
+    assert payload["setup"]["rule"] == "Setup is a bounded post-bootstrap phase that stays separate from init."
+    assert payload["setup"]["phase"] == "post-bootstrap"
+    assert payload["setup"]["scope"] == [
         "orient from a compact report first",
         "keep follow-through bounded and reviewable",
     ]
-    assert payload["jumpstart"]["secondary"] == [
+    assert payload["setup"]["secondary"] == [
         "Do not widen init.",
-        "Do not collapse jumpstart into the proof backlog.",
-        "Do not turn jumpstart into generic analysis.",
+        "Do not collapse setup into the proof backlog.",
+        "Do not turn setup into generic analysis.",
     ]
     assert payload["validation"]["default_routes"]["planning_package"] == "cd packages/planning && uv run pytest tests/test_installer.py"
     workspace_lane = next(lane for lane in payload["validation"]["lanes"] if lane["id"] == "workspace_cli")
@@ -194,6 +194,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "runtime.strong_planner_available",
         "runtime.cheap_bounded_executor_available",
         "handoff.prefer_internal_delegation_when_available",
+        "safety.safe_to_auto_run_commands",
+        "safety.requires_human_verification_on_pr",
     ]
     assert payload["mixed_agent"]["runtime_inference"]["tool_owned"] is True
     assert payload["mixed_agent"]["handoff_quality"]["must_recover"] == [
@@ -224,6 +226,17 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["config"]["path"] == "agentic-workspace.toml"
     assert payload["config"]["command"] == "agentic-workspace config --target ./repo --format json"
     assert "workspace.default_preset" in payload["config"]["supported_fields"]
+    assert "workspace.workflow_artifact_profile" in payload["config"]["supported_fields"]
+    assert payload["workflow_artifact_adapters"]["canonical_doc"] == "docs/workspace-config-contract.md"
+    assert (
+        payload["workflow_artifact_adapters"]["command"] == "agentic-workspace defaults --section workflow_artifact_adapters --format json"
+    )
+    assert payload["workflow_artifact_adapters"]["default_profile"] == "repo-owned"
+    gemini_profile = next(
+        profile for profile in payload["workflow_artifact_adapters"]["supported_profiles"] if profile["profile"] == "gemini"
+    )
+    assert gemini_profile["native_artifacts"] == ["implementation_plan.md", "task.md", "walkthrough.md"]
+    assert gemini_profile["canonical_surfaces"] == ["TODO.md", "docs/execplans/"]
     assert any("ROADMAP.md" in step for step in payload["startup"]["secondary"])
     assert payload["startup"]["workflow_recovery"] == [
         (
@@ -245,7 +258,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Lifecycle:" in text
     assert "primary entrypoint: agentic-workspace" in text
     assert "bootstrap handoff record: .agentic-workspace/bootstrap-handoff.json" in text
-    assert "Jumpstart:" in text
+    assert "Setup:" in text
     assert "docs/jumpstart-contract.md" in text
     assert "Delegation posture:" in text
     assert "docs/delegation-posture-contract.md" in text
@@ -262,6 +275,8 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "docs/environment-recovery-contract.md" in text
     assert "Completion:" in text
     assert "Config:" in text
+    assert "Workflow artifact adapters:" in text
+    assert "docs/workspace-config-contract.md" in text
     assert "Delegated judgment:" in text
     assert "Delegated judgment follow-through:" in text
     assert "Mixed-agent:" in text
@@ -284,6 +299,17 @@ def test_external_agent_handoff_text_uses_configured_agent_instructions_filename
     assert "GEMINI.md remains the repo startup entrypoint" in text
 
 
+def test_external_agent_handoff_text_reports_workflow_artifact_profile() -> None:
+    text = cli._external_agent_handoff_text(
+        selected_modules=["planning"],
+        agent_instructions_file="GEMINI.md",
+        workflow_artifact_profile="gemini",
+    )
+
+    assert "Workflow artifact profile: gemini." in text
+    assert "mirror the durable execution state into TODO.md and the active execplan" in text
+
+
 def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
@@ -294,6 +320,9 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["workspace"]["default_preset"] == "full"
     assert payload["workspace"]["agent_instructions_file"] == "AGENTS.md"
     assert payload["workspace"]["agent_instructions_file_source"] == "product-default"
+    assert payload["workspace"]["workflow_artifact_profile"] == "repo-owned"
+    assert payload["workspace"]["workflow_artifact_profile_source"] == "product-default"
+    assert payload["workspace"]["workflow_artifact_adapter"]["canonical_surfaces"] == ["TODO.md", "docs/execplans/"]
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
     assert payload["mixed_agent"]["status"] == "reporting-only"
@@ -341,21 +370,21 @@ def test_defaults_section_selector_returns_compact_contract_answer(capsys) -> No
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
-def test_defaults_jumpstart_section_selector_returns_compact_contract_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "jumpstart", "--format", "json"]) == 0
+def test_defaults_setup_section_selector_returns_compact_contract_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "setup", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
     assert payload["surface"] == "defaults"
-    assert payload["selector"] == {"section": "jumpstart"}
+    assert payload["selector"] == {"section": "setup"}
     assert payload["matched"] is True
     assert payload["answer"]["canonical_doc"] == "docs/jumpstart-contract.md"
     assert payload["answer"]["phase"] == "post-bootstrap"
     assert "docs/jumpstart-contract.md" in payload["refs"]
-    assert "agentic-workspace jumpstart --target ./repo --format json" in payload["refs"]
+    assert "agentic-workspace setup --target ./repo --format json" in payload["refs"]
 
 
-def test_jumpstart_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Path, capsys) -> None:
+def test_setup_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -365,11 +394,11 @@ def test_jumpstart_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path
     (target / "memory").mkdir(exist_ok=True)
     (target / "memory" / "index.md").write_text("# Memory index\n", encoding="utf-8")
 
-    assert cli.main(["jumpstart", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["setup", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "workspace-jumpstart/v1"
-    assert payload["command"] == "jumpstart"
+    assert payload["kind"] == "workspace-setup/v1"
+    assert payload["command"] == "setup"
     assert payload["orientation"]["mode"] == "no-new-seed-surfaces-needed"
     assert "no new seed surfaces are needed" in payload["orientation"]["summary"].lower()
     assert payload["next_action"]["summary"] == "No new seed surfaces needed"
@@ -591,7 +620,8 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
         "schema_version = 1\n\n"
         "[workspace]\n"
         'default_preset = "planning"\n'
-        'agent_instructions_file = "GEMINI.md"\n\n'
+        'agent_instructions_file = "GEMINI.md"\n'
+        'workflow_artifact_profile = "gemini"\n\n'
         "[update.modules.planning]\n"
         'source_type = "git"\n'
         'source_ref = "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"\n'
@@ -607,6 +637,13 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
     assert payload["workspace"]["default_preset"] == "planning"
     assert payload["workspace"]["agent_instructions_file"] == "GEMINI.md"
     assert payload["workspace"]["agent_instructions_file_source"] == "repo-config"
+    assert payload["workspace"]["workflow_artifact_profile"] == "gemini"
+    assert payload["workspace"]["workflow_artifact_profile_source"] == "repo-config"
+    assert payload["workspace"]["workflow_artifact_adapter"]["native_artifacts"] == [
+        "implementation_plan.md",
+        "task.md",
+        "walkthrough.md",
+    ]
     planning_policy = next(item for item in payload["update"]["modules"] if item["module"] == "planning")
     assert planning_policy["source"] == "repo-config"
     assert planning_policy["source_ref"] == "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"
@@ -737,7 +774,7 @@ def test_skills_command_recommends_planning_autopilot_for_active_milestone_task(
     assert any("phrase match" in reason for reason in payload["recommendations"][0]["reasons"])
 
 
-def test_skills_command_recommends_planning_reporting_for_jumpstart_task(tmp_path: Path, capsys) -> None:
+def test_skills_command_recommends_planning_reporting_for_setup_task(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -752,7 +789,7 @@ def test_skills_command_recommends_planning_reporting_for_jumpstart_task(tmp_pat
                 "--target",
                 str(target),
                 "--task",
-                "jumpstart the repo after bootstrap without widening init",
+                "setup the repo after bootstrap without widening init",
                 "--format",
                 "json",
             ]
@@ -763,7 +800,7 @@ def test_skills_command_recommends_planning_reporting_for_jumpstart_task(tmp_pat
     payload = json.loads(capsys.readouterr().out)
     assert [entry["id"] for entry in payload["recommendations"]] == ["planning-reporting"]
     assert payload["recommendations"][0]["score"] == 10
-    assert "jumpstart uses the compact planning reporting surface" in payload["recommendations"][0]["reasons"][0]
+    assert "setup uses the compact planning reporting surface" in payload["recommendations"][0]["reasons"][0]
 
 
 def test_skills_command_recommends_memory_router_for_note_selection_task(tmp_path: Path, capsys) -> None:
@@ -992,6 +1029,18 @@ def test_init_can_write_prompt_file(monkeypatch, tmp_path: Path, capsys) -> None
     assert "Finish the Agentic Workspace bootstrap" in prompt_path.read_text(encoding="utf-8")
 
 
+def test_selection_commands_accept_non_interactive_flag() -> None:
+    parser = cli.build_parser()
+
+    init_args = parser.parse_args(["init", "--target", ".", "--non-interactive"])
+    status_args = parser.parse_args(["status", "--target", ".", "--non-interactive"])
+    prompt_args = parser.parse_args(["prompt", "upgrade", "--modules", "planning", "--target", ".", "--non-interactive"])
+
+    assert init_args.non_interactive is True
+    assert status_args.non_interactive is True
+    assert prompt_args.non_interactive is True
+
+
 def test_prompt_init_uses_dry_run_workspace_bootstrap(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
@@ -1010,6 +1059,18 @@ def test_prompt_init_uses_dry_run_workspace_bootstrap(monkeypatch, tmp_path: Pat
         ("planning", "install", {"target": str(tmp_path), "dry_run": True, "force": False}),
         ("memory", "install", {"target": str(tmp_path), "dry_run": True, "force": False}),
     ]
+
+
+def test_prompt_init_non_interactive_marks_prompt_free_handoff(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["prompt", "init", "--target", str(tmp_path), "--non-interactive", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["non_interactive"] is True
+    assert "do not assume a human can answer prompts or unblock a PTY" in payload["handoff_prompt"]
 
 
 def test_prompt_init_returns_structured_handoff_record_for_high_ambiguity_repo(monkeypatch, tmp_path: Path, capsys) -> None:
@@ -1038,6 +1099,17 @@ def test_prompt_upgrade_builds_workspace_handoff_prompt(monkeypatch, tmp_path: P
     assert payload["dry_run"] is True
     assert "Use the workspace CLI as the lifecycle entrypoint" in payload["handoff_prompt"]
     assert "README.md: inspect manually" in payload["handoff_prompt"]
+
+
+def test_prompt_upgrade_non_interactive_mentions_prompt_free_execution(monkeypatch, tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))
+
+    assert cli.main(["prompt", "upgrade", "--modules", "planning", "--target", str(tmp_path), "--non-interactive", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["non_interactive"] is True
+    assert "Run this flow with `--non-interactive`" in payload["handoff_prompt"]
 
 
 def test_init_uses_recommended_prompt_for_single_existing_surface(monkeypatch, tmp_path: Path, capsys) -> None:

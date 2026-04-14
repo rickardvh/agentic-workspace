@@ -11,10 +11,11 @@ Use it when you need the canonical intent, repo-state, policy, and handoff contr
 - If `agentic-workspace.toml` exists, `workspace.agent_instructions_file` becomes the canonical root startup-entrypoint filename.
 - The user intent is the selected preset: `memory`, `planning`, or `full`.
 - The command bootstraps mechanically, classifies repo state, then chooses the safest lifecycle mode automatically.
+- `--non-interactive` is the explicit no-prompt posture for unattended agents and PowerShell-heavy environments.
 - The root workspace layer is part of that bootstrap contract, not an incidental repo file copy.
 - Clean installs should seed `.agentic-workspace/WORKFLOW.md`, `.agentic-workspace/OWNERSHIP.toml`, and a coherent root startup entrypoint for the selected modules.
 - The root CLI also keeps one checked-in external-agent handoff surface at `llms.txt`.
-- Post-bootstrap jumpstart is separate from `init` and uses [`docs/jumpstart-contract.md`](docs/jumpstart-contract.md) plus `agentic-workspace jumpstart --target ./repo --format json` for the bounded follow-through phase.
+- Post-bootstrap setup is separate from `init` and uses [`docs/jumpstart-contract.md`](docs/jumpstart-contract.md) plus `agentic-workspace setup --target ./repo --format json` for the bounded follow-through phase.
 - When bootstrap still needs judgment, the CLI writes the next-action brief to `.agentic-workspace/bootstrap-handoff.md`.
 - When bootstrap still needs judgment, the CLI also writes the compact structured sibling artifact to `.agentic-workspace/bootstrap-handoff.json`.
 
@@ -47,7 +48,7 @@ Use it when you need the canonical intent, repo-state, policy, and handoff contr
 ## Handoff Surfaces
 
 - `llms.txt` is the canonical external-agent handoff file for the repo.
-- `docs/jumpstart-contract.md` is the canonical post-bootstrap jumpstart contract, and `agentic-workspace jumpstart --target ./repo --format json` is its compact machine-readable sibling.
+- `docs/jumpstart-contract.md` is the canonical post-bootstrap setup contract, and `agentic-workspace setup --target ./repo --format json` is its compact machine-readable sibling.
 - `.agentic-workspace/bootstrap-handoff.md` is the canonical post-bootstrap next-action brief when `prompt_requirement` is not `none`.
 - `.agentic-workspace/bootstrap-handoff.json` is the compact structured sibling artifact for the same bootstrap handoff when `prompt_requirement` is not `none`.
 - `none` means bootstrap can finish without a handoff brief.
@@ -57,6 +58,7 @@ Use it when you need the canonical intent, repo-state, policy, and handoff contr
 ## Maintainer Notes
 
 - Recovery after interrupted bootstrap or lifecycle ambiguity should follow `docs/environment-recovery-contract.md` so the ordered remediation path stays centralized.
+- Lifecycle handoff prompts and suggested runner commands should prefer `--non-interactive` when the work is being prepared for another unattended agent.
 - The root README should stay short and point here instead of duplicating the mode matrix.
 - Package-local CLIs still own their own install and adoption behavior; the root layer only centralizes composition and reporting.
 - Repo-owned lifecycle defaults and update intent belong in `agentic-workspace.toml`, not under `.agentic-workspace/`.

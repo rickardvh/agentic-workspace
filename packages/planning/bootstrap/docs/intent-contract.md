@@ -18,6 +18,11 @@ Use:
 agentic-planning-bootstrap summary --format json
 ```
 
+That summary now carries a top-level schema envelope:
+
+- `kind = "planning-summary/v1"`
+- `schema.schema_version = "planning-summary-schema/v1"`
+
 The `planning_record` object is the compact machine-readable active record for current work when planning has one active TODO item and one active execplan. The `active_contract` object remains as the narrower intent view over that canonical record.
 
 The canonical planning record currently carries:
@@ -30,6 +35,7 @@ The canonical planning record currently carries:
 - `next_action`
 - `touched_scope`
 - `proof_expectations`
+- `tool_verification`
 - `escalate_when`
 - `continuation_owner`
 - `completion_criteria`
@@ -44,6 +50,8 @@ The canonical planning record currently carries:
 - Keep it small enough that a weaker or later agent can recover the intended end state without broad rereading.
 - Treat it as unavailable when active planning is ambiguous instead of fabricating certainty from several partial surfaces.
 - Preserve explicit escalation boundaries; the contract must not silently widen requested outcome, ownership scope, or time horizon.
+- When a plan declares `Required Tools`, expose that requirement directly so weaker agents can stop or escalate before attempting impossible work.
+- If an agent runtime uses native planning artifacts, project any durable state back into the canonical planning record before handoff or review instead of treating runtime-local files as authoritative.
 
 ## Relationship To Other Contracts
 

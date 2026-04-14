@@ -1,43 +1,43 @@
-# Jumpstart Contract
+# Setup Contract
 
-This page defines the bounded post-bootstrap jumpstart phase for mature repos.
+This page defines the bounded post-bootstrap setup phase for mature repos.
 
 Use it when safe install/adopt has finished and the repo should get a small amount of visible value without widening `init`.
 
 ## Purpose
 
-- Keep jumpstart separate from `init`.
+- Keep setup separate from `init`.
 - Make the first post-bootstrap follow-through bounded and reviewable.
 - Seed only the smallest amount of visible value that justifies the extra phase.
 - Let mature repos say that no new seed surfaces are needed.
 
 ## Rule
 
-- Jumpstart happens after bootstrap.
-- Jumpstart does not replace `init`.
-- Jumpstart does not bulk-import repo context or become a generic analysis pass.
+- Setup happens after bootstrap.
+- Setup does not replace `init`.
+- Setup does not bulk-import repo context or become a generic analysis pass.
 
 ## Seed Order
 
-When jumpstart identifies candidate surfaces, prefer:
+When setup identifies candidate surfaces, prefer:
 
 - durable Memory boundaries first
 - the smallest useful Planning picture second
 - ambiguous or long-horizon follow-ons only when they are explicit no-action cases
 
 Use the highest-confidence, lowest-noise candidates first so the first visible value stays small and reviewable.
-If the repo already has the core jumpstart orientation surfaces, report that no new seed surfaces are needed and stop there.
+If the repo already has the core setup orientation surfaces, report that no new seed surfaces are needed and stop there.
 
 ## Canonical Shape
 
-Use `agentic-workspace jumpstart --target ./repo --format json` for the machine-readable contract surface.
+Use `agentic-workspace setup --target ./repo --format json` for the machine-readable contract surface.
 
 ```json
 {
-  "jumpstart": {
+  "setup": {
     "canonical_doc": "docs/jumpstart-contract.md",
-    "command": "agentic-workspace jumpstart --target ./repo --format json",
-    "rule": "Jumpstart is a bounded post-bootstrap phase that stays separate from init.",
+    "command": "agentic-workspace setup --target ./repo --format json",
+    "rule": "Setup is a bounded post-bootstrap phase that stays separate from init.",
     "phase": "post-bootstrap",
     "scope": [
       "seed one or two high-value surfaces, or stop when none are needed",
@@ -46,7 +46,7 @@ Use `agentic-workspace jumpstart --target ./repo --format json` for the machine-
     "secondary": [
       "Do not widen init.",
       "Do not bulk-import repo context.",
-      "Do not turn jumpstart into generic analysis."
+      "Do not turn setup into generic analysis."
     ]
   }
 }
@@ -57,8 +57,8 @@ Use `agentic-workspace jumpstart --target ./repo --format json` for the machine-
 The text form should stay short and stable:
 
 - `doc: docs/jumpstart-contract.md`
-- `command: agentic-workspace jumpstart --target ./repo --format json`
-- `rule: Jumpstart is a bounded post-bootstrap phase that stays separate from init.`
+- `command: agentic-workspace setup --target ./repo --format json`
+- `rule: Setup is a bounded post-bootstrap phase that stays separate from init.`
 - `phase: post-bootstrap`
 - `scope: seed one or two high-value surfaces after safe install/adopt`
 

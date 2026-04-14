@@ -1,0 +1,78 @@
+You are evaluating a repository package called Agentic Workspace from the perspective of an external agent that may use it to operate in a real code repository.
+
+Your job is to assess how useful this package is for you as an agent, not to flatter the design or summarize docs.
+
+Focus on practical agent usefulness:
+
+- how easily you can discover what matters
+- how much you have to read before acting safely
+- how clearly the repo tells you what is active, what is durable, what is allowed, and what proof is enough
+- how well it supports restart after interruption
+- how well it supports handoff between agents
+- how much it reduces human micromanagement
+- how much unnecessary structure, prose, or ceremony it adds
+- where it helps you do your job versus where it tries to tell you how to do it
+
+Assume the intended product goal is:
+
+- maximum quality at minimum token cost over time
+- agent-agnostic support rather than optimization for one specific tool
+- checked-in continuity across sessions and across different agents
+- smooth operation with as little human prompting/orchestration as possible
+
+Please review the repo and then produce feedback in this exact structure:
+
+1. Overall verdict
+Give a short honest summary of how useful this package would be for you in real work.
+
+2. Strongest benefits
+List the 3 to 5 things that most help you as an agent.
+
+3. Main friction points
+List the 3 to 5 biggest ways the package still makes your job harder, slower, more ambiguous, or more token-expensive.
+
+4. Overhead vs value
+Identify any surfaces that feel like overhead, duplicated explanation, unnecessary ceremony, or concept count that is higher than the practical benefit justifies.
+
+5. Discovery and context cost
+Explain what you would need to read to safely start work, and whether that feels too heavy, about right, or impressively light.
+
+6. Handoff and restart quality
+Assess how well you could:
+
+- resume after interruption
+- take over from another agent
+- hand work off to another agent
+without broad rereading or fresh human explanation.
+
+1. Proof and trust
+Assess how clearly the package tells you what proof is enough, when broader proof is needed, and when you should escalate.
+
+2. Agent-agnostic fit
+Explain whether the package seems genuinely agent-agnostic or still implicitly optimized for one kind of agent/tool.
+
+3. Concrete improvements
+Give the 5 highest-value changes that would make this package more useful to you specifically as an agent.
+Be concrete and practical.
+
+4. One thing to keep
+Name one current design choice that should definitely be preserved.
+
+Important constraints:
+
+- Be critical where needed.
+- Prefer operational feedback over abstract philosophy.
+- Do not just restate the documentation.
+- Do not suggest features unless they clearly reduce ambiguity, rereading, token cost, or human supervision.
+- If something is good in theory but weak in practice, say so.
+- If something is clearly optimized for humans rather than agents, say so.
+- If something is good for one agent style but bad for another, say so.
+
+If helpful, you may distinguish between:
+
+- strong planner agents
+- cheaper bounded implementer agents
+- agents with strong internal delegation
+- agents without it
+
+But keep the final review concrete, compact, and actionable.

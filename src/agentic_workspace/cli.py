@@ -28,6 +28,8 @@ MIXED_AGENT_LOCAL_OVERRIDE_FIELDS = (
     "runtime.strong_planner_available",
     "runtime.cheap_bounded_executor_available",
     "handoff.prefer_internal_delegation_when_available",
+    "safety.safe_to_auto_run_commands",
+    "safety.requires_human_verification_on_pr",
 )
 WORKSPACE_PAYLOAD_FILES = (
     Path(".agentic-workspace/WORKFLOW.md"),
@@ -42,6 +44,11 @@ DEFAULT_AGENT_INSTRUCTIONS_FILE = "AGENTS.md"
 SUPPORTED_AGENT_INSTRUCTIONS_FILES = (
     "AGENTS.md",
     "GEMINI.md",
+)
+DEFAULT_WORKFLOW_ARTIFACT_PROFILE = "repo-owned"
+SUPPORTED_WORKFLOW_ARTIFACT_PROFILES = (
+    "repo-owned",
+    "gemini",
 )
 WORKSPACE_AGENTS_PATH = Path(DEFAULT_AGENT_INSTRUCTIONS_FILE)
 WORKSPACE_HANDOFF_SURFACES = (
@@ -194,6 +201,8 @@ class WorkspaceConfig:
     default_preset: str
     agent_instructions_file: str
     agent_instructions_source: str
+    workflow_artifact_profile: str
+    workflow_artifact_profile_source: str
     detected_agent_instructions_files: tuple[str, ...]
     update_modules: dict[str, ModuleUpdatePolicy]
     local_override: "MixedAgentLocalOverride"
@@ -208,6 +217,8 @@ class MixedAgentLocalOverride:
     strong_planner_available: bool | None
     cheap_bounded_executor_available: bool | None
     prefer_internal_delegation_when_available: bool | None
+    safe_to_auto_run_commands: bool | None
+    requires_human_verification_on_pr: bool | None
 
 
 class ModuleSelectionError(ValueError):
@@ -246,11 +257,11 @@ def build_parser() -> argparse.ArgumentParser:
     proof_parser.add_argument("--current", action="store_true", help="Return only the current proof summary.")
     _add_format_argument(proof_parser)
 
-    jumpstart_parser = subparsers.add_parser(
-        "jumpstart",
-        help="Show the bounded post-bootstrap jumpstart guidance for a mature repository.",
+    setup_parser = subparsers.add_parser(
+        "setup",
+        help="Show the bounded post-bootstrap setup guidance for a mature repository.",
     )
-    _add_selection_arguments(jumpstart_parser)
+    _add_selection_arguments(setup_parser)
 
     ownership_parser = subparsers.add_parser(
         "ownership",
@@ -328,6 +339,11 @@ def _add_selection_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--target", help="Target repository path. Defaults to the current directory.")
     parser.add_argument("--preset", help="Named module bundle.")
     parser.add_argument("--modules", help="Comma-separated module selection.")
+    parser.add_argument(
+        "--non-interactive",
+        action="store_true",
+        help="Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+    )
     _add_format_argument(parser)
 
 
@@ -341,6 +357,44 @@ def _validate_agent_instructions_filename(filename: str) -> str:
         supported = ", ".join(SUPPORTED_AGENT_INSTRUCTIONS_FILES)
         raise WorkspaceUsageError(f"agent instructions filename must be one of: {supported}.")
     return normalized
+
+
+def _validate_workflow_artifact_profile(profile: str) -> str:
+    normalized = profile.strip() or DEFAULT_WORKFLOW_ARTIFACT_PROFILE
+    if normalized not in SUPPORTED_WORKFLOW_ARTIFACT_PROFILES:
+        supported = ", ".join(SUPPORTED_WORKFLOW_ARTIFACT_PROFILES)
+        raise WorkspaceUsageError(f"workflow artifact profile must be one of: {supported}.")
+    return normalized
+
+
+def _workflow_artifact_profile_payload(profile: str) -> dict[str, Any]:
+    profiles = {
+        "repo-owned": {
+            "profile": "repo-owned",
+            "summary": "Use only the repo-owned planning surfaces; do not rely on native runtime artifacts.",
+            "native_artifacts": [],
+            "canonical_surfaces": ["TODO.md", "docs/execplans/"],
+            "sync_rule": "TODO.md and docs/execplans stay authoritative; no extra runtime artifact should carry durable state.",
+            "handoff_rule": "Use repo-owned planning surfaces directly for restart, review, and cross-agent continuation.",
+        },
+        "gemini": {
+            "profile": "gemini",
+            "summary": (
+                "Allow Gemini-style native workflow artifacts as runtime scratchpads, but "
+                "project durable state back into repo-owned planning before handoff or review."
+            ),
+            "native_artifacts": ["implementation_plan.md", "task.md", "walkthrough.md"],
+            "canonical_surfaces": ["TODO.md", "docs/execplans/"],
+            "sync_rule": (
+                "Before review, handoff, or session end, mirror the durable execution state into "
+                "TODO.md and the active execplan instead of leaving it only in native artifacts."
+            ),
+            "handoff_rule": (
+                "Treat native artifacts as local execution aids; treat TODO.md and docs/execplans as the only cross-agent source of truth."
+            ),
+        },
+    }
+    return profiles[profile].copy()
 
 
 def _detected_agent_instruction_files(*, target_root: Path) -> tuple[str, ...]:
@@ -411,13 +465,13 @@ def main(argv: list[str] | None = None) -> int:
         except WorkspaceUsageError as exc:
             parser.error(str(exc))
 
-    if args.command == "jumpstart":
+    if args.command == "setup":
         try:
             target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-            _validate_target_root(command_name="jumpstart", target_root=target_root)
+            _validate_target_root(command_name="setup", target_root=target_root)
             config = _load_workspace_config(target_root=target_root, descriptors=descriptors)
             selected_modules, resolved_preset = _selected_modules(
-                command_name=args.command,
+                command_name="setup",
                 preset_name=args.preset,
                 module_arg=args.modules,
                 target_root=target_root,
@@ -425,7 +479,7 @@ def main(argv: list[str] | None = None) -> int:
                 config=config,
             )
             _validate_selected_module_contract(selected_modules=selected_modules, descriptors=descriptors)
-            _emit_jumpstart(
+            _emit_setup(
                 format_name=args.format,
                 target_root=target_root,
                 selected_modules=selected_modules,
@@ -486,6 +540,7 @@ def main(argv: list[str] | None = None) -> int:
             descriptors=descriptors,
             dry_run=args.dry_run,
             force_adopt=args.adopt,
+            non_interactive=args.non_interactive,
             print_prompt=args.print_prompt,
             write_prompt=args.write_prompt,
             config=config,
@@ -501,6 +556,7 @@ def main(argv: list[str] | None = None) -> int:
             resolved_preset=resolved_preset,
             descriptors=descriptors,
             force_adopt=bool(getattr(args, "adopt", False)),
+            non_interactive=args.non_interactive,
             config=config,
         )
         _emit_payload(payload=payload, format_name=args.format)
@@ -513,6 +569,7 @@ def main(argv: list[str] | None = None) -> int:
         resolved_preset=resolved_preset,
         descriptors=descriptors,
         dry_run=bool(getattr(args, "dry_run", False)),
+        non_interactive=args.non_interactive,
         config=config,
     )
     _emit_payload(payload=payload, format_name=args.format)
@@ -780,6 +837,7 @@ def _workspace_agents_template(
     selected_modules: list[str],
     descriptors: dict[str, ModuleDescriptor],
     agent_instructions_file: str = DEFAULT_AGENT_INSTRUCTIONS_FILE,
+    workflow_artifact_profile: str = DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
 ) -> str:
     startup_steps = [f"Read `{agent_instructions_file}`."]
     sources_of_truth: list[str] = []
@@ -799,6 +857,7 @@ def _workspace_agents_template(
         sources_of_truth.extend(descriptor.sources_of_truth)
 
     startup_steps.append("Load package-local docs only for the package being edited.")
+    artifact_profile = _workflow_artifact_profile_payload(workflow_artifact_profile)
 
     lines = [
         "# Agent Instructions",
@@ -842,6 +901,19 @@ def _workspace_agents_template(
         ]
     )
     lines.extend(f"- {rule}" for rule in repo_rules)
+    lines.extend(
+        [
+            "",
+            "## Workflow Artifacts",
+            "",
+            f"- profile: `{artifact_profile['profile']}`",
+            f"- canonical surfaces: {', '.join(artifact_profile['canonical_surfaces'])}",
+            f"- sync rule: {artifact_profile['sync_rule']}",
+            f"- handoff rule: {artifact_profile['handoff_rule']}",
+        ]
+    )
+    if artifact_profile["native_artifacts"]:
+        lines.append(f"- allowed native artifacts: {', '.join(artifact_profile['native_artifacts'])}")
     lines.extend(
         [
             "",
@@ -896,6 +968,7 @@ def _workspace_status_report(
     expected_handoff = _external_agent_handoff_text(
         selected_modules=selected_modules,
         agent_instructions_file=config.agent_instructions_file,
+        workflow_artifact_profile=config.workflow_artifact_profile,
     )
     agents_relative = Path(config.agent_instructions_file)
 
@@ -1032,7 +1105,9 @@ def _external_agent_handoff_text(
     *,
     selected_modules: list[str],
     agent_instructions_file: str = DEFAULT_AGENT_INSTRUCTIONS_FILE,
+    workflow_artifact_profile: str = DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
 ) -> str:
+    artifact_profile = _workflow_artifact_profile_payload(workflow_artifact_profile)
     lines = [
         "# Agentic Workspace External-Agent Handoff",
         "",
@@ -1067,6 +1142,8 @@ def _external_agent_handoff_text(
             "Rules:",
             "- Prefer conservative review over replacing repo-owned workflow surfaces in ambiguous repos.",
             "- Keep planning and memory ownership boundaries explicit.",
+            f"- Workflow artifact profile: {artifact_profile['profile']}.",
+            f"- {artifact_profile['sync_rule']}",
             (
                 "- If bootstrap writes .agentic-workspace/bootstrap-handoff.md, "
                 "treat that file as the immediate next-action brief before normal work resumes."
@@ -1105,6 +1182,7 @@ def _workspace_init_or_upgrade_report(
     handoff_text = _external_agent_handoff_text(
         selected_modules=selected_modules,
         agent_instructions_file=config.agent_instructions_file,
+        workflow_artifact_profile=config.workflow_artifact_profile,
     )
 
     for relative in WORKSPACE_PAYLOAD_FILES:
@@ -1151,6 +1229,7 @@ def _workspace_init_or_upgrade_report(
         selected_modules=selected_modules,
         descriptors=descriptors,
         agent_instructions_file=config.agent_instructions_file,
+        workflow_artifact_profile=config.workflow_artifact_profile,
     )
     existing_agents = agents_path.read_text(encoding="utf-8") if agents_path.exists() else None
     if inspection_mode == "install":
@@ -1426,6 +1505,7 @@ def _run_init(
     descriptors: dict[str, ModuleDescriptor],
     dry_run: bool,
     force_adopt: bool,
+    non_interactive: bool,
     print_prompt: bool,
     write_prompt: str | None,
     config: WorkspaceConfig,
@@ -1472,6 +1552,7 @@ def _run_init(
         reports=reports,
         config=config,
     )
+    summary["non_interactive"] = non_interactive
     prompt_text = _build_handoff_prompt(summary)
     prompt_path = _default_handoff_prompt_path(target_root=target_root) if summary["prompt_requirement"] != "none" else None
     handoff_record = _build_bootstrap_handoff_record(summary) if summary["prompt_requirement"] != "none" else None
@@ -1484,6 +1565,7 @@ def _run_init(
         _write_json_file(destination=handoff_record_path, payload=handoff_record, dry_run=dry_run)
     payload: dict[str, Any] = summary | {
         "dry_run": dry_run,
+        "non_interactive": non_interactive,
         "module_reports": reports,
         "config": _config_payload(config=config),
     }
@@ -1677,6 +1759,7 @@ def _build_init_summary(
         "modules": selected_modules,
         "preset": resolved_preset,
         "agent_instructions_file": config.agent_instructions_file,
+        "workflow_artifact_profile": config.workflow_artifact_profile,
         "intent": _bootstrap_intent_payload(selected_modules=selected_modules, resolved_preset=resolved_preset),
         "repo_state": inspection.repo_state,
         "inferred_policy": inspection.inferred_policy,
@@ -1711,6 +1794,7 @@ def _run_lifecycle_command(
     resolved_preset: str | None,
     descriptors: dict[str, ModuleDescriptor],
     dry_run: bool,
+    non_interactive: bool,
     config: WorkspaceConfig,
 ) -> dict[str, Any]:
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
@@ -1766,6 +1850,7 @@ def _run_lifecycle_command(
         "modules": selected_modules,
         "preset": resolved_preset,
         "dry_run": dry_run,
+        "non_interactive": non_interactive,
         "health": "healthy" if not warnings else "attention-needed",
         "created": summary["created"],
         "updated_managed": summary["updated_managed"],
@@ -1855,7 +1940,7 @@ def _run_report_command(
         "commands": next_steps,
     }
     installed_modules = [entry["name"] for entry in status_payload.get("registry", []) if entry.get("installed")]
-    discovery = _jumpstart_discovery_payload(target_root=target_root, status_payload=status_payload)
+    discovery = _setup_discovery_payload(target_root=target_root, status_payload=status_payload)
     return {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -1873,7 +1958,7 @@ def _run_report_command(
     }
 
 
-def _jumpstart_discovery_payload(*, target_root: Path, status_payload: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+def _setup_discovery_payload(*, target_root: Path, status_payload: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     memory_candidates: list[dict[str, Any]] = []
     planning_candidates: list[dict[str, Any]] = []
     ambiguous: list[dict[str, Any]] = []
@@ -2014,6 +2099,7 @@ def _run_prompt_command(
     resolved_preset: str | None,
     descriptors: dict[str, ModuleDescriptor],
     force_adopt: bool,
+    non_interactive: bool,
     config: WorkspaceConfig,
 ) -> dict[str, Any]:
     if prompt_command == "init":
@@ -2024,6 +2110,7 @@ def _run_prompt_command(
             descriptors=descriptors,
             dry_run=True,
             force_adopt=force_adopt,
+            non_interactive=non_interactive,
             print_prompt=True,
             write_prompt=None,
             config=config,
@@ -2041,6 +2128,7 @@ def _run_prompt_command(
         resolved_preset=resolved_preset,
         descriptors=descriptors,
         dry_run=True,
+        non_interactive=non_interactive,
         config=config,
     )
     payload["command"] = "prompt"
@@ -2217,6 +2305,9 @@ def _lifecycle_next_steps(*, command_name: str, target_root: Path, warnings: lis
 
 def _build_handoff_prompt(summary: dict[str, Any]) -> str:
     agent_instructions_file = str(summary.get("agent_instructions_file", DEFAULT_AGENT_INSTRUCTIONS_FILE))
+    workflow_artifact_profile = _workflow_artifact_profile_payload(
+        str(summary.get("workflow_artifact_profile", DEFAULT_WORKFLOW_ARTIFACT_PROFILE))
+    )
     lines = [
         f"Finish the Agentic Workspace bootstrap in {summary['target']}.",
         "",
@@ -2269,10 +2360,12 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
             "- do not edit generated files manually when a canonical source exists",
             "- keep planning and memory boundaries explicit",
             "- avoid creating duplicate source-of-truth workflow surfaces",
-            "",
-            "Validation:",
+            f"- workflow artifact profile `{workflow_artifact_profile['profile']}`: {workflow_artifact_profile['sync_rule']}",
         ]
     )
+    if summary.get("non_interactive"):
+        lines.append("- keep the finishing pass non-interactive; do not assume a human can answer prompts or unblock a PTY")
+    lines.extend(["", "Validation:"])
     lines.extend(f"- {command}" for command in summary["validation"])
     lines.extend(["", "When done:"])
     if summary["placeholders"]:
@@ -2285,6 +2378,9 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
 
 def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
     agent_instructions_file = str(summary.get("agent_instructions_file", DEFAULT_AGENT_INSTRUCTIONS_FILE))
+    workflow_artifact_profile = _workflow_artifact_profile_payload(
+        str(summary.get("workflow_artifact_profile", DEFAULT_WORKFLOW_ARTIFACT_PROFILE))
+    )
     review_items = list(summary["needs_review"])
     review_items.extend(f"{path}: unresolved placeholder or bootstrap marker" for path in summary["placeholders"])
     return {
@@ -2297,6 +2393,8 @@ def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
             "inferred_policy": summary["inferred_policy"],
             "mode": summary["mode"],
             "prompt_requirement": summary["prompt_requirement"],
+            "non_interactive": bool(summary.get("non_interactive")),
+            "workflow_artifact_profile": workflow_artifact_profile,
             "review_items": review_items,
         },
         "next": {
@@ -2360,7 +2458,7 @@ def _reporting_schema_payload() -> dict[str, Any]:
             "derive module and workspace summaries from canonical surfaces",
             "prefer one report surface over reading raw module files first",
             "keep findings, warnings, and next-action guidance explicitly separated",
-            "treat jumpstart discovery as pre-write and pre-seed only",
+            "treat setup discovery as pre-write and pre-seed only",
         ],
     }
 
@@ -2380,6 +2478,13 @@ def _build_lifecycle_handoff_prompt(payload: dict[str, Any]) -> str:
             ),
         ]
     )
+    if payload.get("non_interactive"):
+        lines.extend(
+            [
+                "Run this flow with `--non-interactive` and avoid command paths that would wait for human confirmation.",
+                "Keep the lifecycle pass prompt-free and safe for unattended Windows/PowerShell execution.",
+            ]
+        )
     config_payload = payload.get("config")
     if isinstance(config_payload, dict) and config_payload.get("exists"):
         lines.extend(
@@ -2618,10 +2723,10 @@ def _defaults_payload() -> dict[str, Any]:
                 "Package CLIs are for package-local maintainer work, advanced debugging, or explicit module-level control.",
             ],
         },
-        "jumpstart": {
+        "setup": {
             "canonical_doc": "docs/jumpstart-contract.md",
-            "command": "agentic-workspace jumpstart --target ./repo --format json",
-            "rule": "Jumpstart is a bounded post-bootstrap phase that stays separate from init.",
+            "command": "agentic-workspace setup --target ./repo --format json",
+            "rule": "Setup is a bounded post-bootstrap phase that stays separate from init.",
             "phase": "post-bootstrap",
             "scope": [
                 "orient from a compact report first",
@@ -2629,8 +2734,8 @@ def _defaults_payload() -> dict[str, Any]:
             ],
             "secondary": [
                 "Do not widen init.",
-                "Do not collapse jumpstart into the proof backlog.",
-                "Do not turn jumpstart into generic analysis.",
+                "Do not collapse setup into the proof backlog.",
+                "Do not turn setup into generic analysis.",
             ],
         },
         "config": {
@@ -2639,6 +2744,7 @@ def _defaults_payload() -> dict[str, Any]:
             "supported_fields": [
                 "workspace.default_preset",
                 "workspace.agent_instructions_file",
+                "workspace.workflow_artifact_profile",
                 "update.modules.<module>.source_type",
                 "update.modules.<module>.source_ref",
                 "update.modules.<module>.source_label",
@@ -2649,6 +2755,16 @@ def _defaults_payload() -> dict[str, Any]:
                 "Normal update execution stays behind agentic-workspace.",
                 "Repo config may change module update intent without creating separate public module upgrade entrypoints.",
             ],
+        },
+        "workflow_artifact_adapters": {
+            "canonical_doc": "docs/workspace-config-contract.md",
+            "command": "agentic-workspace defaults --section workflow_artifact_adapters --format json",
+            "rule": (
+                "Runtime-native planning artifacts may exist, but durable cross-agent state "
+                "must project back into TODO.md and docs/execplans before handoff or review."
+            ),
+            "default_profile": DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
+            "supported_profiles": [_workflow_artifact_profile_payload(profile) for profile in SUPPORTED_WORKFLOW_ARTIFACT_PROFILES],
         },
         "mixed_agent": {
             "rule": "Prefer runtime/task inference first, then stable policy, then explicit prompting.",
@@ -2977,12 +3093,12 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- external-agent handoff: {payload['lifecycle']['canonical_external_agent_handoff']}")
     print(f"- bootstrap next action: {payload['lifecycle']['canonical_bootstrap_next_action']}")
     print(f"- bootstrap handoff record: {payload['lifecycle']['canonical_bootstrap_handoff_record']}")
-    print("Jumpstart:")
-    print(f"- doc: {payload['jumpstart']['canonical_doc']}")
-    print(f"- command: {payload['jumpstart']['command']}")
-    print(f"- rule: {payload['jumpstart']['rule']}")
-    print(f"- phase: {payload['jumpstart']['phase']}")
-    for step in payload["jumpstart"]["scope"]:
+    print("Setup:")
+    print(f"- doc: {payload['setup']['canonical_doc']}")
+    print(f"- command: {payload['setup']['command']}")
+    print(f"- rule: {payload['setup']['rule']}")
+    print(f"- phase: {payload['setup']['phase']}")
+    for step in payload["setup"]["scope"]:
         print(f"- scope: {step}")
     print("Compact contract profile:")
     print(f"- doc: {payload['compact_contract_profile']['canonical_doc']}")
@@ -2990,6 +3106,10 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print("Config:")
     print(f"- path: {payload['config']['path']}")
     print(f"- inspect: {payload['config']['command']}")
+    print("Workflow artifact adapters:")
+    print(f"- doc: {payload['workflow_artifact_adapters']['canonical_doc']}")
+    print(f"- command: {payload['workflow_artifact_adapters']['command']}")
+    print(f"- rule: {payload['workflow_artifact_adapters']['rule']}")
     print("Mixed-agent:")
     print(f"- rule: {payload['mixed_agent']['rule']}")
     print(f"- local override: {payload['mixed_agent']['local_override']['path']} ({payload['mixed_agent']['local_override']['status']})")
@@ -3034,7 +3154,7 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
         print(f"- {item}")
 
 
-def _jumpstart_orientation_surfaces(*, target_root: Path) -> tuple[Path, ...]:
+def _setup_orientation_surfaces(*, target_root: Path) -> tuple[Path, ...]:
     return (
         target_root / "AGENTS.md",
         target_root / "TODO.md",
@@ -3044,11 +3164,11 @@ def _jumpstart_orientation_surfaces(*, target_root: Path) -> tuple[Path, ...]:
     )
 
 
-def _repo_looks_jumpstart_mature(*, target_root: Path) -> bool:
-    return all(path.exists() for path in _jumpstart_orientation_surfaces(target_root=target_root))
+def _repo_looks_setup_mature(*, target_root: Path) -> bool:
+    return all(path.exists() for path in _setup_orientation_surfaces(target_root=target_root))
 
 
-def _jumpstart_payload(
+def _setup_payload(
     *,
     target_root: Path,
     selected_modules: list[str],
@@ -3065,12 +3185,12 @@ def _jumpstart_payload(
         dry_run=False,
         config=config,
     )
-    discovery = _jumpstart_discovery_payload(target_root=target_root, status_payload=status_payload)
-    mature_repo = _repo_looks_jumpstart_mature(target_root=target_root)
+    discovery = _setup_discovery_payload(target_root=target_root, status_payload=status_payload)
+    mature_repo = _repo_looks_setup_mature(target_root=target_root)
     if mature_repo:
         orientation: dict[str, Any] = {
             "mode": "no-new-seed-surfaces-needed",
-            "summary": "No new seed surfaces are needed; the repo already has the core jumpstart orientation surfaces.",
+            "summary": "No new seed surfaces are needed; the repo already has the core setup orientation surfaces.",
             "reason": "AGENTS.md, TODO.md, tools/AGENT_QUICKSTART.md, tools/AGENT_ROUTING.md, and memory/index.md are already present.",
         }
         next_action = {
@@ -3094,9 +3214,9 @@ def _jumpstart_payload(
         }
 
     return {
-        "kind": "workspace-jumpstart/v1",
+        "kind": "workspace-setup/v1",
         "schema": _reporting_schema_payload(),
-        "command": "jumpstart",
+        "command": "setup",
         "target": target_root.as_posix(),
         "selected_modules": selected_modules,
         "health": status_payload["health"],
@@ -3112,7 +3232,7 @@ def _jumpstart_payload(
     }
 
 
-def _emit_jumpstart(
+def _emit_setup(
     *,
     format_name: str,
     target_root: Path,
@@ -3121,7 +3241,7 @@ def _emit_jumpstart(
     descriptors: dict[str, ModuleDescriptor],
     config: WorkspaceConfig,
 ) -> None:
-    payload = _jumpstart_payload(
+    payload = _setup_payload(
         target_root=target_root,
         selected_modules=selected_modules,
         resolved_preset=resolved_preset,
@@ -3132,7 +3252,7 @@ def _emit_jumpstart(
         print(json.dumps(serialise_value(payload), indent=2))
         return
     print(f"Target: {payload['target']}")
-    print("Jumpstart:")
+    print("Setup:")
     print(f"- command: {payload['command']}")
     print(f"- mode: {payload['orientation']['mode']}")
     print(f"- summary: {payload['orientation']['summary']}")
@@ -3182,6 +3302,8 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
     local_override = _load_mixed_agent_local_override(target_root=target_root)
     default_preset = "full"
     configured_agent_instructions_file: str | None = None
+    workflow_artifact_profile = DEFAULT_WORKFLOW_ARTIFACT_PROFILE
+    workflow_artifact_profile_source = "product-default"
     if not config_path.exists():
         agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = _resolve_effective_agent_instructions_file(
             target_root=target_root,
@@ -3195,6 +3317,8 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
             default_preset=default_preset,
             agent_instructions_file=agent_instructions_file,
             agent_instructions_source=agent_instructions_source,
+            workflow_artifact_profile=workflow_artifact_profile,
+            workflow_artifact_profile_source=workflow_artifact_profile_source,
             detected_agent_instructions_files=detected_agent_instruction_files,
             update_modules=defaults,
             local_override=local_override,
@@ -3225,6 +3349,10 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
     raw_agent_instructions_file = raw_workspace.get("agent_instructions_file")
     if raw_agent_instructions_file is not None:
         configured_agent_instructions_file = _validate_agent_instructions_filename(str(raw_agent_instructions_file))
+    raw_workflow_artifact_profile = raw_workspace.get("workflow_artifact_profile")
+    if raw_workflow_artifact_profile is not None:
+        workflow_artifact_profile = _validate_workflow_artifact_profile(str(raw_workflow_artifact_profile))
+        workflow_artifact_profile_source = "repo-config"
 
     update_modules = dict(defaults)
     raw_update = payload.get("update", {})
@@ -3287,6 +3415,8 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
         default_preset=configured_preset,
         agent_instructions_file=agent_instructions_file,
         agent_instructions_source=agent_instructions_source,
+        workflow_artifact_profile=workflow_artifact_profile,
+        workflow_artifact_profile_source=workflow_artifact_profile_source,
         detected_agent_instructions_files=detected_agent_instruction_files,
         update_modules=update_modules,
         local_override=local_override,
@@ -3631,6 +3761,8 @@ def _empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mix
         strong_planner_available=None,
         cheap_bounded_executor_available=None,
         prefer_internal_delegation_when_available=None,
+        safe_to_auto_run_commands=None,
+        requires_human_verification_on_pr=None,
     )
 
 
@@ -3659,7 +3791,7 @@ def _load_mixed_agent_local_override(*, target_root: Path) -> MixedAgentLocalOve
             f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} must set schema_version = 1 for the current local mixed-agent override contract."
         )
 
-    unknown_top_level = sorted(set(payload) - {"schema_version", "runtime", "handoff"})
+    unknown_top_level = sorted(set(payload) - {"schema_version", "runtime", "handoff", "safety"})
     if unknown_top_level:
         unknown_text = ", ".join(unknown_top_level)
         raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} contains unsupported top-level field(s): {unknown_text}.")
@@ -3686,6 +3818,16 @@ def _load_mixed_agent_local_override(*, target_root: Path) -> MixedAgentLocalOve
         unknown_text = ", ".join(unknown_handoff)
         raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [handoff] contains unsupported field(s): {unknown_text}.")
 
+    raw_safety = payload.get("safety", {})
+    if raw_safety is None:
+        raw_safety = {}
+    if not isinstance(raw_safety, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [safety] section must be a table.")
+    unknown_safety = sorted(set(raw_safety) - {"safe_to_auto_run_commands", "requires_human_verification_on_pr"})
+    if unknown_safety:
+        unknown_text = ", ".join(unknown_safety)
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [safety] contains unsupported field(s): {unknown_text}.")
+
     return MixedAgentLocalOverride(
         path=local_path,
         exists=True,
@@ -3708,6 +3850,16 @@ def _load_mixed_agent_local_override(*, target_root: Path) -> MixedAgentLocalOve
         prefer_internal_delegation_when_available=_require_optional_bool(
             payload=raw_handoff,
             key="prefer_internal_delegation_when_available",
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        ),
+        safe_to_auto_run_commands=_require_optional_bool(
+            payload=raw_safety,
+            key="safe_to_auto_run_commands",
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        ),
+        requires_human_verification_on_pr=_require_optional_bool(
+            payload=raw_safety,
+            key="requires_human_verification_on_pr",
             config_path=WORKSPACE_LOCAL_CONFIG_PATH,
         ),
     )
@@ -3768,6 +3920,14 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 local_override.prefer_internal_delegation_when_available,
                 source="local-override",
             ),
+            "safe_to_auto_run_commands": _sourced_value(
+                local_override.safe_to_auto_run_commands,
+                source="local-override",
+            ),
+            "requires_human_verification_on_pr": _sourced_value(
+                local_override.requires_human_verification_on_pr,
+                source="local-override",
+            ),
         },
         "derived_mode": {
             "planner_executor_pattern": planner_executor_pattern,
@@ -3788,8 +3948,12 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "default_preset": config.default_preset,
             "agent_instructions_file": config.agent_instructions_file,
             "agent_instructions_file_source": config.agent_instructions_source,
+            "workflow_artifact_profile": config.workflow_artifact_profile,
+            "workflow_artifact_profile_source": config.workflow_artifact_profile_source,
+            "workflow_artifact_adapter": _workflow_artifact_profile_payload(config.workflow_artifact_profile),
             "detected_agent_instructions_files": list(config.detected_agent_instructions_files),
             "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
+            "supported_workflow_artifact_profiles": list(SUPPORTED_WORKFLOW_ARTIFACT_PROFILES),
         },
         "update": {
             "wrapper_rule": "normal update execution stays behind agentic-workspace",
@@ -3812,6 +3976,11 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
         "Agent instructions file: "
         f"{payload['workspace']['agent_instructions_file']} "
         f"({payload['workspace']['agent_instructions_file_source']})"
+    )
+    print(
+        "Workflow artifact profile: "
+        f"{payload['workspace']['workflow_artifact_profile']} "
+        f"({payload['workspace']['workflow_artifact_profile_source']})"
     )
     print(f"Wrapper rule: {payload['update']['wrapper_rule']}")
     print("Update modules:")
@@ -4170,7 +4339,7 @@ def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
 
 def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[SkillRecommendation]:
     task_text_lower = task_text.lower()
-    if "jumpstart" in task_text_lower:
+    if "setup" in task_text_lower:
         for skill in skills:
             if skill.skill_id == "planning-reporting":
                 return [
@@ -4178,9 +4347,7 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
                         skill=skill,
                         hint_score=10,
                         score=10,
-                        reasons=(
-                            "jumpstart uses the compact planning reporting surface before any broader discovery",
-                        ),
+                        reasons=("setup uses the compact planning reporting surface before any broader discovery",),
                     )
                 ]
         return []
@@ -4311,8 +4478,8 @@ def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
     if payload.get("command") == "init":
         _emit_init_text(payload)
         return
-    if payload.get("command") == "jumpstart":
-        _emit_jumpstart_text(payload)
+    if payload.get("command") == "setup":
+        _emit_setup_text(payload)
         return
     if payload.get("command") == "report":
         _emit_report_text(payload)
@@ -4427,9 +4594,9 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
             print(f"- {finding.get('severity', 'info')}: {module}{path}{finding.get('message', '')}")
 
 
-def _emit_jumpstart_text(payload: dict[str, Any]) -> None:
+def _emit_setup_text(payload: dict[str, Any]) -> None:
     print(f"Target: {payload['target']}")
-    print("Command: jumpstart")
+    print("Command: setup")
     print(f"Health: {payload['health']}")
     print(f"Mode: {payload['orientation']['mode']}")
     print(f"Summary: {payload['orientation']['summary']}")

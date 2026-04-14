@@ -98,6 +98,17 @@ Omit the section when no implementation-blocking questions remain.
 
 -
 
+If the slice renames, moves, retires, or refactors a named surface, include a cheap stale-reference sweep here as part of closure proof.
+Prefer a narrow search such as `rg old-surface-name` or the relevant planning checker over broad rereads.
+
+## Required Tools
+
+- None.
+
+Use this section when the plan depends on a capability that a weaker or differently provisioned agent might not have.
+List only the concrete tools or capability surfaces that the task must have before execution starts.
+Keep the first slice advisory: if a required tool is unavailable, stop or escalate instead of attempting an impossible substitute.
+
 ## Completion Criteria
 
 -

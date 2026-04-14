@@ -389,8 +389,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
                 }
             )
 
-    candidate_lines = _section_lines(_read_lines(roadmap_path), "Next Candidate Queue")
-    candidate_count = sum(1 for line in candidate_lines if re.match(r"^\s*-\s+", line))
+    roadmap_candidates = _roadmap_candidates(roadmap_path)
 
     active_execplans: list[dict[str, str]] = []
     archived_execplans = 0
@@ -421,6 +420,8 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         resumable_contract=resumable_contract,
     )
     return {
+        "kind": "planning-summary/v1",
+        "schema": _planning_summary_schema(),
         "target_root": str(target_root),
         "adoption_mode": _detect_adoption_mode(target_root),
         "todo": {
@@ -438,11 +439,104 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         "active_contract": _contract_projection(active_contract, view_name="active_contract"),
         "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
         "roadmap": {
-            "candidate_count": candidate_count,
+            "candidate_count": len(roadmap_candidates),
+            "candidates": roadmap_candidates,
         },
         "warnings": [warning.copy() for warning in warnings],
         "warning_count": len(warnings),
     }
+
+
+def _planning_summary_schema() -> dict[str, Any]:
+    return {
+        "schema_version": "planning-summary-schema/v1",
+        "canonical_docs": [
+            "docs/intent-contract.md",
+            "docs/resumable-execution-contract.md",
+            "docs/execplans/README.md",
+        ],
+        "command": "agentic-planning-bootstrap summary --format json",
+        "shared_fields": [
+            "kind",
+            "schema",
+            "target_root",
+            "adoption_mode",
+            "todo",
+            "execplans",
+            "planning_record",
+            "active_contract",
+            "resumable_contract",
+            "roadmap",
+            "warnings",
+            "warning_count",
+        ],
+        "view_fields": {
+            "planning_record": [
+                "task",
+                "requested_outcome",
+                "hard_constraints",
+                "agent_may_decide",
+                "next_action",
+                "proof_expectations",
+                "tool_verification",
+                "escalate_when",
+                "continuation_owner",
+                "touched_scope",
+                "completion_criteria",
+                "blockers",
+                "minimal_refs",
+            ],
+            "active_contract": [
+                "todo_item",
+                "intent",
+                "touched_scope",
+                "proof_expectations",
+                "tool_verification",
+                "minimal_refs",
+            ],
+            "resumable_contract": [
+                "current_next_action",
+                "active_milestone",
+                "completion_criteria",
+                "proof_expectations",
+                "tool_verification",
+                "escalate_when",
+                "blockers",
+                "minimal_refs",
+            ],
+            "roadmap": [
+                "candidate_count",
+                "candidates",
+            ],
+        },
+        "rules": [
+            "planning_record is the canonical compact active planning state when it is available",
+            "active_contract and resumable_contract remain thinner projections over that state",
+            "prefer the summary schema over raw TODO or execplan parsing when one structured answer is enough",
+        ],
+    }
+
+
+def _roadmap_candidates(roadmap_path: Path) -> list[dict[str, str]]:
+    candidate_lines = _section_lines(_read_lines(roadmap_path), "Next Candidate Queue")
+    candidates: list[dict[str, str]] = []
+    for line in candidate_lines:
+        if not re.match(r"^\s*-\s+", line):
+            continue
+        text = re.sub(r"^\s*-\s+", "", line).strip()
+        if not text:
+            continue
+        priority_match = re.match(r"^Priority\s+(\d+)\s*:\s*(.*)$", text, re.IGNORECASE)
+        if priority_match:
+            candidates.append(
+                {
+                    "priority": priority_match.group(1),
+                    "summary": priority_match.group(2).strip(),
+                }
+            )
+            continue
+        candidates.append({"priority": "", "summary": text})
+    return candidates
 
 
 def _active_intent_contract(
@@ -480,6 +574,7 @@ def _active_intent_contract(
 
     touched_scope = _extract_section_bullets(plan_path, "Touched Paths")
     proof_expectations = _extract_section_bullets(plan_path, "Validation Commands")
+    required_tools = [tool for tool in _extract_section_bullets(plan_path, "Required Tools") if tool.lower() not in {"none", "none."}]
     minimal_refs = _dedupe(
         [
             "TODO.md",
@@ -502,6 +597,11 @@ def _active_intent_contract(
         },
         "touched_scope": touched_scope,
         "proof_expectations": proof_expectations,
+        "tool_verification": {
+            "status": "required-tools-declared" if required_tools else "unspecified",
+            "required_tools": required_tools,
+            "rule": "If a required tool is unavailable, stop or escalate before attempting the task.",
+        },
         "minimal_refs": minimal_refs,
     }
 
@@ -547,6 +647,7 @@ def _active_resumable_contract(
         },
         "completion_criteria": completion_criteria,
         "proof_expectations": list(active_contract["proof_expectations"]),
+        "tool_verification": dict(active_contract["tool_verification"]),
         "escalate_when": active_contract["intent"]["escalate_when"],
         "blockers": blockers,
         "minimal_refs": list(active_contract["minimal_refs"]),
@@ -587,6 +688,7 @@ def _canonical_planning_record(
         "agent_may_decide": str(active_contract["intent"]["agent_may_decide"]).strip(),
         "next_action": str(resumable_contract["current_next_action"]).strip(),
         "proof_expectations": list(resumable_contract.get("proof_expectations", [])),
+        "tool_verification": dict(resumable_contract.get("tool_verification", {})),
         "escalate_when": str(resumable_contract.get("escalate_when", "")).strip(),
         "continuation_owner": continuation_owner,
         "touched_scope": list(active_contract.get("touched_scope", [])),
@@ -707,6 +809,7 @@ def archive_execplan(
     validation_confirmed = execution_summary.get("validation confirmed", "").strip()
     follow_on_routed_to = execution_summary.get("follow-on routed to", "").strip()
     resume_from = execution_summary.get("resume from", "").strip()
+    validation_commands = _execplan_validation_commands(plan_path)
     if completes_larger_outcome == "no" and (not continuation_surface or continuation_surface.lower() in {"none", "n/a"}):
         result.warnings.append(
             {
@@ -810,6 +913,20 @@ def archive_execplan(
             }
         )
         result.add("manual review", plan_path, "fill `Execution Summary` with the post-archive resume cue before archiving")
+        return result
+    if _execplan_needs_reference_sweep(plan_path) and not _validation_has_reference_sweep(validation_commands):
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_closure_check",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Rename/refactor-like completed work is missing a stale-reference sweep in Validation Commands.",
+            }
+        )
+        result.add(
+            "manual review",
+            plan_path,
+            "add a stale-reference sweep to `Validation Commands` before archiving rename/refactor-like work",
+        )
         return result
     cleanup_todo_lines: list[str] | None = None
     todo_ref_items = _todo_referencing_items(target_root / "TODO.md", plan_path, target_root)
@@ -1347,6 +1464,8 @@ def _render_execplan_from_todo_item(
         "- Preserve the planning contract and keep the work bounded to this plan.\n\n"
         "## Validation Commands\n\n"
         "- Fill in the narrowest command that proves the promoted work.\n\n"
+        "## Required Tools\n\n"
+        "- None.\n\n"
         "## Completion Criteria\n\n"
         f"- {completion}\n\n"
         "## Execution Summary\n\n"
@@ -1428,6 +1547,27 @@ def _execplan_active_milestone(path: Path) -> dict[str, str]:
 def _execplan_execution_summary(path: Path) -> dict[str, str]:
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Execution Summary"))
+
+
+def _execplan_validation_commands(path: Path) -> list[str]:
+    return _extract_section_bullets(path, "Validation Commands")
+
+
+def _execplan_needs_reference_sweep(path: Path) -> bool:
+    lines = _read_lines(path)
+    relevant = [
+        *_section_lines(lines, "Goal"),
+        *_section_lines(lines, "Active Milestone"),
+        *_section_lines(lines, "Touched Paths"),
+        *_section_lines(lines, "Execution Summary"),
+    ]
+    text = "\n".join(relevant).lower()
+    return any(token in text for token in ("rename", "renamed", "refactor", "refactored", "move", "moved", "retire", "retired"))
+
+
+def _validation_has_reference_sweep(commands: list[str]) -> bool:
+    lowered = "\n".join(command.lower() for command in commands)
+    return any(token in lowered for token in ("rg ", "ripgrep", "grep "))
 
 
 def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path) -> list[TodoItem]:

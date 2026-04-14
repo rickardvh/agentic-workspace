@@ -23,7 +23,19 @@ def test_workspace_init_clean() -> None:
 
         # Initialize workspace with planning and memory modules
         result = subprocess.run(
-            ["uv", "run", "agentic-workspace", "init", "--target", str(target), "--preset", "full", "--format", "json"],
+            [
+                "uv",
+                "run",
+                "agentic-workspace",
+                "init",
+                "--target",
+                str(target),
+                "--preset",
+                "full",
+                "--non-interactive",
+                "--format",
+                "json",
+            ],
             capture_output=True,
             text=True,
             cwd=workspace_root,
@@ -59,7 +71,7 @@ def test_workspace_init_dry_run() -> None:
 
         # Initialize with dry-run
         subprocess.run(
-            ["uv", "run", "agentic-workspace", "init", "--target", str(target), "--preset", "full", "--dry-run"],
+            ["uv", "run", "agentic-workspace", "init", "--target", str(target), "--preset", "full", "--non-interactive", "--dry-run"],
             capture_output=True,
             text=True,
             cwd=workspace_root,
@@ -89,7 +101,7 @@ def test_workspace_status_after_init() -> None:
 
         # Initialize
         subprocess.run(
-            ["uv", "run", "agentic-workspace", "init", "--target", str(target), "--preset", "full"],
+            ["uv", "run", "agentic-workspace", "init", "--target", str(target), "--preset", "full", "--non-interactive"],
             capture_output=True,
             text=True,
             cwd=workspace_root,
@@ -98,7 +110,19 @@ def test_workspace_status_after_init() -> None:
 
         # Check status
         result = subprocess.run(
-            ["uv", "run", "agentic-workspace", "status", "--target", str(target), "--preset", "full", "--format", "json"],
+            [
+                "uv",
+                "run",
+                "agentic-workspace",
+                "status",
+                "--target",
+                str(target),
+                "--preset",
+                "full",
+                "--non-interactive",
+                "--format",
+                "json",
+            ],
             capture_output=True,
             text=True,
             cwd=workspace_root,

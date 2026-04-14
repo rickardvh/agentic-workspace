@@ -32,14 +32,14 @@
 ## Active Milestone
 
 - Status: in-progress
-- Scope: implement the jumpstart command tranche first, then the execplan guidance tranche, then memory doctor signal tuning.
+- Scope: implement the setup command tranche first, then the execplan guidance tranche, then memory doctor signal tuning.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Implement a public `agentic-workspace jumpstart` command that stays separate from `proof` and can say when no new seed surfaces are needed.
+- Implement a public `agentic-workspace setup` command that stays separate from `proof` and can say when no new seed surfaces are needed.
 
 ## Blockers
 
@@ -63,27 +63,27 @@
 
 - Issue work proceeds in roadmap priority order.
 - Each milestone gets its own commit.
-- Jumpstart remains bounded and distinct from proof.
+- Setup remains bounded and distinct from proof.
 - Existing repo-owned config and planning contracts stay authoritative.
 
 ## Contract Decisions To Freeze
 
-- Jumpstart gets a real public command instead of relying on `defaults` as a concept-only surface.
-- The jumpstart command should stay compact and should not spill into the full proof backlog.
+- Setup gets a real public command instead of relying on `defaults` as a concept-only surface.
+- The setup command should stay compact and should not spill into the full proof backlog.
 - Mature repos should be able to get an explicit no-new-seed-surface result.
 - Repo-owned execplan upgrades should surface clearer guidance rather than only generic drift pressure.
 - Memory doctor should keep useful warnings while lowering low-signal overlap pressure for mature custom corpora.
 
 ## Open Questions To Close
 
-- What exact compact shape should the new `jumpstart` command expose?
-- Which jumpstart recommendation, if any, should `skills --task jumpstart` surface?
+- What exact compact shape should the new `setup` command expose?
+- Which setup recommendation, if any, should `skills --task setup` surface?
 - Which execplan upgrade warnings should become migration hints versus standard drift?
 - Which memory doctor advisories should be downgraded or reclassified for mature corpora?
 
 ## Validation Commands
 
-- `uv run pytest tests/test_workspace_cli.py -q -k "jumpstart or config_command or skills"`
+- `uv run pytest tests/test_workspace_cli.py -q -k "setup or config_command or skills"`
 - `uv run pytest tests/test_maintainer_surfaces.py -q`
 - `uv run pytest packages/planning/tests/test_installer.py -q -k "render_wrapper or config or upgrade"`
 - `uv run pytest packages/memory/tests -q`

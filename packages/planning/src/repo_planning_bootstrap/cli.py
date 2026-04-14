@@ -182,6 +182,10 @@ def _print_summary(summary: dict) -> None:
         print(f"- Next action: {planning_record['next_action']}")
         print(f"- Continuation owner: {planning_record['continuation_owner']}")
         print(f"- Proof expectations: {', '.join(planning_record['proof_expectations'])}")
+        tool_verification = planning_record.get("tool_verification", {})
+        required_tools = tool_verification.get("required_tools", [])
+        if required_tools:
+            print(f"- Required tools: {', '.join(required_tools)}")
     elif planning_record:
         print(f"Planning record: {planning_record.get('status')} ({planning_record.get('reason', 'no compact record available')})")
     active_contract = summary.get("active_contract", {})
@@ -215,6 +219,7 @@ def _build_prompt(command: str, target: str | None) -> str:
     source = resolve_upgrade_source(target)
     runner = _preferred_runner(source)
     target_args = f" --target {target}" if target else ""
+    non_interactive_args = " --non-interactive"
     if command == "install":
         if runner is None:
             return (
@@ -223,7 +228,7 @@ def _build_prompt(command: str, target: str | None) -> str:
                 "or publish a tagged release before relying on remote `prompt install` workflows."
             )
         return (
-            f"Run `{runner} install{target_args}`. "
+            f"Run `{runner} install{target_args}{non_interactive_args}`. "
             "Then customise `AGENTS.md`, prune starter placeholders, and run "
             "`python scripts/render_agent_docs.py` plus "
             "`python scripts/check/check_maintainer_surfaces.py` inside the target repo."
@@ -236,7 +241,7 @@ def _build_prompt(command: str, target: str | None) -> str:
                 "or publish a tagged release before relying on remote `prompt adopt` workflows."
             )
         return (
-            f"Run `{runner} adopt{target_args}` conservatively. "
+            f"Run `{runner} adopt{target_args}{non_interactive_args}` conservatively. "
             "Do not overwrite repo-owned planning files unless the user asks for it. "
             "Afterwards run `python scripts/render_agent_docs.py` and "
             "`python scripts/check/check_maintainer_surfaces.py` inside the target repo."
@@ -245,21 +250,21 @@ def _build_prompt(command: str, target: str | None) -> str:
         upgrade_guidance = (
             f"Use the checked-in `bootstrap-upgrade` skill under `{_managed_skills_path(target)}/`. "
             "It should use the repo's `.agentic-workspace/planning/UPGRADE-SOURCE.toml`, prefer an installed "
-            "`agentic-planning-bootstrap` command when available, and rerun render/check validation. "
+            "`agentic-planning-bootstrap` command with `--non-interactive` when available, and rerun render/check validation. "
             "If `doctor` still flags older active execplans, reconcile those plans to the current contract by "
             "adding or refreshing `Intent Continuity`, `Required Continuation`, `Delegated Judgment`, "
             "`Active Milestone`, and `Execution Summary` instead of treating the upgrade as broken."
         )
         if runner is None:
             return upgrade_guidance
-        return upgrade_guidance + f" If a local install is unavailable, fall back to `{runner} upgrade --target <repo>`."
+        return upgrade_guidance + f" If a local install is unavailable, fall back to `{runner} upgrade --target <repo> --non-interactive`."
     if runner is None:
         return (
             "No pinned remote runner is published for this bootstrap version yet. "
             "Use an installed `agentic-planning-bootstrap` command if it is already available locally."
         )
     return (
-        f"Run `{runner} adopt{target_args}` conservatively. "
+        f"Run `{runner} adopt{target_args}{non_interactive_args}` conservatively. "
         "Do not overwrite repo-owned planning files unless the user asks for it. "
         "Afterwards run `python scripts/render_agent_docs.py` and "
         "`python scripts/check/check_maintainer_surfaces.py` inside the target repo."

@@ -18,6 +18,11 @@ Use:
 agentic-planning-bootstrap summary --format json
 ```
 
+That summary now carries a top-level schema envelope:
+
+- `kind = "planning-summary/v1"`
+- `schema.schema_version = "planning-summary-schema/v1"`
+
 The `planning_record` object is the compact machine-readable active record for current work when planning has one active TODO item and one active execplan. The `resumable_contract` object remains the thinner restart view over that canonical record.
 
 The resumable view currently carries:
@@ -26,6 +31,7 @@ The resumable view currently carries:
 - `active_milestone`
 - `completion_criteria`
 - `proof_expectations`
+- `tool_verification`
 - `escalate_when`
 - `blockers`
 - `minimal_refs`
@@ -38,6 +44,8 @@ The resumable view currently carries:
 - Derive the canonical planning record and its views from existing execplan sections instead of requiring a new section.
 - Treat it as unavailable when active planning is ambiguous or under-specified rather than fabricating restart certainty.
 - Preserve proof and escalation boundaries explicitly so a weaker or later agent does not have to infer them from prose.
+- Keep tool verification advisory in the first slice: declare required tools clearly, then stop or escalate when they are unavailable.
+- If the runtime also used native planning artifacts, make sure the resumable view has already absorbed the durable next step before relying on cross-agent continuation.
 
 ## Relationship To Other Contracts
 

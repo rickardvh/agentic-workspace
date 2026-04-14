@@ -110,6 +110,10 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 
 - uv run pytest tests/test_check_planning_surfaces.py
 
+## Required Tools
+
+- None.
+
 ## Completion Criteria
 
 - Warning classes are emitted for known drift.
@@ -122,6 +126,25 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 
 - 2026-04-04: Initial plan created.
 """
+
+
+def _minimal_execplan_with_required_tools(status: str = "in-progress") -> str:
+    return _minimal_execplan(status=status).replace("## Required Tools\n\n- None.\n", "## Required Tools\n\n- browser\n- gh\n")
+
+
+def _rename_like_execplan(*, status: str = "completed", with_reference_sweep: bool = False) -> str:
+    plan = _minimal_execplan(status=status).replace("- Keep scope clear.", "- Rename the stale planning surface cleanly.")
+    if with_reference_sweep:
+        plan = plan.replace(
+            "- uv run pytest tests/test_check_planning_surfaces.py",
+            "- uv run pytest tests/test_check_planning_surfaces.py\n- rg old-planning-surface docs scripts",
+            1,
+        )
+        plan = plan.replace(
+            "- Validation confirmed: uv run pytest tests/test_check_planning_surfaces.py",
+            "- Validation confirmed: uv run pytest tests/test_check_planning_surfaces.py; rg old-planning-surface docs scripts",
+        )
+    return plan
 
 
 def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
@@ -464,6 +487,8 @@ def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
     assert "## Delegated Judgment" in text
     assert "Requested outcome" in text
     assert "Agent may decide locally" in text
+    assert "required tools" in text
+    assert "Native runtime artifacts such as `implementation_plan.md`" in text
     assert "## Execution Summary" in text
     assert "Outcome delivered" in text
 
@@ -475,6 +500,7 @@ def test_bootstrap_execution_summary_contract_is_part_of_payload() -> None:
     assert "## Canonical Shape" in text
     assert "Outcome delivered" in text
     assert "Validation confirmed" in text
+    assert "stale-reference sweep" in text
     assert "Follow-on routed to" in text
     assert "Resume from" in text
     assert Path("docs/execution-summary-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
@@ -485,6 +511,9 @@ def test_bootstrap_intent_contract_is_part_of_payload() -> None:
 
     assert "planning_record" in text
     assert "active_contract" in text
+    assert "planning-summary-schema/v1" in text
+    assert "tool_verification" in text
+    assert "native planning artifacts" in text
     assert "agentic-planning-bootstrap summary --format json" in text
     assert Path("docs/intent-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
@@ -495,6 +524,9 @@ def test_bootstrap_resumable_execution_contract_is_part_of_payload() -> None:
     assert "planning_record" in text
     assert "resumable_contract" in text
     assert "current_next_action" in text
+    assert "planning-summary-schema/v1" in text
+    assert "tool_verification" in text
+    assert "runtime also used native planning artifacts" in text
     assert Path("docs/resumable-execution-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
@@ -963,6 +995,36 @@ def test_archive_execplan_blocks_missing_delegated_judgment(tmp_path: Path) -> N
     )
 
 
+def test_archive_execplan_blocks_rename_like_work_without_reference_sweep(tmp_path: Path) -> None:
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
+    _write(plan_path, _rename_like_execplan())
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_missing_closure_check" for warning in result.warnings)
+    assert any(
+        action.kind == "manual review" and action.path == plan_path and "stale-reference sweep" in action.detail
+        for action in result.actions
+    )
+
+
+def test_archive_execplan_allows_rename_like_work_with_reference_sweep(tmp_path: Path) -> None:
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
+    _write(plan_path, _rename_like_execplan(with_reference_sweep=True))
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+    archived_path = tmp_path / "docs" / "execplans" / "archive" / "plan-alpha.md"
+
+    assert archived_path.exists()
+    assert not plan_path.exists()
+    assert any(action.kind == "moved" and action.path == archived_path for action in result.actions)
+
+
 def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_path: Path) -> None:
     _write(
         tmp_path / "TODO.md",
@@ -1255,7 +1317,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
 
 ## Next Candidate Queue
 
-- Candidate alpha: promote when maintained report signal appears.
+- Priority 1: Candidate alpha; promote when maintained report signal appears.
 
 ## Reopen Conditions
 
@@ -1266,6 +1328,10 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
 
     summary = planning_summary(target=tmp_path)
 
+    assert summary["kind"] == "planning-summary/v1"
+    assert summary["schema"]["schema_version"] == "planning-summary-schema/v1"
+    assert summary["schema"]["command"] == "agentic-planning-bootstrap summary --format json"
+    assert "planning_record" in summary["schema"]["shared_fields"]
     assert summary["todo"]["active_count"] == 1
     assert summary["execplans"]["active_count"] == 1
     assert summary["planning_record"]["status"] == "present"
@@ -1285,6 +1351,8 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["active_contract"]["todo_item"]["id"] == "plan-alpha"
     assert summary["active_contract"]["intent"]["requested_outcome"] == "Keep scope clear."
     assert summary["active_contract"]["proof_expectations"] == ["uv run pytest tests/test_check_planning_surfaces.py"]
+    assert summary["active_contract"]["tool_verification"]["status"] == "unspecified"
+    assert summary["active_contract"]["tool_verification"]["required_tools"] == []
     assert summary["active_contract"]["touched_scope"] == ["scripts/check/check_planning_surfaces.py"]
     assert summary["active_contract"]["minimal_refs"] == ["TODO.md", "docs/execplans/plan-alpha.md"]
     assert summary["resumable_contract"]["status"] == "present"
@@ -1292,8 +1360,41 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["resumable_contract"]["current_next_action"] == "Add one checker."
     assert summary["resumable_contract"]["active_milestone"]["scope"] == "maintain planning discipline."
     assert summary["resumable_contract"]["completion_criteria"] == ["Warning classes are emitted for known drift."]
+    assert summary["resumable_contract"]["tool_verification"]["status"] == "unspecified"
     assert summary["roadmap"]["candidate_count"] == 1
+    assert summary["roadmap"]["candidates"] == [
+        {
+            "priority": "1",
+            "summary": "Candidate alpha; promote when maintained report signal appears.",
+        }
+    ]
     assert summary["warning_count"] == 0
+
+
+def test_planning_summary_reports_required_tools_when_execplan_declares_them(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: docs/execplans/plan-alpha.md
+  Why now: promote when maintained report signal appears.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan_with_required_tools())
+
+    summary = planning_summary(target=tmp_path)
+
+    assert summary["planning_record"]["tool_verification"]["status"] == "required-tools-declared"
+    assert summary["planning_record"]["tool_verification"]["required_tools"] == ["browser", "gh"]
+    assert summary["active_contract"]["tool_verification"]["required_tools"] == ["browser", "gh"]
+    assert summary["resumable_contract"]["tool_verification"]["required_tools"] == ["browser", "gh"]
 
 
 def test_planning_summary_can_expose_active_contract_from_execplan_without_todo_row(tmp_path: Path) -> None:
@@ -1314,6 +1415,18 @@ def test_planning_summary_can_expose_active_contract_from_execplan_without_todo_
     assert summary["resumable_contract"]["status"] == "present"
     assert summary["active_contract"]["todo_item"]["id"] == ""
     assert summary["active_contract"]["minimal_refs"] == ["TODO.md", "docs/execplans/plan-alpha.md"]
+
+
+def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+
+    summary = planning_summary(target=tmp_path)
+
+    assert summary["schema"]["view_fields"]["planning_record"][0] == "task"
+    assert "tool_verification" in summary["schema"]["view_fields"]["planning_record"]
+    assert "tool_verification" in summary["schema"]["view_fields"]["resumable_contract"]
 
 
 def test_planning_summary_human_view_starts_with_planning_record(tmp_path: Path, capsys) -> None:
@@ -1372,3 +1485,28 @@ def test_summary_text_prints_planning_record_before_contract_views(tmp_path: Pat
     assert "Resumable contract view:" in captured
     assert captured.index("Planning record:") < captured.index("Active contract view:")
     assert "- Next action: Add one checker." in captured
+
+
+def test_summary_text_prints_required_tools_when_declared(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: docs/execplans/plan-alpha.md
+  Why now: promote when maintained report signal appears.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan_with_required_tools())
+
+    exit_code = planning_cli.main(["summary", "--target", str(tmp_path)])
+    captured = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "- Required tools: browser, gh" in captured
