@@ -1340,10 +1340,23 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["command"] == "report"
     assert payload["schema"]["schema_version"] == "workspace-reporting-schema/v1"
     assert payload["schema"]["command"] == "agentic-workspace report --target ./repo --format json"
+    assert "discovery" in payload["schema"]["shared_fields"]
     assert payload["selected_modules"] == ["planning", "memory"]
     assert payload["installed_modules"] == ["planning", "memory"]
     assert payload["health"] == "healthy"
     assert payload["next_action"]["summary"] == "No immediate action"
+    assert any(
+        item["surface"]
+        in {
+            "docs/delegated-judgment-contract.md",
+            "docs/resumable-execution-contract.md",
+            "docs/capability-aware-execution.md",
+            "docs/execution-summary-contract.md",
+        }
+        for item in payload["discovery"]["memory_candidates"]
+    )
+    assert any(item["surface"] == "TODO.md" for item in payload["discovery"]["planning_candidates"])
+    assert any(item["surface"] == "ROADMAP.md" for item in payload["discovery"]["ambiguous"])
     assert payload["reports"][0]["module"] == "planning"
     assert payload["config"]["mixed_agent"]["status"] == "reporting-only"
 

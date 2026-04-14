@@ -1823,6 +1823,7 @@ def _run_report_command(
         "commands": next_steps,
     }
     installed_modules = [entry["name"] for entry in status_payload.get("registry", []) if entry.get("installed")]
+    discovery = _jumpstart_discovery_payload(target_root=target_root, status_payload=status_payload)
     return {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -1833,10 +1834,130 @@ def _run_report_command(
         "health": status_payload["health"],
         "findings": findings,
         "next_action": next_action,
+        "discovery": discovery,
         "registry": status_payload["registry"],
         "config": status_payload["config"],
         "reports": status_payload["reports"],
     }
+
+
+def _jumpstart_discovery_payload(*, target_root: Path, status_payload: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    memory_candidates: list[dict[str, Any]] = []
+    planning_candidates: list[dict[str, Any]] = []
+    ambiguous: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def _add_candidate(
+        bucket: list[dict[str, Any]],
+        *,
+        surface: str,
+        reason: str,
+        confidence: float,
+        refs: list[str],
+    ) -> None:
+        key = (surface, reason)
+        if key in seen:
+            return
+        seen.add(key)
+        bucket.append(
+            {
+                "surface": surface,
+                "reason": reason,
+                "confidence": confidence,
+                "refs": refs,
+            }
+        )
+
+    for surface, reason, confidence, refs in (
+        (
+            "docs/delegated-judgment-contract.md",
+            "bounded human/agent decision boundaries",
+            0.94,
+            ["docs/delegated-judgment-contract.md"],
+        ),
+        (
+            "docs/resumable-execution-contract.md",
+            "restart and continuation boundaries",
+            0.91,
+            ["docs/resumable-execution-contract.md"],
+        ),
+        (
+            "docs/capability-aware-execution.md",
+            "task-shape and capability-fit rules",
+            0.89,
+            ["docs/capability-aware-execution.md"],
+        ),
+        (
+            "docs/execution-summary-contract.md",
+            "compact execution outcome and follow-through shape",
+            0.87,
+            ["docs/execution-summary-contract.md"],
+        ),
+    ):
+        if (target_root / surface).exists():
+            _add_candidate(memory_candidates, surface=surface, reason=reason, confidence=confidence, refs=refs)
+
+    if (target_root / "TODO.md").exists():
+        _add_candidate(
+            planning_candidates,
+            surface="TODO.md",
+            reason="active queue carries the current work slice",
+            confidence=0.94,
+            refs=["TODO.md"],
+        )
+    todo_surface = _active_todo_surface(target_root=target_root)
+    if todo_surface and todo_surface != "TODO.md" and (target_root / todo_surface).exists():
+        _add_candidate(
+            planning_candidates,
+            surface=todo_surface,
+            reason="active execplan carries the current bounded work slice",
+            confidence=0.96,
+            refs=[todo_surface, "TODO.md"],
+        )
+
+    if (target_root / "ROADMAP.md").exists():
+        _add_candidate(
+            ambiguous,
+            surface="ROADMAP.md",
+            reason="long-horizon follow-ons should not be seeded without promotion",
+            confidence=0.82,
+            refs=["ROADMAP.md"],
+        )
+
+    for warning in status_payload.get("warnings", []):
+        if isinstance(warning, dict):
+            surface = str(warning.get("path") or "workspace")
+            message = str(warning.get("message") or "requires review")
+        else:
+            surface = "workspace"
+            message = str(warning)
+        _add_candidate(
+            ambiguous,
+            surface=surface,
+            reason=message,
+            confidence=0.5,
+            refs=[surface],
+        )
+
+    return {
+        "memory_candidates": memory_candidates,
+        "planning_candidates": planning_candidates,
+        "ambiguous": ambiguous,
+    }
+
+
+def _active_todo_surface(*, target_root: Path) -> str | None:
+    todo_path = target_root / "TODO.md"
+    if not todo_path.exists():
+        return None
+    surface_pattern = re.compile(r"Surface:\s*`?([^`;]+?)`?(?:;|$)")
+    for line in todo_path.read_text(encoding="utf-8").splitlines():
+        if "Status: active" not in line or "Surface:" not in line:
+            continue
+        match = surface_pattern.search(line)
+        if match:
+            return match.group(1).strip()
+    return None
 
 
 def _bootstrap_intent_payload(*, selected_modules: list[str], resolved_preset: str | None) -> dict[str, str]:
@@ -2197,6 +2318,7 @@ def _reporting_schema_payload() -> dict[str, Any]:
             "health",
             "findings",
             "next_action",
+            "discovery",
             "registry",
             "config",
             "reports",
@@ -2206,6 +2328,7 @@ def _reporting_schema_payload() -> dict[str, Any]:
             "derive module and workspace summaries from canonical surfaces",
             "prefer one report surface over reading raw module files first",
             "keep findings, warnings, and next-action guidance explicitly separated",
+            "treat jumpstart discovery as pre-write and pre-seed only",
         ],
     }
 
@@ -4112,6 +4235,23 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
             print("Commands:")
             for command in commands:
                 print(f"- {command}")
+    discovery = payload.get("discovery", {})
+    if isinstance(discovery, dict):
+        for bucket_name, heading in (
+            ("memory_candidates", "Memory candidates"),
+            ("planning_candidates", "Planning candidates"),
+            ("ambiguous", "Ambiguous areas"),
+        ):
+            bucket = discovery.get(bucket_name, [])
+            if not isinstance(bucket, list) or not bucket:
+                continue
+            print(f"{heading}:")
+            for item in bucket:
+                if not isinstance(item, dict):
+                    continue
+                surface = item.get("surface", "")
+                reason = item.get("reason", "")
+                print(f"- {surface}: {reason}")
     findings = payload.get("findings", [])
     if isinstance(findings, list) and findings:
         print("Findings:")

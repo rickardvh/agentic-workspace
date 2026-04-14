@@ -54,3 +54,4 @@ The text form should stay short and stable:
 
 - Use [`docs/default-path-contract.md`](docs/default-path-contract.md) for the front-door route selection contract.
 - Use [`docs/init-lifecycle.md`](docs/init-lifecycle.md) for the lifecycle boundary between `init` and post-bootstrap follow-through.
+- Use [`docs/reporting-contract.md`](docs/reporting-contract.md) for the pre-write discovery report that classifies candidate Memory and Planning seeds before any state is written.
