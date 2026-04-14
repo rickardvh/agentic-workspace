@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
+import repo_planning_bootstrap._render as render_module
 import repo_planning_bootstrap.installer as installer_mod
 from repo_planning_bootstrap._ownership import module_root as planning_module_root
 from repo_planning_bootstrap.installer import (
@@ -401,6 +403,10 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     readme_text = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
     bootstrap_agents_text = (installer_mod.payload_root() / "AGENTS.md").read_text(encoding="utf-8")
     execplans_readme_text = (installer_mod.payload_root() / "docs" / "execplans" / "README.md").read_text(encoding="utf-8")
+    manifest_payload = json.loads(
+        (installer_mod.payload_root() / ".agentic-workspace" / "planning" / "agent-manifest.json").read_text(encoding="utf-8")
+    )
+    quickstart_text = render_module.render_quickstart(manifest_payload)
 
     assert "Execplans now treat three fields as first-class" in readme_text
     assert "clear the matched queue residue in the same pass" in readme_text
@@ -411,6 +417,13 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "remove or archive the matched planning residue in the same pass" in bootstrap_agents_text
     assert "record the required next owner and activation trigger explicitly before archive" in bootstrap_agents_text
     assert "remove or archive the matched queue residue in the same pass" in execplans_readme_text
+    assert any(
+        "prefer `agentic-workspace defaults --format json`, then use `llms.txt` or `AGENTS.md` when those surfaces are present" in item
+        for item in manifest_payload["bootstrap"]["conditional_reads"]
+    )
+    assert any("clear the matched queue residue in the same pass" in item for item in manifest_payload["bootstrap"]["completion_reminders"])
+    assert "agentic-workspace defaults --format json" in quickstart_text
+    assert "clear the matched queue residue in the same pass" in quickstart_text
 
 
 def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:

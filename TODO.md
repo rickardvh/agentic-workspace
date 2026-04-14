@@ -11,9 +11,10 @@ Active queue for repository work.
 - No active work right now.
 ## Action
 
-- Promote the next bounded roadmap candidate when new active work is needed.
+- Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation.
 ## Done
 
+- cross-agent-workflow-robustness-hardening: Completed (tightened the machine-readable workflow-recovery and completion cues, kept the workspace default recovery rule selective-adoption-safe, and archived the slice while leaving broader mixed-agent follow-through in `ROADMAP.md`)
 - portability-evidence-review: Completed (reviewed the current portability claims against fresh clean-room first-party install proof plus the extension-boundary docs, tightened the canonical doctrine to distinguish proven first-party portability from still-unproven broader ecosystem portability, and cleared the highest-priority queue)
 - selective-adoption-proof-refresh: Completed (ran fresh clean-room `memory`, `planning`, and `full` installs through `agentic-workspace init`, fixed optional-memory append noise in blank repos, narrowed the planning startup checker so generic READMEs and starter TODO hygiene text no longer trigger false drift, and confirmed the remaining clean-room follow-up is expected starter customization rather than contract inconsistency)
 - cross-agent-handoff-quality-audit: Completed (audited the external-agent and restart surfaces, found a real `llms.txt` drift against the current workspace contract, refreshed the root handoff file through the canonical workspace upgrade path, confirmed the handoff warning cleared, and routed the remaining AGENTS-preservation concern into bootstrap-hardening follow-through instead of keeping this broader lane open)

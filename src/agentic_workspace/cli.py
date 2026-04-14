@@ -2064,6 +2064,14 @@ def _defaults_payload() -> dict[str, Any]:
                 "Read package-local `AGENTS.md` only for the package being edited.",
                 "Read memory only when installed and the task needs durable context.",
             ],
+            "workflow_recovery": [
+                (
+                    "When startup or workflow routing is unclear, prefer "
+                    "`agentic-workspace defaults --format json`, then use `llms.txt` "
+                    "or `AGENTS.md` when those surfaces are present, before "
+                    "repo-local workaround guidance."
+                ),
+            ],
         },
         "lifecycle": {
             "primary_entrypoint": "agentic-workspace",
@@ -2241,6 +2249,14 @@ def _defaults_payload() -> dict[str, Any]:
                 ".agentic-workspace/bootstrap-handoff.md",
             ],
         },
+        "completion": {
+            "rule": "When a completed slice came from TODO.md or ROADMAP.md, clear the matched queue residue in the same pass.",
+            "prefer_surfaces": [
+                "TODO.md",
+                "ROADMAP.md",
+                "docs/execplans/README.md",
+            ],
+        },
         "delegated_judgment": {
             "canonical_doc": "docs/delegated-judgment-contract.md",
             "rule": "Improve means locally; do not silently rewrite ends locally.",
@@ -2283,6 +2299,8 @@ def _emit_defaults(*, format_name: str) -> None:
     print("Startup:")
     for step in payload["startup"]["primary"]:
         print(f"- {step}")
+    for step in payload["startup"].get("workflow_recovery", []):
+        print(f"- {step}")
     print("Lifecycle:")
     print(f"- primary entrypoint: {payload['lifecycle']['primary_entrypoint']}")
     print(f"- install: {payload['lifecycle']['default_install_command']}")
@@ -2315,6 +2333,8 @@ def _emit_defaults(*, format_name: str) -> None:
     print("Recovery:")
     print(f"- doc: {payload['recovery']['canonical_doc']}")
     print(f"- rule: {payload['recovery']['rule']}")
+    print("Completion:")
+    print(f"- rule: {payload['completion']['rule']}")
     print("Delegated judgment:")
     print(f"- doc: {payload['delegated_judgment']['canonical_doc']}")
     print(f"- rule: {payload['delegated_judgment']['rule']}")

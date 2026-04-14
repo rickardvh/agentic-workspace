@@ -15,6 +15,7 @@
       "Read the active feature plan in `docs/execplans/` when the task belongs to one.",
       "Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.",
       "Read `docs/upstream-task-intake.md` when triaging external issues or tasks into checked-in planning.",
+      "When startup or workflow routing is unclear, prefer `agentic-workspace defaults --format json`, then use `llms.txt` or `AGENTS.md` when those surfaces are present, before repo-local workaround guidance.",
       "When the task is clearly review-shaped, check `agentic-workspace skills --target ./repo --task \"<task>\" --format json` before falling back to generic reasoning so bundled review skills stay cheaper to use than rediscovery.",
       "Read `docs/capability-aware-execution.md` when task capability fit, delegation, or escalation is unclear, especially when the question is whether to silently reshape the work instead of prompting for a stronger executor.",
       "Read `docs/environment-recovery-contract.md` when interruption handling, environment assumptions, or recovery shape is unclear.",
@@ -38,6 +39,7 @@
     ],
     "completion_reminders": [
       "Do not leave completed task detail in `TODO.md` once it no longer changes execution.",
+      "If the completed slice came from `TODO.md` or `ROADMAP.md`, clear the matched queue residue in the same pass.",
       "When direct execution changes durable knowledge or leaves meaningful follow-up, record only that minimal residue in memory, canonical docs, `ROADMAP.md`, or a promoted execplan."
     ],
     "generated_surfaces": [

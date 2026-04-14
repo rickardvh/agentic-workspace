@@ -131,6 +131,14 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "agentic-workspace doctor --target ./repo",
     ]
     assert ".agentic-workspace/bootstrap-handoff.md" in payload["recovery"]["handoff_surfaces"]
+    assert payload["completion"]["rule"] == (
+        "When a completed slice came from TODO.md or ROADMAP.md, clear the matched queue residue in the same pass."
+    )
+    assert payload["completion"]["prefer_surfaces"] == [
+        "TODO.md",
+        "ROADMAP.md",
+        "docs/execplans/README.md",
+    ]
     assert payload["delegated_judgment"]["canonical_doc"] == "docs/delegated-judgment-contract.md"
     assert payload["delegated_judgment"]["rule"] == "Improve means locally; do not silently rewrite ends locally."
     assert "requested outcome" in payload["delegated_judgment"]["human_sets"]
@@ -168,6 +176,14 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["config"]["command"] == "agentic-workspace config --target ./repo --format json"
     assert "workspace.default_preset" in payload["config"]["supported_fields"]
     assert any("ROADMAP.md" in step for step in payload["startup"]["secondary"])
+    assert payload["startup"]["workflow_recovery"] == [
+        (
+            "When startup or workflow routing is unclear, prefer "
+            "`agentic-workspace defaults --format json`, then use `llms.txt` "
+            "or `AGENTS.md` when those surfaces are present, before "
+            "repo-local workaround guidance."
+        ),
+    ]
     assert any("skills --target ./repo --task" in step for step in payload["skill_discovery"]["primary"])
 
 
@@ -176,6 +192,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
 
     text = capsys.readouterr().out
     assert "Startup:" in text
+    assert "agentic-workspace defaults --format json" in text
     assert "Lifecycle:" in text
     assert "primary entrypoint: agentic-workspace" in text
     assert "Proof surfaces:" in text
@@ -185,6 +202,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Combined install:" in text
     assert "Recovery:" in text
     assert "docs/environment-recovery-contract.md" in text
+    assert "Completion:" in text
     assert "Config:" in text
     assert "Delegated judgment:" in text
     assert "Delegated judgment follow-through:" in text
