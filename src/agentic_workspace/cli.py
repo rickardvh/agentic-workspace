@@ -6,7 +6,7 @@ import json
 import re
 import tomllib
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -38,7 +38,12 @@ WORKSPACE_LOCAL_CONFIG_PATH = Path("agentic-workspace.local.toml")
 WORKSPACE_EXTERNAL_AGENT_PATH = Path("llms.txt")
 WORKSPACE_BOOTSTRAP_HANDOFF_PATH = Path(".agentic-workspace/bootstrap-handoff.md")
 WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH = Path(".agentic-workspace/bootstrap-handoff.json")
-WORKSPACE_AGENTS_PATH = Path("AGENTS.md")
+DEFAULT_AGENT_INSTRUCTIONS_FILE = "AGENTS.md"
+SUPPORTED_AGENT_INSTRUCTIONS_FILES = (
+    "AGENTS.md",
+    "GEMINI.md",
+)
+WORKSPACE_AGENTS_PATH = Path(DEFAULT_AGENT_INSTRUCTIONS_FILE)
 WORKSPACE_HANDOFF_SURFACES = (
     WORKSPACE_EXTERNAL_AGENT_PATH,
     WORKSPACE_BOOTSTRAP_HANDOFF_PATH,
@@ -187,6 +192,9 @@ class WorkspaceConfig:
     exists: bool
     schema_version: int
     default_preset: str
+    agent_instructions_file: str
+    agent_instructions_source: str
+    detected_agent_instructions_files: tuple[str, ...]
     update_modules: dict[str, ModuleUpdatePolicy]
     local_override: "MixedAgentLocalOverride"
 
@@ -264,6 +272,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     init_parser = subparsers.add_parser("init", help="Bootstrap selected modules into a target repository.")
     _add_selection_arguments(init_parser)
+    init_parser.add_argument(
+        "--agent-instructions-file",
+        help="Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md).",
+    )
     init_parser.add_argument("--adopt", action="store_true", help="Force conservative adopt behavior.")
     init_parser.add_argument("--dry-run", action="store_true", help="Show planned changes without mutating files.")
     init_parser.add_argument("--print-prompt", action="store_true", help="Print the generated handoff prompt.")
@@ -273,6 +285,10 @@ def build_parser() -> argparse.ArgumentParser:
     prompt_subparsers = prompt_parser.add_subparsers(dest="prompt_command", required=True)
     prompt_init_parser = prompt_subparsers.add_parser("init", help="Print the workspace bootstrap handoff prompt.")
     _add_selection_arguments(prompt_init_parser)
+    prompt_init_parser.add_argument(
+        "--agent-instructions-file",
+        help="Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md).",
+    )
     prompt_init_parser.add_argument("--adopt", action="store_true", help="Force conservative adopt behavior.")
     prompt_upgrade_parser = prompt_subparsers.add_parser("upgrade", help="Print the workspace upgrade handoff prompt.")
     _add_selection_arguments(prompt_upgrade_parser)
@@ -305,6 +321,35 @@ def _add_selection_arguments(parser: argparse.ArgumentParser) -> None:
 
 def _add_format_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--format", choices=("text", "json"), default="text", help="Output format.")
+
+
+def _validate_agent_instructions_filename(filename: str) -> str:
+    normalized = filename.strip()
+    if normalized not in SUPPORTED_AGENT_INSTRUCTIONS_FILES:
+        supported = ", ".join(SUPPORTED_AGENT_INSTRUCTIONS_FILES)
+        raise WorkspaceUsageError(f"agent instructions filename must be one of: {supported}.")
+    return normalized
+
+
+def _detected_agent_instruction_files(*, target_root: Path) -> tuple[str, ...]:
+    return tuple(name for name in SUPPORTED_AGENT_INSTRUCTIONS_FILES if (target_root / name).exists())
+
+
+def _resolve_effective_agent_instructions_file(*, target_root: Path, configured: str | None) -> tuple[str, str, tuple[str, ...]]:
+    detected = _detected_agent_instruction_files(target_root=target_root)
+    if configured is not None:
+        return configured, "repo-config", detected
+    if len(detected) == 1:
+        return detected[0], "autodetected-existing", detected
+    return DEFAULT_AGENT_INSTRUCTIONS_FILE, "product-default", detected
+
+
+def _with_agent_instructions_file(config: WorkspaceConfig, *, filename: str, source: str) -> WorkspaceConfig:
+    return replace(
+        config,
+        agent_instructions_file=filename,
+        agent_instructions_source=source,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -365,6 +410,13 @@ def main(argv: list[str] | None = None) -> int:
         target_root = _resolve_target_root(args.target)
         _validate_target_root(command_name=args.command, target_root=target_root)
         config = _load_workspace_config(target_root=target_root, descriptors=descriptors)
+        explicit_agent_instructions_file = getattr(args, "agent_instructions_file", None)
+        if explicit_agent_instructions_file:
+            config = _with_agent_instructions_file(
+                config,
+                filename=_validate_agent_instructions_filename(explicit_agent_instructions_file),
+                source="explicit-argument",
+            )
         selected_modules, resolved_preset = _selected_modules(
             command_name=args.command,
             preset_name=args.preset,
@@ -674,8 +726,13 @@ def _workspace_report(
     }
 
 
-def _workspace_agents_template(*, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]) -> str:
-    startup_steps = ["Read `AGENTS.md`."]
+def _workspace_agents_template(
+    *,
+    selected_modules: list[str],
+    descriptors: dict[str, ModuleDescriptor],
+    agent_instructions_file: str = DEFAULT_AGENT_INSTRUCTIONS_FILE,
+) -> str:
+    startup_steps = [f"Read `{agent_instructions_file}`."]
     sources_of_truth: list[str] = []
     repo_rules = [
         "Keep package boundaries explicit.",
@@ -707,7 +764,7 @@ def _workspace_agents_template(*, selected_modules: list[str], descriptors: dict
             "## Precedence",
             "",
             "1. Explicit user request.",
-            "2. `AGENTS.md`.",
+            f"2. `{agent_instructions_file}`.",
             "3. Package-local `AGENTS.md` under `packages/*/` once imported.",
             "4. Routed memory or canonical repo docs when present.",
             "",
@@ -787,7 +844,11 @@ def _workspace_status_report(
 ) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
-    expected_handoff = _external_agent_handoff_text(selected_modules=selected_modules)
+    expected_handoff = _external_agent_handoff_text(
+        selected_modules=selected_modules,
+        agent_instructions_file=config.agent_instructions_file,
+    )
+    agents_relative = Path(config.agent_instructions_file)
 
     for relative in WORKSPACE_PAYLOAD_FILES:
         path = target_root / relative
@@ -802,10 +863,10 @@ def _workspace_status_report(
         if not exists:
             warnings.append({"path": relative.as_posix(), "message": "required workspace file missing"})
 
-    agents_path = target_root / WORKSPACE_AGENTS_PATH
+    agents_path = target_root / agents_relative
     if not agents_path.exists():
-        actions.append({"kind": "missing", "path": WORKSPACE_AGENTS_PATH.as_posix(), "detail": "root AGENTS.md entrypoint missing"})
-        warnings.append({"path": WORKSPACE_AGENTS_PATH.as_posix(), "message": "root AGENTS.md entrypoint missing"})
+        actions.append({"kind": "missing", "path": agents_relative.as_posix(), "detail": "root startup entrypoint missing"})
+        warnings.append({"path": agents_relative.as_posix(), "message": "root startup entrypoint missing"})
         return _workspace_report(
             target_root=target_root,
             message=f"{command_name.title()} report",
@@ -819,7 +880,7 @@ def _workspace_status_report(
         actions.append(
             {
                 "kind": "current",
-                "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                "path": agents_relative.as_posix(),
                 "detail": "workspace workflow pointer block present",
             }
         )
@@ -827,11 +888,11 @@ def _workspace_status_report(
         actions.append(
             {
                 "kind": "warning",
-                "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                "path": agents_relative.as_posix(),
                 "detail": "workspace workflow pointer block missing",
             }
         )
-        warnings.append({"path": WORKSPACE_AGENTS_PATH.as_posix(), "message": "workspace workflow pointer block missing"})
+        warnings.append({"path": agents_relative.as_posix(), "message": "workspace workflow pointer block missing"})
 
     for module_name in selected_modules:
         for block in descriptors[module_name].root_agents_cleanup_blocks:
@@ -840,7 +901,7 @@ def _workspace_status_report(
             actions.append(
                 {
                     "kind": "warning",
-                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                    "path": agents_relative.as_posix(),
                     "detail": (
                         f"redundant top-level {block.label} still present; "
                         "shared workspace workflow should delegate to module-specific guidance"
@@ -849,7 +910,7 @@ def _workspace_status_report(
             )
             warnings.append(
                 {
-                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
+                    "path": agents_relative.as_posix(),
                     "message": f"redundant top-level {block.label} still present",
                 }
             )
@@ -918,7 +979,11 @@ def _write_action_kind(*, dry_run: bool, existing: str | None) -> str:
     return "created" if existing is None else "updated"
 
 
-def _external_agent_handoff_text(*, selected_modules: list[str]) -> str:
+def _external_agent_handoff_text(
+    *,
+    selected_modules: list[str],
+    agent_instructions_file: str = DEFAULT_AGENT_INSTRUCTIONS_FILE,
+) -> str:
     lines = [
         "# Agentic Workspace External-Agent Handoff",
         "",
@@ -928,7 +993,7 @@ def _external_agent_handoff_text(*, selected_modules: list[str]) -> str:
         "- the repository containing this llms.txt file",
         "",
         "Required steps:",
-        "- Read AGENTS.md first.",
+        f"- Read {agent_instructions_file} first.",
         "- For normal work, continue through TODO.md and the active execplan only when TODO points to one.",
         "- Do not assume agentic-workspace is already installed; follow the checked-in lifecycle instructions in this repository.",
         "- For lifecycle work, use agentic-workspace rather than package-specific CLIs unless package-local debugging is required.",
@@ -960,7 +1025,7 @@ def _external_agent_handoff_text(*, selected_modules: list[str]) -> str:
             "",
             "Success means:",
             "- the workspace lifecycle runs through agentic-workspace",
-            "- AGENTS.md remains the repo startup entrypoint",
+            f"- {agent_instructions_file} remains the repo startup entrypoint",
             "- llms.txt stays aligned with the installed workspace contract",
             "",
         ]
@@ -988,7 +1053,10 @@ def _workspace_init_or_upgrade_report(
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     conservative = inspection_mode != "install" and command_name == "init"
-    handoff_text = _external_agent_handoff_text(selected_modules=selected_modules)
+    handoff_text = _external_agent_handoff_text(
+        selected_modules=selected_modules,
+        agent_instructions_file=config.agent_instructions_file,
+    )
 
     for relative in WORKSPACE_PAYLOAD_FILES:
         destination = target_root / relative
@@ -1028,8 +1096,13 @@ def _workspace_init_or_upgrade_report(
             }
         )
 
-    agents_path = target_root / WORKSPACE_AGENTS_PATH
-    rendered_agents = _workspace_agents_template(selected_modules=selected_modules, descriptors=descriptors)
+    agents_relative = Path(config.agent_instructions_file)
+    agents_path = target_root / agents_relative
+    rendered_agents = _workspace_agents_template(
+        selected_modules=selected_modules,
+        descriptors=descriptors,
+        agent_instructions_file=config.agent_instructions_file,
+    )
     existing_agents = agents_path.read_text(encoding="utf-8") if agents_path.exists() else None
     if inspection_mode == "install":
         if existing_agents != rendered_agents:
@@ -1039,16 +1112,16 @@ def _workspace_init_or_upgrade_report(
             actions.append(
                 {
                     "kind": _write_action_kind(dry_run=dry_run, existing=existing_agents),
-                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
-                    "detail": "refresh composed root AGENTS.md entrypoint for selected workspace modules",
+                    "path": agents_relative.as_posix(),
+                    "detail": "refresh composed root startup entrypoint for selected workspace modules",
                 }
             )
         else:
             actions.append(
                 {
                     "kind": "current",
-                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
-                    "detail": "composed root AGENTS.md entrypoint already current",
+                    "path": agents_relative.as_posix(),
+                    "detail": "composed root startup entrypoint already current",
                 }
             )
     else:
@@ -1074,18 +1147,37 @@ def _workspace_init_or_upgrade_report(
             actions.append(
                 {
                     "kind": _write_action_kind(dry_run=dry_run, existing=existing_agents),
-                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
-                    "detail": "patched the shared workspace workflow pointer into AGENTS.md without replacing repo-owned content",
+                    "path": agents_relative.as_posix(),
+                    "detail": (
+                        "patched the shared workspace workflow pointer into the root startup file without replacing repo-owned content"
+                    ),
                 }
             )
         elif existing_agents is not None:
             actions.append(
                 {
                     "kind": "current",
-                    "path": WORKSPACE_AGENTS_PATH.as_posix(),
-                    "detail": "workflow pointer blocks already present in AGENTS.md",
+                    "path": agents_relative.as_posix(),
+                    "detail": "workflow pointer blocks already present in the root startup file",
                 }
             )
+
+    default_agents_relative = Path(DEFAULT_AGENT_INSTRUCTIONS_FILE)
+    default_agents_path = target_root / default_agents_relative
+    if (
+        agents_relative != default_agents_relative
+        and DEFAULT_AGENT_INSTRUCTIONS_FILE not in config.detected_agent_instructions_files
+        and default_agents_path.exists()
+    ):
+        if not dry_run:
+            default_agents_path.unlink()
+        actions.append(
+            {
+                "kind": "would remove" if dry_run else "removed",
+                "path": default_agents_relative.as_posix(),
+                "detail": ("remove redundant default startup entrypoint because a different canonical startup file is configured"),
+            }
+        )
 
     handoff_destination = target_root / WORKSPACE_EXTERNAL_AGENT_PATH
     existing_handoff = handoff_destination.read_text(encoding="utf-8") if handoff_destination.exists() else None
@@ -1289,16 +1381,20 @@ def _run_init(
         selected_modules=selected_modules,
         descriptors=descriptors,
         force_adopt=force_adopt,
+        config=config,
     )
     module_command = "install" if inspection.mode == "install" else "adopt"
     reports = [
-        _invoke_module_command(
-            command_name=module_command,
-            module_name=module_name,
-            descriptor=descriptors[module_name],
-            target_root=target_root,
-            dry_run=dry_run,
-            force=False,
+        _normalize_module_report_startup_paths(
+            _invoke_module_command(
+                command_name=module_command,
+                module_name=module_name,
+                descriptor=descriptors[module_name],
+                target_root=target_root,
+                dry_run=dry_run,
+                force=False,
+            ),
+            config=config,
         )
         for module_name in selected_modules
     ]
@@ -1320,6 +1416,7 @@ def _run_init(
         descriptors=descriptors,
         inspection=inspection,
         reports=reports,
+        config=config,
     )
     prompt_text = _build_handoff_prompt(summary)
     prompt_path = _default_handoff_prompt_path(target_root=target_root) if summary["prompt_requirement"] != "none" else None
@@ -1355,10 +1452,12 @@ def _inspect_repo_state(
     selected_modules: list[str],
     descriptors: dict[str, ModuleDescriptor],
     force_adopt: bool,
+    config: WorkspaceConfig,
 ) -> RepoInspection:
     workflow_surfaces = _module_workflow_surfaces(selected_modules=selected_modules, descriptors=descriptors)
     generated_artifacts = _module_generated_artifacts(selected_modules=selected_modules, descriptors=descriptors)
-    detected_workflow_surfaces = [path.as_posix() for path in workflow_surfaces if (target_root / path).exists()]
+    startup_surfaces = [Path(name) for name in config.detected_agent_instructions_files]
+    detected_workflow_surfaces = [path.as_posix() for path in [*workflow_surfaces, *startup_surfaces] if (target_root / path).exists()]
     detected_state_surfaces = [path.as_posix() for path in WORKSPACE_HANDOFF_SURFACES if (target_root / path).exists()]
     detected_surfaces = _dedupe([*detected_workflow_surfaces, *detected_state_surfaces])
     preserved_existing = [path for path in detected_surfaces if path not in generated_artifacts]
@@ -1378,6 +1477,7 @@ def _inspect_repo_state(
         managed_root_present=managed_root_present,
         overlap_count=overlap_count,
         workflow_overlap_count=len(detected_workflow_surfaces),
+        startup_surface_count=len(config.detected_agent_instructions_files),
         handoff_surface_count=sum(
             1
             for surface in detected_state_surfaces
@@ -1414,6 +1514,7 @@ def _classify_repo_state(
     managed_root_present: bool,
     overlap_count: int,
     workflow_overlap_count: int,
+    startup_surface_count: int,
     handoff_surface_count: int,
     partial_state: list[str],
     placeholders: list[str],
@@ -1423,7 +1524,8 @@ def _classify_repo_state(
     if not overlap_count and not force_adopt:
         return ("blank_or_unmanaged_repo", "install", "install_direct")
     if (
-        overlap_count >= 4
+        startup_surface_count >= 2
+        or overlap_count >= 4
         or (managed_root_present and overlap_count >= 2)
         or handoff_surface_count >= 2
         or (handoff_surface_count >= 1 and workflow_overlap_count >= 1)
@@ -1466,6 +1568,7 @@ def _build_init_summary(
     descriptors: dict[str, ModuleDescriptor],
     inspection: RepoInspection,
     reports: list[dict[str, Any]],
+    config: WorkspaceConfig,
 ) -> dict[str, Any]:
     created: list[str] = []
     updated_managed: list[str] = []
@@ -1519,6 +1622,7 @@ def _build_init_summary(
         "target": target_root.as_posix(),
         "modules": selected_modules,
         "preset": resolved_preset,
+        "agent_instructions_file": config.agent_instructions_file,
         "intent": _bootstrap_intent_payload(selected_modules=selected_modules, resolved_preset=resolved_preset),
         "repo_state": inspection.repo_state,
         "inferred_policy": inspection.inferred_policy,
@@ -1540,6 +1644,7 @@ def _build_init_summary(
             prompt_requirement=prompt_requirement,
             needs_review=needs_review,
             placeholders=placeholders,
+            agent_instructions_file=config.agent_instructions_file,
         ),
     }
 
@@ -1556,13 +1661,16 @@ def _run_lifecycle_command(
 ) -> dict[str, Any]:
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     reports = [
-        _invoke_module_command(
-            command_name=command_name,
-            module_name=module_name,
-            descriptor=descriptors[module_name],
-            target_root=target_root,
-            dry_run=dry_run,
-            force=False,
+        _normalize_module_report_startup_paths(
+            _invoke_module_command(
+                command_name=command_name,
+                module_name=module_name,
+                descriptor=descriptors[module_name],
+                target_root=target_root,
+                dry_run=dry_run,
+                force=False,
+            ),
+            config=config,
         )
         for module_name in selected_modules
     ]
@@ -1786,6 +1894,28 @@ def _invoke_module_command(
     return adapt_module_result(module=module_name, result=result).to_dict()
 
 
+def _normalize_module_report_startup_paths(report: dict[str, Any], *, config: WorkspaceConfig) -> dict[str, Any]:
+    if (
+        config.agent_instructions_file == DEFAULT_AGENT_INSTRUCTIONS_FILE
+        or DEFAULT_AGENT_INSTRUCTIONS_FILE in config.detected_agent_instructions_files
+    ):
+        return report
+
+    def _rewrite_path(value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+        path = Path(value)
+        if path.parent == Path(".") and path.name == DEFAULT_AGENT_INSTRUCTIONS_FILE:
+            return config.agent_instructions_file
+        return value
+
+    return {
+        **report,
+        "actions": [{**action, "path": _rewrite_path(action.get("path"))} for action in report["actions"]],
+        "warnings": [{**warning, "path": _rewrite_path(warning.get("path"))} for warning in report["warnings"]],
+    }
+
+
 def _validation_commands(*, target_root: Path) -> list[str]:
     target = target_root.as_posix()
     return [
@@ -1803,6 +1933,7 @@ def _init_next_steps(
     prompt_requirement: str,
     needs_review: list[str],
     placeholders: list[str],
+    agent_instructions_file: str,
 ) -> list[str]:
     target = target_root.as_posix()
     steps = [f"Run agentic-workspace doctor --target {target} after bootstrap changes settle."]
@@ -1811,7 +1942,9 @@ def _init_next_steps(
             f"Use the generated finishing brief at {WORKSPACE_BOOTSTRAP_HANDOFF_PATH.as_posix()} for the next bounded bootstrap action."
         )
     if prompt_requirement == "none":
-        steps.append("Tell your coding agent to use AGENTS.md for normal work and llms.txt for lifecycle/front-door guidance.")
+        steps.append(
+            f"Tell your coding agent to use {agent_instructions_file} for normal work and llms.txt for lifecycle/front-door guidance."
+        )
         return steps
     if mode == "adopt_high_ambiguity":
         steps.append("Treat the finishing brief as required before normal work resumes.")
@@ -1840,6 +1973,7 @@ def _lifecycle_next_steps(*, command_name: str, target_root: Path, warnings: lis
 
 
 def _build_handoff_prompt(summary: dict[str, Any]) -> str:
+    agent_instructions_file = str(summary.get("agent_instructions_file", DEFAULT_AGENT_INSTRUCTIONS_FILE))
     lines = [
         f"Finish the Agentic Workspace bootstrap in {summary['target']}.",
         "",
@@ -1902,10 +2036,12 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
         lines.append("- remove or resolve any remaining placeholders before closing the bootstrap task")
     lines.append("- keep llms.txt current as the canonical external-agent handoff surface")
     lines.append("- leave only durable workflow residue; do not keep temporary bootstrap notes around")
+    lines.append(f"- keep {agent_instructions_file} as the repo startup entrypoint")
     return "\n".join(lines)
 
 
 def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
+    agent_instructions_file = str(summary.get("agent_instructions_file", DEFAULT_AGENT_INSTRUCTIONS_FILE))
     review_items = list(summary["needs_review"])
     review_items.extend(f"{path}: unresolved placeholder or bootstrap marker" for path in summary["placeholders"])
     return {
@@ -1945,7 +2081,7 @@ def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
             "the handoff can no longer stay bounded to bootstrap follow-through",
         ],
         "refs": [
-            "AGENTS.md",
+            agent_instructions_file,
             "TODO.md",
             "llms.txt",
             "docs/delegated-judgment-contract.md",
@@ -2154,6 +2290,8 @@ def _defaults_payload() -> dict[str, Any]:
                 "Read `TODO.md`.",
                 "Read the active execplan only when `TODO.md` points to one.",
             ],
+            "default_canonical_agent_instructions_file": DEFAULT_AGENT_INSTRUCTIONS_FILE,
+            "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
             "secondary": [
                 "Read `ROADMAP.md` only when promoting work.",
                 "Read package-local `AGENTS.md` only for the package being edited.",
@@ -2212,6 +2350,7 @@ def _defaults_payload() -> dict[str, Any]:
             "command": "agentic-workspace config --target ./repo --format json",
             "supported_fields": [
                 "workspace.default_preset",
+                "workspace.agent_instructions_file",
                 "update.modules.<module>.source_type",
                 "update.modules.<module>.source_ref",
                 "update.modules.<module>.source_label",
@@ -2565,13 +2704,21 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
     config_path = target_root / WORKSPACE_CONFIG_PATH
     local_override = _load_mixed_agent_local_override(target_root=target_root)
     default_preset = "full"
+    configured_agent_instructions_file: str | None = None
     if not config_path.exists():
+        agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = _resolve_effective_agent_instructions_file(
+            target_root=target_root,
+            configured=None,
+        )
         return WorkspaceConfig(
             target_root=target_root,
             path=config_path,
             exists=False,
             schema_version=1,
             default_preset=default_preset,
+            agent_instructions_file=agent_instructions_file,
+            agent_instructions_source=agent_instructions_source,
+            detected_agent_instructions_files=detected_agent_instruction_files,
             update_modules=defaults,
             local_override=local_override,
         )
@@ -2598,6 +2745,9 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
     if configured_preset not in valid_presets:
         supported = ", ".join(sorted(valid_presets))
         raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} workspace.default_preset must be one of: {supported}.")
+    raw_agent_instructions_file = raw_workspace.get("agent_instructions_file")
+    if raw_agent_instructions_file is not None:
+        configured_agent_instructions_file = _validate_agent_instructions_filename(str(raw_agent_instructions_file))
 
     update_modules = dict(defaults)
     raw_update = payload.get("update", {})
@@ -2648,12 +2798,19 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
             source="repo-config",
         )
 
+    agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = _resolve_effective_agent_instructions_file(
+        target_root=target_root,
+        configured=configured_agent_instructions_file,
+    )
     return WorkspaceConfig(
         target_root=target_root,
         path=config_path,
         exists=True,
         schema_version=1,
         default_preset=configured_preset,
+        agent_instructions_file=agent_instructions_file,
+        agent_instructions_source=agent_instructions_source,
+        detected_agent_instructions_files=detected_agent_instruction_files,
         update_modules=update_modules,
         local_override=local_override,
     )
@@ -3150,7 +3307,13 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "config_path": config.path.as_posix() if config.path is not None else WORKSPACE_CONFIG_PATH.as_posix(),
         "exists": config.exists,
         "schema_version": config.schema_version,
-        "workspace": {"default_preset": config.default_preset},
+        "workspace": {
+            "default_preset": config.default_preset,
+            "agent_instructions_file": config.agent_instructions_file,
+            "agent_instructions_file_source": config.agent_instructions_source,
+            "detected_agent_instructions_files": list(config.detected_agent_instructions_files),
+            "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
+        },
         "update": {
             "wrapper_rule": "normal update execution stays behind agentic-workspace",
             "modules": _module_update_policy_payload(config=config, target_root=config.target_root),
@@ -3168,6 +3331,11 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
     print(f"Config path: {payload['config_path']}")
     print(f"Exists: {payload['exists']}")
     print(f"Default preset: {payload['workspace']['default_preset']}")
+    print(
+        "Agent instructions file: "
+        f"{payload['workspace']['agent_instructions_file']} "
+        f"({payload['workspace']['agent_instructions_file_source']})"
+    )
     print(f"Wrapper rule: {payload['update']['wrapper_rule']}")
     print("Update modules:")
     for module in payload["update"]["modules"]:

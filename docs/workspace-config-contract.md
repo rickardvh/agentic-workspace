@@ -22,6 +22,7 @@ schema_version = 1
 
 [workspace]
 default_preset = "full" # memory | planning | full
+agent_instructions_file = "AGENTS.md" # AGENTS.md | GEMINI.md
 
 [update.modules.planning]
 source_type = "git" # git | local
@@ -41,6 +42,8 @@ recommended_upgrade_after_days = 30
 - `schema_version` is required.
 - Missing fields use product defaults.
 - `workspace.default_preset` affects `init` and `prompt` only when the user does not pass `--preset` or `--modules`.
+- `workspace.agent_instructions_file` sets the canonical root startup-entrypoint filename for workspace lifecycle surfaces.
+- If `workspace.agent_instructions_file` is omitted, the workspace defaults to `AGENTS.md` and may conservatively autodetect one existing supported startup file in the target repo.
 - Update policy is module-specific in v1; there is no separate public module upgrade entrypoint.
 - Normal update execution stays behind `agentic-workspace`.
 - Config does not own active state, long instructions, free-form prompts, or scheduler semantics.
@@ -102,6 +105,7 @@ That surface reports:
 
 - whether `agentic-workspace.toml` exists
 - the resolved default preset
+- the resolved canonical startup-entrypoint filename plus whether it came from repo config, autodetection, product defaults, or an explicit CLI override
 - the effective per-module update policy
 - whether each module's `UPGRADE-SOURCE.toml` metadata matches the resolved policy
 - the current mixed-agent reporting boundary: repo-policy source, reserved local-override status, and the fact that runtime orchestration remains tool-owned

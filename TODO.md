@@ -9,11 +9,9 @@ Active queue for repository work.
 ## Now
 
 - No active work right now.
-## Action
-
-- Promote the final remaining open GitHub issue after the lazy-discovery measurement tranche is archived.
 ## Done
 
+- configurable-canonical-agent-instructions-filename: Completed (added a narrow supported `workspace.agent_instructions_file` contract plus conservative autodetect of one existing supported startup file, exposed the effective startup entrypoint through `agentic-workspace config` and `defaults`, kept blank/custom startup installs selective-adoption-safe by rewriting workspace reports and removing redundant default `AGENTS.md`, and dogfooded the new path with real `GEMINI.md` bootstrap passes)
 - lazy-discovery-measurement-audit: Completed (added the first cheap lazy-discovery measurement framework, checked in one audit of the current defaults/proof/ownership selector path, and proved the existing compact-contract work with measured retrieval-size reduction instead of schema intuition)
 - bootstrap-agents-preservation-hardening: Completed (fixed the workspace upgrade path so root `AGENTS.md` stays repo-owned outside the managed workspace fence, added focused regression coverage, and confirmed the live bootstrap/handoff surfaces still behave conservatively enough to close the remaining bootstrap hardening issue)
 - structured-bootstrap-handoff-artifact: Completed (added `.agentic-workspace/bootstrap-handoff.json` as the compact structured sibling for bootstrap follow-through, used it to carry intent/proof/escalation boundaries in checked-in form, aligned the lifecycle docs and CLI tests, and dogfooded the new record against this repo's live bootstrap state)

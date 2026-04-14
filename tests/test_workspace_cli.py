@@ -99,6 +99,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert cli.main(["defaults", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["startup"]["default_canonical_agent_instructions_file"] == "AGENTS.md"
+    assert payload["startup"]["supported_agent_instructions_files"] == ["AGENTS.md", "GEMINI.md"]
     assert payload["compact_contract_profile"]["canonical_doc"] == "docs/compact-contract-profile.md"
     assert payload["compact_contract_profile"]["rule"] == (
         "When one bounded answer is enough, prefer a narrow selector over a whole-surface dump."
@@ -229,6 +231,13 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
     assert "Do not assume agentic-workspace is already installed" in text
 
 
+def test_external_agent_handoff_text_uses_configured_agent_instructions_filename() -> None:
+    text = cli._external_agent_handoff_text(selected_modules=["planning"], agent_instructions_file="GEMINI.md")
+
+    assert "Read GEMINI.md first." in text
+    assert "GEMINI.md remains the repo startup entrypoint" in text
+
+
 def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
@@ -237,6 +246,8 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     payload = json.loads(capsys.readouterr().out)
     assert payload["exists"] is False
     assert payload["workspace"]["default_preset"] == "full"
+    assert payload["workspace"]["agent_instructions_file"] == "AGENTS.md"
+    assert payload["workspace"]["agent_instructions_file_source"] == "product-default"
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
     assert payload["mixed_agent"]["status"] == "reporting-only"
@@ -256,6 +267,18 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
         "cheap switching across agents and subscriptions",
         "persisted shared knowledge beats rediscovery",
     ]
+
+
+def test_config_command_autodetects_existing_supported_agent_instructions_file(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "GEMINI.md").write_text("# Gemini\n", encoding="utf-8")
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workspace"]["agent_instructions_file"] == "GEMINI.md"
+    assert payload["workspace"]["agent_instructions_file_source"] == "autodetected-existing"
+    assert payload["workspace"]["detected_agent_instructions_files"] == ["GEMINI.md"]
 
 
 def test_defaults_section_selector_returns_compact_contract_answer(capsys) -> None:
@@ -471,7 +494,8 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
     (target / "agentic-workspace.toml").write_text(
         "schema_version = 1\n\n"
         "[workspace]\n"
-        'default_preset = "planning"\n\n'
+        'default_preset = "planning"\n'
+        'agent_instructions_file = "GEMINI.md"\n\n'
         "[update.modules.planning]\n"
         'source_type = "git"\n'
         'source_ref = "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"\n'
@@ -485,6 +509,8 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
     payload = json.loads(capsys.readouterr().out)
     assert payload["exists"] is True
     assert payload["workspace"]["default_preset"] == "planning"
+    assert payload["workspace"]["agent_instructions_file"] == "GEMINI.md"
+    assert payload["workspace"]["agent_instructions_file_source"] == "repo-config"
     planning_policy = next(item for item in payload["update"]["modules"] if item["module"] == "planning")
     assert planning_policy["source"] == "repo-config"
     assert planning_policy["source_ref"] == "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"
@@ -792,6 +818,7 @@ def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_p
     assert payload["mode"] == "adopt_high_ambiguity"
     assert payload["prompt_requirement"] == "required"
     assert sorted(payload["detected_surfaces"]) == ["AGENTS.md", "TODO.md", "docs/execplans", "memory/index.md"]
+    assert payload["agent_instructions_file"] == "AGENTS.md"
     assert payload["handoff_prompt_path"] == (tmp_path / ".agentic-workspace" / "bootstrap-handoff.md").as_posix()
     assert payload["handoff_record_path"] == (tmp_path / ".agentic-workspace" / "bootstrap-handoff.json").as_posix()
     assert "handoff_prompt" in payload
@@ -892,6 +919,90 @@ def test_init_uses_recommended_prompt_for_single_existing_surface(monkeypatch, t
         ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
         ("memory", "adopt", {"target": str(tmp_path), "dry_run": False}),
     ]
+
+
+def test_init_autodetects_existing_gemini_file_as_startup_entrypoint(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    (tmp_path / "GEMINI.md").write_text("# Existing Gemini\n", encoding="utf-8")
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["agent_instructions_file"] == "GEMINI.md"
+    assert payload["repo_state"] == "light_existing_workflow"
+    assert payload["detected_surfaces"] == ["GEMINI.md"]
+    assert "Read GEMINI.md first." in (tmp_path / "llms.txt").read_text(encoding="utf-8")
+
+
+def test_init_treats_multiple_supported_startup_files_as_high_ambiguity(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    (tmp_path / "AGENTS.md").write_text("# Existing\n", encoding="utf-8")
+    (tmp_path / "GEMINI.md").write_text("# Existing Gemini\n", encoding="utf-8")
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["inferred_policy"] == "require_explicit_handoff"
+    assert payload["mode"] == "adopt_high_ambiguity"
+    assert sorted(payload["detected_surfaces"]) == ["AGENTS.md", "GEMINI.md"]
+
+
+def test_init_can_create_gemini_startup_file_for_blank_repo(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert (
+        cli.main(
+            [
+                "init",
+                "--target",
+                str(tmp_path),
+                "--agent-instructions-file",
+                "GEMINI.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["agent_instructions_file"] == "GEMINI.md"
+    assert (tmp_path / "GEMINI.md").exists()
+    assert not (tmp_path / "AGENTS.md").exists()
+    assert "Read GEMINI.md first." in (tmp_path / "llms.txt").read_text(encoding="utf-8")
+
+
+def test_init_dry_run_rewrites_module_startup_actions_for_custom_agent_file(monkeypatch, tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))
+
+    assert (
+        cli.main(
+            [
+                "init",
+                "--modules",
+                "planning",
+                "--target",
+                str(tmp_path),
+                "--agent-instructions-file",
+                "GEMINI.md",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "GEMINI.md" in payload["preserved_existing"]
+    assert "AGENTS.md" not in payload["preserved_existing"]
 
 
 def test_init_treats_existing_llms_file_as_existing_workspace_surface(monkeypatch, tmp_path: Path, capsys) -> None:
@@ -1094,6 +1205,21 @@ def test_install_real_init_creates_combined_memory_and_planning_surfaces(tmp_pat
     assert "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself." in agents_text
     assert "<!-- agentic-memory:workflow:start -->" not in agents_text
     assert "<PROJECT_NAME>" not in agents_text
+
+
+def test_install_real_init_can_use_gemini_as_root_startup_entrypoint(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target), "--agent-instructions-file", "GEMINI.md"]) == 0
+
+    assert (target / "GEMINI.md").exists()
+    assert not (target / "AGENTS.md").exists()
+    gemini_text = (target / "GEMINI.md").read_text(encoding="utf-8")
+    assert "Read `GEMINI.md`." in gemini_text
+    assert "2. `GEMINI.md`." in gemini_text
+    assert "Read GEMINI.md first." in (target / "llms.txt").read_text(encoding="utf-8")
 
 
 def test_status_real_init_reports_workspace_shared_layer_surfaces(tmp_path: Path, capsys) -> None:

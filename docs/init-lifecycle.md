@@ -8,10 +8,11 @@ Use it when you need the canonical intent, repo-state, policy, and handoff contr
 
 - `init` defaults to the full preset when module selection is omitted.
 - If `agentic-workspace.toml` exists, `workspace.default_preset` becomes the default preset when the user omits `--preset` and `--modules`.
+- If `agentic-workspace.toml` exists, `workspace.agent_instructions_file` becomes the canonical root startup-entrypoint filename.
 - The user intent is the selected preset: `memory`, `planning`, or `full`.
 - The command bootstraps mechanically, classifies repo state, then chooses the safest lifecycle mode automatically.
 - The root workspace layer is part of that bootstrap contract, not an incidental repo file copy.
-- Clean installs should seed `.agentic-workspace/WORKFLOW.md`, `.agentic-workspace/OWNERSHIP.toml`, and a coherent root `AGENTS.md` entrypoint for the selected modules.
+- Clean installs should seed `.agentic-workspace/WORKFLOW.md`, `.agentic-workspace/OWNERSHIP.toml`, and a coherent root startup entrypoint for the selected modules.
 - The root CLI also keeps one checked-in external-agent handoff surface at `llms.txt`.
 - When bootstrap still needs judgment, the CLI writes the next-action brief to `.agentic-workspace/bootstrap-handoff.md`.
 - When bootstrap still needs judgment, the CLI also writes the compact structured sibling artifact to `.agentic-workspace/bootstrap-handoff.json`.
@@ -35,6 +36,7 @@ Use it when you need the canonical intent, repo-state, policy, and handoff contr
 
 ## High-Ambiguity Signals
 
+- More than one supported root startup-entrypoint filename is already present.
 - Partial module state for a selected module.
 - Placeholder markers or bootstrap markers still present in workflow surfaces.
 - Existing canonical handoff surfaces overlap with workflow surfaces and need reconciliation before normal work continues.
