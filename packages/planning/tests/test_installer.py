@@ -132,6 +132,21 @@ def _minimal_execplan_with_required_tools(status: str = "in-progress") -> str:
     return _minimal_execplan(status=status).replace("## Required Tools\n\n- None.\n", "## Required Tools\n\n- browser\n- gh\n")
 
 
+def _rename_like_execplan(*, status: str = "completed", with_reference_sweep: bool = False) -> str:
+    plan = _minimal_execplan(status=status).replace("- Keep scope clear.", "- Rename the stale planning surface cleanly.")
+    if with_reference_sweep:
+        plan = plan.replace(
+            "- uv run pytest tests/test_check_planning_surfaces.py",
+            "- uv run pytest tests/test_check_planning_surfaces.py\n- rg old-planning-surface docs scripts",
+            1,
+        )
+        plan = plan.replace(
+            "- Validation confirmed: uv run pytest tests/test_check_planning_surfaces.py",
+            "- Validation confirmed: uv run pytest tests/test_check_planning_surfaces.py; rg old-planning-surface docs scripts",
+        )
+    return plan
+
+
 def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     result = install_bootstrap(target=tmp_path)
     capability_fit_doc_path = tmp_path / "docs" / "capability-aware-execution.md"
@@ -484,6 +499,7 @@ def test_bootstrap_execution_summary_contract_is_part_of_payload() -> None:
     assert "## Canonical Shape" in text
     assert "Outcome delivered" in text
     assert "Validation confirmed" in text
+    assert "stale-reference sweep" in text
     assert "Follow-on routed to" in text
     assert "Resume from" in text
     assert Path("docs/execution-summary-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
@@ -974,6 +990,36 @@ def test_archive_execplan_blocks_missing_delegated_judgment(tmp_path: Path) -> N
     assert any(
         action.kind == "manual review" and action.path == plan_path and "Delegated Judgment" in action.detail for action in result.actions
     )
+
+
+def test_archive_execplan_blocks_rename_like_work_without_reference_sweep(tmp_path: Path) -> None:
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
+    _write(plan_path, _rename_like_execplan())
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_missing_closure_check" for warning in result.warnings)
+    assert any(
+        action.kind == "manual review" and action.path == plan_path and "stale-reference sweep" in action.detail
+        for action in result.actions
+    )
+
+
+def test_archive_execplan_allows_rename_like_work_with_reference_sweep(tmp_path: Path) -> None:
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
+    _write(plan_path, _rename_like_execplan(with_reference_sweep=True))
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+    archived_path = tmp_path / "docs" / "execplans" / "archive" / "plan-alpha.md"
+
+    assert archived_path.exists()
+    assert not plan_path.exists()
+    assert any(action.kind == "moved" and action.path == archived_path for action in result.actions)
 
 
 def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_path: Path) -> None:

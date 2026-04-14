@@ -39,7 +39,7 @@
 
 ## Immediate Next Action
 
-- Improve closure discipline so bounded work finishes with explicit done checks and less dangling residue for the next agent.
+- Add a narrow adapter pattern so agent-native workflow artifacts can map back into the repo-owned planning surfaces without duplication.
 
 ## Blockers
 
@@ -103,3 +103,4 @@
 - 2026-04-14: Closed `#77` after adding advisory `Required Tools` support to the compact planning contract and refreshing the installed planning payload in this repo.
 - 2026-04-14: Closed `#74` after adding an explicit schema envelope to `agentic-planning-bootstrap summary --format json` and refreshing the installed planning payload in this repo.
 - 2026-04-14: Closed `#78` after making `planning_record` plus `planning-summary/v1` the canonical compact planning-state answer, thinning `ROADMAP.md` into a real candidate queue, and surfacing `roadmap.candidates` directly in planning summary.
+- 2026-04-14: Closed `#79` after adding a cheap closure rule for rename/refactor-like work: archive now requires a stale-reference sweep in `Validation Commands`, and the planning checker flags the same omission before residue reaches the next agent.

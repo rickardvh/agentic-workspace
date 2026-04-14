@@ -121,6 +121,21 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
 """.format(status=status, execution_summary=execution_summary)
 
 
+def _rename_like_execplan(*, with_reference_sweep: bool = False) -> str:
+    plan = _minimal_execplan(status="completed").replace("- Keep scope clear.", "- Rename the stale planning surface cleanly.")
+    if with_reference_sweep:
+        plan = plan.replace(
+            "- uv run pytest tests/test_check_planning_surfaces.py",
+            "- uv run pytest tests/test_check_planning_surfaces.py\n- rg old-planning-surface docs scripts",
+            1,
+        )
+        plan = plan.replace(
+            "- Validation confirmed: uv run pytest tests/test_check_planning_surfaces.py",
+            "- Validation confirmed: uv run pytest tests/test_check_planning_surfaces.py; rg old-planning-surface docs scripts",
+        )
+    return plan
+
+
 def _baseline_todo(surface: str = "docs/execplans/plan-alpha.md") -> str:
     return f"""
 # TODO
@@ -652,6 +667,26 @@ def test_contract_shaping_execplan_with_decision_sections_passes(tmp_path: Path)
 
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     assert not [warning for warning in warnings if warning.warning_class == "execplan_under_specified"]
+
+
+def test_completed_rename_like_execplan_without_reference_sweep_warns(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_closure_drift")
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _rename_like_execplan())
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    assert any(warning.warning_class == "execplan_closure_drift" for warning in warnings)
+
+
+def test_completed_rename_like_execplan_with_reference_sweep_passes(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_closure_clean")
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _rename_like_execplan(with_reference_sweep=True))
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    assert not [warning for warning in warnings if warning.warning_class == "execplan_closure_drift"]
 
 
 def test_main_json_format_outputs_payload(tmp_path: Path, capsys) -> None:

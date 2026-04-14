@@ -136,6 +136,12 @@ Keep this section compact and decision-shaped.
 It exists so later contributors do not have to reconstruct what the slice achieved, how it was proved, and where follow-through now lives.
 Do not turn it into a second drift log, a notebook, or a memory note.
 
+Closure discipline should stay cheap and explicit:
+
+- when a slice renames, moves, retires, or refactors a named surface, include a stale-reference sweep in `Validation Commands`
+- prefer a narrow search or checker over broad rereads
+- if required follow-on remains, route it into checked-in planning instead of leaving it implicit in chat or drift prose
+
 Keep the drift log decision-shaped and brief. Do not turn an active or completed execplan into a changelog when the same detail is already recoverable from archived plans and git.
 Execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work. `TODO.md` should only expose that the work is active and point here.
 Environment-sensitive work should express recovery in the existing plan fields rather than inventing ad hoc restart sections or long troubleshooting prose.

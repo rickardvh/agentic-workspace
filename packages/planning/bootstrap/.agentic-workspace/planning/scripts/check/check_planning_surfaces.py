@@ -39,6 +39,7 @@ WARNING_EXECPLAN_READINESS_DRIFT = "execplan_readiness_drift"
 WARNING_EXECPLAN_LOG_DRIFT = "execplan_log_drift"
 WARNING_EXECPLAN_NOTEBOOK_DRIFT = "execplan_notebook_drift"
 WARNING_EXECPLAN_UNDER_SPECIFIED = "execplan_under_specified"
+WARNING_EXECPLAN_CLOSURE_DRIFT = "execplan_closure_drift"
 WARNING_EXECPLAN_ACTIVE_SET_PRESSURE = "execplan_active_set_pressure"
 WARNING_ROADMAP_EXECUTION_DRIFT = "roadmap_execution_drift"
 WARNING_ROADMAP_MISSING_PROMOTION_SIGNAL = "roadmap_missing_promotion_signal"
@@ -774,6 +775,23 @@ def _contains_durable_technical_fact_shape(lines: list[str]) -> bool:
     return dense_tech_signals >= 3
 
 
+def _execplan_needs_reference_sweep(lines: list[str]) -> bool:
+    relevant = [
+        *_section_content(lines, "Goal"),
+        *_section_content(lines, "Active Milestone"),
+        *_section_content(lines, "Touched Paths"),
+        *_section_content(lines, "Execution Summary"),
+    ]
+    text = "\n".join(relevant).lower()
+    return any(token in text for token in ("rename", "renamed", "refactor", "refactored", "move", "moved", "retire", "retired"))
+
+
+def _validation_has_reference_sweep(lines: list[str]) -> bool:
+    validation_commands = _section_content(lines, "Validation Commands")
+    lowered = "\n".join(validation_commands).lower()
+    return any(token in lowered for token in ("rg ", "ripgrep", "grep "))
+
+
 def _looks_contract_shaping_execplan(*, goal_lines: list[str], scope_value: str) -> bool:
     haystack = "\n".join(goal_lines + [scope_value]).lower()
     return any(hint in haystack for hint in CONTRACT_SHAPING_HINTS)
@@ -1164,6 +1182,14 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 WARNING_EXECPLAN_UNDER_SPECIFIED,
                 _render_path(path),
                 "Validation Commands is empty; record the narrowest command that proves this plan.",
+            )
+        )
+    elif has_only_completed_status and _execplan_needs_reference_sweep(lines) and not _validation_has_reference_sweep(lines):
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_CLOSURE_DRIFT,
+                _render_path(path),
+                "Completed rename/refactor-like work is missing a stale-reference sweep in Validation Commands.",
             )
         )
 

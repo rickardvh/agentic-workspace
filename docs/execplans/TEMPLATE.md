@@ -98,6 +98,9 @@ Omit the section when no implementation-blocking questions remain.
 
 -
 
+If the slice renames, moves, retires, or refactors a named surface, include a cheap stale-reference sweep here as part of closure proof.
+Prefer a narrow search such as `rg old-surface-name` or the relevant planning checker over broad rereads.
+
 ## Required Tools
 
 - None.

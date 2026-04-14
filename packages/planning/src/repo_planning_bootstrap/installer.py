@@ -809,6 +809,7 @@ def archive_execplan(
     validation_confirmed = execution_summary.get("validation confirmed", "").strip()
     follow_on_routed_to = execution_summary.get("follow-on routed to", "").strip()
     resume_from = execution_summary.get("resume from", "").strip()
+    validation_commands = _execplan_validation_commands(plan_path)
     if completes_larger_outcome == "no" and (not continuation_surface or continuation_surface.lower() in {"none", "n/a"}):
         result.warnings.append(
             {
@@ -912,6 +913,20 @@ def archive_execplan(
             }
         )
         result.add("manual review", plan_path, "fill `Execution Summary` with the post-archive resume cue before archiving")
+        return result
+    if _execplan_needs_reference_sweep(plan_path) and not _validation_has_reference_sweep(validation_commands):
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_closure_check",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Rename/refactor-like completed work is missing a stale-reference sweep in Validation Commands.",
+            }
+        )
+        result.add(
+            "manual review",
+            plan_path,
+            "add a stale-reference sweep to `Validation Commands` before archiving rename/refactor-like work",
+        )
         return result
     cleanup_todo_lines: list[str] | None = None
     todo_ref_items = _todo_referencing_items(target_root / "TODO.md", plan_path, target_root)
@@ -1532,6 +1547,27 @@ def _execplan_active_milestone(path: Path) -> dict[str, str]:
 def _execplan_execution_summary(path: Path) -> dict[str, str]:
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Execution Summary"))
+
+
+def _execplan_validation_commands(path: Path) -> list[str]:
+    return _extract_section_bullets(path, "Validation Commands")
+
+
+def _execplan_needs_reference_sweep(path: Path) -> bool:
+    lines = _read_lines(path)
+    relevant = [
+        *_section_lines(lines, "Goal"),
+        *_section_lines(lines, "Active Milestone"),
+        *_section_lines(lines, "Touched Paths"),
+        *_section_lines(lines, "Execution Summary"),
+    ]
+    text = "\n".join(relevant).lower()
+    return any(token in text for token in ("rename", "renamed", "refactor", "refactored", "move", "moved", "retire", "retired"))
+
+
+def _validation_has_reference_sweep(commands: list[str]) -> bool:
+    lowered = "\n".join(command.lower() for command in commands)
+    return any(token in lowered for token in ("rg ", "ripgrep", "grep "))
 
 
 def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path) -> list[TodoItem]:

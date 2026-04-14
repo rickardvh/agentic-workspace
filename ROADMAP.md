@@ -25,8 +25,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Next Candidate Queue
 
-- Priority 1: `Improve closure discipline for bounded smaller-model work` from GitHub issue `#79`; promote when the compact planning-state tranche is stable enough to add a cheap end-of-task closure check without widening routine work.
-- Priority 2: `Adapter patterns for agent-specific workflow artifacts` from GitHub issue `#73`; promote when canonical compact planning state exists and the next follow-on can map native runtime artifacts into repo-owned surfaces without doubling sources of truth.
+- Priority 1: `Adapter patterns for agent-specific workflow artifacts` from GitHub issue `#73`; promote when canonical compact planning state exists and the next follow-on can map native runtime artifacts into repo-owned surfaces without doubling sources of truth.
 
 ## Reopen Conditions
 

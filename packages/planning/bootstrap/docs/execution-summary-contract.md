@@ -22,6 +22,8 @@ For a completed planning slice, record:
 - where required follow-on now lives
 - how a later contributor should treat the slice when resuming related work
 
+When the slice renamed, moved, retired, or refactored a named surface, `Validation confirmed` should make the stale-reference sweep explicit instead of implying that closure was complete.
+
 The point is not exhaustive history.
 The point is one compact answer to "what happened here, and what should the next session know?"
 
