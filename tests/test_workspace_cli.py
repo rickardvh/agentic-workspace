@@ -299,6 +299,7 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["mixed_agent"]["status"] == "reporting-only"
     assert payload["mixed_agent"]["repo_policy"]["source"] == "product-defaults"
     assert payload["mixed_agent"]["repo_policy"]["path"] == "agentic-workspace.toml"
+    assert payload["mixed_agent"]["repo_policy"]["authoritative"] is False
     assert payload["mixed_agent"]["local_override"]["path"] == "agentic-workspace.local.toml"
     assert payload["mixed_agent"]["local_override"]["supported"] is True
     assert payload["mixed_agent"]["local_override"]["exists"] is False
@@ -591,6 +592,7 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
     assert planning_policy["source_label"] == "planning feature ref"
     assert planning_policy["recommended_upgrade_after_days"] == 14
     assert payload["mixed_agent"]["repo_policy"]["source"] == "repo-config"
+    assert payload["mixed_agent"]["repo_policy"]["authoritative"] is True
 
 
 def test_config_command_reports_reserved_local_override_presence_without_applying_it(tmp_path: Path, capsys) -> None:

@@ -173,7 +173,7 @@ For the resolved repo-owned customization layer, use:
 agentic-workspace config --target ./repo --format json
 ```
 
-That surface layers `agentic-workspace.toml` over product defaults and reports the effective default preset, canonical root startup-entrypoint filename, and per-module update intent.
+That surface layers `agentic-workspace.toml` over product defaults and reports the effective default preset, canonical root startup-entrypoint filename, per-module update intent, and whether repo policy is authoritative or defaults-only.
 It also reports the current mixed-agent contract boundary: repo policy source, optional local-override posture from `agentic-workspace.local.toml`, and whether runtime inference is still tool-owned rather than workspace-controlled.
 
 For the repo-owned config contract itself, use [`docs/workspace-config-contract.md`](docs/workspace-config-contract.md).

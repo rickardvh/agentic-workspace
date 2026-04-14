@@ -12,7 +12,7 @@ Use it when the repository wants to keep one checked-in source of truth for life
 
 ## File Location
 
-- Repo-owned config lives at `agentic-workspace.toml`.
+- Repo-owned config lives at `agentic-workspace.toml` when present.
 - Product-managed workflow and ownership state still lives under `.agentic-workspace/`.
 
 ## V1 Schema
@@ -44,6 +44,7 @@ recommended_upgrade_after_days = 30
 - `workspace.default_preset` affects `init` and `prompt` only when the user does not pass `--preset` or `--modules`.
 - `workspace.agent_instructions_file` sets the canonical root startup-entrypoint filename for workspace lifecycle surfaces.
 - If `workspace.agent_instructions_file` is omitted, the workspace defaults to `AGENTS.md` and may conservatively autodetect one existing supported startup file in the target repo.
+- When `agentic-workspace.toml` is absent, product defaults remain authoritative and the config report should say so rather than implying a live repo policy.
 - Update policy is module-specific in v1; there is no separate public module upgrade entrypoint.
 - Normal update execution stays behind `agentic-workspace`.
 - Config does not own active state, long instructions, free-form prompts, or scheduler semantics.
@@ -105,6 +106,7 @@ agentic-workspace config --target ./repo --format json
 That surface reports:
 
 - whether `agentic-workspace.toml` exists
+- whether repo policy is currently authoritative or defaults-only
 - the resolved default preset
 - the resolved canonical startup-entrypoint filename plus whether it came from repo config, autodetection, product defaults, or an explicit CLI override
 - the effective per-module update policy

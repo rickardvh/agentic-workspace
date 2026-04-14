@@ -3586,7 +3586,7 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "repo_policy": {
             "path": WORKSPACE_CONFIG_PATH.as_posix(),
             "source": "repo-config" if config.exists else "product-defaults",
-            "authoritative": True,
+            "authoritative": config.exists,
             "supported_fields": [],
         },
         "local_override": {
