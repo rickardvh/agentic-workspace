@@ -1300,6 +1300,33 @@ def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, c
     assert payload["stale_generated_surfaces"] == ["tools/AGENT_QUICKSTART.md"]
 
 
+def test_upgrade_preserves_repo_owned_agents_content_outside_workspace_fence(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    agents_path = target / "AGENTS.md"
+    original = agents_path.read_text(encoding="utf-8")
+    agents_path.write_text(
+        f"# Repo Instructions\n\nKeep this repo-specific guidance.\n\n{original}\nMore local instructions.\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["upgrade", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    updated = agents_path.read_text(encoding="utf-8")
+    assert payload["health"] == "healthy"
+    assert "# Repo Instructions" in updated
+    assert "Keep this repo-specific guidance." in updated
+    assert "More local instructions." in updated
+    assert "<!-- agentic-workspace:workflow:start -->" in updated
+    assert "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules." in updated
+
+
 def test_upgrade_dry_run_syncs_module_update_source_metadata_from_repo_config(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

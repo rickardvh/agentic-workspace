@@ -11,9 +11,10 @@ Active queue for repository work.
 - No active work right now.
 ## Action
 
-- Promote the next bounded GitHub issue candidate after the structured bootstrap handoff tranche is archived.
+- Promote the next bounded open GitHub issue after the bootstrap hardening tranche is archived.
 ## Done
 
+- bootstrap-agents-preservation-hardening: Completed (fixed the workspace upgrade path so root `AGENTS.md` stays repo-owned outside the managed workspace fence, added focused regression coverage, and confirmed the live bootstrap/handoff surfaces still behave conservatively enough to close the remaining bootstrap hardening issue)
 - structured-bootstrap-handoff-artifact: Completed (added `.agentic-workspace/bootstrap-handoff.json` as the compact structured sibling for bootstrap follow-through, used it to carry intent/proof/escalation boundaries in checked-in form, aligned the lifecycle docs and CLI tests, and dogfooded the new record against this repo's live bootstrap state)
 - lazy-discovery-contract-profile-and-selectors: Completed (shipped the first compact queryable contract profile, added narrow selectors to the defaults/proof/ownership machine-readable surfaces, aligned the contract docs, and dogfooded the new retrieval path directly in this repo before archiving the tranche)
 - cross-agent-workflow-robustness-hardening: Completed (tightened the machine-readable workflow-recovery and completion cues, kept the workspace default recovery rule selective-adoption-safe, and archived the slice while leaving broader mixed-agent follow-through in `ROADMAP.md`)

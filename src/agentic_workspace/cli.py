@@ -1031,7 +1031,7 @@ def _workspace_init_or_upgrade_report(
     agents_path = target_root / WORKSPACE_AGENTS_PATH
     rendered_agents = _workspace_agents_template(selected_modules=selected_modules, descriptors=descriptors)
     existing_agents = agents_path.read_text(encoding="utf-8") if agents_path.exists() else None
-    if inspection_mode == "install" or command_name == "upgrade":
+    if inspection_mode == "install":
         if existing_agents != rendered_agents:
             if not dry_run:
                 agents_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1052,7 +1052,7 @@ def _workspace_init_or_upgrade_report(
                 }
             )
     else:
-        base_text = existing_agents or ""
+        base_text = existing_agents or rendered_agents
         updated_text, changed = _replace_or_insert_fenced_block(
             text=base_text,
             block=WORKSPACE_POINTER_BLOCK,
