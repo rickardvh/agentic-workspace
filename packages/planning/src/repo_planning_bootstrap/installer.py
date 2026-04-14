@@ -1082,12 +1082,18 @@ def _warning_remediation(warning_class: str) -> str | None:
         "todo_missing_execplan_linkage": "Create or promote this item to a docs/execplans plan and point Surface at it.",
         "todo_plan_required_hint": "This direct task has grown beyond direct-task shape; scaffold an execplan for it.",
         "todo_broken_surface_reference": "Repair Surface so it points at a live docs/execplans path, or remove the stale item.",
-        "execplan_structure_drift": "Restore the template sections and keep the plan contract-shaped rather than inventory-shaped.",
+        "execplan_structure_drift": (
+            "Restore the current template sections, especially Intent Continuity, Required Continuation, "
+            "Delegated Judgment, Active Milestone, and Execution Summary, so the plan matches the newer contract."
+        ),
         "execplan_immediate_next_action_drift": "Reduce Immediate Next Action to one concrete next step.",
         "execplan_readiness_drift": "Set Ready/Blocked explicitly so the active milestone can be resumed without re-deriving state.",
         "execplan_log_drift": "Compress the drift log into short decision notes or archive the completed plan.",
         "execplan_notebook_drift": "Strip status-journal residue out of the plan and keep only the current execution contract.",
-        "execplan_under_specified": "Fill in the thin sections so the plan can be executed without extra chat context.",
+        "execplan_under_specified": (
+            "Fill in the missing contract sections so the plan can survive upgrades without extra chat context; "
+            "compare the plan with docs/execplans/README.md and docs/execution-summary-contract.md."
+        ),
         "roadmap_execution_drift": "Reduce ROADMAP back to candidate framing; keep active sequencing in TODO and execplans.",
         "roadmap_stale_candidate_pressure": "Prune stale candidate detail and leave compact candidate stubs only.",
         "promotion_linkage_drift": "Make the promotion signal explicit in TODO or ROADMAP so activation has a visible trigger.",

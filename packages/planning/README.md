@@ -598,6 +598,7 @@ This system is most useful when:
 `archive-plan --apply-cleanup` is intentionally narrow. It may remove completed TODO items that still point at the archived plan and compress stale `ROADMAP.md` Active Handoff residue tied to that same thread, but it does not invent hidden state or perform broad automatic rewrites.
 
 `upgrade` is intentionally conservative: it refreshes package-managed helper surfaces and re-renders generated planning docs, but leaves repo-owned planning surfaces like `AGENTS.md`, `TODO.md`, and `ROADMAP.md` unchanged when they already exist.
+When older active execplans were written against a previous template, the upgrade path is to reconcile those plans to the current contract shape, not to expect `upgrade` to rewrite them automatically.
 
 `uninstall` is intentionally safe: it removes managed files only when they still match package content and leaves locally modified files in place for manual review.
 

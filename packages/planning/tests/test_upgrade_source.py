@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from repo_planning_bootstrap import cli
 from repo_planning_bootstrap._source import UPGRADE_SOURCE_PATH, default_upgrade_source, resolve_upgrade_source
 from repo_planning_bootstrap.installer import doctor_bootstrap
 
@@ -50,3 +51,14 @@ recommended_upgrade_after_days = 30
     result = doctor_bootstrap(target=tmp_path)
     assert any(action.kind == "source" and action.path == tmp_path / UPGRADE_SOURCE_PATH for action in result.actions)
     assert any(warning["warning_class"] == "upgrade_source_stale" for warning in result.warnings)
+
+
+def test_build_prompt_upgrade_mentions_old_execplan_contract_shape(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(cli, "resolve_upgrade_source", lambda target: default_upgrade_source())
+    monkeypatch.setattr(cli, "_preferred_runner", lambda source: None)
+
+    prompt = cli._build_prompt("upgrade", str(tmp_path))
+
+    assert "older active execplans" in prompt
+    assert "Intent Continuity" in prompt
+    assert "Execution Summary" in prompt

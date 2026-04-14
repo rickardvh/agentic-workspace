@@ -552,6 +552,107 @@ def test_doctor_does_not_flag_starter_todo_for_milestone_word_in_hygiene_rules(t
     assert not any(action.path == tmp_path / "TODO.md" and "milestone-level narrative" in action.detail for action in result.actions)
 
 
+def test_doctor_guides_older_execplans_toward_current_contract_sections(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: docs/execplans/plan-alpha.md
+  Why now: the active plan still needs migration hints for the newer contract shape.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
+    _write(
+        plan_path,
+        """
+# Plan Alpha
+
+## Goal
+
+- Keep scope clear.
+
+## Non-Goals
+
+- No runtime changes.
+
+## Intent Continuity
+
+- Larger intended outcome: Land plan alpha end to end.
+- This slice completes the larger intended outcome: yes
+- Continuation surface: none
+
+## Required Continuation
+
+- Required follow-on for the larger intended outcome: no
+- Owner surface: none
+- Activation trigger: none
+
+## Active Milestone
+
+- Status: in-progress
+- Scope: maintain planning discipline.
+- Ready: ready
+- Blocked: none
+- optional_deps: none
+
+## Immediate Next Action
+
+- Add one checker.
+
+## Blockers
+
+Long narrative status update line one.
+Long narrative status update line two.
+Long narrative status update line three.
+Long narrative status update line four.
+Long narrative status update line five.
+Long narrative status update line six.
+Long narrative status update line seven.
+Long narrative status update line eight.
+Long narrative status update line nine.
+Long narrative status update line ten.
+Long narrative status update line eleven.
+
+## Touched Paths
+
+## Invariants
+
+## Validation Commands
+
+## Completion Criteria
+
+-
+
+## Drift Log
+
+- 2026-04-01: Decision one.
+- 2026-04-02: Decision two.
+- 2026-04-03: Decision three.
+- 2026-04-04: Decision four.
+- 2026-04-05: Decision five.
+- 2026-04-06: Decision six.
+""",
+    )
+
+    result = doctor_bootstrap(target=tmp_path)
+
+    assert any(warning["warning_class"] == "execplan_structure_drift" for warning in result.warnings)
+    assert any(
+        action.kind == "suggested fix"
+        and action.path == plan_path
+        and "docs/execution-summary-contract.md" in action.detail
+        and "docs/execplans/README.md" in action.detail
+        for action in result.actions
+    )
+
+
 def test_verify_payload_flags_missing_collaboration_safe_template_guidance(tmp_path: Path, monkeypatch) -> None:
     payload_root = tmp_path / "payload"
     _write(payload_root / "AGENTS.md", "# Agent Instructions\n")

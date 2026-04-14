@@ -245,7 +245,10 @@ def _build_prompt(command: str, target: str | None) -> str:
         upgrade_guidance = (
             f"Use the checked-in `bootstrap-upgrade` skill under `{_managed_skills_path(target)}/`. "
             "It should use the repo's `.agentic-workspace/planning/UPGRADE-SOURCE.toml`, prefer an installed "
-            "`agentic-planning-bootstrap` command when available, and rerun render/check validation."
+            "`agentic-planning-bootstrap` command when available, and rerun render/check validation. "
+            "If `doctor` still flags older active execplans, reconcile those plans to the current contract by "
+            "adding or refreshing `Intent Continuity`, `Required Continuation`, `Delegated Judgment`, "
+            "`Active Milestone`, and `Execution Summary` instead of treating the upgrade as broken."
         )
         if runner is None:
             return upgrade_guidance
