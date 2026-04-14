@@ -9,6 +9,7 @@ Use it when safe install/adopt has finished and the repo should get a small amou
 - Keep jumpstart separate from `init`.
 - Make the first post-bootstrap follow-through bounded and reviewable.
 - Seed only the smallest amount of visible value that justifies the extra phase.
+- Let mature repos say that no new seed surfaces are needed.
 
 ## Rule
 
@@ -25,20 +26,21 @@ When jumpstart identifies candidate surfaces, prefer:
 - ambiguous or long-horizon follow-ons only when they are explicit no-action cases
 
 Use the highest-confidence, lowest-noise candidates first so the first visible value stays small and reviewable.
+If the repo already has the core jumpstart orientation surfaces, report that no new seed surfaces are needed and stop there.
 
 ## Canonical Shape
 
-Use `agentic-workspace defaults --section jumpstart --format json` for the machine-readable contract surface.
+Use `agentic-workspace jumpstart --target ./repo --format json` for the machine-readable contract surface.
 
 ```json
 {
   "jumpstart": {
     "canonical_doc": "docs/jumpstart-contract.md",
-    "command": "agentic-workspace defaults --section jumpstart --format json",
+    "command": "agentic-workspace jumpstart --target ./repo --format json",
     "rule": "Jumpstart is a bounded post-bootstrap phase that stays separate from init.",
     "phase": "post-bootstrap",
     "scope": [
-      "seed one or two high-value surfaces",
+      "seed one or two high-value surfaces, or stop when none are needed",
       "keep follow-through bounded and reviewable"
     ],
     "secondary": [
@@ -55,7 +57,7 @@ Use `agentic-workspace defaults --section jumpstart --format json` for the machi
 The text form should stay short and stable:
 
 - `doc: docs/jumpstart-contract.md`
-- `command: agentic-workspace defaults --section jumpstart --format json`
+- `command: agentic-workspace jumpstart --target ./repo --format json`
 - `rule: Jumpstart is a bounded post-bootstrap phase that stays separate from init.`
 - `phase: post-bootstrap`
 - `scope: seed one or two high-value surfaces after safe install/adopt`

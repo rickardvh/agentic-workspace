@@ -246,6 +246,12 @@ def build_parser() -> argparse.ArgumentParser:
     proof_parser.add_argument("--current", action="store_true", help="Return only the current proof summary.")
     _add_format_argument(proof_parser)
 
+    jumpstart_parser = subparsers.add_parser(
+        "jumpstart",
+        help="Show the bounded post-bootstrap jumpstart guidance for a mature repository.",
+    )
+    _add_selection_arguments(jumpstart_parser)
+
     ownership_parser = subparsers.add_parser(
         "ownership",
         help="Show the canonical ownership and authority mapping for the target repository.",
@@ -403,6 +409,32 @@ def main(argv: list[str] | None = None) -> int:
                 _emit_config(format_name=args.format, config=_load_workspace_config(target_root=target_root, descriptors=descriptors))
             return 0
         except WorkspaceUsageError as exc:
+            parser.error(str(exc))
+
+    if args.command == "jumpstart":
+        try:
+            target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+            _validate_target_root(command_name="jumpstart", target_root=target_root)
+            config = _load_workspace_config(target_root=target_root, descriptors=descriptors)
+            selected_modules, resolved_preset = _selected_modules(
+                command_name=args.command,
+                preset_name=args.preset,
+                module_arg=args.modules,
+                target_root=target_root,
+                descriptors=descriptors,
+                config=config,
+            )
+            _validate_selected_module_contract(selected_modules=selected_modules, descriptors=descriptors)
+            _emit_jumpstart(
+                format_name=args.format,
+                target_root=target_root,
+                selected_modules=selected_modules,
+                resolved_preset=resolved_preset,
+                descriptors=descriptors,
+                config=config,
+            )
+            return 0
+        except (ModuleSelectionError, WorkspaceUsageError) as exc:
             parser.error(str(exc))
 
     if args.command == "skills":
@@ -2588,16 +2620,16 @@ def _defaults_payload() -> dict[str, Any]:
         },
         "jumpstart": {
             "canonical_doc": "docs/jumpstart-contract.md",
-            "command": "agentic-workspace defaults --section jumpstart --format json",
+            "command": "agentic-workspace jumpstart --target ./repo --format json",
             "rule": "Jumpstart is a bounded post-bootstrap phase that stays separate from init.",
             "phase": "post-bootstrap",
             "scope": [
-                "seed one or two high-value surfaces",
+                "orient from a compact report first",
                 "keep follow-through bounded and reviewable",
             ],
             "secondary": [
                 "Do not widen init.",
-                "Do not bulk-import repo context.",
+                "Do not collapse jumpstart into the proof backlog.",
                 "Do not turn jumpstart into generic analysis.",
             ],
         },
@@ -3000,6 +3032,121 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print("Delegated judgment follow-through:")
     for item in payload["delegated_judgment"]["operational_follow_through"]:
         print(f"- {item}")
+
+
+def _jumpstart_orientation_surfaces(*, target_root: Path) -> tuple[Path, ...]:
+    return (
+        target_root / "AGENTS.md",
+        target_root / "TODO.md",
+        target_root / "tools" / "AGENT_QUICKSTART.md",
+        target_root / "tools" / "AGENT_ROUTING.md",
+        target_root / "memory" / "index.md",
+    )
+
+
+def _repo_looks_jumpstart_mature(*, target_root: Path) -> bool:
+    return all(path.exists() for path in _jumpstart_orientation_surfaces(target_root=target_root))
+
+
+def _jumpstart_payload(
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    descriptors: dict[str, ModuleDescriptor],
+    config: WorkspaceConfig,
+) -> dict[str, Any]:
+    status_payload = _run_lifecycle_command(
+        command_name="status",
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        dry_run=False,
+        config=config,
+    )
+    discovery = _jumpstart_discovery_payload(target_root=target_root, status_payload=status_payload)
+    mature_repo = _repo_looks_jumpstart_mature(target_root=target_root)
+    if mature_repo:
+        orientation: dict[str, Any] = {
+            "mode": "no-new-seed-surfaces-needed",
+            "summary": "No new seed surfaces are needed; the repo already has the core jumpstart orientation surfaces.",
+            "reason": "AGENTS.md, TODO.md, tools/AGENT_QUICKSTART.md, tools/AGENT_ROUTING.md, and memory/index.md are already present.",
+        }
+        next_action = {
+            "summary": "No new seed surfaces needed",
+            "commands": ["agentic-workspace report --target ./repo --format json"],
+        }
+    else:
+        prioritized = discovery["memory_candidates"] + discovery["planning_candidates"] + discovery["ambiguous"]
+        prioritized.sort(key=lambda item: item["confidence"], reverse=True)
+        best = prioritized[0] if prioritized else None
+        orientation = {
+            "mode": "bounded-orientation-needed",
+            "summary": "Review the strongest current surface candidates before seeding anything new.",
+        }
+        if best is not None:
+            orientation["surface"] = best["surface"]
+            orientation["reason"] = best["reason"]
+        next_action = {
+            "summary": "Review the compact report surfaces",
+            "commands": ["agentic-workspace report --target ./repo --format json"],
+        }
+
+    return {
+        "kind": "workspace-jumpstart/v1",
+        "schema": _reporting_schema_payload(),
+        "command": "jumpstart",
+        "target": target_root.as_posix(),
+        "selected_modules": selected_modules,
+        "health": status_payload["health"],
+        "orientation": orientation,
+        "next_action": next_action,
+        "discovery": discovery,
+        "current": {
+            "installed_modules": [entry["name"] for entry in status_payload.get("registry", []) if entry.get("installed")],
+            "warnings": list(status_payload.get("warnings", [])),
+            "needs_review": list(status_payload.get("needs_review", [])),
+            "stale_generated_surfaces": list(status_payload.get("stale_generated_surfaces", [])),
+        },
+    }
+
+
+def _emit_jumpstart(
+    *,
+    format_name: str,
+    target_root: Path,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    descriptors: dict[str, ModuleDescriptor],
+    config: WorkspaceConfig,
+) -> None:
+    payload = _jumpstart_payload(
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        config=config,
+    )
+    if format_name == "json":
+        print(json.dumps(serialise_value(payload), indent=2))
+        return
+    print(f"Target: {payload['target']}")
+    print("Jumpstart:")
+    print(f"- command: {payload['command']}")
+    print(f"- mode: {payload['orientation']['mode']}")
+    print(f"- summary: {payload['orientation']['summary']}")
+    if payload["orientation"].get("surface"):
+        print(f"- surface: {payload['orientation']['surface']}")
+    if payload["orientation"].get("reason"):
+        print(f"- reason: {payload['orientation']['reason']}")
+    print(f"- next action: {payload['next_action']['summary']}")
+    for command in payload["next_action"]["commands"]:
+        print(f"  - {command}")
+    if payload["current"]["warnings"]:
+        print("Current warnings:")
+        for warning in payload["current"]["warnings"]:
+            print(f"- {warning}")
 
 
 def _default_module_update_policies() -> dict[str, ModuleUpdatePolicy]:
@@ -4023,6 +4170,20 @@ def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
 
 def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[SkillRecommendation]:
     task_text_lower = task_text.lower()
+    if "jumpstart" in task_text_lower:
+        for skill in skills:
+            if skill.skill_id == "planning-reporting":
+                return [
+                    SkillRecommendation(
+                        skill=skill,
+                        hint_score=10,
+                        score=10,
+                        reasons=(
+                            "jumpstart uses the compact planning reporting surface before any broader discovery",
+                        ),
+                    )
+                ]
+        return []
     task_tokens = set(_skill_match_tokens(task_text))
     recommendations: list[SkillRecommendation] = []
 
@@ -4150,6 +4311,9 @@ def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
     if payload.get("command") == "init":
         _emit_init_text(payload)
         return
+    if payload.get("command") == "jumpstart":
+        _emit_jumpstart_text(payload)
+        return
     if payload.get("command") == "report":
         _emit_report_text(payload)
         return
@@ -4261,6 +4425,38 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
             module = f"[{finding['module']}] " if finding.get("module") else ""
             path = f"{finding['path']}: " if finding.get("path") else ""
             print(f"- {finding.get('severity', 'info')}: {module}{path}{finding.get('message', '')}")
+
+
+def _emit_jumpstart_text(payload: dict[str, Any]) -> None:
+    print(f"Target: {payload['target']}")
+    print("Command: jumpstart")
+    print(f"Health: {payload['health']}")
+    print(f"Mode: {payload['orientation']['mode']}")
+    print(f"Summary: {payload['orientation']['summary']}")
+    if payload["orientation"].get("reason"):
+        print(f"Reason: {payload['orientation']['reason']}")
+    next_action = payload.get("next_action", {})
+    if isinstance(next_action, dict):
+        summary = next_action.get("summary")
+        if summary:
+            print(f"Next action: {summary}")
+        commands = next_action.get("commands", [])
+        if isinstance(commands, list) and commands:
+            print("Commands:")
+            for command in commands:
+                print(f"- {command}")
+    current = payload.get("current", {})
+    if isinstance(current, dict):
+        warnings = current.get("warnings", [])
+        if isinstance(warnings, list) and warnings:
+            print("Warnings:")
+            for warning in warnings:
+                print(f"- {warning}")
+        needs_review = current.get("needs_review", [])
+        if isinstance(needs_review, list) and needs_review:
+            print("Needs review:")
+            for item in needs_review:
+                print(f"- {item}")
 
 
 def _emit_prompt_text(payload: dict[str, Any]) -> None:

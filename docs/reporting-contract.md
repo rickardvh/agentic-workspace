@@ -85,3 +85,5 @@ Use the machine-readable report first when the question is:
 Use [`docs/compact-contract-profile.md`](docs/compact-contract-profile.md) for the selector-shaped answer envelope that should sit underneath the report surface when one answer is enough.
 
 Use [`docs/lazy-discovery-measurements.md`](docs/lazy-discovery-measurements.md) when you want to check whether a narrow query is actually cheaper than a broad dump.
+
+Use `agentic-workspace jumpstart --target ./repo --format json` when the report has already identified a bounded follow-through path and you want the public jumpstart surface rather than the broader combined report.
