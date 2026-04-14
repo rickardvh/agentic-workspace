@@ -1,0 +1,78 @@
+{
+  "schema": "benchmark_scenario/v1",
+  "scenarios": [
+    {
+      "scenario_id": "startup-path-blank",
+      "fixture_id": "blank_or_unmanaged_repo",
+      "human_policy_ref": "benchmark_human_policy/v1",
+      "judge_rubric_ref": "benchmark_judge_rubric/v1",
+      "questions": [
+        "What is the canonical startup path here?",
+        "What should happen next after interrupted bootstrap?"
+      ],
+      "allowed_answers": [
+        "canonical path",
+        "defer to escalation",
+        "narrow next action"
+      ],
+      "trace_fields": [
+        "human_role_trace",
+        "worker_trace",
+        "judge_scores",
+        "files_opened_before_safe_action",
+        "selector_vs_broad_dump_counts",
+        "escalation_count"
+      ]
+    },
+    {
+      "scenario_id": "ownership-selection-partial",
+      "fixture_id": "partial_or_placeholder_state",
+      "human_policy_ref": "benchmark_human_policy/v1",
+      "judge_rubric_ref": "benchmark_judge_rubric/v1",
+      "questions": [
+        "Who owns this file or concern?",
+        "May the worker proceed directly or must it escalate?"
+      ],
+      "allowed_answers": [
+        "owner surface path",
+        "no owner yet",
+        "escalate",
+        "proceed",
+        "ask for missing policy"
+      ],
+      "trace_fields": [
+        "human_role_trace",
+        "worker_trace",
+        "judge_scores",
+        "files_opened_before_safe_action",
+        "selector_vs_broad_dump_counts",
+        "escalation_count"
+      ]
+    },
+    {
+      "scenario_id": "proof-lane-docs-heavy",
+      "fixture_id": "docs_heavy_existing_repo",
+      "human_policy_ref": "benchmark_human_policy/v1",
+      "judge_rubric_ref": "benchmark_judge_rubric/v1",
+      "questions": [
+        "What proof lane is enough?",
+        "May the worker proceed directly or must it escalate?"
+      ],
+      "allowed_answers": [
+        "narrow proof lane",
+        "broader proof lane",
+        "escalate",
+        "proceed",
+        "request_missing_field"
+      ],
+      "trace_fields": [
+        "human_role_trace",
+        "worker_trace",
+        "judge_scores",
+        "files_opened_before_safe_action",
+        "selector_vs_broad_dump_counts",
+        "escalation_count"
+      ]
+    }
+  ]
+}

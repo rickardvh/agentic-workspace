@@ -14,7 +14,9 @@ Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraint
 Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Active Handoff
+
 - `Bounded post-install jumpstart phase for mature repos` remains active in `docs/execplans/bounded-post-install-jumpstart-phase-2026-04-14.md`; the remaining mature-repo follow-on candidates stay queued below.
+
 ## GitHub Issue Intake
 
 - Latest intake tranche: GitHub issues `#53` through `#58`.
@@ -46,17 +48,6 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 | `Memory seeding from high-value mature-repo signals` | GitHub issue `#50`; jumpstart Memory slice | Mature repos often already contain durable anti-rediscovery knowledge that should seed Memory early, but only if the source material is high-confidence and compact enough to avoid noise. | High-confidence Memory seeds can be extracted as compact facts, invariants, runbooks, or stable conventions without bulk-importing prose. |
 | `Planning seeding from current mature-repo reality` | GitHub issue `#51`; jumpstart Planning slice | Mature repos often already expose one useful active picture, and a bounded planning seed can make adoption feel immediately useful without migrating historic backlog state. | One current active slice, one or two roadmap candidates, or one bounded review artifact can be seeded without turning intake into backlog archaeology. |
 | `Fast payoff mature-repo jumpstart mode` | GitHub issue `#52`; jumpstart ranking refinement | A bounded jumpstart phase also needs an explicit ranking policy so the highest-value low-risk seeds come first and the first visible gains stay small, clear, and reviewable. | Candidate ranking can be expressed with clear value and confidence signals, and skipped seeds stay explicit in reporting. |
-
-## Fifth Priority Queue
-
-| Candidate | Source | Why now | Promote when |
-| --- | --- | --- | --- |
-| `Human-free benchmark harness for repo-operating evaluations` | GitHub issue `#54`; benchmark harness core | The fastest dogfooding payoff is a runnable evaluation loop that can score repo-operating behavior without requiring real humans in every run. | The repo can run a stable benchmark loop with explicit human, worker, and judge roles plus structured outputs. |
-| `Structured judge rubric for agent-scored benchmarking` | GitHub issue `#55`; benchmark comparability | A harness is only useful if the judge produces comparable structured scores instead of free-form narrative. | The rubric can score action choice, scope discipline, proof, ownership, escalation, retrieval efficiency, and handoff continuity. |
-| `Frozen fixture repos and scenario specs` | GitHub issue `#57`; benchmark reproducibility | Stable fixtures are needed to make dogfooding results comparable across branches, agents, and time. | The benchmark can run against frozen repo snapshots with compact scenario specs and narrow expected answers. |
-| `Structured human-policy spec for benchmark human agents` | GitHub issue `#53`; benchmark role stability | The human-role agent needs bounded policy input or the benchmark will drift into ad hoc helpfulness. | The human-role policy can define outcome, constraints, approvals, prohibitions, and escalation responses in a structured way. |
-| `Narrow operational-question benchmarks` | GitHub issue `#56`; benchmark alignment | The product’s value is repository operating cost, so the benchmark should ask narrow operational questions directly. | The benchmark family can score ownership, proof, escalation, bootstrap next action, and handoff continuity with clear answers. |
-| `Token-cost and retrieval-efficiency metrics` | GitHub issue `#58`; efficiency proof | Efficiency claims should be measurable, but the metrics are most useful once the basic benchmark loop already exists. | The benchmark can record reading cost, selector use, broad dumps, and other retrieval-efficiency proxies in structured output. |
 
 ## Ongoing Maintenance Expectations
 
