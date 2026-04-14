@@ -15,11 +15,11 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Active Handoff
 
-- The bounded post-install setup phase is complete; the next mature-repo follow-on work now comes from the combined upgrade-quality and setup-quality issue tranches below.
+- The active queue now owns the live open GitHub issue tranche `#73` through `#79`; roadmap candidates should stay inactive until that queue narrows or closes.
 
 ## GitHub Issue Intake
 
-- Latest intake tranche: GitHub issues `#65` through `#77`.
+- Latest intake tranche: GitHub issues `#73` through `#79`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 
@@ -27,20 +27,12 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 | Priority | Candidate | Source | Why now | Promote when |
 | --- | --- | --- | --- | --- |
-| 1 | `Canonical compact planning state and thin views for continuation safety` | GitHub issue `#78` | Smaller models are more likely to lose continuity when active queue, completion history, and long-horizon candidate notes are mixed together. The planning layer needs a compact canonical record and thinner rendered views so weaker agents can continue cleanly without reconstructing structure from prose. | The planning-state drift is visible in another dogfood pass, or the stronger-model implementation slice is ready to define the canonical compact record and thin views. |
-| 2 | `Renderer wrapper upgrade compatibility hardening` | GitHub issue `#66` | The canonical workspace upgrade path now works on mature repos, but it can still break a preserved repo-local `scripts/render_agent_docs.py` wrapper contract and force a manual compatibility repair after upgrade. | Another preserved repo hits the same post-upgrade renderer-wrapper gap, or the next workspace upgrade hardening pass is ready to close the highest-signal mature-repo compatibility issue first. |
-| 3 | `Workspace config path semantics clarification` | GitHub issue `#65` | `agentic-workspace config` still reports `agentic-workspace.toml` as the authoritative config path even when the file does not exist, which weakens the default-path and trust-surface contract in both migration and upgrade evidence. | Another adopter or upgrade report still finds the missing-file ambiguity, or the next defaults/config tranche is ready to sharpen front-door config trust. |
-| 4 | `Setup public workflow clarification` | GitHub issue `#69` | Setup is now a documented public contract concept, but the public `agentic-workspace setup` command still needs the last pass of front-door clarification, which leaves the concept and the product surface out of sync. | Another adopter looks for the public setup entrypoint, or the next front-door workflow refinement pass is ready to resolve the concept-versus-command mismatch directly. |
-| 5 | `Mature-repo setup no-op detection` | GitHub issue `#72` | On a mature already-customized repo, setup currently adds little useful signal but does not clearly say that no new seed surfaces are needed, which weakens the quiet-by-default goal. | Another mature repo shows the same low-value setup result set, or the next setup/product-shape tranche is ready to improve graceful no-op behavior before adding more guidance surfaces. |
-| 6 | `Execplan upgrade-guidance ergonomics` | GitHub issue `#67` | A successful canonical upgrade can still look attention-needing until preserved repo-owned execplans are manually brought to the newer planning contract shape, leaving avoidable guesswork in otherwise healthy upgrades. | Another preserved repo needs manual execplan contract reconciliation after upgrade, or the next planning contract change is large enough that upgrade hints should land before more schema growth. |
-| 7 | `Setup bounded-proof separation` | GitHub issue `#70` | `report` is the closest thing to useful setup behavior today, while `proof` is still too backlog-heavy for bounded mature-repo orientation, so the setup lane is not yet clearly separated from the full proof backlog. | Another setup evaluation shows `proof` drowning bounded orientation in full backlog output, or the next setup pass is ready to sharpen the compact orientation lane. |
-| 8 | `Setup skill recommendation quality` | GitHub issue `#71` | `skills --task "setup"` currently degrades into a broad skill dump with empty recommendations, which is anti-signal in exactly the quick-orientation lane where precision matters most. | Another repo shows the same empty-recommendation broad dump, or the next skill-routing refinement pass is ready to give setup a real recommendation contract. |
-| 9 | `Memory doctor mature-corpus signal tuning` | GitHub issue `#68` | The remaining upgrade friction is now mostly low-signal advisory pressure from memory doctor on established customized corpora rather than lifecycle failure, so signal quality is the next mature-repo trust problem after the upgrade-path and setup-shape gaps above. | Repeated mature-repo evidence still shows overlap and current-note warnings dominating doctor output, or the higher-priority upgrade-contract and setup-shape issues above are closed and signal quality becomes the next trust bottleneck. |
-| 10 | `Model Permissions in Delegation Posture Contract` | GitHub issue `#76` | Provides immediate, concrete safety guarantees for autonomous agents. Very quick to implement by extending `MixedAgentLocalOverride`. | The current active queue completes or an explicit safety-bounding need arises. |
-| 11 | `Strict CLI Non-Interactivity and Windows Support` | GitHub issue `#75` | Crucial for robust CI and autonomous agent execution (especially on Windows), by adding `--non-interactive` argument propagation to prevent hanging prompts. | Autonomous agents consistently hang during lifecycle updates, or formatting/workflow cleanup tranche is selected. |
-| 12 | `Structured Data Schemas for State Retrieval` | GitHub issue `#74` | Reduces agent parsing errors and hallucinations by exposing machine-friendly state. | Markdown prose continues to cause heavy extraction faults. |
-| 13 | `Explicit Tool Verification State for Execplans` | GitHub issue `#77` | Complements schemas by warning agents if they lack required tools before attempting execution. | Capability-aware execution is expanded. |
-| 14 | `Adapter Patterns for Agent-Specific Workflow Artifacts` | GitHub issue `#73` | Eliminates friction of maintaining two sets of plans for agents with native workflow artifacts. | Ecosystem integration lane is opened. |
+| 1 | `Canonical compact planning state and thin views for continuation safety` | GitHub issue `#78` | Smaller models are still being asked to recover too much structure from overloaded planning surfaces, and the current queue drift confirms the state model needs one compact canonical owner. | The active contract/reliability tranche closes and the next implementation pass is ready to rewrite planning state without reopening already-fixed smaller slices. |
+| 2 | `Improve closure discipline for bounded smaller-model work` | GitHub issue `#79` | The repo now has compact active and resumable contract projections, but it still lacks a cheap, explicit closure discipline that catches dangling references and unfinished residue before smaller models stop. | Another bounded slice still leaves cleanup residue, or the compact planning-state tranche is ready to add a cheap completion check at the same time. |
+| 3 | `Adapter patterns for agent-specific workflow artifacts` | GitHub issue `#73` | Native agent artifacts are a real ecosystem constraint, but the planning state should be compact and canonical before adding sync/adapter affordances around it. | Canonical compact planning state exists and the next follow-on can map runtime-native artifacts into repo-owned thin views without doubling sources of truth. |
+| 4 | `Strict CLI non-interactivity and Windows/PowerShell support` | GitHub issue `#75` | This is a direct reliability issue for autonomous agent use, but the smallest useful pass should follow the currently active closure/reconciliation tranche instead of competing with planning-state fixes for the same startup attention. | The active queue reaches the CLI reliability slice or another lifecycle command still shows prompt/hang risk under unattended Windows use. |
+| 5 | `Explicit tool verification state for execplans` | GitHub issue `#77` | Capability-aware execution is present, but execplans do not yet expose a compact preflight tool-availability answer that a weaker agent can check before wasting tokens on impossible work. | The active queue finishes the current contract/reliability tranche or another dogfood pass shows repeated failed attempts due to missing tools. |
+| 6 | `Structured data schemas for state retrieval` | GitHub issue `#74` | Several machine-readable projections already exist, so the next value is a narrower schema layer that surfaces planning/memory state without requiring broad Markdown parsing. | The active queue finishes the current tranche and the remaining state-retrieval gaps are clear enough to expose through a compact schema rather than more prose. |
 
 ## Ongoing Maintenance Expectations
 
@@ -51,10 +43,10 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 ## Sequencing Recommendation
 
 1. Prefer proof, refinement, and trust-hardening over new capability invention.
-2. The next mature-repo tranche should come from the upgrade-quality queue first, then the setup product-shape queue, before broader doctor signal tuning.
-3. Treat issue `#66` and issue `#65` as the highest-priority pair because they affect whether the canonical upgrade path and config trust surface stay trustworthy on preserved custom repos.
-4. Treat issue `#69` and issue `#72` as the next pair because they decide whether setup is a real quiet workflow or just a partially productized concept.
-5. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.
+2. Finish the live active issue queue first; do not reopen inactive candidates while `TODO.md` still owns the `#73`-`#79` tranche.
+3. After the active queue narrows, treat issues `#78` and `#79` as the highest-priority pair because they define whether smaller models can continue and close work cleanly from compact checked-in state.
+4. Treat issue `#73` as the next ecosystem follow-on only after the canonical planning-state contract is stable enough to adapt rather than duplicate.
+5. Execute one bounded roadmap candidate at a time with narrow validation, dogfooding, and prompt archival.
 
 ## Reopen Conditions
 
