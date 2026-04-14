@@ -178,8 +178,9 @@ def _print_summary(summary: dict) -> None:
         task = planning_record.get("task", {})
         print("Planning record:")
         print(f"- Task: {task.get('id', '')}: {task.get('surface', '')}")
-        print(f"- Requested outcome: {planning_record['intent']['requested_outcome']}")
+        print(f"- Requested outcome: {planning_record['requested_outcome']}")
         print(f"- Next action: {planning_record['next_action']}")
+        print(f"- Continuation owner: {planning_record['continuation_owner']}")
         print(f"- Proof expectations: {', '.join(planning_record['proof_expectations'])}")
     elif planning_record:
         print(f"Planning record: {planning_record.get('status')} ({planning_record.get('reason', 'no compact record available')})")

@@ -18,9 +18,9 @@ Use:
 agentic-planning-bootstrap summary --format json
 ```
 
-The `resumable_contract` object is the compact machine-readable restart contract for current active work when planning has one active execplan and a present `active_contract`.
+The `planning_record` object is the compact machine-readable active record for current work when planning has one active TODO item and one active execplan. The `resumable_contract` object remains the thinner restart view over that canonical record.
 
-That contract currently carries:
+The resumable view currently carries:
 
 - `current_next_action`
 - `active_milestone`
@@ -30,10 +30,12 @@ That contract currently carries:
 - `blockers`
 - `minimal_refs`
 
+`planning_record` is the canonical active state. `resumable_contract` is a restart projection over that state.
+
 ## Rules
 
-- Keep the resumable contract smaller than the full execplan.
-- Derive it from existing execplan sections instead of requiring a new section.
+- Keep the resumable view smaller than the full execplan.
+- Derive the canonical planning record and its views from existing execplan sections instead of requiring a new section.
 - Treat it as unavailable when active planning is ambiguous or under-specified rather than fabricating restart certainty.
 - Preserve proof and escalation boundaries explicitly so a weaker or later agent does not have to infer them from prose.
 

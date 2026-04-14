@@ -1151,10 +1151,13 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["planning_record"]["task"]["surface"] == "docs/execplans/plan-alpha.md"
     assert summary["planning_record"]["next_action"] == "Add one checker."
     assert summary["planning_record"]["proof_expectations"] == ["uv run pytest tests/test_check_planning_surfaces.py"]
+    assert summary["planning_record"]["agent_may_decide"] == (
+        "Bounded decomposition, validation tightening, and plan-local residue routing."
+    )
     assert summary["planning_record"]["escalate_when"] == (
         "The requested outcome, owned surface, time horizon, or meaningful validation story would change."
     )
-    assert "continuation_owner" not in summary["planning_record"]
+    assert summary["planning_record"]["continuation_owner"] == "docs/execplans/plan-alpha.md"
     assert summary["active_contract"]["status"] == "present"
     assert summary["active_contract"]["view_of"] == "planning_record"
     assert summary["active_contract"]["todo_item"]["id"] == "plan-alpha"
@@ -1184,10 +1187,40 @@ def test_planning_summary_can_expose_active_contract_from_execplan_without_todo_
     assert summary["planning_record"]["status"] == "present"
     assert summary["planning_record"]["task"]["id"] == "plan-alpha"
     assert summary["planning_record"]["task"]["surface"] == "docs/execplans/plan-alpha.md"
+    assert summary["planning_record"]["continuation_owner"] == "docs/execplans/plan-alpha.md"
     assert summary["active_contract"]["status"] == "present"
     assert summary["resumable_contract"]["status"] == "present"
     assert summary["active_contract"]["todo_item"]["id"] == ""
     assert summary["active_contract"]["minimal_refs"] == ["TODO.md", "docs/execplans/plan-alpha.md"]
+
+
+def test_planning_summary_human_view_starts_with_planning_record(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: docs/execplans/plan-alpha.md
+  Why now: promote when maintained report signal appears.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+
+    summary = planning_summary(target=tmp_path)
+    planning_cli._print_summary(summary)
+    out = capsys.readouterr().out
+
+    assert "Planning record:" in out
+    assert "Requested outcome: Keep scope clear." in out
+    assert "Continuation owner: docs/execplans/plan-alpha.md" in out
+    assert "Active contract view:" in out
+    assert "Resumable contract view:" in out
 
 
 def test_summary_text_prints_planning_record_before_contract_views(tmp_path: Path, capsys) -> None:

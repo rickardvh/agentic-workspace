@@ -571,6 +571,10 @@ def _canonical_planning_record(
 
     todo_item = active_contract.get("todo_item", {})
     active_milestone = resumable_contract.get("active_milestone", {})
+    minimal_refs = list(resumable_contract.get("minimal_refs", []))
+    continuation_owner = str(todo_item.get("surface", "")).strip()
+    if not continuation_owner and minimal_refs:
+        continuation_owner = minimal_refs[-1]
     return {
         "status": "present",
         "task": {
@@ -578,17 +582,17 @@ def _canonical_planning_record(
             "surface": str(todo_item.get("surface", "")).strip(),
             "status": str(active_milestone.get("status", "")).strip(),
         },
-        "intent": {
-            "requested_outcome": str(active_contract["intent"]["requested_outcome"]).strip(),
-            "hard_constraints": str(active_contract["intent"]["hard_constraints"]).strip(),
-        },
+        "requested_outcome": str(active_contract["intent"]["requested_outcome"]).strip(),
+        "hard_constraints": str(active_contract["intent"]["hard_constraints"]).strip(),
+        "agent_may_decide": str(active_contract["intent"]["agent_may_decide"]).strip(),
         "next_action": str(resumable_contract["current_next_action"]).strip(),
         "proof_expectations": list(resumable_contract.get("proof_expectations", [])),
         "escalate_when": str(resumable_contract.get("escalate_when", "")).strip(),
+        "continuation_owner": continuation_owner,
         "touched_scope": list(active_contract.get("touched_scope", [])),
         "completion_criteria": list(resumable_contract.get("completion_criteria", [])),
         "blockers": list(resumable_contract.get("blockers", [])),
-        "minimal_refs": list(resumable_contract.get("minimal_refs", [])),
+        "minimal_refs": minimal_refs,
     }
 
 
