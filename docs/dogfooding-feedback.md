@@ -24,6 +24,7 @@ Classify each signal into exactly one primary bucket first:
 - If the signal changes active execution, route it into `TODO.md` or an execplan.
 - If it is a future candidate, record it in `ROADMAP.md` with a promotion signal.
 - If it is durable operating knowledge, capture it in memory or canonical docs.
+- If the signal is the post-completion reflection for a finished execplan, record one compact `Product improvement signal` in that plan's `Execution Summary` and route any required follow-on separately.
 - If cleanup burden repeats, classify it as stewardship friction and route it into planning rather than letting it become invisible task residue.
 - If it is monorepo-only friction, say that explicitly so it does not silently become product policy.
 

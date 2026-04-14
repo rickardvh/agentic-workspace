@@ -182,7 +182,6 @@ Execplans now treat three fields as first-class:
 - `Intent Continuity`: whether the larger intended outcome is actually complete and what checked-in surface now owns it if not
 - `Required Continuation`: whether follow-on is mandatory for that larger outcome, plus the owner surface and activation trigger
 - `Execution Summary`: what the slice delivered, how validation was confirmed, where follow-on was routed, and how later work should resume
-
 When an execplan is carrying broad direction across sessions, it should also record a compact `Delegated Judgment` section:
 
 - `Requested outcome`

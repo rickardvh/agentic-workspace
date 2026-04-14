@@ -2430,6 +2430,30 @@ def _defaults_payload() -> dict[str, Any]:
                 "persisted shared knowledge beats rediscovery",
             ],
         },
+        "delegation_posture": {
+            "canonical_doc": "docs/delegation-posture-contract.md",
+            "command": "agentic-workspace defaults --section delegation_posture --format json",
+            "rule": (
+                "Use the effective mixed-agent posture to decide whether to keep work direct, "
+                "split it into planner/implementer/validator subtasks, or escalate to a stronger planner."
+            ),
+            "preferred_split": [
+                "planner",
+                "implementer",
+                "validator",
+            ],
+            "config_controls": [
+                "agentic-workspace.local.toml runtime.supports_internal_delegation",
+                "agentic-workspace.local.toml runtime.strong_planner_available",
+                "agentic-workspace.local.toml runtime.cheap_bounded_executor_available",
+                "agentic-workspace.local.toml handoff.prefer_internal_delegation_when_available",
+            ],
+            "secondary": [
+                "Do not treat config as a scheduler.",
+                "Do not delegate when the task stays cheap and direct.",
+                "Do not silently rewrite ends.",
+            ],
+        },
         "skill_discovery": {
             "primary": [
                 "agentic-workspace skills --target ./repo --format json",
@@ -2663,6 +2687,12 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print("Mixed-agent:")
     print(f"- rule: {payload['mixed_agent']['rule']}")
     print(f"- local override: {payload['mixed_agent']['local_override']['path']} ({payload['mixed_agent']['local_override']['status']})")
+    print("Delegation posture:")
+    print(f"- doc: {payload['delegation_posture']['canonical_doc']}")
+    print(f"- command: {payload['delegation_posture']['command']}")
+    print(f"- rule: {payload['delegation_posture']['rule']}")
+    print(f"- preferred split: {' -> '.join(payload['delegation_posture']['preferred_split'])}")
+    print(f"- config controls: {', '.join(payload['delegation_posture']['config_controls'])}")
     print("Skill discovery:")
     for step in payload["skill_discovery"]["primary"]:
         print(f"- {step}")

@@ -14,7 +14,7 @@ Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraint
 Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Active Handoff
-- `Bounded post-install jumpstart phase for mature repos` is promoted to `docs/execplans/bounded-post-install-jumpstart-phase-2026-04-14.md`; the remaining mature-repo follow-on candidates stay queued below.
+- `Bounded post-install jumpstart phase for mature repos` remains active in `docs/execplans/bounded-post-install-jumpstart-phase-2026-04-14.md`; the remaining mature-repo follow-on candidates stay queued below.
 ## GitHub Issue Intake
 
 - Latest intake tranche: GitHub issues `#53` through `#58`.

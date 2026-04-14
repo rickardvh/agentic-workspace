@@ -33,6 +33,7 @@ In execplans, use the `## Execution Summary` section with these fields:
 - `Validation confirmed`
 - `Follow-on routed to`
 - `Resume from`
+- `Product improvement signal`
 
 Keep each field brief and decision-shaped.
 
@@ -42,6 +43,10 @@ Good examples:
 - `Validation confirmed: make check; uv run pytest packages/planning/tests/test_installer.py`
 - `Follow-on routed to: ROADMAP.md candidate \`Handoff and execution summary contract\``
 - `Resume from: No further action in this plan; start from the queued follow-on candidate if the broader outcome is reopened.`
+- `Product improvement signal: Add a compact post-slice reflection field so completed execplans leave the friction signal with the plan instead of only in chat.`
+
+Use `Product improvement signal` for the smallest useful dogfood note when the slice exposed a repeatable product or workflow improvement.
+If no durable improvement surfaced, keep it brief and say `none`.
 
 ## What This Contract Is Not
 

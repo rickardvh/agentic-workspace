@@ -753,7 +753,6 @@ def archive_execplan(
         )
         result.add("manual review", plan_path, "fill `Execution Summary` with the post-archive resume cue before archiving")
         return result
-
     cleanup_todo_lines: list[str] | None = None
     todo_ref_items = _todo_referencing_items(target_root / "TODO.md", plan_path, target_root)
     if apply_cleanup and todo_ref_items:

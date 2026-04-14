@@ -118,6 +118,8 @@ If mixed-agent policy grows beyond the v1 surface, effective reporting should al
 - what comes from product defaults
 - what is inferred from the current runtime or task shape
 
+Use `agentic-workspace defaults --section delegation_posture --format json` to see how the current config and local override resolve into the current delegation posture.
+
 When runtime inference materially changes behavior, reporting should make that inference auditable rather than hidden.
 
 Do not add broader mixed-agent config without a reporting surface that preserves this distinction.

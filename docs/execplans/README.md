@@ -122,9 +122,10 @@ Execution summaries belong under `## Execution Summary` for completed or nearly-
 - `Validation confirmed`
 - `Follow-on routed to`
 - `Resume from`
+- `Product improvement signal`
 
 Keep this section compact and decision-shaped.
-It exists so later contributors do not have to reconstruct what the slice achieved, how it was proved, and where follow-through now lives.
+It exists so later contributors do not have to reconstruct what the slice achieved, how it was proved, where follow-through now lives, or what repeatable product friction the slice exposed.
 Do not turn it into a second drift log, a notebook, or a memory note.
 
 Keep the drift log decision-shaped and brief. Do not turn an active or completed execplan into a changelog when the same detail is already recoverable from archived plans and git.

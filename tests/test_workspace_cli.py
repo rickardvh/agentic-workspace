@@ -194,6 +194,24 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "proof expectations",
         "immediate next action",
     ]
+    assert payload["delegation_posture"]["canonical_doc"] == "docs/delegation-posture-contract.md"
+    assert payload["delegation_posture"]["command"] == "agentic-workspace defaults --section delegation_posture --format json"
+    assert payload["delegation_posture"]["rule"] == (
+        "Use the effective mixed-agent posture to decide whether to keep work direct, "
+        "split it into planner/implementer/validator subtasks, or escalate to a stronger planner."
+    )
+    assert payload["delegation_posture"]["preferred_split"] == ["planner", "implementer", "validator"]
+    assert payload["delegation_posture"]["config_controls"] == [
+        "agentic-workspace.local.toml runtime.supports_internal_delegation",
+        "agentic-workspace.local.toml runtime.strong_planner_available",
+        "agentic-workspace.local.toml runtime.cheap_bounded_executor_available",
+        "agentic-workspace.local.toml handoff.prefer_internal_delegation_when_available",
+    ]
+    assert payload["delegation_posture"]["secondary"] == [
+        "Do not treat config as a scheduler.",
+        "Do not delegate when the task stays cheap and direct.",
+        "Do not silently rewrite ends.",
+    ]
     assert payload["config"]["path"] == "agentic-workspace.toml"
     assert payload["config"]["command"] == "agentic-workspace config --target ./repo --format json"
     assert "workspace.default_preset" in payload["config"]["supported_fields"]
@@ -220,6 +238,8 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "bootstrap handoff record: .agentic-workspace/bootstrap-handoff.json" in text
     assert "Jumpstart:" in text
     assert "docs/jumpstart-contract.md" in text
+    assert "Delegation posture:" in text
+    assert "docs/delegation-posture-contract.md" in text
     assert "Compact contract profile:" in text
     assert "docs/compact-contract-profile.md" in text
     assert "Proof surfaces:" in text
@@ -320,6 +340,20 @@ def test_defaults_jumpstart_section_selector_returns_compact_contract_answer(cap
     assert payload["answer"]["canonical_doc"] == "docs/jumpstart-contract.md"
     assert payload["answer"]["phase"] == "post-bootstrap"
     assert "docs/jumpstart-contract.md" in payload["refs"]
+    assert "agentic-workspace defaults --format json" in payload["refs"]
+
+
+def test_defaults_delegation_posture_section_selector_returns_compact_contract_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "delegation_posture", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "delegation_posture"}
+    assert payload["matched"] is True
+    assert payload["answer"]["canonical_doc"] == "docs/delegation-posture-contract.md"
+    assert payload["answer"]["preferred_split"] == ["planner", "implementer", "validator"]
+    assert "docs/delegation-posture-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 

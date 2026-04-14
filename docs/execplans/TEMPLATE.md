@@ -107,8 +107,10 @@ Omit the section when no implementation-blocking questions remain.
 - Validation confirmed:
 - Follow-on routed to:
 - Resume from:
+- Product improvement signal:
 
 Keep this compact and completion-shaped.
+If the slice exposed a repeatable product or workflow improvement, fill `Product improvement signal` with the smallest useful dogfood note instead of leaving that signal only in chat.
 Before archiving a completed plan, replace placeholders with the durable summary a later contributor should not have to reconstruct from chat or drift prose.
 
 ## Drift Log

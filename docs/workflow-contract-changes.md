@@ -4,6 +4,10 @@ Use this page as a compact maintainer-facing record of recent workflow-surface c
 
 Keep this page short and decision-shaped; it is not the full changelog, release notes, or command index.
 
+## 2026-04-14
+
+- Added a compact `Product improvement signal` field to execplan execution summaries so completed slices can carry one dogfood reflection forward instead of leaving it only in chat.
+
 ## 2026-04-08
 
 - Restored the missing canonical source/payload/root-install boundary guide at `docs/source-payload-operational-install.md`.
