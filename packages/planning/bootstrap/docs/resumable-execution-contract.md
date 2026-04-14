@@ -45,6 +45,7 @@ The resumable view currently carries:
 - Treat it as unavailable when active planning is ambiguous or under-specified rather than fabricating restart certainty.
 - Preserve proof and escalation boundaries explicitly so a weaker or later agent does not have to infer them from prose.
 - Keep tool verification advisory in the first slice: declare required tools clearly, then stop or escalate when they are unavailable.
+- If the runtime also used native planning artifacts, make sure the resumable view has already absorbed the durable next step before relying on cross-agent continuation.
 
 ## Relationship To Other Contracts
 

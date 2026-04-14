@@ -13,14 +13,14 @@
 ## Intent Continuity
 
 - Larger intended outcome: finish the remaining open GitHub issue queue while keeping the checked-in planning system authoritative and continuation-safe for smaller models.
-- This slice completes the larger intended outcome: no
-- Continuation surface: TODO.md
+- This slice completes the larger intended outcome: yes
+- Continuation surface: none
 
 ## Required Continuation
 
-- Required follow-on for the larger intended outcome: yes
-- Owner surface: TODO.md
-- Activation trigger: when the current issue tranche or current milestone completes and the next remaining open issue is ready to implement
+- Required follow-on for the larger intended outcome: no
+- Owner surface: none
+- Activation trigger: none
 
 ## Delegated Judgment
 
@@ -31,15 +31,15 @@
 
 ## Active Milestone
 
-- Status: in-progress
-- Scope: reconcile the live `#73`-`#79` queue into checked-in planning, close already-landed `#76`, then implement the remaining bounded contract and reliability slices before the larger planning-state work.
+- Status: completed
+- Scope: reconciled the live `#73`-`#79` queue into checked-in planning, closed already-landed `#76`, and shipped the remaining bounded contract and reliability slices through `#73`.
 - Ready: ready
 - Blocked: none
 - optional_deps: explorer read-only analysis may run in parallel
 
 ## Immediate Next Action
 
-- Add a narrow adapter pattern so agent-native workflow artifacts can map back into the repo-owned planning surfaces without duplication.
+- Archive this completed plan and clear the matched active-queue and roadmap residue in the same pass.
 
 ## Blockers
 
@@ -70,9 +70,7 @@
 
 ## Open Questions To Close
 
-- Which open issues are already effectively implemented and only need closure plus planning cleanup?
-- What is the smallest canonical compact planning record that can make `TODO.md` and `ROADMAP.md` thin views without widening the planning package too far?
-- Which completion-discipline checks are cheap enough to run on every bounded slice without turning routine work into ceremony?
+- None.
 
 ## Validation Commands
 
@@ -91,16 +89,13 @@
 
 ## Execution Summary
 
-- Outcome delivered: pending
-- Validation confirmed: pending
-- Follow-on routed to: TODO.md
-- Resume from: validate issue `#76`, then continue through the remaining live issue queue
+- Outcome delivered: closed GitHub issues `#73` through `#79` with shipped workspace/planning contract improvements for non-interactive lifecycle flow, planning summary schema and tool verification, compact canonical planning state, closure discipline, and workflow-artifact adapter profiles.
+- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q -k "workflow_artifact or config_command_reports_effective_defaults_without_repo_file or config_command_reports_repo_owned_overrides or defaults_command_reports_machine_readable_default_routes_as_json or defaults_command_text_emphasises_primary_and_secondary_routes or external_agent_handoff_text"`; `uv run pytest packages/planning/tests/test_installer.py -q -k "bootstrap_execplan_readme_includes_memory_synergy_guidance or bootstrap_intent_contract_is_part_of_payload or bootstrap_resumable_execution_contract_is_part_of_payload"`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run agentic-workspace defaults --section workflow_artifact_adapters --format json`; `uv run agentic-workspace config --target . --format json`
+- Follow-on routed to: none
+- Resume from: no further action in this plan
 
 ## Drift Log
 
 - 2026-04-14: Replaced the stale `#69`-`#72` active issue tranche with the live `#73`-`#79` queue after confirming upstream closure drift.
-- 2026-04-14: Closed `#76` after validating the shipped safety contract and cleaned up stale active-plan residue; closed `#75` after adding the explicit `--non-interactive` lifecycle posture and prompt-safe handoff guidance.
-- 2026-04-14: Closed `#77` after adding advisory `Required Tools` support to the compact planning contract and refreshing the installed planning payload in this repo.
-- 2026-04-14: Closed `#74` after adding an explicit schema envelope to `agentic-planning-bootstrap summary --format json` and refreshing the installed planning payload in this repo.
-- 2026-04-14: Closed `#78` after making `planning_record` plus `planning-summary/v1` the canonical compact planning-state answer, thinning `ROADMAP.md` into a real candidate queue, and surfacing `roadmap.candidates` directly in planning summary.
-- 2026-04-14: Closed `#79` after adding a cheap closure rule for rename/refactor-like work: archive now requires a stale-reference sweep in `Validation Commands`, and the planning checker flags the same omission before residue reaches the next agent.
+- 2026-04-14: Closed `#74` through `#79` in bounded commits while keeping package docs, installed docs, generated surfaces, and issue comments aligned.
+- 2026-04-14: Closed `#73` by shipping a narrow workflow-artifact adapter contract through workspace defaults/config plus planning docs, keeping native runtime artifacts allowed but non-authoritative.

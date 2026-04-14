@@ -45,6 +45,11 @@ SUPPORTED_AGENT_INSTRUCTIONS_FILES = (
     "AGENTS.md",
     "GEMINI.md",
 )
+DEFAULT_WORKFLOW_ARTIFACT_PROFILE = "repo-owned"
+SUPPORTED_WORKFLOW_ARTIFACT_PROFILES = (
+    "repo-owned",
+    "gemini",
+)
 WORKSPACE_AGENTS_PATH = Path(DEFAULT_AGENT_INSTRUCTIONS_FILE)
 WORKSPACE_HANDOFF_SURFACES = (
     WORKSPACE_EXTERNAL_AGENT_PATH,
@@ -196,6 +201,8 @@ class WorkspaceConfig:
     default_preset: str
     agent_instructions_file: str
     agent_instructions_source: str
+    workflow_artifact_profile: str
+    workflow_artifact_profile_source: str
     detected_agent_instructions_files: tuple[str, ...]
     update_modules: dict[str, ModuleUpdatePolicy]
     local_override: "MixedAgentLocalOverride"
@@ -350,6 +357,44 @@ def _validate_agent_instructions_filename(filename: str) -> str:
         supported = ", ".join(SUPPORTED_AGENT_INSTRUCTIONS_FILES)
         raise WorkspaceUsageError(f"agent instructions filename must be one of: {supported}.")
     return normalized
+
+
+def _validate_workflow_artifact_profile(profile: str) -> str:
+    normalized = profile.strip() or DEFAULT_WORKFLOW_ARTIFACT_PROFILE
+    if normalized not in SUPPORTED_WORKFLOW_ARTIFACT_PROFILES:
+        supported = ", ".join(SUPPORTED_WORKFLOW_ARTIFACT_PROFILES)
+        raise WorkspaceUsageError(f"workflow artifact profile must be one of: {supported}.")
+    return normalized
+
+
+def _workflow_artifact_profile_payload(profile: str) -> dict[str, Any]:
+    profiles = {
+        "repo-owned": {
+            "profile": "repo-owned",
+            "summary": "Use only the repo-owned planning surfaces; do not rely on native runtime artifacts.",
+            "native_artifacts": [],
+            "canonical_surfaces": ["TODO.md", "docs/execplans/"],
+            "sync_rule": "TODO.md and docs/execplans stay authoritative; no extra runtime artifact should carry durable state.",
+            "handoff_rule": "Use repo-owned planning surfaces directly for restart, review, and cross-agent continuation.",
+        },
+        "gemini": {
+            "profile": "gemini",
+            "summary": (
+                "Allow Gemini-style native workflow artifacts as runtime scratchpads, but "
+                "project durable state back into repo-owned planning before handoff or review."
+            ),
+            "native_artifacts": ["implementation_plan.md", "task.md", "walkthrough.md"],
+            "canonical_surfaces": ["TODO.md", "docs/execplans/"],
+            "sync_rule": (
+                "Before review, handoff, or session end, mirror the durable execution state into "
+                "TODO.md and the active execplan instead of leaving it only in native artifacts."
+            ),
+            "handoff_rule": (
+                "Treat native artifacts as local execution aids; treat TODO.md and docs/execplans as the only cross-agent source of truth."
+            ),
+        },
+    }
+    return profiles[profile].copy()
 
 
 def _detected_agent_instruction_files(*, target_root: Path) -> tuple[str, ...]:
@@ -792,6 +837,7 @@ def _workspace_agents_template(
     selected_modules: list[str],
     descriptors: dict[str, ModuleDescriptor],
     agent_instructions_file: str = DEFAULT_AGENT_INSTRUCTIONS_FILE,
+    workflow_artifact_profile: str = DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
 ) -> str:
     startup_steps = [f"Read `{agent_instructions_file}`."]
     sources_of_truth: list[str] = []
@@ -811,6 +857,7 @@ def _workspace_agents_template(
         sources_of_truth.extend(descriptor.sources_of_truth)
 
     startup_steps.append("Load package-local docs only for the package being edited.")
+    artifact_profile = _workflow_artifact_profile_payload(workflow_artifact_profile)
 
     lines = [
         "# Agent Instructions",
@@ -854,6 +901,19 @@ def _workspace_agents_template(
         ]
     )
     lines.extend(f"- {rule}" for rule in repo_rules)
+    lines.extend(
+        [
+            "",
+            "## Workflow Artifacts",
+            "",
+            f"- profile: `{artifact_profile['profile']}`",
+            f"- canonical surfaces: {', '.join(artifact_profile['canonical_surfaces'])}",
+            f"- sync rule: {artifact_profile['sync_rule']}",
+            f"- handoff rule: {artifact_profile['handoff_rule']}",
+        ]
+    )
+    if artifact_profile["native_artifacts"]:
+        lines.append(f"- allowed native artifacts: {', '.join(artifact_profile['native_artifacts'])}")
     lines.extend(
         [
             "",
@@ -908,6 +968,7 @@ def _workspace_status_report(
     expected_handoff = _external_agent_handoff_text(
         selected_modules=selected_modules,
         agent_instructions_file=config.agent_instructions_file,
+        workflow_artifact_profile=config.workflow_artifact_profile,
     )
     agents_relative = Path(config.agent_instructions_file)
 
@@ -1044,7 +1105,9 @@ def _external_agent_handoff_text(
     *,
     selected_modules: list[str],
     agent_instructions_file: str = DEFAULT_AGENT_INSTRUCTIONS_FILE,
+    workflow_artifact_profile: str = DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
 ) -> str:
+    artifact_profile = _workflow_artifact_profile_payload(workflow_artifact_profile)
     lines = [
         "# Agentic Workspace External-Agent Handoff",
         "",
@@ -1079,6 +1142,8 @@ def _external_agent_handoff_text(
             "Rules:",
             "- Prefer conservative review over replacing repo-owned workflow surfaces in ambiguous repos.",
             "- Keep planning and memory ownership boundaries explicit.",
+            f"- Workflow artifact profile: {artifact_profile['profile']}.",
+            f"- {artifact_profile['sync_rule']}",
             (
                 "- If bootstrap writes .agentic-workspace/bootstrap-handoff.md, "
                 "treat that file as the immediate next-action brief before normal work resumes."
@@ -1117,6 +1182,7 @@ def _workspace_init_or_upgrade_report(
     handoff_text = _external_agent_handoff_text(
         selected_modules=selected_modules,
         agent_instructions_file=config.agent_instructions_file,
+        workflow_artifact_profile=config.workflow_artifact_profile,
     )
 
     for relative in WORKSPACE_PAYLOAD_FILES:
@@ -1163,6 +1229,7 @@ def _workspace_init_or_upgrade_report(
         selected_modules=selected_modules,
         descriptors=descriptors,
         agent_instructions_file=config.agent_instructions_file,
+        workflow_artifact_profile=config.workflow_artifact_profile,
     )
     existing_agents = agents_path.read_text(encoding="utf-8") if agents_path.exists() else None
     if inspection_mode == "install":
@@ -1692,6 +1759,7 @@ def _build_init_summary(
         "modules": selected_modules,
         "preset": resolved_preset,
         "agent_instructions_file": config.agent_instructions_file,
+        "workflow_artifact_profile": config.workflow_artifact_profile,
         "intent": _bootstrap_intent_payload(selected_modules=selected_modules, resolved_preset=resolved_preset),
         "repo_state": inspection.repo_state,
         "inferred_policy": inspection.inferred_policy,
@@ -2237,6 +2305,9 @@ def _lifecycle_next_steps(*, command_name: str, target_root: Path, warnings: lis
 
 def _build_handoff_prompt(summary: dict[str, Any]) -> str:
     agent_instructions_file = str(summary.get("agent_instructions_file", DEFAULT_AGENT_INSTRUCTIONS_FILE))
+    workflow_artifact_profile = _workflow_artifact_profile_payload(
+        str(summary.get("workflow_artifact_profile", DEFAULT_WORKFLOW_ARTIFACT_PROFILE))
+    )
     lines = [
         f"Finish the Agentic Workspace bootstrap in {summary['target']}.",
         "",
@@ -2289,6 +2360,7 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
             "- do not edit generated files manually when a canonical source exists",
             "- keep planning and memory boundaries explicit",
             "- avoid creating duplicate source-of-truth workflow surfaces",
+            f"- workflow artifact profile `{workflow_artifact_profile['profile']}`: {workflow_artifact_profile['sync_rule']}",
         ]
     )
     if summary.get("non_interactive"):
@@ -2306,6 +2378,9 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
 
 def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
     agent_instructions_file = str(summary.get("agent_instructions_file", DEFAULT_AGENT_INSTRUCTIONS_FILE))
+    workflow_artifact_profile = _workflow_artifact_profile_payload(
+        str(summary.get("workflow_artifact_profile", DEFAULT_WORKFLOW_ARTIFACT_PROFILE))
+    )
     review_items = list(summary["needs_review"])
     review_items.extend(f"{path}: unresolved placeholder or bootstrap marker" for path in summary["placeholders"])
     return {
@@ -2319,6 +2394,7 @@ def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
             "mode": summary["mode"],
             "prompt_requirement": summary["prompt_requirement"],
             "non_interactive": bool(summary.get("non_interactive")),
+            "workflow_artifact_profile": workflow_artifact_profile,
             "review_items": review_items,
         },
         "next": {
@@ -2668,6 +2744,7 @@ def _defaults_payload() -> dict[str, Any]:
             "supported_fields": [
                 "workspace.default_preset",
                 "workspace.agent_instructions_file",
+                "workspace.workflow_artifact_profile",
                 "update.modules.<module>.source_type",
                 "update.modules.<module>.source_ref",
                 "update.modules.<module>.source_label",
@@ -2678,6 +2755,16 @@ def _defaults_payload() -> dict[str, Any]:
                 "Normal update execution stays behind agentic-workspace.",
                 "Repo config may change module update intent without creating separate public module upgrade entrypoints.",
             ],
+        },
+        "workflow_artifact_adapters": {
+            "canonical_doc": "docs/workspace-config-contract.md",
+            "command": "agentic-workspace defaults --section workflow_artifact_adapters --format json",
+            "rule": (
+                "Runtime-native planning artifacts may exist, but durable cross-agent state "
+                "must project back into TODO.md and docs/execplans before handoff or review."
+            ),
+            "default_profile": DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
+            "supported_profiles": [_workflow_artifact_profile_payload(profile) for profile in SUPPORTED_WORKFLOW_ARTIFACT_PROFILES],
         },
         "mixed_agent": {
             "rule": "Prefer runtime/task inference first, then stable policy, then explicit prompting.",
@@ -3019,6 +3106,10 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print("Config:")
     print(f"- path: {payload['config']['path']}")
     print(f"- inspect: {payload['config']['command']}")
+    print("Workflow artifact adapters:")
+    print(f"- doc: {payload['workflow_artifact_adapters']['canonical_doc']}")
+    print(f"- command: {payload['workflow_artifact_adapters']['command']}")
+    print(f"- rule: {payload['workflow_artifact_adapters']['rule']}")
     print("Mixed-agent:")
     print(f"- rule: {payload['mixed_agent']['rule']}")
     print(f"- local override: {payload['mixed_agent']['local_override']['path']} ({payload['mixed_agent']['local_override']['status']})")
@@ -3211,6 +3302,8 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
     local_override = _load_mixed_agent_local_override(target_root=target_root)
     default_preset = "full"
     configured_agent_instructions_file: str | None = None
+    workflow_artifact_profile = DEFAULT_WORKFLOW_ARTIFACT_PROFILE
+    workflow_artifact_profile_source = "product-default"
     if not config_path.exists():
         agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = _resolve_effective_agent_instructions_file(
             target_root=target_root,
@@ -3224,6 +3317,8 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
             default_preset=default_preset,
             agent_instructions_file=agent_instructions_file,
             agent_instructions_source=agent_instructions_source,
+            workflow_artifact_profile=workflow_artifact_profile,
+            workflow_artifact_profile_source=workflow_artifact_profile_source,
             detected_agent_instructions_files=detected_agent_instruction_files,
             update_modules=defaults,
             local_override=local_override,
@@ -3254,6 +3349,10 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
     raw_agent_instructions_file = raw_workspace.get("agent_instructions_file")
     if raw_agent_instructions_file is not None:
         configured_agent_instructions_file = _validate_agent_instructions_filename(str(raw_agent_instructions_file))
+    raw_workflow_artifact_profile = raw_workspace.get("workflow_artifact_profile")
+    if raw_workflow_artifact_profile is not None:
+        workflow_artifact_profile = _validate_workflow_artifact_profile(str(raw_workflow_artifact_profile))
+        workflow_artifact_profile_source = "repo-config"
 
     update_modules = dict(defaults)
     raw_update = payload.get("update", {})
@@ -3316,6 +3415,8 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
         default_preset=configured_preset,
         agent_instructions_file=agent_instructions_file,
         agent_instructions_source=agent_instructions_source,
+        workflow_artifact_profile=workflow_artifact_profile,
+        workflow_artifact_profile_source=workflow_artifact_profile_source,
         detected_agent_instructions_files=detected_agent_instruction_files,
         update_modules=update_modules,
         local_override=local_override,
@@ -3847,8 +3948,12 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "default_preset": config.default_preset,
             "agent_instructions_file": config.agent_instructions_file,
             "agent_instructions_file_source": config.agent_instructions_source,
+            "workflow_artifact_profile": config.workflow_artifact_profile,
+            "workflow_artifact_profile_source": config.workflow_artifact_profile_source,
+            "workflow_artifact_adapter": _workflow_artifact_profile_payload(config.workflow_artifact_profile),
             "detected_agent_instructions_files": list(config.detected_agent_instructions_files),
             "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
+            "supported_workflow_artifact_profiles": list(SUPPORTED_WORKFLOW_ARTIFACT_PROFILES),
         },
         "update": {
             "wrapper_rule": "normal update execution stays behind agentic-workspace",
@@ -3871,6 +3976,11 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
         "Agent instructions file: "
         f"{payload['workspace']['agent_instructions_file']} "
         f"({payload['workspace']['agent_instructions_file_source']})"
+    )
+    print(
+        "Workflow artifact profile: "
+        f"{payload['workspace']['workflow_artifact_profile']} "
+        f"({payload['workspace']['workflow_artifact_profile_source']})"
     )
     print(f"Wrapper rule: {payload['update']['wrapper_rule']}")
     print("Update modules:")

@@ -28,6 +28,7 @@ Use it when you want the shortest correct answer for startup, lifecycle, skill d
 | Where is the post-bootstrap next action? | `.agentic-workspace/bootstrap-handoff.md` when bootstrap says review is still needed | Ad hoc chat instructions |
 | Where is the compact bootstrap handoff contract? | `.agentic-workspace/bootstrap-handoff.json` when bootstrap writes a checked-in finishing handoff | Mining the prose brief for scope or escalation boundaries |
 | How do I customize lifecycle defaults or update intent? | `agentic-workspace.toml` plus `agentic-workspace config --format json` to see whether repo policy is authoritative or defaults-only | Ad hoc chat instructions or direct module metadata edits |
+| How do native runtime planning artifacts fit? | `agentic-workspace defaults --section workflow_artifact_adapters --format json` plus `agentic-workspace config --target ./repo --format json` | Letting `implementation_plan.md`, `task.md`, or similar files become an untracked second source of truth |
 | How do I inspect modules? | `agentic-workspace modules --format json` | Read package docs directly when working on one package contract |
 | How do I discover skills? | `agentic-workspace skills --format json` or `--task ...` | Read registries or `SKILL.md` files directly only when debugging or authoring skills |
 | How do I validate? | Use the narrowest proving lane from the contributor playbook or machine-readable defaults | Broader package/root lanes only when the change crosses boundaries |

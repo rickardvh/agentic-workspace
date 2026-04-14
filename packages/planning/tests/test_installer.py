@@ -488,6 +488,7 @@ def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
     assert "Requested outcome" in text
     assert "Agent may decide locally" in text
     assert "required tools" in text
+    assert "Native runtime artifacts such as `implementation_plan.md`" in text
     assert "## Execution Summary" in text
     assert "Outcome delivered" in text
 
@@ -512,6 +513,7 @@ def test_bootstrap_intent_contract_is_part_of_payload() -> None:
     assert "active_contract" in text
     assert "planning-summary-schema/v1" in text
     assert "tool_verification" in text
+    assert "native planning artifacts" in text
     assert "agentic-planning-bootstrap summary --format json" in text
     assert Path("docs/intent-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
@@ -524,6 +526,7 @@ def test_bootstrap_resumable_execution_contract_is_part_of_payload() -> None:
     assert "current_next_action" in text
     assert "planning-summary-schema/v1" in text
     assert "tool_verification" in text
+    assert "runtime also used native planning artifacts" in text
     assert Path("docs/resumable-execution-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 

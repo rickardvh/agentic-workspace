@@ -226,6 +226,17 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["config"]["path"] == "agentic-workspace.toml"
     assert payload["config"]["command"] == "agentic-workspace config --target ./repo --format json"
     assert "workspace.default_preset" in payload["config"]["supported_fields"]
+    assert "workspace.workflow_artifact_profile" in payload["config"]["supported_fields"]
+    assert payload["workflow_artifact_adapters"]["canonical_doc"] == "docs/workspace-config-contract.md"
+    assert (
+        payload["workflow_artifact_adapters"]["command"] == "agentic-workspace defaults --section workflow_artifact_adapters --format json"
+    )
+    assert payload["workflow_artifact_adapters"]["default_profile"] == "repo-owned"
+    gemini_profile = next(
+        profile for profile in payload["workflow_artifact_adapters"]["supported_profiles"] if profile["profile"] == "gemini"
+    )
+    assert gemini_profile["native_artifacts"] == ["implementation_plan.md", "task.md", "walkthrough.md"]
+    assert gemini_profile["canonical_surfaces"] == ["TODO.md", "docs/execplans/"]
     assert any("ROADMAP.md" in step for step in payload["startup"]["secondary"])
     assert payload["startup"]["workflow_recovery"] == [
         (
@@ -264,6 +275,8 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "docs/environment-recovery-contract.md" in text
     assert "Completion:" in text
     assert "Config:" in text
+    assert "Workflow artifact adapters:" in text
+    assert "docs/workspace-config-contract.md" in text
     assert "Delegated judgment:" in text
     assert "Delegated judgment follow-through:" in text
     assert "Mixed-agent:" in text
@@ -286,6 +299,17 @@ def test_external_agent_handoff_text_uses_configured_agent_instructions_filename
     assert "GEMINI.md remains the repo startup entrypoint" in text
 
 
+def test_external_agent_handoff_text_reports_workflow_artifact_profile() -> None:
+    text = cli._external_agent_handoff_text(
+        selected_modules=["planning"],
+        agent_instructions_file="GEMINI.md",
+        workflow_artifact_profile="gemini",
+    )
+
+    assert "Workflow artifact profile: gemini." in text
+    assert "mirror the durable execution state into TODO.md and the active execplan" in text
+
+
 def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
@@ -296,6 +320,9 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["workspace"]["default_preset"] == "full"
     assert payload["workspace"]["agent_instructions_file"] == "AGENTS.md"
     assert payload["workspace"]["agent_instructions_file_source"] == "product-default"
+    assert payload["workspace"]["workflow_artifact_profile"] == "repo-owned"
+    assert payload["workspace"]["workflow_artifact_profile_source"] == "product-default"
+    assert payload["workspace"]["workflow_artifact_adapter"]["canonical_surfaces"] == ["TODO.md", "docs/execplans/"]
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
     assert payload["mixed_agent"]["status"] == "reporting-only"
@@ -593,7 +620,8 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
         "schema_version = 1\n\n"
         "[workspace]\n"
         'default_preset = "planning"\n'
-        'agent_instructions_file = "GEMINI.md"\n\n'
+        'agent_instructions_file = "GEMINI.md"\n'
+        'workflow_artifact_profile = "gemini"\n\n'
         "[update.modules.planning]\n"
         'source_type = "git"\n'
         'source_ref = "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"\n'
@@ -609,6 +637,13 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
     assert payload["workspace"]["default_preset"] == "planning"
     assert payload["workspace"]["agent_instructions_file"] == "GEMINI.md"
     assert payload["workspace"]["agent_instructions_file_source"] == "repo-config"
+    assert payload["workspace"]["workflow_artifact_profile"] == "gemini"
+    assert payload["workspace"]["workflow_artifact_profile_source"] == "repo-config"
+    assert payload["workspace"]["workflow_artifact_adapter"]["native_artifacts"] == [
+        "implementation_plan.md",
+        "task.md",
+        "walkthrough.md",
+    ]
     planning_policy = next(item for item in payload["update"]["modules"] if item["module"] == "planning")
     assert planning_policy["source"] == "repo-config"
     assert planning_policy["source_ref"] == "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"

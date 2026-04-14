@@ -23,6 +23,7 @@ schema_version = 1
 [workspace]
 default_preset = "full" # memory | planning | full
 agent_instructions_file = "AGENTS.md" # AGENTS.md | GEMINI.md
+workflow_artifact_profile = "repo-owned" # repo-owned | gemini
 
 [update.modules.planning]
 source_type = "git" # git | local
@@ -44,6 +45,9 @@ recommended_upgrade_after_days = 30
 - `workspace.default_preset` affects `init` and `prompt` only when the user does not pass `--preset` or `--modules`.
 - `workspace.agent_instructions_file` sets the canonical root startup-entrypoint filename for workspace lifecycle surfaces.
 - If `workspace.agent_instructions_file` is omitted, the workspace defaults to `AGENTS.md` and may conservatively autodetect one existing supported startup file in the target repo.
+- `workspace.workflow_artifact_profile` tells the workspace which native runtime artifacts may exist before the repo-owned planning surfaces must be updated.
+- `repo-owned` means do not rely on native runtime artifacts at all; keep durable state directly in `TODO.md` and `docs/execplans/`.
+- `gemini` allows Gemini-style files such as `implementation_plan.md`, `task.md`, or `walkthrough.md` as local execution aids, but durable cross-agent state must still be mirrored back into `TODO.md` and `docs/execplans/` before review, handoff, or session end.
 - When `agentic-workspace.toml` is absent, product defaults remain authoritative and the config report should say so rather than implying a live repo policy.
 - Update policy is module-specific in v1; there is no separate public module upgrade entrypoint.
 - Normal update execution stays behind `agentic-workspace`.
@@ -105,6 +109,7 @@ Use:
 
 ```bash
 agentic-workspace config --target ./repo --format json
+agentic-workspace defaults --section workflow_artifact_adapters --format json
 ```
 
 That surface reports:
@@ -117,6 +122,7 @@ That surface reports:
 - whether each module's `UPGRADE-SOURCE.toml` metadata matches the resolved policy
 - the current mixed-agent reporting boundary: repo-policy source, reserved local-override status, and the fact that runtime orchestration remains tool-owned
 - the effective local mixed-agent posture when `agentic-workspace.local.toml` is present
+- the effective workflow-artifact adapter profile and its sync rule
 
 If mixed-agent policy grows beyond the v1 surface, effective reporting should also make clear:
 

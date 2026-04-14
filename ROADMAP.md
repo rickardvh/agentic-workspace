@@ -14,9 +14,7 @@ Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraint
 Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Active Handoff
-
-- The active queue now owns the live open GitHub issue tranche `#73` through `#79`; roadmap candidates should stay inactive until that queue narrows or closes.
-
+- No active handoff right now.
 ## GitHub Issue Intake
 
 - Latest intake tranche: GitHub issues `#73` through `#79`.
@@ -24,9 +22,6 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 
 ## Next Candidate Queue
-
-- Priority 1: `Adapter patterns for agent-specific workflow artifacts` from GitHub issue `#73`; promote when canonical compact planning state exists and the next follow-on can map native runtime artifacts into repo-owned surfaces without doubling sources of truth.
-
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.

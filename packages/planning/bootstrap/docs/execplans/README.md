@@ -49,6 +49,8 @@ Do not create a plan just because a stronger agent could write one. Use a checke
 
 Capability-aware delegation is allowed but optional. If the environment supports it, a more capable agent or model may write a compact execplan and then hand implementation to a smaller or less capable agent when that is likely to save tokens without sacrificing quality. Do not assume subagents exist; the same contract must still work for one agent executing end-to-end. Prefer silent shaping and better planning over repeated prompts to switch executors manually.
 
+Native runtime artifacts such as `implementation_plan.md`, `task.md`, or `walkthrough.md` may exist when an agent UI provides them, but they must not become a second durable source of truth. Before review, handoff, or session end, mirror any durable execution state back into `TODO.md` and the active execplan so the next agent can continue from repo-owned surfaces alone.
+
 Each active plan should stay compact and include:
 
 - goal

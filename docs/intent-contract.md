@@ -51,6 +51,7 @@ The canonical planning record currently carries:
 - Treat it as unavailable when active planning is ambiguous instead of fabricating certainty from several partial surfaces.
 - Preserve explicit escalation boundaries; the contract must not silently widen requested outcome, ownership scope, or time horizon.
 - When a plan declares `Required Tools`, expose that requirement directly so weaker agents can stop or escalate before attempting impossible work.
+- If an agent runtime uses native planning artifacts, project any durable state back into the canonical planning record before handoff or review instead of treating runtime-local files as authoritative.
 
 ## Relationship To Other Contracts
 
