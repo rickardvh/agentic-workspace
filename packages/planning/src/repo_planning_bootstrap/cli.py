@@ -182,6 +182,10 @@ def _print_summary(summary: dict) -> None:
         print(f"- Next action: {planning_record['next_action']}")
         print(f"- Continuation owner: {planning_record['continuation_owner']}")
         print(f"- Proof expectations: {', '.join(planning_record['proof_expectations'])}")
+        tool_verification = planning_record.get("tool_verification", {})
+        required_tools = tool_verification.get("required_tools", [])
+        if required_tools:
+            print(f"- Required tools: {', '.join(required_tools)}")
     elif planning_record:
         print(f"Planning record: {planning_record.get('status')} ({planning_record.get('reason', 'no compact record available')})")
     active_contract = summary.get("active_contract", {})

@@ -63,6 +63,7 @@ Each active plan should stay compact and include:
 - contract decisions to freeze when the slice is product-shaping
 - open questions to close when unresolved contract decisions still block implementation
 - validation commands
+- required tools when the task depends on a capability that may be absent in some runtimes
 - completion criteria
 - execution summary
 - drift log
@@ -115,6 +116,14 @@ Current-state restart belongs in the compact `resumable_contract` projection:
 - `minimal_refs`
 
 That object should stay smaller than the full execplan and answer "how do I continue safely right now?" without broad rereading.
+
+Tool verification belongs in the compact planning contract when the task needs a capability that may not be present:
+
+- `required_tools`
+- advisory rule: stop or escalate when a required tool is unavailable instead of attempting an impossible substitute
+
+Keep the first slice advisory.
+The goal is to save tokens by preventing doomed attempts, not to turn execplans into a full runtime capability detector.
 
 Execution summaries belong under `## Execution Summary` for completed or nearly-complete plans:
 

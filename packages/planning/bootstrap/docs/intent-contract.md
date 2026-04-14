@@ -30,6 +30,7 @@ The canonical planning record currently carries:
 - `next_action`
 - `touched_scope`
 - `proof_expectations`
+- `tool_verification`
 - `escalate_when`
 - `continuation_owner`
 - `completion_criteria`
@@ -44,6 +45,7 @@ The canonical planning record currently carries:
 - Keep it small enough that a weaker or later agent can recover the intended end state without broad rereading.
 - Treat it as unavailable when active planning is ambiguous instead of fabricating certainty from several partial surfaces.
 - Preserve explicit escalation boundaries; the contract must not silently widen requested outcome, ownership scope, or time horizon.
+- When a plan declares `Required Tools`, expose that requirement directly so weaker agents can stop or escalate before attempting impossible work.
 
 ## Relationship To Other Contracts
 

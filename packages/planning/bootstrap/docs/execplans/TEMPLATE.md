@@ -98,6 +98,14 @@ Omit the section when no implementation-blocking questions remain.
 
 -
 
+## Required Tools
+
+- None.
+
+Use this section when the plan depends on a capability that a weaker or differently provisioned agent might not have.
+List only the concrete tools or capability surfaces that the task must have before execution starts.
+Keep the first slice advisory: if a required tool is unavailable, stop or escalate instead of attempting an impossible substitute.
+
 ## Completion Criteria
 
 -

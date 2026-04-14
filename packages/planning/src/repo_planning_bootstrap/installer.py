@@ -480,6 +480,7 @@ def _active_intent_contract(
 
     touched_scope = _extract_section_bullets(plan_path, "Touched Paths")
     proof_expectations = _extract_section_bullets(plan_path, "Validation Commands")
+    required_tools = [tool for tool in _extract_section_bullets(plan_path, "Required Tools") if tool.lower() not in {"none", "none."}]
     minimal_refs = _dedupe(
         [
             "TODO.md",
@@ -502,6 +503,11 @@ def _active_intent_contract(
         },
         "touched_scope": touched_scope,
         "proof_expectations": proof_expectations,
+        "tool_verification": {
+            "status": "required-tools-declared" if required_tools else "unspecified",
+            "required_tools": required_tools,
+            "rule": "If a required tool is unavailable, stop or escalate before attempting the task.",
+        },
         "minimal_refs": minimal_refs,
     }
 
@@ -547,6 +553,7 @@ def _active_resumable_contract(
         },
         "completion_criteria": completion_criteria,
         "proof_expectations": list(active_contract["proof_expectations"]),
+        "tool_verification": dict(active_contract["tool_verification"]),
         "escalate_when": active_contract["intent"]["escalate_when"],
         "blockers": blockers,
         "minimal_refs": list(active_contract["minimal_refs"]),
@@ -587,6 +594,7 @@ def _canonical_planning_record(
         "agent_may_decide": str(active_contract["intent"]["agent_may_decide"]).strip(),
         "next_action": str(resumable_contract["current_next_action"]).strip(),
         "proof_expectations": list(resumable_contract.get("proof_expectations", [])),
+        "tool_verification": dict(resumable_contract.get("tool_verification", {})),
         "escalate_when": str(resumable_contract.get("escalate_when", "")).strip(),
         "continuation_owner": continuation_owner,
         "touched_scope": list(active_contract.get("touched_scope", [])),
@@ -1347,6 +1355,8 @@ def _render_execplan_from_todo_item(
         "- Preserve the planning contract and keep the work bounded to this plan.\n\n"
         "## Validation Commands\n\n"
         "- Fill in the narrowest command that proves the promoted work.\n\n"
+        "## Required Tools\n\n"
+        "- None.\n\n"
         "## Completion Criteria\n\n"
         f"- {completion}\n\n"
         "## Execution Summary\n\n"

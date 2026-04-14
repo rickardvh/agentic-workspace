@@ -26,6 +26,7 @@ The resumable view currently carries:
 - `active_milestone`
 - `completion_criteria`
 - `proof_expectations`
+- `tool_verification`
 - `escalate_when`
 - `blockers`
 - `minimal_refs`
@@ -38,6 +39,7 @@ The resumable view currently carries:
 - Derive the canonical planning record and its views from existing execplan sections instead of requiring a new section.
 - Treat it as unavailable when active planning is ambiguous or under-specified rather than fabricating restart certainty.
 - Preserve proof and escalation boundaries explicitly so a weaker or later agent does not have to infer them from prose.
+- Keep tool verification advisory in the first slice: declare required tools clearly, then stop or escalate when they are unavailable.
 
 ## Relationship To Other Contracts
 

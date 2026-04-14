@@ -39,7 +39,7 @@
 
 ## Immediate Next Action
 
-- Implement explicit tool-verification state for execplans so smaller agents can cheaply tell when a task should stop or escalate before wasting tokens.
+- Tighten the machine-readable state-retrieval contract so agents can query planning state through explicit schemas instead of broad Markdown parsing.
 
 ## Blockers
 
@@ -100,3 +100,4 @@
 
 - 2026-04-14: Replaced the stale `#69`-`#72` active issue tranche with the live `#73`-`#79` queue after confirming upstream closure drift.
 - 2026-04-14: Closed `#76` after validating the shipped safety contract and cleaned up stale active-plan residue; closed `#75` after adding the explicit `--non-interactive` lifecycle posture and prompt-safe handoff guidance.
+- 2026-04-14: Closed `#77` after adding advisory `Required Tools` support to the compact planning contract and refreshing the installed planning payload in this repo.

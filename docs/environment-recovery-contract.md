@@ -65,7 +65,6 @@ Use this ordered path when normal work is blocked by repo-state ambiguity, inter
 2. Reconfirm the default operating contract:
    - `agentic-workspace defaults --format json`
    - `agentic-workspace config --target ./repo --format json`
-   - prefer `--non-interactive` on lifecycle entrypoints when the recovery is being executed by an unattended agent or in a PowerShell session that cannot answer prompts
 3. If the issue is package-contract freshness rather than repo-owned customization, refresh the shipped contract:
    - `uv run agentic-planning-bootstrap upgrade --target .`
    - `uv run agentic-memory-bootstrap upgrade --target .`
@@ -101,7 +100,6 @@ Do not stretch it into:
 ## Recovery Rules
 
 - Prefer `agentic-workspace` as the public recovery entrypoint.
-- Prefer `--non-interactive` on lifecycle commands when a human is not actively steering the run.
 - Treat `status` and `doctor` as the first inspection lane, not direct file spelunking.
 - Use `defaults` and `config` when the question is "what is the normal contract here?" rather than "what failed?"
 - Distinguish package drift from repo-local warnings:
