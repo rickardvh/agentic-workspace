@@ -11,9 +11,10 @@ Active queue for repository work.
 - No active work right now.
 ## Action
 
-- Promote the next bounded GitHub issue candidate after the compact lazy-discovery tranche is archived.
+- Promote the next bounded GitHub issue candidate after the structured bootstrap handoff tranche is archived.
 ## Done
 
+- structured-bootstrap-handoff-artifact: Completed (added `.agentic-workspace/bootstrap-handoff.json` as the compact structured sibling for bootstrap follow-through, used it to carry intent/proof/escalation boundaries in checked-in form, aligned the lifecycle docs and CLI tests, and dogfooded the new record against this repo's live bootstrap state)
 - lazy-discovery-contract-profile-and-selectors: Completed (shipped the first compact queryable contract profile, added narrow selectors to the defaults/proof/ownership machine-readable surfaces, aligned the contract docs, and dogfooded the new retrieval path directly in this repo before archiving the tranche)
 - cross-agent-workflow-robustness-hardening: Completed (tightened the machine-readable workflow-recovery and completion cues, kept the workspace default recovery rule selective-adoption-safe, and archived the slice while leaving broader mixed-agent follow-through in `ROADMAP.md`)
 - portability-evidence-review: Completed (reviewed the current portability claims against fresh clean-room first-party install proof plus the extension-boundary docs, tightened the canonical doctrine to distinguish proven first-party portability from still-unproven broader ecosystem portability, and cleared the highest-priority queue)

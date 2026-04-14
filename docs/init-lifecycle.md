@@ -14,6 +14,7 @@ Use it when you need the canonical intent, repo-state, policy, and handoff contr
 - Clean installs should seed `.agentic-workspace/WORKFLOW.md`, `.agentic-workspace/OWNERSHIP.toml`, and a coherent root `AGENTS.md` entrypoint for the selected modules.
 - The root CLI also keeps one checked-in external-agent handoff surface at `llms.txt`.
 - When bootstrap still needs judgment, the CLI writes the next-action brief to `.agentic-workspace/bootstrap-handoff.md`.
+- When bootstrap still needs judgment, the CLI also writes the compact structured sibling artifact to `.agentic-workspace/bootstrap-handoff.json`.
 
 ## Intent Contract
 
@@ -44,6 +45,7 @@ Use it when you need the canonical intent, repo-state, policy, and handoff contr
 
 - `llms.txt` is the canonical external-agent handoff file for the repo.
 - `.agentic-workspace/bootstrap-handoff.md` is the canonical post-bootstrap next-action brief when `prompt_requirement` is not `none`.
+- `.agentic-workspace/bootstrap-handoff.json` is the compact structured sibling artifact for the same bootstrap handoff when `prompt_requirement` is not `none`.
 - `none` means bootstrap can finish without a handoff brief.
 - `recommended` means the brief is useful but not mandatory.
 - `required` means the brief should be followed before normal work resumes.

@@ -37,10 +37,12 @@ WORKSPACE_CONFIG_PATH = Path("agentic-workspace.toml")
 WORKSPACE_LOCAL_CONFIG_PATH = Path("agentic-workspace.local.toml")
 WORKSPACE_EXTERNAL_AGENT_PATH = Path("llms.txt")
 WORKSPACE_BOOTSTRAP_HANDOFF_PATH = Path(".agentic-workspace/bootstrap-handoff.md")
+WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH = Path(".agentic-workspace/bootstrap-handoff.json")
 WORKSPACE_AGENTS_PATH = Path("AGENTS.md")
 WORKSPACE_HANDOFF_SURFACES = (
     WORKSPACE_EXTERNAL_AGENT_PATH,
     WORKSPACE_BOOTSTRAP_HANDOFF_PATH,
+    WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH,
 )
 MODULE_UPGRADE_SOURCE_PATHS = {
     "planning": Path(".agentic-workspace/planning/UPGRADE-SOURCE.toml"),
@@ -1321,10 +1323,14 @@ def _run_init(
     )
     prompt_text = _build_handoff_prompt(summary)
     prompt_path = _default_handoff_prompt_path(target_root=target_root) if summary["prompt_requirement"] != "none" else None
+    handoff_record = _build_bootstrap_handoff_record(summary) if summary["prompt_requirement"] != "none" else None
+    handoff_record_path = _default_handoff_record_path(target_root=target_root) if handoff_record is not None else None
     if write_prompt:
         prompt_path = Path(write_prompt).expanduser().resolve()
     if prompt_path is not None and (write_prompt or not dry_run):
         _write_prompt_file(prompt_path=prompt_path, prompt_text=prompt_text, dry_run=dry_run)
+    if handoff_record is not None and handoff_record_path is not None and not dry_run:
+        _write_json_file(destination=handoff_record_path, payload=handoff_record, dry_run=dry_run)
     payload: dict[str, Any] = summary | {
         "dry_run": dry_run,
         "module_reports": reports,
@@ -1336,6 +1342,10 @@ def _run_init(
     if prompt_path is not None:
         payload["handoff_prompt_path"] = prompt_path.as_posix()
         payload["next_steps"].append(f"Review the written handoff prompt at {prompt_path.as_posix()}.")
+    if handoff_record is not None and handoff_record_path is not None:
+        payload["handoff_record"] = handoff_record
+        payload["handoff_record_path"] = handoff_record_path.as_posix()
+        payload["next_steps"].append(f"Review the structured handoff record at {handoff_record_path.as_posix()}.")
     return payload
 
 
@@ -1895,6 +1905,57 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
+    review_items = list(summary["needs_review"])
+    review_items.extend(f"{path}: unresolved placeholder or bootstrap marker" for path in summary["placeholders"])
+    return {
+        "kind": "workspace-bootstrap-handoff/v1",
+        "intent": summary["intent"],
+        "scope": {
+            "target": summary["target"],
+            "selected_modules": summary["modules"],
+            "repo_state": summary["repo_state"],
+            "inferred_policy": summary["inferred_policy"],
+            "mode": summary["mode"],
+            "prompt_requirement": summary["prompt_requirement"],
+            "review_items": review_items,
+        },
+        "next": {
+            "steps": summary["next_steps"],
+            "immediate_brief": WORKSPACE_BOOTSTRAP_HANDOFF_PATH.as_posix(),
+        },
+        "proof": {
+            "validation": summary["validation"],
+            "done_when": [
+                "bootstrap review items are closed or explicitly resolved",
+                "llms.txt remains current as the canonical external-agent handoff surface",
+                "temporary bootstrap residue is removed before normal work resumes",
+            ],
+        },
+        "must_not_change": [
+            "the requested bootstrap intent",
+            "repo-owned workflow surfaces without explicit review",
+            "planning and memory ownership boundaries",
+            "agentic-workspace as the lifecycle entrypoint",
+        ],
+        "escalate_when": [
+            "finishing bootstrap would require replacing preserved repo-owned surfaces blindly",
+            "the requested bootstrap intent no longer fits the repo state safely",
+            "validation would be meaningless without broader lifecycle scope",
+            "the handoff can no longer stay bounded to bootstrap follow-through",
+        ],
+        "refs": [
+            "AGENTS.md",
+            "TODO.md",
+            "llms.txt",
+            "docs/delegated-judgment-contract.md",
+            "docs/init-lifecycle.md",
+            "agentic-workspace defaults --format json",
+            "agentic-workspace config --target ./repo --format json",
+        ],
+    }
+
+
 def _build_lifecycle_handoff_prompt(payload: dict[str, Any]) -> str:
     prompt_command = str(payload["prompt_command"])
     target = str(payload["target"])
@@ -1941,11 +2002,22 @@ def _default_handoff_prompt_path(*, target_root: Path) -> Path:
     return (target_root / WORKSPACE_BOOTSTRAP_HANDOFF_PATH).resolve()
 
 
+def _default_handoff_record_path(*, target_root: Path) -> Path:
+    return (target_root / WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH).resolve()
+
+
 def _write_prompt_file(*, prompt_path: Path, prompt_text: str, dry_run: bool) -> Path:
     if not dry_run:
         prompt_path.parent.mkdir(parents=True, exist_ok=True)
         prompt_path.write_text(prompt_text + "\n", encoding="utf-8")
     return prompt_path
+
+
+def _write_json_file(*, destination: Path, payload: dict[str, Any], dry_run: bool) -> Path:
+    if not dry_run:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(json.dumps(serialise_value(payload), indent=2) + "\n", encoding="utf-8")
+    return destination
 
 
 def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
@@ -2130,6 +2202,7 @@ def _defaults_payload() -> dict[str, Any]:
             ],
             "canonical_external_agent_handoff": "llms.txt",
             "canonical_bootstrap_next_action": ".agentic-workspace/bootstrap-handoff.md",
+            "canonical_bootstrap_handoff_record": ".agentic-workspace/bootstrap-handoff.json",
             "secondary": [
                 "Package CLIs are for package-local maintainer work, advanced debugging, or explicit module-level control.",
             ],
@@ -2289,6 +2362,7 @@ def _defaults_payload() -> dict[str, Any]:
             "handoff_surfaces": [
                 "llms.txt",
                 ".agentic-workspace/bootstrap-handoff.md",
+                ".agentic-workspace/bootstrap-handoff.json",
             ],
         },
         "completion": {
@@ -2418,6 +2492,7 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- install: {payload['lifecycle']['default_install_command']}")
     print(f"- external-agent handoff: {payload['lifecycle']['canonical_external_agent_handoff']}")
     print(f"- bootstrap next action: {payload['lifecycle']['canonical_bootstrap_next_action']}")
+    print(f"- bootstrap handoff record: {payload['lifecycle']['canonical_bootstrap_handoff_record']}")
     print("Compact contract profile:")
     print(f"- doc: {payload['compact_contract_profile']['canonical_doc']}")
     print(f"- rule: {payload['compact_contract_profile']['rule']}")
@@ -3605,10 +3680,16 @@ def _emit_init_text(payload: dict[str, Any]) -> None:
     _print_path_list("Next steps", payload["next_steps"])
     if payload.get("handoff_prompt_path"):
         print(f"Handoff prompt file: {payload['handoff_prompt_path']}")
+    if payload.get("handoff_record_path"):
+        print(f"Handoff record file: {payload['handoff_record_path']}")
     if payload.get("handoff_prompt"):
         print("")
         print("Handoff Prompt:")
         print(payload["handoff_prompt"])
+    if payload.get("handoff_record"):
+        print("")
+        print("Handoff Record:")
+        print(json.dumps(serialise_value(payload["handoff_record"]), indent=2))
 
 
 def _emit_lifecycle_text(payload: dict[str, Any]) -> None:
@@ -3644,9 +3725,15 @@ def _emit_prompt_text(payload: dict[str, Any]) -> None:
         print(f"Prompt requirement: {payload['prompt_requirement']}")
     _print_path_list("Needs review", payload.get("needs_review", []))
     _print_path_list("Warnings", payload.get("warnings", []))
+    if payload.get("handoff_record_path"):
+        print(f"Handoff record file: {payload['handoff_record_path']}")
     print("")
     print("Handoff Prompt:")
     print(payload["handoff_prompt"])
+    if payload.get("handoff_record"):
+        print("")
+        print("Handoff Record:")
+        print(json.dumps(serialise_value(payload["handoff_record"]), indent=2))
 
 
 def _print_path_list(heading: str, values: list[str]) -> None:

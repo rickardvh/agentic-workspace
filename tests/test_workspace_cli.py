@@ -108,6 +108,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "agentic-workspace init --target ./repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
     assert payload["lifecycle"]["canonical_external_agent_handoff"] == "llms.txt"
     assert payload["lifecycle"]["canonical_bootstrap_next_action"] == ".agentic-workspace/bootstrap-handoff.md"
+    assert payload["lifecycle"]["canonical_bootstrap_handoff_record"] == ".agentic-workspace/bootstrap-handoff.json"
     assert payload["validation"]["default_routes"]["planning_package"] == "cd packages/planning && uv run pytest tests/test_installer.py"
     workspace_lane = next(lane for lane in payload["validation"]["lanes"] if lane["id"] == "workspace_cli")
     assert "root workspace CLI changes" in workspace_lane["when"]
@@ -136,6 +137,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "agentic-workspace doctor --target ./repo",
     ]
     assert ".agentic-workspace/bootstrap-handoff.md" in payload["recovery"]["handoff_surfaces"]
+    assert ".agentic-workspace/bootstrap-handoff.json" in payload["recovery"]["handoff_surfaces"]
     assert payload["completion"]["rule"] == (
         "When a completed slice came from TODO.md or ROADMAP.md, clear the matched queue residue in the same pass."
     )
@@ -200,6 +202,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "agentic-workspace defaults --format json" in text
     assert "Lifecycle:" in text
     assert "primary entrypoint: agentic-workspace" in text
+    assert "bootstrap handoff record: .agentic-workspace/bootstrap-handoff.json" in text
     assert "Compact contract profile:" in text
     assert "docs/compact-contract-profile.md" in text
     assert "Proof surfaces:" in text
@@ -790,9 +793,15 @@ def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_p
     assert payload["prompt_requirement"] == "required"
     assert sorted(payload["detected_surfaces"]) == ["AGENTS.md", "TODO.md", "docs/execplans", "memory/index.md"]
     assert payload["handoff_prompt_path"] == (tmp_path / ".agentic-workspace" / "bootstrap-handoff.md").as_posix()
+    assert payload["handoff_record_path"] == (tmp_path / ".agentic-workspace" / "bootstrap-handoff.json").as_posix()
     assert "handoff_prompt" in payload
+    assert payload["handoff_record"]["kind"] == "workspace-bootstrap-handoff/v1"
+    assert payload["handoff_record"]["intent"]["summary"] == "set up this repo for both Planning and Memory"
+    assert "must_not_change" in payload["handoff_record"]
+    assert "escalate_when" in payload["handoff_record"]
     assert "User intent:" in payload["handoff_prompt"]
     assert (tmp_path / ".agentic-workspace" / "bootstrap-handoff.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "bootstrap-handoff.json").exists()
     assert (tmp_path / "llms.txt").exists()
     assert calls == [
         ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
@@ -811,7 +820,9 @@ def test_init_can_write_prompt_file(monkeypatch, tmp_path: Path, capsys) -> None
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["handoff_prompt_path"] == prompt_path.as_posix()
+    assert payload["handoff_record_path"] == (tmp_path / ".agentic-workspace" / "bootstrap-handoff.json").as_posix()
     assert prompt_path.exists()
+    assert (tmp_path / ".agentic-workspace" / "bootstrap-handoff.json").exists()
     assert "Finish the Agentic Workspace bootstrap" in prompt_path.read_text(encoding="utf-8")
 
 
@@ -828,10 +839,25 @@ def test_prompt_init_uses_dry_run_workspace_bootstrap(monkeypatch, tmp_path: Pat
     assert payload["dry_run"] is True
     assert "handoff_prompt" in payload
     assert "Finish the Agentic Workspace bootstrap" in payload["handoff_prompt"]
+    assert "handoff_record" not in payload
     assert calls == [
         ("planning", "install", {"target": str(tmp_path), "dry_run": True, "force": False}),
         ("memory", "install", {"target": str(tmp_path), "dry_run": True, "force": False}),
     ]
+
+
+def test_prompt_init_returns_structured_handoff_record_for_high_ambiguity_repo(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, dict[str, object]]] = []
+    _init_git_repo(tmp_path)
+    (tmp_path / "AGENTS.md").write_text("# Existing\n", encoding="utf-8")
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
+
+    assert cli.main(["prompt", "init", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["prompt_requirement"] != "none"
+    assert payload["handoff_record"]["kind"] == "workspace-bootstrap-handoff/v1"
+    assert payload["handoff_record"]["next"]["immediate_brief"] == ".agentic-workspace/bootstrap-handoff.md"
 
 
 def test_prompt_upgrade_builds_workspace_handoff_prompt(monkeypatch, tmp_path: Path, capsys) -> None:

@@ -31,9 +31,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 | Candidate | Source | Why now | Promote when |
 | --- | --- | --- | --- |
-| `Delegated-judgment practical follow-through` | GitHub issue `#25`; `docs/delegated-judgment-contract.md`; `docs/execplans/README.md` | Delegated judgment is now good on paper; the next work is proving it in repeated real workflows and tightening places where agents still silently widen ends, fail to escalate, or need too much user steering to stay bounded. | Another delegated task shows ambiguity around local latitude, escalation boundaries, or requested-end preservation. |
 | `External-agent handoff polish` | GitHub issue `#27`; `llms.txt`; `.agentic-workspace/bootstrap-handoff.md`; `README.md` | External-agent handoff surfaces are strong additions, but they still need proof that they are foolproof in use: no installed-CLI assumptions, no ambiguity about target repo versus this repo, and no drift between the README prompt, raw handoff file, and actual bootstrap behavior. | Another external-agent or cold-start pass shows ambiguity between docs, handoff files, and live bootstrap behavior. |
-| `Compact structured handoff artifacts` | GitHub issue `#31`; `llms.txt`; `.agentic-workspace/bootstrap-handoff.md`; `docs/workspace-config-contract.md` | The repo now has useful prose handoff surfaces, but strong-planner and cheap-implementer collaboration still pays too much narration cost. A compact structured sibling artifact is the next likely way to preserve intent, proof, and escalation boundaries more cheaply across agents and sessions. | Another mixed-agent handoff needs broad prose rereading to recover scope, proof, escalation triggers, or hard boundaries. |
 
 ## Third Priority Queue
 
