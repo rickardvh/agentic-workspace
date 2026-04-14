@@ -17,7 +17,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - No active handoff right now.
 ## GitHub Issue Intake
 
-- Latest intake tranche: GitHub issues `#25` through `#34`.
+- Latest intake tranche: GitHub issues `#25` through `#37`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 
@@ -25,16 +25,17 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 | Candidate | Source | Why now | Promote when |
 | --- | --- | --- | --- |
-| `Minimal resumable execution contract` | GitHub issue `#34`; compact intent-contract follow-through | The compact intent contract now preserves the requested end state cheaply, but restart still benefits from one smaller active slice that also carries current next action and proof in the minimum checked-in form. This is the clearest next token-efficiency and continuity win. | Ordinary work still needs more than one compact checked-in slice to recover current intent, current next action, proof, and escalation boundaries safely after a restart. |
+| `Nearly automatic proof selection` | GitHub issue `#35`; compact intent/resumable contract follow-through | The active execution contract is now smaller, but a major remaining supervision cost is proof choice. The next highest-value refinement is making the narrowest sufficient proof lane and its escalation boundary cheaper to retrieve than human steering. | Ordinary work still requires human interpretation to decide what proof is enough, when broader proof is required, or when the narrow lane has stopped being meaningful. |
 
 ## Second Priority Queue
 
-- No remaining second-priority candidates right now.
+- `Cross-agent handoff as an ordinary-work mode` from GitHub issue `#36`
 
 ## Third Priority Queue
 
 | Candidate | Source | Why now | Promote when |
 | --- | --- | --- | --- |
+| `Repeated-human-steering improvement signal` | GitHub issue `#37`; improvement-targeting workflow | Repeated human correction should become explicit product pressure, but that follow-through is lower urgency than shrinking the active execution contract and proof/handoff ambiguity first. | The same class of human steering still repeats after the intent, resumable-execution, proof, or handoff contracts improve. |
 | `Cross-agent workflow robustness hardening` | Archived execplan `docs/execplans/archive/cross-agent-workflow-robustness-hardening-2026-04-13.md`; mixed-agent dogfooding feedback | The first machine-readable hardening slice landed, but the broader goal stays open until future mixed-agent passes show startup routing, package-managed paths, and same-pass planning cleanup are no longer missed in ordinary use. | Another mixed-agent pass still misses startup routing, package-managed paths, or same-pass planning cleanup after the current machine-readable hardening slice. |
 
 ## Ongoing Maintenance Expectations

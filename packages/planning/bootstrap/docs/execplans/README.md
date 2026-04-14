@@ -6,6 +6,7 @@ Use `python scripts/check/check_planning_surfaces.py` for advisory shape and dri
 Use `agentic-planning-bootstrap summary`, `promote-to-plan`, and `archive-plan` as thin file-native helpers around the same checked-in contract.
 Use `docs/environment-recovery-contract.md` for the canonical way to express task-local recovery and environment assumptions without adding another plan section.
 Use `docs/intent-contract.md` for the compact machine-readable active intent contract exposed through `agentic-planning-bootstrap summary`.
+Use `docs/resumable-execution-contract.md` for the smaller current-state restart contract exposed through the same summary surface.
 Use `docs/execution-summary-contract.md` for the compact outcome shape that completed slices should leave behind before archive.
 Use `archive-plan --apply-cleanup` only when you want the helper to also remove completed TODO references and compress matching `ROADMAP.md` Active Handoff residue for the same archived thread.
 
@@ -102,6 +103,18 @@ Keep this section compact.
 It exists to preserve the intended end state, the allowed local latitude, and the escalation boundary when a safe first slice might otherwise drift into a substitute for the larger request.
 Use `none` only when the slice is so local that delegated-judgment framing would add no value beyond the surrounding plan.
 `agentic-planning-bootstrap summary --format json` projects these fields into the compact `active_contract.intent` object when planning has one active TODO item and one active execplan.
+
+Current-state restart belongs in the compact `resumable_contract` object:
+
+- `current_next_action`
+- `active_milestone`
+- `completion_criteria`
+- `proof_expectations`
+- `escalate_when`
+- `blockers`
+- `minimal_refs`
+
+That object should stay smaller than the full execplan and answer "how do I continue safely right now?" without broad rereading.
 
 Execution summaries belong under `## Execution Summary` for completed or nearly-complete plans:
 

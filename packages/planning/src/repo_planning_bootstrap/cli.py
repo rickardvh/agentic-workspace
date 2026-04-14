@@ -181,6 +181,17 @@ def _print_summary(summary: dict) -> None:
         print(f"- Proof expectations: {', '.join(active_contract['proof_expectations'])}")
     elif active_contract:
         print(f"Active contract: {active_contract.get('status')} ({active_contract.get('reason', 'no compact contract available')})")
+    resumable_contract = summary.get("resumable_contract", {})
+    if resumable_contract.get("status") == "present":
+        print("Resumable contract:")
+        print(f"- Next action: {resumable_contract['current_next_action']}")
+        print(f"- Scope: {resumable_contract['active_milestone']['scope']}")
+        print(f"- Proof expectations: {', '.join(resumable_contract['proof_expectations'])}")
+    elif resumable_contract:
+        print(
+            "Resumable contract: "
+            f"{resumable_contract.get('status')} ({resumable_contract.get('reason', 'no resumable contract available')})"
+        )
     if summary["todo"]["active_items"]:
         print("Active items:")
         for item in summary["todo"]["active_items"]:

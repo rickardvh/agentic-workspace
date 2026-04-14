@@ -38,6 +38,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path("docs/environment-recovery-contract.md"),
     Path("docs/execution-summary-contract.md"),
     Path("docs/intent-contract.md"),
+    Path("docs/resumable-execution-contract.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
     Path("docs/execplans/archive/README.md"),
@@ -66,6 +67,7 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("docs/environment-recovery-contract.md"),
     Path("docs/execution-summary-contract.md"),
     Path("docs/intent-contract.md"),
+    Path("docs/resumable-execution-contract.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
     Path("docs/execplans/archive/README.md"),
@@ -409,6 +411,11 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         active_items=active_items,
         active_execplans=active_execplans,
     )
+    resumable_contract = _active_resumable_contract(
+        target_root=target_root,
+        active_contract=active_contract,
+        active_execplans=active_execplans,
+    )
     return {
         "target_root": str(target_root),
         "adoption_mode": _detect_adoption_mode(target_root),
@@ -424,6 +431,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
             "archived_count": archived_execplans,
         },
         "active_contract": active_contract,
+        "resumable_contract": resumable_contract,
         "roadmap": {
             "candidate_count": candidate_count,
         },
@@ -490,6 +498,53 @@ def _active_intent_contract(
         "touched_scope": touched_scope,
         "proof_expectations": proof_expectations,
         "minimal_refs": minimal_refs,
+    }
+
+
+def _active_resumable_contract(
+    *,
+    target_root: Path,
+    active_contract: dict[str, Any],
+    active_execplans: list[dict[str, str]],
+) -> dict[str, Any]:
+    if active_contract.get("status") != "present" or len(active_execplans) != 1:
+        return {
+            "status": "unavailable",
+            "reason": "requires one active execplan with a present active intent contract",
+        }
+
+    plan_path = _resolve_execplan_path(target_root, active_execplans[0]["path"])
+    if plan_path is None or not plan_path.exists():
+        return {
+            "status": "unavailable",
+            "reason": "active execplan path is not available for resumable-contract extraction",
+        }
+
+    milestone = _execplan_active_milestone(plan_path)
+    current_next_action = _extract_section_bullets(plan_path, "Immediate Next Action")
+    completion_criteria = _extract_section_bullets(plan_path, "Completion Criteria")
+    blockers = [item for item in _extract_section_bullets(plan_path, "Blockers") if item.lower() != "none."]
+    if not current_next_action or not completion_criteria:
+        return {
+            "status": "unavailable",
+            "reason": "active execplan is missing current next action or completion criteria",
+        }
+
+    return {
+        "status": "present",
+        "current_next_action": current_next_action[0],
+        "active_milestone": {
+            "id": milestone.get("id", "").strip(),
+            "status": milestone.get("status", "").strip(),
+            "scope": milestone.get("scope", "").strip(),
+            "ready": milestone.get("ready", "").strip(),
+            "blocked": milestone.get("blocked", "").strip(),
+        },
+        "completion_criteria": completion_criteria,
+        "proof_expectations": list(active_contract["proof_expectations"]),
+        "escalate_when": active_contract["intent"]["escalate_when"],
+        "blockers": blockers,
+        "minimal_refs": list(active_contract["minimal_refs"]),
     }
 
 
@@ -1300,6 +1355,11 @@ def _execplan_required_continuation(path: Path) -> dict[str, str]:
 def _execplan_delegated_judgment(path: Path) -> dict[str, str]:
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Delegated Judgment"))
+
+
+def _execplan_active_milestone(path: Path) -> dict[str, str]:
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Active Milestone"))
 
 
 def _execplan_execution_summary(path: Path) -> dict[str, str]:

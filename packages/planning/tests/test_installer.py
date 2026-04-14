@@ -119,6 +119,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     environment_recovery_doc_path = tmp_path / "docs" / "environment-recovery-contract.md"
     execution_summary_doc_path = tmp_path / "docs" / "execution-summary-contract.md"
     intent_contract_doc_path = tmp_path / "docs" / "intent-contract.md"
+    resumable_contract_doc_path = tmp_path / "docs" / "resumable-execution-contract.md"
     skill_readme_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "README.md"
     skill_registry_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json"
     skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
@@ -134,6 +135,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert environment_recovery_doc_path.exists()
     assert execution_summary_doc_path.exists()
     assert intent_contract_doc_path.exists()
+    assert resumable_contract_doc_path.exists()
     assert review_readme_path.exists()
     assert review_template_path.exists()
     assert intake_doc_path.exists()
@@ -464,6 +466,14 @@ def test_bootstrap_intent_contract_is_part_of_payload() -> None:
     assert "active_contract" in text
     assert "agentic-planning-bootstrap summary --format json" in text
     assert Path("docs/intent-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+
+
+def test_bootstrap_resumable_execution_contract_is_part_of_payload() -> None:
+    text = (installer_mod.payload_root() / "docs" / "resumable-execution-contract.md").read_text(encoding="utf-8")
+
+    assert "resumable_contract" in text
+    assert "current_next_action" in text
+    assert Path("docs/resumable-execution-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
 def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
@@ -1141,6 +1151,10 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["active_contract"]["proof_expectations"] == ["uv run pytest tests/test_check_planning_surfaces.py"]
     assert summary["active_contract"]["touched_scope"] == ["scripts/check/check_planning_surfaces.py"]
     assert summary["active_contract"]["minimal_refs"] == ["TODO.md", "docs/execplans/plan-alpha.md"]
+    assert summary["resumable_contract"]["status"] == "present"
+    assert summary["resumable_contract"]["current_next_action"] == "Add one checker."
+    assert summary["resumable_contract"]["active_milestone"]["scope"] == "maintain planning discipline."
+    assert summary["resumable_contract"]["completion_criteria"] == ["Warning classes are emitted for known drift."]
     assert summary["roadmap"]["candidate_count"] == 1
     assert summary["warning_count"] == 0
 
@@ -1156,5 +1170,6 @@ def test_planning_summary_can_expose_active_contract_from_execplan_without_todo_
     assert summary["todo"]["active_count"] == 0
     assert summary["execplans"]["active_count"] == 1
     assert summary["active_contract"]["status"] == "present"
+    assert summary["resumable_contract"]["status"] == "present"
     assert summary["active_contract"]["todo_item"]["id"] == ""
     assert summary["active_contract"]["minimal_refs"] == ["TODO.md", "docs/execplans/plan-alpha.md"]
