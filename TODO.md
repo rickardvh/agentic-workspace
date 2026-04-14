@@ -11,9 +11,10 @@ Active queue for repository work.
 - No active work right now.
 ## Action
 
-- Promote the next bounded open GitHub issue after the bootstrap hardening tranche is archived.
+- Promote the final remaining open GitHub issue after the lazy-discovery measurement tranche is archived.
 ## Done
 
+- lazy-discovery-measurement-audit: Completed (added the first cheap lazy-discovery measurement framework, checked in one audit of the current defaults/proof/ownership selector path, and proved the existing compact-contract work with measured retrieval-size reduction instead of schema intuition)
 - bootstrap-agents-preservation-hardening: Completed (fixed the workspace upgrade path so root `AGENTS.md` stays repo-owned outside the managed workspace fence, added focused regression coverage, and confirmed the live bootstrap/handoff surfaces still behave conservatively enough to close the remaining bootstrap hardening issue)
 - structured-bootstrap-handoff-artifact: Completed (added `.agentic-workspace/bootstrap-handoff.json` as the compact structured sibling for bootstrap follow-through, used it to carry intent/proof/escalation boundaries in checked-in form, aligned the lifecycle docs and CLI tests, and dogfooded the new record against this repo's live bootstrap state)
 - lazy-discovery-contract-profile-and-selectors: Completed (shipped the first compact queryable contract profile, added narrow selectors to the defaults/proof/ownership machine-readable surfaces, aligned the contract docs, and dogfooded the new retrieval path directly in this repo before archiving the tranche)
