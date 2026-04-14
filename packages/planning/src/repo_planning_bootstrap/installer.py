@@ -416,6 +416,10 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         active_contract=active_contract,
         active_execplans=active_execplans,
     )
+    planning_record = _canonical_planning_record(
+        active_contract=active_contract,
+        resumable_contract=resumable_contract,
+    )
     return {
         "target_root": str(target_root),
         "adoption_mode": _detect_adoption_mode(target_root),
@@ -430,8 +434,9 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
             "active_execplans": active_execplans,
             "archived_count": archived_execplans,
         },
-        "active_contract": active_contract,
-        "resumable_contract": resumable_contract,
+        "planning_record": planning_record,
+        "active_contract": _contract_projection(active_contract, view_name="active_contract"),
+        "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
         "roadmap": {
             "candidate_count": candidate_count,
         },
@@ -546,6 +551,55 @@ def _active_resumable_contract(
         "blockers": blockers,
         "minimal_refs": list(active_contract["minimal_refs"]),
     }
+
+
+def _canonical_planning_record(
+    *,
+    active_contract: dict[str, Any],
+    resumable_contract: dict[str, Any],
+) -> dict[str, Any]:
+    if active_contract.get("status") != "present" or resumable_contract.get("status") != "present":
+        reasons: list[str] = []
+        if active_contract.get("status") != "present":
+            reasons.append(active_contract.get("reason", "active contract unavailable"))
+        if resumable_contract.get("status") != "present":
+            reasons.append(resumable_contract.get("reason", "resumable contract unavailable"))
+        return {
+            "status": "unavailable",
+            "reason": "; ".join(_dedupe(reasons)),
+        }
+
+    todo_item = active_contract.get("todo_item", {})
+    active_milestone = resumable_contract.get("active_milestone", {})
+    return {
+        "status": "present",
+        "task": {
+            "id": str(todo_item.get("id", "")).strip() or str(active_milestone.get("id", "")).strip(),
+            "surface": str(todo_item.get("surface", "")).strip(),
+            "status": str(active_milestone.get("status", "")).strip(),
+        },
+        "intent": {
+            "requested_outcome": str(active_contract["intent"]["requested_outcome"]).strip(),
+            "hard_constraints": str(active_contract["intent"]["hard_constraints"]).strip(),
+        },
+        "next_action": str(resumable_contract["current_next_action"]).strip(),
+        "proof_expectations": list(resumable_contract.get("proof_expectations", [])),
+        "escalate_when": str(resumable_contract.get("escalate_when", "")).strip(),
+        "touched_scope": list(active_contract.get("touched_scope", [])),
+        "completion_criteria": list(resumable_contract.get("completion_criteria", [])),
+        "blockers": list(resumable_contract.get("blockers", [])),
+        "minimal_refs": list(resumable_contract.get("minimal_refs", [])),
+    }
+
+
+def _contract_projection(contract: dict[str, Any], *, view_name: str) -> dict[str, Any]:
+    if not contract:
+        return {}
+    projection = dict(contract)
+    projection.setdefault("view_role", "projection")
+    projection.setdefault("view", view_name)
+    projection.setdefault("view_of", "planning_record")
+    return projection
 
 
 def promote_todo_item_to_execplan(

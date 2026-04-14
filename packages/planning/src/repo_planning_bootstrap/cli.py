@@ -173,23 +173,29 @@ def _print_summary(summary: dict) -> None:
     print(f"TODO: {summary['todo']['active_count']} active / {summary['todo']['item_count']} items / {summary['todo']['line_count']} lines")
     print(f"Execplans: {summary['execplans']['active_count']} active / {summary['execplans']['archived_count']} archived")
     print(f"Roadmap: {summary['roadmap']['candidate_count']} candidate bullets")
+    planning_record = summary.get("planning_record", {})
+    if planning_record.get("status") == "present":
+        task = planning_record.get("task", {})
+        print("Planning record:")
+        print(f"- Task: {task.get('id', '')}: {task.get('surface', '')}")
+        print(f"- Requested outcome: {planning_record['intent']['requested_outcome']}")
+        print(f"- Next action: {planning_record['next_action']}")
+        print(f"- Proof expectations: {', '.join(planning_record['proof_expectations'])}")
+    elif planning_record:
+        print(f"Planning record: {planning_record.get('status')} ({planning_record.get('reason', 'no compact record available')})")
     active_contract = summary.get("active_contract", {})
     if active_contract.get("status") == "present":
-        print("Active contract:")
+        print("Active contract view:")
         print(f"- TODO item: {active_contract['todo_item']['id']}: {active_contract['todo_item']['surface']}")
-        print(f"- Requested outcome: {active_contract['intent']['requested_outcome']}")
-        print(f"- Proof expectations: {', '.join(active_contract['proof_expectations'])}")
     elif active_contract:
-        print(f"Active contract: {active_contract.get('status')} ({active_contract.get('reason', 'no compact contract available')})")
+        print(f"Active contract view: {active_contract.get('status')} ({active_contract.get('reason', 'no compact contract available')})")
     resumable_contract = summary.get("resumable_contract", {})
     if resumable_contract.get("status") == "present":
-        print("Resumable contract:")
+        print("Resumable contract view:")
         print(f"- Next action: {resumable_contract['current_next_action']}")
-        print(f"- Scope: {resumable_contract['active_milestone']['scope']}")
-        print(f"- Proof expectations: {', '.join(resumable_contract['proof_expectations'])}")
     elif resumable_contract:
         print(
-            "Resumable contract: "
+            "Resumable contract view: "
             f"{resumable_contract.get('status')} ({resumable_contract.get('reason', 'no resumable contract available')})"
         )
     if summary["todo"]["active_items"]:

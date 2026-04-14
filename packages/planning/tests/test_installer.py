@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import repo_planning_bootstrap._render as render_module
+import repo_planning_bootstrap.cli as planning_cli
 import repo_planning_bootstrap.installer as installer_mod
 from repo_planning_bootstrap._ownership import module_root as planning_module_root
 from repo_planning_bootstrap.installer import (
@@ -1145,13 +1146,24 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
 
     assert summary["todo"]["active_count"] == 1
     assert summary["execplans"]["active_count"] == 1
+    assert summary["planning_record"]["status"] == "present"
+    assert summary["planning_record"]["task"]["id"] == "plan-alpha"
+    assert summary["planning_record"]["task"]["surface"] == "docs/execplans/plan-alpha.md"
+    assert summary["planning_record"]["next_action"] == "Add one checker."
+    assert summary["planning_record"]["proof_expectations"] == ["uv run pytest tests/test_check_planning_surfaces.py"]
+    assert summary["planning_record"]["escalate_when"] == (
+        "The requested outcome, owned surface, time horizon, or meaningful validation story would change."
+    )
+    assert "continuation_owner" not in summary["planning_record"]
     assert summary["active_contract"]["status"] == "present"
+    assert summary["active_contract"]["view_of"] == "planning_record"
     assert summary["active_contract"]["todo_item"]["id"] == "plan-alpha"
     assert summary["active_contract"]["intent"]["requested_outcome"] == "Keep scope clear."
     assert summary["active_contract"]["proof_expectations"] == ["uv run pytest tests/test_check_planning_surfaces.py"]
     assert summary["active_contract"]["touched_scope"] == ["scripts/check/check_planning_surfaces.py"]
     assert summary["active_contract"]["minimal_refs"] == ["TODO.md", "docs/execplans/plan-alpha.md"]
     assert summary["resumable_contract"]["status"] == "present"
+    assert summary["resumable_contract"]["view_of"] == "planning_record"
     assert summary["resumable_contract"]["current_next_action"] == "Add one checker."
     assert summary["resumable_contract"]["active_milestone"]["scope"] == "maintain planning discipline."
     assert summary["resumable_contract"]["completion_criteria"] == ["Warning classes are emitted for known drift."]
@@ -1169,7 +1181,39 @@ def test_planning_summary_can_expose_active_contract_from_execplan_without_todo_
 
     assert summary["todo"]["active_count"] == 0
     assert summary["execplans"]["active_count"] == 1
+    assert summary["planning_record"]["status"] == "present"
+    assert summary["planning_record"]["task"]["id"] == "plan-alpha"
+    assert summary["planning_record"]["task"]["surface"] == "docs/execplans/plan-alpha.md"
     assert summary["active_contract"]["status"] == "present"
     assert summary["resumable_contract"]["status"] == "present"
     assert summary["active_contract"]["todo_item"]["id"] == ""
     assert summary["active_contract"]["minimal_refs"] == ["TODO.md", "docs/execplans/plan-alpha.md"]
+
+
+def test_summary_text_prints_planning_record_before_contract_views(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: docs/execplans/plan-alpha.md
+  Why now: promote when maintained report signal appears.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n\n## Next Candidate Queue\n\n- Candidate alpha\n")
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+
+    exit_code = planning_cli.main(["summary", "--target", str(tmp_path)])
+    captured = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Planning record:" in captured
+    assert "Active contract view:" in captured
+    assert "Resumable contract view:" in captured
+    assert captured.index("Planning record:") < captured.index("Active contract view:")
+    assert "- Next action: Add one checker." in captured
