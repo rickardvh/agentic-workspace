@@ -28,6 +28,8 @@ MIXED_AGENT_LOCAL_OVERRIDE_FIELDS = (
     "runtime.strong_planner_available",
     "runtime.cheap_bounded_executor_available",
     "handoff.prefer_internal_delegation_when_available",
+    "safety.safe_to_auto_run_commands",
+    "safety.requires_human_verification_on_pr",
 )
 WORKSPACE_PAYLOAD_FILES = (
     Path(".agentic-workspace/WORKFLOW.md"),
@@ -208,6 +210,8 @@ class MixedAgentLocalOverride:
     strong_planner_available: bool | None
     cheap_bounded_executor_available: bool | None
     prefer_internal_delegation_when_available: bool | None
+    safe_to_auto_run_commands: bool | None
+    requires_human_verification_on_pr: bool | None
 
 
 class ModuleSelectionError(ValueError):
@@ -3631,6 +3635,8 @@ def _empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mix
         strong_planner_available=None,
         cheap_bounded_executor_available=None,
         prefer_internal_delegation_when_available=None,
+        safe_to_auto_run_commands=None,
+        requires_human_verification_on_pr=None,
     )
 
 
@@ -3659,7 +3665,7 @@ def _load_mixed_agent_local_override(*, target_root: Path) -> MixedAgentLocalOve
             f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} must set schema_version = 1 for the current local mixed-agent override contract."
         )
 
-    unknown_top_level = sorted(set(payload) - {"schema_version", "runtime", "handoff"})
+    unknown_top_level = sorted(set(payload) - {"schema_version", "runtime", "handoff", "safety"})
     if unknown_top_level:
         unknown_text = ", ".join(unknown_top_level)
         raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} contains unsupported top-level field(s): {unknown_text}.")
@@ -3686,6 +3692,16 @@ def _load_mixed_agent_local_override(*, target_root: Path) -> MixedAgentLocalOve
         unknown_text = ", ".join(unknown_handoff)
         raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [handoff] contains unsupported field(s): {unknown_text}.")
 
+    raw_safety = payload.get("safety", {})
+    if raw_safety is None:
+        raw_safety = {}
+    if not isinstance(raw_safety, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [safety] section must be a table.")
+    unknown_safety = sorted(set(raw_safety) - {"safe_to_auto_run_commands", "requires_human_verification_on_pr"})
+    if unknown_safety:
+        unknown_text = ", ".join(unknown_safety)
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [safety] contains unsupported field(s): {unknown_text}.")
+
     return MixedAgentLocalOverride(
         path=local_path,
         exists=True,
@@ -3708,6 +3724,16 @@ def _load_mixed_agent_local_override(*, target_root: Path) -> MixedAgentLocalOve
         prefer_internal_delegation_when_available=_require_optional_bool(
             payload=raw_handoff,
             key="prefer_internal_delegation_when_available",
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        ),
+        safe_to_auto_run_commands=_require_optional_bool(
+            payload=raw_safety,
+            key="safe_to_auto_run_commands",
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        ),
+        requires_human_verification_on_pr=_require_optional_bool(
+            payload=raw_safety,
+            key="requires_human_verification_on_pr",
             config_path=WORKSPACE_LOCAL_CONFIG_PATH,
         ),
     )
@@ -3766,6 +3792,14 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             ),
             "prefer_internal_delegation_when_available": _sourced_value(
                 local_override.prefer_internal_delegation_when_available,
+                source="local-override",
+            ),
+            "safe_to_auto_run_commands": _sourced_value(
+                local_override.safe_to_auto_run_commands,
+                source="local-override",
+            ),
+            "requires_human_verification_on_pr": _sourced_value(
+                local_override.requires_human_verification_on_pr,
                 source="local-override",
             ),
         },

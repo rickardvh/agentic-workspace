@@ -19,7 +19,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## GitHub Issue Intake
 
-- Latest intake tranche: GitHub issues `#65` through `#72`.
+- Latest intake tranche: GitHub issues `#65` through `#77`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 
@@ -35,6 +35,11 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 | 6 | `Jumpstart bounded-proof separation` | GitHub issue `#70` | `report` is the closest thing to useful jumpstart behavior today, while `proof` is still too backlog-heavy for bounded mature-repo orientation, so the jumpstart lane is not yet clearly separated from the full proof backlog. | Another jumpstart evaluation shows `proof` drowning bounded orientation in full backlog output, or the next jumpstart pass is ready to sharpen the compact orientation lane. |
 | 7 | `Jumpstart skill recommendation quality` | GitHub issue `#71` | `skills --task "jumpstart"` currently degrades into a broad skill dump with empty recommendations, which is anti-signal in exactly the quick-orientation lane where precision matters most. | Another repo shows the same empty-recommendation broad dump, or the next skill-routing refinement pass is ready to give jumpstart a real recommendation contract. |
 | 8 | `Memory doctor mature-corpus signal tuning` | GitHub issue `#68` | The remaining upgrade friction is now mostly low-signal advisory pressure from memory doctor on established customized corpora rather than lifecycle failure, so signal quality is the next mature-repo trust problem after the upgrade-path and jumpstart-shape gaps above. | Repeated mature-repo evidence still shows overlap and current-note warnings dominating doctor output, or the higher-priority upgrade-contract and jumpstart-shape issues above are closed and signal quality becomes the next trust bottleneck. |
+| 9 | `Model Permissions in Delegation Posture Contract` | GitHub issue `#76` | Provides immediate, concrete safety guarantees for autonomous agents. Very quick to implement by extending `MixedAgentLocalOverride`. | The current active queue completes or an explicit safety-bounding need arises. |
+| 10 | `Strict CLI Non-Interactivity and Windows Support` | GitHub issue `#75` | Crucial for robust CI and autonomous agent execution (especially on Windows), by adding `--non-interactive` argument propagation to prevent hanging prompts. | Autonomous agents consistently hang during lifecycle updates, or formatting/workflow cleanup tranche is selected. |
+| 11 | `Structured Data Schemas for State Retrieval` | GitHub issue `#74` | Reduces agent parsing errors and hallucinations by exposing machine-friendly state. | Markdown prose continues to cause heavy extraction faults. |
+| 12 | `Explicit Tool Verification State for Execplans` | GitHub issue `#77` | Complements schemas by warning agents if they lack required tools before attempting execution. | Capability-aware execution is expanded. |
+| 13 | `Adapter Patterns for Agent-Specific Workflow Artifacts` | GitHub issue `#73` | Eliminates friction of maintaining two sets of plans for agents with native workflow artifacts. | Ecosystem integration lane is opened. |
 
 ## Ongoing Maintenance Expectations
 

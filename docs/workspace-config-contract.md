@@ -86,6 +86,10 @@ cheap_bounded_executor_available = true
 
 [handoff]
 prefer_internal_delegation_when_available = true
+
+[safety]
+safe_to_auto_run_commands = false
+requires_human_verification_on_pr = true
 ```
 
 Rules:

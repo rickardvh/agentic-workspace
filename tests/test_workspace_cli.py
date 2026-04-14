@@ -194,6 +194,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "runtime.strong_planner_available",
         "runtime.cheap_bounded_executor_available",
         "handoff.prefer_internal_delegation_when_available",
+        "safety.safe_to_auto_run_commands",
+        "safety.requires_human_verification_on_pr",
     ]
     assert payload["mixed_agent"]["runtime_inference"]["tool_owned"] is True
     assert payload["mixed_agent"]["handoff_quality"]["must_recover"] == [

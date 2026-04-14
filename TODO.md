@@ -14,6 +14,13 @@ Active queue for repository work.
   Why now: the remaining open GitHub intake tranche still needs checked-in execution in priority order.
   Next action: implement the public `agentic-workspace jumpstart` command first.
   Done when: the prioritized intake issues are implemented, validated, and committed in order.
+
+- ID: model-permissions-contract
+  Status: not-started
+  Surface: docs/execplans/model-permissions-contract-2026-04-14.md
+  Why now: Priority 1 issue from the latest intake tranche for immediate safety-bounding enforcement.
+  Next action: Implement the changes in `cli.py` and `workspace-config-contract.md`.
+  Done when: `agentic-workspace config` successfully reports the new safety constraints.
 ## Done
 
 - bounded-post-install-jumpstart-phase: Completed (added the pre-write jumpstart discovery report, seeded the smallest Memory and Planning follow-through surfaces, and closed the fast-payoff ranking rule so the mature-repo adoption slice no longer depends on prose-first curation)
