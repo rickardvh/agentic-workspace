@@ -17,7 +17,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - No active handoff right now.
 ## GitHub Issue Intake
 
-- Latest intake tranche: GitHub issues `#25` through `#37`.
+- Latest intake tranche: GitHub issues `#48` through `#52`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 
@@ -37,6 +37,16 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 | --- | --- | --- | --- |
 | `Repeated-human-steering improvement signal` | GitHub issue `#37`; improvement-targeting workflow | Repeated human correction should become explicit product pressure, but that follow-through is lower urgency than shrinking the active execution contract and proof/handoff ambiguity first. | The same class of human steering still repeats after the intent, resumable-execution, proof, or handoff contracts improve. |
 | `Cross-agent workflow robustness hardening` | Archived execplan `docs/execplans/archive/cross-agent-workflow-robustness-hardening-2026-04-13.md`; mixed-agent dogfooding feedback | The first machine-readable hardening slice landed, but the broader goal stays open until future mixed-agent passes show startup routing, package-managed paths, and same-pass planning cleanup are no longer missed in ordinary use. | Another mixed-agent pass still misses startup routing, package-managed paths, or same-pass planning cleanup after the current machine-readable hardening slice. |
+
+## Fourth Priority Queue
+
+| Candidate | Source | Why now | Promote when |
+| --- | --- | --- | --- |
+| `Bounded post-install jumpstart phase for mature repos` | GitHub issue `#48`; mature-repo adoption gap | Safe install/adopt is already the right first step, but mature repos still need a bounded post-bootstrap phase so the first visible value appears sooner without broad conversion semantics. | The repo has a clear safe install/adopt path and one bounded post-bootstrap seeding flow can be defined without widening `init`. |
+| `Mature-repo discovery reporting before seeding` | GitHub issue `#49`; jumpstart reporting prerequisite | Jumpstart needs a compact, auditable report that classifies durable Memory candidates, active Planning candidates, and unsafe ambiguity before any checked-in state is written. | The report shape can stay compact and machine-readable while identifying high-value candidates and no-action cases. |
+| `Fast payoff mature-repo jumpstart mode` | GitHub issue `#52`; jumpstart ranking refinement | A bounded jumpstart phase also needs an explicit ranking policy so the highest-value low-risk seeds come first and the first visible gains stay small, clear, and reviewable. | Candidate ranking can be expressed with clear value and confidence signals, and skipped seeds stay explicit in reporting. |
+| `Memory seeding from high-value mature-repo signals` | GitHub issue `#50`; jumpstart Memory slice | Mature repos often already contain durable anti-rediscovery knowledge that should seed Memory early, but only if the source material is high-confidence and compact enough to avoid noise. | High-confidence Memory seeds can be extracted as compact facts, invariants, runbooks, or stable conventions without bulk-importing prose. |
+| `Planning seeding from current mature-repo reality` | GitHub issue `#51`; jumpstart Planning slice | Mature repos often already expose one useful active picture, and a bounded planning seed can make adoption feel immediately useful without migrating historic backlog state. | One current active slice, one or two roadmap candidates, or one bounded review artifact can be seeded without turning intake into backlog archaeology. |
 
 ## Ongoing Maintenance Expectations
 
