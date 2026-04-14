@@ -99,6 +99,11 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert cli.main(["defaults", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["compact_contract_profile"]["canonical_doc"] == "docs/compact-contract-profile.md"
+    assert payload["compact_contract_profile"]["rule"] == (
+        "When one bounded answer is enough, prefer a narrow selector over a whole-surface dump."
+    )
+    assert payload["compact_contract_profile"]["selectors"]["defaults"] == ("agentic-workspace defaults --section <section> --format json")
     assert payload["lifecycle"]["primary_entrypoint"] == "agentic-workspace"
     assert "agentic-workspace init --target ./repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
     assert payload["lifecycle"]["canonical_external_agent_handoff"] == "llms.txt"
@@ -195,6 +200,8 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "agentic-workspace defaults --format json" in text
     assert "Lifecycle:" in text
     assert "primary entrypoint: agentic-workspace" in text
+    assert "Compact contract profile:" in text
+    assert "docs/compact-contract-profile.md" in text
     assert "Proof surfaces:" in text
     assert "docs/proof-surfaces-contract.md" in text
     assert "Ownership mapping:" in text
@@ -248,6 +255,19 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     ]
 
 
+def test_defaults_section_selector_returns_compact_contract_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "validation", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "validation"}
+    assert payload["matched"] is True
+    assert payload["answer"]["rule"] == "Run the narrowest proving lane that matches the touched surface."
+    assert "docs/compact-contract-profile.md" in payload["refs"]
+    assert "agentic-workspace defaults --format json" in payload["refs"]
+
+
 def test_proof_command_reports_routes_and_current_health(tmp_path: Path, monkeypatch, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
@@ -276,6 +296,58 @@ def test_proof_command_reports_routes_and_current_health(tmp_path: Path, monkeyp
     assert payload["current"]["warnings"] == []
     assert payload["current"]["needs_review"] == []
     assert calls == []
+
+
+def test_proof_route_selector_returns_compact_contract_answer(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, []))
+    monkeypatch.setattr(
+        cli,
+        "_run_lifecycle_command",
+        lambda **kwargs: {
+            "health": "healthy",
+            "warnings": [],
+            "needs_review": [],
+            "stale_generated_surfaces": [],
+        },
+    )
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--route", "workspace_proof", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "proof"
+    assert payload["selector"] == {"route": "workspace_proof"}
+    assert payload["matched"] is True
+    assert payload["answer"] == {
+        "id": "workspace_proof",
+        "command": "agentic-workspace proof --target ./repo --format json",
+    }
+    assert payload["target"] == tmp_path.as_posix()
+
+
+def test_proof_current_selector_returns_compact_contract_answer(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "planning").mkdir()
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, []))
+    monkeypatch.setattr(
+        cli,
+        "_run_lifecycle_command",
+        lambda **kwargs: {
+            "health": "healthy",
+            "warnings": [],
+            "needs_review": [],
+            "stale_generated_surfaces": [],
+        },
+    )
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--current", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["selector"] == {"current": True}
+    assert payload["answer"]["installed_modules"] == ["planning"]
+    assert payload["answer"]["status_health"] == "healthy"
 
 
 def test_ownership_command_reports_authority_map(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -323,6 +395,70 @@ def test_ownership_command_reports_authority_map(tmp_path: Path, monkeypatch, ca
     assert payload["authority_surfaces"][0]["concern"] == "active-execution-state"
     assert payload["authority_surfaces"][0]["surface"] == "TODO.md"
     assert payload["warnings"] == []
+
+
+def test_ownership_concern_selector_returns_compact_contract_answer(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace" / "OWNERSHIP.toml").write_text(
+        "schema_version = 1\n\n"
+        "[[authority_surfaces]]\n"
+        'concern = "active-execution-state"\n'
+        'surface = "TODO.md"\n'
+        'owner = "repo"\n'
+        'ownership = "repo_owned"\n'
+        'authority = "primary"\n'
+        'summary = "current work"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, []))
+
+    assert cli.main(["ownership", "--target", str(tmp_path), "--concern", "active-execution-state", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "ownership"
+    assert payload["selector"] == {"concern": "active-execution-state"}
+    assert payload["matched"] is True
+    assert payload["answer"]["surface"] == "TODO.md"
+    assert payload["answer"]["owner"] == "repo"
+
+
+def test_ownership_path_selector_returns_compact_contract_answer(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace" / "OWNERSHIP.toml").write_text(
+        "schema_version = 1\n\n"
+        "[[module_roots]]\n"
+        'module = "planning"\n'
+        'path = ".agentic-workspace/planning/"\n'
+        'ownership = "module_managed"\n'
+        'uninstall_policy = "remove-managed-files-only"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, []))
+
+    assert (
+        cli.main(
+            [
+                "ownership",
+                "--target",
+                str(tmp_path),
+                "--path",
+                ".agentic-workspace/planning/agent-manifest.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["selector"] == {"path": ".agentic-workspace/planning/agent-manifest.json"}
+    assert payload["matched"] is True
+    assert payload["answer"]["owner"] == "planning"
+    assert payload["answer"]["matched_by"] == "module_root"
 
 
 def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> None:

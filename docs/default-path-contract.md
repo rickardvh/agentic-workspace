@@ -52,6 +52,15 @@ That surface is the queryable contract for:
 - repo-owned lifecycle defaults and update intent
 - current mixed-agent reporting boundaries
 
+When one bounded answer is enough, prefer the compact selector path:
+
+```bash
+agentic-workspace defaults --section validation --format json
+agentic-workspace proof --target ./repo --current --format json
+agentic-workspace ownership --target ./repo --concern active-execution-state --format json
+```
+
+Use [`docs/compact-contract-profile.md`](docs/compact-contract-profile.md) for the compact answer envelope and the first narrow-selector contract.
 Use `docs/delegated-judgment-contract.md` when the question is not which command to run, but what the human should specify, what the agent may decide locally, and what should force promotion or escalation.
 Use the `validation` section in `agentic-workspace defaults --format json` when the missing judgment is which proving lane is enough, when broader checks are required, and when the change should escalate beyond the narrow lane.
 Use `docs/environment-recovery-contract.md` when the question is how to recover cheaply from repo-state ambiguity, lifecycle warnings, or interrupted bootstrap/maintenance work.

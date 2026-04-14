@@ -33,6 +33,15 @@ That command is the workspace-level query surface for:
 - managed fences
 - the main authority surfaces by concern
 
+When the question is already narrow, prefer the compact selector path:
+
+```bash
+agentic-workspace ownership --target ./repo --concern active-execution-state --format json
+agentic-workspace ownership --target ./repo --path TODO.md --format json
+```
+
+Those forms return the compact contract answer profile from [`docs/compact-contract-profile.md`](docs/compact-contract-profile.md) instead of the full ownership object.
+
 ## Main Authority Surfaces
 
 | Concern | Primary surface | Owner | Ownership class |
@@ -68,6 +77,7 @@ That command is the workspace-level query surface for:
 
 ## Relationship To Other Docs
 
+- Use [`docs/compact-contract-profile.md`](docs/compact-contract-profile.md) when you want a one-answer ownership lookup instead of the full ledger report.
 - Use [`docs/proof-surfaces-contract.md`](docs/proof-surfaces-contract.md) when the question is which proof lane establishes trust.
 - Use [`docs/generated-surface-trust.md`](docs/generated-surface-trust.md) when the question is whether a generated mirror is stale or hand-edited.
 - Use [`docs/compatibility-policy.md`](docs/compatibility-policy.md) when the question is whether a surface is stable, mutable, or generated.

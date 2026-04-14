@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import re
 import tomllib
@@ -55,6 +56,8 @@ MEMORY_WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
 MEMORY_POINTER_BLOCK = (
     f"{MEMORY_WORKFLOW_MARKER_START}\nRead `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n{MEMORY_WORKFLOW_MARKER_END}"
 )
+COMPACT_CONTRACT_PROFILE = "compact-contract-answer/v1"
+COMPACT_CONTRACT_PROFILE_DOC = "docs/compact-contract-profile.md"
 
 
 @dataclass(frozen=True)
@@ -221,6 +224,7 @@ def build_parser() -> argparse.ArgumentParser:
         "defaults",
         help="Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
     )
+    defaults_parser.add_argument("--section", help="Return only one top-level defaults section in the compact contract profile.")
     _add_format_argument(defaults_parser)
 
     proof_parser = subparsers.add_parser(
@@ -228,6 +232,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show the canonical proof routes and current workspace proof summary.",
     )
     proof_parser.add_argument("--target", help="Optional repository path used to inspect installed modules and proof state.")
+    proof_parser.add_argument("--route", help="Return one proof route by id instead of the full proof surface.")
+    proof_parser.add_argument("--current", action="store_true", help="Return only the current proof summary.")
     _add_format_argument(proof_parser)
 
     ownership_parser = subparsers.add_parser(
@@ -235,6 +241,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show the canonical ownership and authority mapping for the target repository.",
     )
     ownership_parser.add_argument("--target", help="Optional repository path used to inspect the ownership ledger.")
+    ownership_parser.add_argument("--concern", help="Return one authority-surface answer by concern.")
+    ownership_parser.add_argument("--path", help="Return the ownership answer for one repo-relative path.")
     _add_format_argument(ownership_parser)
 
     config_parser = subparsers.add_parser(
@@ -312,17 +320,32 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "defaults":
-        _emit_defaults(format_name=args.format)
-        return 0
+        try:
+            _emit_defaults(format_name=args.format, section=getattr(args, "section", None))
+            return 0
+        except WorkspaceUsageError as exc:
+            parser.error(str(exc))
 
     if args.command in {"proof", "ownership", "config"}:
         try:
             target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
             _validate_target_root(command_name=args.command, target_root=target_root)
             if args.command == "proof":
-                _emit_proof(format_name=args.format, target_root=target_root, descriptors=descriptors)
+                _emit_proof(
+                    format_name=args.format,
+                    target_root=target_root,
+                    descriptors=descriptors,
+                    route=getattr(args, "route", None),
+                    current_only=bool(getattr(args, "current", False)),
+                )
             elif args.command == "ownership":
-                _emit_ownership(format_name=args.format, target_root=target_root, descriptors=descriptors)
+                _emit_ownership(
+                    format_name=args.format,
+                    target_root=target_root,
+                    descriptors=descriptors,
+                    concern=getattr(args, "concern", None),
+                    repo_path=getattr(args, "path", None),
+                )
             else:
                 _emit_config(format_name=args.format, config=_load_workspace_config(target_root=target_root, descriptors=descriptors))
             return 0
@@ -2073,6 +2096,25 @@ def _defaults_payload() -> dict[str, Any]:
                 ),
             ],
         },
+        "compact_contract_profile": {
+            "canonical_doc": COMPACT_CONTRACT_PROFILE_DOC,
+            "rule": "When one bounded answer is enough, prefer a narrow selector over a whole-surface dump.",
+            "answer_shape": [
+                "profile",
+                "surface",
+                "selector",
+                "matched",
+                "answer",
+                "refs",
+            ],
+            "selectors": {
+                "defaults": "agentic-workspace defaults --section <section> --format json",
+                "proof_route": "agentic-workspace proof --target ./repo --route <id> --format json",
+                "proof_current": "agentic-workspace proof --target ./repo --current --format json",
+                "ownership_concern": "agentic-workspace ownership --target ./repo --concern <concern> --format json",
+                "ownership_path": "agentic-workspace ownership --target ./repo --path <repo-path> --format json",
+            },
+        },
         "lifecycle": {
             "primary_entrypoint": "agentic-workspace",
             "default_install_command": "agentic-workspace init --target ./repo --preset <memory|planning|full>",
@@ -2291,10 +2333,80 @@ def _defaults_payload() -> dict[str, Any]:
     }
 
 
-def _emit_defaults(*, format_name: str) -> None:
+def _compact_contract_answer(
+    *,
+    surface: str,
+    selector: dict[str, Any],
+    answer: Any,
+    refs: list[str],
+    matched: bool = True,
+    target: str | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "profile": COMPACT_CONTRACT_PROFILE,
+        "surface": surface,
+        "selector": selector,
+        "matched": matched,
+        "answer": answer,
+        "refs": refs,
+    }
+    if target is not None:
+        payload["target"] = target
+    return payload
+
+
+def _compact_text(value: Any) -> str:
+    if isinstance(value, (dict, list)):
+        return json.dumps(serialise_value(value), indent=2)
+    return str(value)
+
+
+def _emit_compact_answer_text(payload: dict[str, Any]) -> None:
+    print(f"Profile: {payload['profile']}")
+    print(f"Surface: {payload['surface']}")
+    print(f"Selector: {json.dumps(serialise_value(payload['selector']), sort_keys=True)}")
+    print(f"Matched: {payload['matched']}")
+    print("Answer:")
+    print(_compact_text(payload["answer"]))
+    if payload.get("refs"):
+        print("Refs:")
+        for ref in payload["refs"]:
+            print(f"- {ref}")
+
+
+def _selector_refs(*, command: str, answer: Any) -> list[str]:
+    refs = [COMPACT_CONTRACT_PROFILE_DOC, command]
+    if isinstance(answer, dict):
+        for key in ("canonical_doc", "command", "path", "surface", "ledger_path"):
+            value = answer.get(key)
+            if isinstance(value, str) and value not in refs:
+                refs.append(value)
+    return refs
+
+
+def _select_defaults_section(payload: dict[str, Any], *, section: str) -> dict[str, Any]:
+    normalized = section.strip()
+    if normalized not in payload:
+        supported = ", ".join(sorted(payload))
+        raise WorkspaceUsageError(f"defaults --section must match one of: {supported}.")
+    answer = payload[normalized]
+    return _compact_contract_answer(
+        surface="defaults",
+        selector={"section": normalized},
+        answer=answer,
+        refs=_selector_refs(command="agentic-workspace defaults --format json", answer=answer),
+    )
+
+
+def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     payload = _defaults_payload()
+    if section is not None:
+        payload = _select_defaults_section(payload, section=section)
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
+        return
+    if section is not None:
+        _emit_compact_answer_text(payload)
         return
     print("Startup:")
     for step in payload["startup"]["primary"]:
@@ -2306,6 +2418,9 @@ def _emit_defaults(*, format_name: str) -> None:
     print(f"- install: {payload['lifecycle']['default_install_command']}")
     print(f"- external-agent handoff: {payload['lifecycle']['canonical_external_agent_handoff']}")
     print(f"- bootstrap next action: {payload['lifecycle']['canonical_bootstrap_next_action']}")
+    print("Compact contract profile:")
+    print(f"- doc: {payload['compact_contract_profile']['canonical_doc']}")
+    print(f"- rule: {payload['compact_contract_profile']['rule']}")
     print("Config:")
     print(f"- path: {payload['config']['path']}")
     print(f"- inspect: {payload['config']['command']}")
@@ -2469,10 +2584,57 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
     )
 
 
-def _emit_proof(*, format_name: str, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> None:
+def _select_proof_payload(
+    payload: dict[str, Any],
+    *,
+    route: str | None,
+    current_only: bool,
+) -> dict[str, Any]:
+    if route and current_only:
+        raise WorkspaceUsageError("proof selectors are mutually exclusive; use either --route or --current.")
+    if route:
+        answer = {
+            "id": route,
+            "command": payload["default_routes"].get(route),
+        }
+        matched = answer["command"] is not None
+        refs = [COMPACT_CONTRACT_PROFILE_DOC, payload["command"], payload["canonical_doc"]]
+        return _compact_contract_answer(
+            surface="proof",
+            selector={"route": route},
+            answer=answer,
+            refs=refs,
+            matched=matched,
+            target=payload["target"],
+        )
+    if current_only:
+        answer = payload["current"]
+        refs = [COMPACT_CONTRACT_PROFILE_DOC, payload["command"], payload["canonical_doc"]]
+        return _compact_contract_answer(
+            surface="proof",
+            selector={"current": True},
+            answer=answer,
+            refs=refs,
+            target=payload["target"],
+        )
+    return payload
+
+
+def _emit_proof(
+    *,
+    format_name: str,
+    target_root: Path,
+    descriptors: dict[str, ModuleDescriptor],
+    route: str | None = None,
+    current_only: bool = False,
+) -> None:
     payload = _proof_payload(target_root=target_root, descriptors=descriptors)
+    payload = _select_proof_payload(payload, route=route, current_only=current_only)
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
+        return
+    if route or current_only:
+        _emit_compact_answer_text(payload)
         return
     print(f"Target: {payload['target']}")
     print(f"Rule: {payload['rule']}")
@@ -2553,10 +2715,122 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
     }
 
 
-def _emit_ownership(*, format_name: str, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> None:
+def _normalize_repo_path(path_text: str) -> str:
+    return Path(path_text).as_posix().rstrip("/")
+
+
+def _ownership_answer_for_path(payload: dict[str, Any], *, repo_path: str) -> tuple[dict[str, Any], bool]:
+    normalized = _normalize_repo_path(repo_path)
+    for entry in payload["authority_surfaces"]:
+        surface = str(entry.get("surface", "")).rstrip("/")
+        if surface == normalized:
+            return (
+                {
+                    "path": normalized,
+                    "owner": entry.get("owner"),
+                    "ownership": entry.get("ownership"),
+                    "authority": entry.get("authority"),
+                    "surface": entry.get("surface"),
+                    "summary": entry.get("summary"),
+                    "matched_by": "authority_surface",
+                },
+                True,
+            )
+    for entry in payload["module_roots"]:
+        root_path = str(entry.get("path", "")).rstrip("/")
+        if normalized == root_path or normalized.startswith(f"{root_path}/"):
+            return (
+                {
+                    "path": normalized,
+                    "owner": entry.get("module"),
+                    "ownership": entry.get("ownership"),
+                    "authority": "module_root",
+                    "surface": entry.get("path"),
+                    "uninstall_policy": entry.get("uninstall_policy"),
+                    "matched_by": "module_root",
+                },
+                True,
+            )
+    for entry in payload["managed_surfaces"]:
+        surface = str(entry.get("path", ""))
+        if fnmatch.fnmatch(normalized, surface):
+            return (
+                {
+                    "path": normalized,
+                    "owner": entry.get("module"),
+                    "ownership": entry.get("ownership"),
+                    "authority": entry.get("kind"),
+                    "surface": entry.get("path"),
+                    "uninstall_policy": entry.get("uninstall_policy"),
+                    "matched_by": "managed_surface",
+                },
+                True,
+            )
+    for entry in payload["fences"]:
+        file_path = str(entry.get("file", "")).rstrip("/")
+        if normalized == file_path:
+            return (
+                {
+                    "path": normalized,
+                    "owner": entry.get("module"),
+                    "ownership": entry.get("ownership"),
+                    "authority": "managed_fence",
+                    "surface": entry.get("file"),
+                    "fence": entry.get("name"),
+                    "matched_by": "fence_file",
+                },
+                True,
+            )
+    return ({"path": normalized}, False)
+
+
+def _select_ownership_payload(
+    payload: dict[str, Any],
+    *,
+    concern: str | None,
+    repo_path: str | None,
+) -> dict[str, Any]:
+    if concern and repo_path:
+        raise WorkspaceUsageError("ownership selectors are mutually exclusive; use either --concern or --path.")
+    refs = [COMPACT_CONTRACT_PROFILE_DOC, payload["command"], payload["canonical_doc"], payload["ledger_path"]]
+    if concern:
+        answer = next((entry for entry in payload["authority_surfaces"] if entry.get("concern") == concern), {"concern": concern})
+        return _compact_contract_answer(
+            surface="ownership",
+            selector={"concern": concern},
+            answer=answer,
+            refs=refs,
+            matched="surface" in answer,
+            target=payload["target"],
+        )
+    if repo_path:
+        answer, matched = _ownership_answer_for_path(payload, repo_path=repo_path)
+        return _compact_contract_answer(
+            surface="ownership",
+            selector={"path": _normalize_repo_path(repo_path)},
+            answer=answer,
+            refs=refs,
+            matched=matched,
+            target=payload["target"],
+        )
+    return payload
+
+
+def _emit_ownership(
+    *,
+    format_name: str,
+    target_root: Path,
+    descriptors: dict[str, ModuleDescriptor],
+    concern: str | None = None,
+    repo_path: str | None = None,
+) -> None:
     payload = _ownership_payload(target_root=target_root, descriptors=descriptors)
+    payload = _select_ownership_payload(payload, concern=concern, repo_path=repo_path)
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
+        return
+    if concern or repo_path:
+        _emit_compact_answer_text(payload)
         return
     print(f"Target: {payload['target']}")
     print(f"Rule: {payload['rule']}")

@@ -25,8 +25,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 | Candidate | Source | Why now | Promote when |
 | --- | --- | --- | --- |
-| `Compact queryable contract profile for lazy discovery` | GitHub issue `#29`; `docs/design-principles.md`; `src/agentic_workspace/cli.py` | The next direct efficiency gain is not more structured output in general but making contract discovery truly lazy: one proof answer, one ownership answer, one escalation answer, one next-action answer. That is now the clearest product-level way to reduce rereading and help weaker or cheaper agents act safely with less context. | Another ordinary task or mixed-agent handoff still requires loading broad defaults, proof, ownership, or handoff output just to answer one bounded operating question. |
-| `Narrow query selectors for machine-readable surfaces` | GitHub issue `#30`; `agentic-workspace defaults --format json`; `agentic-workspace proof --format json`; `agentic-workspace ownership --format json` | The current machine-readable front door is much stronger, but agents still often have to load broad objects and filter them mentally. Narrow selectors are the most concrete next slice for turning the lazy-discovery goal into cheaper routine retrieval. | Another proof, ownership, startup, or handoff query still needs a whole-surface dump instead of one narrow structured answer. |
+- No remaining highest-priority candidates right now.
 
 ## Second Priority Queue
 
@@ -55,7 +54,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 1. Prefer proof, refinement, and trust-hardening over new capability invention.
 2. The first proof tranche is now complete: bounded dogfooding, synergy proof, external-agent handoff trust, selective adoption, and first-party portability all have current evidence.
-3. Next promotions should come first from the highest-priority lazy-discovery and narrow-retrieval lanes, then from delegated-judgment and external-handoff trust follow-through.
+3. Next promotions should come from the second-priority delegated-judgment and external-handoff follow-through lanes unless the active lazy-discovery tranche leaves a narrower required continuation in the queue.
 4. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.
 
 ## Reopen Conditions

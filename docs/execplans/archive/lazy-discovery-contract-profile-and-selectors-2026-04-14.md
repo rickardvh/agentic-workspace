@@ -1,0 +1,106 @@
+# Lazy Discovery Contract Profile And Selectors
+
+## Goal
+
+- Define the first compact queryable contract profile for lazy discovery so agents can retrieve one bounded answer instead of loading a broad contract blob.
+- Ship the first narrow selectors on existing machine-readable workspace surfaces instead of inventing a new query language or a separate query service.
+
+## Non-Goals
+
+- Replace the existing full-surface JSON outputs.
+- Build a general query language or expression syntax.
+- Turn checked-in config into a scheduler or runtime model router.
+- Replace prose handoff surfaces entirely in this slice.
+
+## Intent Continuity
+
+- Larger intended outcome: complete the highest-priority lazy-discovery and narrow-retrieval roadmap work so the workspace contract lowers token cost directly during startup, proof choice, and ownership lookup.
+- This slice completes the larger intended outcome: yes
+- Continuation surface: `none`
+
+## Required Continuation
+
+- Required follow-on for the larger intended outcome: no
+- Owner surface: `none`
+- Activation trigger: `none`
+
+## Delegated Judgment
+
+- Requested outcome: add the first compact queryable contract profile plus the narrowest useful selectors on existing defaults, proof, and ownership surfaces, then align docs/tests and dogfood the result in this repo.
+- Hard constraints: keep the surface query-first and small; preserve existing full outputs; avoid a new query language; keep selectors concern-shaped and portable; keep runtime orchestration tool-owned.
+- Agent may decide locally: the exact selector names, the compact answer envelope, the minimum doc updates, and whether one or two adjacent selectors belong in the first slice as long as the tranche stays bounded.
+- Escalate when: the slice would require a new command family, path-indexing engine, or broad handoff-artifact redesign instead of a narrow refinement of existing surfaces.
+
+## Active Milestone
+
+- ID: lazy-discovery-contract-profile-and-selectors
+- Status: completed
+- Scope: ship a compact contract profile doc and first narrow selectors for `defaults`, `proof`, and `ownership`, then validate and dogfood the new retrieval path.
+- Ready: ready
+- Blocked: none
+- optional_deps: GitHub issues `#29` and `#30`
+
+## Immediate Next Action
+
+- None. Slice completed; promote the next open GitHub issue tranche from `ROADMAP.md`.
+
+## Blockers
+
+- None.
+
+## Touched Paths
+
+- `TODO.md`
+- `ROADMAP.md`
+- `docs/execplans/lazy-discovery-contract-profile-and-selectors-2026-04-14.md`
+- `docs/compact-contract-profile.md`
+- `docs/default-path-contract.md`
+- `docs/proof-surfaces-contract.md`
+- `docs/ownership-authority-contract.md`
+- `src/agentic_workspace/cli.py`
+- `tests/test_workspace_cli.py`
+
+## Invariants
+
+- One bounded answer should be cheaper to retrieve than a whole-surface dump.
+- Existing full-surface JSON remains available and authoritative.
+- Selector vocabulary stays concern-shaped rather than path-heuristic or vendor-specific.
+- Ownership and proof remain query surfaces over existing contracts, not replacement authorities.
+
+## Contract Decisions To Freeze
+
+- The first compact profile should be an answer-envelope convention on existing commands, not a new command family.
+- Narrow selectors should prefer stable concern keys such as section, route, concern, and path.
+- Query-first access should complement, not replace, the existing full contract dumps.
+- Compact structured answers should carry refs back to canonical docs or surfaces instead of embedding broad explanation.
+
+## Open Questions To Close
+
+- What is the smallest answer envelope that stays reusable across defaults, proof, and ownership without becoming a new abstraction tax?
+- Which selectors give the biggest lazy-discovery win in the first pass?
+- Which docs should point to selectors as the new default retrieval path for one-answer questions?
+
+## Validation Commands
+
+- `uv run pytest tests/test_workspace_cli.py -q`
+- `uv run python scripts/check/check_planning_surfaces.py`
+- `uv run ruff check src tests`
+
+## Completion Criteria
+
+- A canonical compact contract profile doc exists and matches shipped behavior.
+- `defaults`, `proof`, and `ownership` can each answer at least one narrow bounded query without emitting the full contract body.
+- The focused CLI tests cover the selector behavior and compact answer shape.
+- The repo has dogfooded the new selectors on a real bounded planning/ownership/proof lookup during implementation.
+
+## Execution Summary
+
+- Outcome delivered: shipped `docs/compact-contract-profile.md` plus the first compact answer envelope and narrow selectors on `agentic-workspace defaults`, `proof`, and `ownership`; aligned the front-door, proof, and ownership docs; and dogfooded the new retrieval path in this repo with bounded live queries.
+- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run ruff check src tests`; `uv run agentic-workspace defaults --section validation --format json`; `uv run agentic-workspace proof --target . --current --format json`; `uv run agentic-workspace ownership --target . --path TODO.md --format json`.
+- Follow-on routed to: `ROADMAP.md`.
+- Resume from: promote the next bounded GitHub issue tranche, most likely delegated-judgment follow-through, external-agent handoff polish, or compact structured handoff artifacts.
+
+## Drift Log
+
+- 2026-04-14: Promoted from the highest-priority roadmap queue after live issue intake moved lazy discovery and narrow retrieval ahead of older follow-through lanes.
+- 2026-04-14: Completed by shipping the first compact queryable contract profile and selector-bearing defaults/proof/ownership surfaces, then using the selectors directly in this repo for validation and dogfooding.

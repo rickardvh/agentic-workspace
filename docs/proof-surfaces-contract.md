@@ -30,6 +30,15 @@ That command is the workspace-level query surface for:
 
 It reports existing proof lanes. It does not replace them.
 
+When the question is already narrow, prefer the compact selector path:
+
+```bash
+agentic-workspace proof --target ./repo --route workspace_proof --format json
+agentic-workspace proof --target ./repo --current --format json
+```
+
+Those forms return the compact contract answer profile from [`docs/compact-contract-profile.md`](docs/compact-contract-profile.md) instead of the full proof surface.
+
 ## Default Routes
 
 | Trust question | Default route | Why |
@@ -52,6 +61,7 @@ It reports existing proof lanes. It does not replace them.
 
 ## Relationship To Other Docs
 
+- Use [`docs/compact-contract-profile.md`](docs/compact-contract-profile.md) when you want the one-answer query shape instead of the full proof object.
 - Use [`docs/default-path-contract.md`](docs/default-path-contract.md) for the front-door route selection contract.
 - Use [`docs/environment-recovery-contract.md`](docs/environment-recovery-contract.md) when the repo is already in a broken or ambiguous state and you need a recovery sequence.
 - Use [`docs/generated-surface-trust.md`](docs/generated-surface-trust.md) when the trust question is specifically about generated mirrors and their canonical sources.
