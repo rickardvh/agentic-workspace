@@ -12,7 +12,7 @@ Active queue for repository work.
   Status: in-progress
   Surface: docs/execplans/github-issues-69-72-follow-through-2026-04-14.md
   Why now: the remaining open GitHub intake tranche still needs checked-in execution in priority order.
-  Next action: implement the public `agentic-workspace jumpstart` command first.
+  Next action: implement the public `agentic-workspace setup` command first.
   Done when: the prioritized intake issues are implemented, validated, and committed in order.
 
 - ID: model-permissions-contract
@@ -23,7 +23,7 @@ Active queue for repository work.
   Done when: `agentic-workspace config` successfully reports the new safety constraints.
 ## Done
 
-- bounded-post-install-jumpstart-phase: Completed (added the pre-write jumpstart discovery report, seeded the smallest Memory and Planning follow-through surfaces, and closed the fast-payoff ranking rule so the mature-repo adoption slice no longer depends on prose-first curation)
+- bounded-post-install-jumpstart-phase: Completed (added the pre-write setup discovery report, seeded the smallest Memory and Planning follow-through surfaces, and closed the fast-payoff ranking rule so the mature-repo adoption slice no longer depends on prose-first curation)
 
 - resumable-execution-contract: Completed (projected the current active execplan into `agentic-planning-bootstrap summary` as `resumable_contract`, added the canonical resumable-execution contract doc, refreshed the root planning install, and dogfooded the smaller restart contract against this repo's live active execplan)
 - compact-intent-contract: Completed (projected the existing active execplan fields into `agentic-planning-bootstrap summary` as `active_contract`, added the canonical intent-contract doc, refreshed the root planning install, and dogfooded the compact contract against this repo's live active execplan instead of leaving requested outcome and escalation boundaries distributed across prose)

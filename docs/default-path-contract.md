@@ -19,8 +19,8 @@ Use it when you want the shortest correct answer for startup, lifecycle, skill d
 | How do I start in a repo? | The configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`) -> `TODO.md` -> active execplan when relevant | `ROADMAP.md` only when promoting work |
 | How do I inspect current active planning state? | `agentic-planning-bootstrap summary --format json` and its `planning_record` object | Reading raw `TODO.md` or execplan prose first |
 | How do I inspect combined workspace state? | `agentic-workspace report --target ./repo --format json` and its `schema` plus report payload | Reading raw module files before the report |
-| How do I inspect mature-repo jumpstart candidates? | `agentic-workspace jumpstart --target ./repo --format json` and its compact orientation payload | Guessing at Memory/Planning candidates by reading prose first |
-| Where is the bounded post-bootstrap jumpstart contract? | [`docs/jumpstart-contract.md`](docs/jumpstart-contract.md) and `agentic-workspace jumpstart --target ./repo --format json` | Treating jumpstart as a wider `init` path or a repo-local checklist |
+| How do I inspect mature-repo setup candidates? | `agentic-workspace setup --target ./repo --format json` and its compact orientation payload | Guessing at Memory/Planning candidates by reading prose first |
+| Where is the bounded post-bootstrap setup contract? | [`docs/jumpstart-contract.md`](docs/jumpstart-contract.md) and `agentic-workspace setup --target ./repo --format json` | Treating setup as a wider `init` path or a repo-local checklist |
 | Where is the proof-selection contract? | `agentic-workspace defaults --section proof_selection --format json` and [`docs/proof-surfaces-contract.md`](docs/proof-surfaces-contract.md) | Mining prose for the narrowest proof lane first |
 | Where is the delegation posture contract? | [`docs/delegation-posture-contract.md`](docs/delegation-posture-contract.md) and `agentic-workspace defaults --section delegation_posture --format json` | Treating config as a scheduler or ignoring the effective mixed-agent posture |
 | Where should I point an external agent? | The repository's `llms.txt` | Richer docs only when that handoff file points there |
@@ -48,7 +48,7 @@ That surface is the queryable contract for:
 
 - startup
 - lifecycle
-- post-bootstrap jumpstart
+- post-bootstrap setup
 - delegation posture
 - supported intents
 - canonical external-agent handoff
@@ -78,7 +78,7 @@ Use `agentic-workspace defaults --section proof_selection --format json` when th
 Use `docs/environment-recovery-contract.md` when the question is how to recover cheaply from repo-state ambiguity, lifecycle warnings, or interrupted bootstrap/maintenance work.
 Use `docs/proof-surfaces-contract.md` when the question is which proof lane answers the current trust question and what the current proof state already says.
 Use `docs/ownership-authority-contract.md` when the question is which surface owns a concern and which checked-in contract is authoritative.
-Use [`docs/jumpstart-contract.md`](docs/jumpstart-contract.md) when the question is how to do the bounded post-bootstrap follow-through after safe install/adopt without widening `init`.
+Use [`docs/jumpstart-contract.md`](docs/jumpstart-contract.md) when the question is how to do the bounded post-bootstrap setup follow-through after safe install/adopt without widening `init`.
 Use [`docs/delegation-posture-contract.md`](docs/delegation-posture-contract.md) when the question is whether to stay direct, split into planner/implementer/validator subtasks, or escalate to a stronger planner under the current config-controlled posture.
 
 ## Secondary Paths

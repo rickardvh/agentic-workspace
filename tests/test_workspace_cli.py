@@ -111,18 +111,18 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["lifecycle"]["canonical_external_agent_handoff"] == "llms.txt"
     assert payload["lifecycle"]["canonical_bootstrap_next_action"] == ".agentic-workspace/bootstrap-handoff.md"
     assert payload["lifecycle"]["canonical_bootstrap_handoff_record"] == ".agentic-workspace/bootstrap-handoff.json"
-    assert payload["jumpstart"]["canonical_doc"] == "docs/jumpstart-contract.md"
-    assert payload["jumpstart"]["command"] == "agentic-workspace jumpstart --target ./repo --format json"
-    assert payload["jumpstart"]["rule"] == "Jumpstart is a bounded post-bootstrap phase that stays separate from init."
-    assert payload["jumpstart"]["phase"] == "post-bootstrap"
-    assert payload["jumpstart"]["scope"] == [
+    assert payload["setup"]["canonical_doc"] == "docs/jumpstart-contract.md"
+    assert payload["setup"]["command"] == "agentic-workspace setup --target ./repo --format json"
+    assert payload["setup"]["rule"] == "Setup is a bounded post-bootstrap phase that stays separate from init."
+    assert payload["setup"]["phase"] == "post-bootstrap"
+    assert payload["setup"]["scope"] == [
         "orient from a compact report first",
         "keep follow-through bounded and reviewable",
     ]
-    assert payload["jumpstart"]["secondary"] == [
+    assert payload["setup"]["secondary"] == [
         "Do not widen init.",
-        "Do not collapse jumpstart into the proof backlog.",
-        "Do not turn jumpstart into generic analysis.",
+        "Do not collapse setup into the proof backlog.",
+        "Do not turn setup into generic analysis.",
     ]
     assert payload["validation"]["default_routes"]["planning_package"] == "cd packages/planning && uv run pytest tests/test_installer.py"
     workspace_lane = next(lane for lane in payload["validation"]["lanes"] if lane["id"] == "workspace_cli")
@@ -247,7 +247,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Lifecycle:" in text
     assert "primary entrypoint: agentic-workspace" in text
     assert "bootstrap handoff record: .agentic-workspace/bootstrap-handoff.json" in text
-    assert "Jumpstart:" in text
+    assert "Setup:" in text
     assert "docs/jumpstart-contract.md" in text
     assert "Delegation posture:" in text
     assert "docs/delegation-posture-contract.md" in text
@@ -343,21 +343,21 @@ def test_defaults_section_selector_returns_compact_contract_answer(capsys) -> No
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
-def test_defaults_jumpstart_section_selector_returns_compact_contract_answer(capsys) -> None:
-    assert cli.main(["defaults", "--section", "jumpstart", "--format", "json"]) == 0
+def test_defaults_setup_section_selector_returns_compact_contract_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "setup", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-contract-answer/v1"
     assert payload["surface"] == "defaults"
-    assert payload["selector"] == {"section": "jumpstart"}
+    assert payload["selector"] == {"section": "setup"}
     assert payload["matched"] is True
     assert payload["answer"]["canonical_doc"] == "docs/jumpstart-contract.md"
     assert payload["answer"]["phase"] == "post-bootstrap"
     assert "docs/jumpstart-contract.md" in payload["refs"]
-    assert "agentic-workspace jumpstart --target ./repo --format json" in payload["refs"]
+    assert "agentic-workspace setup --target ./repo --format json" in payload["refs"]
 
 
-def test_jumpstart_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Path, capsys) -> None:
+def test_setup_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -367,11 +367,11 @@ def test_jumpstart_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path
     (target / "memory").mkdir(exist_ok=True)
     (target / "memory" / "index.md").write_text("# Memory index\n", encoding="utf-8")
 
-    assert cli.main(["jumpstart", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["setup", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "workspace-jumpstart/v1"
-    assert payload["command"] == "jumpstart"
+    assert payload["kind"] == "workspace-setup/v1"
+    assert payload["command"] == "setup"
     assert payload["orientation"]["mode"] == "no-new-seed-surfaces-needed"
     assert "no new seed surfaces are needed" in payload["orientation"]["summary"].lower()
     assert payload["next_action"]["summary"] == "No new seed surfaces needed"
@@ -739,7 +739,7 @@ def test_skills_command_recommends_planning_autopilot_for_active_milestone_task(
     assert any("phrase match" in reason for reason in payload["recommendations"][0]["reasons"])
 
 
-def test_skills_command_recommends_planning_reporting_for_jumpstart_task(tmp_path: Path, capsys) -> None:
+def test_skills_command_recommends_planning_reporting_for_setup_task(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -754,7 +754,7 @@ def test_skills_command_recommends_planning_reporting_for_jumpstart_task(tmp_pat
                 "--target",
                 str(target),
                 "--task",
-                "jumpstart the repo after bootstrap without widening init",
+                "setup the repo after bootstrap without widening init",
                 "--format",
                 "json",
             ]
@@ -765,7 +765,7 @@ def test_skills_command_recommends_planning_reporting_for_jumpstart_task(tmp_pat
     payload = json.loads(capsys.readouterr().out)
     assert [entry["id"] for entry in payload["recommendations"]] == ["planning-reporting"]
     assert payload["recommendations"][0]["score"] == 10
-    assert "jumpstart uses the compact planning reporting surface" in payload["recommendations"][0]["reasons"][0]
+    assert "setup uses the compact planning reporting surface" in payload["recommendations"][0]["reasons"][0]
 
 
 def test_skills_command_recommends_memory_router_for_note_selection_task(tmp_path: Path, capsys) -> None:

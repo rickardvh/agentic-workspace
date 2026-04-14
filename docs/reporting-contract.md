@@ -10,7 +10,7 @@ Use it when you want one derived inspection surface for combined workspace state
 - Derive workspace and module summaries from canonical module-owned surfaces.
 - Expose next-action guidance without turning reporting into a new source-of-truth store.
 - Prefer one bounded question at a time when the report can answer it cheaply.
-- Surface jumpstart discovery before any seed writes happen.
+- Surface setup discovery before any seed writes happen.
 
 ## Shared Schema
 
@@ -39,7 +39,7 @@ The surrounding report payload keeps these fields separate:
 
 ## Discovery Shape
 
-The `discovery` object is the pre-write, pre-seed jumpstart layer.
+The `discovery` object is the pre-write, pre-seed setup layer.
 
 It groups candidate surfaces into three buckets:
 
@@ -78,7 +78,7 @@ Use the machine-readable report first when the question is:
 - Keep findings, warnings, and next-action guidance separate.
 - Keep module reports compact and derived.
 - Keep concern-shaped subobjects narrow enough that one question does not force unrelated contract domains to load.
-- Keep discovery read-only until a jumpstart promotion explicitly decides to seed.
+- Keep discovery read-only until a setup promotion explicitly decides to seed.
 
 ## Relationship To Lazy Discovery
 
@@ -86,4 +86,4 @@ Use [`docs/compact-contract-profile.md`](docs/compact-contract-profile.md) for t
 
 Use [`docs/lazy-discovery-measurements.md`](docs/lazy-discovery-measurements.md) when you want to check whether a narrow query is actually cheaper than a broad dump.
 
-Use `agentic-workspace jumpstart --target ./repo --format json` when the report has already identified a bounded follow-through path and you want the public jumpstart surface rather than the broader combined report.
+Use `agentic-workspace setup --target ./repo --format json` when the report has already identified a bounded follow-through path and you want the public setup surface rather than the broader combined report.

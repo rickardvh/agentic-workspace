@@ -250,11 +250,11 @@ def build_parser() -> argparse.ArgumentParser:
     proof_parser.add_argument("--current", action="store_true", help="Return only the current proof summary.")
     _add_format_argument(proof_parser)
 
-    jumpstart_parser = subparsers.add_parser(
-        "jumpstart",
-        help="Show the bounded post-bootstrap jumpstart guidance for a mature repository.",
+    setup_parser = subparsers.add_parser(
+        "setup",
+        help="Show the bounded post-bootstrap setup guidance for a mature repository.",
     )
-    _add_selection_arguments(jumpstart_parser)
+    _add_selection_arguments(setup_parser)
 
     ownership_parser = subparsers.add_parser(
         "ownership",
@@ -415,13 +415,13 @@ def main(argv: list[str] | None = None) -> int:
         except WorkspaceUsageError as exc:
             parser.error(str(exc))
 
-    if args.command == "jumpstart":
+    if args.command == "setup":
         try:
             target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-            _validate_target_root(command_name="jumpstart", target_root=target_root)
+            _validate_target_root(command_name="setup", target_root=target_root)
             config = _load_workspace_config(target_root=target_root, descriptors=descriptors)
             selected_modules, resolved_preset = _selected_modules(
-                command_name=args.command,
+                command_name="setup",
                 preset_name=args.preset,
                 module_arg=args.modules,
                 target_root=target_root,
@@ -429,7 +429,7 @@ def main(argv: list[str] | None = None) -> int:
                 config=config,
             )
             _validate_selected_module_contract(selected_modules=selected_modules, descriptors=descriptors)
-            _emit_jumpstart(
+            _emit_setup(
                 format_name=args.format,
                 target_root=target_root,
                 selected_modules=selected_modules,
@@ -1859,7 +1859,7 @@ def _run_report_command(
         "commands": next_steps,
     }
     installed_modules = [entry["name"] for entry in status_payload.get("registry", []) if entry.get("installed")]
-    discovery = _jumpstart_discovery_payload(target_root=target_root, status_payload=status_payload)
+    discovery = _setup_discovery_payload(target_root=target_root, status_payload=status_payload)
     return {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -1877,7 +1877,7 @@ def _run_report_command(
     }
 
 
-def _jumpstart_discovery_payload(*, target_root: Path, status_payload: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+def _setup_discovery_payload(*, target_root: Path, status_payload: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     memory_candidates: list[dict[str, Any]] = []
     planning_candidates: list[dict[str, Any]] = []
     ambiguous: list[dict[str, Any]] = []
@@ -2364,7 +2364,7 @@ def _reporting_schema_payload() -> dict[str, Any]:
             "derive module and workspace summaries from canonical surfaces",
             "prefer one report surface over reading raw module files first",
             "keep findings, warnings, and next-action guidance explicitly separated",
-            "treat jumpstart discovery as pre-write and pre-seed only",
+            "treat setup discovery as pre-write and pre-seed only",
         ],
     }
 
@@ -2622,10 +2622,10 @@ def _defaults_payload() -> dict[str, Any]:
                 "Package CLIs are for package-local maintainer work, advanced debugging, or explicit module-level control.",
             ],
         },
-        "jumpstart": {
+        "setup": {
             "canonical_doc": "docs/jumpstart-contract.md",
-            "command": "agentic-workspace jumpstart --target ./repo --format json",
-            "rule": "Jumpstart is a bounded post-bootstrap phase that stays separate from init.",
+            "command": "agentic-workspace setup --target ./repo --format json",
+            "rule": "Setup is a bounded post-bootstrap phase that stays separate from init.",
             "phase": "post-bootstrap",
             "scope": [
                 "orient from a compact report first",
@@ -2633,8 +2633,8 @@ def _defaults_payload() -> dict[str, Any]:
             ],
             "secondary": [
                 "Do not widen init.",
-                "Do not collapse jumpstart into the proof backlog.",
-                "Do not turn jumpstart into generic analysis.",
+                "Do not collapse setup into the proof backlog.",
+                "Do not turn setup into generic analysis.",
             ],
         },
         "config": {
@@ -2981,12 +2981,12 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- external-agent handoff: {payload['lifecycle']['canonical_external_agent_handoff']}")
     print(f"- bootstrap next action: {payload['lifecycle']['canonical_bootstrap_next_action']}")
     print(f"- bootstrap handoff record: {payload['lifecycle']['canonical_bootstrap_handoff_record']}")
-    print("Jumpstart:")
-    print(f"- doc: {payload['jumpstart']['canonical_doc']}")
-    print(f"- command: {payload['jumpstart']['command']}")
-    print(f"- rule: {payload['jumpstart']['rule']}")
-    print(f"- phase: {payload['jumpstart']['phase']}")
-    for step in payload["jumpstart"]["scope"]:
+    print("Setup:")
+    print(f"- doc: {payload['setup']['canonical_doc']}")
+    print(f"- command: {payload['setup']['command']}")
+    print(f"- rule: {payload['setup']['rule']}")
+    print(f"- phase: {payload['setup']['phase']}")
+    for step in payload["setup"]["scope"]:
         print(f"- scope: {step}")
     print("Compact contract profile:")
     print(f"- doc: {payload['compact_contract_profile']['canonical_doc']}")
@@ -3038,7 +3038,7 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
         print(f"- {item}")
 
 
-def _jumpstart_orientation_surfaces(*, target_root: Path) -> tuple[Path, ...]:
+def _setup_orientation_surfaces(*, target_root: Path) -> tuple[Path, ...]:
     return (
         target_root / "AGENTS.md",
         target_root / "TODO.md",
@@ -3048,11 +3048,11 @@ def _jumpstart_orientation_surfaces(*, target_root: Path) -> tuple[Path, ...]:
     )
 
 
-def _repo_looks_jumpstart_mature(*, target_root: Path) -> bool:
-    return all(path.exists() for path in _jumpstart_orientation_surfaces(target_root=target_root))
+def _repo_looks_setup_mature(*, target_root: Path) -> bool:
+    return all(path.exists() for path in _setup_orientation_surfaces(target_root=target_root))
 
 
-def _jumpstart_payload(
+def _setup_payload(
     *,
     target_root: Path,
     selected_modules: list[str],
@@ -3069,12 +3069,12 @@ def _jumpstart_payload(
         dry_run=False,
         config=config,
     )
-    discovery = _jumpstart_discovery_payload(target_root=target_root, status_payload=status_payload)
-    mature_repo = _repo_looks_jumpstart_mature(target_root=target_root)
+    discovery = _setup_discovery_payload(target_root=target_root, status_payload=status_payload)
+    mature_repo = _repo_looks_setup_mature(target_root=target_root)
     if mature_repo:
         orientation: dict[str, Any] = {
             "mode": "no-new-seed-surfaces-needed",
-            "summary": "No new seed surfaces are needed; the repo already has the core jumpstart orientation surfaces.",
+            "summary": "No new seed surfaces are needed; the repo already has the core setup orientation surfaces.",
             "reason": "AGENTS.md, TODO.md, tools/AGENT_QUICKSTART.md, tools/AGENT_ROUTING.md, and memory/index.md are already present.",
         }
         next_action = {
@@ -3098,9 +3098,9 @@ def _jumpstart_payload(
         }
 
     return {
-        "kind": "workspace-jumpstart/v1",
+        "kind": "workspace-setup/v1",
         "schema": _reporting_schema_payload(),
-        "command": "jumpstart",
+        "command": "setup",
         "target": target_root.as_posix(),
         "selected_modules": selected_modules,
         "health": status_payload["health"],
@@ -3116,7 +3116,7 @@ def _jumpstart_payload(
     }
 
 
-def _emit_jumpstart(
+def _emit_setup(
     *,
     format_name: str,
     target_root: Path,
@@ -3125,7 +3125,7 @@ def _emit_jumpstart(
     descriptors: dict[str, ModuleDescriptor],
     config: WorkspaceConfig,
 ) -> None:
-    payload = _jumpstart_payload(
+    payload = _setup_payload(
         target_root=target_root,
         selected_modules=selected_modules,
         resolved_preset=resolved_preset,
@@ -3136,7 +3136,7 @@ def _emit_jumpstart(
         print(json.dumps(serialise_value(payload), indent=2))
         return
     print(f"Target: {payload['target']}")
-    print("Jumpstart:")
+    print("Setup:")
     print(f"- command: {payload['command']}")
     print(f"- mode: {payload['orientation']['mode']}")
     print(f"- summary: {payload['orientation']['summary']}")
@@ -4204,7 +4204,7 @@ def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
 
 def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[SkillRecommendation]:
     task_text_lower = task_text.lower()
-    if "jumpstart" in task_text_lower:
+    if "setup" in task_text_lower:
         for skill in skills:
             if skill.skill_id == "planning-reporting":
                 return [
@@ -4212,9 +4212,7 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
                         skill=skill,
                         hint_score=10,
                         score=10,
-                        reasons=(
-                            "jumpstart uses the compact planning reporting surface before any broader discovery",
-                        ),
+                        reasons=("setup uses the compact planning reporting surface before any broader discovery",),
                     )
                 ]
         return []
@@ -4345,8 +4343,8 @@ def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
     if payload.get("command") == "init":
         _emit_init_text(payload)
         return
-    if payload.get("command") == "jumpstart":
-        _emit_jumpstart_text(payload)
+    if payload.get("command") == "setup":
+        _emit_setup_text(payload)
         return
     if payload.get("command") == "report":
         _emit_report_text(payload)
@@ -4461,9 +4459,9 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
             print(f"- {finding.get('severity', 'info')}: {module}{path}{finding.get('message', '')}")
 
 
-def _emit_jumpstart_text(payload: dict[str, Any]) -> None:
+def _emit_setup_text(payload: dict[str, Any]) -> None:
     print(f"Target: {payload['target']}")
-    print("Command: jumpstart")
+    print("Command: setup")
     print(f"Health: {payload['health']}")
     print(f"Mode: {payload['orientation']['mode']}")
     print(f"Summary: {payload['orientation']['summary']}")
