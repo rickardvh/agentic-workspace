@@ -17,6 +17,7 @@ Use it when you want the shortest correct answer for startup, lifecycle, skill d
 | How do I install? | `agentic-workspace init --preset <memory|planning|full>` | Package CLIs for package-local maintainer work or debugging |
 | How do I express intent? | Pick the preset that matches the outcome you want and let `init` infer install vs adopt vs review-required handoff | Manually reasoning about lifecycle verbs before asking the tool |
 | How do I start in a repo? | The configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`) -> `TODO.md` -> active execplan when relevant | `ROADMAP.md` only when promoting work |
+| How do I inspect current active planning state? | `agentic-planning-bootstrap summary --format json` and its `planning_record` object | Reading raw `TODO.md` or execplan prose first |
 | Where is the bounded post-bootstrap jumpstart contract? | [`docs/jumpstart-contract.md`](docs/jumpstart-contract.md) and `agentic-workspace defaults --section jumpstart --format json` | Treating jumpstart as a wider `init` path or a repo-local checklist |
 | Where is the delegation posture contract? | [`docs/delegation-posture-contract.md`](docs/delegation-posture-contract.md) and `agentic-workspace defaults --section delegation_posture --format json` | Treating config as a scheduler or ignoring the effective mixed-agent posture |
 | Where should I point an external agent? | The repository's `llms.txt` | Richer docs only when that handoff file points there |

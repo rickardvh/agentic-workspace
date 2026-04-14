@@ -6,6 +6,7 @@ Keep this page short and decision-shaped; it is not the full changelog, release 
 
 ## 2026-04-14
 
+- Added a canonical `planning_record` to `agentic-planning-bootstrap summary --format json`, then tightened the intent and resumable contract docs and human summary views so they read as projections over that record instead of competing sources of truth.
 - Added a compact `Product improvement signal` field to execplan execution summaries so completed slices can carry one dogfood reflection forward instead of leaving it only in chat.
 
 ## 2026-04-08
