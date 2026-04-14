@@ -37,6 +37,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path("docs/delegated-judgment-contract.md"),
     Path("docs/environment-recovery-contract.md"),
     Path("docs/execution-summary-contract.md"),
+    Path("docs/intent-contract.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
     Path("docs/execplans/archive/README.md"),
@@ -64,6 +65,7 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("docs/delegated-judgment-contract.md"),
     Path("docs/environment-recovery-contract.md"),
     Path("docs/execution-summary-contract.md"),
+    Path("docs/intent-contract.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
     Path("docs/execplans/archive/README.md"),
@@ -402,6 +404,11 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
             archived_execplans = sum(1 for path in archive_dir.glob("*.md") if path.is_file())
 
     warnings = _run_planning_checker(target_root)
+    active_contract = _active_intent_contract(
+        target_root=target_root,
+        active_items=active_items,
+        active_execplans=active_execplans,
+    )
     return {
         "target_root": str(target_root),
         "adoption_mode": _detect_adoption_mode(target_root),
@@ -416,11 +423,73 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
             "active_execplans": active_execplans,
             "archived_count": archived_execplans,
         },
+        "active_contract": active_contract,
         "roadmap": {
             "candidate_count": candidate_count,
         },
         "warnings": [warning.copy() for warning in warnings],
         "warning_count": len(warnings),
+    }
+
+
+def _active_intent_contract(
+    *,
+    target_root: Path,
+    active_items: list[dict[str, str]],
+    active_execplans: list[dict[str, str]],
+) -> dict[str, Any]:
+    if len(active_execplans) != 1 or len(active_items) > 1:
+        return {
+            "status": "unavailable",
+            "reason": "requires exactly one active execplan and at most one active TODO item",
+        }
+
+    active_item = active_items[0] if active_items else None
+    active_execplan_path = active_execplans[0]["path"].strip()
+    surface = active_item.get("surface", "").strip() if active_item else active_execplan_path
+    plan_path = _resolve_execplan_path(target_root, surface) or _resolve_execplan_path(target_root, active_execplan_path)
+    if plan_path is None or not plan_path.exists():
+        return {
+            "status": "unavailable",
+            "reason": "active planning state does not resolve to a live execplan path",
+        }
+
+    delegated_judgment = _execplan_delegated_judgment(plan_path)
+    requested_outcome = delegated_judgment.get("requested outcome", "").strip()
+    hard_constraints = delegated_judgment.get("hard constraints", "").strip()
+    agent_may_decide = delegated_judgment.get("agent may decide locally", "").strip()
+    escalate_when = delegated_judgment.get("escalate when", "").strip()
+    if not requested_outcome or not hard_constraints or not agent_may_decide or not escalate_when:
+        return {
+            "status": "unavailable",
+            "reason": "active execplan is missing delegated-judgment fields",
+        }
+
+    touched_scope = _extract_section_bullets(plan_path, "Touched Paths")
+    proof_expectations = _extract_section_bullets(plan_path, "Validation Commands")
+    minimal_refs = _dedupe(
+        [
+            "TODO.md",
+            plan_path.relative_to(target_root).as_posix(),
+            *([surface] if surface else []),
+        ]
+    )
+    return {
+        "status": "present",
+        "todo_item": {
+            "id": active_item.get("id", "").strip() if active_item else "",
+            "surface": surface,
+            "why_now": active_item.get("why_now", "").strip() if active_item else "",
+        },
+        "intent": {
+            "requested_outcome": requested_outcome,
+            "hard_constraints": hard_constraints,
+            "agent_may_decide": agent_may_decide,
+            "escalate_when": escalate_when,
+        },
+        "touched_scope": touched_scope,
+        "proof_expectations": proof_expectations,
+        "minimal_refs": minimal_refs,
     }
 
 
@@ -1045,6 +1114,27 @@ def _extract_kv_fields(lines: list[str]) -> dict[str, str]:
         if match:
             fields[match.group(1).strip().lower()] = match.group(2).strip()
     return fields
+
+
+def _extract_section_bullets(path: Path, heading: str) -> list[str]:
+    values: list[str] = []
+    for line in _section_lines(_read_lines(path), heading):
+        match = re.match(r"^\s*-\s+(.*\S)\s*$", line)
+        if match:
+            values.append(match.group(1).strip())
+    return values
+
+
+def _dedupe(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for item in items:
+        normalized = item.strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        ordered.append(normalized)
+    return ordered
 
 
 def _read_todo_items(path: Path) -> tuple[list[str], list[TodoItem]]:

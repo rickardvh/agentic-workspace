@@ -17,7 +17,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - No active handoff right now.
 ## GitHub Issue Intake
 
-- Latest intake tranche: GitHub issues `#25` through `#32`.
+- Latest intake tranche: GitHub issues `#25` through `#34`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 
@@ -25,7 +25,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 | Candidate | Source | Why now | Promote when |
 | --- | --- | --- | --- |
-- No remaining highest-priority candidates right now.
+| `Minimal resumable execution contract` | GitHub issue `#34`; compact intent-contract follow-through | The compact intent contract now preserves the requested end state cheaply, but restart still benefits from one smaller active slice that also carries current next action and proof in the minimum checked-in form. This is the clearest next token-efficiency and continuity win. | Ordinary work still needs more than one compact checked-in slice to recover current intent, current next action, proof, and escalation boundaries safely after a restart. |
 
 ## Second Priority Queue
 
@@ -47,7 +47,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 1. Prefer proof, refinement, and trust-hardening over new capability invention.
 2. The first proof tranche is now complete: bounded dogfooding, synergy proof, external-agent handoff trust, selective adoption, and first-party portability all have current evidence.
-3. Next promotions should come from repeated mixed-agent friction or another bounded trust/continuity gap, not from issue intake alone.
+3. The next promotion after the compact intent-contract slice should come from the resumable-execution lane if the first slice proves its contract cheaply in ordinary repo work.
 4. Execute one bounded roadmap candidate at a time with narrow validation and prompt archival.
 
 ## Reopen Conditions

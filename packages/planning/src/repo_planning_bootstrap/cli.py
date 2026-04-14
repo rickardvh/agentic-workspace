@@ -173,6 +173,14 @@ def _print_summary(summary: dict) -> None:
     print(f"TODO: {summary['todo']['active_count']} active / {summary['todo']['item_count']} items / {summary['todo']['line_count']} lines")
     print(f"Execplans: {summary['execplans']['active_count']} active / {summary['execplans']['archived_count']} archived")
     print(f"Roadmap: {summary['roadmap']['candidate_count']} candidate bullets")
+    active_contract = summary.get("active_contract", {})
+    if active_contract.get("status") == "present":
+        print("Active contract:")
+        print(f"- TODO item: {active_contract['todo_item']['id']}: {active_contract['todo_item']['surface']}")
+        print(f"- Requested outcome: {active_contract['intent']['requested_outcome']}")
+        print(f"- Proof expectations: {', '.join(active_contract['proof_expectations'])}")
+    elif active_contract:
+        print(f"Active contract: {active_contract.get('status')} ({active_contract.get('reason', 'no compact contract available')})")
     if summary["todo"]["active_items"]:
         print("Active items:")
         for item in summary["todo"]["active_items"]:

@@ -76,6 +76,7 @@ Use this ordered path when normal work is blocked by repo-state ambiguity, inter
 5. If bootstrap or adopt work still requires judgment, follow the checked-in handoff:
    - `llms.txt` for the external-agent entry surface
    - `.agentic-workspace/bootstrap-handoff.md` when bootstrap says review is still needed
+   - `.agentic-workspace/bootstrap-handoff.json` when the follow-on agent needs the compact structured handoff boundary directly
 
 ## What This Contract Covers
 

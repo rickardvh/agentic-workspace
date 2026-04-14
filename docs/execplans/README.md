@@ -5,6 +5,7 @@ Checked-in execution plans for multi-milestone or multi-thread work live in this
 Use `python scripts/check/check_planning_surfaces.py` for advisory shape and drift warnings across `TODO.md`, active execplans, and `ROADMAP.md`.
 Use `agentic-planning-bootstrap summary`, `promote-to-plan`, and `archive-plan` as thin file-native helpers around the same checked-in contract.
 Use `docs/environment-recovery-contract.md` for the canonical way to express task-local recovery and environment assumptions without adding another plan section.
+Use `docs/intent-contract.md` for the compact machine-readable active intent contract exposed through `agentic-planning-bootstrap summary`.
 Use `docs/execution-summary-contract.md` for the compact outcome shape that completed slices should leave behind before archive.
 Use `archive-plan --apply-cleanup` only when you want the helper to also remove completed TODO references and compress matching `ROADMAP.md` Active Handoff residue for the same archived thread.
 
@@ -100,6 +101,7 @@ Delegated judgment belongs under `## Delegated Judgment` for active plans that s
 Keep this section compact.
 It exists to preserve the intended end state, the allowed local latitude, and the escalation boundary when a safe first slice might otherwise drift into a substitute for the larger request.
 Use `none` only when the slice is so local that delegated-judgment framing would add no value beyond the surrounding plan.
+`agentic-planning-bootstrap summary --format json` projects these fields into the compact `active_contract.intent` object when planning has one active TODO item and one active execplan.
 
 Execution summaries belong under `## Execution Summary` for completed or nearly-complete plans:
 
