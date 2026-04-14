@@ -15,7 +15,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Active Handoff
 
-- `Bounded post-install jumpstart phase for mature repos` remains active in `docs/execplans/bounded-post-install-jumpstart-phase-2026-04-14.md`; the remaining mature-repo follow-on candidates stay queued below.
+- The bounded post-install jumpstart phase is complete; the mature-repo follow-on candidates below were promoted, implemented, and closed.
 
 ## GitHub Issue Intake
 
@@ -23,28 +23,9 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 
-## Highest Priority Queue
+## Long-Horizon Queue
 
-| Candidate | Source | Why now | Promote when |
-| --- | --- | --- | --- |
-| `Help the agent do the job, do not script the job` | GitHub issue `#45`; product boundary refinement | The repo needs an explicit boundary for when reporting, guidance, and contracts should help the agent execute rather than script the entire job. | The repo can state that boundary compactly enough to keep guidance helpful without turning it into over-prescriptive workflow ceremony. |
-
-## Second Priority Queue
-
-- `Prove the strong-planner / cheap-implementer loop in ordinary work` from GitHub issue `#46`
-
-## Third Priority Queue
-
-`Make lazy discovery the primary optimization target across machine-readable workspace surfaces` from GitHub issue `#47`
-
-## Fourth Priority Queue
-
-| Candidate | Source | Why now | Promote when |
-| --- | --- | --- | --- |
-| `Mature-repo discovery reporting before seeding` | GitHub issue `#49`; jumpstart reporting prerequisite | Jumpstart needs a compact, auditable report that classifies durable Memory candidates, active Planning candidates, and unsafe ambiguity before any checked-in state is written. | The report shape can stay compact and machine-readable while identifying high-value candidates and no-action cases. |
-| `Memory seeding from high-value mature-repo signals` | GitHub issue `#50`; jumpstart Memory slice | Mature repos often already contain durable anti-rediscovery knowledge that should seed Memory early, but only if the source material is high-confidence and compact enough to avoid noise. | High-confidence Memory seeds can be extracted as compact facts, invariants, runbooks, or stable conventions without bulk-importing prose. |
-| `Planning seeding from current mature-repo reality` | GitHub issue `#51`; jumpstart Planning slice | Mature repos often already expose one useful active picture, and a bounded planning seed can make adoption feel immediately useful without migrating historic backlog state. | One current active slice, one or two roadmap candidates, or one bounded review artifact can be seeded without turning intake into backlog archaeology. |
-| `Fast payoff mature-repo jumpstart mode` | GitHub issue `#52`; jumpstart ranking refinement | A bounded jumpstart phase also needs an explicit ranking policy so the highest-value low-risk seeds come first and the first visible gains stay small, clear, and reviewable. | Candidate ranking can be expressed with clear value and confidence signals, and skipped seeds stay explicit in reporting. |
+No current long-horizon candidates remain from the closed GitHub issue intake tranche.
 
 ## Ongoing Maintenance Expectations
 

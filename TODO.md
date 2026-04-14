@@ -8,8 +8,10 @@ Active queue for repository work.
 
 ## Now
 
-- `bounded-post-install-jumpstart-phase`: `Status: active`; `Surface: docs/execplans/bounded-post-install-jumpstart-phase-2026-04-14.md`; `Why now: the bounded post-install jumpstart phase now has a pre-write discovery report and the next implementation step is to seed the smallest useful Memory and Planning surfaces from it.`
+No active items.
 ## Done
+
+- bounded-post-install-jumpstart-phase: Completed (added the pre-write jumpstart discovery report, seeded the smallest Memory and Planning follow-through surfaces, and closed the fast-payoff ranking rule so the mature-repo adoption slice no longer depends on prose-first curation)
 
 - resumable-execution-contract: Completed (projected the current active execplan into `agentic-planning-bootstrap summary` as `resumable_contract`, added the canonical resumable-execution contract doc, refreshed the root planning install, and dogfooded the smaller restart contract against this repo's live active execplan)
 - compact-intent-contract: Completed (projected the existing active execplan fields into `agentic-planning-bootstrap summary` as `active_contract`, added the canonical intent-contract doc, refreshed the root planning install, and dogfooded the compact contract against this repo's live active execplan instead of leaving requested outcome and escalation boundaries distributed across prose)

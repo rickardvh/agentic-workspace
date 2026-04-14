@@ -14,14 +14,14 @@
 ## Intent Continuity
 
 - Larger intended outcome: make mature-repo adoption feel useful quickly while preserving the conservative safe-install posture.
-- This slice completes the larger intended outcome: no
-- Continuation surface: `ROADMAP.md`
+- This slice completes the larger intended outcome: yes
+- Continuation surface: none
 
 ## Required Continuation
 
-- Required follow-on for the larger intended outcome: yes
-- Owner surface: `ROADMAP.md`
-- Activation trigger: after the bounded jumpstart phase is defined, promote only the remaining discovery-reporting, Memory-seeding, Planning-seeding, and fast-payoff ranking follow-ons that still look bounded and useful.
+- Required follow-on for the larger intended outcome: no
+- Owner surface: none
+- Activation trigger: none
 
 ## Delegated Judgment
 
@@ -33,7 +33,7 @@
 ## Active Milestone
 
 - ID: bounded-post-install-jumpstart-phase
-- Status: active
+- Status: completed
 - Scope: define the first bounded jumpstart phase for mature repos, including what counts as jumpstart relative to `init` and which one or two surfaces prove visible value first.
 - Ready: ready
 - Blocked: none
@@ -41,7 +41,7 @@
 
 ## Immediate Next Action
 
-- Draft the first bounded jumpstart contract shape and identify the smallest visible seed surfaces.
+- Archive the completed jumpstart phase and keep the discovery/reporting surfaces as the read path for future mature-repo adoption.
 
 ## Blockers
 
@@ -70,9 +70,7 @@
 
 ## Open Questions To Close
 
-- Which minimal seeded surfaces prove early value most clearly in mature repos?
-- Should the first slice define the ranking policy now or defer it to the discovery/reporting follow-on?
-- What is the smallest report or artifact needed to make jumpstart auditable without becoming noisy?
+- Resolved by the seed-target tranche.
 
 ## Seed Targets
 
@@ -101,10 +99,11 @@
 
 ## Execution Summary
 
-- Outcome delivered: none yet.
-- Validation confirmed: none yet.
-- Follow-on routed to: `ROADMAP.md`
-- Resume from: shape the first bounded jumpstart contract and decide whether discovery/reporting needs to stay in the roadmap or enter the active plan.
+- Outcome delivered: bounded post-install jumpstart now has a compact discovery report, explicit Memory seed candidates, explicit Planning seed targets, and a fast-payoff ranking rule.
+- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`, `uv run ruff check src tests`, `uv run python scripts/check/check_planning_surfaces.py`, and `uv run python scripts/check/check_memory_freshness.py` all passed.
+- Follow-on routed to: none
+- Resume from: none
+- Product improvement signal: the jumpstart phase was easier to finish once discovery, memory seeding, planning seeding, and ranking each had their own compact surfaces instead of a single broad post-bootstrap concept.
 
 ## Drift Log
 
