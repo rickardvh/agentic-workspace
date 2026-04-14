@@ -17,7 +17,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - `Bounded post-install jumpstart phase for mature repos` remains active in `docs/execplans/bounded-post-install-jumpstart-phase-2026-04-14.md`; the remaining mature-repo follow-on candidates stay queued below.
 ## GitHub Issue Intake
 
-- Latest intake tranche: GitHub issues `#53` through `#58`.
+- Latest intake tranche: GitHub issues `#59` through `#64`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 
@@ -57,6 +57,17 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 | `Structured human-policy spec for benchmark human agents` | GitHub issue `#53`; benchmark role stability | The human-role agent needs bounded policy input or the benchmark will drift into ad hoc helpfulness. | The human-role policy can define outcome, constraints, approvals, prohibitions, and escalation responses in a structured way. |
 | `Narrow operational-question benchmarks` | GitHub issue `#56`; benchmark alignment | The product’s value is repository operating cost, so the benchmark should ask narrow operational questions directly. | The benchmark family can score ownership, proof, escalation, bootstrap next action, and handoff continuity with clear answers. |
 | `Token-cost and retrieval-efficiency metrics` | GitHub issue `#58`; efficiency proof | Efficiency claims should be measurable, but the metrics are most useful once the basic benchmark loop already exists. | The benchmark can record reading cost, selector use, broad dumps, and other retrieval-efficiency proxies in structured output. |
+
+## Sixth Priority Queue
+
+| Candidate | Source | Why now | Promote when |
+| --- | --- | --- | --- |
+| `Define a compact canonical planning record for active work` | GitHub issue `#60`; active-work canonical state | Restart, handoff, and curation stay too prose-dependent until active work has one compact canonical record with the minimum safe continuation facts. | The minimum active-work fields can live in one compact canonical record and support safe continuation without broad prose rereading. |
+| `Make compact machine-readable planning state canonical` | GitHub issue `#59`; planning-state canonicalization | The planning layer is still prose-first, but the existing summary/reporting contracts are already pointing toward a compact canonical state layer. | Compact machine-readable active state can clearly own canonical meaning while human-readable views become derived or secondary. |
+| `Add planning reporting surfaces as the primary inspection path` | GitHub issue `#62`; planning reporting | Routine inspection still falls back to raw planning files, which is costly once canonical state becomes more compact and agent-oriented. | A compact planning report can answer active state, proof posture, next action, and warnings before raw files are needed. |
+| `Recast TODO, execplans, and completion summaries as thin human views` | GitHub issue `#61`; thin-view refinement | Human-readable planning files should become thinner once canonical compact state and reporting own the primary facts. | At least one planning surface family can be rendered from canonical compact state with only narrow human-authored explanation. |
+| `Add canonical drift checks between compact state and views` | GitHub issue `#63`; view/state consistency | Thin views only stay trustworthy if the package checks that they still reflect the canonical compact state. | One compact state/view pair can be checked for drift through an existing planning proof or doctor lane. |
+| `Reduce prose-first plan curation` | GitHub issue `#64`; default read-path refinement | The default agent planning path still overuses raw prose, which keeps curation expensive even when compact selectors and reports exist. | Summary/reporting and narrow selectors are the default read path for routine planning inspection. |
 
 ## Ongoing Maintenance Expectations
 
