@@ -104,16 +104,6 @@ Planning is the current home of this contract.
 Delegated judgment does not replace planning.
 It defines how much local decision-making is safe before planning, promotion, or escalation should take over.
 
-## Relationship To Product Boundaries
-
-Use [`docs/design-principles.md`](docs/design-principles.md) for the higher-level rule that the product should help the agent do the job rather than script the job.
-
-That boundary keeps delegated judgment useful:
-
-- the contract stays bounded
-- local judgment remains local
-- future feature proposals need clear repository operating-cost savings before they add stronger choreography
-
 ## Relationship To Machine-Readable Defaults
 
 `agentic-workspace defaults --format json` should expose the same front-door contract in structured form.
