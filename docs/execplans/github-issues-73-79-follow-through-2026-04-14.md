@@ -39,7 +39,7 @@
 
 ## Immediate Next Action
 
-- Make compact planning state canonical and thin `TODO.md` plus `ROADMAP.md` down to cleaner rendered views for smaller-model continuation safety.
+- Improve closure discipline so bounded work finishes with explicit done checks and less dangling residue for the next agent.
 
 ## Blockers
 
@@ -102,3 +102,4 @@
 - 2026-04-14: Closed `#76` after validating the shipped safety contract and cleaned up stale active-plan residue; closed `#75` after adding the explicit `--non-interactive` lifecycle posture and prompt-safe handoff guidance.
 - 2026-04-14: Closed `#77` after adding advisory `Required Tools` support to the compact planning contract and refreshing the installed planning payload in this repo.
 - 2026-04-14: Closed `#74` after adding an explicit schema envelope to `agentic-planning-bootstrap summary --format json` and refreshing the installed planning payload in this repo.
+- 2026-04-14: Closed `#78` after making `planning_record` plus `planning-summary/v1` the canonical compact planning-state answer, thinning `ROADMAP.md` into a real candidate queue, and surfacing `roadmap.candidates` directly in planning summary.

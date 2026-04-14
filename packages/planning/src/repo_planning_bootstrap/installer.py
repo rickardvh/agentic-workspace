@@ -389,8 +389,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
                 }
             )
 
-    candidate_lines = _section_lines(_read_lines(roadmap_path), "Next Candidate Queue")
-    candidate_count = sum(1 for line in candidate_lines if re.match(r"^\s*-\s+", line))
+    roadmap_candidates = _roadmap_candidates(roadmap_path)
 
     active_execplans: list[dict[str, str]] = []
     archived_execplans = 0
@@ -440,7 +439,8 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         "active_contract": _contract_projection(active_contract, view_name="active_contract"),
         "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
         "roadmap": {
-            "candidate_count": candidate_count,
+            "candidate_count": len(roadmap_candidates),
+            "candidates": roadmap_candidates,
         },
         "warnings": [warning.copy() for warning in warnings],
         "warning_count": len(warnings),
@@ -504,6 +504,10 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "blockers",
                 "minimal_refs",
             ],
+            "roadmap": [
+                "candidate_count",
+                "candidates",
+            ],
         },
         "rules": [
             "planning_record is the canonical compact active planning state when it is available",
@@ -511,6 +515,28 @@ def _planning_summary_schema() -> dict[str, Any]:
             "prefer the summary schema over raw TODO or execplan parsing when one structured answer is enough",
         ],
     }
+
+
+def _roadmap_candidates(roadmap_path: Path) -> list[dict[str, str]]:
+    candidate_lines = _section_lines(_read_lines(roadmap_path), "Next Candidate Queue")
+    candidates: list[dict[str, str]] = []
+    for line in candidate_lines:
+        if not re.match(r"^\s*-\s+", line):
+            continue
+        text = re.sub(r"^\s*-\s+", "", line).strip()
+        if not text:
+            continue
+        priority_match = re.match(r"^Priority\s+(\d+)\s*:\s*(.*)$", text, re.IGNORECASE)
+        if priority_match:
+            candidates.append(
+                {
+                    "priority": priority_match.group(1),
+                    "summary": priority_match.group(2).strip(),
+                }
+            )
+            continue
+        candidates.append({"priority": "", "summary": text})
+    return candidates
 
 
 def _active_intent_contract(

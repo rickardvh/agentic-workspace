@@ -23,27 +23,10 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 
-## Long-Horizon Queue
+## Next Candidate Queue
 
-| Priority | Candidate | Source | Why now | Promote when |
-| --- | --- | --- | --- | --- |
-| 1 | `Canonical compact planning state and thin views for continuation safety` | GitHub issue `#78` | Smaller models are still being asked to recover too much structure from overloaded planning surfaces, and the current queue drift confirms the state model needs one compact canonical owner. | The active contract/reliability tranche closes and the next implementation pass is ready to rewrite planning state without reopening already-fixed smaller slices. |
-| 2 | `Improve closure discipline for bounded smaller-model work` | GitHub issue `#79` | The repo now has compact active and resumable contract projections, but it still lacks a cheap, explicit closure discipline that catches dangling references and unfinished residue before smaller models stop. | Another bounded slice still leaves cleanup residue, or the compact planning-state tranche is ready to add a cheap completion check at the same time. |
-| 3 | `Adapter patterns for agent-specific workflow artifacts` | GitHub issue `#73` | Native agent artifacts are a real ecosystem constraint, but the planning state should be compact and canonical before adding sync/adapter affordances around it. | Canonical compact planning state exists and the next follow-on can map runtime-native artifacts into repo-owned thin views without doubling sources of truth. |
-
-## Ongoing Maintenance Expectations
-
-- Keep front-door and default-path surfaces quiet; remove transitional wording, duplicated route descriptions, and fallback explanations once newer defaults prove stable.
-- Preserve review and issue discipline by keeping both layers bounded, quiet, and cheaper than the confusion they prevent.
-- Treat cheap-agent-safe residue capture as part of the mixed-agent proof work above rather than a separate backlog lane unless it produces a distinct repeated failure class.
-
-## Sequencing Recommendation
-
-1. Prefer proof, refinement, and trust-hardening over new capability invention.
-2. Finish the live active issue queue first; do not reopen inactive candidates while `TODO.md` still owns the `#73`-`#79` tranche.
-3. After the active queue narrows, treat issues `#78` and `#79` as the highest-priority pair because they define whether smaller models can continue and close work cleanly from compact checked-in state.
-4. Treat issue `#73` as the next ecosystem follow-on only after the canonical planning-state contract is stable enough to adapt rather than duplicate.
-5. Execute one bounded roadmap candidate at a time with narrow validation, dogfooding, and prompt archival.
+- Priority 1: `Improve closure discipline for bounded smaller-model work` from GitHub issue `#79`; promote when the compact planning-state tranche is stable enough to add a cheap end-of-task closure check without widening routine work.
+- Priority 2: `Adapter patterns for agent-specific workflow artifacts` from GitHub issue `#73`; promote when canonical compact planning state exists and the next follow-on can map native runtime artifacts into repo-owned surfaces without doubling sources of truth.
 
 ## Reopen Conditions
 

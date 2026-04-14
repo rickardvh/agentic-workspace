@@ -1268,7 +1268,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
 
 ## Next Candidate Queue
 
-- Candidate alpha: promote when maintained report signal appears.
+- Priority 1: Candidate alpha; promote when maintained report signal appears.
 
 ## Reopen Conditions
 
@@ -1313,6 +1313,12 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["resumable_contract"]["completion_criteria"] == ["Warning classes are emitted for known drift."]
     assert summary["resumable_contract"]["tool_verification"]["status"] == "unspecified"
     assert summary["roadmap"]["candidate_count"] == 1
+    assert summary["roadmap"]["candidates"] == [
+        {
+            "priority": "1",
+            "summary": "Candidate alpha; promote when maintained report signal appears.",
+        }
+    ]
     assert summary["warning_count"] == 0
 
 
