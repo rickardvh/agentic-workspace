@@ -21,9 +21,10 @@ Default startup path for an agent maintainer:
 
 1. Read `AGENTS.md`.
 2. Read `TODO.md`.
-3. Read one active execplan only when `TODO.md` points to it.
-4. Read package-local `AGENTS.md` only for the package you will edit.
-5. Use this playbook to pick the right ownership surface and narrow validation lane.
+3. Use `agentic-planning-bootstrap summary --format json` when the question is active planning state rather than raw prose semantics.
+4. Read one active execplan only when `TODO.md` points to it and the compact summary is insufficient.
+5. Read package-local `AGENTS.md` only for the package you will edit.
+6. Use this playbook to pick the right ownership surface and narrow validation lane.
 
 Prefer repository-native state over chat-only context. If a follow-up matters after the current turn, record it in planning or memory instead of relying on conversational residue.
 
@@ -34,8 +35,10 @@ The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`,
 
 1. Read `AGENTS.md`.
 2. Read `TODO.md`.
-3. If `TODO.md` points at an active execplan, read that plan before editing code.
-4. Load package-local docs only for the package you will touch.
+3. If you need the current planning state, ask `agentic-planning-bootstrap summary --format json` before opening raw planning files.
+4. If you need the combined workspace state, ask `agentic-workspace report --target ./repo --format json` before reading raw module files.
+5. If `TODO.md` points at an active execplan and the compact surfaces are insufficient, read that plan before editing code.
+6. Load package-local docs only for the package you will touch.
 
 ## Ownership Map
 

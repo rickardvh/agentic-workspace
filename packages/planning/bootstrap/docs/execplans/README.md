@@ -2,8 +2,10 @@
 
 Checked-in execution plans for multi-milestone or multi-thread work live in this directory.
 
+Use `agentic-planning-bootstrap summary --format json` first when the question is active planning state.
+Use raw `TODO.md` and execplan prose after that only when the compact summary is insufficient or when you are maintaining the human-readable plan directly.
 Use `python scripts/check/check_planning_surfaces.py` for advisory shape and drift warnings across `TODO.md`, active execplans, and `ROADMAP.md`.
-Use `agentic-planning-bootstrap summary`, `promote-to-plan`, and `archive-plan` as thin file-native helpers around the same checked-in contract.
+Use `promote-to-plan` and `archive-plan` as thin file-native helpers around the same checked-in contract.
 Use `docs/environment-recovery-contract.md` for the canonical way to express task-local recovery and environment assumptions without adding another plan section.
 Use `docs/intent-contract.md` for the compact machine-readable active intent contract exposed through `agentic-planning-bootstrap summary`.
 Use `docs/resumable-execution-contract.md` for the smaller current-state restart contract exposed through the same summary surface.
@@ -41,6 +43,12 @@ Direct execution is a success mode, not a planning failure.
 Use `docs/capability-aware-execution.md` when deciding whether the task still fits cheap direct execution, should move to stronger planning first, is suitable for bounded autopilot, should be silently reshaped into a cheaper slice, or should stop and escalate.
 Use `docs/environment-recovery-contract.md` when interruption handling, environment drift, or retry state means the plan must carry a compact recovery path.
 Silent shaping may improve means, decomposition, and validation scope, but it must not silently widen the requested outcome, owned surface, or time horizon; broader solutions belong in an explicit promotion or escalation decision.
+
+For ordinary inspection, keep the hierarchy explicit:
+
+1. `agentic-planning-bootstrap summary --format json`
+2. one relevant selector or view inside that payload
+3. raw `TODO.md` or execplan prose only when the compact state is insufficient
 
 When memory is installed, prefer borrowing durable context from the smallest relevant memory note or canonical doc instead of restating the same subsystem explanation inside each execplan.
 Repeated background prose in plans is a missing-synergy signal: tighten routing, promote the durable fact into memory or canonical docs, or decompose the work so the plan can stay local.
@@ -106,6 +114,7 @@ Keep this section compact.
 It exists to preserve the intended end state, the allowed local latitude, and the escalation boundary when a safe first slice might otherwise drift into a substitute for the larger request.
 Use `none` only when the slice is so local that delegated-judgment framing would add no value beyond the surrounding plan.
 `agentic-planning-bootstrap summary --format json` exposes a typed `planning-summary/v1` payload. Inside that payload, `planning_record` is the canonical active planning record when planning has one active TODO item and one active execplan. `active_contract` is the narrower intent projection over that record.
+Treat `planning_record` as canonical active state when it is available; raw `TODO.md` and execplan prose remain the thin human maintenance layer and semantic fallback.
 
 Current-state restart belongs in the compact `resumable_contract` projection:
 
@@ -118,6 +127,7 @@ Current-state restart belongs in the compact `resumable_contract` projection:
 - `minimal_refs`
 
 That object should stay smaller than the full execplan and answer "how do I continue safely right now?" without broad rereading.
+Use it before opening raw plan prose when the task is ordinary restart or handoff, not deep semantic maintenance.
 
 Tool verification belongs in the compact planning contract when the task needs a capability that may not be present:
 

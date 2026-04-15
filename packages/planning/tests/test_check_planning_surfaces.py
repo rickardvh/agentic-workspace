@@ -220,8 +220,53 @@ The default startup path for an agent maintainer is:
 
 - Read `AGENTS.md`.
 - Read `TODO.md`.
-- Open the active execplan.
+- Use `agentic-planning-bootstrap summary --format json` when the question is active planning state.
+- Use `agentic-workspace report --target ./repo --format json` when the question is combined workspace state.
+- Open the active execplan only when the compact surfaces are insufficient.
 - Read package-local `AGENTS.md` only for the package being edited.
+"""
+
+
+def _baseline_default_path_contract() -> str:
+    return """
+# Default Path Contract
+
+## Inspection Order
+
+1. report or summary
+2. narrow selector
+3. raw file or richer prose only when the compact surface is insufficient
+
+- use `agentic-planning-bootstrap summary --format json` before opening `TODO.md` or execplan prose
+- use `agentic-workspace report --target ./repo --format json` before reading raw module files
+"""
+
+
+def _baseline_intent_contract() -> str:
+    return """
+# Intent Contract
+
+- Treat `planning_record` as the canonical active planning state whenever it is available.
+- Treat raw planning prose as a thin human maintenance view and semantic fallback, not the default inspection path.
+"""
+
+
+def _baseline_resumable_contract() -> str:
+    return """
+# Resumable Execution Contract
+
+- Treat `planning_record` as the canonical active planning state when it is available.
+- Treat raw planning prose as the semantic fallback and maintenance layer rather than the default restart-inspection path.
+"""
+
+
+def _baseline_execplans_readme() -> str:
+    return """
+# Execution Plans
+
+Use `agentic-planning-bootstrap summary --format json` first when the question is active planning state.
+Use raw `TODO.md` and execplan prose after that only when the compact summary is insufficient.
+`agentic-planning-bootstrap summary --format json` exposes a typed payload and `planning_record` is the canonical active planning record.
 """
 
 
@@ -254,6 +299,13 @@ def _write_startup_surfaces(
         contributor_playbook or _baseline_contributor_playbook(),
     )
     _write_generated_agent_surfaces(tmp_path, manifest)
+
+
+def _write_hierarchy_docs(tmp_path: Path) -> None:
+    _write(tmp_path / "docs" / "default-path-contract.md", _baseline_default_path_contract())
+    _write(tmp_path / "docs" / "intent-contract.md", _baseline_intent_contract())
+    _write(tmp_path / "docs" / "resumable-execution-contract.md", _baseline_resumable_contract())
+    _write(tmp_path / "docs" / "execplans" / "README.md", _baseline_execplans_readme())
 
 
 def _has_warning_path_suffix(warnings, suffix: str) -> bool:
@@ -739,3 +791,26 @@ def test_generated_docs_warn_for_drift_and_missing_marker(tmp_path: Path) -> Non
     assert _has_warning_path_suffix(generated_warnings, "tools/agent-manifest.json")
     assert _has_warning_path_suffix(generated_warnings, "tools/AGENT_QUICKSTART.md")
     assert _has_warning_path_suffix(generated_warnings, "tools/AGENT_ROUTING.md")
+
+
+def test_docs_surface_role_drift_warns_when_summary_first_hierarchy_is_missing(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_docs_surface_roles")
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+    _write_startup_surfaces(tmp_path)
+    _write_hierarchy_docs(tmp_path)
+    _write(
+        tmp_path / "docs" / "contributor-playbook.md",
+        """
+# Contributor Playbook
+
+- Read `AGENTS.md`.
+- Read `TODO.md`.
+- Open the active execplan.
+""",
+    )
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    docs_warnings = [warning for warning in warnings if warning.warning_class == "docs_surface_role_drift"]
+    assert _has_warning_path_suffix(docs_warnings, "docs/contributor-playbook.md")

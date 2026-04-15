@@ -17,6 +17,8 @@ Fast path for autonomous agents working on this repo.
 
 - Read the active feature plan in `docs/execplans/` when the task belongs to one.
 - Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.
+- When the question is active planning state, prefer `agentic-planning-bootstrap summary --format json` before opening `TODO.md` or execplan prose.
+- When the question is combined workspace state, prefer `agentic-workspace report --target ./repo --format json` before reading raw module files.
 - Read `docs/upstream-task-intake.md` when triaging external issues or tasks into checked-in planning.
 - When startup or workflow routing is unclear, prefer `agentic-workspace defaults --format json`, then use `llms.txt` or `AGENTS.md` when those surfaces are present, before repo-local workaround guidance.
 - When the task is clearly review-shaped, check `agentic-workspace skills --target ./repo --task "<task>" --format json` before falling back to generic reasoning so bundled review skills stay cheaper to use than rediscovery.

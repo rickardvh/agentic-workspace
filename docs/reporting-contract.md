@@ -62,7 +62,7 @@ Prefer:
 agentic-workspace report --target ./repo --format json
 ```
 
-Use the machine-readable report first when the question is:
+Use the machine-readable report as the default combined-state inspection path when the question is:
 
 - what modules are installed?
 - what is the combined workspace health?
@@ -70,6 +70,9 @@ Use the machine-readable report first when the question is:
 - what should happen next?
 - what existing repo surfaces look like durable Memory or Planning seed candidates?
 - what findings or warnings need attention?
+
+If the report already answers the question, stop there.
+Only open raw module files or broader docs when the report points you to a follow-on surface or when the missing judgment is semantic rather than operational.
 
 ## Guardrails
 
@@ -79,6 +82,7 @@ Use the machine-readable report first when the question is:
 - Keep module reports compact and derived.
 - Keep concern-shaped subobjects narrow enough that one question does not force unrelated contract domains to load.
 - Keep discovery read-only until a setup promotion explicitly decides to seed.
+- Keep `agentic-planning-bootstrap summary --format json` as the planning-side companion surface rather than stretching the workspace report into a second planning schema.
 
 ## Relationship To Lazy Discovery
 

@@ -25,6 +25,9 @@ That summary now carries a top-level schema envelope:
 
 The `planning_record` object is the compact machine-readable active record for current work when planning has one active TODO item and one active execplan. The `active_contract` object remains as the narrower intent view over that canonical record.
 
+Use the summary first when the question is active intent, constraints, proof, or escalation boundaries.
+Do not start by parsing `TODO.md` or execplan prose when the compact summary already answers the question.
+
 The canonical planning record currently carries:
 
 - the active task id and execplan surface
@@ -47,11 +50,13 @@ The canonical planning record currently carries:
 ## Rules
 
 - Derive the canonical planning record and its views from the existing execplan fields rather than adding a second required authoring section.
+- Treat `planning_record` as the canonical active planning state whenever it is available; `active_contract` is a projection over that state, not a peer authority.
 - Keep it small enough that a weaker or later agent can recover the intended end state without broad rereading.
 - Treat it as unavailable when active planning is ambiguous instead of fabricating certainty from several partial surfaces.
 - Preserve explicit escalation boundaries; the contract must not silently widen requested outcome, ownership scope, or time horizon.
 - When a plan declares `Required Tools`, expose that requirement directly so weaker agents can stop or escalate before attempting impossible work.
 - If an agent runtime uses native planning artifacts, project any durable state back into the canonical planning record before handoff or review instead of treating runtime-local files as authoritative.
+- Treat raw planning prose as a thin human maintenance view and semantic fallback, not the default inspection path for ordinary state questions.
 
 ## Relationship To Other Contracts
 

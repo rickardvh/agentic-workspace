@@ -22,11 +22,9 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 
 ## Next Candidate Queue
-- Priority 1: `Finish the planning state transition by making compact planning state unmistakably primary and prose views unmistakably secondary` from GitHub issue `#86`; promote next and keep `#85` bundled with it because both are about making compact planning state and reporting-first inspection operationally primary.
-- Priority 2: `Make reporting and summary surfaces the default inspection path everywhere and demote raw file reads to fallback status` from GitHub issue `#85`; promote with `#86` as one bounded hierarchy-and-routing tranche instead of splitting the same source-of-truth change across two plans.
-- Priority 3: `Add a compact operating map so the growing contract surface stays queryable without growing concept overhead` from GitHub issue `#84`; promote after the planning-state and reporting-first hierarchy is stable enough to compress cleanly.
-- Priority 4: `Add a compact maintenance rule that new work must come from measured friction or repeated failure, not concept opportunity alone` from GitHub issue `#88`; promote once the next intake or promotion pass can apply the rule immediately.
-- Priority 5: `Expand lazy-discovery and curation-cost measurement across real workflows so current compact surfaces are justified by measured savings` from GitHub issue `#87`; promote after the hierarchy/reporting tranche and maintenance guardrail settle so the measurements target the intended steady-state path.
+- Priority 1: `Add a compact operating map so the growing contract surface stays queryable without growing concept overhead` from GitHub issue `#84`; promote next now that the planning-state and reporting-first hierarchy is stable enough to compress cleanly.
+- Priority 2: `Add a compact maintenance rule that new work must come from measured friction or repeated failure, not concept opportunity alone` from GitHub issue `#88`; promote once the next intake or promotion pass can apply the rule immediately.
+- Priority 3: `Expand lazy-discovery and curation-cost measurement across real workflows so current compact surfaces are justified by measured savings` from GitHub issue `#87`; promote after the compact operating map and maintenance guardrail settle so the measurements target the intended steady-state path.
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.

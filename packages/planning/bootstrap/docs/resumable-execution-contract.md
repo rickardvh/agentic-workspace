@@ -25,6 +25,9 @@ That summary now carries a top-level schema envelope:
 
 The `planning_record` object is the compact machine-readable active record for current work when planning has one active TODO item and one active execplan. The `resumable_contract` object remains the thinner restart view over that canonical record.
 
+Use the summary first when the question is "how do I continue safely right now?".
+Do not start by rereading raw execplan prose unless the compact summary leaves the restart boundary ambiguous.
+
 The resumable view currently carries:
 
 - `current_next_action`
@@ -42,10 +45,12 @@ The resumable view currently carries:
 
 - Keep the resumable view smaller than the full execplan.
 - Derive the canonical planning record and its views from existing execplan sections instead of requiring a new section.
+- Treat `planning_record` as the canonical active planning state when it is available; `resumable_contract` is a restart projection over that state.
 - Treat it as unavailable when active planning is ambiguous or under-specified rather than fabricating restart certainty.
 - Preserve proof and escalation boundaries explicitly so a weaker or later agent does not have to infer them from prose.
 - Keep tool verification advisory in the first slice: declare required tools clearly, then stop or escalate when they are unavailable.
 - If the runtime also used native planning artifacts, make sure the resumable view has already absorbed the durable next step before relying on cross-agent continuation.
+- Treat raw planning prose as the semantic fallback and maintenance layer rather than the default restart-inspection path.
 
 ## Relationship To Other Contracts
 

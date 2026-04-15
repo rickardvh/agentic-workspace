@@ -6,6 +6,7 @@ description: Report active planning state, proof expectations, and next-action g
 # Planning Reporting
 
 Use this skill when you need a compact, comparable picture of what is active and what should happen next, without rereading `TODO.md` or execplan prose first.
+Use `agentic-workspace report --target <repo> --format json` first when the question is broader than planning state alone.
 
 ## Canonical Reporting Surface
 
@@ -16,6 +17,7 @@ agentic-planning-bootstrap summary --target <repo> --format json
 ```
 
 This is the canonical compact inspection surface for active planning state. The `planning_record` payload carries the minimum facts needed for safe continuation, including next action and proof expectations.
+Treat `planning_record` as canonical active state when it is available; `active_contract` and `resumable_contract` are thinner projections, and raw planning files are fallback surfaces.
 
 When the question is "which proof lane is enough?", also consult:
 
@@ -49,4 +51,3 @@ Return a compact planning report containing:
 - blockers (or `none`)
 - escalation boundary
 - warnings worth acting on
-

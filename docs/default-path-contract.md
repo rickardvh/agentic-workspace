@@ -10,6 +10,20 @@ Use it when you want the shortest correct answer for startup, lifecycle, skill d
 - Keep advanced or package-local paths clearly secondary.
 - Point to machine-readable output when the repo can answer through structure instead of richer prose.
 
+## Inspection Order
+
+Use this order for ordinary inspection work:
+
+1. report or summary
+2. narrow selector
+3. raw file or richer prose only when the compact surface is insufficient
+
+That means:
+
+- use `agentic-planning-bootstrap summary --format json` before opening `TODO.md` or execplan prose when the question is active planning state
+- use `agentic-workspace report --target ./repo --format json` before reading raw module files when the question is combined workspace state
+- use defaults/proof/ownership selectors before broad docs when the question is already narrow
+
 ## Default Answers
 
 | Question | Default path | Secondary path |
@@ -65,6 +79,9 @@ That surface is the queryable contract for:
 - repo-owned lifecycle defaults and update intent
 - current mixed-agent reporting boundaries
 
+Use this broad route when the question spans several contract domains.
+If one bounded answer is enough, stop at the narrow selector instead of loading a broader dump or opening raw files first.
+
 When one bounded answer is enough, prefer the compact selector path:
 
 ```bash
@@ -87,6 +104,7 @@ Use [`docs/delegation-posture-contract.md`](docs/delegation-posture-contract.md)
 
 Treat these as real but secondary:
 
+- raw `TODO.md`, `ROADMAP.md`, and execplan prose for routine state inspection
 - package-local CLIs
 - maintainer-only commands
 - debugging-oriented doctor or payload verification lanes

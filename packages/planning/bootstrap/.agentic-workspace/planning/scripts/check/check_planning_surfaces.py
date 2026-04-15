@@ -645,30 +645,87 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
 def _check_docs_surface_roles(repo_root: Path) -> list[PlanningWarning]:
     warnings: list[PlanningWarning] = []
     readme_path = repo_root / "README.md"
-    if not readme_path.exists():
-        return warnings
-
-    text = "\n".join(_read_lines(readme_path)).lower()
-    if "## docs map" not in text:
-        return warnings
-
-    required_fragments = (
-        "for maintainers:",
-        "`docs/contributor-playbook.md`",
-        "`docs/maintainer-commands.md`",
-        "`docs/collaboration-safety.md`",
-        "`docs/installed-contract-design-checklist.md`",
-        "`docs/dogfooding-feedback.md`",
-        "`docs/workflow-contract-changes.md`",
-    )
-    if not all(fragment in text for fragment in required_fragments):
-        warnings.append(
-            PlanningWarning(
-                WARNING_DOCS_SURFACE_ROLE_DRIFT,
-                _render_path(readme_path),
-                "Root README docs map is missing required role separation or maintainer page coverage.",
+    if readme_path.exists():
+        text = "\n".join(_read_lines(readme_path)).lower()
+        if "## docs map" in text:
+            required_fragments = (
+                "for maintainers:",
+                "`docs/contributor-playbook.md`",
+                "`docs/maintainer-commands.md`",
+                "`docs/collaboration-safety.md`",
+                "`docs/installed-contract-design-checklist.md`",
+                "`docs/dogfooding-feedback.md`",
+                "`docs/workflow-contract-changes.md`",
             )
-        )
+            if not all(fragment in text for fragment in required_fragments):
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_DOCS_SURFACE_ROLE_DRIFT,
+                        _render_path(readme_path),
+                        "Root README docs map is missing required role separation or maintainer page coverage.",
+                    )
+                )
+
+    hierarchy_docs = (
+        (
+            repo_root / "docs" / "default-path-contract.md",
+            (
+                "1. report or summary",
+                "2. narrow selector",
+                "3. raw file or richer prose only when the compact surface is insufficient",
+                "agentic-planning-bootstrap summary --format json",
+                "agentic-workspace report --target ./repo --format json",
+            ),
+            "Default path contract must keep report/summary-first inspection explicit.",
+        ),
+        (
+            repo_root / "docs" / "contributor-playbook.md",
+            (
+                "agentic-planning-bootstrap summary --format json",
+                "agentic-workspace report --target ./repo --format json",
+                "compact surfaces are insufficient",
+            ),
+            "Contributor playbook must route maintainers through summary/report before raw planning or module files.",
+        ),
+        (
+            repo_root / "docs" / "intent-contract.md",
+            (
+                "planning_record` as the canonical active planning state",
+                "raw planning prose as a thin human maintenance view and semantic fallback",
+            ),
+            "Intent contract must describe planning_record as canonical and raw prose as fallback.",
+        ),
+        (
+            repo_root / "docs" / "resumable-execution-contract.md",
+            (
+                "planning_record` as the canonical active planning state",
+                "raw planning prose as the semantic fallback and maintenance layer",
+            ),
+            "Resumable contract must describe planning_record as canonical and raw prose as fallback.",
+        ),
+        (
+            repo_root / "docs" / "execplans" / "README.md",
+            (
+                "agentic-planning-bootstrap summary --format json` first",
+                "raw `todo.md` and execplan prose after that only when the compact summary is insufficient",
+                "planning_record` is the canonical active planning record",
+            ),
+            "Execplans README must keep summary-first inspection and planning_record primacy explicit.",
+        ),
+    )
+
+    for path, required_fragments, message in hierarchy_docs:
+        if not path.exists():
+            continue
+        text = "\n".join(_read_lines(path)).lower()
+        if not all(fragment.lower() in text for fragment in required_fragments):
+            warnings.append(
+                PlanningWarning(
+                    WARNING_DOCS_SURFACE_ROLE_DRIFT,
+                    _render_path(path),
+                    message,
+                )
+            )
 
     return warnings
 
