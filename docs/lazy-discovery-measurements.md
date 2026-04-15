@@ -2,17 +2,17 @@
 
 ## Purpose
 
-This page defines the first cheap measurement framework for lazy discovery.
+This page defines the cheap measurement framework for lazy discovery.
 
 Use it when a compact contract change claims to reduce reading or token cost and needs proof stronger than “the schema looks cleaner.”
 
 ## Rule
 
-Measure one-answer retrieval against the corresponding full-surface dump.
+Measure the preferred compact/query-first route for one workflow question against the broader plausible fallback route.
 
 Prefer cheap reproducible proxies over invented exactness.
 
-## First Framework
+## Current Framework
 
 Use:
 
@@ -20,30 +20,46 @@ Use:
 uv run python scripts/check/measure_lazy_discovery.py --target .
 ```
 
-The first framework measures:
+The current framework measures:
 
+- artifacts loaded before the first safe action
+- file reads avoided when a compact route replaces a prose-first path
 - UTF-8 bytes returned
 - character count returned
 - a simple token proxy: `ceil(character_count / 4)`
 
 It compares:
 
-- the full machine-readable surface for a question
-- the selector-shaped narrow answer for the same question
+- the preferred compact command or selector for a question
+- the broader fallback route a contributor would otherwise use
+
+Fallback routes may be:
+
+- a broader machine-readable surface
+- a file bundle when the real fallback path is prose-first or file-first rather than query-first
 
 Current covered questions:
 
-- choosing the validation lane
-- reading the current proof state
-- resolving the owner of active execution state
+- startup and routing contract lookup
+- active planning inspection and restart handoff
+- proof-lane selection
+- ownership lookup
+- setup and jumpstart inspection
+
+## Interpretation Rule
+
+- Prefer cases where the compact route replaces multiple file reads or a broad dump with one bounded answer.
+- Count query-first wins in artifact and file-read reduction first; byte and token proxies are secondary confirmation.
+- Keep correction pressure, curation mistakes, and restart quality as qualitative notes in the audit artifact unless a cheap structured proxy becomes trustworthy later.
 
 ## Boundaries
 
 - This is a retrieval-size proxy, not exact model token accounting.
-- The first pass is intentionally small and static.
+- It is intentionally small and static; it is not a benchmark runner or telemetry lane.
 - Do not turn this into runtime telemetry or generic analytics.
 
 ## Relationship To Other Docs
 
 - Use [`docs/compact-contract-profile.md`](docs/compact-contract-profile.md) for the selector and compact-answer contract itself.
+- Use [`docs/reporting-contract.md`](docs/reporting-contract.md) and [`docs/default-path-contract.md`](docs/default-path-contract.md) when choosing the preferred compact route for a workflow question.
 - Use [`docs/design-principles.md`](docs/design-principles.md) for the “proof should beat preference” rule that motivates this measurement.

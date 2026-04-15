@@ -22,7 +22,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 
 ## Next Candidate Queue
-- Priority 1: `Expand lazy-discovery and curation-cost measurement across real workflows so current compact surfaces are justified by measured savings` from GitHub issue `#87`; keep as the next bounded candidate because it is strategic evidence work rather than the small docs/discoverability fixes promoted now from `#89` through `#91`.
+- No inactive candidates right now; reopen this queue when a new bounded candidate is ready to promote.
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.
