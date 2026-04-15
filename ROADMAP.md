@@ -22,9 +22,8 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 
 ## Next Candidate Queue
-- Priority 1: `Add a compact operating map so the growing contract surface stays queryable without growing concept overhead` from GitHub issue `#84`; promote next now that the planning-state and reporting-first hierarchy is stable enough to compress cleanly.
-- Priority 2: `Add a compact maintenance rule that new work must come from measured friction or repeated failure, not concept opportunity alone` from GitHub issue `#88`; promote once the next intake or promotion pass can apply the rule immediately.
-- Priority 3: `Expand lazy-discovery and curation-cost measurement across real workflows so current compact surfaces are justified by measured savings` from GitHub issue `#87`; promote after the compact operating map and maintenance guardrail settle so the measurements target the intended steady-state path.
+- Priority 1: `Add a compact maintenance rule that new work must come from measured friction or repeated failure, not concept opportunity alone` from GitHub issue `#88`; promote next because the compact operating map has landed and the rule can now be applied immediately to the remaining queue.
+- Priority 2: `Expand lazy-discovery and curation-cost measurement across real workflows so current compact surfaces are justified by measured savings` from GitHub issue `#87`; promote after the maintenance guardrail lands so the measurement tranche runs under the intended intake discipline.
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.

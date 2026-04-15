@@ -221,7 +221,7 @@ Start here:
 
 - [`tools/AGENT_QUICKSTART.md`](tools/AGENT_QUICKSTART.md)
 - [`tools/AGENT_ROUTING.md`](tools/AGENT_ROUTING.md)
-- [`docs/which-package.md`](docs/which-package.md)
+- [`docs/which-package.md`](docs/which-package.md) for the compact operating map
 - [`docs/default-path-contract.md`](docs/default-path-contract.md)
 - [`docs/workspace-config-contract.md`](docs/workspace-config-contract.md)
 

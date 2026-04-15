@@ -24,6 +24,9 @@ That means:
 - use `agentic-workspace report --target ./repo --format json` before reading raw module files when the question is combined workspace state
 - use defaults/proof/ownership selectors before broad docs when the question is already narrow
 
+Use [`docs/which-package.md`](which-package.md) when you want the smaller operating-map view over those same buckets.
+Use this page when you need the fuller route contract after the compact map points you here.
+
 ## Default Answers
 
 | Question | Default path | Secondary path |

@@ -13,6 +13,22 @@ Pick the preset that matches the repo problem.
 
 Default answer: use `agentic-workspace` and choose the preset that matches the repo problem.
 
+## Compact Operating Map
+
+Ask the smallest useful question first:
+
+| If you need to know... | Ask this first | Then, only if needed |
+| --- | --- | --- |
+| how to start or which lifecycle path applies | `AGENTS.md`, then `agentic-workspace config --target ./repo --format json` | [`docs/default-path-contract.md`](default-path-contract.md) |
+| what is active right now | `agentic-planning-bootstrap summary --format json` | `TODO.md`, then one active execplan |
+| what the combined workspace state looks like | `agentic-workspace report --target ./repo --format json` | raw module files or maintainer docs |
+| which proof or ownership answer is enough | `agentic-workspace defaults --section proof_selection --format json`, `agentic-workspace proof --target ./repo --format json`, or `agentic-workspace ownership --target ./repo --format json` | [`docs/default-path-contract.md`](default-path-contract.md) and the referenced contract doc |
+| where handoff or setup work lives | `llms.txt` or `agentic-workspace setup --target ./repo --format json` | `.agentic-workspace/bootstrap-handoff.md` or `.json` when bootstrap says review is still needed |
+| what mixed-agent posture is in effect | `agentic-workspace config --target ./repo --format json` | [`docs/workspace-config-contract.md`](workspace-config-contract.md) |
+
+Stop at the first compact surface that answers the question.
+Use broader docs or raw files only when the compact surface is insufficient.
+
 ## What Stays Secondary
 
 These are real but secondary:
@@ -53,7 +69,7 @@ Use them when you explicitly need module-level control, not for normal adoption.
 
 ## Read Next
 
+- Compact operating map and first question: [`docs/default-path-contract.md`](default-path-contract.md)
 - Memory path: [`packages/memory/README.md`](../packages/memory/README.md)
 - Planning path: [`packages/planning/README.md`](../packages/planning/README.md)
-- Shared defaults: [`docs/default-path-contract.md`](default-path-contract.md)
 - Architecture: [`docs/architecture.md`](architecture.md)
