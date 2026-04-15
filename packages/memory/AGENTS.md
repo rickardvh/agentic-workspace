@@ -13,6 +13,13 @@ Package-local contract for work under `packages/memory/`.
 - Treat the root `memory/` tree and root planning surfaces as the operational authority for this repository.
 - When a task crosses package source, shipped payload, and root install boundaries, use `docs/source-payload-operational-install.md` to keep the layers separate.
 
+## Architecture Context
+
+- Workspace layer: `agentic-workspace` is the thin composition layer and normal lifecycle front door for installs that include memory.
+- Package layer: `packages/memory/` owns memory-specific source, shipped payload, package skills, and regression coverage.
+- Installed layer: the target repo's `memory/` tree and `.agentic-workspace/memory/` surfaces are the live memory contract after bootstrap.
+- In this monorepo, the root `memory/` tree plus the root installed workspace surfaces are the live operational copy; this package directory is not a second active memory install.
+
 ## Start Here
 
 1. Read `README.md`.

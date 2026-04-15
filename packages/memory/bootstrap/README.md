@@ -21,6 +21,7 @@ It is intended to be copied into an existing repository to provide:
 - `.agentic-memory/VERSION.md` as the installed bootstrap version marker
 - `memory/current/project-state.md` as a weak-authority current overview
 - `memory/current/task-context.md` as optional weak-authority continuation compression
+- `memory/templates/` as starter note templates for the first real repo-specific notes
 - an advisory memory freshness audit
 - optional workflow fragments for common contribution flows
 
@@ -92,6 +93,7 @@ Review and replace repo-specific placeholders such as:
 The installer can also fill these placeholders when you pass the matching explicit CLI flags.
 
 Delete unused routing examples once the target repository has concrete notes.
+When replacing those starter examples or adding the first repo-specific note of a class, start from `memory/templates/memory-note-template.md`, `memory/templates/invariant-template.md`, or `memory/templates/runbook-template.md` instead of copying old prose by hand.
 
 `AGENTS.md` should stay short and point to `.agentic-memory/WORKFLOW.md` for the shared operating model.
 Bootstrap should modify `AGENTS.md` only through the managed workflow pointer block. Repo-specific `AGENTS.md` prose outside that block is repo-owned and should not be treated as shared upgradeable guidance.
@@ -114,6 +116,7 @@ When `memory/manifest.toml` marks a note as `canonical_elsewhere`, routing shoul
 Planning/status surfaces identify touched paths or surfaces; memory routing returns the smallest relevant durable note set.
 If the same note keeps being routed for safe work on one subsystem, that is often a cue to suggest clearer docs, stronger validation, or refactor review.
 In combined installs, memory should reduce what planning has to restate, not become a second plan explanation layer.
+Use `memory/manifest.toml` to make that improvement pressure legible: optional fields such as `memory_role`, `preferred_remediation`, `improvement_note`, `elimination_target`, and `retention_justification` explain whether a note is durable truth or a symptom pointing at upstream docs, tests, skills, scripts, validation, or refactor work.
 
 Common task bundles:
 
@@ -148,6 +151,13 @@ Interoperability pattern catalogue:
 - stable human-facing guidance -> consider promoting it into canonical docs and leaving memory as a stub or backlink
 - note that repeatedly explains one hard subsystem -> consider refactor review or clearer module boundaries
 - routing crutch used for one awkward area -> consider naming, structure, or ownership cleanup in the repo
+
+If a note is mainly a symptom rather than durable truth, record the expected post-remediation shape too:
+
+- `shrink` when the note should get smaller after upstream improvement
+- `promote` when the durable truth should move into canonical docs
+- `automate` when a script or skill should replace the repeated prose
+- `refactor_away` when a design or boundary change should remove the need for the note entirely
 
 ## When to write to memory
 

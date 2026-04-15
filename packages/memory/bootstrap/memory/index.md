@@ -47,6 +47,7 @@ Fresh installs include one small replaceable example for each primary note class
 
 Treat them as starter shape only, not as repo-specific truth.
 Replace or delete them once the repository captures real durable notes.
+When replacing them or adding the first repo-specific note of a class, start from the matching template under `memory/templates/`.
 
 ## Loading rule
 
@@ -65,6 +66,7 @@ Replace or delete them once the repository captures real durable notes.
 - `decisions/` = longer-lived rationale or trade-offs that are still worth remembering but are no longer current-orientation notes.
 - `runbooks/` = repeatable operational procedures, recovery steps, and verification sequences.
 - `current/` = lightweight current overview and optional current-task compression, not historical records.
+- `templates/` = starter note shapes for the first real repo-owned domain, invariant, runbook, or general memory note you add
 
 ## Memory admission rule
 

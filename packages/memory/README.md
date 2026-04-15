@@ -199,6 +199,7 @@ Running `install` or `adopt` adds the following to your repository:
 | `memory/mistakes/` | Recurring failure modes |
 | `memory/decisions/` | Longer-lived rationale and trade-offs |
 | `memory/current/` | Lightweight project overview and optional task-continuation compression |
+| `memory/templates/` | Starter note templates for the first repo-specific memory notes you replace or add |
 | `.agentic-workspace/memory/skills/` | Bootstrap-managed shared memory skills, upgrade-replaceable |
 | `memory/skills/` | Optional repo-owned memory skills |
 | `scripts/check/` | Advisory freshness audit script |
@@ -356,6 +357,14 @@ The installed `WORKFLOW.md` under `.agentic-workspace/memory/` is the full refer
 - **Keep the working set small.** Memory saves tokens only when the notes you load are cheaper than rediscovering the same facts from code.
 - **Promote when stable.** If a note matures into general guidance, move it into canonical docs and leave memory as a stub.
 - **Do not make memory the default answer to repo complexity.** Durable truth may stay or grow when justified, but improvement-signal notes should push agents toward clearer docs, safer tests, stronger tooling, or simpler structure when those fixes are feasible.
+
+Starter note templates are part of that installed contract too. Use `memory/templates/memory-note-template.md`, `memory/templates/invariant-template.md`, and `memory/templates/runbook-template.md` when you replace the shipped starter examples or add the first real repo-specific notes for those classes.
+
+For manifest discoverability, the quickest installed guidance path is:
+
+- `memory/manifest.toml` for the machine-readable note map and optional improvement-pressure fields
+- `.agentic-workspace/memory/WORKFLOW.md` for the short explanation of when fields such as `memory_role`, `preferred_remediation`, `improvement_note`, `elimination_target`, and `retention_justification` should be used
+- `memory/templates/memory-note-template.md` for the compact note-level reminder of how improvement-signal notes should point at an upstream remediation target
 
 ## Command Summary
 

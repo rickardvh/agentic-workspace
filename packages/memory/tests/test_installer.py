@@ -2255,6 +2255,10 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
     assert "memory should help plans stay smaller by holding durable context that execplans can reference instead of repeating" in text
     assert "Repeated plan re-explanation or restart friction is a missing-synergy signal" in text
     assert "do not absorb plan history or milestone narration into memory" in text
+    assert "## Starter templates" in text
+    assert "memory/templates/memory-note-template.md" in text
+    assert "## Improvement metadata quick reference" in text
+    assert "`retention_justification`" in text
 
 
 def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() -> None:
@@ -2265,6 +2269,7 @@ def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() 
     assert "## Starter examples for fresh installs" in text
     assert "memory/domains/example-runtime-boundary.md" in text
     assert "Treat them as starter shape only" in text
+    assert "memory/templates/" in text
     assert "## Small routing examples" in text
     assert "Example: deployment recovery" in text
     assert "## Canonicality rule" in text
@@ -2309,6 +2314,8 @@ def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -
     assert "suggest upstream repo improvements instead of treating memory as the default answer to repo complexity" in text
     assert "remain advisory outside the managed bootstrap surface" in text
     assert "prefer a clearer handoff into repo-owned work" in text
+    assert "`memory/templates/` as starter note templates" in text
+    assert "`retention_justification`" in text
 
 
 def test_bootstrap_payload_includes_starter_examples_for_primary_note_classes() -> None:

@@ -64,6 +64,24 @@ Keep it concise, repo-agnostic, and non-procedural.
 - Optional manifest fields such as `memory_role`, `symptom_of`, `preferred_remediation`, `improvement_candidate`, `improvement_note`, and `elimination_target` can capture why a note exists and what kind of upstream improvement it may be pointing toward.
 - Keep calibration artefacts distinct from durable notes: `memory/current/routing-feedback.md` should stay optional, agent-only, and free of broad routing metadata or durable-truth claims.
 
+## Starter templates
+
+- Use `memory/templates/memory-note-template.md` for a general durable note or improvement-signal note.
+- Use `memory/templates/invariant-template.md` when the primary home is a must-remain-true contract.
+- Use `memory/templates/runbook-template.md` when the primary home is a durable operator procedure.
+- Treat the templates as starter shape only; adapt them to the repo and keep the first real note smaller than the template when possible.
+- When replacing the shipped starter examples, prefer the matching template over copying old example prose forward.
+
+## Improvement metadata quick reference
+
+- `memory_role = "durable_truth"` means the note is expected to stay visible as anti-rediscovery knowledge.
+- `memory_role = "improvement_signal"` means the note exists partly because the repo still needs an upstream improvement.
+- `preferred_remediation` should name the most likely upstream target: docs, skill, script, test, validation, refactor, or code.
+- `improvement_note` should stay short and concrete; say what improvement would reduce the note rather than restating the note.
+- `elimination_target` should describe the intended post-remediation shape: shrink, promote, automate, or refactor away.
+- `retention_justification` is the fallback when a note remains justified even though it is also an improvement signal.
+- Use the quick reminder in `memory/templates/memory-note-template.md` when you are writing the note itself and the fuller workflow below when deciding how to route follow-through.
+
 ## Canonical-doc boundary
 
 - Prefer checked-in canonical docs first and memory second when stable policies, procedures, or engineering guidance already have a natural home in `README.md`, `docs/`, or equivalent repo docs.
