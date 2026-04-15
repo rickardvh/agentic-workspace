@@ -1139,6 +1139,18 @@ def _external_agent_handoff_text(
             '- agentic-workspace skills --target ./repo --task "<task>" --format json',
             "- agentic-workspace upgrade --target ./repo",
             "",
+            "Quick state check:",
+            "- agentic-workspace config --target ./repo --format json",
+            "- agentic-planning-bootstrap summary --format json",
+            (
+                "- If agentic-workspace.local.toml is present, use the config report to see "
+                "local capability/cost posture without treating it as checked-in repo policy."
+            ),
+            "",
+            "Compact routing docs when present:",
+            "- tools/AGENT_QUICKSTART.md",
+            "- tools/AGENT_ROUTING.md",
+            "",
             "Rules:",
             "- Prefer conservative review over replacing repo-owned workflow surfaces in ambiguous repos.",
             "- Keep planning and memory ownership boundaries explicit.",
@@ -1903,6 +1915,7 @@ def _run_report_command(
         resolved_preset=resolved_preset,
         descriptors=descriptors,
         dry_run=False,
+        non_interactive=False,
         config=config,
     )
     warnings = list(status_payload.get("warnings", []))
@@ -3183,6 +3196,7 @@ def _setup_payload(
         resolved_preset=resolved_preset,
         descriptors=descriptors,
         dry_run=False,
+        non_interactive=False,
         config=config,
     )
     discovery = _setup_discovery_payload(target_root=target_root, status_payload=status_payload)

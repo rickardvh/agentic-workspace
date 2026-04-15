@@ -83,6 +83,54 @@ stale_when = []
 # Use this note only for compact routing calibration:
 # concrete missed-note or over-routing cases worth revisiting after manifest or index changes.
 
+[notes."memory/domains/example-runtime-boundary.md"]
+note_type = "domain"
+canonical_home = "memory/domains/example-runtime-boundary.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["starter-example", "runtime"]
+surfaces = ["runtime", "architecture"]
+routes_from = ["memory/index.md", "bootstrap/**/*.md"]
+stale_when = ["memory/index.md", "bootstrap/**/*.md"]
+
+[notes."memory/invariants/example-response-contract.md"]
+note_type = "invariant"
+canonical_home = "memory/invariants/example-response-contract.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["starter-example", "api"]
+surfaces = ["api", "tests"]
+routes_from = ["memory/index.md", "bootstrap/**/*.md"]
+stale_when = ["memory/index.md", "bootstrap/**/*.md"]
+
+[notes."memory/runbooks/example-release-check.md"]
+note_type = "runbook"
+canonical_home = "memory/runbooks/example-release-check.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["starter-example", "operations"]
+surfaces = ["runtime", "tests"]
+routes_from = ["memory/index.md", "bootstrap/**/*.md"]
+stale_when = ["memory/index.md", "bootstrap/**/*.md"]
+
+[notes."memory/decisions/example-cli-selection.md"]
+note_type = "decision"
+canonical_home = "memory/decisions/example-cli-selection.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["starter-example", "tooling"]
+surfaces = ["architecture"]
+routes_from = ["memory/index.md", "bootstrap/**/*.md"]
+stale_when = ["memory/index.md", "bootstrap/**/*.md"]
+
 [notes."memory/current/active-decisions.md"]
 note_type = "current-decisions"
 canonical_home = "memory/current/active-decisions.md"

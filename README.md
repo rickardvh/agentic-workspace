@@ -64,6 +64,9 @@ Install or adopt Agentic Workspace in the repository you are working in by follo
 Canonical handoff surfaces after install:
 
 - [`llms.txt`](llms.txt) is the checked-in external-agent front door.
+- [`AGENTS.md`](AGENTS.md) remains the startup entrypoint for normal repo work after the front door.
+- [`tools/AGENT_QUICKSTART.md`](tools/AGENT_QUICKSTART.md) is the compact generated task-shaped helper when a cold agent needs the shortest useful route.
+- [`tools/AGENT_ROUTING.md`](tools/AGENT_ROUTING.md) is the compact generated routing reference when a cold agent needs a little more guidance without reading deeper docs.
 - `.agentic-workspace/bootstrap-handoff.md` is the bounded next-action brief when bootstrap reports that review or reconciliation is still required.
 
 ## Normal next commands
@@ -216,6 +219,8 @@ See [`docs/maturity-model.md`](docs/maturity-model.md) for the current maturity 
 
 Start here:
 
+- [`tools/AGENT_QUICKSTART.md`](tools/AGENT_QUICKSTART.md)
+- [`tools/AGENT_ROUTING.md`](tools/AGENT_ROUTING.md)
 - [`docs/which-package.md`](docs/which-package.md)
 - [`docs/default-path-contract.md`](docs/default-path-contract.md)
 - [`docs/workspace-config-contract.md`](docs/workspace-config-contract.md)

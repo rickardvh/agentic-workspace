@@ -2043,14 +2043,23 @@ def test_memory_freshness_strict_default_does_not_fail_on_bootstrap_placeholders
     )
 
     assert result.returncode == 0
-    assert "Uncustomised routing placeholders:" in result.stdout
-    assert "starter placeholder route examples" in result.stdout
+    assert "Uncustomised routing placeholders:" not in result.stdout
 
 
 def test_memory_freshness_strict_can_fail_on_bootstrap_placeholders_when_requested(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
     installer.install_bootstrap(target=target)
+    (target / "memory" / "index.md").write_text(
+        (target / "memory" / "index.md")
+        .read_text(encoding="utf-8")
+        .replace(
+            "Treat starter examples as temporary orientation until the repository has real notes to replace them.",
+            "Delete unused routing examples once the repository has concrete notes.",
+        )
+        + "\n- runtime or deployment change: `memory/domains/<runtime-or-deployment-note>.md`\n",
+        encoding="utf-8",
+    )
 
     result = subprocess.run(
         [
@@ -2253,6 +2262,9 @@ def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() 
 
     assert "## Token-efficiency rule" in text
     assert "Memory is a net token saver" in text
+    assert "## Starter examples for fresh installs" in text
+    assert "memory/domains/example-runtime-boundary.md" in text
+    assert "Treat them as starter shape only" in text
     assert "## Small routing examples" in text
     assert "Example: deployment recovery" in text
     assert "## Canonicality rule" in text
@@ -2297,6 +2309,21 @@ def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -
     assert "suggest upstream repo improvements instead of treating memory as the default answer to repo complexity" in text
     assert "remain advisory outside the managed bootstrap surface" in text
     assert "prefer a clearer handoff into repo-owned work" in text
+
+
+def test_bootstrap_payload_includes_starter_examples_for_primary_note_classes() -> None:
+    payload_root = installer.payload_root()
+
+    assert (payload_root / "memory" / "domains" / "example-runtime-boundary.md").exists()
+    assert (payload_root / "memory" / "invariants" / "example-response-contract.md").exists()
+    assert (payload_root / "memory" / "runbooks" / "example-release-check.md").exists()
+    assert (payload_root / "memory" / "decisions" / "example-cli-selection.md").exists()
+
+    manifest_text = (payload_root / "memory" / "manifest.toml").read_text(encoding="utf-8")
+    assert '[notes."memory/domains/example-runtime-boundary.md"]' in manifest_text
+    assert '[notes."memory/invariants/example-response-contract.md"]' in manifest_text
+    assert '[notes."memory/runbooks/example-release-check.md"]' in manifest_text
+    assert '[notes."memory/decisions/example-cli-selection.md"]' in manifest_text
 
 
 def test_memory_note_template_includes_improvement_signal_metadata() -> None:

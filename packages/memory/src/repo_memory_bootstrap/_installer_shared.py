@@ -34,6 +34,12 @@ CURRENT_MEMORY_BASELINE = (
 )
 OPTIONAL_CURRENT_MEMORY_FILES = (Path("memory/current/routing-feedback.md"),)
 ROUTING_BASELINE = (Path("memory/index.md"),)
+STARTER_EXAMPLE_FILES = (
+    Path("memory/domains/example-runtime-boundary.md"),
+    Path("memory/invariants/example-response-contract.md"),
+    Path("memory/runbooks/example-release-check.md"),
+    Path("memory/decisions/example-cli-selection.md"),
+)
 BOOTSTRAP_WORKSPACE_FILES = (
     BOOTSTRAP_WORKSPACE_ROOT / "README.md",
     BOOTSTRAP_WORKSPACE_ROOT / "skills/install/SKILL.md",
@@ -67,6 +73,7 @@ PAYLOAD_REQUIRED_FILES = (
     Path("memory/current/project-state.md"),
     Path("memory/current/task-context.md"),
     Path("memory/domains/README.md"),
+    *STARTER_EXAMPLE_FILES,
     Path("memory/invariants/README.md"),
     Path("memory/runbooks/README.md"),
     Path("memory/mistakes/recurring-failures.md"),

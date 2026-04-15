@@ -25,16 +25,28 @@
 
 - current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` when needed
 - live decision review: optional repo-owned `memory/current/active-decisions.md` when the repo keeps one, plus `memory/decisions/README.md`
-- runtime or deployment change: `memory/domains/<runtime-or-deployment-note>.md` plus `memory/runbooks/<relevant-operator-runbook>.md`
-- API or interface change: `memory/domains/<api-or-interface-note>.md` plus `memory/invariants/<response-or-contract-note>.md`
-- retrieval or search change: `memory/domains/<retrieval-or-search-note>.md` plus `memory/invariants/<retrieval-contract-note>.md` plus `memory/mistakes/recurring-failures.md`
-- tests or validation work: `memory/domains/<testing-or-validation-note>.md` plus `memory/mistakes/recurring-failures.md`
-- architecture or data-model work: `memory/domains/<data-model-or-architecture-note>.md` plus `memory/invariants/<relevant-invariant-note>.md` plus `memory/decisions/README.md`
+- runtime or deployment change: start with `memory/domains/example-runtime-boundary.md` plus `memory/runbooks/example-release-check.md`, then switch to repo-specific runtime notes when they exist
+- API or interface change: start with `memory/invariants/example-response-contract.md`, then add the repo's real API or contract note when it exists
+- retrieval or search change: start with `memory/invariants/example-response-contract.md` plus `memory/mistakes/recurring-failures.md`, then switch to repo-specific retrieval notes when they exist
+- tests or validation work: `memory/mistakes/recurring-failures.md` plus the nearest real invariant or domain note
+- architecture or data-model work: start with `memory/decisions/example-cli-selection.md`, then add the repo's real domain or invariant notes when they exist
 
 ## Task routing
 
-Delete unused routing examples once the repository has concrete notes.
+Treat starter examples as temporary orientation until the repository has real notes to replace them.
 Prefer the smallest bundle that still covers the task surface.
+
+## Starter examples for fresh installs
+
+Fresh installs include one small replaceable example for each primary note class:
+
+- `memory/domains/example-runtime-boundary.md`
+- `memory/invariants/example-response-contract.md`
+- `memory/runbooks/example-release-check.md`
+- `memory/decisions/example-cli-selection.md`
+
+Treat them as starter shape only, not as repo-specific truth.
+Replace or delete them once the repository captures real durable notes.
 
 ## Loading rule
 

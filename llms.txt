@@ -20,9 +20,20 @@ Preferred follow-up commands:
 - agentic-workspace skills --target ./repo --task "<task>" --format json
 - agentic-workspace upgrade --target ./repo
 
+Quick state check:
+- agentic-workspace config --target ./repo --format json
+- agentic-planning-bootstrap summary --format json
+- If agentic-workspace.local.toml is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.
+
+Compact routing docs when present:
+- tools/AGENT_QUICKSTART.md
+- tools/AGENT_ROUTING.md
+
 Rules:
 - Prefer conservative review over replacing repo-owned workflow surfaces in ambiguous repos.
 - Keep planning and memory ownership boundaries explicit.
+- Workflow artifact profile: repo-owned.
+- TODO.md and docs/execplans stay authoritative; no extra runtime artifact should carry durable state.
 - If bootstrap writes .agentic-workspace/bootstrap-handoff.md, treat that file as the immediate next-action brief before normal work resumes.
 
 Success means:

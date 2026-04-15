@@ -522,7 +522,8 @@ def main() -> int:
     _print_section("Missing manifest entries", missing_manifest_entries)
     _print_section("Manifest records for missing notes", manifest_records_for_missing_notes)
     _print_section("Shared canonical homes", shared_canonical_homes)
-    _print_section("Uncustomised routing placeholders", uncustomised_index_placeholders)
+    if uncustomised_index_placeholders:
+        _print_section("Uncustomised routing placeholders", uncustomised_index_placeholders)
 
     findings = {
         "needs_verification": needs_verification,
