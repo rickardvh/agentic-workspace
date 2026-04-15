@@ -17,12 +17,16 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - No active handoff right now.
 ## GitHub Issue Intake
 
-- Latest intake tranche: GitHub issues `#87` through `#91`.
+- Latest intake tranche: GitHub issues `#92` through `#95`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
+- The broader multi-runtime and lifecycle-extraction ideas in `contract-tooling-roadmap.md` are not yet promoted beyond this first bounded tranche.
 
 ## Next Candidate Queue
-- No inactive candidates right now; reopen this queue when a new bounded candidate is ready to promote.
+- `#92` Declarative contract boundary and Python-owned behavior inventory; promote when the first contract-tooling tranche is selected and the repo is ready to classify current proof/report/selector/lifecycle behavior before extracting any schemas.
+- `#93` Shared schemas for proof, report, and selector contracts; promote after `#92` lands and the boundary note shows a stable declarative subset ready for versioned schemas.
+- `#94` Manifest-backed extraction for proof, report, and selector metadata; promote when `#92` and `#93` have made the contract stable enough that Python can consume checked-in metadata without changing user-visible behavior.
+- `#95` Schema and manifest validation for contract-backed surfaces; promote when shared schemas or manifests exist and drift checks can fail fast without widening adopter/runtime requirements.
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.

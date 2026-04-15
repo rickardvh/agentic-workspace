@@ -1,5 +1,14 @@
 # Roadmap: Declarative Contract Layer And Multi-Runtime Tooling
 
+This document is source material, not the canonical planning queue.
+
+The first bounded tranche from this proposal has been promoted into:
+
+- `ROADMAP.md`
+- GitHub issues `#92` through `#95`
+
+Later stages here remain exploratory until repeated product pressure justifies promoting them into canonical planning.
+
 ## Goal
 
 Make Agentic Workspace safer and faster to develop by using stronger schema, validation, and generation tooling during development, while keeping shipped operational requirements narrow and intentional.
