@@ -121,6 +121,7 @@ Use staged promotion:
 4. move durable stable guidance into canonical docs or memory when the value is long-lived knowledge rather than future work tracking
 
 Do not promote every finding. Dismiss weak, duplicate, or low-value findings instead of turning the queue into an analysis backlog.
+By default, do not promote a new work item unless there is measured friction, repeated failure, repeated dogfooding pain, or an explicit maintainer override for why the work should exist now.
 
 ## Improvement-targeting workflow
 
@@ -155,3 +156,4 @@ Repeated findings that work needed stronger execution capability than expected s
 - Do not leave top-level `docs/reviews/` full of old speculative notes.
 - If a review repeatedly produces the same finding, prefer fixing the underlying docs, tests, validation, or structure.
 - When a doctrine page records long-horizon product direction, keep a lightweight `Last doctrinal review` marker on the page and refresh it whenever a doctrine-refresh pass materially confirms or revises that page.
+- If a proposed follow-on still reads like concept opportunity after review, leave it out of planning rather than converting the queue into an idea inventory.

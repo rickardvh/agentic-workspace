@@ -22,8 +22,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 
 ## Next Candidate Queue
-- Priority 1: `Add a compact maintenance rule that new work must come from measured friction or repeated failure, not concept opportunity alone` from GitHub issue `#88`; promote next because the compact operating map has landed and the rule can now be applied immediately to the remaining queue.
-- Priority 2: `Expand lazy-discovery and curation-cost measurement across real workflows so current compact surfaces are justified by measured savings` from GitHub issue `#87`; promote after the maintenance guardrail lands so the measurement tranche runs under the intended intake discipline.
+- Priority 1: `Expand lazy-discovery and curation-cost measurement across real workflows so current compact surfaces are justified by measured savings` from GitHub issue `#87`; promote next now that the maintenance guardrail is active and the measurement tranche can run against the intended steady-state path.
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.
@@ -32,6 +31,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 - Promote candidate items only when dependencies are clear and the scope fits a short execplan.
 - For review-derived candidates, prefer promotion only after the same product-level deficiency appears in at least two independent captures, or one review artifact plus one repeated maintenance or dogfooding pass, unless explicit maintainer direction justifies immediate activation.
+- Prefer measured friction, repeated failure, repeated dogfooding pain, or explicit maintainer override over concept opportunity when deciding whether new work belongs in planning at all.
 - Keep detailed execution in `docs/execplans/` once promoted.
 - Prefer collaboration-safe installed-contract work over new top-level concepts when dogfooding shows concurrent-edit ambiguity or merge pressure.
 - Prefer friction-confirmed or repeated review findings over one-off static-analysis neatness.

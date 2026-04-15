@@ -332,6 +332,18 @@ A feature fails if it reduces model-side token use but shifts comparable or grea
 
 The product should reduce total operating cost, not merely move it between participants.
 
+### 20. New work must earn its way in
+
+At this maturity level, new planning or contract work should enter the queue only when one of these is true:
+
+- measured overhead reduction opportunity
+- repeated practical failure class
+- repeated dogfooding friction
+- explicit maintainer override for strategically important work
+
+Concept opportunity alone is not enough.
+The default posture should be subtraction and proof, not idea accumulation.
+
 ## Design Tests
 
 A proposed feature is moving in the right direction if it helps answer yes to questions like:
@@ -348,6 +360,7 @@ A proposed feature is moving in the right direction if it helps answer yes to qu
 - Can it be removed cleanly if needed?
 - Would it still make sense outside this monorepo?
 - Does this strengthen checked-in leverage without trying to out-orchestrate the runtime?
+- Is there measured friction, repeated failure, repeated dogfooding pain, or an explicit maintainer reason for adding it now?
 
 A proposed feature is suspicious if it tends to:
 
@@ -361,6 +374,7 @@ A proposed feature is suspicious if it tends to:
 - make the workspace layer absorb module logic
 - leave behind high-churn residue that outlives its value
 - try to schedule runtime model choice or delegation from checked-in policy
+- enter planning mainly because it sounds like a useful idea rather than because the repo has paid a real cost for its absence
 
 ## Practical Standard
 

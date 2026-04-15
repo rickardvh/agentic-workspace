@@ -99,6 +99,7 @@ If the upstream context needs more than a short source cue, promote to an execpl
 - Prefer direct TODO execution only for truly small local work.
 
 Promotion into active work should happen only through explicit maintainer choice, clear urgency, or a strong enough planning signal that the task is ready to execute from checked-in surfaces.
+Promotion into planning at all should normally require measured friction, repeated failure, repeated dogfooding pain, or an explicit maintainer override rather than concept opportunity alone.
 
 ## Authority Rule
 
@@ -120,3 +121,7 @@ When an upstream task reports friction discovered in this repository, ask:
 Could or should this have been found, prevented, or remediated by the product itself?
 
 If yes, preserve that reasoning in the planning artifact so later work can prefer package or contract improvements over repo-local workaround guidance.
+
+## Intake Guardrail
+
+When an upstream task still reads mainly like an idea, potential enhancement, or nice-to-have concept rather than a response to measured friction or repeated failure, prefer dismissal or bounded review over adding it to planning.

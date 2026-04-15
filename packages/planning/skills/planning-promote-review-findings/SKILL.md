@@ -16,6 +16,7 @@ Planning Promote Review Findings turns selected review findings into planned wor
 5. Preserve the original source classification when summarising the promoted item.
 6. Do not promote every finding from a review artifact.
 7. If the real value is durable guidance rather than future work, promote to canonical docs or memory instead of planning.
+8. By default, do not promote a new planning item unless there is measured friction, repeated failure, repeated dogfooding pain, or an explicit maintainer override.
 
 ## Promotion Checklist
 
@@ -24,6 +25,7 @@ Planning Promote Review Findings turns selected review findings into planned wor
 - Is the suggested action concrete enough to be useful?
 - Is there an explicit trigger for activation?
 - Does the target surface match the time horizon?
+- Is there measured friction, repeated failure, repeated dogfooding pain, or explicit maintainer override for why this should exist now?
 
 If any answer is no, defer or dismiss instead of promoting.
 
