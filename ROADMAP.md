@@ -18,12 +18,16 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 ## GitHub Issue Intake
 
 - Latest intake tranche: GitHub issues `#109` through `#120`.
+- Earlier open planning issues `#101` through `#108` remain available for the next tranche.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 - The simplification tranche is complete.
 
 ## Next Candidate Queue
-No active candidate queue right now.
+- `#101/#102` Add an intent-interpretation contract and distinguish confirmed intent from interpreted intent so vague prompts can be shaped into a cheap bounded execution contract without silently rewriting user ends; promote when the repo needs a first-class contract for weak-prompt handling that preserves escalation boundaries.
+- `#103/#104` Add a cheap-clarification path and tighten prompt-to-proof / prompt-to-owner inference so the repo can resolve common vague prompts with minimal interruption; promote when repeated prompt-polishing and clarification cost show the current path is still too expensive.
+- `#105/#108` Make strong-planner / cheap-implementer relay explicit and let routed Memory feed interpreted intent so weak prompts can borrow durable repo understanding before Planning freezes the bounded execution shape; promote when the interpretation bridge needs a clear handoff between durable context and active intent.
+- `#106/#107` Strengthen Memory as the durable domain-understanding layer and treat repeated vague-instruction failures as a signal for durable capture; promote when the interpretation bridge proves that missing shared understanding is the main remaining source of vague-prompt friction.
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.
