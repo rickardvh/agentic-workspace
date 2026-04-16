@@ -20,11 +20,10 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Latest intake tranche: GitHub issues `#109` through `#120`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification tranche is now the top-priority queue.
+- The simplification tranche is complete.
 
 ## Next Candidate Queue
-- `#118/#119` Guard against agent-constraining opinionation while preserving higher-level convergence context across bounded slices; promote when the repo needs a stronger bias toward bounded guidance without losing cross-slice intent continuity.
-- `#109` Review and reduce orchestration-layer code concentration so the product contract is easier to evolve safely; promote when a focused architecture pass can extract or separate one overloaded seam without changing behavior.
+- No active candidate queue right now.
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.
