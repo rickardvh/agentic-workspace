@@ -196,12 +196,14 @@ The platform should centralize:
 - preset and module selection
 - shared reporting
 - orchestration
+- shared workspace policy and evidence surfaces that do not justify an independent lifecycle
 
 It should not erase:
 
 - memory ownership
 - planning ownership
 - future module ownership
+- the distinction between workspace-level shared policy/reporting and module-owned domain logic
 
 Convenience must not blur responsibility.
 

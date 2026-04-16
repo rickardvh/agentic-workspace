@@ -89,6 +89,7 @@ SUPPORTED_IMPROVEMENT_LATITUDES = (
     "proactive",
 )
 REPO_FRICTION_LARGE_FILE_THRESHOLD = 400
+REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD = 200
 REPO_FRICTION_MAX_HOTSPOTS = 5
 REPO_FRICTION_SCAN_SUFFIXES = {
     ".c",
@@ -581,6 +582,33 @@ def _improvement_latitude_payload(mode: str) -> dict[str, Any]:
         },
     }
     return policies[mode].copy()
+
+
+def _improvement_boundary_test_payload() -> dict[str, Any]:
+    return {
+        "stays_local_when": [
+            "the requested outcome still means the same thing after the improvement",
+            "the proof lane remains narrow enough to prove the change without cross-owner validation",
+            "ownership stays inside the current workspace/planning/memory boundary",
+            "the improvement reduces proven friction rather than creating a new capability branch",
+        ],
+        "changed_task_when": [
+            "the improvement changes what counts as success instead of only changing the means",
+            "proof must broaden into another lane or owner before the change can be trusted",
+            "the work introduces new visible process, routing, tooling, or module responsibility",
+            "the friction signal is being used to justify standalone work that the current slice did not already own",
+        ],
+        "broaden_proof_when": [
+            "the touched surface expands from local code cleanup into shared reporting, planning, or memory state",
+            "the improvement changes a generated or front-door surface that weaker agents may rely on directly",
+            "the concept-friction change alters user-visible routing, startup, or ownership guidance",
+        ],
+        "escalate_when": [
+            "the improvement would rewrite requested ends under a cleanup label",
+            "the change would create a new top-level concept or module to fix the friction",
+            "the available evidence is too weak to distinguish local means improvement from a different task",
+        ],
+    }
 
 
 def _detected_agent_instruction_files(*, target_root: Path) -> tuple[str, ...]:
@@ -2168,8 +2196,27 @@ def _repo_friction_kind_for_path(path: Path) -> str:
     return "code"
 
 
-def _repo_friction_payload(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
-    policy = _improvement_latitude_payload(config.improvement_latitude)
+def _repo_friction_surface_role(relative_path: str) -> str:
+    if relative_path in {
+        "AGENTS.md",
+        "TODO.md",
+        "ROADMAP.md",
+        "llms.txt",
+        "agentic-workspace.toml",
+    }:
+        return "front-door"
+    if relative_path.startswith("docs/execplans/"):
+        return "planning-state"
+    if relative_path.startswith("docs/"):
+        return "canonical-doc"
+    if relative_path.startswith("tools/"):
+        return "generated-maintainer-surface"
+    if relative_path.startswith(".agentic-workspace/"):
+        return "managed-surface"
+    return "repo-surface"
+
+
+def _repo_friction_hotspots(*, target_root: Path) -> list[dict[str, Any]]:
     hotspots: list[dict[str, Any]] = []
     for path in sorted(target_root.rglob("*")):
         if not path.is_file():
@@ -2182,7 +2229,7 @@ def _repo_friction_payload(*, target_root: Path, config: WorkspaceConfig) -> dic
             line_count = sum(1 for _ in path.open("r", encoding="utf-8"))
         except (UnicodeDecodeError, OSError):
             continue
-        if line_count < REPO_FRICTION_LARGE_FILE_THRESHOLD:
+        if line_count < REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD:
             continue
         relative = path.relative_to(target_root).as_posix()
         hotspots.append(
@@ -2190,21 +2237,42 @@ def _repo_friction_payload(*, target_root: Path, config: WorkspaceConfig) -> dic
                 "path": relative,
                 "line_count": line_count,
                 "kind": _repo_friction_kind_for_path(path),
+                "surface_role": _repo_friction_surface_role(relative),
             }
         )
     hotspots.sort(key=lambda item: (-int(item["line_count"]), str(item["path"])))
-    hotspots = hotspots[:REPO_FRICTION_MAX_HOTSPOTS]
+    return hotspots
+
+
+def _repo_friction_payload(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
+    policy = _improvement_latitude_payload(config.improvement_latitude)
+    hotspots = _repo_friction_hotspots(target_root=target_root)
+    large_file_hotspots = [item.copy() for item in hotspots if int(item["line_count"]) >= REPO_FRICTION_LARGE_FILE_THRESHOLD][
+        :REPO_FRICTION_MAX_HOTSPOTS
+    ]
+    concept_hotspots = [item.copy() for item in hotspots if item["kind"] in {"docs", "config"}][:REPO_FRICTION_MAX_HOTSPOTS]
     return {
+        "owner_surface": "workspace",
+        "owner_rule": (
+            "Repo-friction policy and evidence stay workspace-level shared surfaces unless a future "
+            "independent lifecycle justifies a new module."
+        ),
         "policy_mode": config.improvement_latitude,
         "policy_source": config.improvement_latitude_source,
         "initiative_posture": policy["initiative_posture"],
         "rule": policy["reporting_rule"],
         "reporting_destinations": policy["reporting_destinations"],
-        "evidence_classes": ["large_file_hotspots"],
+        "decision_test": _improvement_boundary_test_payload(),
+        "evidence_classes": ["large_file_hotspots", "concept_surface_hotspots"],
         "large_file_hotspots": {
             "threshold_lines": REPO_FRICTION_LARGE_FILE_THRESHOLD,
-            "count": len(hotspots),
-            "items": hotspots,
+            "count": len(large_file_hotspots),
+            "items": large_file_hotspots,
+        },
+        "concept_surface_hotspots": {
+            "threshold_lines": REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD,
+            "count": len(concept_hotspots),
+            "items": concept_hotspots,
         },
     }
 
@@ -3212,9 +3280,13 @@ def _defaults_payload() -> dict[str, Any]:
                 "Repo-owned improvement latitude may widen means to reduce proven repo friction, "
                 "but it must remain subordinate to delegated judgment, proof, and ownership."
             ),
+            "owner_surface": "workspace",
+            "owner_rule": ("Repo-friction policy and evidence remain workspace-level shared surfaces rather than a separate core module."),
             "default_mode": DEFAULT_IMPROVEMENT_LATITUDE,
             "supported_modes": [_improvement_latitude_payload(mode) for mode in SUPPORTED_IMPROVEMENT_LATITUDES],
+            "decision_test": _improvement_boundary_test_payload(),
             "evidence_source": "agentic-workspace report --target ./repo --format json",
+            "evidence_classes": ["large_file_hotspots", "concept_surface_hotspots"],
         },
         "workflow_artifact_adapters": {
             "canonical_doc": "docs/workspace-config-contract.md",
@@ -3594,6 +3666,7 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- doc: {payload['improvement_latitude']['canonical_doc']}")
     print(f"- command: {payload['improvement_latitude']['command']}")
     print(f"- rule: {payload['improvement_latitude']['rule']}")
+    print(f"- owner: {payload['improvement_latitude']['owner_surface']}")
     print(f"- default mode: {payload['improvement_latitude']['default_mode']}")
     for mode in payload["improvement_latitude"]["supported_modes"]:
         print(f"- {mode['mode']}: {mode['summary']}")

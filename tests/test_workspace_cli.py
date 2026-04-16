@@ -264,6 +264,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "workspace.workflow_artifact_profile" in payload["config"]["supported_fields"]
     assert payload["improvement_latitude"]["canonical_doc"] == "docs/workspace-config-contract.md"
     assert payload["improvement_latitude"]["command"] == "agentic-workspace defaults --section improvement_latitude --format json"
+    assert payload["improvement_latitude"]["owner_surface"] == "workspace"
     assert payload["improvement_latitude"]["default_mode"] == "conservative"
     assert payload["improvement_latitude"]["supported_modes"][0]["mode"] == "none"
     assert payload["improvement_latitude"]["supported_modes"][1]["mode"] == "reporting"
@@ -271,6 +272,15 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "review outputs" in payload["improvement_latitude"]["supported_modes"][1]["reporting_destinations"]
     assert payload["improvement_latitude"]["supported_modes"][3]["mode"] == "balanced"
     assert payload["improvement_latitude"]["evidence_source"] == "agentic-workspace report --target ./repo --format json"
+    assert payload["improvement_latitude"]["evidence_classes"] == ["large_file_hotspots", "concept_surface_hotspots"]
+    assert (
+        "the requested outcome still means the same thing after the improvement"
+        in payload["improvement_latitude"]["decision_test"]["stays_local_when"]
+    )
+    assert (
+        "the improvement changes what counts as success instead of only changing the means"
+        in payload["improvement_latitude"]["decision_test"]["changed_task_when"]
+    )
     assert payload["workflow_artifact_adapters"]["canonical_doc"] == "docs/workspace-config-contract.md"
     assert (
         payload["workflow_artifact_adapters"]["command"] == "agentic-workspace defaults --section workflow_artifact_adapters --format json"
@@ -314,6 +324,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Relay:" in text
     assert "strong planner" in text
     assert "Improvement latitude:" in text
+    assert "owner: workspace" in text
     assert "default mode: conservative" in text
     assert "none: Do not perform opportunistic repo-friction reduction" in text
     assert "reporting: Notice and surface notable repo friction" in text
@@ -536,10 +547,16 @@ def test_defaults_section_selector_returns_improvement_latitude_answer(capsys) -
     assert payload["matched"] is True
     assert payload["answer"]["canonical_doc"] == "docs/workspace-config-contract.md"
     assert payload["answer"]["default_mode"] == "conservative"
+    assert payload["answer"]["owner_surface"] == "workspace"
     assert payload["answer"]["supported_modes"][0]["mode"] == "none"
     assert payload["answer"]["supported_modes"][1]["mode"] == "reporting"
     assert payload["answer"]["supported_modes"][1]["initiative_posture"] == "reporting-only"
     assert payload["answer"]["supported_modes"][4]["mode"] == "proactive"
+    assert payload["answer"]["evidence_classes"] == ["large_file_hotspots", "concept_surface_hotspots"]
+    assert (
+        "the improvement changes what counts as success instead of only changing the means"
+        in payload["answer"]["decision_test"]["changed_task_when"]
+    )
     assert "docs/workspace-config-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
@@ -1664,12 +1681,15 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert any(item["surface"] == "TODO.md" for item in payload["discovery"]["planning_candidates"])
     assert any(item["surface"] == "ROADMAP.md" for item in payload["discovery"]["ambiguous"])
     assert payload["repo_friction"]["policy_mode"] == "conservative"
+    assert payload["repo_friction"]["owner_surface"] == "workspace"
     assert payload["repo_friction"]["initiative_posture"] == "local-touched-scope-only"
     assert payload["repo_friction"]["reporting_destinations"] == [
         "agentic-workspace report --target ./repo --format json",
         "TODO.md or the active execplan when repeated friction deserves promotion",
     ]
+    assert payload["repo_friction"]["evidence_classes"] == ["large_file_hotspots", "concept_surface_hotspots"]
     assert payload["repo_friction"]["large_file_hotspots"]["threshold_lines"] == 400
+    assert payload["repo_friction"]["concept_surface_hotspots"]["threshold_lines"] == 200
     assert payload["reports"][0]["module"] == "planning"
     assert payload["config"]["mixed_agent"]["status"] == "reporting-only"
 
@@ -1694,6 +1714,25 @@ def test_report_surfaces_large_file_hotspots_as_repo_friction_evidence(tmp_path:
     assert payload["repo_friction"]["large_file_hotspots"]["items"][0]["path"] == "src/big_module.py"
     assert payload["repo_friction"]["large_file_hotspots"]["items"][0]["line_count"] == 450
     assert payload["repo_friction"]["large_file_hotspots"]["items"][0]["kind"] == "code"
+
+
+def test_report_surfaces_concept_hotspots_as_repo_friction_evidence(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "docs").mkdir()
+    (target / "docs" / "routing-contract.md").write_text(
+        "\n".join(f"line_{index}" for index in range(220)) + "\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["repo_friction"]["concept_surface_hotspots"]["count"] == 1
+    assert payload["repo_friction"]["concept_surface_hotspots"]["items"][0]["path"] == "docs/routing-contract.md"
+    assert payload["repo_friction"]["concept_surface_hotspots"]["items"][0]["kind"] == "docs"
+    assert payload["repo_friction"]["concept_surface_hotspots"]["items"][0]["surface_role"] == "canonical-doc"
 
 
 def test_report_surfaces_reporting_only_repo_friction_posture(tmp_path: Path, capsys) -> None:

@@ -74,6 +74,8 @@ Promotion or escalation is required when:
 - confidence drops below the point where silent continuation is defensible
 - friction reduction would turn a local means improvement into a changed requested end state
 
+Use the machine-readable decision test in `agentic-workspace defaults --section improvement_latitude --format json` when a cheaper agent should not have to infer that boundary from prose alone.
+
 The safe pattern is:
 
 - improve means locally

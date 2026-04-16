@@ -48,6 +48,7 @@ recommended_upgrade_after_days = 30
 - If `workspace.agent_instructions_file` is omitted, the workspace defaults to `AGENTS.md` and may conservatively autodetect one existing supported startup file in the target repo.
 - `workspace.workflow_artifact_profile` tells the workspace which native runtime artifacts may exist before the repo-owned planning surfaces must be updated.
 - `workspace.improvement_latitude` sets how much bounded repo-friction initiative is welcome by default when the repo already has evidence that a local hotspot is expensive to keep extending.
+- Improvement-latitude policy and repo-friction evidence stay workspace-level shared surfaces; they should not become a third core module unless a future independent lifecycle clearly justifies it.
 - `repo-owned` means do not rely on native runtime artifacts at all; keep durable state directly in `TODO.md` and `docs/execplans/`.
 - `gemini` allows Gemini-style files such as `implementation_plan.md`, `task.md`, or `walkthrough.md` as local execution aids, but durable cross-agent state must still be mirrored back into `TODO.md` and `docs/execplans/` before review, handoff, or session end.
 - `none` means do not perform opportunistic repo-friction reduction outside the explicitly requested work.
@@ -56,6 +57,7 @@ recommended_upgrade_after_days = 30
 - `balanced` means one evidence-backed hotspot may justify bounded cleanup when proof and ownership stay inside the current lane.
 - `proactive` means small standalone cleanup slices are allowed when evidence is explicit and the work still stays bounded by delegated judgment, proof, and ownership.
 - `reporting` findings belong in derived report output, review output, or planning residue that already exists for the current slice; they must not create active work on their own.
+- Use `agentic-workspace defaults --section improvement_latitude --format json` to inspect the shipped decision test for when friction reduction still counts as local means versus a changed task.
 - When `agentic-workspace.toml` is absent, product defaults remain authoritative and the config report should say so rather than implying a live repo policy.
 - Update policy is module-specific in v1; there is no separate public module upgrade entrypoint.
 - Normal update execution stays behind `agentic-workspace`.
