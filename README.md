@@ -1,6 +1,8 @@
 # agentic-workspace
 
-Agentic Workspace gives a repository a durable, checked-in operating system for agents.
+Agentic Workspace gives a repository a durable, checked-in operating layer for agents.
+
+It is intentionally quiet, repo-native, and user-light. The public shape should stay smaller than the internals behind it.
 
 It is built around two complementary products:
 
@@ -29,6 +31,12 @@ What it adds:
 - selective adoption: either module alone or both together
 - an improvement loop that turns recurring friction into better contracts, docs, checks, and workflows
 
+## Product posture
+
+Agentic Workspace is primarily a quiet repo-native capability layer, not a framework the user has to operate continuously.
+
+The default should be compact surfaces, background continuity, and selective retrieval. If a user-facing surface becomes visibly heavy, it should justify that visibility or move into a quieter contract.
+
 ## Default path
 
 1. Express the outcome once with `--preset`:
@@ -46,6 +54,14 @@ uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-wor
 ```
 
 If you only want one module, switch `--preset full` to `--preset memory` or `--preset planning`.
+
+## Lightweight operational profile
+
+The smallest useful profile is `memory`.
+
+Use it when a repo mainly needs durable knowledge, compact routing, and a quiet adoption path without checked-in active execution state.
+
+Add `planning` only when the repo needs restartable active work. Use `full` when both durable knowledge and active execution matter enough to justify the extra surface area.
 
 If you use `pipx` instead of `uvx`, keep the same command shape:
 

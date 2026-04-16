@@ -130,6 +130,8 @@ It should not:
 - create unnecessary visible ceremony
 - encourage people to maintain the system for its own sake
 
+Visible machinery should justify its visibility. If a surface can move into reporting, routing, or background structure without losing safety or clarity, prefer the quieter shape.
+
 ### 8. Improve the repository, not just the agent experience
 
 If the system repeatedly captures the same workaround, warning, or procedural note, that should be pressure to improve the repo itself.
