@@ -21,6 +21,7 @@ Classify each signal into exactly one primary bucket first:
 
 ## Capture Rules
 
+- If the signal is about ordinary daily use, feature choice, or repeated surface pull, record it in `docs/dogfooding-usage-ledger.md` first and then route any repeated pattern onward.
 - If the signal changes active execution, route it into `TODO.md` or an execplan.
 - If it is a future candidate, record it in `ROADMAP.md` with a promotion signal.
 - If it is durable operating knowledge, capture it in memory or canonical docs.
@@ -48,3 +49,7 @@ Classify each signal into exactly one primary bucket first:
 When recording friction, answer this sentence once:
 
 `This is primarily a <category> because ...`
+
+For daily-use usage entries, add one more sentence:
+
+`I chose <surface> over <skipped surface> because ...`
