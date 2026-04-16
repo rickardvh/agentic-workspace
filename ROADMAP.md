@@ -17,16 +17,17 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - No active handoff right now.
 ## GitHub Issue Intake
 
-- Latest intake tranche: GitHub issues `#92` through `#95`.
+- Latest intake tranche: GitHub issues `#109` through `#120`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The broader multi-runtime and lifecycle-extraction ideas in `contract-tooling-roadmap.md` are not yet promoted beyond this first bounded tranche.
+- The simplification tranche is now the top-priority queue.
 
 ## Next Candidate Queue
-- `#92` Declarative contract boundary and Python-owned behavior inventory; promote when the first contract-tooling tranche is selected and the repo is ready to classify current proof/report/selector/lifecycle behavior before extracting any schemas.
-- `#93` Shared schemas for proof, report, and selector contracts; promote after `#92` lands and the boundary note shows a stable declarative subset ready for versioned schemas.
-- `#94` Manifest-backed extraction for proof, report, and selector metadata; promote when `#92` and `#93` have made the contract stable enough that Python can consume checked-in metadata without changing user-visible behavior.
-- `#95` Schema and manifest validation for contract-backed surfaces; promote when shared schemas or manifests exist and drift checks can fail fast without widening adopter/runtime requirements.
+- `#112/#111` Add a hard surface-growth rule and run one consolidation pass so new contract surfaces replace, merge, or materially simplify older paths; promote when the repo is ready to enforce product compression and classify user-facing, maintainer-facing, and support-only surfaces in one bounded review.
+- `#117/#113/#110` Reassert the product as a quiet repo-native capability layer, clarify framework-versus-utility positioning, and define a deliberately lightweight operational profile; promote when the front door needs a concrete positioning decision and a smallest useful profile distinct from the full framework path.
+- `#120/#115/#116/#114` Add a local dogfooding usage ledger, audit ordinary-use surface pull, add outsider-legibility, and counter self-hosting bias; promote when the review lane can measure daily pull, outsider friction, and low-signal feature choices in one bounded pass.
+- `#118/#119` Guard against agent-constraining opinionation while preserving higher-level convergence context across bounded slices; promote when the repo needs a stronger bias toward bounded guidance without losing cross-slice intent continuity.
+- `#109` Review and reduce orchestration-layer code concentration so the product contract is easier to evolve safely; promote when a focused architecture pass can extract or separate one overloaded seam without changing behavior.
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.
