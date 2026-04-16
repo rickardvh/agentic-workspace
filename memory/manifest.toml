@@ -156,6 +156,31 @@ routes_from = ["packages/memory/**", "packages/memory/README.md"]
 stale_when = ["packages/memory/**"]
 memory_role = "durable_truth"
 
+[notes."memory/domains/vague-prompt-domain-understanding.md"]
+note_type = "domain"
+canonical_home = "memory/domains/vague-prompt-domain-understanding.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system", "planning", "routing"]
+surfaces = ["decision", "routing"]
+routes_from = [
+  "docs/intent-contract.md",
+  "docs/default-path-contract.md",
+  "docs/reporting-contract.md",
+  "docs/delegated-judgment-contract.md",
+  "src/agentic_workspace/cli.py",
+]
+stale_when = [
+  "docs/intent-contract.md",
+  "docs/default-path-contract.md",
+  "docs/reporting-contract.md",
+  "docs/delegated-judgment-contract.md",
+  "src/agentic_workspace/cli.py",
+]
+memory_role = "durable_truth"
+
 [notes."memory/domains/planning-package-context.md"]
 note_type = "domain"
 canonical_home = "memory/domains/planning-package-context.md"
@@ -215,6 +240,36 @@ surfaces = ["review", "architecture"]
 routes_from = ["memory/runbooks/dogfooding-feedback-routing.md", "docs/lazy-discovery-measurements.md"]
 stale_when = ["memory/runbooks/dogfooding-feedback-routing.md", "docs/lazy-discovery-measurements.md"]
 memory_role = "durable_truth"
+
+[notes."memory/runbooks/vague-instruction-failure-capture.md"]
+note_type = "runbook"
+canonical_home = "memory/runbooks/vague-instruction-failure-capture.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system", "planning", "routing"]
+surfaces = ["review", "routing"]
+routes_from = [
+  "docs/intent-contract.md",
+  "docs/default-path-contract.md",
+  "docs/reporting-contract.md",
+  "docs/delegated-judgment-contract.md",
+  "memory/runbooks/dogfooding-usage-ledger.md",
+]
+stale_when = [
+  "docs/intent-contract.md",
+  "docs/default-path-contract.md",
+  "docs/reporting-contract.md",
+  "docs/delegated-judgment-contract.md",
+  "memory/runbooks/dogfooding-usage-ledger.md",
+]
+memory_role = "improvement_signal"
+symptom_of = "guidance_drift"
+preferred_remediation = "docs"
+improvement_candidate = true
+improvement_note = "If repeated vague prompts keep requiring the same clarification, capture the missing domain knowledge or promote it into canonical docs."
+elimination_target = "promote"
 
 [notes."memory/decisions/installed-system-consolidation-2026-04-05.md"]
 note_type = "decision"

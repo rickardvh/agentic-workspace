@@ -10,6 +10,58 @@ Use it when the question is not "what happened after completion?" but "what did 
 - Make active work cheaper to resume across sessions and agents.
 - Keep the first machine-readable contract derived from the existing execplan shape instead of introducing a second plan schema.
 
+## Front-Door Intent Surface
+
+Use:
+
+```bash
+agentic-workspace defaults --section intent --format json
+```
+
+That selector carries the compact front-door intent split:
+
+- `confirmed_intent`: the human-owned request before workspace normalization
+- `interpreted_intent`: the workspace-normalized request carried forward by lifecycle commands
+
+Use it when the question is what the human asked for and how the workspace normalized it.
+
+## Cheap Clarification Surface
+
+Use:
+
+```bash
+agentic-workspace defaults --section clarification --format json
+```
+
+That selector captures the smallest repo-context question needed to remove vague-prompt ambiguity.
+
+Use it when the task is vague but the repo context can cheaply disambiguate it without widening the request.
+
+## Prompt Routing Surface
+
+Use:
+
+```bash
+agentic-workspace defaults --section prompt_routing --format json
+```
+
+That selector maps vague prompt classes to a likely proof lane and owner surface.
+Each `proof_lane` should name an executable proof or validation route id, and cross-cutting cases may add `broaden_with` follow-on lanes instead of inventing combined route names.
+
+Use it when the main missing judgment is which contract lane or owner should absorb the work.
+
+## Relay Surface
+
+Use:
+
+```bash
+agentic-workspace defaults --section relay --format json
+```
+
+That selector records the strong-planner / cheap-implementer relay and the routed-Memory bridge.
+
+Use it when the prompt is already being shaped into a compact contract and the question is how the handoff should proceed.
+
 ## Canonical Surface
 
 Use:

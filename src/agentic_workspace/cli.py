@@ -2098,18 +2098,187 @@ def _active_todo_surface(*, target_root: Path) -> str | None:
     return None
 
 
-def _bootstrap_intent_payload(*, selected_modules: list[str], resolved_preset: str | None) -> dict[str, str]:
+def _bootstrap_intent_payload(*, selected_modules: list[str], resolved_preset: str | None) -> dict[str, Any]:
     if resolved_preset == "memory":
-        return {"key": "memory", "summary": "set up this repo for Agentic Memory"}
-    if resolved_preset == "planning":
-        return {"key": "planning", "summary": "set up this repo for Agentic Planning"}
-    if resolved_preset == "full":
-        return {"key": "full", "summary": "set up this repo for both Planning and Memory"}
-    if selected_modules == ["memory"]:
-        return {"key": "memory", "summary": "set up this repo for Agentic Memory"}
-    if selected_modules == ["planning"]:
-        return {"key": "planning", "summary": "set up this repo for Agentic Planning"}
-    return {"key": "custom", "summary": f"set up this repo for: {', '.join(selected_modules)}"}
+        key = "memory"
+        summary = "set up this repo for Agentic Memory"
+        confirmed_source = "resolved preset: memory"
+    elif resolved_preset == "planning":
+        key = "planning"
+        summary = "set up this repo for Agentic Planning"
+        confirmed_source = "resolved preset: planning"
+    elif resolved_preset == "full":
+        key = "full"
+        summary = "set up this repo for both Planning and Memory"
+        confirmed_source = "resolved preset: full"
+    elif selected_modules == ["memory"]:
+        key = "memory"
+        summary = "set up this repo for Agentic Memory"
+        confirmed_source = "selected modules: memory"
+    elif selected_modules == ["planning"]:
+        key = "planning"
+        summary = "set up this repo for Agentic Planning"
+        confirmed_source = "selected modules: planning"
+    else:
+        key = "custom"
+        summary = f"set up this repo for: {', '.join(selected_modules)}"
+        confirmed_source = f"selected modules: {', '.join(selected_modules)}"
+    return {
+        "key": key,
+        "summary": summary,
+        "confirmed_intent": {
+            "key": key,
+            "summary": summary,
+            "source": confirmed_source,
+        },
+        "interpreted_intent": {
+            "key": key,
+            "summary": summary,
+            "source": "workspace-normalized lifecycle intent",
+        },
+    }
+
+
+def _intent_contract_payload() -> dict[str, Any]:
+    return {
+        "canonical_doc": "docs/intent-contract.md",
+        "command": "agentic-workspace defaults --section intent --format json",
+        "rule": "Confirmed intent stays human-owned; interpreted intent must remain visibly inferred.",
+        "confirmed_intent": {
+            "summary": "the human-owned request before workspace normalization",
+            "source": "user request or explicit lifecycle directive",
+        },
+        "interpreted_intent": {
+            "summary": "the workspace-normalized request carried forward by lifecycle commands",
+            "source": "workspace normalization",
+        },
+        "escalate_when": [
+            "the interpreted intent changes the requested outcome",
+            "the interpreted intent widens the owned surface or time horizon",
+            "the compact selector can no longer carry the user-end safely",
+        ],
+    }
+
+
+def _clarification_contract_payload() -> dict[str, Any]:
+    return {
+        "canonical_doc": "docs/intent-contract.md",
+        "command": "agentic-workspace defaults --section clarification --format json",
+        "rule": "When a prompt is vague, ask the smallest repo-context question that removes the ambiguity.",
+        "mode": "minimal-interruption",
+        "repo_context": [
+            "Use TODO.md or the active execplan when the prompt seems planning-shaped.",
+            "Use report before broad file reads when the prompt may touch several workspace surfaces.",
+            "Use ownership when the target surface or owner is unclear.",
+        ],
+        "first_questions": [
+            "Which surface should change?",
+            "What proof would make the change safe?",
+            "Does the work belong in planning, memory, or workspace-level docs?",
+        ],
+        "fallback": [
+            "Use the intent selector first, then clarification, report, and ownership/proof selectors as needed.",
+            "Stop or escalate when answering the question would rewrite the requested end state.",
+        ],
+        "examples": [
+            "vague task request",
+            "missing target surface",
+            "unclear proof boundary",
+        ],
+    }
+
+
+def _prompt_routing_contract_payload() -> dict[str, Any]:
+    return {
+        "canonical_doc": "docs/intent-contract.md",
+        "command": "agentic-workspace defaults --section prompt_routing --format json",
+        "rule": "Map vague prompt classes to a proof lane and an owner before widening the task.",
+        "route_by_class": [
+            {
+                "class": "workspace lifecycle change",
+                "proof_lane": "workspace_cli",
+                "owner_surface": "src/agentic_workspace/cli.py",
+            },
+            {
+                "class": "planning state or contract change",
+                "proof_lane": "planning_surfaces",
+                "owner_surface": "docs/execplans/ or TODO.md",
+            },
+            {
+                "class": "durable repo knowledge change",
+                "proof_lane": "memory_payload",
+                "owner_surface": "memory/",
+            },
+            {
+                "class": "cross-cutting workspace contract",
+                "proof_lane": "workspace_cli",
+                "broaden_with": ["planning_surfaces"],
+                "owner_surface": "docs/design-principles.md",
+            },
+        ],
+        "proof_inference": [
+            "Use workspace_cli when the prompt changes the front-door workspace surface.",
+            "Use planning_surfaces when the prompt changes TODO.md, ROADMAP.md, or execplans.",
+            "Use memory_payload when the prompt changes durable repo knowledge or routing notes.",
+        ],
+        "owner_inference": [
+            "TODO.md or an active execplan implies planning ownership.",
+            "memory/index.md or a runbook implies memory ownership.",
+            "workspace lifecycle defaults or routing docs imply workspace ownership.",
+        ],
+        "escalate_when": [
+            "the proof lane is still unclear after one repo-context clarification",
+            "the owner inference would change the requested outcome",
+            "the prompt spans multiple owners and no narrow lane is enough",
+        ],
+    }
+
+
+def _relay_contract_payload() -> dict[str, Any]:
+    return {
+        "canonical_doc": "docs/delegated-judgment-contract.md",
+        "command": "agentic-workspace defaults --section relay --format json",
+        "rule": "Use a strong planner to normalize the vague prompt, then hand the compact contract to a cheap implementer.",
+        "planner_role": {
+            "summary": "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract.",
+            "does": [
+                "clarify the request with the smallest repo-context follow-up",
+                "choose the narrow proof lane and owner surface",
+                "preserve escalation boundaries before the handoff freezes",
+            ],
+        },
+        "implementer_role": {
+            "summary": "execute the narrow contract without widening the requested end state.",
+            "does": [
+                "follow the compact interpreted contract",
+                "stop or escalate when the scope expands",
+                "mirror durable follow-through into checked-in surfaces",
+            ],
+        },
+        "memory_bridge": {
+            "summary": "when routed Memory is installed, borrow durable repo understanding before freezing the compact contract.",
+            "borrow_from": [
+                "memory/index.md",
+                "memory/current/",
+                "memory/runbooks/",
+            ],
+            "fallback": [
+                "continue from checked-in docs when routed Memory is absent",
+                "route missing durable context back into Memory when the work reveals repeated gaps",
+            ],
+        },
+        "hand_off_order": [
+            "intent",
+            "clarification",
+            "prompt_routing",
+            "relay",
+        ],
+        "escalate_when": [
+            "the planner would need to rewrite the requested outcome",
+            "the cheap implementer would need broad repo rereads to stay safe",
+            "the routed Memory bridge is absent and the missing context is blocking",
+        ],
+    }
 
 
 def _run_prompt_command(
@@ -2329,11 +2498,9 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
     workflow_artifact_profile = _workflow_artifact_profile_payload(
         str(summary.get("workflow_artifact_profile", DEFAULT_WORKFLOW_ARTIFACT_PROFILE))
     )
+    intent_payload = summary.get("intent")
     lines = [
         f"Finish the Agentic Workspace bootstrap in {summary['target']}.",
-        "",
-        "User intent:",
-        f"- {summary['intent']['summary']}",
         "",
         "Repo state:",
         f"- {summary['repo_state']}",
@@ -2347,6 +2514,18 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
         "Selected modules:",
     ]
     lines.extend(f"- {module_name}" for module_name in summary["modules"])
+    if isinstance(intent_payload, dict):
+        confirmed_intent = intent_payload.get("confirmed_intent")
+        interpreted_intent = intent_payload.get("interpreted_intent")
+        if isinstance(confirmed_intent, dict) and isinstance(interpreted_intent, dict):
+            lines.extend(
+                [
+                    "",
+                    "Intent:",
+                    f"- confirmed: {confirmed_intent.get('summary', intent_payload.get('summary', ''))}",
+                    f"- interpreted: {interpreted_intent.get('summary', intent_payload.get('summary', ''))}",
+                ]
+            )
     config_payload = summary.get("config")
     if isinstance(config_payload, dict) and config_payload.get("exists"):
         lines.extend(
@@ -2525,6 +2704,19 @@ def _build_lifecycle_handoff_prompt(payload: dict[str, Any]) -> str:
     review_items = []
     for heading in ("updated_managed", "preserved_existing", "needs_review", "warnings"):
         review_items.extend(payload.get(heading, []))
+    intent_payload = payload.get("intent")
+    if isinstance(intent_payload, dict):
+        confirmed_intent = intent_payload.get("confirmed_intent")
+        interpreted_intent = intent_payload.get("interpreted_intent")
+        if isinstance(confirmed_intent, dict) and isinstance(interpreted_intent, dict):
+            lines.extend(
+                [
+                    "",
+                    "Intent:",
+                    f"- confirmed: {confirmed_intent.get('summary', intent_payload.get('summary', ''))}",
+                    f"- interpreted: {interpreted_intent.get('summary', intent_payload.get('summary', ''))}",
+                ]
+            )
     if review_items:
         lines.extend(["", "Review before applying:"])
         lines.extend(f"- {item}" for item in review_items)
@@ -2759,6 +2951,10 @@ def _defaults_payload() -> dict[str, Any]:
                 "Do not turn setup into generic analysis.",
             ],
         },
+        "intent": _intent_contract_payload(),
+        "clarification": _clarification_contract_payload(),
+        "prompt_routing": _prompt_routing_contract_payload(),
+        "relay": _relay_contract_payload(),
         "config": {
             "path": "agentic-workspace.toml",
             "command": "agentic-workspace config --target ./repo --format json",
@@ -3121,6 +3317,36 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- phase: {payload['setup']['phase']}")
     for step in payload["setup"]["scope"]:
         print(f"- scope: {step}")
+    print("Intent:")
+    print(f"- doc: {payload['intent']['canonical_doc']}")
+    print(f"- command: {payload['intent']['command']}")
+    print(f"- rule: {payload['intent']['rule']}")
+    print(f"- confirmed: {payload['intent']['confirmed_intent']['summary']}")
+    print(f"- interpreted: {payload['intent']['interpreted_intent']['summary']}")
+    print("Clarification:")
+    print(f"- doc: {payload['clarification']['canonical_doc']}")
+    print(f"- command: {payload['clarification']['command']}")
+    print(f"- rule: {payload['clarification']['rule']}")
+    print(f"- mode: {payload['clarification']['mode']}")
+    for step in payload["clarification"]["repo_context"]:
+        print(f"- repo context: {step}")
+    print("Prompt routing:")
+    print(f"- doc: {payload['prompt_routing']['canonical_doc']}")
+    print(f"- command: {payload['prompt_routing']['command']}")
+    print(f"- rule: {payload['prompt_routing']['rule']}")
+    for route in payload["prompt_routing"]["route_by_class"]:
+        route_text = route["proof_lane"]
+        broaden_with = route.get("broaden_with")
+        if isinstance(broaden_with, list) and broaden_with:
+            route_text = f"{route_text} (broaden with {', '.join(broaden_with)})"
+        print(f"- {route['class']}: {route_text} -> {route['owner_surface']}")
+    print("Relay:")
+    print(f"- doc: {payload['relay']['canonical_doc']}")
+    print(f"- command: {payload['relay']['command']}")
+    print(f"- rule: {payload['relay']['rule']}")
+    print(f"- planner: {payload['relay']['planner_role']['summary']}")
+    print(f"- implementer: {payload['relay']['implementer_role']['summary']}")
+    print(f"- memory bridge: {payload['relay']['memory_bridge']['summary']}")
     print("Compact contract profile:")
     print(f"- doc: {payload['compact_contract_profile']['canonical_doc']}")
     print(f"- rule: {payload['compact_contract_profile']['rule']}")

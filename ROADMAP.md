@@ -18,12 +18,13 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 ## GitHub Issue Intake
 
 - Latest intake tranche: GitHub issues `#109` through `#120`.
+- Earlier open planning issues `none` remain available for the next tranche.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 - The simplification tranche is complete.
 
 ## Next Candidate Queue
-No active candidate queue right now.
+- No active candidate queue right now.
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.

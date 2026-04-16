@@ -20,6 +20,7 @@ Use it when you want the repo to make delegation preference queryable without tu
 ## Canonical Shape
 
 Use `agentic-workspace defaults --section delegation_posture --format json` for the machine-readable contract surface.
+Use `agentic-workspace defaults --section relay --format json` when the question is how a strong planner hands the compact contract to a cheap implementer, especially when routed Memory should supply durable context first.
 
 ```json
 {
