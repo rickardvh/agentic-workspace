@@ -2,6 +2,7 @@ schema_version = 1
 
 [workspace]
 default_preset = "full"
+improvement_latitude = "proactive"
 
 [update.modules.planning]
 source_type = "git"

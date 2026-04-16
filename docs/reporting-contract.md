@@ -33,6 +33,7 @@ The surrounding report payload keeps these fields separate:
 - `findings`
 - `next_action`
 - `discovery`
+- `repo_friction`
 - `registry`
 - `config`
 - `reports`
@@ -67,6 +68,7 @@ Use the machine-readable report as the default combined-state inspection path wh
 - what modules are installed?
 - what is the combined workspace health?
 - what mixed-agent posture is in effect?
+- what explicit repo-friction hotspots exist right now?
 - what should happen next?
 - what existing repo surfaces look like durable Memory or Planning seed candidates?
 - what findings or warnings need attention?
@@ -75,6 +77,7 @@ Use `agentic-workspace defaults --section intent --format json` when the questio
 Use `agentic-workspace defaults --section clarification --format json` when the question is how to ask the smallest useful follow-up.
 Use `agentic-workspace defaults --section prompt_routing --format json` when the question is which proof lane or owner should absorb a vague prompt.
 Use `agentic-workspace defaults --section relay --format json` when the question is how a strong planner should hand a compact contract to a cheap implementer.
+Use `agentic-workspace defaults --section improvement_latitude --format json` when the question is how much evidence-backed repo-friction reduction is welcome by default.
 
 If the report already answers the question, stop there.
 Only open raw module files or broader docs when the report points you to a follow-on surface or when the missing judgment is semantic rather than operational.
@@ -84,6 +87,7 @@ Only open raw module files or broader docs when the report points you to a follo
 - Do not treat the report as a second state store.
 - Do not require raw module files before the report when the report already answers the question.
 - Keep findings, warnings, and next-action guidance separate.
+- Keep repo-friction evidence derived and queryable instead of turning it into a second editable state store.
 - Keep module reports compact and derived.
 - Keep concern-shaped subobjects narrow enough that one question does not force unrelated contract domains to load.
 - Keep discovery read-only until a setup promotion explicitly decides to seed.

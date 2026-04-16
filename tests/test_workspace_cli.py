@@ -260,7 +260,13 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["config"]["path"] == "agentic-workspace.toml"
     assert payload["config"]["command"] == "agentic-workspace config --target ./repo --format json"
     assert "workspace.default_preset" in payload["config"]["supported_fields"]
+    assert "workspace.improvement_latitude" in payload["config"]["supported_fields"]
     assert "workspace.workflow_artifact_profile" in payload["config"]["supported_fields"]
+    assert payload["improvement_latitude"]["canonical_doc"] == "docs/workspace-config-contract.md"
+    assert payload["improvement_latitude"]["command"] == "agentic-workspace defaults --section improvement_latitude --format json"
+    assert payload["improvement_latitude"]["default_mode"] == "conservative"
+    assert payload["improvement_latitude"]["supported_modes"][1]["mode"] == "balanced"
+    assert payload["improvement_latitude"]["evidence_source"] == "agentic-workspace report --target ./repo --format json"
     assert payload["workflow_artifact_adapters"]["canonical_doc"] == "docs/workspace-config-contract.md"
     assert (
         payload["workflow_artifact_adapters"]["command"] == "agentic-workspace defaults --section workflow_artifact_adapters --format json"
@@ -303,6 +309,8 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Prompt routing:" in text
     assert "Relay:" in text
     assert "strong planner" in text
+    assert "Improvement latitude:" in text
+    assert "default mode: conservative" in text
     assert "Delegation posture:" in text
     assert "docs/delegation-posture-contract.md" in text
     assert "Compact contract profile:" in text
@@ -370,6 +378,8 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["workspace"]["agent_instructions_file_source"] == "product-default"
     assert payload["workspace"]["workflow_artifact_profile"] == "repo-owned"
     assert payload["workspace"]["workflow_artifact_profile_source"] == "product-default"
+    assert payload["workspace"]["improvement_latitude"] == "conservative"
+    assert payload["workspace"]["improvement_latitude_source"] == "product-default"
     assert payload["workspace"]["workflow_artifact_adapter"]["canonical_surfaces"] == ["TODO.md", "docs/execplans/"]
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
@@ -493,6 +503,22 @@ def test_defaults_section_selector_returns_relay_answer(capsys) -> None:
         "when routed Memory is installed, borrow durable repo understanding before freezing the compact contract."
     )
     assert "docs/delegated-judgment-contract.md" in payload["refs"]
+    assert "agentic-workspace defaults --format json" in payload["refs"]
+
+
+def test_defaults_section_selector_returns_improvement_latitude_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "improvement_latitude", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "improvement_latitude"}
+    assert payload["matched"] is True
+    assert payload["answer"]["canonical_doc"] == "docs/workspace-config-contract.md"
+    assert payload["answer"]["default_mode"] == "conservative"
+    assert payload["answer"]["supported_modes"][0]["mode"] == "conservative"
+    assert payload["answer"]["supported_modes"][2]["mode"] == "proactive"
+    assert "docs/workspace-config-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
@@ -747,7 +773,8 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
         "[workspace]\n"
         'default_preset = "planning"\n'
         'agent_instructions_file = "GEMINI.md"\n'
-        'workflow_artifact_profile = "gemini"\n\n'
+        'workflow_artifact_profile = "gemini"\n'
+        'improvement_latitude = "balanced"\n\n'
         "[update.modules.planning]\n"
         'source_type = "git"\n'
         'source_ref = "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"\n'
@@ -765,6 +792,8 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
     assert payload["workspace"]["agent_instructions_file_source"] == "repo-config"
     assert payload["workspace"]["workflow_artifact_profile"] == "gemini"
     assert payload["workspace"]["workflow_artifact_profile_source"] == "repo-config"
+    assert payload["workspace"]["improvement_latitude"] == "balanced"
+    assert payload["workspace"]["improvement_latitude_source"] == "repo-config"
     assert payload["workspace"]["workflow_artifact_adapter"]["native_artifacts"] == [
         "implementation_plan.md",
         "task.md",
@@ -1595,6 +1624,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["schema"]["schema_version"] == "workspace-reporting-schema/v1"
     assert payload["schema"]["command"] == "agentic-workspace report --target ./repo --format json"
     assert "discovery" in payload["schema"]["shared_fields"]
+    assert "repo_friction" in payload["schema"]["shared_fields"]
     assert payload["selected_modules"] == ["planning", "memory"]
     assert payload["installed_modules"] == ["planning", "memory"]
     assert payload["health"] == "healthy"
@@ -1611,8 +1641,31 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     )
     assert any(item["surface"] == "TODO.md" for item in payload["discovery"]["planning_candidates"])
     assert any(item["surface"] == "ROADMAP.md" for item in payload["discovery"]["ambiguous"])
+    assert payload["repo_friction"]["policy_mode"] == "conservative"
+    assert payload["repo_friction"]["large_file_hotspots"]["threshold_lines"] == 400
     assert payload["reports"][0]["module"] == "planning"
     assert payload["config"]["mixed_agent"]["status"] == "reporting-only"
+
+
+def test_report_surfaces_large_file_hotspots_as_repo_friction_evidence(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "agentic-workspace.toml").write_text(
+        'schema_version = 1\n\n[workspace]\nimprovement_latitude = "balanced"\n',
+        encoding="utf-8",
+    )
+    (target / "src").mkdir()
+    (target / "src" / "big_module.py").write_text("\n".join(f"line_{index}" for index in range(450)) + "\n", encoding="utf-8")
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["repo_friction"]["policy_mode"] == "balanced"
+    assert payload["repo_friction"]["large_file_hotspots"]["count"] == 1
+    assert payload["repo_friction"]["large_file_hotspots"]["items"][0]["path"] == "src/big_module.py"
+    assert payload["repo_friction"]["large_file_hotspots"]["items"][0]["line_count"] == 450
+    assert payload["repo_friction"]["large_file_hotspots"]["items"][0]["kind"] == "code"
 
 
 def test_status_real_init_reports_workspace_health(tmp_path: Path, capsys) -> None:

@@ -24,6 +24,7 @@ schema_version = 1
 default_preset = "full" # memory | planning | full
 agent_instructions_file = "AGENTS.md" # AGENTS.md | GEMINI.md
 workflow_artifact_profile = "repo-owned" # repo-owned | gemini
+improvement_latitude = "conservative" # conservative | balanced | proactive
 
 [update.modules.planning]
 source_type = "git" # git | local
@@ -46,8 +47,12 @@ recommended_upgrade_after_days = 30
 - `workspace.agent_instructions_file` sets the canonical root startup-entrypoint filename for workspace lifecycle surfaces.
 - If `workspace.agent_instructions_file` is omitted, the workspace defaults to `AGENTS.md` and may conservatively autodetect one existing supported startup file in the target repo.
 - `workspace.workflow_artifact_profile` tells the workspace which native runtime artifacts may exist before the repo-owned planning surfaces must be updated.
+- `workspace.improvement_latitude` sets how much bounded repo-friction reduction is welcome by default when the repo already has evidence that a local hotspot is expensive to keep extending.
 - `repo-owned` means do not rely on native runtime artifacts at all; keep durable state directly in `TODO.md` and `docs/execplans/`.
 - `gemini` allows Gemini-style files such as `implementation_plan.md`, `task.md`, or `walkthrough.md` as local execution aids, but durable cross-agent state must still be mirrored back into `TODO.md` and `docs/execplans/` before review, handoff, or session end.
+- `conservative` means reduce friction only inside already-touched scope unless the work is explicitly promoted.
+- `balanced` means one evidence-backed hotspot may justify bounded cleanup when proof and ownership stay inside the current lane.
+- `proactive` means small standalone cleanup slices are allowed when evidence is explicit and the work still stays bounded by delegated judgment, proof, and ownership.
 - When `agentic-workspace.toml` is absent, product defaults remain authoritative and the config report should say so rather than implying a live repo policy.
 - Update policy is module-specific in v1; there is no separate public module upgrade entrypoint.
 - Normal update execution stays behind `agentic-workspace`.
@@ -58,6 +63,7 @@ recommended_upgrade_after_days = 30
 Future config expansion should stay narrow.
 
 - Repo-owned checked-in config should continue to own only stable repo policy that deserves review and portability.
+- Improvement latitude belongs here as repo policy because it states what bounded initiative is welcome, not how the agent must reason or delegate internally.
 - The main motivation for any mixed-agent extension is lower long-run token cost plus smoother switching across subscriptions, agent tools, and future local models.
 - Runtime model choice, internal delegation strategy, and reasoning-depth selection should remain tool-owned unless a future surface can express them as capability-oriented hints without turning the repo into a scheduler.
 - The product should prefer task/runtime inference first, config second, and explicit prompting last.
@@ -118,6 +124,7 @@ That surface reports:
 - whether repo policy is currently authoritative or defaults-only
 - the resolved default preset
 - the resolved canonical startup-entrypoint filename plus whether it came from repo config, autodetection, product defaults, or an explicit CLI override
+- the effective improvement-latitude mode plus whether it came from repo config or product defaults
 - the effective per-module update policy
 - whether each module's `UPGRADE-SOURCE.toml` metadata matches the resolved policy
 - the current mixed-agent reporting boundary: repo-policy source, reserved local-override status, and the fact that runtime orchestration remains tool-owned
@@ -132,6 +139,7 @@ If mixed-agent policy grows beyond the v1 surface, effective reporting should al
 - what is inferred from the current runtime or task shape
 
 Use `agentic-workspace defaults --section delegation_posture --format json` to see how the current config and local override resolve into the current delegation posture.
+Use `agentic-workspace defaults --section improvement_latitude --format json` to inspect the bounded initiative modes and their interaction with repo-friction evidence.
 
 When runtime inference materially changes behavior, reporting should make that inference auditable rather than hidden.
 

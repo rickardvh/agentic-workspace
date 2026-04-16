@@ -45,6 +45,7 @@ Use this page when you need the fuller route contract after the compact map poin
 | Where is the bounded post-bootstrap setup contract? | [`docs/jumpstart-contract.md`](docs/jumpstart-contract.md) and `agentic-workspace setup --target ./repo --format json` | Treating setup as a wider `init` path or a repo-local checklist |
 | Where is the proof-selection contract? | `agentic-workspace defaults --section proof_selection --format json` and [`docs/proof-surfaces-contract.md`](docs/proof-surfaces-contract.md) | Mining prose for the narrowest proof lane first |
 | Where is the delegation posture contract? | [`docs/delegation-posture-contract.md`](docs/delegation-posture-contract.md) and `agentic-workspace defaults --section delegation_posture --format json` | Treating config as a scheduler or ignoring the effective mixed-agent posture |
+| Where is the bounded repo-friction initiative contract? | `agentic-workspace defaults --section improvement_latitude --format json` plus `agentic-workspace report --target ./repo --format json` | Treating one hotspot as blanket permission for broad cleanup or inventing a second policy surface |
 | Where should I point an external agent? | The repository's `llms.txt` | Richer docs only when that handoff file points there |
 | Where is the post-bootstrap next action? | `.agentic-workspace/bootstrap-handoff.md` when bootstrap says review is still needed | Ad hoc chat instructions |
 | Where is the compact bootstrap handoff contract? | `.agentic-workspace/bootstrap-handoff.json` when bootstrap writes a checked-in finishing handoff | Mining the prose brief for scope or escalation boundaries |
@@ -84,6 +85,7 @@ That surface is the queryable contract for:
 - combined-install operation
 - shared workspace reporting
 - repo-owned lifecycle defaults and update intent
+- improvement-latitude policy and current repo-friction evidence
 - current mixed-agent reporting boundaries
 
 Use this broad route when the question spans several contract domains.

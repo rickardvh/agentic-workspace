@@ -50,6 +50,7 @@ Allowed local judgment includes:
 - preferring a checked-in plan when direct execution is no longer safe
 - capturing durable residue in the correct checked-in surface
 - choosing the cheapest local method that still preserves the boundary and proof story
+- reducing proven repo friction when the configured `improvement_latitude` mode allows it and the work still stays inside the current ownership and proof lane
 
 This is bounded initiative.
 It is not permission to replace the requested outcome with a broader or more ambitious one.
@@ -70,6 +71,7 @@ Promotion or escalation is required when:
 - the requested path would violate a stable contract or ownership boundary
 - validation would be meaningless without the added work
 - confidence drops below the point where silent continuation is defensible
+- friction reduction would turn a local means improvement into a changed requested end state
 
 The safe pattern is:
 

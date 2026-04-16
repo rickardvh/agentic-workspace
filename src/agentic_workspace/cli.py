@@ -80,6 +80,53 @@ MEMORY_POINTER_BLOCK = (
 )
 COMPACT_CONTRACT_PROFILE = "compact-contract-answer/v1"
 COMPACT_CONTRACT_PROFILE_DOC = "docs/compact-contract-profile.md"
+DEFAULT_IMPROVEMENT_LATITUDE = "conservative"
+SUPPORTED_IMPROVEMENT_LATITUDES = ("conservative", "balanced", "proactive")
+REPO_FRICTION_LARGE_FILE_THRESHOLD = 400
+REPO_FRICTION_MAX_HOTSPOTS = 5
+REPO_FRICTION_SCAN_SUFFIXES = {
+    ".c",
+    ".cc",
+    ".cfg",
+    ".cpp",
+    ".cs",
+    ".css",
+    ".go",
+    ".html",
+    ".ini",
+    ".java",
+    ".js",
+    ".json",
+    ".jsx",
+    ".md",
+    ".mjs",
+    ".py",
+    ".ps1",
+    ".rb",
+    ".rs",
+    ".scss",
+    ".sh",
+    ".sql",
+    ".text",
+    ".toml",
+    ".ts",
+    ".tsx",
+    ".txt",
+    ".yaml",
+    ".yml",
+}
+REPO_FRICTION_SKIP_DIRS = {
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".uv-cache",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "node_modules",
+}
 
 
 @dataclass(frozen=True)
@@ -211,6 +258,8 @@ class WorkspaceConfig:
     agent_instructions_source: str
     workflow_artifact_profile: str
     workflow_artifact_profile_source: str
+    improvement_latitude: str
+    improvement_latitude_source: str
     detected_agent_instructions_files: tuple[str, ...]
     update_modules: dict[str, ModuleUpdatePolicy]
     local_override: "MixedAgentLocalOverride"
@@ -375,6 +424,14 @@ def _validate_workflow_artifact_profile(profile: str) -> str:
     return normalized
 
 
+def _validate_improvement_latitude(value: str) -> str:
+    normalized = value.strip() or DEFAULT_IMPROVEMENT_LATITUDE
+    if normalized not in SUPPORTED_IMPROVEMENT_LATITUDES:
+        supported = ", ".join(SUPPORTED_IMPROVEMENT_LATITUDES)
+        raise WorkspaceUsageError(f"workspace.improvement_latitude must be one of: {supported}.")
+    return normalized
+
+
 def _workflow_artifact_profile_payload(profile: str) -> dict[str, Any]:
     profiles = {
         "repo-owned": {
@@ -403,6 +460,60 @@ def _workflow_artifact_profile_payload(profile: str) -> dict[str, Any]:
         },
     }
     return profiles[profile].copy()
+
+
+def _improvement_latitude_payload(mode: str) -> dict[str, Any]:
+    policies = {
+        "conservative": {
+            "mode": "conservative",
+            "summary": (
+                "Only reduce repo friction opportunistically inside already-touched scope; "
+                "do not create standalone cleanup work from one hotspot alone."
+            ),
+            "allows": [
+                "small local simplifications inside already-touched files",
+                "narrow helper extraction when proof and ownership stay unchanged",
+                "recording repeated friction as durable follow-on instead of widening the current slice",
+            ],
+            "forbids": [
+                "standalone cleanup work triggered by one hotspot alone",
+                "broad refactors or concept-pruning without explicit promotion",
+            ],
+        },
+        "balanced": {
+            "mode": "balanced",
+            "summary": (
+                "Allow bounded friction reduction when evidence is clear and the extra work "
+                "stays inside the current proof and ownership boundary."
+            ),
+            "allows": [
+                "simplifying a touched hotspot during the current slice",
+                "small repo-friction reductions when one evidence signal is present and proof stays narrow",
+                "turning repeated friction into a bounded follow-on candidate",
+            ],
+            "forbids": [
+                "rewriting requested ends in the name of cleanup",
+                "broad cross-owner refactors without promotion",
+            ],
+        },
+        "proactive": {
+            "mode": "proactive",
+            "summary": (
+                "Allow bounded standalone friction reduction when evidence is strong and the "
+                "work can still stay inside clear ownership and proof lanes."
+            ),
+            "allows": [
+                "small standalone cleanup slices backed by explicit friction evidence",
+                "collapsing low-value local complexity before it grows further",
+                "promoting repeated friction into planning earlier",
+            ],
+            "forbids": [
+                "unsignaled broad redesign under a cleanup label",
+                "using proactive mode as a scheduler or blanket refactor permission",
+            ],
+        },
+    }
+    return policies[mode].copy()
 
 
 def _detected_agent_instruction_files(*, target_root: Path) -> tuple[str, ...]:
@@ -1962,6 +2073,7 @@ def _run_report_command(
     }
     installed_modules = [entry["name"] for entry in status_payload.get("registry", []) if entry.get("installed")]
     discovery = _setup_discovery_payload(target_root=target_root, status_payload=status_payload)
+    repo_friction = _repo_friction_payload(target_root=target_root, config=config)
     return {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -1973,9 +2085,60 @@ def _run_report_command(
         "findings": findings,
         "next_action": next_action,
         "discovery": discovery,
+        "repo_friction": repo_friction,
         "registry": status_payload["registry"],
         "config": status_payload["config"],
         "reports": status_payload["reports"],
+    }
+
+
+def _repo_friction_kind_for_path(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix in {".md", ".txt", ".text"}:
+        return "docs"
+    if suffix in {".toml", ".json", ".yaml", ".yml", ".ini", ".cfg"}:
+        return "config"
+    return "code"
+
+
+def _repo_friction_payload(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
+    hotspots: list[dict[str, Any]] = []
+    for path in sorted(target_root.rglob("*")):
+        if not path.is_file():
+            continue
+        if any(part in REPO_FRICTION_SKIP_DIRS or part.startswith(".uv-cache") for part in path.parts):
+            continue
+        if path.suffix.lower() not in REPO_FRICTION_SCAN_SUFFIXES:
+            continue
+        try:
+            line_count = sum(1 for _ in path.open("r", encoding="utf-8"))
+        except (UnicodeDecodeError, OSError):
+            continue
+        if line_count < REPO_FRICTION_LARGE_FILE_THRESHOLD:
+            continue
+        relative = path.relative_to(target_root).as_posix()
+        hotspots.append(
+            {
+                "path": relative,
+                "line_count": line_count,
+                "kind": _repo_friction_kind_for_path(path),
+            }
+        )
+    hotspots.sort(key=lambda item: (-int(item["line_count"]), str(item["path"])))
+    hotspots = hotspots[:REPO_FRICTION_MAX_HOTSPOTS]
+    return {
+        "policy_mode": config.improvement_latitude,
+        "policy_source": config.improvement_latitude_source,
+        "rule": (
+            "Use repo-friction evidence to justify bounded cleanup only when delegated judgment, "
+            "proof, and ownership still stay inside the current safe boundary."
+        ),
+        "evidence_classes": ["large_file_hotspots"],
+        "large_file_hotspots": {
+            "threshold_lines": REPO_FRICTION_LARGE_FILE_THRESHOLD,
+            "count": len(hotspots),
+            "items": hotspots,
+        },
     }
 
 
@@ -2649,6 +2812,7 @@ def _reporting_schema_payload() -> dict[str, Any]:
             "findings",
             "next_action",
             "discovery",
+            "repo_friction",
             "registry",
             "config",
             "reports",
@@ -2962,6 +3126,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "workspace.default_preset",
                 "workspace.agent_instructions_file",
                 "workspace.workflow_artifact_profile",
+                "workspace.improvement_latitude",
                 "update.modules.<module>.source_type",
                 "update.modules.<module>.source_ref",
                 "update.modules.<module>.source_label",
@@ -2972,6 +3137,17 @@ def _defaults_payload() -> dict[str, Any]:
                 "Normal update execution stays behind agentic-workspace.",
                 "Repo config may change module update intent without creating separate public module upgrade entrypoints.",
             ],
+        },
+        "improvement_latitude": {
+            "canonical_doc": "docs/workspace-config-contract.md",
+            "command": "agentic-workspace defaults --section improvement_latitude --format json",
+            "rule": (
+                "Repo-owned improvement latitude may widen means to reduce proven repo friction, "
+                "but it must remain subordinate to delegated judgment, proof, and ownership."
+            ),
+            "default_mode": DEFAULT_IMPROVEMENT_LATITUDE,
+            "supported_modes": [_improvement_latitude_payload(mode) for mode in SUPPORTED_IMPROVEMENT_LATITUDES],
+            "evidence_source": "agentic-workspace report --target ./repo --format json",
         },
         "workflow_artifact_adapters": {
             "canonical_doc": "docs/workspace-config-contract.md",
@@ -3347,6 +3523,13 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- planner: {payload['relay']['planner_role']['summary']}")
     print(f"- implementer: {payload['relay']['implementer_role']['summary']}")
     print(f"- memory bridge: {payload['relay']['memory_bridge']['summary']}")
+    print("Improvement latitude:")
+    print(f"- doc: {payload['improvement_latitude']['canonical_doc']}")
+    print(f"- command: {payload['improvement_latitude']['command']}")
+    print(f"- rule: {payload['improvement_latitude']['rule']}")
+    print(f"- default mode: {payload['improvement_latitude']['default_mode']}")
+    for mode in payload["improvement_latitude"]["supported_modes"]:
+        print(f"- {mode['mode']}: {mode['summary']}")
     print("Compact contract profile:")
     print(f"- doc: {payload['compact_contract_profile']['canonical_doc']}")
     print(f"- rule: {payload['compact_contract_profile']['rule']}")
@@ -3552,6 +3735,8 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
     configured_agent_instructions_file: str | None = None
     workflow_artifact_profile = DEFAULT_WORKFLOW_ARTIFACT_PROFILE
     workflow_artifact_profile_source = "product-default"
+    improvement_latitude = DEFAULT_IMPROVEMENT_LATITUDE
+    improvement_latitude_source = "product-default"
     if not config_path.exists():
         agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = _resolve_effective_agent_instructions_file(
             target_root=target_root,
@@ -3567,6 +3752,8 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
             agent_instructions_source=agent_instructions_source,
             workflow_artifact_profile=workflow_artifact_profile,
             workflow_artifact_profile_source=workflow_artifact_profile_source,
+            improvement_latitude=improvement_latitude,
+            improvement_latitude_source=improvement_latitude_source,
             detected_agent_instructions_files=detected_agent_instruction_files,
             update_modules=defaults,
             local_override=local_override,
@@ -3601,6 +3788,10 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
     if raw_workflow_artifact_profile is not None:
         workflow_artifact_profile = _validate_workflow_artifact_profile(str(raw_workflow_artifact_profile))
         workflow_artifact_profile_source = "repo-config"
+    raw_improvement_latitude = raw_workspace.get("improvement_latitude")
+    if raw_improvement_latitude is not None:
+        improvement_latitude = _validate_improvement_latitude(str(raw_improvement_latitude))
+        improvement_latitude_source = "repo-config"
 
     update_modules = dict(defaults)
     raw_update = payload.get("update", {})
@@ -3665,6 +3856,8 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
         agent_instructions_source=agent_instructions_source,
         workflow_artifact_profile=workflow_artifact_profile,
         workflow_artifact_profile_source=workflow_artifact_profile_source,
+        improvement_latitude=improvement_latitude,
+        improvement_latitude_source=improvement_latitude_source,
         detected_agent_instructions_files=detected_agent_instruction_files,
         update_modules=update_modules,
         local_override=local_override,
@@ -4134,7 +4327,7 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "path": WORKSPACE_CONFIG_PATH.as_posix(),
             "source": "repo-config" if config.exists else "product-defaults",
             "authoritative": config.exists,
-            "supported_fields": [],
+            "supported_fields": ["workspace.improvement_latitude"],
         },
         "local_override": {
             "path": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
@@ -4198,10 +4391,13 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "agent_instructions_file_source": config.agent_instructions_source,
             "workflow_artifact_profile": config.workflow_artifact_profile,
             "workflow_artifact_profile_source": config.workflow_artifact_profile_source,
+            "improvement_latitude": config.improvement_latitude,
+            "improvement_latitude_source": config.improvement_latitude_source,
             "workflow_artifact_adapter": _workflow_artifact_profile_payload(config.workflow_artifact_profile),
             "detected_agent_instructions_files": list(config.detected_agent_instructions_files),
             "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
             "supported_workflow_artifact_profiles": list(SUPPORTED_WORKFLOW_ARTIFACT_PROFILES),
+            "supported_improvement_latitudes": list(SUPPORTED_IMPROVEMENT_LATITUDES),
         },
         "update": {
             "wrapper_rule": "normal update execution stays behind agentic-workspace",
@@ -4230,6 +4426,7 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
         f"{payload['workspace']['workflow_artifact_profile']} "
         f"({payload['workspace']['workflow_artifact_profile_source']})"
     )
+    print(f"Improvement latitude: {payload['workspace']['improvement_latitude']} ({payload['workspace']['improvement_latitude_source']})")
     print(f"Wrapper rule: {payload['update']['wrapper_rule']}")
     print("Update modules:")
     for module in payload["update"]["modules"]:

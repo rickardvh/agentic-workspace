@@ -332,13 +332,31 @@ Smooth switching means the next contributor can recover:
 
 without broad startup rereads.
 
-### 19. Do not save model tokens by creating human bureaucracy
+### 19. Optimize total token cost, not single-run cheapness
+
+The cheapest-looking run is not always the cheapest workflow.
+
+Prefer:
+
+- a stronger agent once when the work still needs interpretation, proof choice, or boundary setting
+- a smaller or cheaper agent later when the slice has become bounded and mechanically clear
+- checked-in continuity when work may cross sessions, tools, contributors, or subscriptions
+
+Do not prefer:
+
+- a small agent first when it still has to rediscover the contract
+- hidden internal delegation as the only continuity mechanism
+- saving model tokens mainly by shifting cost into human prompting, cleanup, or repeated restarts
+
+The success test is lower total cost across planning, execution, validation, interruption, handoff, and restart without quality loss.
+
+### 20. Do not save model tokens by creating human bureaucracy
 
 A feature fails if it reduces model-side token use but shifts comparable or greater cost onto humans through extra prompting, triage, cleanup, or hidden configuration burden.
 
 The product should reduce total operating cost, not merely move it between participants.
 
-### 20. New work must earn its way in
+### 21. New work must earn its way in
 
 At this maturity level, new planning or contract work should enter the queue only when one of these is true:
 
