@@ -37,6 +37,7 @@ In this monorepo:
 ## Why The Workspace Layer Stays Thin
 
 The workspace layer exists to compose modules, not to absorb domain logic.
+It should stay quiet in ordinary use: visible machinery should justify itself, and compact selectors or module-owned surfaces should carry the detail whenever they can do so safely.
 
 Default rule:
 

@@ -130,6 +130,8 @@ It should not:
 - create unnecessary visible ceremony
 - encourage people to maintain the system for its own sake
 
+Visible machinery should justify its visibility. If a surface can move into reporting, routing, or background structure without losing safety or clarity, prefer the quieter shape.
+
 ### 8. Improve the repository, not just the agent experience
 
 If the system repeatedly captures the same workaround, warning, or procedural note, that should be pressure to improve the repo itself.
@@ -146,6 +148,8 @@ The right long-term answer is often:
 Leave the repository cleaner than you found it within the touched scope.
 
 If cleanup would expand beyond the touched scope, record the broader improvement as follow-up instead of silently absorbing it.
+
+New contract surfaces should also earn their place by compressing older paths. A new surface should replace, merge, or materially simplify something that already exists; if it only adds precision, ask what can be deleted, collapsed, or demoted.
 
 The system should help the repo mature, not simply accumulate operational residue forever.
 
@@ -250,6 +254,7 @@ Dogfooding is valuable only if it produces better general systems.
 ### 15. Help the agent do the job, do not script the job
 
 The product should make bounded work easier, not turn the repository into a workflow script that dictates every local decision.
+It should stay opinionated about what must remain true, not about the exact local choreography used to get there.
 
 Prefer:
 
@@ -264,6 +269,7 @@ Avoid:
 - broad local workflows that only work when the agent follows a long script
 
 If a proposed surface mostly tells the agent exactly how to work rather than helping it work better, ask whether it is actually reducing repository operating cost.
+Prefer boundaries over procedures: if a surface mostly tells the agent how to work instead of what boundary to preserve, look for a thinner contract or a clearer handoff instead.
 
 ### 15. Portability matters more than local cleverness
 
@@ -375,6 +381,7 @@ A proposed feature is suspicious if it tends to:
 - leave behind high-churn residue that outlives its value
 - try to schedule runtime model choice or delegation from checked-in policy
 - enter planning mainly because it sounds like a useful idea rather than because the repo has paid a real cost for its absence
+- add a new contract surface without naming the older path it replaces, merges, or materially simplifies
 
 ## Practical Standard
 

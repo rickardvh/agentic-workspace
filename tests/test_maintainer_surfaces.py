@@ -158,7 +158,7 @@ For maintainers:
 - `docs/maintainer-commands.md` - canonical command index for routine maintenance.
 - `docs/collaboration-safety.md` - concurrent-edit and git hygiene rules.
 - `docs/installed-contract-design-checklist.md` - review bar for new or changed shipped surfaces.
-- `docs/dogfooding-feedback.md` - classify internal friction before routing it onward.
+- `memory/runbooks/dogfooding-feedback-routing.md` - classify internal friction before routing it onward.
 - `docs/workflow-contract-changes.md` - compact record of recent workflow-surface changes.
 
 For agent maintainers, the primary operating path is `AGENTS.md`, `TODO.md`, the active execplan, and `docs/contributor-playbook.md`.
@@ -219,9 +219,9 @@ review bar for collaboration-sensitive installed surfaces.
 """,
     )
     _write(
-        tmp_path / "docs" / "dogfooding-feedback.md",
+        tmp_path / "memory" / "runbooks" / "dogfooding-feedback-routing.md",
         """
-# Dogfooding Feedback Capture
+# Dogfooding Feedback Routing
 
 Use this convention when internal use reveals friction.
 

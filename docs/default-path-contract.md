@@ -32,6 +32,7 @@ Use this page when you need the fuller route contract after the compact map poin
 | Question | Default path | Secondary path |
 | --- | --- | --- |
 | How do I install? | `agentic-workspace init --preset <memory|planning|full>` | Package CLIs for package-local maintainer work or debugging |
+| How do I keep the profile lightweight? | `agentic-workspace init --preset memory` | Add planning only when the repo needs checked-in active execution state. |
 | How do I express intent? | Pick the preset that matches the outcome you want and let `init` infer install vs adopt vs review-required handoff | Manually reasoning about lifecycle verbs before asking the tool |
 | How do I start in a repo? | The configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`) -> `TODO.md` -> active execplan when relevant | `ROADMAP.md` only when promoting work |
 | How do I inspect current active planning state? | `agentic-planning-bootstrap summary --format json` and its `planning_record` object inside the `planning-summary/v1` payload | Reading raw `TODO.md` or execplan prose first |

@@ -103,6 +103,20 @@ Use this section to distinguish required continuation from optional nice-to-have
 If a completed slice leaves the larger intended outcome unfinished, record the required next owner and activation trigger here before archiving.
 Do not rely on drift-log prose, completion-note prose, or chat residue to carry mandatory follow-through.
 
+## Convergence Context
+
+Use convergence context when a bounded slice is only part of a longer line of work and the larger picture must survive interruption or side requests.
+
+Keep the arc explicit enough that later contributors can answer:
+
+- what larger intended outcome this slice serves
+- which checked-in surface owns the continuation
+- what must remain intact after interruption or diversion
+- whether a new request replaced the arc or only paused it
+
+This is the durable larger-picture companion to the narrower next-action and required-continuation fields.
+It should stay compact, but it should exist whenever the work is likely to survive across more than one bounded slice.
+
 Delegated judgment belongs under `## Delegated Judgment` for active plans that should preserve broad direction across sessions:
 
 - `Requested outcome`
