@@ -2160,6 +2160,79 @@ def _intent_contract_payload() -> dict[str, Any]:
     }
 
 
+def _clarification_contract_payload() -> dict[str, Any]:
+    return {
+        "canonical_doc": "docs/intent-contract.md",
+        "command": "agentic-workspace defaults --section clarification --format json",
+        "rule": "When a prompt is vague, ask the smallest repo-context question that removes the ambiguity.",
+        "mode": "minimal-interruption",
+        "repo_context": [
+            "Use TODO.md or the active execplan when the prompt seems planning-shaped.",
+            "Use report before broad file reads when the prompt may touch several workspace surfaces.",
+            "Use ownership when the target surface or owner is unclear.",
+        ],
+        "first_questions": [
+            "Which surface should change?",
+            "What proof would make the change safe?",
+            "Does the work belong in planning, memory, or workspace-level docs?",
+        ],
+        "fallback": [
+            "Use the intent selector first, then clarification, report, and ownership/proof selectors as needed.",
+            "Stop or escalate when answering the question would rewrite the requested end state.",
+        ],
+        "examples": [
+            "vague task request",
+            "missing target surface",
+            "unclear proof boundary",
+        ],
+    }
+
+
+def _prompt_routing_contract_payload() -> dict[str, Any]:
+    return {
+        "canonical_doc": "docs/intent-contract.md",
+        "command": "agentic-workspace defaults --section prompt_routing --format json",
+        "rule": "Map vague prompt classes to a proof lane and an owner before widening the task.",
+        "route_by_class": [
+            {
+                "class": "workspace lifecycle change",
+                "proof_lane": "workspace_cli",
+                "owner_surface": "src/agentic_workspace/cli.py",
+            },
+            {
+                "class": "planning state or contract change",
+                "proof_lane": "planning_surfaces",
+                "owner_surface": "docs/execplans/ or TODO.md",
+            },
+            {
+                "class": "durable repo knowledge change",
+                "proof_lane": "memory_package",
+                "owner_surface": "memory/",
+            },
+            {
+                "class": "cross-cutting workspace contract",
+                "proof_lane": "workspace_cli + planning_surfaces",
+                "owner_surface": "docs/design-principles.md",
+            },
+        ],
+        "proof_inference": [
+            "Use workspace_cli when the prompt changes the front-door workspace surface.",
+            "Use planning_surfaces when the prompt changes TODO.md, ROADMAP.md, or execplans.",
+            "Use memory_package when the prompt changes durable repo knowledge or routing notes.",
+        ],
+        "owner_inference": [
+            "TODO.md or an active execplan implies planning ownership.",
+            "memory/index.md or a runbook implies memory ownership.",
+            "workspace lifecycle defaults or routing docs imply workspace ownership.",
+        ],
+        "escalate_when": [
+            "the proof lane is still unclear after one repo-context clarification",
+            "the owner inference would change the requested outcome",
+            "the prompt spans multiple owners and no narrow lane is enough",
+        ],
+    }
+
+
 def _run_prompt_command(
     *,
     prompt_command: str,
@@ -2831,6 +2904,8 @@ def _defaults_payload() -> dict[str, Any]:
             ],
         },
         "intent": _intent_contract_payload(),
+        "clarification": _clarification_contract_payload(),
+        "prompt_routing": _prompt_routing_contract_payload(),
         "config": {
             "path": "agentic-workspace.toml",
             "command": "agentic-workspace config --target ./repo --format json",
@@ -3199,6 +3274,19 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- rule: {payload['intent']['rule']}")
     print(f"- confirmed: {payload['intent']['confirmed_intent']['summary']}")
     print(f"- interpreted: {payload['intent']['interpreted_intent']['summary']}")
+    print("Clarification:")
+    print(f"- doc: {payload['clarification']['canonical_doc']}")
+    print(f"- command: {payload['clarification']['command']}")
+    print(f"- rule: {payload['clarification']['rule']}")
+    print(f"- mode: {payload['clarification']['mode']}")
+    for step in payload["clarification"]["repo_context"]:
+        print(f"- repo context: {step}")
+    print("Prompt routing:")
+    print(f"- doc: {payload['prompt_routing']['canonical_doc']}")
+    print(f"- command: {payload['prompt_routing']['command']}")
+    print(f"- rule: {payload['prompt_routing']['rule']}")
+    for route in payload["prompt_routing"]["route_by_class"]:
+        print(f"- {route['class']}: {route['proof_lane']} -> {route['owner_surface']}")
     print("Compact contract profile:")
     print(f"- doc: {payload['compact_contract_profile']['canonical_doc']}")
     print(f"- rule: {payload['compact_contract_profile']['rule']}")

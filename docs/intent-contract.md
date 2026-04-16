@@ -25,6 +25,30 @@ That selector carries the compact front-door intent split:
 
 Use it when the question is what the human asked for and how the workspace normalized it.
 
+## Cheap Clarification Surface
+
+Use:
+
+```bash
+agentic-workspace defaults --section clarification --format json
+```
+
+That selector captures the smallest repo-context question needed to remove vague-prompt ambiguity.
+
+Use it when the task is vague but the repo context can cheaply disambiguate it without widening the request.
+
+## Prompt Routing Surface
+
+Use:
+
+```bash
+agentic-workspace defaults --section prompt_routing --format json
+```
+
+That selector maps vague prompt classes to a likely proof lane and owner surface.
+
+Use it when the main missing judgment is which contract lane or owner should absorb the work.
+
 ## Canonical Surface
 
 Use:

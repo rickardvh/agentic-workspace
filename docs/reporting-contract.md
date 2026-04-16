@@ -72,6 +72,8 @@ Use the machine-readable report as the default combined-state inspection path wh
 - what findings or warnings need attention?
 
 Use `agentic-workspace defaults --section intent --format json` when the question is confirmed versus interpreted intent; keep report for combined workspace state.
+Use `agentic-workspace defaults --section clarification --format json` when the question is how to ask the smallest useful follow-up.
+Use `agentic-workspace defaults --section prompt_routing --format json` when the question is which proof lane or owner should absorb a vague prompt.
 
 If the report already answers the question, stop there.
 Only open raw module files or broader docs when the report points you to a follow-on surface or when the missing judgment is semantic rather than operational.

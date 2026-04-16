@@ -40,6 +40,12 @@ agentic-workspace ownership --target ./repo --concern active-execution-state --f
 agentic-workspace ownership --target ./repo --path TODO.md --format json
 ```
 
+When the question is who should own a vague prompt after one repo-context clarification, use:
+
+```bash
+agentic-workspace defaults --section prompt_routing --format json
+```
+
 Those forms return the compact contract answer profile from [`docs/compact-contract-profile.md`](docs/compact-contract-profile.md) instead of the full ownership object.
 
 ## Main Authority Surfaces

@@ -124,6 +124,21 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["intent"]["rule"] == "Confirmed intent stays human-owned; interpreted intent must remain visibly inferred."
     assert payload["intent"]["confirmed_intent"]["summary"] == "the human-owned request before workspace normalization"
     assert payload["intent"]["interpreted_intent"]["summary"] == "the workspace-normalized request carried forward by lifecycle commands"
+    assert payload["clarification"]["canonical_doc"] == "docs/intent-contract.md"
+    assert payload["clarification"]["command"] == "agentic-workspace defaults --section clarification --format json"
+    assert payload["clarification"]["rule"] == "When a prompt is vague, ask the smallest repo-context question that removes the ambiguity."
+    assert payload["clarification"]["mode"] == "minimal-interruption"
+    assert payload["clarification"]["first_questions"] == [
+        "Which surface should change?",
+        "What proof would make the change safe?",
+        "Does the work belong in planning, memory, or workspace-level docs?",
+    ]
+    assert payload["prompt_routing"]["canonical_doc"] == "docs/intent-contract.md"
+    assert payload["prompt_routing"]["command"] == "agentic-workspace defaults --section prompt_routing --format json"
+    assert payload["prompt_routing"]["rule"] == "Map vague prompt classes to a proof lane and an owner before widening the task."
+    assert payload["prompt_routing"]["route_by_class"][0]["class"] == "workspace lifecycle change"
+    assert payload["prompt_routing"]["route_by_class"][0]["proof_lane"] == "workspace_cli"
+    assert payload["prompt_routing"]["route_by_class"][0]["owner_surface"] == "src/agentic_workspace/cli.py"
     assert payload["setup"]["secondary"] == [
         "Do not widen init.",
         "Do not collapse setup into the proof backlog.",
@@ -269,6 +284,9 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Confirmed intent stays human-owned" in text
     assert "confirmed:" in text
     assert "interpreted:" in text
+    assert "Clarification:" in text
+    assert "mode: minimal-interruption" in text
+    assert "Prompt routing:" in text
     assert "Delegation posture:" in text
     assert "docs/delegation-posture-contract.md" in text
     assert "Compact contract profile:" in text
@@ -397,6 +415,43 @@ def test_defaults_section_selector_returns_intent_answer(capsys) -> None:
     assert payload["answer"]["rule"] == "Confirmed intent stays human-owned; interpreted intent must remain visibly inferred."
     assert payload["answer"]["confirmed_intent"]["summary"] == "the human-owned request before workspace normalization"
     assert payload["answer"]["interpreted_intent"]["summary"] == "the workspace-normalized request carried forward by lifecycle commands"
+    assert "docs/intent-contract.md" in payload["refs"]
+    assert "agentic-workspace defaults --format json" in payload["refs"]
+
+
+def test_defaults_section_selector_returns_clarification_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "clarification", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "clarification"}
+    assert payload["matched"] is True
+    assert payload["answer"]["canonical_doc"] == "docs/intent-contract.md"
+    assert payload["answer"]["command"] == "agentic-workspace defaults --section clarification --format json"
+    assert payload["answer"]["mode"] == "minimal-interruption"
+    assert payload["answer"]["first_questions"] == [
+        "Which surface should change?",
+        "What proof would make the change safe?",
+        "Does the work belong in planning, memory, or workspace-level docs?",
+    ]
+    assert "docs/intent-contract.md" in payload["refs"]
+    assert "agentic-workspace defaults --format json" in payload["refs"]
+
+
+def test_defaults_section_selector_returns_prompt_routing_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "prompt_routing", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "prompt_routing"}
+    assert payload["matched"] is True
+    assert payload["answer"]["canonical_doc"] == "docs/intent-contract.md"
+    assert payload["answer"]["command"] == "agentic-workspace defaults --section prompt_routing --format json"
+    assert payload["answer"]["route_by_class"][0]["class"] == "workspace lifecycle change"
+    assert payload["answer"]["route_by_class"][0]["proof_lane"] == "workspace_cli"
+    assert payload["answer"]["route_by_class"][0]["owner_surface"] == "src/agentic_workspace/cli.py"
     assert "docs/intent-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 

@@ -35,14 +35,14 @@
 ## Active Milestone
 
 - Status: active
-- Scope: define the cheap-clarification path and prompt-to-proof / prompt-to-owner inference surface for vague prompts.
+- Scope: define the strong-planner / cheap-implementer relay and routed-Memory bridge for weak prompts.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Inspect the current intent, report, and defaults surfaces and decide where the cheap-clarification path should land.
+- Inspect the intent, clarification, and prompt-routing surfaces and decide where the relay bridge should land.
 
 ## Blockers
 
@@ -51,6 +51,8 @@
 ## Touched Paths
 
 - `docs/intent-contract.md`
+- `docs/proof-surfaces-contract.md`
+- `docs/ownership-authority-contract.md`
 - `docs/delegated-judgment-contract.md`
 - `docs/capability-aware-execution.md`
 - `docs/default-path-contract.md`
@@ -68,13 +70,15 @@
 ## Contract Decisions To Freeze
 
 - `defaults --section intent --format json` owns the front-door confirmed-versus-interpreted split.
+- `defaults --section clarification --format json` owns the smallest repo-context follow-up for vague prompts.
+- `defaults --section prompt_routing --format json` owns the compact proof-lane and owner inference surface.
 - `init` handoff mirrors the same split for bootstrap follow-through.
 - `report` stays the combined workspace-state surface rather than becoming a second intent contract.
 
 ## Open Questions To Close
 
-- Which common vague-prompt classes should be used as the first proof cases?
-- Does the bridge belong in the workspace CLI or the planning package first?
+- Which common vague-prompt classes should be used as the first proof cases for routed-Memory relay?
+- Does the relay bridge belong in the workspace CLI or the planning package first?
 - What is the narrowest useful fallback when Memory is absent?
 
 ## Validation Commands
@@ -98,12 +102,13 @@
 
 ## Execution Summary
 
-- Outcome delivered: confirmed versus interpreted intent now appears in `agentic-workspace defaults --section intent --format json` and the bootstrap handoff prompt.
+- Outcome delivered: confirmed versus interpreted intent now appears in `agentic-workspace defaults --section intent --format json` and the bootstrap handoff prompt; cheap clarification and prompt routing now appear in `defaults --section clarification` and `defaults --section prompt_routing`.
 - Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`, `uv run ruff check src tests`.
-- Follow-on routed to: `ROADMAP.md` and GitHub issues `#103` through `#108`.
-- Resume from: define the cheap-clarification path and the prompt-to-proof / prompt-to-owner inference surface.
+- Follow-on routed to: `ROADMAP.md` and GitHub issues `#105` through `#108`.
+- Resume from: define the strong-planner / cheap-implementer relay and the routed-Memory bridge for weak prompts.
 
 ## Drift Log
 
 - 2026-04-16: Plan created from the vague-prompt / intent-interpretation tranche.
 - 2026-04-16: First slice landed the confirmed-versus-interpreted intent split in defaults and bootstrap handoff surfaces.
+- 2026-04-16: Second slice landed cheap clarification and prompt routing selectors for vague prompts.

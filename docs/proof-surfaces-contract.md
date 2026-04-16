@@ -36,6 +36,12 @@ When the question is which proof lane is enough, use the proof-selection section
 agentic-workspace defaults --section proof_selection --format json
 ```
 
+When the question is which proof lane should absorb a vague prompt, use the prompt-routing section:
+
+```bash
+agentic-workspace defaults --section prompt_routing --format json
+```
+
 When the question is already narrow, prefer the compact selector path:
 
 ```bash
