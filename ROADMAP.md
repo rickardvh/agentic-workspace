@@ -23,7 +23,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - The simplification tranche is complete.
 
 ## Next Candidate Queue
-- No active candidate queue right now.
+No active candidate queue right now.
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.
