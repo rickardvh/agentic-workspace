@@ -139,6 +139,9 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["prompt_routing"]["route_by_class"][0]["class"] == "workspace lifecycle change"
     assert payload["prompt_routing"]["route_by_class"][0]["proof_lane"] == "workspace_cli"
     assert payload["prompt_routing"]["route_by_class"][0]["owner_surface"] == "src/agentic_workspace/cli.py"
+    assert payload["prompt_routing"]["route_by_class"][2]["proof_lane"] == "memory_payload"
+    assert payload["prompt_routing"]["route_by_class"][3]["proof_lane"] == "workspace_cli"
+    assert payload["prompt_routing"]["route_by_class"][3]["broaden_with"] == ["planning_surfaces"]
     assert payload["relay"]["canonical_doc"] == "docs/delegated-judgment-contract.md"
     assert payload["relay"]["command"] == "agentic-workspace defaults --section relay --format json"
     assert payload["relay"]["rule"] == (
@@ -465,6 +468,9 @@ def test_defaults_section_selector_returns_prompt_routing_answer(capsys) -> None
     assert payload["answer"]["route_by_class"][0]["class"] == "workspace lifecycle change"
     assert payload["answer"]["route_by_class"][0]["proof_lane"] == "workspace_cli"
     assert payload["answer"]["route_by_class"][0]["owner_surface"] == "src/agentic_workspace/cli.py"
+    assert payload["answer"]["route_by_class"][2]["proof_lane"] == "memory_payload"
+    assert payload["answer"]["route_by_class"][3]["proof_lane"] == "workspace_cli"
+    assert payload["answer"]["route_by_class"][3]["broaden_with"] == ["planning_surfaces"]
     assert "docs/intent-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
@@ -482,9 +488,7 @@ def test_defaults_section_selector_returns_relay_answer(capsys) -> None:
     assert payload["answer"]["planner_role"]["summary"] == (
         "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract."
     )
-    assert payload["answer"]["implementer_role"]["summary"] == (
-        "execute the narrow contract without widening the requested end state."
-    )
+    assert payload["answer"]["implementer_role"]["summary"] == ("execute the narrow contract without widening the requested end state.")
     assert payload["answer"]["memory_bridge"]["summary"] == (
         "when routed Memory is installed, borrow durable repo understanding before freezing the compact contract."
     )

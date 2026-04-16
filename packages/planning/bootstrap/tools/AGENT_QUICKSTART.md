@@ -21,6 +21,7 @@ Fast path for autonomous agents working on this repo.
 - When the question is combined workspace state, prefer `agentic-workspace report --target ./repo --format json` before reading raw module files.
 - Read `docs/upstream-task-intake.md` when triaging external issues or tasks into checked-in planning.
 - When startup or workflow routing is unclear, prefer `agentic-workspace defaults --format json`, then use `llms.txt` or `AGENTS.md` when those surfaces are present, before repo-local workaround guidance.
+- When the task starts from a vague prompt, prefer `agentic-workspace defaults --section intent --format json`, `clarification`, `prompt_routing`, and `relay` before broad rereads, then open `docs/intent-contract.md` only if the compact selectors are not enough.
 - When the task is clearly review-shaped, check `agentic-workspace skills --target ./repo --task "<task>" --format json` before falling back to generic reasoning so bundled review skills stay cheaper to use than rediscovery.
 - Read `docs/capability-aware-execution.md` when task capability fit, delegation, or escalation is unclear, especially when the question is whether to silently reshape the work instead of prompting for a stronger executor.
 - Read `docs/environment-recovery-contract.md` when interruption handling, environment assumptions, or recovery shape is unclear.

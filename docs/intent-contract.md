@@ -46,6 +46,7 @@ agentic-workspace defaults --section prompt_routing --format json
 ```
 
 That selector maps vague prompt classes to a likely proof lane and owner surface.
+Each `proof_lane` should name an executable proof or validation route id, and cross-cutting cases may add `broaden_with` follow-on lanes instead of inventing combined route names.
 
 Use it when the main missing judgment is which contract lane or owner should absorb the work.
 

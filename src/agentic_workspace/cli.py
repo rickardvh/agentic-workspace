@@ -2206,19 +2206,20 @@ def _prompt_routing_contract_payload() -> dict[str, Any]:
             },
             {
                 "class": "durable repo knowledge change",
-                "proof_lane": "memory_package",
+                "proof_lane": "memory_payload",
                 "owner_surface": "memory/",
             },
             {
                 "class": "cross-cutting workspace contract",
-                "proof_lane": "workspace_cli + planning_surfaces",
+                "proof_lane": "workspace_cli",
+                "broaden_with": ["planning_surfaces"],
                 "owner_surface": "docs/design-principles.md",
             },
         ],
         "proof_inference": [
             "Use workspace_cli when the prompt changes the front-door workspace surface.",
             "Use planning_surfaces when the prompt changes TODO.md, ROADMAP.md, or execplans.",
-            "Use memory_package when the prompt changes durable repo knowledge or routing notes.",
+            "Use memory_payload when the prompt changes durable repo knowledge or routing notes.",
         ],
         "owner_inference": [
             "TODO.md or an active execplan implies planning ownership.",
@@ -3334,7 +3335,11 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- command: {payload['prompt_routing']['command']}")
     print(f"- rule: {payload['prompt_routing']['rule']}")
     for route in payload["prompt_routing"]["route_by_class"]:
-        print(f"- {route['class']}: {route['proof_lane']} -> {route['owner_surface']}")
+        route_text = route["proof_lane"]
+        broaden_with = route.get("broaden_with")
+        if isinstance(broaden_with, list) and broaden_with:
+            route_text = f"{route_text} (broaden with {', '.join(broaden_with)})"
+        print(f"- {route['class']}: {route_text} -> {route['owner_surface']}")
     print("Relay:")
     print(f"- doc: {payload['relay']['canonical_doc']}")
     print(f"- command: {payload['relay']['command']}")
