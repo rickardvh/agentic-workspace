@@ -10,6 +10,21 @@ Use it when the question is not "what happened after completion?" but "what did 
 - Make active work cheaper to resume across sessions and agents.
 - Keep the first machine-readable contract derived from the existing execplan shape instead of introducing a second plan schema.
 
+## Front-Door Intent Surface
+
+Use:
+
+```bash
+agentic-workspace defaults --section intent --format json
+```
+
+That selector carries the compact front-door intent split:
+
+- `confirmed_intent`: the human-owned request before workspace normalization
+- `interpreted_intent`: the workspace-normalized request carried forward by lifecycle commands
+
+Use it when the question is what the human asked for and how the workspace normalized it.
+
 ## Canonical Surface
 
 Use:

@@ -2098,18 +2098,66 @@ def _active_todo_surface(*, target_root: Path) -> str | None:
     return None
 
 
-def _bootstrap_intent_payload(*, selected_modules: list[str], resolved_preset: str | None) -> dict[str, str]:
+def _bootstrap_intent_payload(*, selected_modules: list[str], resolved_preset: str | None) -> dict[str, Any]:
     if resolved_preset == "memory":
-        return {"key": "memory", "summary": "set up this repo for Agentic Memory"}
-    if resolved_preset == "planning":
-        return {"key": "planning", "summary": "set up this repo for Agentic Planning"}
-    if resolved_preset == "full":
-        return {"key": "full", "summary": "set up this repo for both Planning and Memory"}
-    if selected_modules == ["memory"]:
-        return {"key": "memory", "summary": "set up this repo for Agentic Memory"}
-    if selected_modules == ["planning"]:
-        return {"key": "planning", "summary": "set up this repo for Agentic Planning"}
-    return {"key": "custom", "summary": f"set up this repo for: {', '.join(selected_modules)}"}
+        key = "memory"
+        summary = "set up this repo for Agentic Memory"
+        confirmed_source = "resolved preset: memory"
+    elif resolved_preset == "planning":
+        key = "planning"
+        summary = "set up this repo for Agentic Planning"
+        confirmed_source = "resolved preset: planning"
+    elif resolved_preset == "full":
+        key = "full"
+        summary = "set up this repo for both Planning and Memory"
+        confirmed_source = "resolved preset: full"
+    elif selected_modules == ["memory"]:
+        key = "memory"
+        summary = "set up this repo for Agentic Memory"
+        confirmed_source = "selected modules: memory"
+    elif selected_modules == ["planning"]:
+        key = "planning"
+        summary = "set up this repo for Agentic Planning"
+        confirmed_source = "selected modules: planning"
+    else:
+        key = "custom"
+        summary = f"set up this repo for: {', '.join(selected_modules)}"
+        confirmed_source = f"selected modules: {', '.join(selected_modules)}"
+    return {
+        "key": key,
+        "summary": summary,
+        "confirmed_intent": {
+            "key": key,
+            "summary": summary,
+            "source": confirmed_source,
+        },
+        "interpreted_intent": {
+            "key": key,
+            "summary": summary,
+            "source": "workspace-normalized lifecycle intent",
+        },
+    }
+
+
+def _intent_contract_payload() -> dict[str, Any]:
+    return {
+        "canonical_doc": "docs/intent-contract.md",
+        "command": "agentic-workspace defaults --section intent --format json",
+        "rule": "Confirmed intent stays human-owned; interpreted intent must remain visibly inferred.",
+        "confirmed_intent": {
+            "summary": "the human-owned request before workspace normalization",
+            "source": "user request or explicit lifecycle directive",
+        },
+        "interpreted_intent": {
+            "summary": "the workspace-normalized request carried forward by lifecycle commands",
+            "source": "workspace normalization",
+        },
+        "escalate_when": [
+            "the interpreted intent changes the requested outcome",
+            "the interpreted intent widens the owned surface or time horizon",
+            "the compact selector can no longer carry the user-end safely",
+        ],
+    }
 
 
 def _run_prompt_command(
@@ -2329,11 +2377,9 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
     workflow_artifact_profile = _workflow_artifact_profile_payload(
         str(summary.get("workflow_artifact_profile", DEFAULT_WORKFLOW_ARTIFACT_PROFILE))
     )
+    intent_payload = summary.get("intent")
     lines = [
         f"Finish the Agentic Workspace bootstrap in {summary['target']}.",
-        "",
-        "User intent:",
-        f"- {summary['intent']['summary']}",
         "",
         "Repo state:",
         f"- {summary['repo_state']}",
@@ -2347,6 +2393,18 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
         "Selected modules:",
     ]
     lines.extend(f"- {module_name}" for module_name in summary["modules"])
+    if isinstance(intent_payload, dict):
+        confirmed_intent = intent_payload.get("confirmed_intent")
+        interpreted_intent = intent_payload.get("interpreted_intent")
+        if isinstance(confirmed_intent, dict) and isinstance(interpreted_intent, dict):
+            lines.extend(
+                [
+                    "",
+                    "Intent:",
+                    f"- confirmed: {confirmed_intent.get('summary', intent_payload.get('summary', ''))}",
+                    f"- interpreted: {interpreted_intent.get('summary', intent_payload.get('summary', ''))}",
+                ]
+            )
     config_payload = summary.get("config")
     if isinstance(config_payload, dict) and config_payload.get("exists"):
         lines.extend(
@@ -2525,6 +2583,19 @@ def _build_lifecycle_handoff_prompt(payload: dict[str, Any]) -> str:
     review_items = []
     for heading in ("updated_managed", "preserved_existing", "needs_review", "warnings"):
         review_items.extend(payload.get(heading, []))
+    intent_payload = payload.get("intent")
+    if isinstance(intent_payload, dict):
+        confirmed_intent = intent_payload.get("confirmed_intent")
+        interpreted_intent = intent_payload.get("interpreted_intent")
+        if isinstance(confirmed_intent, dict) and isinstance(interpreted_intent, dict):
+            lines.extend(
+                [
+                    "",
+                    "Intent:",
+                    f"- confirmed: {confirmed_intent.get('summary', intent_payload.get('summary', ''))}",
+                    f"- interpreted: {interpreted_intent.get('summary', intent_payload.get('summary', ''))}",
+                ]
+            )
     if review_items:
         lines.extend(["", "Review before applying:"])
         lines.extend(f"- {item}" for item in review_items)
@@ -2759,6 +2830,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "Do not turn setup into generic analysis.",
             ],
         },
+        "intent": _intent_contract_payload(),
         "config": {
             "path": "agentic-workspace.toml",
             "command": "agentic-workspace config --target ./repo --format json",
@@ -3121,6 +3193,12 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- phase: {payload['setup']['phase']}")
     for step in payload["setup"]["scope"]:
         print(f"- scope: {step}")
+    print("Intent:")
+    print(f"- doc: {payload['intent']['canonical_doc']}")
+    print(f"- command: {payload['intent']['command']}")
+    print(f"- rule: {payload['intent']['rule']}")
+    print(f"- confirmed: {payload['intent']['confirmed_intent']['summary']}")
+    print(f"- interpreted: {payload['intent']['interpreted_intent']['summary']}")
     print("Compact contract profile:")
     print(f"- doc: {payload['compact_contract_profile']['canonical_doc']}")
     print(f"- rule: {payload['compact_contract_profile']['rule']}")

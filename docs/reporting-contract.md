@@ -71,6 +71,8 @@ Use the machine-readable report as the default combined-state inspection path wh
 - what existing repo surfaces look like durable Memory or Planning seed candidates?
 - what findings or warnings need attention?
 
+Use `agentic-workspace defaults --section intent --format json` when the question is confirmed versus interpreted intent; keep report for combined workspace state.
+
 If the report already answers the question, stop there.
 Only open raw module files or broader docs when the report points you to a follow-on surface or when the missing judgment is semantic rather than operational.
 

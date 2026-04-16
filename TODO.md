@@ -9,4 +9,7 @@ Completed work belongs in archived execplans and roadmap history, not in the act
 
 ## Now
 
-- No active work right now.
+- ID: intent-interpretation-contract-2026-04-16
+  Status: in-progress
+  Surface: docs/execplans/intent-interpretation-contract-2026-04-16.md
+  Why now: vague prompts still need a checked-in continuation surface.

@@ -115,6 +115,9 @@ The structured surface should answer:
 - what the human sets
 - what the agent may decide locally
 - what forces promotion or escalation
+- what was confirmed by the human versus interpreted by the workspace
+
+Use `agentic-workspace defaults --section intent --format json` for the confirmed/interpreted split and `agentic-workspace defaults --section delegation_posture --format json` for the direct/local decision boundary.
 
 That keeps the contract queryable for agents that should not have to rely on richer prose first.
 
