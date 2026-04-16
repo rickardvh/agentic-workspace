@@ -58,6 +58,7 @@ recommended_upgrade_after_days = 30
 - `proactive` means small standalone cleanup slices are allowed when evidence is explicit and the work still stays bounded by delegated judgment, proof, and ownership.
 - `reporting` findings belong in derived report output, review output, or planning residue that already exists for the current slice; they must not create active work on their own.
 - Use `agentic-workspace defaults --section improvement_latitude --format json` to inspect the shipped decision test for when friction reduction still counts as local means versus a changed task.
+- Use `agentic-workspace report --target ./repo --format json` to inspect both workspace-derived evidence and any compatible external hotspot artifacts the repo already maintains.
 - When `agentic-workspace.toml` is absent, product defaults remain authoritative and the config report should say so rather than implying a live repo policy.
 - Update policy is module-specific in v1; there is no separate public module upgrade entrypoint.
 - Normal update execution stays behind `agentic-workspace`.

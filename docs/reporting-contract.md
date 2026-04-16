@@ -70,6 +70,7 @@ Use the machine-readable report as the default combined-state inspection path wh
 - what mixed-agent posture is in effect?
 - what explicit repo-friction hotspots exist right now?
 - what concept or routing surfaces are getting large enough to act as concept friction?
+- what compatible external hotspot artifacts already exist that the workspace can consume instead of recomputing everything itself?
 - what should happen next?
 - what existing repo surfaces look like durable Memory or Planning seed candidates?
 - what findings or warnings need attention?
@@ -90,6 +91,7 @@ Only open raw module files or broader docs when the report points you to a follo
 - Do not require raw module files before the report when the report already answers the question.
 - Keep findings, warnings, and next-action guidance separate.
 - Keep repo-friction evidence derived and queryable instead of turning it into a second editable state store.
+- When a repo already has a compatible generated hotspot artifact, prefer consuming it as additional evidence instead of requiring the workspace layer to own the analyzer.
 - Keep repo-friction policy and evidence as shared workspace-level concerns rather than introducing a new core module for them.
 - Keep reporting-only repo-friction follow-through bounded to report output, review output, or already-owned planning residue instead of auto-promoting it into active work.
 - Keep module reports compact and derived.

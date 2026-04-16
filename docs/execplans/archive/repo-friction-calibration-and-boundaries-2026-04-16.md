@@ -39,7 +39,7 @@
 
 ## Active Milestone
 
-- Status: in progress
+- Status: completed
 - Scope: add concept-friction evidence, make the boundary test queryable, and archive one bounded audit that calibrates the repo posture.
 - Ready: ready
 - Blocked: none
@@ -47,7 +47,7 @@
 
 ## Immediate Next Action
 
-- Run the bounded calibration review against current repo-friction evidence and recent agent-driven work, then use it to close or narrow the remaining top-priority issues.
+- None. Slice completed; archive the plan and advance the roadmap to the next queue.
 
 ## Blockers
 
@@ -107,12 +107,13 @@
 
 ## Execution Summary
 
-- Outcome delivered: pending
-- Validation confirmed: pending
-- Follow-on routed to: pending
-- Resume from: pending
+- Outcome delivered: the workspace lane now ships code and concept repo-friction evidence, a queryable local-improvement decision test, an explicit workspace-level ownership rule, optional ingestion of a compatible external hotspot artifact, and a bounded review that calibrates this repo's `proactive` posture.
+- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; dogfood via `uv run agentic-workspace defaults --section improvement_latitude --format json`; `uv run agentic-workspace report --target . --format json`; review inputs via `git log --stat --oneline -8` and `git log --name-only --pretty=format: -8`.
+- Follow-on routed to: `ROADMAP.md`
+- Resume from: promote `#128` when the next bounded planning-residue slice is ready.
 
 ## Drift Log
 
 - 2026-04-16: Promoted after the first improvement-latitude slice and the `#130` follow-on landed; the remaining top-priority lane is now calibration, boundaries, and closure rather than new policy invention.
 - 2026-04-16: Extended the workspace report/defaults contract with concept-surface hotspots, a queryable local-improvement decision test, and an explicit workspace-level ownership rule for repo-friction policy and evidence.
+- 2026-04-16: Added optional consumption of a compatible external hotspot artifact (`tools/codebase-map.json`) and completed a bounded calibration review that justifies keeping this repo on `workspace.improvement_latitude = "proactive"`.

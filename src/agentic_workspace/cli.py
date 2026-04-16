@@ -2244,6 +2244,86 @@ def _repo_friction_hotspots(*, target_root: Path) -> list[dict[str, Any]]:
     return hotspots
 
 
+def _int_or_none(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return None
+
+
+def _repo_friction_external_codebase_map_payload(*, target_root: Path) -> dict[str, Any] | None:
+    path = target_root / "tools" / "codebase-map.json"
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return {
+            "kind": "codebase-map",
+            "path": "tools/codebase-map.json",
+            "status": "unreadable",
+            "items": [],
+        }
+    if not isinstance(payload, dict):
+        return {
+            "kind": "codebase-map",
+            "path": "tools/codebase-map.json",
+            "status": "unsupported-shape",
+            "items": [],
+        }
+
+    candidate_lists: list[Any] = []
+    for key in ("large_modules", "hotspots", "modules"):
+        value = payload.get(key)
+        if isinstance(value, list):
+            candidate_lists.append(value)
+
+    items: list[dict[str, Any]] = []
+    for candidate_list in candidate_lists:
+        for entry in candidate_list:
+            if not isinstance(entry, dict):
+                continue
+            path_value = entry.get("path") or entry.get("module") or entry.get("name")
+            if not isinstance(path_value, str) or not path_value.strip():
+                continue
+            line_count = _int_or_none(entry.get("line_count"))
+            if line_count is None:
+                line_count = _int_or_none(entry.get("lines"))
+            normalized: dict[str, Any] = {
+                "path": path_value.strip().replace("\\", "/"),
+                "line_count": line_count,
+            }
+            function_count = _int_or_none(entry.get("function_count"))
+            if function_count is None:
+                function_count = _int_or_none(entry.get("functions"))
+            if function_count is not None:
+                normalized["function_count"] = function_count
+            class_count = _int_or_none(entry.get("class_count"))
+            if class_count is None:
+                class_count = _int_or_none(entry.get("classes"))
+            if class_count is not None:
+                normalized["class_count"] = class_count
+            items.append(normalized)
+
+    items.sort(
+        key=lambda item: (
+            -(item["line_count"] if isinstance(item.get("line_count"), int) else -1),
+            str(item["path"]),
+        )
+    )
+    return {
+        "kind": "codebase-map",
+        "path": "tools/codebase-map.json",
+        "status": "loaded",
+        "items": items[:REPO_FRICTION_MAX_HOTSPOTS],
+    }
+
+
 def _repo_friction_payload(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
     policy = _improvement_latitude_payload(config.improvement_latitude)
     hotspots = _repo_friction_hotspots(target_root=target_root)
@@ -2251,6 +2331,13 @@ def _repo_friction_payload(*, target_root: Path, config: WorkspaceConfig) -> dic
         :REPO_FRICTION_MAX_HOTSPOTS
     ]
     concept_hotspots = [item.copy() for item in hotspots if item["kind"] in {"docs", "config"}][:REPO_FRICTION_MAX_HOTSPOTS]
+    external_evidence: list[dict[str, Any]] = []
+    external_codebase_map = _repo_friction_external_codebase_map_payload(target_root=target_root)
+    if external_codebase_map is not None:
+        external_evidence.append(external_codebase_map)
+    evidence_classes = ["large_file_hotspots", "concept_surface_hotspots"]
+    if external_evidence:
+        evidence_classes.append("external_evidence")
     return {
         "owner_surface": "workspace",
         "owner_rule": (
@@ -2263,7 +2350,7 @@ def _repo_friction_payload(*, target_root: Path, config: WorkspaceConfig) -> dic
         "rule": policy["reporting_rule"],
         "reporting_destinations": policy["reporting_destinations"],
         "decision_test": _improvement_boundary_test_payload(),
-        "evidence_classes": ["large_file_hotspots", "concept_surface_hotspots"],
+        "evidence_classes": evidence_classes,
         "large_file_hotspots": {
             "threshold_lines": REPO_FRICTION_LARGE_FILE_THRESHOLD,
             "count": len(large_file_hotspots),
@@ -2274,6 +2361,7 @@ def _repo_friction_payload(*, target_root: Path, config: WorkspaceConfig) -> dic
             "count": len(concept_hotspots),
             "items": concept_hotspots,
         },
+        "external_evidence": external_evidence,
     }
 
 

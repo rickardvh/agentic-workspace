@@ -1690,6 +1690,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["repo_friction"]["evidence_classes"] == ["large_file_hotspots", "concept_surface_hotspots"]
     assert payload["repo_friction"]["large_file_hotspots"]["threshold_lines"] == 400
     assert payload["repo_friction"]["concept_surface_hotspots"]["threshold_lines"] == 200
+    assert payload["repo_friction"]["external_evidence"] == []
     assert payload["reports"][0]["module"] == "planning"
     assert payload["config"]["mixed_agent"]["status"] == "reporting-only"
 
@@ -1733,6 +1734,44 @@ def test_report_surfaces_concept_hotspots_as_repo_friction_evidence(tmp_path: Pa
     assert payload["repo_friction"]["concept_surface_hotspots"]["items"][0]["path"] == "docs/routing-contract.md"
     assert payload["repo_friction"]["concept_surface_hotspots"]["items"][0]["kind"] == "docs"
     assert payload["repo_friction"]["concept_surface_hotspots"]["items"][0]["surface_role"] == "canonical-doc"
+
+
+def test_report_consumes_external_codebase_map_when_present(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "tools").mkdir()
+    (target / "tools" / "codebase-map.json").write_text(
+        json.dumps(
+            {
+                "large_modules": [
+                    {
+                        "path": "src/generated_hotspot.py",
+                        "line_count": 900,
+                        "function_count": 12,
+                        "class_count": 1,
+                    }
+                ]
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["repo_friction"]["evidence_classes"] == [
+        "large_file_hotspots",
+        "concept_surface_hotspots",
+        "external_evidence",
+    ]
+    assert payload["repo_friction"]["external_evidence"][0]["kind"] == "codebase-map"
+    assert payload["repo_friction"]["external_evidence"][0]["path"] == "tools/codebase-map.json"
+    assert payload["repo_friction"]["external_evidence"][0]["status"] == "loaded"
+    assert payload["repo_friction"]["external_evidence"][0]["items"][0]["path"] == "src/generated_hotspot.py"
+    assert payload["repo_friction"]["external_evidence"][0]["items"][0]["line_count"] == 900
 
 
 def test_report_surfaces_reporting_only_repo_friction_posture(tmp_path: Path, capsys) -> None:

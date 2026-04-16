@@ -14,50 +14,43 @@ Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraint
 Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Active Handoff
-- Active slice: `repo-friction-calibration-and-boundaries`
-  Surface: `docs/execplans/repo-friction-calibration-and-boundaries-2026-04-16.md`
-  Focus: finish the improvement-latitude / repo-friction lane by adding concept-friction evidence, freezing the local-improvement boundary test, and archiving a bounded calibration review.
+- No active slice.
+  Focus: the next promotion should move to planning-residue follow-through now that the improvement-latitude / repo-friction lane is complete.
 ## GitHub Issue Intake
 
-- Latest intake tranche: GitHub issues `#122` through `#133`.
-- Earlier open planning issues still available for intake: `#40`, `#92` through `#100`.
+- Latest intake tranche: GitHub issues `#131` through `#133`.
+- Earlier open planning issues still available for intake: `#40`, `#92` through `#100`, `#127`, `#128`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification tranche is complete; the next queue is led by bounded repo-friction / improvement-latitude work.
+- The simplification and improvement-latitude tranches are complete; the next queue is led by planning-residue follow-through.
 
 ## Next Candidate Queue
-- Highest priority when the next bounded policy-plus-evidence slice is ready: Evidence-backed improvement latitude and repo-friction policy calibration.
-  Issues: `#122`, `#123`, `#124`, `#125`, `#126`
-  Why now: this is the strongest repeated current-work friction cluster, it affects ordinary agent use directly, and the pieces depend on each other cleanly.
-  Promotion signal: promote when the next bounded slice is ready to extend the policy/evidence contract without opening a broader architecture branch.
-  Suggested next slice: calibrate the evidence interpretation rule from real hotspot and moderation-burden signals so the current ladder and report surface better distinguish when friction should stay reported, when it can stay local, and when it deserves bounded promotion.
-  Execution posture: use a stronger planner first to shape the contract, then hand bounded implementation to the cheapest safe executor rather than trying to run the whole lane on a smaller agent from the start.
-- Second priority when a bounded slice is expected to stop before the larger goal is complete: Iterative follow-through as first-class planning residue.
+- Highest priority when a bounded slice is expected to stop before the larger goal is complete: Iterative follow-through as first-class planning residue.
   Issues: `#128`
   Why next: recent work keeps proving the need to preserve what a slice enabled, what it intentionally deferred, and what proof remains without falling back to larger narrative plans.
   Promotion signal: promote when the next planned slice is expected to stop intentionally before the larger goal is fully complete or when residue is again at risk of fragmenting across iterations.
   Suggested first slice: add a compact follow-through residue contract that carries deferred work, discovered implications, and proof/validation carry-forward across bounded slices.
-- Third priority when reporting and residue need a clearer compactness-versus-legibility default without changing semantics: Output/residue optimization bias.
+- Second priority when reporting and residue need a clearer compactness-versus-legibility default without changing semantics: Output/residue optimization bias.
   Issues: `#131`, `#132`, `#133`
   Why later: this is a good narrow repo-policy candidate, but it should stay subordinate to the stronger current need to calibrate improvement latitude and preserve iterative follow-through cleanly.
   Promotion signal: promote when one or two reporting/residue surfaces are ready to adopt a stable output-bias default without creating alternate canonical state.
   Suggested first slice: define one narrow repo-owned `optimization_bias` policy, freeze the guardrail that it affects output/residue preference rather than execution method, and apply it to one report surface plus one planning-residue or rendered-view surface.
-- Fourth priority when setup/jumpstart findings need a durable promotion path: Agent-produced setup and jumpstart findings promotion.
+- Third priority when setup/jumpstart findings need a durable promotion path: Agent-produced setup and jumpstart findings promotion.
   Issues: `#127`
   Why later: important for keeping the product lightweight and analysis-friendly, but it benefits from first deciding how repo-friction evidence and planning residue should be represented.
   Promotion signal: promote after the first repo-friction evidence shape exists or when a jumpstart/setup pass produces findings that are clearly useful but currently have no durable promotion contract.
   Suggested first slice: define one bounded promotion contract for setup/jumpstart findings worth preserving into planning, memory, or workspace evidence.
-- Fifth priority when the near-term contract shapes stabilize enough to extract them safely: Declarative contract inventory and schemas.
+- Fourth priority when the near-term contract shapes stabilize enough to extract them safely: Declarative contract inventory and schemas.
   Issues: `#92`, `#93`, `#94`, `#95`
   Why later: still valuable, but less urgent than the current product-shaping friction lane and should follow once the near-term contract shapes settle.
   Promotion signal: promote when the near-term contract shapes have stabilized enough that extracting schemas or manifests would reduce drift instead of freezing churn.
   Suggested first slice: inventory Python-owned contract answers, then choose one small shared schema/manifests slice instead of broad extraction.
-- Sixth priority when Memory becomes the main restart or trust bottleneck again: Memory trust, usefulness, and cleanup ergonomics.
+- Fifth priority when Memory becomes the main restart or trust bottleneck again: Memory trust, usefulness, and cleanup ergonomics.
   Issues: `#96`, `#97`, `#98`, `#99`, `#100`
   Why later: this remains important, but the immediate pain is still workspace/planning-side moderation burden and coherence rather than Memory operations alone.
   Promotion signal: promote when Memory again becomes the main restart/trust bottleneck or when one bounded cleanup/usefulness slice can be proved independently of the workspace lane.
   Suggested first slice: start with usefulness audit plus cleanup ergonomics before broader evidence-backed note invalidation.
-- Seventh priority when shared reporting still bottoms out on raw module reads: Canonical module reporting surfaces.
+- Sixth priority when shared reporting still bottoms out on raw module reads: Canonical module reporting surfaces.
   Issues: `#40`
   Why later: partially addressed by the newer shared report work, but still open as a follow-on once the higher-priority planning/workspace lanes stabilize.
   Promotion signal: promote when shared report work again bottoms out on module-specific state questions that still require raw file reads.
