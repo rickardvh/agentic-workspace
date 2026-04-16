@@ -182,6 +182,19 @@ routes_from = ["packages/memory/**", "packages/planning/**"]
 stale_when = ["packages/memory/**", "packages/planning/**"]
 memory_role = "durable_truth"
 
+[notes."memory/runbooks/dogfooding-usage-ledger.md"]
+note_type = "runbook"
+canonical_home = "memory/runbooks/dogfooding-usage-ledger.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system", "planning"]
+surfaces = ["review", "architecture"]
+routes_from = ["docs/dogfooding-feedback.md", "docs/lazy-discovery-measurements.md"]
+stale_when = ["docs/dogfooding-feedback.md", "docs/lazy-discovery-measurements.md"]
+memory_role = "durable_truth"
+
 [notes."memory/decisions/installed-system-consolidation-2026-04-05.md"]
 note_type = "decision"
 canonical_home = "memory/decisions/installed-system-consolidation-2026-04-05.md"

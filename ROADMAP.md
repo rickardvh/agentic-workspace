@@ -23,7 +23,6 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - The simplification tranche is now the top-priority queue.
 
 ## Next Candidate Queue
-- `#112/#111` Add a hard surface-growth rule and run one consolidation pass so new contract surfaces replace, merge, or materially simplify older paths; promote when the repo is ready to enforce product compression and classify user-facing, maintainer-facing, and support-only surfaces in one bounded review.
 - `#117/#113/#110` Reassert the product as a quiet repo-native capability layer, clarify framework-versus-utility positioning, and define a deliberately lightweight operational profile; promote when the front door needs a concrete positioning decision and a smallest useful profile distinct from the full framework path.
 - `#120/#115/#116/#114` Add a local dogfooding usage ledger, audit ordinary-use surface pull, add outsider-legibility, and counter self-hosting bias; promote when the review lane can measure daily pull, outsider friction, and low-signal feature choices in one bounded pass.
 - `#118/#119` Guard against agent-constraining opinionation while preserving higher-level convergence context across bounded slices; promote when the repo needs a stronger bias toward bounded guidance without losing cross-slice intent continuity.
