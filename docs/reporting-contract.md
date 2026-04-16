@@ -78,6 +78,7 @@ Use `agentic-workspace defaults --section clarification --format json` when the 
 Use `agentic-workspace defaults --section prompt_routing --format json` when the question is which proof lane or owner should absorb a vague prompt.
 Use `agentic-workspace defaults --section relay --format json` when the question is how a strong planner should hand a compact contract to a cheap implementer.
 Use `agentic-workspace defaults --section improvement_latitude --format json` when the question is how much evidence-backed repo-friction reduction is welcome by default.
+Use the `repo_friction.reporting_destinations` field when the question is where reporting-only findings may surface without creating implicit active work.
 
 If the report already answers the question, stop there.
 Only open raw module files or broader docs when the report points you to a follow-on surface or when the missing judgment is semantic rather than operational.
@@ -88,6 +89,7 @@ Only open raw module files or broader docs when the report points you to a follo
 - Do not require raw module files before the report when the report already answers the question.
 - Keep findings, warnings, and next-action guidance separate.
 - Keep repo-friction evidence derived and queryable instead of turning it into a second editable state store.
+- Keep reporting-only repo-friction follow-through bounded to report output, review output, or already-owned planning residue instead of auto-promoting it into active work.
 - Keep module reports compact and derived.
 - Keep concern-shaped subobjects narrow enough that one question does not force unrelated contract domains to load.
 - Keep discovery read-only until a setup promotion explicitly decides to seed.

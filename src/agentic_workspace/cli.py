@@ -81,7 +81,13 @@ MEMORY_POINTER_BLOCK = (
 COMPACT_CONTRACT_PROFILE = "compact-contract-answer/v1"
 COMPACT_CONTRACT_PROFILE_DOC = "docs/compact-contract-profile.md"
 DEFAULT_IMPROVEMENT_LATITUDE = "conservative"
-SUPPORTED_IMPROVEMENT_LATITUDES = ("conservative", "balanced", "proactive")
+SUPPORTED_IMPROVEMENT_LATITUDES = (
+    "none",
+    "reporting",
+    "conservative",
+    "balanced",
+    "proactive",
+)
 REPO_FRICTION_LARGE_FILE_THRESHOLD = 400
 REPO_FRICTION_MAX_HOTSPOTS = 5
 REPO_FRICTION_SCAN_SUFFIXES = {
@@ -464,8 +470,48 @@ def _workflow_artifact_profile_payload(profile: str) -> dict[str, Any]:
 
 def _improvement_latitude_payload(mode: str) -> dict[str, Any]:
     policies = {
+        "none": {
+            "mode": "none",
+            "initiative_posture": "no-opportunistic-action",
+            "summary": ("Do not perform opportunistic repo-friction reduction outside the explicitly requested work."),
+            "allows": [
+                "only the cleanup necessary to complete the requested work safely",
+                "ignoring incidental friction that does not block the current slice",
+            ],
+            "forbids": [
+                "agent-initiated cleanup prompted only by repo-friction evidence",
+                "turning incidental hotspots into side work during the current slice",
+            ],
+            "reporting_destinations": [
+                "agentic-workspace report --target ./repo --format json",
+            ],
+            "reporting_rule": "Surface friction passively through derived reporting only; do not create follow-on work on your own.",
+        },
+        "reporting": {
+            "mode": "reporting",
+            "initiative_posture": "reporting-only",
+            "summary": ("Notice and surface notable repo friction, but do not reduce it on the agent's own initiative."),
+            "allows": [
+                "recording notable friction in bounded reporting or review outputs",
+                "capturing durable follow-through in planning residue when the current slice already owns planning state",
+                "surfacing evidence-backed hotspots for later human-directed action",
+            ],
+            "forbids": [
+                "opportunistic cleanup outside the explicitly requested work",
+                "promoting friction into active work without a bounded promotion step",
+            ],
+            "reporting_destinations": [
+                "agentic-workspace report --target ./repo --format json",
+                "review outputs",
+                "TODO.md or the active execplan when the current slice already owns planning residue",
+            ],
+            "reporting_rule": (
+                "Surface notable friction through bounded reporting or residue; do not act on it without explicit direction."
+            ),
+        },
         "conservative": {
             "mode": "conservative",
+            "initiative_posture": "local-touched-scope-only",
             "summary": (
                 "Only reduce repo friction opportunistically inside already-touched scope; "
                 "do not create standalone cleanup work from one hotspot alone."
@@ -479,9 +525,17 @@ def _improvement_latitude_payload(mode: str) -> dict[str, Any]:
                 "standalone cleanup work triggered by one hotspot alone",
                 "broad refactors or concept-pruning without explicit promotion",
             ],
+            "reporting_destinations": [
+                "agentic-workspace report --target ./repo --format json",
+                "TODO.md or the active execplan when repeated friction deserves promotion",
+            ],
+            "reporting_rule": (
+                "Use reporting to justify or defer bounded follow-on; do not treat one hotspot as permission for standalone cleanup."
+            ),
         },
         "balanced": {
             "mode": "balanced",
+            "initiative_posture": "bounded-evidence-backed-action",
             "summary": (
                 "Allow bounded friction reduction when evidence is clear and the extra work "
                 "stays inside the current proof and ownership boundary."
@@ -495,9 +549,17 @@ def _improvement_latitude_payload(mode: str) -> dict[str, Any]:
                 "rewriting requested ends in the name of cleanup",
                 "broad cross-owner refactors without promotion",
             ],
+            "reporting_destinations": [
+                "agentic-workspace report --target ./repo --format json",
+                "TODO.md or the active execplan when friction should become bounded follow-on work",
+            ],
+            "reporting_rule": (
+                "Use reporting to preserve evidence and deferred cleanup residue whenever the current slice intentionally stops short."
+            ),
         },
         "proactive": {
             "mode": "proactive",
+            "initiative_posture": "bounded-standalone-action-allowed",
             "summary": (
                 "Allow bounded standalone friction reduction when evidence is strong and the "
                 "work can still stay inside clear ownership and proof lanes."
@@ -511,6 +573,11 @@ def _improvement_latitude_payload(mode: str) -> dict[str, Any]:
                 "unsignaled broad redesign under a cleanup label",
                 "using proactive mode as a scheduler or blanket refactor permission",
             ],
+            "reporting_destinations": [
+                "agentic-workspace report --target ./repo --format json",
+                "TODO.md or the active execplan when proactive cleanup stops before the larger opportunity is complete",
+            ],
+            "reporting_rule": "Use reporting to preserve evidence and unfinished bounded cleanup residue, not to justify hidden widening.",
         },
     }
     return policies[mode].copy()
@@ -2102,6 +2169,7 @@ def _repo_friction_kind_for_path(path: Path) -> str:
 
 
 def _repo_friction_payload(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
+    policy = _improvement_latitude_payload(config.improvement_latitude)
     hotspots: list[dict[str, Any]] = []
     for path in sorted(target_root.rglob("*")):
         if not path.is_file():
@@ -2129,10 +2197,9 @@ def _repo_friction_payload(*, target_root: Path, config: WorkspaceConfig) -> dic
     return {
         "policy_mode": config.improvement_latitude,
         "policy_source": config.improvement_latitude_source,
-        "rule": (
-            "Use repo-friction evidence to justify bounded cleanup only when delegated judgment, "
-            "proof, and ownership still stay inside the current safe boundary."
-        ),
+        "initiative_posture": policy["initiative_posture"],
+        "rule": policy["reporting_rule"],
+        "reporting_destinations": policy["reporting_destinations"],
         "evidence_classes": ["large_file_hotspots"],
         "large_file_hotspots": {
             "threshold_lines": REPO_FRICTION_LARGE_FILE_THRESHOLD,

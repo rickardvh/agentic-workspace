@@ -14,23 +14,22 @@ Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraint
 Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Active Handoff
-- Active slice: `improvement-latitude-first-slice`
-  Surface: `docs/execplans/improvement-latitude-first-slice-2026-04-16.md`
-  Focus: ship one narrow repo-owned `improvement_latitude` policy plus one queryable repo-friction evidence surface without adding a second control layer on top of the configured posture.
+- No active slice.
+  Focus: the next promotion should stay in the improvement-latitude / repo-friction lane, but start from measured friction and moderation burden rather than extending the policy ladder again.
 ## GitHub Issue Intake
 
-- Latest intake tranche: GitHub issues `#122` through `#128`.
+- Latest intake tranche: GitHub issues `#122` through `#130`.
 - Earlier open planning issues still available for intake: `#40`, `#92` through `#100`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 - The simplification tranche is complete; the next queue is led by bounded repo-friction / improvement-latitude work.
 
 ## Next Candidate Queue
-- Highest priority when the next bounded policy-plus-evidence slice is ready: Evidence-backed improvement latitude and repo-friction policy.
-  Issues: `#122`, `#123`, `#124`, `#126`
+- Highest priority when the next bounded policy-plus-evidence slice is ready: Evidence-backed improvement latitude and repo-friction policy calibration.
+  Issues: `#122`, `#123`, `#124`, `#125`, `#126`
   Why now: this is the strongest repeated current-work friction cluster, it affects ordinary agent use directly, and the pieces depend on each other cleanly.
-  Promotion signal: promote when the next bounded slice is ready to define one narrow workspace-level policy and one evidence surface together without opening a broader architecture branch.
-  Suggested first slice: define one narrow workspace-level improvement-latitude policy plus one executable repo-friction evidence surface and the minimum delegated-judgment / proof boundary rule that keeps the policy bounded.
+  Promotion signal: promote when the next bounded slice is ready to extend the policy/evidence contract without opening a broader architecture branch.
+  Suggested next slice: calibrate the evidence interpretation rule from real hotspot and moderation-burden signals so the current ladder and report surface better distinguish when friction should stay reported, when it can stay local, and when it deserves bounded promotion.
   Execution posture: use a stronger planner first to shape the contract, then hand bounded implementation to the cheapest safe executor rather than trying to run the whole lane on a smaller agent from the start.
 - Second priority when a bounded slice is expected to stop before the larger goal is complete: Iterative follow-through as first-class planning residue.
   Issues: `#128`

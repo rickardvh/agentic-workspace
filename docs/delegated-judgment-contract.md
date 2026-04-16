@@ -51,6 +51,7 @@ Allowed local judgment includes:
 - capturing durable residue in the correct checked-in surface
 - choosing the cheapest local method that still preserves the boundary and proof story
 - reducing proven repo friction when the configured `improvement_latitude` mode allows it and the work still stays inside the current ownership and proof lane
+- surfacing notable repo friction through bounded reporting or residue when the configured `improvement_latitude` mode is `reporting`
 
 This is bounded initiative.
 It is not permission to replace the requested outcome with a broader or more ambitious one.

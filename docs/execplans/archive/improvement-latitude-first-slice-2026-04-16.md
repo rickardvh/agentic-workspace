@@ -41,7 +41,7 @@
 
 ## Active Milestone
 
-- Status: in progress
+- Status: completed
 - Scope: add repo-owned `improvement_latitude` config/reporting support, derive one repo-friction evidence surface from the current repo tree, and align the boundary docs with the shipped contract.
 - Ready: ready
 - Blocked: none
@@ -49,7 +49,7 @@
 
 ## Immediate Next Action
 
-- Decide whether the next bounded follow-on should tighten the evidence interpretation rule or promote one evidence-backed cleanup/dogfood slice from the new hotspot report.
+- Decide whether the next bounded follow-on should calibrate evidence-backed defaults from real repo-friction signals or promote one bounded cleanup/dogfood slice from the current hotspot report.
 
 ## Blockers
 
@@ -105,12 +105,14 @@
 
 ## Execution Summary
 
-- Outcome delivered: pending
-- Validation confirmed: pending
-- Follow-on routed to: pending
-- Resume from: pending
+- Outcome delivered: repo-owned improvement latitude now supports explicit non-acting `none` and `reporting` modes alongside acting modes, and reporting-only destinations are exposed through defaults and workspace report output.
+- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; dogfood via `uv run agentic-workspace defaults --section improvement_latitude --format json`; `uv run agentic-workspace config --target . --format json`; `uv run agentic-workspace report --target . --format json`.
+- Follow-on routed to: `ROADMAP.md`
+- Resume from: calibrate the next improvement-latitude / repo-friction follow-on from real hotspots and moderation burden rather than expanding the policy ladder again.
 
 ## Drift Log
 
 - 2026-04-16: Promoted from the highest-priority roadmap lane after live GitHub intake confirmed the improvement-latitude / repo-friction cluster as the clearest next bounded product slice.
-- 2026-04-16: Landed repo-owned `workspace.improvement_latitude`, exposed it through `agentic-workspace config` and `defaults`, added `repo_friction.large_file_hotspots` to `agentic-workspace report`, and dogfooded the repo policy with `improvement_latitude = "balanced"`.
+- 2026-04-16: Landed repo-owned `workspace.improvement_latitude`, exposed it through `agentic-workspace config` and `defaults`, added `repo_friction.large_file_hotspots` to `agentic-workspace report`, and dogfooded the repo policy with `improvement_latitude = "proactive"`.
+- 2026-04-16: Live GitHub intake added `#130`, which sharpens the likely next follow-on for this lane: explicit non-acting `none` and `reporting` modes so repos can surface friction without granting cleanup initiative.
+- 2026-04-16: Implemented the `#130` follow-on by extending the policy ladder with `none` and `reporting`, exposing reporting-only destinations through defaults/reporting, and keeping the non-acting modes bounded to report output, review output, or already-owned planning residue.
