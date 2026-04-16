@@ -62,5 +62,7 @@ Current covered questions:
 
 - Use [`docs/compact-contract-profile.md`](docs/compact-contract-profile.md) for the selector and compact-answer contract itself.
 - Use [`docs/reporting-contract.md`](docs/reporting-contract.md) and [`docs/default-path-contract.md`](docs/default-path-contract.md) when choosing the preferred compact route for a workflow question.
+- Use [`memory/runbooks/dogfooding-feedback-routing.md`](memory/runbooks/dogfooding-feedback-routing.md) when you want to classify internal friction, repeated surface pull, or outsider-legibility concerns during ordinary work.
 - Use [`memory/runbooks/dogfooding-usage-ledger.md`](memory/runbooks/dogfooding-usage-ledger.md) when you want to record whether the measured route was actually chosen during ordinary work.
+- Use `docs/reviews/README.md` ordinary-use-pull mode when the ledger shows repeated low-pull patterns and you need to decide whether to merge, demote, or retire a surface.
 - Use [`docs/design-principles.md`](docs/design-principles.md) for the "proof should beat preference" rule that motivates this measurement.

@@ -131,7 +131,8 @@ When internal use reveals friction, classify it before routing it onward.
 - Docs or routing issue
 - Monorepo-only friction
 
-Use `docs/dogfooding-feedback.md` for the capture convention and preferred destinations.
+Use `memory/runbooks/dogfooding-feedback-routing.md` for the capture convention and preferred destinations.
+Use `docs/reviews/README.md` ordinary-use-pull mode when the question is which surfaces are actually used, skipped, or too insider-shaped for normal work.
 
 Use `docs/installed-contract-design-checklist.md` when a package change adds or materially reshapes an installed file, generated mirror, or other collaboration-sensitive contract surface.
 

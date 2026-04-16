@@ -10,7 +10,7 @@ Local dogfooding evaluation procedure for recording which surfaces are actually 
 
 ## Applies to
 
-- `docs/dogfooding-feedback.md`
+- `memory/runbooks/dogfooding-feedback-routing.md`
 - `docs/lazy-discovery-measurements.md`
 - repo-local dogfooding notes captured during normal work
 
@@ -23,6 +23,7 @@ Local dogfooding evaluation procedure for recording which surfaces are actually 
 - The daily-use capture contract changes.
 - The feedback routing path changes.
 - The measurement lane starts trying to answer usage questions instead of retrieval-cost questions.
+- Ordinary-use pull audits start surfacing repeated outsider-legibility or self-hosting-bias findings.
 
 ## Failure signals
 
@@ -45,6 +46,7 @@ Local dogfooding evaluation procedure for recording which surfaces are actually 
 
 - Record one entry per meaningful task or decision point.
 - Capture the goal, surfaces used, surfaces skipped, selection reason, skip reason, friction, cost note, and follow-up.
+- Add a short legibility note when a fresh external agent would likely have chosen differently.
 - Keep the entry short enough that it survives ordinary maintenance.
 
 ## Steps
@@ -54,6 +56,20 @@ Local dogfooding evaluation procedure for recording which surfaces are actually 
 3. Note which surface you skipped and why.
 4. Add a short friction or cost note.
 5. Route any repeated pattern into planning, a review artifact, or canonical docs.
+6. If the same choice keeps showing up, note whether the pull came from repository familiarity, model capability, or genuine product fit.
+
+## Entry Template
+
+- Task class:
+- Goal:
+- Surface used first:
+- Surface skipped:
+- Choice reason:
+- Skip reason:
+- Friction or cost note:
+- Follow-up:
+- Outsider-legibility note:
+- Self-hosting-bias note:
 
 ## Verification
 
@@ -67,7 +83,7 @@ Local dogfooding evaluation procedure for recording which surfaces are actually 
 
 ## Verified against
 
-- `docs/dogfooding-feedback.md`
+- `memory/runbooks/dogfooding-feedback-routing.md`
 - `docs/lazy-discovery-measurements.md`
 - `memory/runbooks/README.md`
 - `memory/manifest.toml`
@@ -80,4 +96,4 @@ Local dogfooding evaluation procedure for recording which surfaces are actually 
 
 ## Last confirmed
 
-2026-04-16 during the contract consolidation pass for issue `#111`
+2026-04-16 during the simplification pass for issues `#120`, `#115`, `#116`, and `#114`

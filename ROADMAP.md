@@ -1,6 +1,6 @@
 # Roadmap
 
-Last reviewed: 2026-04-15
+Last reviewed: 2026-04-16
 
 ## Purpose
 
@@ -23,7 +23,6 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - The simplification tranche is now the top-priority queue.
 
 ## Next Candidate Queue
-- `#120/#115/#116/#114` Add a local dogfooding usage ledger, audit ordinary-use surface pull, add outsider-legibility, and counter self-hosting bias; promote when the review lane can measure daily pull, outsider friction, and low-signal feature choices in one bounded pass.
 - `#118/#119` Guard against agent-constraining opinionation while preserving higher-level convergence context across bounded slices; promote when the repo needs a stronger bias toward bounded guidance without losing cross-slice intent continuity.
 - `#109` Review and reduce orchestration-layer code concentration so the product contract is easier to evolve safely; promote when a focused architecture pass can extract or separate one overloaded seam without changing behavior.
 ## Reopen Conditions
