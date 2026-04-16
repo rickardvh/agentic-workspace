@@ -16,14 +16,14 @@
 ## Intent Continuity
 
 - Larger intended outcome: make vague prompts cheap to interpret without losing the human/agent boundary.
-- This slice completes the larger intended outcome: no
-- Continuation surface: `docs/execplans/intent-interpretation-contract-2026-04-16.md`
+- This slice completes the larger intended outcome: yes
+- Continuation surface: none
 
 ## Required Continuation
 
-- Required follow-on for the larger intended outcome: yes
-- Owner surface: `ROADMAP.md`
-- Activation trigger: each completed milestone should either close a linked issue or hand off the remaining tranche cleanly
+- Required follow-on for the larger intended outcome: no
+- Owner surface: none
+- Activation trigger: none
 
 ## Delegated Judgment
 
@@ -34,15 +34,15 @@
 
 ## Active Milestone
 
-- Status: active
-- Scope: strengthen Memory as the durable domain-understanding layer and capture repeated vague-instruction failures.
+- Status: completed
+- Scope: completed
 - Ready: ready
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Inspect the memory note template, runbooks, and manifest surfaces and decide where repeated-failure capture should land.
+- Completed.
 
 ## Blockers
 
@@ -82,9 +82,7 @@
 
 ## Open Questions To Close
 
-- Which memory-owned surface should capture repeated vague-instruction failures first?
-- Does durable capture belong in a runbook, a note template, or both?
-- What is the narrowest useful fallback when Memory is absent?
+- None.
 
 ## Validation Commands
 
@@ -107,10 +105,10 @@
 
 ## Execution Summary
 
-- Outcome delivered: confirmed versus interpreted intent now appears in `agentic-workspace defaults --section intent --format json` and the bootstrap handoff prompt; cheap clarification, prompt routing, and relay now appear in `defaults --section clarification`, `defaults --section prompt_routing`, and `defaults --section relay`.
-- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`, `uv run ruff check src tests`.
-- Follow-on routed to: `ROADMAP.md` and GitHub issues `#106` and `#107`.
-- Resume from: strengthen Memory as the durable domain-understanding layer and capture repeated vague-instruction failures.
+- Outcome delivered: confirmed versus interpreted intent, cheap clarification, prompt routing, relay, and durable Memory capture guidance now all appear in checked-in contract surfaces.
+- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`, `uv run ruff check src tests`, `uv run python scripts/check/check_planning_surfaces.py`, `uv run python scripts/check/check_memory_freshness.py`.
+- Follow-on routed to: none.
+- Resume from: none.
 
 ## Drift Log
 
@@ -118,3 +116,4 @@
 - 2026-04-16: First slice landed the confirmed-versus-interpreted intent split in defaults and bootstrap handoff surfaces.
 - 2026-04-16: Second slice landed cheap clarification and prompt routing selectors for vague prompts.
 - 2026-04-16: Third slice landed the relay selector and routed-Memory handoff contract.
+- 2026-04-16: Final slice landed durable Memory capture guidance for repeated vague-instruction failures.
