@@ -147,6 +147,8 @@ Leave the repository cleaner than you found it within the touched scope.
 
 If cleanup would expand beyond the touched scope, record the broader improvement as follow-up instead of silently absorbing it.
 
+New contract surfaces should also earn their place by compressing older paths. A new surface should replace, merge, or materially simplify something that already exists; if it only adds precision, ask what can be deleted, collapsed, or demoted.
+
 The system should help the repo mature, not simply accumulate operational residue forever.
 
 ### 9. Favor explicit seams over hidden coupling
@@ -375,6 +377,7 @@ A proposed feature is suspicious if it tends to:
 - leave behind high-churn residue that outlives its value
 - try to schedule runtime model choice or delegation from checked-in policy
 - enter planning mainly because it sounds like a useful idea rather than because the repo has paid a real cost for its absence
+- add a new contract surface without naming the older path it replaces, merges, or materially simplifies
 
 ## Practical Standard
 

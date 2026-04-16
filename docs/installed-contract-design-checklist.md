@@ -28,6 +28,12 @@ Use `docs/compatibility-policy.md` for stable-versus-mutable surface guidance, `
 - Does it tell maintainers when the file should shrink, archive, rerender, or disappear?
 - If the surface is temporary bootstrap or calibration state, is that temporary role explicit?
 
+## Compression
+
+- Does the new surface replace, merge, or materially simplify an older path?
+- If not, what older surface can now be deleted, collapsed, or demoted?
+- Does the proposal name the specific path it is compressing rather than only adding more precision?
+
 ## Partial Adoption
 
 - Does the package still make sense when installed alone?

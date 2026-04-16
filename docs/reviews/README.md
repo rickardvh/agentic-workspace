@@ -122,6 +122,7 @@ Use staged promotion:
 
 Do not promote every finding. Dismiss weak, duplicate, or low-value findings instead of turning the queue into an analysis backlog.
 By default, do not promote a new work item unless there is measured friction, repeated failure, repeated dogfooding pain, or an explicit maintainer override for why the work should exist now.
+For contract-growth reviews, explicitly ask what older path can now be deleted, collapsed, or demoted before promoting a new surface.
 
 ## Improvement-targeting workflow
 

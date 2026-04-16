@@ -35,6 +35,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 ## Promotion Rules
 
 - Promote candidate items only when dependencies are clear and the scope fits a short execplan.
+- For new contract surfaces, require the promotion note to name the older path it replaces, merges, or materially simplifies.
 - For review-derived candidates, prefer promotion only after the same product-level deficiency appears in at least two independent captures, or one review artifact plus one repeated maintenance or dogfooding pass, unless explicit maintainer direction justifies immediate activation.
 - Prefer measured friction, repeated failure, repeated dogfooding pain, or explicit maintainer override over concept opportunity when deciding whether new work belongs in planning at all.
 - Keep detailed execution in `docs/execplans/` once promoted.
