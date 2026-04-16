@@ -2233,6 +2233,53 @@ def _prompt_routing_contract_payload() -> dict[str, Any]:
     }
 
 
+def _relay_contract_payload() -> dict[str, Any]:
+    return {
+        "canonical_doc": "docs/delegated-judgment-contract.md",
+        "command": "agentic-workspace defaults --section relay --format json",
+        "rule": "Use a strong planner to normalize the vague prompt, then hand the compact contract to a cheap implementer.",
+        "planner_role": {
+            "summary": "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract.",
+            "does": [
+                "clarify the request with the smallest repo-context follow-up",
+                "choose the narrow proof lane and owner surface",
+                "preserve escalation boundaries before the handoff freezes",
+            ],
+        },
+        "implementer_role": {
+            "summary": "execute the narrow contract without widening the requested end state.",
+            "does": [
+                "follow the compact interpreted contract",
+                "stop or escalate when the scope expands",
+                "mirror durable follow-through into checked-in surfaces",
+            ],
+        },
+        "memory_bridge": {
+            "summary": "when routed Memory is installed, borrow durable repo understanding before freezing the compact contract.",
+            "borrow_from": [
+                "memory/index.md",
+                "memory/current/",
+                "memory/runbooks/",
+            ],
+            "fallback": [
+                "continue from checked-in docs when routed Memory is absent",
+                "route missing durable context back into Memory when the work reveals repeated gaps",
+            ],
+        },
+        "hand_off_order": [
+            "intent",
+            "clarification",
+            "prompt_routing",
+            "relay",
+        ],
+        "escalate_when": [
+            "the planner would need to rewrite the requested outcome",
+            "the cheap implementer would need broad repo rereads to stay safe",
+            "the routed Memory bridge is absent and the missing context is blocking",
+        ],
+    }
+
+
 def _run_prompt_command(
     *,
     prompt_command: str,
@@ -2906,6 +2953,7 @@ def _defaults_payload() -> dict[str, Any]:
         "intent": _intent_contract_payload(),
         "clarification": _clarification_contract_payload(),
         "prompt_routing": _prompt_routing_contract_payload(),
+        "relay": _relay_contract_payload(),
         "config": {
             "path": "agentic-workspace.toml",
             "command": "agentic-workspace config --target ./repo --format json",
@@ -3287,6 +3335,13 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- rule: {payload['prompt_routing']['rule']}")
     for route in payload["prompt_routing"]["route_by_class"]:
         print(f"- {route['class']}: {route['proof_lane']} -> {route['owner_surface']}")
+    print("Relay:")
+    print(f"- doc: {payload['relay']['canonical_doc']}")
+    print(f"- command: {payload['relay']['command']}")
+    print(f"- rule: {payload['relay']['rule']}")
+    print(f"- planner: {payload['relay']['planner_role']['summary']}")
+    print(f"- implementer: {payload['relay']['implementer_role']['summary']}")
+    print(f"- memory bridge: {payload['relay']['memory_bridge']['summary']}")
     print("Compact contract profile:")
     print(f"- doc: {payload['compact_contract_profile']['canonical_doc']}")
     print(f"- rule: {payload['compact_contract_profile']['rule']}")

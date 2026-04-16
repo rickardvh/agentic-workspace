@@ -35,14 +35,14 @@
 ## Active Milestone
 
 - Status: active
-- Scope: define the strong-planner / cheap-implementer relay and routed-Memory bridge for weak prompts.
+- Scope: strengthen Memory as the durable domain-understanding layer and capture repeated vague-instruction failures.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Inspect the intent, clarification, and prompt-routing surfaces and decide where the relay bridge should land.
+- Inspect the memory note template, runbooks, and manifest surfaces and decide where repeated-failure capture should land.
 
 ## Blockers
 
@@ -57,6 +57,10 @@
 - `docs/capability-aware-execution.md`
 - `docs/default-path-contract.md`
 - `docs/reporting-contract.md`
+- `memory/templates/memory-note-template.md`
+- `memory/runbooks/README.md`
+- `memory/runbooks/`
+- `memory/manifest.toml`
 - `src/agentic_workspace/cli.py`
 - `tests/test_workspace_cli.py`
 
@@ -72,13 +76,14 @@
 - `defaults --section intent --format json` owns the front-door confirmed-versus-interpreted split.
 - `defaults --section clarification --format json` owns the smallest repo-context follow-up for vague prompts.
 - `defaults --section prompt_routing --format json` owns the compact proof-lane and owner inference surface.
+- `defaults --section relay --format json` owns the planner-to-implementer handoff and routed-Memory bridge.
 - `init` handoff mirrors the same split for bootstrap follow-through.
 - `report` stays the combined workspace-state surface rather than becoming a second intent contract.
 
 ## Open Questions To Close
 
-- Which common vague-prompt classes should be used as the first proof cases for routed-Memory relay?
-- Does the relay bridge belong in the workspace CLI or the planning package first?
+- Which memory-owned surface should capture repeated vague-instruction failures first?
+- Does durable capture belong in a runbook, a note template, or both?
 - What is the narrowest useful fallback when Memory is absent?
 
 ## Validation Commands
@@ -102,13 +107,14 @@
 
 ## Execution Summary
 
-- Outcome delivered: confirmed versus interpreted intent now appears in `agentic-workspace defaults --section intent --format json` and the bootstrap handoff prompt; cheap clarification and prompt routing now appear in `defaults --section clarification` and `defaults --section prompt_routing`.
+- Outcome delivered: confirmed versus interpreted intent now appears in `agentic-workspace defaults --section intent --format json` and the bootstrap handoff prompt; cheap clarification, prompt routing, and relay now appear in `defaults --section clarification`, `defaults --section prompt_routing`, and `defaults --section relay`.
 - Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`, `uv run ruff check src tests`.
-- Follow-on routed to: `ROADMAP.md` and GitHub issues `#105` through `#108`.
-- Resume from: define the strong-planner / cheap-implementer relay and the routed-Memory bridge for weak prompts.
+- Follow-on routed to: `ROADMAP.md` and GitHub issues `#106` and `#107`.
+- Resume from: strengthen Memory as the durable domain-understanding layer and capture repeated vague-instruction failures.
 
 ## Drift Log
 
 - 2026-04-16: Plan created from the vague-prompt / intent-interpretation tranche.
 - 2026-04-16: First slice landed the confirmed-versus-interpreted intent split in defaults and bootstrap handoff surfaces.
 - 2026-04-16: Second slice landed cheap clarification and prompt routing selectors for vague prompts.
+- 2026-04-16: Third slice landed the relay selector and routed-Memory handoff contract.

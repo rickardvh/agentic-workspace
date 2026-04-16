@@ -18,13 +18,12 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 ## GitHub Issue Intake
 
 - Latest intake tranche: GitHub issues `#109` through `#120`.
-- Earlier open planning issues `#105` through `#108` remain available for the next tranche.
+- Earlier open planning issues `#106` through `#107` remain available for the next tranche.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 - The simplification tranche is complete.
 
 ## Next Candidate Queue
-- `#105/#108` Make strong-planner / cheap-implementer relay explicit and let routed Memory feed interpreted intent so weak prompts can borrow durable repo understanding before Planning freezes the bounded execution shape; promote when the interpretation bridge needs a clear handoff between durable context and active intent.
 - `#106/#107` Strengthen Memory as the durable domain-understanding layer and treat repeated vague-instruction failures as a signal for durable capture; promote when the interpretation bridge proves that missing shared understanding is the main remaining source of vague-prompt friction.
 ## Reopen Conditions
 

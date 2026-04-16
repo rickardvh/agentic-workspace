@@ -139,6 +139,17 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["prompt_routing"]["route_by_class"][0]["class"] == "workspace lifecycle change"
     assert payload["prompt_routing"]["route_by_class"][0]["proof_lane"] == "workspace_cli"
     assert payload["prompt_routing"]["route_by_class"][0]["owner_surface"] == "src/agentic_workspace/cli.py"
+    assert payload["relay"]["canonical_doc"] == "docs/delegated-judgment-contract.md"
+    assert payload["relay"]["command"] == "agentic-workspace defaults --section relay --format json"
+    assert payload["relay"]["rule"] == (
+        "Use a strong planner to normalize the vague prompt, then hand the compact contract to a cheap implementer."
+    )
+    assert payload["relay"]["planner_role"]["summary"] == (
+        "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract."
+    )
+    assert payload["relay"]["memory_bridge"]["summary"] == (
+        "when routed Memory is installed, borrow durable repo understanding before freezing the compact contract."
+    )
     assert payload["setup"]["secondary"] == [
         "Do not widen init.",
         "Do not collapse setup into the proof backlog.",
@@ -287,6 +298,8 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Clarification:" in text
     assert "mode: minimal-interruption" in text
     assert "Prompt routing:" in text
+    assert "Relay:" in text
+    assert "strong planner" in text
     assert "Delegation posture:" in text
     assert "docs/delegation-posture-contract.md" in text
     assert "Compact contract profile:" in text
@@ -453,6 +466,29 @@ def test_defaults_section_selector_returns_prompt_routing_answer(capsys) -> None
     assert payload["answer"]["route_by_class"][0]["proof_lane"] == "workspace_cli"
     assert payload["answer"]["route_by_class"][0]["owner_surface"] == "src/agentic_workspace/cli.py"
     assert "docs/intent-contract.md" in payload["refs"]
+    assert "agentic-workspace defaults --format json" in payload["refs"]
+
+
+def test_defaults_section_selector_returns_relay_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "relay", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "relay"}
+    assert payload["matched"] is True
+    assert payload["answer"]["canonical_doc"] == "docs/delegated-judgment-contract.md"
+    assert payload["answer"]["command"] == "agentic-workspace defaults --section relay --format json"
+    assert payload["answer"]["planner_role"]["summary"] == (
+        "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract."
+    )
+    assert payload["answer"]["implementer_role"]["summary"] == (
+        "execute the narrow contract without widening the requested end state."
+    )
+    assert payload["answer"]["memory_bridge"]["summary"] == (
+        "when routed Memory is installed, borrow durable repo understanding before freezing the compact contract."
+    )
+    assert "docs/delegated-judgment-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
