@@ -254,6 +254,7 @@ Dogfooding is valuable only if it produces better general systems.
 ### 15. Help the agent do the job, do not script the job
 
 The product should make bounded work easier, not turn the repository into a workflow script that dictates every local decision.
+It should stay opinionated about what must remain true, not about the exact local choreography used to get there.
 
 Prefer:
 
@@ -268,6 +269,7 @@ Avoid:
 - broad local workflows that only work when the agent follows a long script
 
 If a proposed surface mostly tells the agent exactly how to work rather than helping it work better, ask whether it is actually reducing repository operating cost.
+Prefer boundaries over procedures: if a surface mostly tells the agent how to work instead of what boundary to preserve, look for a thinner contract or a clearer handoff instead.
 
 ### 15. Portability matters more than local cleverness
 

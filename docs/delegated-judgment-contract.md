@@ -49,9 +49,11 @@ Allowed local judgment includes:
 - selecting the relevant skill or registry-backed workflow
 - preferring a checked-in plan when direct execution is no longer safe
 - capturing durable residue in the correct checked-in surface
+- choosing the cheapest local method that still preserves the boundary and proof story
 
 This is bounded initiative.
 It is not permission to replace the requested outcome with a broader or more ambitious one.
+It is also not permission to prescribe local execution choreography when a boundary rule or proof boundary is enough.
 
 ## What Requires Promotion Or Escalation
 

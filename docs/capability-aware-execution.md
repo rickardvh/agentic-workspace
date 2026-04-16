@@ -174,6 +174,7 @@ When the assistant or tool already performs automatic capability selection:
 - do use this contract to decide whether the work should stay direct, be planned first, be delegated, or stop
 
 Capability-aware execution should make tool-local routing easier, not noisier.
+Prefer boundaries over procedures: if a thinner boundary rule can keep the task safe, do not replace it with a longer workflow script.
 
 ## Bounded Initiative And Scope Expansion
 

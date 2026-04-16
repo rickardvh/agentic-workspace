@@ -45,6 +45,13 @@ The canonical planning record currently carries:
 - `blockers`
 - `minimal_refs`
 
+When a request belongs to a longer line of work, the canonical record should also preserve the convergence context:
+
+- the larger intended outcome
+- the checked-in continuation owner or surface
+- what must remain intact after interruption or diversion
+- whether the current request pauses the arc or replaces it
+
 `active_contract` remains available as a compatibility projection focused on intent and escalation boundaries.
 
 ## Rules
@@ -54,6 +61,7 @@ The canonical planning record currently carries:
 - Keep it small enough that a weaker or later agent can recover the intended end state without broad rereading.
 - Treat it as unavailable when active planning is ambiguous instead of fabricating certainty from several partial surfaces.
 - Preserve explicit escalation boundaries; the contract must not silently widen requested outcome, ownership scope, or time horizon.
+- Preserve the larger convergence arc when the current slice is only part of it; the record should survive interruptions without the next contributor having to reconstruct the bigger picture from chat.
 - When a plan declares `Required Tools`, expose that requirement directly so weaker agents can stop or escalate before attempting impossible work.
 - If an agent runtime uses native planning artifacts, project any durable state back into the canonical planning record before handoff or review instead of treating runtime-local files as authoritative.
 - Treat raw planning prose as a thin human maintenance view and semantic fallback, not the default inspection path for ordinary state questions.

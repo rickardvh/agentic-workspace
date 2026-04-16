@@ -24,6 +24,15 @@ This file is a thin human view over the canonical `planning_record` surfaced by 
 Use `none` only when this slice actually completes the larger intended outcome.
 If the larger intended outcome is still unfinished, point `Continuation surface` at the checked-in surface that now owns follow-through.
 
+## Convergence Context
+
+- Larger intended outcome:
+- Convergence owner:
+- What must remain intact after interruption:
+- Current interruption boundary:
+
+Use this section when the larger picture needs to survive interruption or diversion without being restated from chat.
+
 ## Required Continuation
 
 - Required follow-on for the larger intended outcome:
