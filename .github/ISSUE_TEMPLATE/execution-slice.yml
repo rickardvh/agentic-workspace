@@ -1,0 +1,92 @@
+name: Execution slice
+description: Capture one bounded implementation or refactor slice when tighter local scoping is useful.
+title: "[Area]: "
+labels: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this selectively.
+
+        This template is for one bounded implementation or refactor slice.
+        Planning remains the authoritative home for larger-picture convergence and continuation.
+
+  - type: dropdown
+    id: planning_signal
+    attributes:
+      label: What kind of planning signal is this?
+      options:
+        - Bounded execution slice
+      default: 0
+    validations:
+      required: true
+
+  - type: input
+    id: parent_lane
+    attributes:
+      label: Parent intent / lane
+      description: Which higher-level intent issue, lane, or epic does this slice belong to?
+      placeholder: e.g. planning-model-cleanup
+    validations:
+      required: true
+
+  - type: textarea
+    id: slice_goal
+    attributes:
+      label: Slice goal
+      description: What specifically should this slice accomplish?
+    validations:
+      required: true
+
+  - type: textarea
+    id: why_split
+    attributes:
+      label: Why this slice exists
+      description: Why is this work being split out instead of left to general planning or decomposition?
+      placeholder: |
+        Examples:
+        - weaker or cheaper agent handoff
+        - tricky proof boundary
+        - sharp refactor boundary
+        - especially important acceptance criteria
+        - bounded review or audit
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What is in scope for this slice?
+    validations:
+      required: true
+
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: What should not be absorbed into this slice?
+    validations:
+      required: false
+
+  - type: textarea
+    id: done_boundary
+    attributes:
+      label: Proof / done boundary
+      description: What counts as done for this slice?
+    validations:
+      required: true
+
+  - type: textarea
+    id: follow_on
+    attributes:
+      label: Follow-on expectations
+      description: What should happen if this slice completes but the larger intent does not?
+      value: |
+        If this slice is completed but the larger intent is not, the agent should:
+        - route required continuation back into Planning
+        - preserve implications and validation still needed
+        - not let closure of this issue imply closure of the larger lane
+    validations:
+      required: true

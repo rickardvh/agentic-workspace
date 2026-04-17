@@ -1,0 +1,113 @@
+name: Intent issue
+description: Capture higher-level intent, constraints, and success signals without over-specifying execution.
+title: "[Area]: "
+labels: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this as the default template.
+
+        This issue should express higher-level intent, constraints, and success signals.
+        Planning remains the authoritative home for decomposition, continuation, follow-on routing, and larger-picture convergence.
+
+  - type: dropdown
+    id: planning_signal
+    attributes:
+      label: What kind of planning signal is this?
+      options:
+        - Intent / lane / epic direction
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem_intent
+    attributes:
+      label: Problem / intent
+      description: What larger outcome do we want, and what problem is this meant to solve?
+      placeholder: |
+        Describe:
+        - what should become true
+        - what should stop happening
+        - why this matters
+    validations:
+      required: true
+
+  - type: textarea
+    id: why_now
+    attributes:
+      label: Why now
+      description: Why is this worth doing now or soon?
+    validations:
+      required: false
+
+  - type: textarea
+    id: larger_picture
+    attributes:
+      label: How it fits the larger picture
+      description: What broader lane, epic, or product direction does this belong to?
+    validations:
+      required: false
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints / boundaries
+      description: What must remain true while pursuing this?
+      placeholder: |
+        Examples:
+        - ownership boundaries
+        - safety boundaries
+        - compatibility boundaries
+        - do not turn this into X
+        - must remain lightweight / quiet / repo-native
+    validations:
+      required: false
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: What this issue is not asking for.
+    validations:
+      required: false
+
+  - type: textarea
+    id: success_signal
+    attributes:
+      label: Acceptance / success signal
+      description: How will we know this direction has been meaningfully advanced?
+      placeholder: Keep this outcome-focused, not implementation-script-focused.
+    validations:
+      required: true
+
+  - type: textarea
+    id: planning_expectations
+    attributes:
+      label: Planning expectations
+      description: How should the agent use Planning in response to this intent?
+      value: |
+        The agent should:
+        - turn this intent into an appropriate planning shape in checked-in planning surfaces
+        - decide whether the work belongs in ROADMAP.md, TODO.md, and/or one or more execplans
+        - preserve follow-on work, implications, and continuation in Planning rather than in issue comments
+        - keep the larger convergence arc visible even if the work is completed iteratively
+    validations:
+      required: true
+
+  - type: textarea
+    id: optional_first_push
+    attributes:
+      label: Optional first push
+      description: Only include this when genuinely helpful.
+      placeholder: |
+        Examples:
+        - one likely first slice
+        - one likely review or audit
+        - one likely proof-of-concept
+
+        Do not turn this section into a detailed execution script.
+    validations:
+      required: false

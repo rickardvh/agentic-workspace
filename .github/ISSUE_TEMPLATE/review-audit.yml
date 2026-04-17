@@ -1,0 +1,78 @@
+name: Review or audit
+description: Run a bounded review, inspection, or audit whose findings may later be promoted into planning work.
+title: "[Review]: "
+labels: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for bounded inspection work.
+
+        Findings should only be promoted into active planning through the normal planning path.
+
+  - type: dropdown
+    id: planning_signal
+    attributes:
+      label: What kind of planning signal is this?
+      options:
+        - Bounded review / audit
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question to answer
+      description: What specifically are we trying to learn from this review?
+    validations:
+      required: true
+
+  - type: textarea
+    id: why_matters
+    attributes:
+      label: Why this review matters
+      description: How does this inform a broader lane or intent?
+    validations:
+      required: true
+
+  - type: textarea
+    id: review_scope
+    attributes:
+      label: Review scope
+      description: What should be inspected?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_output
+    attributes:
+      label: Expected output
+      description: What kind of checked-in result should this review produce?
+      placeholder: |
+        Examples:
+        - promoted planning candidate
+        - repo-friction finding
+        - proof gap
+        - ownership clarification
+        - cleanup target
+        - dismissal of a suspected problem
+    validations:
+      required: true
+
+  - type: textarea
+    id: promotion_rule
+    attributes:
+      label: Promotion rule
+      description: What kind of finding should become active planning work, and what should remain only a review artifact?
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: What should this review explicitly avoid?
+    validations:
+      required: false
