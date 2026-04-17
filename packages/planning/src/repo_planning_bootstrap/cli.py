@@ -16,6 +16,7 @@ from repo_planning_bootstrap.installer import (
     format_summary_json,
     install_bootstrap,
     list_payload_files,
+    planning_handoff,
     planning_report,
     planning_summary,
     promote_todo_item_to_execplan,
@@ -66,6 +67,10 @@ def build_parser() -> argparse.ArgumentParser:
     report_parser = subparsers.add_parser("report", help="Report compact planning module state without reading raw planning files first.")
     report_parser.add_argument("--target")
     report_parser.add_argument("--format", choices=("text", "json"), default="text")
+
+    handoff_parser = subparsers.add_parser("handoff", help="Emit the compact delegated-worker handoff derived from active planning state.")
+    handoff_parser.add_argument("--target")
+    handoff_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     promote_parser = subparsers.add_parser("promote-to-plan", help="Promote a direct TODO item into an execplan scaffold.")
     promote_parser.add_argument("item_id")
@@ -126,6 +131,13 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(report, indent=2))
         else:
             _print_report(report)
+        return 0
+    if args.command == "handoff":
+        handoff = planning_handoff(target=args.target)
+        if args.format == "json":
+            print(json.dumps(handoff, indent=2))
+        else:
+            _print_handoff(handoff)
         return 0
     if args.command == "promote-to-plan":
         return _emit(
@@ -300,6 +312,30 @@ def _print_report(report: dict) -> None:
         for finding in findings:
             path = f"{finding['path']}: " if finding.get("path") else ""
             print(f"- {path}{finding.get('message', '')}")
+
+
+def _print_handoff(handoff: dict) -> None:
+    print(f"Target: {handoff['target_root']}")
+    contract = handoff.get("handoff_contract", {})
+    if contract.get("status") != "present":
+        reason = contract.get("reason", "no delegated handoff is available")
+        print(f"Handoff: unavailable ({reason})")
+        return
+
+    task = contract.get("task", {})
+    print("Delegated handoff:")
+    print(f"- Task: {task.get('id', '')}: {task.get('surface', '')}")
+    parent_lane = contract.get("parent_lane", {})
+    lane_label = parent_lane.get("id") or parent_lane.get("title")
+    if lane_label:
+        print(f"- Parent lane: {lane_label}")
+    print(f"- Next action: {contract.get('next_action', '')}")
+    print(f"- Read first: {', '.join(contract.get('read_first', []))}")
+    print(f"- Write scope: {', '.join(contract.get('owned_write_scope', []))}")
+    print(f"- Proof: {', '.join(contract.get('proof_expectations', []))}")
+    worker_contract = contract.get("worker_contract", {})
+    print(f"- Allowed methods: {', '.join(worker_contract.get('allowed_execution_methods', []))}")
+    print(f"- Worker owns by default: {', '.join(worker_contract.get('worker_owns_by_default', []))}")
 
 
 def _build_prompt(command: str, target: str | None) -> str:

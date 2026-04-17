@@ -58,9 +58,17 @@ Use:
 agentic-workspace defaults --section relay --format json
 ```
 
-That selector records the strong-planner / cheap-implementer relay and the routed-Memory bridge.
+That selector records the strong-planner / cheap-implementer relay, the delegated execution method rule, and the routed-Memory bridge.
 
 Use it when the prompt is already being shaped into a compact contract and the question is how the handoff should proceed.
+
+Use:
+
+```bash
+agentic-planning-bootstrap handoff --format json
+```
+
+when the question is not only the relay rule, but the active worker handoff derived from the current planning state.
 
 ## Canonical Surface
 
@@ -99,6 +107,7 @@ The canonical planning record currently carries:
 
 `active_contract` remains available as a compatibility projection focused on intent and escalation boundaries.
 `follow_through_contract` remains available as a compatibility projection focused on iterative carry-forward across bounded slices.
+`handoff_contract` remains available as a compatibility projection focused on bounded delegated-worker handoff.
 
 ## Rules
 

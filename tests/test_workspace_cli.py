@@ -153,11 +153,13 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["prompt_routing"]["route_by_class"][2]["proof_lane"] == "memory_payload"
     assert payload["prompt_routing"]["route_by_class"][3]["proof_lane"] == "workspace_cli"
     assert payload["prompt_routing"]["route_by_class"][3]["broaden_with"] == ["planning_surfaces"]
-    assert payload["relay"]["canonical_doc"] == "docs/delegated-judgment-contract.md"
+    assert payload["relay"]["canonical_doc"] == "docs/orchestrator-workflow-contract.md"
     assert payload["relay"]["command"] == "agentic-workspace defaults --section relay --format json"
     assert payload["relay"]["rule"] == (
-        "Use a strong planner to normalize the vague prompt, then hand the compact contract to a cheap implementer."
+        "Use a strong planner to normalize the vague prompt, then hand the compact contract to a bounded executor without prescribing the execution method."
     )
+    assert payload["relay"]["handoff_command"] == "agentic-planning-bootstrap handoff --format json"
+    assert payload["relay"]["execution_methods"][1]["id"] == "external cli or api"
     assert payload["relay"]["planner_role"]["summary"] == (
         "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract."
     )
@@ -562,16 +564,18 @@ def test_defaults_section_selector_returns_relay_answer(capsys) -> None:
     assert payload["surface"] == "defaults"
     assert payload["selector"] == {"section": "relay"}
     assert payload["matched"] is True
-    assert payload["answer"]["canonical_doc"] == "docs/delegated-judgment-contract.md"
+    assert payload["answer"]["canonical_doc"] == "docs/orchestrator-workflow-contract.md"
     assert payload["answer"]["command"] == "agentic-workspace defaults --section relay --format json"
     assert payload["answer"]["planner_role"]["summary"] == (
         "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract."
     )
-    assert payload["answer"]["implementer_role"]["summary"] == ("execute the narrow contract without widening the requested end state.")
+    assert payload["answer"]["implementer_role"]["summary"] == (
+        "execute the narrow contract without widening the requested end state, whether the executor is internal or external."
+    )
     assert payload["answer"]["memory_bridge"]["summary"] == (
         "when routed Memory is installed, borrow durable repo understanding before freezing the compact contract."
     )
-    assert "docs/delegated-judgment-contract.md" in payload["refs"]
+    assert "docs/orchestrator-workflow-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
@@ -1839,9 +1843,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["standing_intent"]["supersession_rules"][0]["rule"] == "newer_same_owner_replaces_older"
     stronger_home = payload["standing_intent"]["stronger_home_model"]
     assert stronger_home["candidate_classes"][0]["class"] == "repo_doctrine"
-    assert stronger_home["decision_test"]["promote_to_config_when"][0].startswith(
-        "the standing guidance should be machine-readable"
-    )
+    assert stronger_home["decision_test"]["promote_to_config_when"][0].startswith("the standing guidance should be machine-readable")
     assert any(example["current_owner"] == "scripts/check/check_planning_surfaces.py" for example in stronger_home["examples"])
     assert "checked-in policy" in payload["standing_intent"]["effective_view"]["conflict_rule"]
     assert payload["standing_intent"]["effective_view"]["in_force_count"] == 3

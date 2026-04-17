@@ -139,13 +139,15 @@ Generated mirrors inherit stability from their canonical source relationships, n
 It also defines the bounded-initiative rule: improve means locally, but do not silently widen the requested outcome, owned surface, or time horizon.
 `docs/delegated-judgment-contract.md` is the front-door companion: what the human should specify, what the agent may decide locally, and what should become an explicit promotion or escalation decision.
 `docs/intent-contract.md` defines the compact machine-readable active intent contract exposed through `agentic-planning-bootstrap summary --format json` as a view over the canonical `planning_record`.
+`docs/orchestrator-workflow-contract.md` defines the delegated planner-to-worker workflow and `agentic-planning-bootstrap handoff --format json` surface for agent-agnostic bounded handoff.
 `docs/standing-intent-contract.md` defines the standing-intent classification and promotion contract used by the workspace report to route durable repo-wide guidance into the right owner surface.
 `docs/resumable-execution-contract.md` defines the smaller machine-readable restart contract as a view over the same canonical `planning_record`.
 `docs/environment-recovery-contract.md` defines both how task-local environment assumptions and recovery paths should be expressed without growing a second plan schema, and the ordered recovery path when lifecycle work, repo-state inspection, or validation restart becomes ambiguous.
 `docs/execution-summary-contract.md` defines the compact completion summary that archived slices should leave behind.
 `docs/planning-routing-contract.md` defines the hierarchy and routing rules between `ROADMAP.md`, `TODO.md`, execplans, and reviews.
 
-For active planning, `agentic-planning-bootstrap summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. `active_contract`, `resumable_contract`, `follow_through_contract`, and `hierarchy_contract` remain thinner views over that record.
+For active planning, `agentic-planning-bootstrap summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. `active_contract`, `resumable_contract`, `follow_through_contract`, `hierarchy_contract`, and `handoff_contract` remain thinner views over that record.
+For delegated execution, `agentic-planning-bootstrap handoff --format json` is the compact worker handoff derived from that same active planning state.
 For compact module-state reporting without opening raw planning files first, use `agentic-planning-bootstrap report --format json`. It stays derived from the same canonical planning state and does not create a second state store.
 Use `hierarchy_contract` when you need the larger-picture restart answer cheaply: active chunk, parent lane, next likely chunk, continuation owner, and proof state.
 
@@ -175,6 +177,7 @@ Direct execution is an explicit success mode for small local work. The goal is n
 
 When delegation is useful, keep it capability-aware and optional. If available, a stronger model may draft a compact execplan or handoff for a smaller implementation model, but only when that is likely to save tokens overall without lowering quality. Do not assume subagents or multi-model workflows exist; the contract should still work for a single agent operating alone.
 Use the capability-aware execution contract to describe that recommendation in task-shape terms instead of vendor-specific model names, and prefer silent task shaping over repeated instructions to switch executors manually.
+Use the orchestrator workflow contract plus `agentic-planning-bootstrap handoff --format json` when the goal is to reuse the same checked-in handoff across internal delegation, local CLI/API execution, or another vendor executor.
 
 If stronger capability keeps seeming necessary for the same class of work, treat that as a product signal for cheaper future execution. The next step is often better decomposition, clearer validation, or tighter guidance rather than accepting stronger execution as the permanent answer.
 

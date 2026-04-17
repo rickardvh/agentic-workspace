@@ -110,7 +110,7 @@ Use the machine-readable report as the default combined-state inspection path wh
 Use `agentic-workspace defaults --section intent --format json` when the question is confirmed versus interpreted intent; keep report for combined workspace state.
 Use `agentic-workspace defaults --section clarification --format json` when the question is how to ask the smallest useful follow-up.
 Use `agentic-workspace defaults --section prompt_routing --format json` when the question is which proof lane or owner should absorb a vague prompt.
-Use `agentic-workspace defaults --section relay --format json` when the question is how a strong planner should hand a compact contract to a cheap implementer.
+Use `agentic-workspace defaults --section relay --format json` when the question is how a strong planner should hand a compact contract to a bounded executor, and `agentic-planning-bootstrap handoff --format json` when the active delegated slice itself needs to be handed off.
 Use `agentic-workspace defaults --section improvement_latitude --format json` when the question is how much evidence-backed repo-friction reduction is welcome by default.
 Use `agentic-workspace defaults --section optimization_bias --format json` when the question is how shared report density and residue style should lean by default.
 Use the `repo_friction.reporting_destinations` field when the question is where reporting-only findings may surface without creating implicit active work.

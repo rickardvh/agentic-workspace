@@ -16,6 +16,8 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
   - upgrade planning bootstrap files for an already bootstrapped repository safely
 - `planning-autopilot`
   - execute one bounded planning milestone at a time from the checked-in planning surfaces
+- `planning-orchestrator-workflow`
+  - run planner-to-worker delegated execution from checked-in planning using the local mixed-agent posture and a derived handoff contract
 - `planning-intake-upstream-task`
   - turn an externally tracked issue or task into checked-in planning while keeping the upstream tracker as an intake source only
 - `planning-promote-review-findings`
@@ -25,4 +27,4 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
 - `planning-reporting`
   - report active planning state, proof expectations, and next-action guidance from the canonical summary JSON
 
-These bundled skills cover payload refresh, bounded planning execution, review capture, review-to-plan promotion, and upstream-task intake.
+These bundled skills cover payload refresh, bounded planning execution, delegated planning workflow, review capture, review-to-plan promotion, and upstream-task intake.

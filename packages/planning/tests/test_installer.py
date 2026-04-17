@@ -17,6 +17,7 @@ from repo_planning_bootstrap.installer import (
     collect_status,
     doctor_bootstrap,
     install_bootstrap,
+    planning_handoff,
     planning_report,
     planning_summary,
     promote_todo_item_to_execplan,
@@ -1497,6 +1498,11 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
         "finish the current milestone and archive if no larger follow-on remains."
     )
     assert summary["hierarchy_contract"]["proof_state"]["proof_expectations"] == ["uv run pytest tests/test_check_planning_surfaces.py"]
+    assert summary["handoff_contract"]["status"] == "present"
+    assert summary["handoff_contract"]["task"]["id"] == "plan-alpha"
+    assert summary["handoff_contract"]["read_first"] == ["TODO.md", "docs/execplans/plan-alpha.md"]
+    assert summary["handoff_contract"]["owned_write_scope"] == ["scripts/check/check_planning_surfaces.py"]
+    assert summary["handoff_contract"]["worker_contract"]["allowed_execution_methods"][1] == "external cli or api"
     assert summary["roadmap"]["candidate_count"] == 1
     assert summary["roadmap"]["candidates"] == [
         {
@@ -1638,8 +1644,64 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "tool_verification" in summary["schema"]["view_fields"]["resumable_contract"]
     assert "follow_through_contract" in summary["schema"]["shared_fields"]
     assert "hierarchy_contract" in summary["schema"]["shared_fields"]
+    assert "handoff_contract" in summary["schema"]["shared_fields"]
     assert "parent_lane" in summary["schema"]["view_fields"]["hierarchy_contract"]
     assert "next_likely_slice" in summary["schema"]["view_fields"]["follow_through_contract"]
+    assert "read_first" in summary["schema"]["view_fields"]["handoff_contract"]
+
+
+def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: docs/execplans/plan-alpha.md
+  Why now: promote when maintained report signal appears.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+
+    handoff = planning_handoff(target=tmp_path)
+
+    assert handoff["kind"] == "planning-handoff/v1"
+    assert handoff["schema"]["schema_version"] == "planning-handoff-schema/v1"
+    assert handoff["schema"]["canonical_doc"] == "docs/orchestrator-workflow-contract.md"
+    assert handoff["handoff_contract"]["status"] == "present"
+    assert handoff["handoff_contract"]["next_action"] == "Add one checker."
+    assert handoff["handoff_contract"]["worker_contract"]["worker_must_not_own_by_default"][0] == "roadmap routing"
+
+
+def test_planning_handoff_command_emits_json(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: docs/execplans/plan-alpha.md
+  Why now: promote when maintained report signal appears.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+
+    exit_code = planning_cli.main(["handoff", "--target", str(tmp_path), "--format", "json"])
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "planning-handoff/v1"
+    assert payload["handoff_contract"]["status"] == "present"
 
 
 def test_planning_summary_human_view_starts_with_planning_record(tmp_path: Path, capsys) -> None:

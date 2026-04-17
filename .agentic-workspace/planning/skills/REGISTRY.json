@@ -30,6 +30,24 @@
       }
     },
     {
+      "id": "planning-orchestrator-workflow",
+      "path": "planning-orchestrator-workflow/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "run planner-to-worker delegated execution from checked-in planning using the local mixed-agent posture and a derived handoff contract",
+      "activation_hints": {
+        "verbs": ["delegate", "orchestrate", "handoff", "split", "route"],
+        "nouns": ["worker", "planner", "delegation", "handoff", "orchestrator workflow"],
+        "phrases": [
+          "delegate this lane",
+          "run planner to worker workflow",
+          "derive worker handoff",
+          "orchestrate delegated execution"
+        ],
+        "when": ["strong planner then bounded worker", "external or internal delegation", "delegated handoff reuse"]
+      }
+    },
+    {
       "id": "planning-intake-upstream-task",
       "path": "planning-intake-upstream-task/SKILL.md",
       "scope": "bundled",

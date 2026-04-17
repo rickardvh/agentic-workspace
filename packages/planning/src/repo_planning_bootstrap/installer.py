@@ -39,6 +39,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path("docs/execution-summary-contract.md"),
     Path("docs/iterative-follow-through-contract.md"),
     Path("docs/intent-contract.md"),
+    Path("docs/orchestrator-workflow-contract.md"),
     Path("docs/standing-intent-contract.md"),
     Path("docs/candidate-lanes-contract.md"),
     Path("docs/planning-routing-contract.md"),
@@ -72,6 +73,7 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("docs/execution-summary-contract.md"),
     Path("docs/iterative-follow-through-contract.md"),
     Path("docs/intent-contract.md"),
+    Path("docs/orchestrator-workflow-contract.md"),
     Path("docs/standing-intent-contract.md"),
     Path("docs/candidate-lanes-contract.md"),
     Path("docs/planning-routing-contract.md"),
@@ -453,6 +455,10 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         roadmap_lanes=roadmap_lanes,
         active_execplans=active_execplans,
     )
+    handoff_contract = _active_handoff_contract(
+        planning_record=planning_record,
+        hierarchy_contract=hierarchy_contract,
+    )
     return {
         "kind": "planning-summary/v1",
         "schema": _planning_summary_schema(),
@@ -476,6 +482,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
         "follow_through_contract": _contract_projection(follow_through_contract, view_name="follow_through_contract"),
         "hierarchy_contract": _contract_projection(hierarchy_contract, view_name="hierarchy_contract"),
+        "handoff_contract": _contract_projection(handoff_contract, view_name="handoff_contract"),
         "roadmap": {
             "lane_count": len(roadmap_lanes),
             "candidate_lanes": roadmap_lanes,
@@ -494,6 +501,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
     resumable_contract = summary.get("resumable_contract", {})
     follow_through_contract = summary.get("follow_through_contract", {})
     hierarchy_contract = summary.get("hierarchy_contract", {})
+    handoff_contract = summary.get("handoff_contract", {})
     warnings = list(summary.get("warnings", []))
     findings = [
         {
@@ -562,6 +570,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "resumable_contract": resumable_contract,
             "follow_through_contract": follow_through_contract,
             "hierarchy_contract": hierarchy_contract,
+            "handoff_contract": handoff_contract,
         },
         "findings": findings,
         "next_action": {
@@ -571,11 +580,24 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
     }
 
 
+def planning_handoff(*, target: str | Path | None = None) -> dict[str, Any]:
+    summary = planning_summary(target=target)
+    return {
+        "kind": "planning-handoff/v1",
+        "schema": _planning_handoff_schema(),
+        "target_root": summary["target_root"],
+        "handoff_contract": summary.get("handoff_contract", {}),
+        "warnings": [warning.copy() for warning in summary.get("warnings", [])],
+        "warning_count": int(summary.get("warning_count", 0)),
+    }
+
+
 def _planning_summary_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-summary-schema/v1",
         "canonical_docs": [
             "docs/intent-contract.md",
+            "docs/orchestrator-workflow-contract.md",
             "docs/candidate-lanes-contract.md",
             "docs/planning-routing-contract.md",
             "docs/iterative-follow-through-contract.md",
@@ -595,6 +617,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "resumable_contract",
             "follow_through_contract",
             "hierarchy_contract",
+            "handoff_contract",
             "roadmap",
             "warnings",
             "warning_count",
@@ -655,6 +678,21 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "routing",
                 "minimal_refs",
             ],
+            "handoff_contract": [
+                "task",
+                "parent_lane",
+                "requested_outcome",
+                "hard_constraints",
+                "agent_may_decide",
+                "next_action",
+                "completion_criteria",
+                "read_first",
+                "owned_write_scope",
+                "proof_expectations",
+                "tool_verification",
+                "continuation_owner",
+                "worker_contract",
+            ],
             "roadmap": [
                 "lane_count",
                 "candidate_lanes",
@@ -668,7 +706,29 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "active_contract, resumable_contract, follow_through_contract, and "
                 "hierarchy_contract remain thinner projections over that state"
             ),
+            "handoff_contract remains a thinner delegated-worker view over the same active planning state",
             "prefer the summary schema over raw TODO or execplan parsing when one structured answer is enough",
+        ],
+    }
+
+
+def _planning_handoff_schema() -> dict[str, Any]:
+    return {
+        "schema_version": "planning-handoff-schema/v1",
+        "canonical_doc": "docs/orchestrator-workflow-contract.md",
+        "command": "agentic-planning-bootstrap handoff --format json",
+        "shared_fields": [
+            "kind",
+            "schema",
+            "target_root",
+            "handoff_contract",
+            "warnings",
+            "warning_count",
+        ],
+        "rules": [
+            "derive delegated worker handoff from the active planning record instead of authoring a second durable plan",
+            "treat runtime delegation method as tool-owned and agent-agnostic",
+            "keep worker closure bounded; lane shaping and roadmap routing stay orchestrator-owned",
         ],
     }
 
@@ -1081,6 +1141,62 @@ def _active_hierarchy_contract(
             "review_queue": "docs/reviews/",
         },
         "minimal_refs": minimal_refs,
+    }
+
+
+def _active_handoff_contract(
+    *,
+    planning_record: dict[str, Any],
+    hierarchy_contract: dict[str, Any],
+) -> dict[str, Any]:
+    if planning_record.get("status") != "present":
+        return {
+            "status": "unavailable",
+            "reason": planning_record.get("reason", "requires a present planning record"),
+        }
+
+    parent_lane = {}
+    if hierarchy_contract.get("status") == "present":
+        parent_lane = dict(hierarchy_contract.get("parent_lane", {}))
+
+    return {
+        "status": "present",
+        "task": dict(planning_record.get("task", {})),
+        "parent_lane": parent_lane,
+        "requested_outcome": str(planning_record.get("requested_outcome", "")).strip(),
+        "hard_constraints": str(planning_record.get("hard_constraints", "")).strip(),
+        "agent_may_decide": str(planning_record.get("agent_may_decide", "")).strip(),
+        "next_action": str(planning_record.get("next_action", "")).strip(),
+        "completion_criteria": list(planning_record.get("completion_criteria", [])),
+        "read_first": list(planning_record.get("minimal_refs", [])),
+        "owned_write_scope": list(planning_record.get("touched_scope", [])),
+        "proof_expectations": list(planning_record.get("proof_expectations", [])),
+        "tool_verification": dict(planning_record.get("tool_verification", {})),
+        "continuation_owner": str(planning_record.get("continuation_owner", "")).strip(),
+        "worker_contract": {
+            "allowed_execution_methods": [
+                "internal delegation",
+                "external cli or api",
+                "single-agent fallback",
+            ],
+            "worker_owns_by_default": [
+                "bounded implementation inside the owned write scope",
+                "narrow validation named by the handoff",
+                "checked-in updates inside owned surfaces when explicitly assigned",
+                "cleanup and commit only when explicitly assigned and still bounded",
+            ],
+            "worker_must_not_own_by_default": [
+                "roadmap routing",
+                "issue closure",
+                "lane reshaping",
+                "repo-wide policy changes",
+            ],
+            "stop_when": [
+                str(planning_record.get("escalate_when", "")).strip(),
+                "the task needs broad rereads beyond the explicit read-first refs and owned write scope",
+                "the chosen delegation method cannot preserve the checked-in handoff contract",
+            ],
+        },
     }
 
 

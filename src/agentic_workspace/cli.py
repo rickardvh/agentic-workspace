@@ -2442,11 +2442,7 @@ def _run_report_command(
 
 def _effective_active_direction_payload(*, module_reports: list[dict[str, Any]]) -> dict[str, Any] | None:
     planning_report = next(
-        (
-            report
-            for report in module_reports
-            if isinstance(report, dict) and report.get("module") == "planning"
-        ),
+        (report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"),
         None,
     )
     if not isinstance(planning_report, dict):
@@ -2619,9 +2615,13 @@ def _prompt_routing_contract_payload() -> dict[str, Any]:
 
 def _relay_contract_payload() -> dict[str, Any]:
     return {
-        "canonical_doc": "docs/delegated-judgment-contract.md",
+        "canonical_doc": "docs/orchestrator-workflow-contract.md",
         "command": "agentic-workspace defaults --section relay --format json",
-        "rule": "Use a strong planner to normalize the vague prompt, then hand the compact contract to a cheap implementer.",
+        "rule": "Use a strong planner to normalize the vague prompt, then hand the compact contract to a bounded executor without prescribing the execution method.",
+        "selection_rule": (
+            "Use the effective mixed-agent posture from agentic-workspace config, then keep the same handoff contract whether execution stays internal, external over cli or api, or direct."
+        ),
+        "handoff_command": "agentic-planning-bootstrap handoff --format json",
         "planner_role": {
             "summary": "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract.",
             "does": [
@@ -2631,11 +2631,38 @@ def _relay_contract_payload() -> dict[str, Any]:
             ],
         },
         "implementer_role": {
-            "summary": "execute the narrow contract without widening the requested end state.",
+            "summary": "execute the narrow contract without widening the requested end state, whether the executor is internal or external.",
             "does": [
                 "follow the compact interpreted contract",
                 "stop or escalate when the scope expands",
                 "mirror durable follow-through into checked-in surfaces",
+            ],
+        },
+        "execution_methods": [
+            {
+                "id": "internal delegation",
+                "when": "the runtime supports delegation and the local posture prefers it",
+            },
+            {
+                "id": "external cli or api",
+                "when": "another bounded executor is available outside the current runtime",
+            },
+            {
+                "id": "single-agent fallback",
+                "when": "delegation is unavailable or the handoff would cost more than it saves",
+            },
+        ],
+        "worker_boundary": {
+            "worker_owns_by_default": [
+                "bounded implementation inside the delegated write scope",
+                "narrow validation named by the handoff",
+                "cleanup and commit only when explicitly assigned and still bounded",
+            ],
+            "orchestrator_owns_by_default": [
+                "lane shaping",
+                "roadmap routing",
+                "issue closure",
+                "product-shape decisions",
             ],
         },
         "memory_bridge": {
