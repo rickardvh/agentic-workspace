@@ -104,6 +104,14 @@ def _sample_workspace_local_override_payload() -> dict[str, object]:
             "safe_to_auto_run_commands": False,
             "requires_human_verification_on_pr": True,
         },
+        "delegation_targets": {
+            "mini_impl": {
+                "strength": "weak",
+                "confidence": 0.62,
+                "task_fit": ["bounded-docs", "narrow-tests"],
+                "execution_methods": ["cli"],
+            }
+        },
     }
 
 
@@ -162,6 +170,13 @@ def main() -> int:
         "requires_human_verification_on_pr",
     }:
         checks.append(("workspace local override schema parity", ["safety properties drifted from supported local override fields"]))
+    delegation_target_schema = local_override_schema["properties"]["delegation_targets"]["patternProperties"]["^.+$"]
+    if delegation_target_schema["properties"]["strength"]["enum"] != list(cli.SUPPORTED_DELEGATION_TARGET_STRENGTHS):
+        checks.append(("workspace local override schema parity", ["delegation target strengths drifted from supported local override fields"]))
+    if delegation_target_schema["properties"]["execution_methods"]["items"]["enum"] != list(
+        cli.SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS
+    ):
+        checks.append(("workspace local override schema parity", ["delegation target execution methods drifted from supported local override fields"]))
 
     failures = [(name, errors) for name, errors in checks if errors]
     if failures:

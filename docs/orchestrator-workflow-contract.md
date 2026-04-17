@@ -27,10 +27,12 @@ Use the config surface first to inspect whether the local environment reports:
 - strong planner availability
 - cheap bounded executor availability
 - preference for internal delegation when available
+- any configured local delegation target profiles with coarse strength, confidence, task-fit, and execution-method hints
 
 Those settings live in `agentic-workspace.local.toml`.
 They are local capability and cost posture only.
 They must not rewrite repo-owned planning semantics.
+If delegation target profiles are present, use them only as advisory input for handoff detail, review burden, and whether a target is even plausible for the current bounded slice.
 
 Use the relay selector for the stable planner/implementer rule and the planning handoff command for the active delegated slice contract.
 
@@ -39,6 +41,7 @@ Use the relay selector for the stable planner/implementer rule and the planning 
 - Let a stronger planner shape the compact contract once when that is cheaper than repeated re-derivation.
 - Keep the handoff agent-agnostic: internal delegation, local CLI/API execution, or another vendor executor may all use the same checked-in contract.
 - Prefer internal delegation only when the local posture says it is available and desirable.
+- If local delegation target profiles exist, use them to reduce blind guessing about target capability, but keep the checked-in worker handoff canonical.
 - Otherwise use the same handoff contract with any external CLI/API path that can preserve the checked-in boundaries.
 - Stay direct when delegation would cost more than it saves.
 

@@ -45,6 +45,54 @@
         }
       },
       "additionalProperties": false
+    },
+    "delegation_targets": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": {
+          "type": "object",
+          "required": [
+            "strength",
+            "execution_methods"
+          ],
+          "properties": {
+            "strength": {
+              "type": "string",
+              "enum": [
+                "strong",
+                "medium",
+                "weak"
+              ]
+            },
+            "confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "task_fit": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "execution_methods": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "internal",
+                  "cli",
+                  "api"
+                ]
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

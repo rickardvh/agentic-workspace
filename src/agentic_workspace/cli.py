@@ -45,6 +45,10 @@ MIXED_AGENT_LOCAL_OVERRIDE_FIELDS = (
     "handoff.prefer_internal_delegation_when_available",
     "safety.safe_to_auto_run_commands",
     "safety.requires_human_verification_on_pr",
+    "delegation_targets.<target>.strength",
+    "delegation_targets.<target>.confidence",
+    "delegation_targets.<target>.task_fit",
+    "delegation_targets.<target>.execution_methods",
 )
 WORKSPACE_PAYLOAD_FILES = (
     Path(".agentic-workspace/WORKFLOW.md"),
@@ -98,6 +102,16 @@ SUPPORTED_OPTIMIZATION_BIASES = (
     "agent-efficiency",
     "balanced",
     "human-legibility",
+)
+SUPPORTED_DELEGATION_TARGET_STRENGTHS = (
+    "strong",
+    "medium",
+    "weak",
+)
+SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS = (
+    "internal",
+    "cli",
+    "api",
 )
 SETUP_FINDINGS_PATH = Path("tools/setup-findings.json")
 SETUP_FINDINGS_KIND = "workspace-setup-findings/v1"
@@ -256,6 +270,16 @@ class MixedAgentLocalOverride:
     prefer_internal_delegation_when_available: bool | None
     safe_to_auto_run_commands: bool | None
     requires_human_verification_on_pr: bool | None
+    delegation_targets: tuple["DelegationTargetProfile", ...]
+
+
+@dataclass(frozen=True)
+class DelegationTargetProfile:
+    name: str
+    strength: str
+    execution_methods: tuple[str, ...]
+    confidence: float | None
+    task_fit: tuple[str, ...]
 
 
 class ModuleSelectionError(ValueError):
@@ -3436,10 +3460,13 @@ def _defaults_payload() -> dict[str, Any]:
                 "supported": True,
                 "status": "supported-local-only",
                 "supported_fields": list(MIXED_AGENT_LOCAL_OVERRIDE_FIELDS),
+                "supported_target_strengths": list(SUPPORTED_DELEGATION_TARGET_STRENGTHS),
+                "supported_target_execution_methods": list(SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS),
                 "intended_scope": [
                     "machine-specific capability posture",
                     "account- or cost-profile asymmetry",
                     "local execution preferences that do not redefine repo semantics",
+                    "available delegation target hints that stay advisory and local-only",
                 ],
             },
             "runtime_inference": {
@@ -3485,6 +3512,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "agentic-workspace.local.toml runtime.strong_planner_available",
                 "agentic-workspace.local.toml runtime.cheap_bounded_executor_available",
                 "agentic-workspace.local.toml handoff.prefer_internal_delegation_when_available",
+                "agentic-workspace.local.toml delegation_targets.<target>.*",
             ],
             "secondary": [
                 "Do not treat config as a scheduler.",
@@ -4046,10 +4074,7 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
             local_override=local_override,
         )
 
-    try:
-        payload = tomllib.loads(config_path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError as exc:
-        raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} is invalid TOML: {exc}.") from exc
+    payload = _load_toml_payload(path=config_path, surface_name=WORKSPACE_CONFIG_PATH.as_posix())
 
     schema_version = payload.get("schema_version")
     if schema_version != 1:
@@ -4433,7 +4458,7 @@ def _ownership_payload(*, target_root: Path, descriptors: dict[str, ModuleDescri
     if not ledger_path.exists():
         warnings.append(f"{defaults['ledger']}: ownership ledger missing")
     else:
-        payload = tomllib.loads(ledger_path.read_text(encoding="utf-8"))
+        payload = _load_toml_payload(path=ledger_path, surface_name=ledger_path.as_posix())
         ownership_classes = {key: value for key, value in (payload.get("ownership_classes") or {}).items() if isinstance(value, dict)}
         module_roots = [entry for entry in (payload.get("module_roots") or []) if isinstance(entry, dict)]
         managed_surfaces = [entry for entry in (payload.get("managed_surfaces") or []) if isinstance(entry, dict)]
@@ -4499,6 +4524,7 @@ def _empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mix
         prefer_internal_delegation_when_available=None,
         safe_to_auto_run_commands=None,
         requires_human_verification_on_pr=None,
+        delegation_targets=(),
     )
 
 
@@ -4511,15 +4537,98 @@ def _require_optional_bool(*, payload: dict[str, Any], key: str, config_path: Pa
     return value
 
 
+def _load_toml_payload(*, path: Path, surface_name: str) -> dict[str, Any]:
+    try:
+        return tomllib.loads(path.read_text(encoding="utf-8-sig"))
+    except tomllib.TOMLDecodeError as exc:
+        raise WorkspaceUsageError(f"{surface_name} is invalid TOML: {exc}.") from exc
+
+
+def _require_optional_confidence(*, payload: dict[str, Any], key: str, config_path: Path) -> float | None:
+    if key not in payload:
+        return None
+    value = payload[key]
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be a number between 0 and 1.")
+    normalized = float(value)
+    if normalized < 0 or normalized > 1:
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be between 0 and 1.")
+    return normalized
+
+
+def _require_optional_string_list(
+    *,
+    payload: dict[str, Any],
+    key: str,
+    config_path: Path,
+    allowed: tuple[str, ...] | None = None,
+) -> tuple[str, ...]:
+    if key not in payload:
+        return ()
+    value = payload[key]
+    if not isinstance(value, list):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be an array of strings.")
+    items: list[str] = []
+    for item in value:
+        if not isinstance(item, str) or not item.strip():
+            raise WorkspaceUsageError(f"{config_path.as_posix()} {key} entries must be non-empty strings.")
+        if allowed is not None and item not in allowed:
+            allowed_text = ", ".join(allowed)
+            raise WorkspaceUsageError(f"{config_path.as_posix()} {key} entries must be one of: {allowed_text}.")
+        if item not in items:
+            items.append(item)
+    return tuple(items)
+
+
+def _load_delegation_target_profiles(*, raw_targets: dict[str, Any], config_path: Path) -> tuple[DelegationTargetProfile, ...]:
+    profiles: list[DelegationTargetProfile] = []
+    for target_name in sorted(raw_targets):
+        raw_profile = raw_targets[target_name]
+        target_path = Path(f"{config_path.as_posix()} delegation_targets.{target_name}")
+        if not isinstance(raw_profile, dict):
+            raise WorkspaceUsageError(f"{target_path.as_posix()} must be a table.")
+        unknown_fields = sorted(set(raw_profile) - {"strength", "confidence", "task_fit", "execution_methods"})
+        if unknown_fields:
+            unknown_text = ", ".join(unknown_fields)
+            raise WorkspaceUsageError(f"{target_path.as_posix()} contains unsupported field(s): {unknown_text}.")
+        strength = raw_profile.get("strength")
+        if not isinstance(strength, str) or strength not in SUPPORTED_DELEGATION_TARGET_STRENGTHS:
+            allowed_text = ", ".join(SUPPORTED_DELEGATION_TARGET_STRENGTHS)
+            raise WorkspaceUsageError(f"{target_path.as_posix()} strength must be one of: {allowed_text}.")
+        execution_methods = _require_optional_string_list(
+            payload=raw_profile,
+            key="execution_methods",
+            config_path=target_path,
+            allowed=SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS,
+        )
+        if not execution_methods:
+            raise WorkspaceUsageError(f"{target_path.as_posix()} execution_methods must list at least one supported method.")
+        profiles.append(
+            DelegationTargetProfile(
+                name=target_name,
+                strength=strength,
+                execution_methods=execution_methods,
+                confidence=_require_optional_confidence(
+                    payload=raw_profile,
+                    key="confidence",
+                    config_path=target_path,
+                ),
+                task_fit=_require_optional_string_list(
+                    payload=raw_profile,
+                    key="task_fit",
+                    config_path=target_path,
+                ),
+            )
+        )
+    return tuple(profiles)
+
+
 def _load_mixed_agent_local_override(*, target_root: Path) -> MixedAgentLocalOverride:
     local_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
     if not local_path.exists():
         return _empty_mixed_agent_local_override(path=local_path, exists=False)
 
-    try:
-        payload = tomllib.loads(local_path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError as exc:
-        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} is invalid TOML: {exc}.") from exc
+    payload = _load_toml_payload(path=local_path, surface_name=WORKSPACE_LOCAL_CONFIG_PATH.as_posix())
 
     schema_version = payload.get("schema_version")
     if schema_version != 1:
@@ -4527,7 +4636,7 @@ def _load_mixed_agent_local_override(*, target_root: Path) -> MixedAgentLocalOve
             f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} must set schema_version = 1 for the current local mixed-agent override contract."
         )
 
-    unknown_top_level = sorted(set(payload) - {"schema_version", "runtime", "handoff", "safety"})
+    unknown_top_level = sorted(set(payload) - {"schema_version", "runtime", "handoff", "safety", "delegation_targets"})
     if unknown_top_level:
         unknown_text = ", ".join(unknown_top_level)
         raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} contains unsupported top-level field(s): {unknown_text}.")
@@ -4564,6 +4673,12 @@ def _load_mixed_agent_local_override(*, target_root: Path) -> MixedAgentLocalOve
         unknown_text = ", ".join(unknown_safety)
         raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [safety] contains unsupported field(s): {unknown_text}.")
 
+    raw_delegation_targets = payload.get("delegation_targets", {})
+    if raw_delegation_targets is None:
+        raw_delegation_targets = {}
+    if not isinstance(raw_delegation_targets, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [delegation_targets] section must be a table.")
+
     return MixedAgentLocalOverride(
         path=local_path,
         exists=True,
@@ -4598,11 +4713,33 @@ def _load_mixed_agent_local_override(*, target_root: Path) -> MixedAgentLocalOve
             key="requires_human_verification_on_pr",
             config_path=WORKSPACE_LOCAL_CONFIG_PATH,
         ),
+        delegation_targets=_load_delegation_target_profiles(
+            raw_targets=raw_delegation_targets,
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        ),
     )
 
 
 def _sourced_value(value: bool | None, *, source: str) -> dict[str, Any]:
     return {"value": value, "source": source if value is not None else "unset"}
+
+
+def _delegation_target_advisory(profile: DelegationTargetProfile) -> dict[str, str]:
+    confidence = profile.confidence
+    if profile.strength == "weak" or (confidence is not None and confidence < 0.6):
+        return {
+            "handoff_detail": "high",
+            "review_burden": "high",
+        }
+    if profile.strength == "strong" and confidence is not None and confidence >= 0.85:
+        return {
+            "handoff_detail": "compact",
+            "review_burden": "light",
+        }
+    return {
+        "handoff_detail": "standard",
+        "review_burden": "normal",
+    }
 
 
 def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
@@ -4632,6 +4769,32 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "applied": local_override.applied,
             "status": "applied" if local_override.applied else "available-not-set",
             "rule": "local-only capability/cost posture; may not override repo-owned semantics",
+        },
+        "delegation_targets": {
+            "supported": True,
+            "status": "configured" if local_override.delegation_targets else "available-not-set",
+            "rule": (
+                "local-only advisory target hints; may guide handoff detail and review burden, but must not turn config into a scheduler"
+            ),
+            "supported_fields": [
+                "delegation_targets.<target>.strength",
+                "delegation_targets.<target>.confidence",
+                "delegation_targets.<target>.task_fit",
+                "delegation_targets.<target>.execution_methods",
+            ],
+            "supported_strengths": list(SUPPORTED_DELEGATION_TARGET_STRENGTHS),
+            "supported_execution_methods": list(SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS),
+            "profiles": [
+                {
+                    "name": profile.name,
+                    "strength": profile.strength,
+                    "confidence": profile.confidence,
+                    "task_fit": list(profile.task_fit),
+                    "execution_methods": list(profile.execution_methods),
+                    "advisory": _delegation_target_advisory(profile),
+                }
+                for profile in local_override.delegation_targets
+            ],
         },
         "runtime_inference": {
             "tool_owned": defaults["runtime_inference"]["tool_owned"],
@@ -4742,6 +4905,7 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
         f"strong planner={payload['mixed_agent']['effective_posture']['strong_planner_available']['value']}, "
         f"cheap bounded executor={payload['mixed_agent']['effective_posture']['cheap_bounded_executor_available']['value']}"
     )
+    print(f"- delegation targets: {len(payload['mixed_agent']['delegation_targets']['profiles'])} configured")
 
 
 def _current_module_upgrade_source_state(

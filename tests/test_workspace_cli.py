@@ -243,7 +243,13 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "handoff.prefer_internal_delegation_when_available",
         "safety.safe_to_auto_run_commands",
         "safety.requires_human_verification_on_pr",
+        "delegation_targets.<target>.strength",
+        "delegation_targets.<target>.confidence",
+        "delegation_targets.<target>.task_fit",
+        "delegation_targets.<target>.execution_methods",
     ]
+    assert payload["mixed_agent"]["local_override"]["supported_target_strengths"] == ["strong", "medium", "weak"]
+    assert payload["mixed_agent"]["local_override"]["supported_target_execution_methods"] == ["internal", "cli", "api"]
     assert payload["mixed_agent"]["runtime_inference"]["tool_owned"] is True
     assert payload["mixed_agent"]["handoff_quality"]["must_recover"] == [
         "current intent",
@@ -264,6 +270,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "agentic-workspace.local.toml runtime.strong_planner_available",
         "agentic-workspace.local.toml runtime.cheap_bounded_executor_available",
         "agentic-workspace.local.toml handoff.prefer_internal_delegation_when_available",
+        "agentic-workspace.local.toml delegation_targets.<target>.*",
     ]
     assert payload["delegation_posture"]["secondary"] == [
         "Do not treat config as a scheduler.",
@@ -1049,6 +1056,75 @@ def test_config_command_reports_narrow_local_override_fields_with_source_attribu
     }
     assert payload["mixed_agent"]["derived_mode"]["planner_executor_pattern"] == "strong-planner-cheap-executor-available"
     assert payload["mixed_agent"]["derived_mode"]["handoff_preference"] == "prefer-internal-when-safe"
+
+
+def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "agentic-workspace.local.toml").write_text(
+        "schema_version = 1\n\n"
+        "[delegation_targets.fast_docs]\n"
+        'strength = "weak"\n'
+        "confidence = 0.58\n"
+        'task_fit = ["bounded-docs", "narrow-tests"]\n'
+        'execution_methods = ["cli"]\n\n'
+        "[delegation_targets.primary_planner]\n"
+        'strength = "strong"\n'
+        "confidence = 0.92\n"
+        'execution_methods = ["internal", "api"]\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    targets = payload["mixed_agent"]["delegation_targets"]
+    assert targets["status"] == "configured"
+    fast_docs = next(item for item in targets["profiles"] if item["name"] == "fast_docs")
+    assert fast_docs["strength"] == "weak"
+    assert fast_docs["confidence"] == 0.58
+    assert fast_docs["task_fit"] == ["bounded-docs", "narrow-tests"]
+    assert fast_docs["execution_methods"] == ["cli"]
+    assert fast_docs["advisory"] == {
+        "handoff_detail": "high",
+        "review_burden": "high",
+    }
+    planner = next(item for item in targets["profiles"] if item["name"] == "primary_planner")
+    assert planner["execution_methods"] == ["internal", "api"]
+    assert planner["advisory"] == {
+        "handoff_detail": "compact",
+        "review_burden": "light",
+    }
+
+
+def test_config_command_rejects_invalid_local_delegation_target_strength(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "agentic-workspace.local.toml").write_text(
+        'schema_version = 1\n\n[delegation_targets.bad_target]\nstrength = "expert"\nexecution_methods = ["cli"]\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit):
+        cli.main(["config", "--target", str(target), "--format", "json"])
+    assert "strength must be one of" in capsys.readouterr().err
+
+
+def test_config_command_accepts_utf8_bom_local_override(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "agentic-workspace.local.toml").write_text(
+        'schema_version = 1\n\n[delegation_targets.fast_docs]\nstrength = "weak"\nexecution_methods = ["cli"]\n',
+        encoding="utf-8-sig",
+    )
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mixed_agent"]["delegation_targets"]["profiles"][0]["name"] == "fast_docs"
 
 
 def test_modules_command_reports_installation_state_for_target(monkeypatch, tmp_path: Path, capsys) -> None:

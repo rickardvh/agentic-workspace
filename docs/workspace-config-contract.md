@@ -134,6 +134,17 @@ prefer_internal_delegation_when_available = true
 [safety]
 safe_to_auto_run_commands = false
 requires_human_verification_on_pr = true
+
+[delegation_targets.fast_docs]
+strength = "weak" # strong | medium | weak
+confidence = 0.58
+task_fit = ["bounded-docs", "narrow-tests"]
+execution_methods = ["cli"] # internal | cli | api
+
+[delegation_targets.primary_planner]
+strength = "strong"
+confidence = 0.92
+execution_methods = ["internal", "api"]
 ```
 
 Rules:
@@ -142,6 +153,13 @@ Rules:
 - Supported fields are intentionally narrow and capability-shaped.
 - The local file may affect effective reporting, but it must not silently change repo-owned semantics.
 - The current workspace surface reports these values; it does not turn them into scheduler control.
+- `delegation_targets` is a local-only advisory inventory of available executors.
+- Target names are local aliases, not checked-in repo policy.
+- `strength` is a coarse capability hint, not a promise about all task classes.
+- `confidence` is optional and should stay revisable by experience instead of being treated as stable truth.
+- `task_fit` is optional and should name only the narrow classes of bounded work the local user actually trusts that target to handle cheaply.
+- `execution_methods` tells the orchestrator whether the target is reachable through internal delegation, a CLI runner, an API runner, or more than one of those paths.
+- These hints may influence handoff detail and review burden, but they must not become automatic routing policy.
 
 ## Effective Config
 
@@ -164,6 +182,7 @@ That surface reports:
 - whether each module's `UPGRADE-SOURCE.toml` metadata matches the resolved policy
 - the current mixed-agent reporting boundary: repo-policy source, reserved local-override status, and the fact that runtime orchestration remains tool-owned
 - the effective local mixed-agent posture when `agentic-workspace.local.toml` is present
+- the configured local delegation target profiles and their derived advisory handoff/review hints
 - the effective workflow-artifact adapter profile and its sync rule
 
 If mixed-agent policy grows beyond the v1 surface, effective reporting should also make clear:

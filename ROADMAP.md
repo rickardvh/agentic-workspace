@@ -19,25 +19,16 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## GitHub Issue Intake
 
-- Latest open planning tranche: GitHub issues `#146`-`#172`, grouped below into ordered inactive candidate lanes.
+- Latest open planning tranche: GitHub issues `#146`-`#170`, grouped below into ordered inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 - The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/routing/capture tranches are complete.
 
 ## Candidate Lanes
 
-- Lane: Local delegation target profiles and confidence hints
-  ID: local-delegation-target-profiles
-  Priority: first
-  Issues: #172
-  Outcome: let orchestrators stop guessing blindly about how much to trust available delegation targets while keeping that knowledge local-only and advisory.
-  Why now: the first committed orchestrator-workflow dogfood pass showed the contract itself is usable, but target capability/confidence is still an uncovered cost class for internal and external executors.
-  Promotion signal: promote when the orchestrator still has to guess how detailed a handoff should be or which task classes are safe for a given local/external target.
-  Suggested first slice: define the smallest local-only target profile shape and reporting surface, then prove the orchestrator can use it as advisory input without becoming a scheduler.
-
 - Lane: Workspace optimization bias and setup findings
   ID: workspace-optimization-bias-findings
-  Priority: second
+  Priority: first
   Issues: #148, #149, #151, #152, #153, #154, #155, #156
   Outcome: integrate optimization bias and setup or jumpstart findings into normal repo operation without adding a second analysis framework.
   Why later: wait until the compact planning recovery path is clearer so the reporting path has a stable target and visibility model.
@@ -46,7 +37,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 - Lane: Memory trust and habitual pull
   ID: memory-trust-habitual-pull
-  Priority: third
+  Priority: second
   Issues: #146, #150, #157, #158, #159
   Outcome: prove Memory is a cheap habitual path for ordinary work and clarify its boundary with other standing guidance.
   Why later: wait until the planning recovery path stops shifting so Memory can converge against a stable operating contract.
@@ -55,7 +46,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 - Lane: Portable declarative contracts beyond Python CLI
   ID: portable-declarative-contracts-beyond-python-cli
-  Priority: fourth
+  Priority: third
   Issues: #161, #166, #167, #168, #169, #170
   Outcome: move stable lifecycle and runtime truth toward declarative portable contract sources so Python remains a strong reference implementation rather than the only credible operational embodiment.
   Why later: wait until the current planning/reporting lanes settle so the next declarative extraction tranche targets stable truths rather than moving boundaries.
