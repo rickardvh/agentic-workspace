@@ -13,7 +13,6 @@ import json
 from pathlib import Path
 from typing import NamedTuple
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 WARNING_PACKAGE_LOCAL_INSTALL_DRIFT = "package_local_install_drift"

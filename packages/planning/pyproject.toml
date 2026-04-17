@@ -62,6 +62,7 @@ target-version = "py311"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
+ignore = ["E501"]
 select = ["E", "F", "I"]
 
 [tool.coverage.run]
