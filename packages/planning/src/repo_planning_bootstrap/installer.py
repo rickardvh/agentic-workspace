@@ -40,6 +40,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path("docs/iterative-follow-through-contract.md"),
     Path("docs/intent-contract.md"),
     Path("docs/candidate-lanes-contract.md"),
+    Path("docs/planning-routing-contract.md"),
     Path("docs/resumable-execution-contract.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
@@ -71,6 +72,7 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("docs/iterative-follow-through-contract.md"),
     Path("docs/intent-contract.md"),
     Path("docs/candidate-lanes-contract.md"),
+    Path("docs/planning-routing-contract.md"),
     Path("docs/resumable-execution-contract.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
@@ -382,6 +384,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
 
     todo_lines, todo_items = _read_todo_items(todo_path)
     active_items = []
+    queued_items = []
     for item in todo_items:
         status = item.fields.get("status", "").lower()
         if "in-progress" in status or "active" in status or "ongoing" in status:
@@ -390,6 +393,16 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
                     "id": item.fields.get("id", ""),
                     "surface": item.fields.get("surface", ""),
                     "why_now": item.fields.get("why now", ""),
+                }
+            )
+            continue
+        if status not in {"completed", "done", "closed"}:
+            queued_items.append(
+                {
+                    "id": item.fields.get("id", ""),
+                    "surface": item.fields.get("surface", ""),
+                    "why_now": item.fields.get("why now", ""),
+                    "status": item.fields.get("status", ""),
                 }
             )
 
@@ -429,6 +442,15 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         planning_record=planning_record,
         active_execplans=active_execplans,
     )
+    hierarchy_contract = _active_hierarchy_contract(
+        target_root=target_root,
+        planning_record=planning_record,
+        active_contract=active_contract,
+        resumable_contract=resumable_contract,
+        follow_through_contract=follow_through_contract,
+        roadmap_lanes=roadmap_lanes,
+        active_execplans=active_execplans,
+    )
     return {
         "kind": "planning-summary/v1",
         "schema": _planning_summary_schema(),
@@ -439,6 +461,8 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
             "item_count": len(todo_items),
             "active_count": len(active_items),
             "active_items": active_items,
+            "queued_count": len(queued_items),
+            "queued_items": queued_items,
         },
         "execplans": {
             "active_count": len(active_execplans),
@@ -449,6 +473,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         "active_contract": _contract_projection(active_contract, view_name="active_contract"),
         "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
         "follow_through_contract": _contract_projection(follow_through_contract, view_name="follow_through_contract"),
+        "hierarchy_contract": _contract_projection(hierarchy_contract, view_name="hierarchy_contract"),
         "roadmap": {
             "lane_count": len(roadmap_lanes),
             "candidate_lanes": roadmap_lanes,
@@ -466,6 +491,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
     active_contract = summary.get("active_contract", {})
     resumable_contract = summary.get("resumable_contract", {})
     follow_through_contract = summary.get("follow_through_contract", {})
+    hierarchy_contract = summary.get("hierarchy_contract", {})
     warnings = list(summary.get("warnings", []))
     findings = [
         {
@@ -521,6 +547,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
         "status": {
             "adoption_mode": summary["adoption_mode"],
             "active_todo_count": summary["todo"]["active_count"],
+            "queued_todo_count": summary["todo"].get("queued_count", 0),
             "todo_item_count": summary["todo"]["item_count"],
             "active_execplan_count": summary["execplans"]["active_count"],
             "roadmap_lane_count": summary["roadmap"].get("lane_count", 0),
@@ -532,6 +559,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "active_contract": active_contract,
             "resumable_contract": resumable_contract,
             "follow_through_contract": follow_through_contract,
+            "hierarchy_contract": hierarchy_contract,
         },
         "findings": findings,
         "next_action": {
@@ -547,6 +575,7 @@ def _planning_summary_schema() -> dict[str, Any]:
         "canonical_docs": [
             "docs/intent-contract.md",
             "docs/candidate-lanes-contract.md",
+            "docs/planning-routing-contract.md",
             "docs/iterative-follow-through-contract.md",
             "docs/resumable-execution-contract.md",
             "docs/execplans/README.md",
@@ -563,6 +592,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "active_contract",
             "resumable_contract",
             "follow_through_contract",
+            "hierarchy_contract",
             "roadmap",
             "warnings",
             "warning_count",
@@ -612,6 +642,17 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "next_likely_slice",
                 "minimal_refs",
             ],
+            "hierarchy_contract": [
+                "current_layer",
+                "parent_lane",
+                "active_chunk",
+                "near_term_queue",
+                "next_likely_chunk",
+                "proof_state",
+                "required_continuation",
+                "routing",
+                "minimal_refs",
+            ],
             "roadmap": [
                 "lane_count",
                 "candidate_lanes",
@@ -621,7 +662,10 @@ def _planning_summary_schema() -> dict[str, Any]:
         },
         "rules": [
             "planning_record is the canonical compact active planning state when it is available",
-            "active_contract, resumable_contract, and follow_through_contract remain thinner projections over that state",
+            (
+                "active_contract, resumable_contract, follow_through_contract, and "
+                "hierarchy_contract remain thinner projections over that state"
+            ),
             "prefer the summary schema over raw TODO or execplan parsing when one structured answer is enough",
         ],
     }
@@ -946,6 +990,144 @@ def _active_follow_through_contract(
         "validation_still_needed": follow_through.get("validation still needed", "").strip(),
         "next_likely_slice": follow_through.get("next likely slice", "").strip(),
         "minimal_refs": minimal_refs,
+    }
+
+
+def _active_hierarchy_contract(
+    *,
+    target_root: Path,
+    planning_record: dict[str, Any],
+    active_contract: dict[str, Any],
+    resumable_contract: dict[str, Any],
+    follow_through_contract: dict[str, Any],
+    roadmap_lanes: list[dict[str, Any]],
+    active_execplans: list[dict[str, str]],
+) -> dict[str, Any]:
+    if (
+        planning_record.get("status") != "present"
+        or active_contract.get("status") != "present"
+        or resumable_contract.get("status") != "present"
+        or follow_through_contract.get("status") != "present"
+        or len(active_execplans) != 1
+    ):
+        reasons: list[str] = []
+        for contract in (planning_record, active_contract, resumable_contract, follow_through_contract):
+            if contract.get("status") != "present":
+                reasons.append(contract.get("reason", "required planning contract unavailable"))
+        if len(active_execplans) != 1:
+            reasons.append("requires exactly one active execplan")
+        return {
+            "status": "unavailable",
+            "reason": "; ".join(_dedupe(reasons)),
+        }
+
+    plan_path = _resolve_execplan_path(target_root, active_execplans[0]["path"])
+    if plan_path is None or not plan_path.exists():
+        return {
+            "status": "unavailable",
+            "reason": "active execplan path is not available for hierarchy extraction",
+        }
+
+    intent_continuity = _execplan_intent_continuity(plan_path)
+    required_continuation = _execplan_required_continuation(plan_path)
+    active_milestone = resumable_contract.get("active_milestone", {})
+    todo_item = active_contract.get("todo_item", {})
+
+    parent_lane_ref = intent_continuity.get("parent lane", "").strip()
+    parent_lane = _resolve_parent_lane(parent_lane_ref=parent_lane_ref, roadmap_lanes=roadmap_lanes)
+    continuation_surface = str(follow_through_contract.get("continuation_surface", "")).strip()
+    required_owner_surface = required_continuation.get("owner surface", "").strip()
+    required_follow_on = required_continuation.get("required follow-on for the larger intended outcome", "").strip()
+    owner_surface = required_owner_surface or continuation_surface or planning_record.get("continuation_owner", "")
+    minimal_refs = _dedupe(
+        [
+            *follow_through_contract.get("minimal_refs", []),
+            *(["ROADMAP.md"] if parent_lane.get("id") or roadmap_lanes else []),
+        ]
+    )
+    return {
+        "status": "present",
+        "current_layer": "execution",
+        "parent_lane": parent_lane,
+        "active_chunk": {
+            "todo_id": str(todo_item.get("id", "")).strip() or str(active_milestone.get("id", "")).strip(),
+            "todo_surface": str(todo_item.get("surface", "")).strip(),
+            "execplan": plan_path.relative_to(target_root).as_posix(),
+            "milestone_id": str(active_milestone.get("id", "")).strip(),
+            "milestone_status": str(active_milestone.get("status", "")).strip(),
+            "milestone_scope": str(active_milestone.get("scope", "")).strip(),
+            "next_action": str(resumable_contract.get("current_next_action", "")).strip(),
+        },
+        "near_term_queue": summary_todo_queue(target_root=target_root),
+        "next_likely_chunk": str(follow_through_contract.get("next_likely_slice", "")).strip(),
+        "proof_state": {
+            "proof_achieved_now": str(follow_through_contract.get("proof_achieved_now", "")).strip(),
+            "validation_still_needed": str(follow_through_contract.get("validation_still_needed", "")).strip(),
+            "proof_expectations": list(resumable_contract.get("proof_expectations", [])),
+        },
+        "required_continuation": {
+            "larger_intended_outcome": str(follow_through_contract.get("larger_intended_outcome", "")).strip(),
+            "slice_completes_larger_outcome": intent_continuity.get("this slice completes the larger intended outcome", "").strip(),
+            "continuation_surface": continuation_surface,
+            "required_follow_on": required_follow_on,
+            "owner_surface": required_owner_surface,
+            "activation_trigger": required_continuation.get("activation trigger", "").strip(),
+        },
+        "routing": {
+            "current_owner": str(planning_record.get("continuation_owner", "")).strip(),
+            "follow_on_owner": str(owner_surface).strip(),
+            "review_queue": "docs/reviews/",
+        },
+        "minimal_refs": minimal_refs,
+    }
+
+
+def summary_todo_queue(*, target_root: Path) -> list[dict[str, str]]:
+    todo_lines, todo_items = _read_todo_items(target_root / "TODO.md")
+    del todo_lines
+    queue: list[dict[str, str]] = []
+    for item in todo_items:
+        status = item.fields.get("status", "").strip()
+        status_lower = status.lower()
+        if not status_lower or status_lower in {"completed", "done", "closed"}:
+            continue
+        if "in-progress" in status_lower or "active" in status_lower or "ongoing" in status_lower:
+            continue
+        queue.append(
+            {
+                "id": item.fields.get("id", "").strip(),
+                "surface": item.fields.get("surface", "").strip(),
+                "status": status,
+                "why_now": item.fields.get("why now", "").strip(),
+            }
+        )
+    return queue
+
+
+def _resolve_parent_lane(*, parent_lane_ref: str, roadmap_lanes: list[dict[str, Any]]) -> dict[str, str]:
+    if parent_lane_ref:
+        for lane in roadmap_lanes:
+            if parent_lane_ref == lane.get("id", "") or parent_lane_ref == lane.get("title", ""):
+                return {
+                    "id": str(lane.get("id", "")).strip(),
+                    "title": str(lane.get("title", "")).strip(),
+                    "priority": str(lane.get("priority", "")).strip(),
+                    "issues": ", ".join(lane.get("issues", [])),
+                    "source": "roadmap",
+                }
+        return {
+            "id": parent_lane_ref,
+            "title": "",
+            "priority": "",
+            "issues": "",
+            "source": "execplan",
+        }
+    return {
+        "id": "",
+        "title": "",
+        "priority": "",
+        "issues": "",
+        "source": "unspecified",
     }
 
 

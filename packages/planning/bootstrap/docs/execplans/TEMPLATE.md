@@ -20,9 +20,11 @@ This file is a thin human view over the canonical `planning_record` surfaced by 
 - Larger intended outcome:
 - This slice completes the larger intended outcome:
 - Continuation surface:
+- Parent lane:
 
 Use `none` only when this slice actually completes the larger intended outcome.
 If the larger intended outcome is still unfinished, point `Continuation surface` at the checked-in surface that now owns follow-through.
+Use `Parent lane` when the current chunk belongs to a roadmap lane and later agents should be able to recover that larger queue context from summary/report output without rereading roadmap prose.
 
 ## Required Continuation
 

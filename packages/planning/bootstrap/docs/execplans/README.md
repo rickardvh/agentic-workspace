@@ -5,6 +5,7 @@ Checked-in execution plans for multi-milestone or multi-thread work live in this
 Use `agentic-planning-bootstrap summary --format json` first when the question is active planning state.
 Use raw `TODO.md` and execplan prose after that only when the compact summary is insufficient or when you are maintaining the human-readable plan directly.
 Use `docs/candidate-lanes-contract.md` for the native `ROADMAP.md` lane shape when grouped deferred work needs more structure than a flat candidate bullet.
+Use `docs/planning-routing-contract.md` when deciding whether newly discovered work belongs in `ROADMAP.md`, `TODO.md`, `docs/execplans/`, or `docs/reviews/`.
 Use `python scripts/check/check_planning_surfaces.py` for advisory shape and drift warnings across `TODO.md`, active execplans, and `ROADMAP.md`.
 Use `promote-to-plan` and `archive-plan` as thin file-native helpers around the same checked-in contract.
 Use `docs/environment-recovery-contract.md` for the canonical way to express task-local recovery and environment assumptions without adding another plan section.
@@ -39,6 +40,7 @@ Use a plan here when:
 
 Keep small direct work in `TODO.md` when one coherent pass can finish it safely.
 A direct task should stay compact and normally use only `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`.
+`TODO.md` may also carry the smallest near-term same-thread queue that should follow the active chunk soon; keep that queue concrete and short enough that it stays activation, not backlog.
 Promote that task into `docs/execplans/` once it picks up milestone sequencing, blocker management, validation scope, rollback or migration handling, or enough ambiguity that the next contributor would need more than the TODO row to continue.
 Direct execution is a success mode, not a planning failure.
 Use `docs/capability-aware-execution.md` when deciding whether the task still fits cheap direct execution, should move to stronger planning first, is suitable for bounded autopilot, should be silently reshaped into a cheaper slice, or should stop and escalate.
@@ -50,6 +52,8 @@ For ordinary inspection, keep the hierarchy explicit:
 1. `agentic-planning-bootstrap summary --format json`
 2. one relevant selector or view inside that payload
 3. raw `TODO.md` or execplan prose only when the compact state is insufficient
+
+When planning has one active TODO item and one active execplan, the compact hierarchy question should be answerable from the summary/report surfaces alone: active chunk, parent lane, next likely chunk, continuation owner, and proof state.
 
 When memory is installed, prefer borrowing durable context from the smallest relevant memory note or canonical doc instead of restating the same subsystem explanation inside each execplan.
 Repeated background prose in plans is a missing-synergy signal: tighten routing, promote the durable fact into memory or canonical docs, or decompose the work so the plan can stay local.
@@ -142,6 +146,9 @@ Current-state restart belongs in the compact `resumable_contract` projection:
 
 That object should stay smaller than the full execplan and answer "how do I continue safely right now?" without broad rereading.
 Use it before opening raw plan prose when the task is ordinary restart or handoff, not deep semantic maintenance.
+
+For larger-picture restart and queue questions, `hierarchy_contract` may also be present as a thin projection over the same active planning state. Use it for parent-lane, next-chunk, continuation-owner, and proof-state answers; do not treat it as a second planning authority.
+When queued TODO items exist, the same hierarchy view may also expose the near-term queue so the next same-thread chunk does not survive only in prose or chat.
 
 Tool verification belongs in the compact planning contract when the task needs a capability that may not be present:
 

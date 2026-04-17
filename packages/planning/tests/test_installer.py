@@ -68,6 +68,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 - Larger intended outcome: Land plan alpha end to end.
 - This slice completes the larger intended outcome: yes
 - Continuation surface: none
+- Parent lane: plan-alpha-lane
 
 ## Required Continuation
 
@@ -209,6 +210,7 @@ def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path("docs/execplans/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/reviews/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/upstream-task-intake.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path("docs/planning-routing-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("tools/AGENT_QUICKSTART.md") in PLANNING_LOWER_STABILITY_HELPER_FILES
     assert Path("scripts/render_agent_docs.py") in PLANNING_LOWER_STABILITY_HELPER_FILES
     assert set(PLANNING_COMPATIBILITY_CONTRACT_FILES).isdisjoint(PLANNING_LOWER_STABILITY_HELPER_FILES)
@@ -1485,6 +1487,16 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["follow_through_contract"]["what_this_slice_enabled"] == "Added one bounded planning improvement."
     assert summary["follow_through_contract"]["validation_still_needed"] == ("run the bounded planning checker test before archive.")
     assert summary["follow_through_contract"]["larger_intended_outcome"] == "Land plan alpha end to end."
+    assert summary["hierarchy_contract"]["status"] == "present"
+    assert summary["hierarchy_contract"]["current_layer"] == "execution"
+    assert summary["hierarchy_contract"]["parent_lane"]["id"] == "plan-alpha-lane"
+    assert summary["hierarchy_contract"]["parent_lane"]["source"] == "execplan"
+    assert summary["hierarchy_contract"]["active_chunk"]["milestone_id"] == "plan-alpha"
+    assert summary["hierarchy_contract"]["active_chunk"]["next_action"] == "Add one checker."
+    assert summary["hierarchy_contract"]["next_likely_chunk"] == (
+        "finish the current milestone and archive if no larger follow-on remains."
+    )
+    assert summary["hierarchy_contract"]["proof_state"]["proof_expectations"] == ["uv run pytest tests/test_check_planning_surfaces.py"]
     assert summary["roadmap"]["candidate_count"] == 1
     assert summary["roadmap"]["candidates"] == [
         {
@@ -1609,6 +1621,7 @@ def test_planning_summary_can_expose_active_contract_from_execplan_without_todo_
     assert summary["active_contract"]["status"] == "present"
     assert summary["resumable_contract"]["status"] == "present"
     assert summary["follow_through_contract"]["status"] == "present"
+    assert summary["hierarchy_contract"]["status"] == "present"
     assert summary["active_contract"]["todo_item"]["id"] == ""
     assert summary["active_contract"]["minimal_refs"] == ["TODO.md", "docs/execplans/plan-alpha.md"]
 
@@ -1624,6 +1637,8 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "tool_verification" in summary["schema"]["view_fields"]["planning_record"]
     assert "tool_verification" in summary["schema"]["view_fields"]["resumable_contract"]
     assert "follow_through_contract" in summary["schema"]["shared_fields"]
+    assert "hierarchy_contract" in summary["schema"]["shared_fields"]
+    assert "parent_lane" in summary["schema"]["view_fields"]["hierarchy_contract"]
     assert "next_likely_slice" in summary["schema"]["view_fields"]["follow_through_contract"]
 
 
@@ -1650,6 +1665,8 @@ def test_planning_summary_human_view_starts_with_planning_record(tmp_path: Path,
     out = capsys.readouterr().out
 
     assert "Planning record:" in out
+    assert "Planning hierarchy view:" in out
+    assert "Parent lane: plan-alpha-lane" in out
     assert "Requested outcome: Keep scope clear." in out
     assert "Continuation owner: docs/execplans/plan-alpha.md" in out
     assert "Active contract view:" in out
@@ -1679,6 +1696,7 @@ def test_summary_text_prints_planning_record_before_contract_views(tmp_path: Pat
     captured = capsys.readouterr().out
 
     assert exit_code == 0
+    assert "Planning hierarchy view:" in captured
     assert "Planning record:" in captured
     assert "Active contract view:" in captured
     assert "Resumable contract view:" in captured
@@ -1709,3 +1727,92 @@ def test_summary_text_prints_required_tools_when_declared(tmp_path: Path, capsys
 
     assert exit_code == 0
     assert "- Required tools: browser, gh" in captured
+
+
+def test_planning_report_exposes_hierarchy_projection(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: report-lane
+  Status: in-progress
+  Surface: docs/execplans/report-lane.md
+  Why now: derive compact module state.
+""",
+    )
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Candidate Lanes
+
+- Lane: Report lane parent
+  ID: plan-alpha-lane
+  Priority: first
+  Issues: #140
+  Outcome: test the hierarchy projection.
+  Why now: exercise the derived hierarchy view.
+  Promotion signal: promote when report output needs a live parent lane.
+  Suggested first slice: use one real plan.
+""",
+    )
+    _write(tmp_path / "docs" / "execplans" / "report-lane.md", _minimal_execplan())
+
+    report = planning_report(target=tmp_path)
+
+    assert report["active"]["hierarchy_contract"]["status"] == "present"
+    assert report["active"]["hierarchy_contract"]["parent_lane"]["id"] == "plan-alpha-lane"
+    assert report["active"]["hierarchy_contract"]["parent_lane"]["title"] == "Report lane parent"
+
+
+def test_planning_summary_tracks_near_term_todo_queue(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: docs/execplans/plan-alpha.md
+  Why now: active slice first.
+
+- ID: plan-beta
+  Status: planned
+  Surface: direct
+  Why now: next same-thread chunk after the active slice lands.
+""",
+    )
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Candidate Lanes
+
+- Lane: Report lane parent
+  ID: plan-alpha-lane
+  Priority: first
+  Issues: #140
+  Outcome: test the hierarchy projection.
+  Why now: exercise the derived hierarchy view.
+  Promotion signal: promote when report output needs a live parent lane.
+  Suggested first slice: use one real plan.
+""",
+    )
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+
+    summary = planning_summary(target=tmp_path)
+    report = planning_report(target=tmp_path)
+
+    assert summary["todo"]["queued_count"] == 1
+    assert summary["todo"]["queued_items"][0]["id"] == "plan-beta"
+    assert summary["hierarchy_contract"]["near_term_queue"][0]["id"] == "plan-beta"
+    assert report["status"]["queued_todo_count"] == 1

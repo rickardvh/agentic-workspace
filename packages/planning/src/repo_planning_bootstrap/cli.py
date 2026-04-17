@@ -182,9 +182,41 @@ def _emit(result, output_format: str) -> int:
 def _print_summary(summary: dict) -> None:
     print(f"Target: {summary['target_root']}")
     print(f"Mode: {summary['adoption_mode']}")
-    print(f"TODO: {summary['todo']['active_count']} active / {summary['todo']['item_count']} items / {summary['todo']['line_count']} lines")
+    print(
+        f"TODO: {summary['todo']['active_count']} active / "
+        f"{summary['todo'].get('queued_count', 0)} queued / "
+        f"{summary['todo']['item_count']} items / {summary['todo']['line_count']} lines"
+    )
     print(f"Execplans: {summary['execplans']['active_count']} active / {summary['execplans']['archived_count']} archived")
     print(f"Roadmap: {summary['roadmap'].get('lane_count', 0)} candidate lanes / {summary['roadmap']['candidate_count']} candidate bullets")
+    hierarchy_contract = summary.get("hierarchy_contract", {})
+    if hierarchy_contract.get("status") == "present":
+        parent_lane = hierarchy_contract.get("parent_lane", {})
+        active_chunk = hierarchy_contract.get("active_chunk", {})
+        proof_state = hierarchy_contract.get("proof_state", {})
+        print("Planning hierarchy view:")
+        if parent_lane.get("id") or parent_lane.get("title"):
+            lane_label = parent_lane.get("title") or parent_lane.get("id", "")
+            if parent_lane.get("id") and parent_lane.get("title"):
+                lane_label = f"{parent_lane['id']}: {parent_lane['title']}"
+            print(f"- Parent lane: {lane_label}")
+        else:
+            print("- Parent lane: unspecified")
+        active_chunk_label = active_chunk.get("milestone_id", "") or active_chunk.get("todo_id", "")
+        active_chunk_scope = active_chunk.get("milestone_scope", "")
+        print(f"- Active chunk: {active_chunk_label}: {active_chunk_scope}")
+        near_term_queue = hierarchy_contract.get("near_term_queue", [])
+        if near_term_queue:
+            next_queued = near_term_queue[0]
+            print(f"- Near-term queue: {next_queued.get('id', '')}: {next_queued.get('surface', '')}")
+        print(f"- Next likely chunk: {hierarchy_contract.get('next_likely_chunk', '')}")
+        print(f"- Proof achieved now: {proof_state.get('proof_achieved_now', '')}")
+        print(f"- Validation still needed: {proof_state.get('validation_still_needed', '')}")
+    elif hierarchy_contract:
+        print(
+            "Planning hierarchy view: "
+            f"{hierarchy_contract.get('status')} ({hierarchy_contract.get('reason', 'no hierarchy projection available')})"
+        )
     planning_record = summary.get("planning_record", {})
     if planning_record.get("status") == "present":
         task = planning_record.get("task", {})
@@ -246,6 +278,7 @@ def _print_report(report: dict) -> None:
         print(
             "Status: "
             f"{status.get('active_todo_count', 0)} active TODO / "
+            f"{status.get('queued_todo_count', 0)} queued TODO / "
             f"{status.get('active_execplan_count', 0)} active execplans / "
             f"{status.get('roadmap_lane_count', 0)} roadmap lanes / "
             f"{status.get('roadmap_candidate_count', 0)} roadmap candidates"
@@ -253,6 +286,14 @@ def _print_report(report: dict) -> None:
     next_action = report.get("next_action", {})
     if isinstance(next_action, dict) and next_action.get("summary"):
         print(f"Next action: {next_action['summary']}")
+    active = report.get("active", {})
+    if isinstance(active, dict):
+        hierarchy_contract = active.get("hierarchy_contract", {})
+        if isinstance(hierarchy_contract, dict) and hierarchy_contract.get("status") == "present":
+            parent_lane = hierarchy_contract.get("parent_lane", {})
+            active_chunk = hierarchy_contract.get("active_chunk", {})
+            lane_label = parent_lane.get("id") or parent_lane.get("title") or "unspecified"
+            print(f"Hierarchy: {lane_label} -> {active_chunk.get('milestone_id', '') or active_chunk.get('todo_id', '')}")
     findings = report.get("findings", [])
     if findings:
         print("Findings:")

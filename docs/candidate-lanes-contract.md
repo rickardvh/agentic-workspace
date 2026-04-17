@@ -62,7 +62,7 @@ Use either `Why now` or `Why later` as the compact reason field.
 
 - Keep order meaningful; earlier lanes are higher priority unless stated otherwise.
 - Keep each field compact and promotion-shaped.
-- Keep active execution detail in `TODO.md` and execplans, not here.
+- Keep active execution detail and near-term same-thread queue items in `TODO.md` and execplans, not here.
 - Keep durable background knowledge in canonical docs or memory, not here.
 - Prefer one lane per broader intended outcome rather than many tiny backlog bullets.
 
@@ -70,4 +70,4 @@ Use either `Why now` or `Why later` as the compact reason field.
 
 `agentic-planning-bootstrap summary --format json` exposes candidate lanes through `roadmap.candidate_lanes` and keeps a flattened `roadmap.candidates` compatibility view for older callers.
 
-`agentic-planning-bootstrap report --format json` may surface lane counts in module status, but active execution state still belongs to `planning_record`, `active_contract`, and `resumable_contract`.
+`agentic-planning-bootstrap report --format json` may surface lane counts in module status, but active execution state still belongs to `planning_record`, `active_contract`, `resumable_contract`, and `hierarchy_contract`.

@@ -142,9 +142,11 @@ It also defines the bounded-initiative rule: improve means locally, but do not s
 `docs/resumable-execution-contract.md` defines the smaller machine-readable restart contract as a view over the same canonical `planning_record`.
 `docs/environment-recovery-contract.md` defines both how task-local environment assumptions and recovery paths should be expressed without growing a second plan schema, and the ordered recovery path when lifecycle work, repo-state inspection, or validation restart becomes ambiguous.
 `docs/execution-summary-contract.md` defines the compact completion summary that archived slices should leave behind.
+`docs/planning-routing-contract.md` defines the hierarchy and routing rules between `ROADMAP.md`, `TODO.md`, execplans, and reviews.
 
-For active planning, `agentic-planning-bootstrap summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. `active_contract` and `resumable_contract` remain thinner views over that record.
+For active planning, `agentic-planning-bootstrap summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. `active_contract`, `resumable_contract`, `follow_through_contract`, and `hierarchy_contract` remain thinner views over that record.
 For compact module-state reporting without opening raw planning files first, use `agentic-planning-bootstrap report --format json`. It stays derived from the same canonical planning state and does not create a second state store.
+Use `hierarchy_contract` when you need the larger-picture restart answer cheaply: active chunk, parent lane, next likely chunk, continuation owner, and proof state.
 
 Use a direct task in `TODO.md` when the work is small enough to finish in one coherent pass and does not need milestone sequencing, blocker tracking, or a wider validation story.
 

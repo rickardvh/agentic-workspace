@@ -36,7 +36,7 @@ Use this when work begins in GitHub Issues, Linear, Jira, Notion, internal task 
 - `docs/upstream-task-intake.md` owns the intake rules.
 - `docs/reviews/` owns bounded review capture when the upstream signal needs analysis before planning.
 - `ROADMAP.md` owns inactive accepted candidates.
-- `TODO.md` owns only the active queue.
+- `TODO.md` owns the active queue plus the smallest near-term same-thread follow-on that should not be lost.
 - `docs/execplans/` own active execution contracts and the detailed upstream intake record for active promoted work.
 
 Do not use `TODO.md` as the place to store upstream issue transcripts or detailed intake metadata.
@@ -74,6 +74,7 @@ Example shape:
 ### Active work
 
 When an upstream task becomes active planned work, keep the queue small in `TODO.md` and preserve the source metadata in the execplan.
+Use a near-term queued TODO item only when the next chunk is concrete enough to follow the active work soon; otherwise leave it inactive in `ROADMAP.md`.
 
 Use an `## Intake Source` section in the execplan with compact fields such as:
 
