@@ -32,6 +32,26 @@
       "notes": "Stable report schema metadata is manifest-backed."
     },
     {
+      "area": "workspace_config_schema",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
+      "consumers": [
+        "docs/workspace-config-contract.md",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Repo config shape is now documented as a formal schema in addition to parser enforcement."
+    },
+    {
+      "area": "workspace_local_override_schema",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+      "consumers": [
+        "docs/workspace-config-contract.md",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Local mixed-agent override shape is now documented as a formal schema in addition to parser enforcement."
+    },
+    {
       "area": "report_payload_derivation",
       "classification": "derived",
       "owner_surface": "src/agentic_workspace/cli.py",

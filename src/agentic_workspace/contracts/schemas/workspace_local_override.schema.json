@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/workspace-local-override.schema.json",
+  "title": "Agentic Workspace Local Mixed-Agent Override",
+  "type": "object",
+  "required": [
+    "schema_version"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "supports_internal_delegation": {
+          "type": "boolean"
+        },
+        "strong_planner_available": {
+          "type": "boolean"
+        },
+        "cheap_bounded_executor_available": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "handoff": {
+      "type": "object",
+      "properties": {
+        "prefer_internal_delegation_when_available": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "safety": {
+      "type": "object",
+      "properties": {
+        "safe_to_auto_run_commands": {
+          "type": "boolean"
+        },
+        "requires_human_verification_on_pr": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

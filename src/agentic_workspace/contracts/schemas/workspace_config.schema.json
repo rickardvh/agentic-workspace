@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/workspace-config.schema.json",
+  "title": "Agentic Workspace Repo Config",
+  "type": "object",
+  "required": [
+    "schema_version"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "workspace": {
+      "type": "object",
+      "properties": {
+        "default_preset": {
+          "enum": [
+            "memory",
+            "planning",
+            "full"
+          ]
+        },
+        "agent_instructions_file": {
+          "enum": [
+            "AGENTS.md",
+            "GEMINI.md"
+          ]
+        },
+        "workflow_artifact_profile": {
+          "enum": [
+            "repo-owned",
+            "gemini"
+          ]
+        },
+        "improvement_latitude": {
+          "enum": [
+            "none",
+            "reporting",
+            "conservative",
+            "balanced",
+            "proactive"
+          ]
+        },
+        "optimization_bias": {
+          "enum": [
+            "agent-efficiency",
+            "balanced",
+            "human-legibility"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "update": {
+      "type": "object",
+      "properties": {
+        "modules": {
+          "type": "object",
+          "properties": {
+            "planning": {
+              "$ref": "#/$defs/module_update_policy"
+            },
+            "memory": {
+              "$ref": "#/$defs/module_update_policy"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "module_update_policy": {
+      "type": "object",
+      "properties": {
+        "source_type": {
+          "enum": [
+            "git",
+            "local"
+          ]
+        },
+        "source_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_upgrade_after_days": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

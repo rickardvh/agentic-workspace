@@ -15,6 +15,16 @@ Use it when the repository wants to keep one checked-in source of truth for life
 - Repo-owned config lives at `agentic-workspace.toml` when present.
 - Product-managed workflow and ownership state still lives under `.agentic-workspace/`.
 
+## Formal Schemas
+
+The config shapes are now also defined formally in:
+
+- `src/agentic_workspace/contracts/schemas/workspace_config.schema.json`
+- `src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json`
+
+Treat those schemas as development-time contract artifacts and drift checks.
+`docs/workspace-config-contract.md` remains the canonical semantic explanation, while the schemas make the supported shape explicit for tooling and future integrations.
+
 ## V1 Schema
 
 ```toml
