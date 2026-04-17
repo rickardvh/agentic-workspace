@@ -18,6 +18,7 @@ agentic-workspace = "agentic_workspace.cli:main"
 
 [dependency-groups]
 dev = [
+  "jsonschema",
   "pre-commit",
   "pytest",
   "pytest-cov",

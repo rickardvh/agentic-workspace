@@ -4498,6 +4498,7 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
             resolved_preset=None,
             descriptors=descriptors,
             dry_run=False,
+            non_interactive=False,
             config=config,
         )
         doctor_payload = _run_lifecycle_command(
@@ -4507,6 +4508,7 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
             resolved_preset=None,
             descriptors=descriptors,
             dry_run=False,
+            non_interactive=False,
             config=config,
         )
         current = {

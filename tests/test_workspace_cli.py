@@ -820,6 +820,23 @@ def test_proof_current_selector_returns_compact_contract_answer(tmp_path: Path, 
     assert payload["answer"]["status_health"] == "healthy"
 
 
+def test_proof_route_selector_smoke_works_without_mocked_lifecycle(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target), "--preset", "planning"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["proof", "--target", str(target), "--route", "workspace_proof", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["selector"] == {"route": "workspace_proof"}
+    assert payload["answer"]["id"] == "workspace_proof"
+    assert payload["answer"]["command"] == "agentic-workspace proof --target ./repo --format json"
+
+
 def test_ownership_command_reports_authority_map(tmp_path: Path, monkeypatch, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace").mkdir()

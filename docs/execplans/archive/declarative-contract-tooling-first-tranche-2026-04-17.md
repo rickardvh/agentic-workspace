@@ -41,7 +41,7 @@
 
 ## Active Milestone
 
-- Status: active
+- Status: completed
 - Scope: add the boundary note/inventory, shared schemas, manifest-backed proof/report/selector metadata, and validation/drift checks.
 - Ready: ready
 - Blocked: none
@@ -49,7 +49,7 @@
 
 ## Immediate Next Action
 
-- Add the boundary note and inventory first, then extract one stable manifest set for proof, report, and selector metadata before adding validation.
+- Archive this completed tranche, close issues `#92` through `#95`, and advance the roadmap to canonical module reporting follow-through.
 
 ## Blockers
 
@@ -108,11 +108,12 @@
 
 ## Execution Summary
 
-- Outcome delivered: pending
-- Validation confirmed: pending
-- Follow-on routed to: pending
-- Resume from: pending
+- Outcome delivered: Added a checked-in declarative boundary note and machine-readable inventory, extracted compact selector/profile metadata plus proof routes and report schema metadata into manifests and schemas, and refactored the workspace CLI to read those declarative files without changing user-visible contract shape.
+- Validation confirmed: `uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q`; `uv run python scripts/check/check_contract_tooling_surfaces.py`; `uv run python scripts/check/check_planning_surfaces.py`; live repo dogfood via `agentic-workspace defaults --section proof_selection --format json`, `agentic-workspace proof --target . --route workspace_proof --format json`, and `agentic-workspace report --target . --format json`.
+- Follow-on routed to: `ROADMAP.md` next candidate `Canonical module reporting surfaces`, with the shared workspace CLI hotspot follow-on still queued behind it.
+- Resume from: No further action in this plan; start from the next roadmap lane when another bounded slice is promoted.
 
 ## Drift Log
 
 - 2026-04-17: Promoted roadmap issues `#92` through `#95` into one active declarative-contract-tooling tranche.
+- 2026-04-17: Landed the full declarative contract tooling tranche and prepared the plan for archive.
