@@ -69,6 +69,7 @@ It keeps:
 - `promotion_rule`
 - `precedence_order`
 - `supersession_rules`
+- `stronger_home_model`
 - `classes`
 - `effective_view`
 
@@ -78,6 +79,7 @@ Use it when the question is:
 - which parts are policy, doctrine, active direction, durable understanding, or enforceable workflow?
 - which owner surface currently carries each class?
 - what rule resolves conflicts across those surfaces?
+- when should doctrine or understanding move into config or checks?
 - where should newly durable chat-borne guidance be promoted instead of left in chat?
 
 ## Usage

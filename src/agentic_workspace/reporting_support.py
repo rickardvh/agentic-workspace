@@ -176,6 +176,10 @@ def standing_intent_payload(
         ),
         "precedence_order": _standing_intent_precedence_order(),
         "supersession_rules": _standing_intent_supersession_rules(),
+        "stronger_home_model": _standing_intent_stronger_home_model(
+            target_root=target_root,
+            config_policy=config_policy,
+        ),
         "classes": classes,
         "effective_view": {
             "conflict_rule": (
@@ -393,6 +397,96 @@ def _standing_intent_supersession_rules() -> list[dict[str, Any]]:
             "summary": "Archived or explicitly superseded residue may remain for history, but reporting should treat it as non-authoritative once a clearer current owner exists.",
         },
     ]
+
+
+def _standing_intent_stronger_home_model(*, target_root: Path, config_policy: dict[str, Any]) -> dict[str, Any]:
+    examples: list[dict[str, Any]] = []
+    if str(config_policy.get("improvement_latitude_source")) == "repo-config":
+        examples.append(
+            {
+                "concern": "repo-friction improvement posture",
+                "from_class": "repo_doctrine",
+                "to_class": "config_policy",
+                "current_owner": "agentic-workspace.toml",
+                "status": "already-promoted",
+                "why": "The repo's standing cleanup posture is now machine-readable policy instead of prose-only preference.",
+                "refs": ["agentic-workspace.toml", "docs/standing-intent-contract.md"],
+            }
+        )
+    if str(config_policy.get("optimization_bias_source")) == "repo-config":
+        examples.append(
+            {
+                "concern": "output and residue preference",
+                "from_class": "repo_doctrine",
+                "to_class": "config_policy",
+                "current_owner": "agentic-workspace.toml",
+                "status": "already-promoted",
+                "why": "The repo's reporting and residue preference is enforced through config-backed defaults rather than reminder text alone.",
+                "refs": ["agentic-workspace.toml", "docs/reporting-contract.md"],
+            }
+        )
+    for concern, path, refs in (
+        (
+            "planning surface integrity",
+            "scripts/check/check_planning_surfaces.py",
+            ["scripts/check/check_planning_surfaces.py", "docs/standing-intent-contract.md"],
+        ),
+        (
+            "source/payload/root-install boundary drift",
+            "scripts/check/check_source_payload_operational_install.py",
+            ["scripts/check/check_source_payload_operational_install.py", "docs/source-payload-operational-install.md"],
+        ),
+    ):
+        if (target_root / path).exists():
+            examples.append(
+                {
+                    "concern": concern,
+                    "from_class": "repo_doctrine",
+                    "to_class": "enforceable_workflow",
+                    "current_owner": path,
+                    "status": "already-promoted",
+                    "why": "This standing guidance is now detectable through a check instead of relying on prose alone.",
+                    "refs": refs,
+                }
+            )
+
+    return {
+        "decision_test": {
+            "promote_to_config_when": [
+                "the standing guidance should be machine-readable and survive startup without rereading prose",
+                "the repo needs a stable selectable default or policy mode rather than free-form explanation",
+                "the concern changes repo-wide defaults more than it changes one local workflow",
+            ],
+            "promote_to_enforceable_workflow_when": [
+                "drift should be detectable rather than merely remembered",
+                "the repo needs repeatable validation or a failing/warning check for the concern",
+                "a check, validation command, or workflow can verify the rule without building a generic automation system",
+            ],
+            "keep_as_doctrine_when": [
+                "the guidance is still broad philosophy or boundary explanation rather than a stable toggle",
+                "the stronger home would overfit or overspecify the current doctrine",
+                "human legibility still matters more than machine-readable enforcement for the concern",
+            ],
+        },
+        "candidate_classes": [
+            {
+                "class": "repo_doctrine",
+                "preferred_stronger_homes": ["config_policy", "enforceable_workflow"],
+                "rule": "Promote doctrine when the concern becomes a stable repo-wide default or a rule that should be verified.",
+            },
+            {
+                "class": "active_directional_intent",
+                "preferred_stronger_homes": ["repo_doctrine", "config_policy", "enforceable_workflow"],
+                "rule": "Promote only after the direction stops being lane-local and survives beyond the current slice.",
+            },
+            {
+                "class": "durable_understanding",
+                "preferred_stronger_homes": ["repo_doctrine", "config_policy", "enforceable_workflow"],
+                "rule": "Promote when the understanding has become shared rule or verifiable behavior rather than interpretive context.",
+            },
+        ],
+        "examples": examples,
+    }
 
 
 def _config_policy_effective_item(*, config_policy: dict[str, Any]) -> dict[str, Any]:

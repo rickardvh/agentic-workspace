@@ -22,22 +22,13 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Latest open planning tranche: GitHub issues `#137`-`#159`, grouped below into ordered inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/routing/capture tranches are complete.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/routing/capture tranches are complete.
 
 ## Candidate Lanes
 
-- Lane: Standing intent and durable repo guidance
-  ID: standing-intent-durability
-  Priority: first
-  Issues: #141, #143, #144, #145, #147
-  Outcome: make durable repo intent classifiable, recoverable, and promotable into stronger enforcement and reporting.
-  Why now: the repo keeps generating chat-borne guidance that needs a durable home and precedence rules.
-  Promotion signal: promote when the repo can carry standing intent without ambiguity between doctrine, policy, and enforcement surfaces.
-  Suggested first slice: tighten promotion from doctrine and policy into stronger enforcement when prose is too weak.
-
 - Lane: Workspace optimization bias and setup findings
   ID: workspace-optimization-bias-findings
-  Priority: second
+  Priority: first
   Issues: #148, #149, #151, #152, #153, #154, #155, #156
   Outcome: integrate optimization bias and setup or jumpstart findings into normal repo operation without adding a second analysis framework.
   Why later: wait until planning routing and standing-intent surfaces are settled so the reporting path has a stable target.
@@ -46,7 +37,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 - Lane: Memory trust and habitual pull
   ID: memory-trust-habitual-pull
-  Priority: third
+  Priority: second
   Issues: #146, #150, #157, #158, #159
   Outcome: prove Memory is a cheap habitual path for ordinary work and clarify its boundary with other standing guidance.
   Why later: wait until the planning and standing-intent paths stop changing so memory can converge against a stable contract.

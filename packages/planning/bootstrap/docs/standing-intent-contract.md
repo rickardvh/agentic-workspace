@@ -130,6 +130,42 @@ Keep it transient when any of these are true:
 - `active_directional_intent` may harden into doctrine, policy, or checks only after it stops being merely lane-local.
 - `durable_understanding` should shrink or move when a stable canonical doc or stronger enforcement now explains it better.
 
+## Stronger-Home Decision Test
+
+Promote standing intent into `config_policy` when:
+
+- the guidance should be machine-readable and survive startup without rereading prose
+- the repo needs a stable default or policy mode rather than explanation alone
+- the concern changes repo-wide defaults more than one local workflow
+
+Promote standing intent into `enforceable_workflow` when:
+
+- drift should be detectable rather than merely remembered
+- the repo needs repeatable validation, warnings, or failing checks for the concern
+- a check, validation command, or workflow can verify the rule without turning the repo into a generic automation system
+
+Keep the guidance primarily as doctrine when:
+
+- it is still broad philosophy or boundary explanation rather than a stable toggle
+- a stronger home would overspecify the doctrine too early
+- human legibility still matters more than machine-readable enforcement for the concern
+
+## First Promotion Examples
+
+The first reportable examples in this repo are:
+
+- `improvement_latitude` promoted into `agentic-workspace.toml` as machine-readable standing policy
+- `optimization_bias` promoted into `agentic-workspace.toml` as machine-readable output policy
+- planning-surface integrity promoted into `scripts/check/check_planning_surfaces.py`
+- source/payload/root-install boundary protection promoted into `scripts/check/check_source_payload_operational_install.py`
+
+These examples show the intended path:
+
+- doctrine or repeated guidance becomes explicit
+- the concern proves stable enough for config or checks
+- the stronger home becomes authoritative
+- the older prose may remain as explanation, but not as the only enforcement path
+
 ## Precedence Order
 
 When standing-intent surfaces conflict, use this first compact precedence order:

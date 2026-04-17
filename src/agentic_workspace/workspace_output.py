@@ -126,6 +126,15 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
                     print(f"- {item.get('class', '')}: {item.get('summary', '')}")
                     if owner_surface:
                         print(f"  owner: {owner_surface}")
+        stronger_home_model = standing_intent.get("stronger_home_model", {})
+        if isinstance(stronger_home_model, dict):
+            examples = stronger_home_model.get("examples", [])
+            if isinstance(examples, list) and examples:
+                print("Stronger-home examples:")
+                for example in examples[:3]:
+                    if not isinstance(example, dict):
+                        continue
+                    print(f"- {example.get('concern', '')}: {example.get('current_owner', '')}")
     findings = payload.get("findings", [])
     if isinstance(findings, list) and findings:
         print("Findings:")

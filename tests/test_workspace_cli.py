@@ -1837,6 +1837,12 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["standing_intent"]["precedence_order"][1]["source"] == "active_directional_intent"
     assert payload["standing_intent"]["precedence_order"][2]["source"] == "config_policy"
     assert payload["standing_intent"]["supersession_rules"][0]["rule"] == "newer_same_owner_replaces_older"
+    stronger_home = payload["standing_intent"]["stronger_home_model"]
+    assert stronger_home["candidate_classes"][0]["class"] == "repo_doctrine"
+    assert stronger_home["decision_test"]["promote_to_config_when"][0].startswith(
+        "the standing guidance should be machine-readable"
+    )
+    assert any(example["current_owner"] == "scripts/check/check_planning_surfaces.py" for example in stronger_home["examples"])
     assert "checked-in policy" in payload["standing_intent"]["effective_view"]["conflict_rule"]
     assert payload["standing_intent"]["effective_view"]["in_force_count"] == 3
     standing_classes = {item["class"]: item for item in payload["standing_intent"]["effective_view"]["items"]}
@@ -1938,6 +1944,7 @@ def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path,
         "Active planning direction governs the current bounded slice unless it conflicts with checked-in hard policy."
     )
     assert payload["standing_intent"]["supersession_rules"][2]["rule"] == "active_lane_direction_is_slice_scoped"
+    assert payload["standing_intent"]["stronger_home_model"]["candidate_classes"][1]["class"] == "active_directional_intent"
 
 
 def test_report_surfaces_agent_efficiency_output_contract_from_repo_config(tmp_path: Path, capsys) -> None:
