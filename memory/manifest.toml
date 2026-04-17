@@ -27,6 +27,9 @@ forbid_core_docs_depend_on_memory = false
 # - improvement_note = "short advisory hint"
 # - elimination_target = "shrink" | "promote" | "automate" | "refactor_away"
 # - retention_justification = "short reason the note should remain despite being an improvement signal"
+# Existing `routes_from`, `stale_when`, and `related_validations` fields also act as
+# the first evidence-backed trust anchors for durable notes: they say what currently
+# grounds the note and what should make it questionable or stale when repo evidence changes.
 # These fields are advisory only; existing manifests remain valid without them.
 
 [notes."memory/index.md"]

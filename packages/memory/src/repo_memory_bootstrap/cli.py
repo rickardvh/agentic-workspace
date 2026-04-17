@@ -665,12 +665,24 @@ def _print_report(report: dict[str, object]) -> None:
         )
     trust = report.get("trust", {})
     if isinstance(trust, dict):
+        state_counts = trust.get("state_counts", {})
         print(
             "Trust: "
             f"{trust.get('manual_review_count', 0)} manual-review / "
             f"{trust.get('warning_count', 0)} warning / "
             f"{trust.get('promotion_candidate_count', 0)} promotion candidates"
         )
+        if isinstance(state_counts, dict) and state_counts:
+            print(
+                "Trust states: "
+                f"{state_counts.get('supported', 0)} supported / "
+                f"{state_counts.get('questionable', 0)} questionable / "
+                f"{state_counts.get('stale', 0)} stale / "
+                f"{state_counts.get('elimination_candidate', 0)} elimination-biased"
+            )
+    usefulness_audit = report.get("usefulness_audit", {})
+    if isinstance(usefulness_audit, dict) and usefulness_audit.get("summary"):
+        print(f"Usefulness: {usefulness_audit['summary']}")
     next_action = report.get("next_action", {})
     if isinstance(next_action, dict) and next_action.get("summary"):
         print(f"Next action: {next_action['summary']}")

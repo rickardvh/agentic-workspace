@@ -123,7 +123,7 @@ When both modules are installed, the combined install should be cheaper than eit
 - **Combined-install leverage.** When planning is installed too, memory should help execplans stay smaller and restart cheaper: plans borrow durable context instead of restating it, and repeated plan prose becomes a signal that memory or canonical docs should improve.
 - **Improvement pressure without memory dependence.** Each note can declare whether it is *durable truth* or an *improvement signal* - something that exists because the repo still needs better tests, docs, validation, or design. Manifest fields like `preferred_remediation` and `elimination_target` let the `doctor` command, the freshness audit, and the sync workflow surface actionable suggestions that drive improvements into the codebase without assuming memory volume should follow one universal trend.
 - **Explicit improvement-targeting workflow.** Symptomatic notes should move through a concrete path: symptom captured -> remediation target chosen -> follow-up routed -> remediation lands -> note retained, shrunk, stubbed, or deleted. The workflow distinguishes when a signal should stay in memory, become a review artifact, enter issue intake, or promote into roadmap or active planning.
-- **Freshness and hygiene tooling.** A bundled audit script checks for missing metadata, stale confirmations, oversized notes, explicit planning-state spillover in `memory/current/*`, and manifest/note mismatches. `stale_when` globs catch semantic drift from code changes, not just calendar age.
+- **Freshness and hygiene tooling.** A bundled audit script checks for missing metadata, stale confirmations, oversized notes, explicit planning-state spillover in `memory/current/*`, and manifest/note mismatches. `stale_when` globs catch semantic drift from code changes, not just calendar age, and the compact memory report now projects those existing anchors into note trust states such as `supported`, `questionable`, `stale`, and `elimination_candidate`.
 - **Skills layer.** Repeatable memory operations such as capture, hygiene, refresh, routing, and upgrade ship as upgrade-replaceable skills under `.agentic-workspace/memory/skills/`. Repos can add their own memory-specific skills under `memory/skills/` without modifying the core set.
 - **Language-agnostic.** The installed memory system is plain Markdown and TOML. It works in any repository regardless of language or framework. Only the bootstrap CLI itself requires Python; once installed, the memory layer has no runtime dependencies.
 
@@ -382,7 +382,7 @@ Main commands:
 - `route-review` to replay checked-in routing-feedback cases against current routing behaviour
 - `route-report` to summarise fixture-backed routing health, missed-note vs over-routing drift, and working-set/startup-cost pressure
 - `promotion-report` to suggest notes that should graduate into canonical checked-in docs or become elimination candidates for skills, scripts, tests, or refactors
-- `report` to surface compact module-state, trust, and next-action guidance derived from doctor/current/routing/promotion surfaces
+- `report` to surface compact module-state, note trust states, usefulness/cleanup guidance, and next-action guidance derived from doctor/current/routing/promotion surfaces
 - `verify-payload` to validate the packaged bootstrap contract
 - `scripts/check/check_memory_freshness.py --strict` to fail CI on selected freshness contract violations
 

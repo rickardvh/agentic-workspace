@@ -2131,6 +2131,80 @@ def test_memory_report_derives_compact_module_state(tmp_path: Path) -> None:
     assert report["status"]["current_note_count"] >= 2
     assert "current_notes" in report["active"]
     assert "manual_review_count" in report["trust"]
+    assert "state_counts" in report["trust"]
+    assert "usefulness_audit" in report
+    assert report["usefulness_audit"]["status"] in {"measured", "needs-more-proof", "attention-needed", "actionable"}
+
+
+def test_memory_report_classifies_trust_states_from_manifest_metadata(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+
+    questionable_note = target / "memory" / "decisions" / "questionable-note.md"
+    questionable_note.write_text("# Questionable\n", encoding="utf-8")
+    stale_note = target / "memory" / "decisions" / "stale-note.md"
+    stale_note.write_text("# Stale\n", encoding="utf-8")
+    improvement_note = target / "memory" / "mistakes" / "improvement-note.md"
+    improvement_note.write_text("# Improvement\n", encoding="utf-8")
+
+    manifest_path = target / "memory" / "manifest.toml"
+    manifest_path.write_text(
+        manifest_path.read_text(encoding="utf-8")
+        + """
+
+[notes."memory/decisions/questionable-note.md"]
+note_type = "decision"
+canonical_home = "memory/decisions/questionable-note.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["test"]
+surfaces = ["decision"]
+memory_role = "durable_truth"
+
+[notes."memory/decisions/stale-note.md"]
+note_type = "decision"
+canonical_home = "memory/decisions/stale-note.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["test"]
+surfaces = ["decision"]
+routes_from = ["missing/**/*.md"]
+stale_when = ["missing/**/*.md"]
+memory_role = "durable_truth"
+
+[notes."memory/mistakes/improvement-note.md"]
+note_type = "recurring-failures"
+canonical_home = "memory/mistakes/improvement-note.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["test"]
+surfaces = ["tests"]
+routes_from = ["AGENTS.md"]
+stale_when = ["AGENTS.md"]
+memory_role = "improvement_signal"
+improvement_candidate = true
+preferred_remediation = "docs"
+improvement_note = "Promote once docs improve."
+elimination_target = "promote"
+""",
+        encoding="utf-8",
+    )
+
+    report = installer.memory_report(target=target)
+
+    assert report["trust"]["state_counts"]["questionable"] >= 1
+    assert report["trust"]["state_counts"]["stale"] >= 1
+    assert report["trust"]["state_counts"]["elimination_candidate"] >= 1
+    assert any(item["path"] == "memory/decisions/questionable-note.md" for item in report["trust"]["questionable_notes"])
+    assert any(item["path"] == "memory/decisions/stale-note.md" for item in report["trust"]["stale_notes"])
+    assert any(item["path"] == "memory/mistakes/improvement-note.md" for item in report["trust"]["elimination_candidates"])
 
 
 def test_cli_version_flag_prints_package_version(capsys) -> None:

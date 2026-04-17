@@ -17,20 +17,20 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - No active handoff right now.
 ## GitHub Issue Intake
 
-- Latest open planning tranche: GitHub issues `#96` through `#100`.
+- Latest open planning tranche: GitHub issue `#98`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, and native candidate-lane tranches are complete; the remaining queue is the Memory trust/usefulness lane.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/reporting tranches are complete; the remaining queue is the low-friction Memory routing/capture follow-on.
 
 ## Candidate Lanes
-- Lane: Memory trust, usefulness, and cleanup ergonomics
-  ID: memory-trust-usefulness-cleanup
+- Lane: Low-friction Memory routing and capture
+  ID: memory-routing-capture-cheap-path
   Priority: first
-  Issues: `#96`, `#97`, `#98`, `#99`, `#100`
-  Outcome: make Memory cheaper to trust, inspect, clean up, and prove useful in ordinary restart-heavy work.
-  Why now: the planning-system gap around grouped deferred work is now closed, so Memory is the main remaining restart and trust bottleneck in the roadmap.
-  Promotion signal: promote when the next bounded slice is ready or when another ordinary-work pass shows Memory as the primary remaining trust or rediscovery bottleneck.
-  Suggested first slice: start with evidence-backed note trust states and cleanup/usefulness reporting on top of the new memory module report rather than widening immediately into automatic invalidation.
+  Issues: `#98`
+  Outcome: make Memory the cheap habitual path in ordinary work by tightening routing and lowering capture/update friction without broad memory browsing.
+  Why now: trust/usefulness/reporting is now in place, and live dogfooding shows the remaining gap is still missed routing and sparse cheap capture proof rather than note trust or cleanup visibility.
+  Promotion signal: promote when the next bounded slice is ready or when ordinary-work dogfooding still shows Memory being bypassed because route selection or note capture is not the cheapest path.
+  Suggested first slice: tighten one or two common missed-note work shapes, add cheap fixture/feedback proof for them, and expose one lower-friction capture/update affordance that does not compete with Planning.
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.

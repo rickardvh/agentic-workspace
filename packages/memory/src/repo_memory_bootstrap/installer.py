@@ -110,6 +110,7 @@ from repo_memory_bootstrap._installer_shared import (
     CurrentNoteView,
     CurrentViewResult,
     InstallResult,
+    MemoryNoteRecord,
     RepoDetectionError,
 )
 
@@ -1590,6 +1591,115 @@ def promotion_report(
     return result
 
 
+def _memory_evidence_anchors(note: MemoryNoteRecord) -> list[str]:
+    anchors: list[str] = []
+    for value in (*note.stale_when, *note.routes_from, *note.related_validations):
+        if value and value not in anchors:
+            anchors.append(value)
+    return anchors
+
+
+def _memory_matching_anchor_patterns(*, target_root: Path, anchors: list[str]) -> tuple[list[str], list[str]]:
+    matched_patterns: list[str] = []
+    matched_paths: list[str] = []
+    for anchor in anchors:
+        try:
+            matches = sorted(
+                {path.relative_to(target_root).as_posix() for path in target_root.glob(anchor) if path.exists() and path.is_file()}
+            )
+        except OSError:
+            matches = []
+        if matches:
+            matched_patterns.append(anchor)
+            for match in matches[:3]:
+                if match not in matched_paths:
+                    matched_paths.append(match)
+    return matched_patterns, matched_paths
+
+
+def _memory_trust_item(*, note: MemoryNoteRecord, target_root: Path) -> dict[str, object]:
+    anchors = _memory_evidence_anchors(note)
+    matched_patterns, matched_paths = _memory_matching_anchor_patterns(target_root=target_root, anchors=anchors)
+    note_path = target_root / note.path
+    exists = note_path.exists()
+    scope = "durable" if note.memory_role in {"durable_truth", "improvement_signal"} or note.authority == "canonical" else "advisory"
+
+    state = "supported"
+    reason = "note is grounded in current repo anchors"
+    if not exists:
+        state = "stale"
+        reason = "manifest note path is missing from the repo"
+    elif scope != "durable":
+        state = "advisory"
+        reason = "advisory/current note trust is reported through current-check and freshness surfaces"
+    elif not anchors:
+        state = "questionable"
+        reason = "durable note has no evidence anchors yet"
+    elif not matched_patterns:
+        state = "stale"
+        reason = "evidence anchors no longer match current repo files"
+    elif note.memory_role == "improvement_signal" or note.improvement_candidate:
+        state = "elimination_candidate"
+        reason = "improvement-signal note is still justified but should compete against elimination or promotion"
+
+    return {
+        "path": note.path.as_posix(),
+        "note_type": note.note_type,
+        "authority": note.authority,
+        "memory_role": note.memory_role or "unclassified",
+        "state": state,
+        "reason": reason,
+        "evidence_anchor_count": len(anchors),
+        "matched_anchor_count": len(matched_patterns),
+        "evidence_anchors": anchors,
+        "matched_evidence": matched_paths,
+        "preferred_remediation": note.preferred_remediation,
+        "elimination_target": note.elimination_target,
+    }
+
+
+def _memory_usefulness_audit(*, route_snapshot: InstallResult, remediation: InstallResult) -> dict[str, object]:
+    summary = route_snapshot.route_report_summary or {}
+    feedback = summary.get("feedback", {}) if isinstance(summary, dict) else {}
+    fixtures = summary.get("fixtures", {}) if isinstance(summary, dict) else {}
+    routing_confidence = summary.get("routing_confidence", {}) if isinstance(summary, dict) else {}
+    working_set = summary.get("working_set", {}) if isinstance(summary, dict) else {}
+    startup_cost = summary.get("startup_cost", {}) if isinstance(summary, dict) else {}
+    remediation_counts = remediation.counts()
+
+    feedback_cases = int(feedback.get("total_feedback_case_count", 0) or 0)
+    fixture_cases = int(fixtures.get("fixture_count", 0) or 0)
+    low_confidence = int(routing_confidence.get("low_confidence_fixture_count", 0) or 0)
+    over_target = int(working_set.get("fixture_count_exceeding_target", 0) or 0)
+    promotion_candidates = int(remediation_counts.get("candidate", 0) or 0)
+
+    status = "measured"
+    summary_text = "Memory usefulness is being measured through routing and remediation signals."
+    if feedback_cases == 0 and fixture_cases == 0:
+        status = "needs-more-proof"
+        summary_text = "Memory usefulness is not being measured yet; add routing fixtures or concrete routing-feedback cases."
+    elif low_confidence or over_target:
+        status = "attention-needed"
+        summary_text = "Routing evidence shows Memory is being exercised, but confidence or working-set cost still needs attention."
+    elif promotion_candidates:
+        status = "actionable"
+        summary_text = (
+            "Routing evidence exists, and remediation candidates show where Memory should shrink or promote into stronger surfaces."
+        )
+
+    return {
+        "status": status,
+        "summary": summary_text,
+        "routing_feedback_case_count": feedback_cases,
+        "routing_fixture_count": fixture_cases,
+        "low_confidence_fixture_count": low_confidence,
+        "working_set_fixture_count_exceeding_target": over_target,
+        "average_routed_note_count": working_set.get("average_routed_note_count", 0),
+        "average_routed_line_count": startup_cost.get("average_routed_line_count", 0),
+        "promotion_candidate_count": promotion_candidates,
+    }
+
+
 def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
     target_root = resolve_target_root(target)
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
@@ -1601,10 +1711,16 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
 
     note_type_counts: dict[str, int] = {}
     memory_role_counts: dict[str, int] = {}
+    trust_items: list[dict[str, object]] = []
+    trust_state_counts: dict[str, int] = {}
     for note in manifest.notes:
         note_type_counts[note.note_type] = note_type_counts.get(note.note_type, 0) + 1
         role = note.memory_role or "unclassified"
         memory_role_counts[role] = memory_role_counts.get(role, 0) + 1
+        trust_item = _memory_trust_item(note=note, target_root=target_root)
+        trust_items.append(trust_item)
+        state = str(trust_item["state"])
+        trust_state_counts[state] = trust_state_counts.get(state, 0) + 1
 
     findings: list[dict[str, object]] = []
     seen_findings: set[tuple[str, str, str, str]] = set()
@@ -1653,17 +1769,28 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
         )
 
     remediation_counts = remediation.counts()
+    stale_notes = [item for item in trust_items if item["state"] == "stale"]
+    questionable_notes = [item for item in trust_items if item["state"] == "questionable"]
+    elimination_candidates = [item for item in trust_items if item["state"] == "elimination_candidate"]
+    usefulness_audit = _memory_usefulness_audit(route_snapshot=route_snapshot, remediation=remediation)
     manual_review_total = sum(1 for action in significant_actions if action.kind in {"manual review", "missing"})
     warning_total = sum(1 for action in significant_actions if action.kind == "warning")
     advisory_total = 0
-    if manual_review_total or warning_total:
+    if manual_review_total or warning_total or stale_notes or questionable_notes:
         health = "attention-needed"
     else:
         health = "healthy"
 
     next_action_summary = "Memory looks healthy right now."
     next_action_commands: list[str] = []
-    if manual_review_total or warning_total:
+    if stale_notes:
+        note = stale_notes[0]
+        next_action_summary = f"Review stale memory note {note['path']} before trusting it again."
+        next_action_commands = [
+            "agentic-memory-bootstrap report --target ./repo --format json",
+            "agentic-memory-bootstrap promotion-report --target ./repo --mode remediation",
+        ]
+    elif manual_review_total or warning_total:
         first_finding = findings[0] if findings else None
         if isinstance(first_finding, dict):
             next_action_summary = str(first_finding.get("message", next_action_summary))
@@ -1674,6 +1801,16 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
     elif remediation_counts.get("candidate", 0):
         next_action_summary = "Review bounded promotion or elimination candidates before memory residue grows."
         next_action_commands = ["agentic-memory-bootstrap promotion-report --target ./repo --mode remediation"]
+    elif questionable_notes:
+        note = questionable_notes[0]
+        next_action_summary = f"Ground questionable durable note {note['path']} with evidence anchors or demote it."
+        next_action_commands = [
+            "agentic-memory-bootstrap report --target ./repo --format json",
+            "agentic-memory-bootstrap doctor --target ./repo",
+        ]
+    elif usefulness_audit["status"] == "needs-more-proof":
+        next_action_summary = str(usefulness_audit["summary"])
+        next_action_commands = ["agentic-memory-bootstrap route-report --target ./repo"]
     elif route_snapshot.route_report_summary:
         next_action_summary = "Use the routing report when ordinary work should prove Memory is the cheapest relevant path."
         next_action_commands = ["agentic-memory-bootstrap route-report --target ./repo"]
@@ -1697,6 +1834,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
                 "status",
                 "active",
                 "trust",
+                "usefulness_audit",
                 "findings",
                 "next_action",
             ],
@@ -1721,7 +1859,12 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
             "manual_review_count": manual_review_total,
             "advisory_count": advisory_total,
             "promotion_candidate_count": remediation_counts.get("candidate", 0),
+            "state_counts": trust_state_counts,
+            "questionable_notes": questionable_notes[:5],
+            "stale_notes": stale_notes[:5],
+            "elimination_candidates": elimination_candidates[:5],
         },
+        "usefulness_audit": usefulness_audit,
         "findings": findings,
         "next_action": {
             "summary": next_action_summary,
