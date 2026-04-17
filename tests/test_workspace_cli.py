@@ -119,6 +119,17 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "orient from a compact report first",
         "keep follow-through bounded and reviewable",
     ]
+    assert payload["setup_findings_promotion"]["canonical_doc"] == "docs/setup-findings-contract.md"
+    assert payload["setup_findings_promotion"]["command"] == "agentic-workspace setup --target ./repo --format json"
+    assert payload["setup_findings_promotion"]["artifact_path"] == "tools/setup-findings.json"
+    assert payload["setup_findings_promotion"]["accepted_kind"] == "workspace-setup-findings/v1"
+    assert payload["setup_findings_promotion"]["accepted_classes"][0]["class"] == "repo_friction_evidence"
+    assert payload["setup_findings_promotion"]["accepted_classes"][1]["class"] == "planning_candidate"
+    assert payload["setup_findings_promotion"]["secondary"] == [
+        "Do not build a workspace-owned analyzer.",
+        "Do not auto-write planning or memory state from setup input.",
+        "Do not preserve findings that have no durable owner or bounded next action.",
+    ]
     assert payload["intent"]["canonical_doc"] == "docs/intent-contract.md"
     assert payload["intent"]["command"] == "agentic-workspace defaults --section intent --format json"
     assert payload["intent"]["rule"] == "Confirmed intent stays human-owned; interpreted intent must remain visibly inferred."
@@ -620,6 +631,21 @@ def test_defaults_setup_section_selector_returns_compact_contract_answer(capsys)
     assert "agentic-workspace setup --target ./repo --format json" in payload["refs"]
 
 
+def test_defaults_setup_findings_promotion_section_selector_returns_compact_contract_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "setup_findings_promotion", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "setup_findings_promotion"}
+    assert payload["matched"] is True
+    assert payload["answer"]["canonical_doc"] == "docs/setup-findings-contract.md"
+    assert payload["answer"]["artifact_path"] == "tools/setup-findings.json"
+    assert payload["answer"]["accepted_classes"][0]["class"] == "repo_friction_evidence"
+    assert "docs/setup-findings-contract.md" in payload["refs"]
+    assert "agentic-workspace setup --target ./repo --format json" in payload["refs"]
+
+
 def test_setup_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -637,8 +663,65 @@ def test_setup_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Pa
     assert payload["command"] == "setup"
     assert payload["orientation"]["mode"] == "no-new-seed-surfaces-needed"
     assert "no new seed surfaces are needed" in payload["orientation"]["summary"].lower()
+    assert payload["findings_promotion"]["artifact_path"] == "tools/setup-findings.json"
+    assert payload["analysis_input"]["status"] == "not-found"
     assert payload["next_action"]["summary"] == "No new seed surfaces needed"
     assert payload["next_action"]["commands"] == ["agentic-workspace report --target ./repo --format json"]
+
+
+def test_setup_command_loads_promotable_findings_artifact(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    (target / "memory").mkdir(exist_ok=True)
+    (target / "memory" / "index.md").write_text("# Memory index\n", encoding="utf-8")
+    (target / "tools").mkdir(exist_ok=True)
+    (target / "tools" / "setup-findings.json").write_text(
+        json.dumps(
+            {
+                "kind": "workspace-setup-findings/v1",
+                "findings": [
+                    {
+                        "class": "repo_friction_evidence",
+                        "summary": "Workspace CLI remains a large shared hotspot.",
+                        "confidence": 0.91,
+                        "path": "src/agentic_workspace/cli.py",
+                        "refs": ["docs/reporting-contract.md"],
+                    },
+                    {
+                        "class": "planning_candidate",
+                        "summary": "Promote one bounded module-reporting follow-on.",
+                        "confidence": 0.83,
+                        "next_action": "Promote the next module-reporting slice into TODO.md after setup review.",
+                    },
+                    {
+                        "class": "planning_candidate",
+                        "summary": "Generic thought with no bounded action.",
+                        "confidence": 0.82,
+                    },
+                ],
+            },
+            indent=2,
+        ),
+        encoding="utf-8-sig",
+    )
+
+    assert cli.main(["setup", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["analysis_input"]["status"] == "loaded"
+    assert payload["analysis_input"]["loaded_count"] == 3
+    assert payload["analysis_input"]["promotable"]["repo_friction_evidence"][0]["path"] == "src/agentic_workspace/cli.py"
+    assert payload["analysis_input"]["promotable"]["planning_candidate"][0]["next_action"].startswith("Promote the next")
+    assert payload["analysis_input"]["transient"][0]["promotion_reason"] == "planning candidate needs a bounded next_action"
+    assert payload["next_action"]["summary"] == "Review promotable setup findings before seeding or promoting anything durable"
+    assert payload["next_action"]["commands"] == [
+        "agentic-workspace setup --target ./repo --format json",
+        "agentic-workspace report --target ./repo --format json",
+    ]
 
 
 def test_defaults_delegation_posture_section_selector_returns_compact_contract_answer(capsys) -> None:
@@ -1856,6 +1939,50 @@ def test_report_consumes_external_codebase_map_when_present(tmp_path: Path, caps
     assert payload["repo_friction"]["external_evidence"][0]["status"] == "loaded"
     assert payload["repo_friction"]["external_evidence"][0]["items"][0]["path"] == "src/generated_hotspot.py"
     assert payload["repo_friction"]["external_evidence"][0]["items"][0]["line_count"] == 900
+
+
+def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "tools").mkdir()
+    (target / "tools" / "setup-findings.json").write_text(
+        json.dumps(
+            {
+                "kind": "workspace-setup-findings/v1",
+                "findings": [
+                    {
+                        "class": "repo_friction_evidence",
+                        "summary": "Workspace CLI remains a shared hotspot.",
+                        "confidence": 0.9,
+                        "path": "src/agentic_workspace/cli.py",
+                        "refs": ["docs/reporting-contract.md"],
+                    },
+                    {
+                        "class": "repo_friction_evidence",
+                        "summary": "Low-confidence note stays transient.",
+                        "confidence": 0.4,
+                        "path": "src/ignored.py",
+                    },
+                ],
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["repo_friction"]["evidence_classes"] == [
+        "large_file_hotspots",
+        "concept_surface_hotspots",
+        "external_evidence",
+    ]
+    setup_findings = next(evidence for evidence in payload["repo_friction"]["external_evidence"] if evidence["kind"] == "setup-findings")
+    assert setup_findings["path"] == "tools/setup-findings.json"
+    assert setup_findings["items"][0]["path"] == "src/agentic_workspace/cli.py"
+    assert setup_findings["items"][0]["promotion_reason"] == "grounded friction evidence is worth preserving"
 
 
 def test_report_surfaces_reporting_only_repo_friction_posture(tmp_path: Path, capsys) -> None:

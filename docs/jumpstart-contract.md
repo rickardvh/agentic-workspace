@@ -28,6 +28,18 @@ When setup identifies candidate surfaces, prefer:
 Use the highest-confidence, lowest-noise candidates first so the first visible value stays small and reviewable.
 If the repo already has the core setup orientation surfaces, report that no new seed surfaces are needed and stop there.
 
+## Agent-Produced Findings Input
+
+Setup may also accept one optional agent-produced findings artifact at `tools/setup-findings.json`.
+
+That input stays bounded:
+
+- the workspace does not own how the analysis was produced
+- only findings with a clear durable owner should be preserved
+- low-value or weakly grounded findings should stay transient
+
+Use [`docs/setup-findings-contract.md`](docs/setup-findings-contract.md) for the accepted artifact shape, first finding classes, and promotion-versus-transient rules.
+
 ## Canonical Shape
 
 Use `agentic-workspace setup --target ./repo --format json` for the machine-readable contract surface.
@@ -67,3 +79,4 @@ The text form should stay short and stable:
 - Use [`docs/default-path-contract.md`](docs/default-path-contract.md) for the front-door route selection contract.
 - Use [`docs/init-lifecycle.md`](docs/init-lifecycle.md) for the lifecycle boundary between `init` and post-bootstrap follow-through.
 - Use [`docs/reporting-contract.md`](docs/reporting-contract.md) for the pre-write discovery report that classifies candidate Memory and Planning seeds before any state is written.
+- Use [`docs/setup-findings-contract.md`](docs/setup-findings-contract.md) when setup should accept agent-produced findings as bounded optional input.

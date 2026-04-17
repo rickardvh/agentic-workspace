@@ -97,6 +97,12 @@ SUPPORTED_OPTIMIZATION_BIASES = (
 REPO_FRICTION_LARGE_FILE_THRESHOLD = 400
 REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD = 200
 REPO_FRICTION_MAX_HOTSPOTS = 5
+SETUP_FINDINGS_PATH = Path("tools/setup-findings.json")
+SETUP_FINDINGS_KIND = "workspace-setup-findings/v1"
+SUPPORTED_SETUP_FINDING_CLASSES = (
+    "repo_friction_evidence",
+    "planning_candidate",
+)
 REPO_FRICTION_SCAN_SUFFIXES = {
     ".c",
     ".cc",
@@ -690,6 +696,160 @@ def _optimization_bias_payload(mode: str) -> dict[str, Any]:
         },
     }
     return policies[mode].copy()
+
+
+def _setup_finding_class_payload(finding_class: str) -> dict[str, Any]:
+    payloads = {
+        "repo_friction_evidence": {
+            "class": "repo_friction_evidence",
+            "summary": "Evidence-backed structural or routing friction worth preserving as shared workspace evidence.",
+            "promote_to": "agentic-workspace report --target ./repo --format json repo_friction.external_evidence",
+            "preserve_when": [
+                "confidence is at least 0.75",
+                "the finding has a repo-relative path or explicit refs",
+                "the finding would reduce rediscovery if it survived the current setup pass",
+            ],
+            "transient_when": [
+                "the finding has no grounding path or refs",
+                "confidence is below 0.75",
+                "the finding only restates report output already present elsewhere",
+            ],
+        },
+        "planning_candidate": {
+            "class": "planning_candidate",
+            "summary": "A bounded follow-on or handoff candidate worth preserving as explicit planning promotion guidance.",
+            "promote_to": "TODO.md or docs/execplans/ after bounded planning review",
+            "preserve_when": [
+                "confidence is at least 0.75",
+                "the finding includes a bounded next_action",
+                "the finding would still matter after the current session or agent ends",
+            ],
+            "transient_when": [
+                "the finding lacks a bounded next_action",
+                "confidence is below 0.75",
+                "the finding is only generic analysis with no clear planning owner",
+            ],
+        },
+    }
+    return payloads[finding_class].copy()
+
+
+def _normalized_setup_finding(raw: Any) -> dict[str, Any] | None:
+    if not isinstance(raw, dict):
+        return None
+    finding_class = raw.get("class")
+    if not isinstance(finding_class, str) or finding_class not in SUPPORTED_SETUP_FINDING_CLASSES:
+        return None
+    summary = raw.get("summary")
+    if not isinstance(summary, str) or not summary.strip():
+        return None
+    normalized: dict[str, Any] = {
+        "class": finding_class,
+        "summary": summary.strip(),
+    }
+    raw_confidence = raw.get("confidence", 0.5)
+    try:
+        confidence = float(raw_confidence)
+    except (TypeError, ValueError):
+        confidence = 0.5
+    normalized["confidence"] = max(0.0, min(confidence, 1.0))
+    path = raw.get("path")
+    if isinstance(path, str) and path.strip():
+        normalized["path"] = path.strip()
+    refs = raw.get("refs")
+    if isinstance(refs, list):
+        normalized_refs = [str(item).strip() for item in refs if isinstance(item, str) and item.strip()]
+        if normalized_refs:
+            normalized["refs"] = normalized_refs[:5]
+    next_action = raw.get("next_action")
+    if isinstance(next_action, str) and next_action.strip():
+        normalized["next_action"] = next_action.strip()
+    why = raw.get("why")
+    if isinstance(why, str) and why.strip():
+        normalized["why"] = why.strip()
+    return normalized
+
+
+def _setup_finding_promotion_decision(item: dict[str, Any]) -> tuple[bool, str]:
+    confidence = float(item.get("confidence", 0.0))
+    if confidence < 0.75:
+        return False, "confidence below promotion threshold"
+    finding_class = item["class"]
+    if finding_class == "repo_friction_evidence":
+        if item.get("path") or item.get("refs"):
+            return True, "grounded friction evidence is worth preserving"
+        return False, "repo-friction evidence needs a path or refs"
+    if finding_class == "planning_candidate":
+        if item.get("next_action"):
+            return True, "bounded next action makes the planning candidate durable"
+        return False, "planning candidate needs a bounded next_action"
+    return False, "unsupported finding class"
+
+
+def _setup_findings_input_payload(*, target_root: Path) -> dict[str, Any]:
+    artifact = target_root / SETUP_FINDINGS_PATH
+    payload: dict[str, Any] = {
+        "path": SETUP_FINDINGS_PATH.as_posix(),
+        "accepted_kind": SETUP_FINDINGS_KIND,
+        "accepted_classes": [_setup_finding_class_payload(finding_class) for finding_class in SUPPORTED_SETUP_FINDING_CLASSES],
+        "status": "not-found",
+        "loaded_count": 0,
+        "promotable": {
+            "repo_friction_evidence": [],
+            "planning_candidate": [],
+        },
+        "transient": [],
+    }
+    if not artifact.exists():
+        return payload
+    try:
+        raw_payload = json.loads(artifact.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        payload["status"] = "invalid"
+        payload["reason"] = f"Could not parse {SETUP_FINDINGS_PATH.as_posix()}: {exc}"
+        return payload
+    if not isinstance(raw_payload, dict) or raw_payload.get("kind") != SETUP_FINDINGS_KIND:
+        payload["status"] = "invalid"
+        payload["reason"] = f"{SETUP_FINDINGS_PATH.as_posix()} must contain kind {SETUP_FINDINGS_KIND}."
+        return payload
+    raw_findings = raw_payload.get("findings")
+    if not isinstance(raw_findings, list):
+        payload["status"] = "invalid"
+        payload["reason"] = f"{SETUP_FINDINGS_PATH.as_posix()} must contain a findings list."
+        return payload
+    payload["status"] = "loaded"
+    for raw_item in raw_findings:
+        normalized = _normalized_setup_finding(raw_item)
+        if normalized is None:
+            payload["transient"].append(
+                {
+                    "reason": "ignored malformed or unsupported finding",
+                }
+            )
+            continue
+        should_promote, reason = _setup_finding_promotion_decision(normalized)
+        normalized["promotion_reason"] = reason
+        payload["loaded_count"] = int(payload["loaded_count"]) + 1
+        if should_promote:
+            payload["promotable"][str(normalized["class"])].append(normalized)
+        else:
+            payload["transient"].append(normalized)
+    return payload
+
+
+def _repo_friction_external_setup_findings_payload(*, target_root: Path) -> dict[str, Any] | None:
+    setup_findings = _setup_findings_input_payload(target_root=target_root)
+    if setup_findings.get("status") != "loaded":
+        return None
+    items = [item.copy() for item in setup_findings["promotable"]["repo_friction_evidence"]]
+    if not items:
+        return None
+    return {
+        "kind": "setup-findings",
+        "path": SETUP_FINDINGS_PATH.as_posix(),
+        "status": "loaded",
+        "items": items,
+    }
 
 
 def _detected_agent_instruction_files(*, target_root: Path) -> tuple[str, ...]:
@@ -2417,6 +2577,9 @@ def _repo_friction_payload(*, target_root: Path, config: WorkspaceConfig) -> dic
     external_codebase_map = _repo_friction_external_codebase_map_payload(target_root=target_root)
     if external_codebase_map is not None:
         external_evidence.append(external_codebase_map)
+    external_setup_findings = _repo_friction_external_setup_findings_payload(target_root=target_root)
+    if external_setup_findings is not None:
+        external_evidence.append(external_setup_findings)
     evidence_classes = ["large_file_hotspots", "concept_surface_hotspots"]
     if external_evidence:
         evidence_classes.append("external_evidence")
@@ -3445,6 +3608,25 @@ def _defaults_payload() -> dict[str, Any]:
                 "Do not turn setup into generic analysis.",
             ],
         },
+        "setup_findings_promotion": {
+            "canonical_doc": "docs/setup-findings-contract.md",
+            "command": "agentic-workspace setup --target ./repo --format json",
+            "rule": (
+                "Setup may accept one optional agent-produced findings artifact, but it should preserve only the classes "
+                "that reduce rediscovery and have a clear durable owner."
+            ),
+            "artifact_path": SETUP_FINDINGS_PATH.as_posix(),
+            "accepted_kind": SETUP_FINDINGS_KIND,
+            "accepted_classes": [_setup_finding_class_payload(finding_class) for finding_class in SUPPORTED_SETUP_FINDING_CLASSES],
+            "preserve_rule": (
+                "Promote only evidence-backed repo-friction findings or bounded planning candidates; leave everything else transient."
+            ),
+            "secondary": [
+                "Do not build a workspace-owned analyzer.",
+                "Do not auto-write planning or memory state from setup input.",
+                "Do not preserve findings that have no durable owner or bounded next action.",
+            ],
+        },
         "intent": _intent_contract_payload(),
         "clarification": _clarification_contract_payload(),
         "prompt_routing": _prompt_routing_contract_payload(),
@@ -3984,6 +4166,7 @@ def _setup_payload(
         config=config,
     )
     discovery = _setup_discovery_payload(target_root=target_root, status_payload=status_payload)
+    findings_input = _setup_findings_input_payload(target_root=target_root)
     mature_repo = _repo_looks_setup_mature(target_root=target_root)
     if mature_repo:
         orientation: dict[str, Any] = {
@@ -4010,6 +4193,16 @@ def _setup_payload(
             "summary": "Review the compact report surfaces",
             "commands": ["agentic-workspace report --target ./repo --format json"],
         }
+    if findings_input.get("status") == "loaded":
+        promotable_count = sum(len(items) for items in findings_input["promotable"].values())
+        if promotable_count:
+            next_action = {
+                "summary": "Review promotable setup findings before seeding or promoting anything durable",
+                "commands": [
+                    "agentic-workspace setup --target ./repo --format json",
+                    "agentic-workspace report --target ./repo --format json",
+                ],
+            }
 
     return {
         "kind": "workspace-setup/v1",
@@ -4019,6 +4212,17 @@ def _setup_payload(
         "selected_modules": selected_modules,
         "health": status_payload["health"],
         "orientation": orientation,
+        "findings_promotion": {
+            "canonical_doc": "docs/setup-findings-contract.md",
+            "artifact_path": SETUP_FINDINGS_PATH.as_posix(),
+            "accepted_kind": SETUP_FINDINGS_KIND,
+            "accepted_classes": [_setup_finding_class_payload(finding_class) for finding_class in SUPPORTED_SETUP_FINDING_CLASSES],
+            "rule": (
+                "Accept agent-produced setup findings as optional input, preserve only the classes that reduce rediscovery, "
+                "and keep low-value or weakly grounded findings transient."
+            ),
+        },
+        "analysis_input": findings_input,
         "next_action": next_action,
         "discovery": discovery,
         "current": {

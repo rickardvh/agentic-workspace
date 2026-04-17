@@ -43,6 +43,7 @@ Use this page when you need the fuller route contract after the compact map poin
 | How do I inspect combined workspace state? | `agentic-workspace report --target ./repo --format json` and its `schema` plus report payload | Reading raw module files before the report |
 | How do I inspect mature-repo setup candidates? | `agentic-workspace setup --target ./repo --format json` and its compact orientation payload | Guessing at Memory/Planning candidates by reading prose first |
 | Where is the bounded post-bootstrap setup contract? | [`docs/jumpstart-contract.md`](docs/jumpstart-contract.md) and `agentic-workspace setup --target ./repo --format json` | Treating setup as a wider `init` path or a repo-local checklist |
+| Where is the setup findings promotion contract? | [`docs/setup-findings-contract.md`](docs/setup-findings-contract.md) plus `agentic-workspace setup --target ./repo --format json` | Building a workspace-owned analyzer or preserving every setup finding automatically |
 | Where is the proof-selection contract? | `agentic-workspace defaults --section proof_selection --format json` and [`docs/proof-surfaces-contract.md`](docs/proof-surfaces-contract.md) | Mining prose for the narrowest proof lane first |
 | Where is the delegation posture contract? | [`docs/delegation-posture-contract.md`](docs/delegation-posture-contract.md) and `agentic-workspace defaults --section delegation_posture --format json` | Treating config as a scheduler or ignoring the effective mixed-agent posture |
 | Where is the bounded repo-friction initiative contract? | `agentic-workspace defaults --section improvement_latitude --format json` plus `agentic-workspace report --target ./repo --format json` | Treating one hotspot as blanket permission for broad cleanup or inventing a second policy surface |
@@ -73,6 +74,7 @@ That surface is the queryable contract for:
 - startup
 - lifecycle
 - post-bootstrap setup
+- setup findings promotion
 - delegation posture
 - supported intents
 - canonical external-agent handoff
@@ -107,6 +109,7 @@ Use `docs/environment-recovery-contract.md` when the question is how to recover 
 Use `docs/proof-surfaces-contract.md` when the question is which proof lane answers the current trust question and what the current proof state already says.
 Use `docs/ownership-authority-contract.md` when the question is which surface owns a concern and which checked-in contract is authoritative.
 Use [`docs/jumpstart-contract.md`](docs/jumpstart-contract.md) when the question is how to do the bounded post-bootstrap setup follow-through after safe install/adopt without widening `init`.
+Use [`docs/setup-findings-contract.md`](docs/setup-findings-contract.md) when the question is which agent-produced setup findings should stay transient versus be routed into reporting or planning.
 Use [`docs/delegation-posture-contract.md`](docs/delegation-posture-contract.md) when the question is whether to stay direct, split into planner/implementer/validator subtasks, or escalate to a stronger planner under the current config-controlled posture.
 
 ## Secondary Paths

@@ -127,6 +127,18 @@ def _emit_setup_text(payload: dict[str, Any]) -> None:
     print(f"Summary: {payload['orientation']['summary']}")
     if payload["orientation"].get("reason"):
         print(f"Reason: {payload['orientation']['reason']}")
+    findings_promotion = payload.get("findings_promotion", {})
+    if isinstance(findings_promotion, dict):
+        artifact_path = findings_promotion.get("artifact_path")
+        if artifact_path:
+            print(f"Findings artifact: {artifact_path}")
+    analysis_input = payload.get("analysis_input", {})
+    if isinstance(analysis_input, dict):
+        status = analysis_input.get("status")
+        if status and status != "not-found":
+            print(f"Analysis input: {status}")
+        if isinstance(analysis_input.get("loaded_count"), int) and analysis_input["loaded_count"]:
+            print(f"Loaded findings: {analysis_input['loaded_count']}")
     next_action = payload.get("next_action", {})
     if isinstance(next_action, dict):
         summary = next_action.get("summary")
