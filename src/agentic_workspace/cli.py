@@ -677,6 +677,22 @@ def _improvement_boundary_test_payload() -> dict[str, Any]:
 
 
 def _optimization_bias_payload(mode: str) -> dict[str, Any]:
+    surface_boundary = {
+        "honors_bias": [
+            "derived report rendering density",
+            "rendered human-facing views",
+            "durable residue style when canonical truth is unchanged",
+        ],
+        "stays_invariant": [
+            "execution method",
+            "reasoning depth",
+            "delegated-judgment boundaries",
+            "proof requirements",
+            "ownership semantics",
+            "machine-readable report truth",
+            "canonical state semantics",
+        ],
+    }
     policies = {
         "agent-efficiency": {
             "mode": "agent-efficiency",
@@ -696,6 +712,7 @@ def _optimization_bias_payload(mode: str) -> dict[str, Any]:
                 "proof requirements",
                 "canonical state semantics",
             ],
+            "surface_boundary": surface_boundary,
         },
         "balanced": {
             "mode": "balanced",
@@ -717,6 +734,7 @@ def _optimization_bias_payload(mode: str) -> dict[str, Any]:
                 "proof requirements",
                 "canonical state semantics",
             ],
+            "surface_boundary": surface_boundary,
         },
         "human-legibility": {
             "mode": "human-legibility",
@@ -736,6 +754,7 @@ def _optimization_bias_payload(mode: str) -> dict[str, Any]:
                 "proof requirements",
                 "canonical state semantics",
             ],
+            "surface_boundary": surface_boundary,
         },
     }
     return policies[mode].copy()
@@ -3494,6 +3513,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "rendered human-facing views",
                 "durable residue style when canonical state is unchanged",
             ],
+            "surface_boundary": _optimization_bias_payload(DEFAULT_OPTIMIZATION_BIAS)["surface_boundary"],
             "must_not_change": [
                 "execution method",
                 "reasoning depth",

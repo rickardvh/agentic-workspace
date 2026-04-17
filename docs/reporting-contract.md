@@ -136,6 +136,9 @@ Only open raw module files or broader docs when the report points you to a follo
 - Keep discovery read-only until a setup promotion explicitly decides to seed.
 - Keep `agentic-planning-bootstrap summary --format json` as the planning-side companion surface rather than stretching the workspace report into a second planning schema.
 - Let optimization bias change report density and rendered text style only; do not let it change report truth, execution posture, or module ownership semantics.
+- Keep the optimization-bias surface boundary explicit:
+  - honors bias: derived report rendering density, rendered human-facing views, and durable residue style when truth stays unchanged
+  - stays invariant: machine-readable report truth, execution method, proof semantics, delegated-judgment boundaries, and ownership semantics
 - Treat standing-intent reporting as an inspection and routing surface, not as a new editable source of truth.
 
 ## Relationship To Lazy Discovery

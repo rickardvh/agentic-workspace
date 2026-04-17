@@ -74,6 +74,9 @@ recommended_upgrade_after_days = 30
 - `balanced` means keep outputs compact by default while preserving enough explanation for routine human inspection.
 - `human-legibility` means prefer clearer explanatory rendering and slightly more legible residue when truth would remain unchanged.
 - `optimization_bias` may influence reporting density, rendered human-view density, and residue style, but it must not change execution method, reasoning depth, delegated-judgment limits, proof requirements, or canonical state semantics.
+- The compact surface boundary is:
+  - honors bias: derived report rendering density, rendered human-facing views, and durable residue style when canonical truth stays unchanged
+  - stays invariant: execution method, reasoning depth, delegated-judgment boundaries, proof requirements, ownership semantics, machine-readable report truth, and canonical state semantics
 - Use `agentic-workspace defaults --section improvement_latitude --format json` to inspect the shipped decision test for when friction reduction still counts as local means versus a changed task.
 - Use `agentic-workspace defaults --section optimization_bias --format json` to inspect the shipped output/residue bias contract and its semantic guardrails.
 - Use `agentic-workspace report --target ./repo --format json` to inspect both workspace-derived evidence and any compatible external hotspot artifacts the repo already maintains.

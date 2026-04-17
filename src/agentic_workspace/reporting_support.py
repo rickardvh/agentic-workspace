@@ -54,6 +54,7 @@ def output_contract_payload(
             "rendered human-facing view density",
             "durable residue style when truth stays unchanged",
         ],
+        "surface_boundary": bias_payload["surface_boundary"],
         "report_density": bias_payload["report_density"],
         "residue_density": bias_payload["residue_density"],
         "rendered_view_style": bias_payload["rendered_view_style"],

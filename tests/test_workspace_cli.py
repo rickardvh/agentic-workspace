@@ -317,6 +317,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["optimization_bias"]["supported_modes"][0]["mode"] == "agent-efficiency"
     assert payload["optimization_bias"]["supported_modes"][2]["mode"] == "human-legibility"
     assert "execution method" in payload["optimization_bias"]["must_not_change"]
+    assert payload["optimization_bias"]["surface_boundary"]["honors_bias"][0] == "derived report rendering density"
+    assert "machine-readable report truth" in payload["optimization_bias"]["surface_boundary"]["stays_invariant"]
     assert payload["workflow_artifact_adapters"]["canonical_doc"] == "docs/workspace-config-contract.md"
     assert (
         payload["workflow_artifact_adapters"]["command"] == "agentic-workspace defaults --section workflow_artifact_adapters --format json"
@@ -2011,6 +2013,8 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["output_contract"]["optimization_bias_source"] == "product-default"
     assert payload["output_contract"]["surface"] == "report"
     assert payload["output_contract"]["rendered_view_style"] == "brief-explanatory"
+    assert payload["output_contract"]["surface_boundary"]["honors_bias"][1] == "rendered human-facing views"
+    assert "ownership semantics" in payload["output_contract"]["surface_boundary"]["stays_invariant"]
     assert payload["next_action"]["summary"] == "No immediate action"
     assert any(
         item["surface"]
