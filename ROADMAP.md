@@ -19,30 +19,48 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## GitHub Issue Intake
 
-- Latest open planning tranche: GitHub issues `#137`-`#159`, grouped below into ordered inactive candidate lanes.
+- Latest open planning tranche: GitHub issues `#146`-`#170`, grouped below into ordered inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 - The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/routing/capture tranches are complete.
 
 ## Candidate Lanes
 
+- Lane: Planning surface clarity and routine recovery
+  ID: planning-surface-clarity-routine-recovery
+  Priority: first
+  Issues: #160, #162, #163, #164, #165
+  Outcome: make planning surfaces cheaper for agents to distinguish, recover from, and trust without broad prose rereads.
+  Why now: standing-intent is now settled enough that planning-surface meaning can be tightened against a stable surrounding contract.
+  Promotion signal: promote when ordinary work still needs raw planning-prose rereads or repeated inference to answer routine recovery questions.
+  Suggested first slice: audit repeated ambiguity and reread pressure, then define the minimum routine-recovery questions compact planning surfaces must answer cheaply.
+
 - Lane: Workspace optimization bias and setup findings
   ID: workspace-optimization-bias-findings
-  Priority: first
+  Priority: second
   Issues: #148, #149, #151, #152, #153, #154, #155, #156
   Outcome: integrate optimization bias and setup or jumpstart findings into normal repo operation without adding a second analysis framework.
-  Why later: wait until planning routing and standing-intent surfaces are settled so the reporting path has a stable target.
+  Why later: wait until the compact planning recovery path is clearer so the reporting path has a stable target and visibility model.
   Promotion signal: promote when repeated dogfooding shows the bias and findings path is still hidden, noisy, or too hard to recover.
   Suggested first slice: surface the effective optimization bias in the compact normal recovery path.
 
 - Lane: Memory trust and habitual pull
   ID: memory-trust-habitual-pull
-  Priority: second
+  Priority: third
   Issues: #146, #150, #157, #158, #159
   Outcome: prove Memory is a cheap habitual path for ordinary work and clarify its boundary with other standing guidance.
-  Why later: wait until the planning and standing-intent paths stop changing so memory can converge against a stable contract.
+  Why later: wait until the planning recovery path stops shifting so Memory can converge against a stable operating contract.
   Promotion signal: promote when the repo can show a clear remaining bypass reason or a bounded final follow-through slice.
   Suggested first slice: audit ordinary-work cases to separate real consultation from hypothetical usefulness.
+
+- Lane: Portable declarative contracts beyond Python CLI
+  ID: portable-declarative-contracts-beyond-python-cli
+  Priority: fourth
+  Issues: #161, #166, #167, #168, #169, #170
+  Outcome: move stable lifecycle and runtime truth toward declarative portable contract sources so Python remains a strong reference implementation rather than the only credible operational embodiment.
+  Why later: wait until the current planning/reporting lanes settle so the next declarative extraction tranche targets stable truths rather than moving boundaries.
+  Promotion signal: promote when the repo can name one stable next extraction target or a clear portable architecture/tool-selection rule without inventing a bespoke workflow language.
+  Suggested first slice: inventory which truths still live mainly in Python, define the declarative/procedural/generated-layer boundary, and pick the next bounded extraction target only where stability is proven.
 
 ## Reopen Conditions
 
