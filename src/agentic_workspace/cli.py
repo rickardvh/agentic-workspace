@@ -88,6 +88,12 @@ SUPPORTED_IMPROVEMENT_LATITUDES = (
     "balanced",
     "proactive",
 )
+DEFAULT_OPTIMIZATION_BIAS = "balanced"
+SUPPORTED_OPTIMIZATION_BIASES = (
+    "agent-efficiency",
+    "balanced",
+    "human-legibility",
+)
 REPO_FRICTION_LARGE_FILE_THRESHOLD = 400
 REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD = 200
 REPO_FRICTION_MAX_HOTSPOTS = 5
@@ -267,6 +273,8 @@ class WorkspaceConfig:
     workflow_artifact_profile_source: str
     improvement_latitude: str
     improvement_latitude_source: str
+    optimization_bias: str
+    optimization_bias_source: str
     detected_agent_instructions_files: tuple[str, ...]
     update_modules: dict[str, ModuleUpdatePolicy]
     local_override: "MixedAgentLocalOverride"
@@ -436,6 +444,14 @@ def _validate_improvement_latitude(value: str) -> str:
     if normalized not in SUPPORTED_IMPROVEMENT_LATITUDES:
         supported = ", ".join(SUPPORTED_IMPROVEMENT_LATITUDES)
         raise WorkspaceUsageError(f"workspace.improvement_latitude must be one of: {supported}.")
+    return normalized
+
+
+def _validate_optimization_bias(value: str) -> str:
+    normalized = value.strip() or DEFAULT_OPTIMIZATION_BIAS
+    if normalized not in SUPPORTED_OPTIMIZATION_BIASES:
+        supported = ", ".join(SUPPORTED_OPTIMIZATION_BIASES)
+        raise WorkspaceUsageError(f"workspace.optimization_bias must be one of: {supported}.")
     return normalized
 
 
@@ -609,6 +625,71 @@ def _improvement_boundary_test_payload() -> dict[str, Any]:
             "the available evidence is too weak to distinguish local means improvement from a different task",
         ],
     }
+
+
+def _optimization_bias_payload(mode: str) -> dict[str, Any]:
+    policies = {
+        "agent-efficiency": {
+            "mode": "agent-efficiency",
+            "summary": "Prefer terse durable outputs and low-token rendered views when canonical state would stay unchanged.",
+            "report_density": "compact",
+            "residue_density": "compact-carry-forward",
+            "rendered_view_style": "minimal-prose",
+            "allows": [
+                "preferring terse labels when machine-readable state already carries the contract",
+                "keeping follow-through and residue compact when explanation would only restate canonical fields",
+                "trimming repeated explanatory prose from rendered human views",
+            ],
+            "does_not_affect": [
+                "execution method",
+                "reasoning depth",
+                "delegated-judgment boundaries",
+                "proof requirements",
+                "canonical state semantics",
+            ],
+        },
+        "balanced": {
+            "mode": "balanced",
+            "summary": (
+                "Keep durable outputs compact by default while preserving enough explanatory rendering for routine human inspection."
+            ),
+            "report_density": "balanced",
+            "residue_density": "compact-with-brief-explanation",
+            "rendered_view_style": "brief-explanatory",
+            "allows": [
+                "keeping machine-readable state terse",
+                "adding short explanatory labels in rendered human views",
+                "preserving compact residue with only the explanation needed to avoid rereading",
+            ],
+            "does_not_affect": [
+                "execution method",
+                "reasoning depth",
+                "delegated-judgment boundaries",
+                "proof requirements",
+                "canonical state semantics",
+            ],
+        },
+        "human-legibility": {
+            "mode": "human-legibility",
+            "summary": "Prefer clearer explanatory rendering and more legible durable residue when truth would remain unchanged.",
+            "report_density": "explanatory",
+            "residue_density": "legible-with-context",
+            "rendered_view_style": "explicit-labels-and-context",
+            "allows": [
+                "adding brief explanatory context around compact state",
+                "rendering section purpose more explicitly for human readers",
+                "keeping durable residue slightly more legible when terseness would force rereading",
+            ],
+            "does_not_affect": [
+                "execution method",
+                "reasoning depth",
+                "delegated-judgment boundaries",
+                "proof requirements",
+                "canonical state semantics",
+            ],
+        },
+    }
+    return policies[mode].copy()
 
 
 def _detected_agent_instruction_files(*, target_root: Path) -> tuple[str, ...]:
@@ -2177,6 +2258,7 @@ def _run_report_command(
         "selected_modules": selected_modules,
         "installed_modules": installed_modules,
         "health": status_payload["health"],
+        "output_contract": _output_contract_payload(config=config, surface="report"),
         "findings": findings,
         "next_action": next_action,
         "discovery": discovery,
@@ -2362,6 +2444,29 @@ def _repo_friction_payload(*, target_root: Path, config: WorkspaceConfig) -> dic
             "items": concept_hotspots,
         },
         "external_evidence": external_evidence,
+    }
+
+
+def _output_contract_payload(*, config: WorkspaceConfig, surface: str) -> dict[str, Any]:
+    bias = _optimization_bias_payload(config.optimization_bias)
+    return {
+        "owner_surface": "workspace",
+        "surface": surface,
+        "optimization_bias": config.optimization_bias,
+        "optimization_bias_source": config.optimization_bias_source,
+        "rule": (
+            "Optimization bias may change rendering density and residue style only; "
+            "it must not change execution method or canonical state semantics."
+        ),
+        "applies_to": [
+            "derived reporting density",
+            "rendered human-facing view density",
+            "durable residue style when truth stays unchanged",
+        ],
+        "report_density": bias["report_density"],
+        "residue_density": bias["residue_density"],
+        "rendered_view_style": bias["rendered_view_style"],
+        "must_not_change": list(bias["does_not_affect"]),
     }
 
 
@@ -3032,6 +3137,7 @@ def _reporting_schema_payload() -> dict[str, Any]:
             "selected_modules",
             "installed_modules",
             "health",
+            "output_contract",
             "findings",
             "next_action",
             "discovery",
@@ -3046,6 +3152,7 @@ def _reporting_schema_payload() -> dict[str, Any]:
             "prefer one report surface over reading raw module files first",
             "keep findings, warnings, and next-action guidance explicitly separated",
             "treat setup discovery as pre-write and pre-seed only",
+            "let optimization bias change rendering density, not canonical truth or execution method",
         ],
     }
 
@@ -3350,6 +3457,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "workspace.agent_instructions_file",
                 "workspace.workflow_artifact_profile",
                 "workspace.improvement_latitude",
+                "workspace.optimization_bias",
                 "update.modules.<module>.source_type",
                 "update.modules.<module>.source_ref",
                 "update.modules.<module>.source_label",
@@ -3375,6 +3483,29 @@ def _defaults_payload() -> dict[str, Any]:
             "decision_test": _improvement_boundary_test_payload(),
             "evidence_source": "agentic-workspace report --target ./repo --format json",
             "evidence_classes": ["large_file_hotspots", "concept_surface_hotspots"],
+        },
+        "optimization_bias": {
+            "canonical_doc": "docs/workspace-config-contract.md",
+            "command": "agentic-workspace defaults --section optimization_bias --format json",
+            "rule": (
+                "Repo-owned optimization bias may change output density and residue style, "
+                "but it must not change execution method or canonical state semantics."
+            ),
+            "owner_surface": "workspace",
+            "default_mode": DEFAULT_OPTIMIZATION_BIAS,
+            "supported_modes": [_optimization_bias_payload(mode) for mode in SUPPORTED_OPTIMIZATION_BIASES],
+            "applies_to": [
+                "derived report rendering density",
+                "rendered human-facing views",
+                "durable residue style when canonical state is unchanged",
+            ],
+            "must_not_change": [
+                "execution method",
+                "reasoning depth",
+                "delegated-judgment boundaries",
+                "proof requirements",
+                "canonical state semantics",
+            ],
         },
         "workflow_artifact_adapters": {
             "canonical_doc": "docs/workspace-config-contract.md",
@@ -3758,6 +3889,14 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- default mode: {payload['improvement_latitude']['default_mode']}")
     for mode in payload["improvement_latitude"]["supported_modes"]:
         print(f"- {mode['mode']}: {mode['summary']}")
+    print("Optimization bias:")
+    print(f"- doc: {payload['optimization_bias']['canonical_doc']}")
+    print(f"- command: {payload['optimization_bias']['command']}")
+    print(f"- rule: {payload['optimization_bias']['rule']}")
+    print(f"- owner: {payload['optimization_bias']['owner_surface']}")
+    print(f"- default mode: {payload['optimization_bias']['default_mode']}")
+    for mode in payload["optimization_bias"]["supported_modes"]:
+        print(f"- {mode['mode']}: {mode['summary']}")
     print("Compact contract profile:")
     print(f"- doc: {payload['compact_contract_profile']['canonical_doc']}")
     print(f"- rule: {payload['compact_contract_profile']['rule']}")
@@ -3965,6 +4104,8 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
     workflow_artifact_profile_source = "product-default"
     improvement_latitude = DEFAULT_IMPROVEMENT_LATITUDE
     improvement_latitude_source = "product-default"
+    optimization_bias = DEFAULT_OPTIMIZATION_BIAS
+    optimization_bias_source = "product-default"
     if not config_path.exists():
         agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = _resolve_effective_agent_instructions_file(
             target_root=target_root,
@@ -3982,6 +4123,8 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
             workflow_artifact_profile_source=workflow_artifact_profile_source,
             improvement_latitude=improvement_latitude,
             improvement_latitude_source=improvement_latitude_source,
+            optimization_bias=optimization_bias,
+            optimization_bias_source=optimization_bias_source,
             detected_agent_instructions_files=detected_agent_instruction_files,
             update_modules=defaults,
             local_override=local_override,
@@ -4020,6 +4163,10 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
     if raw_improvement_latitude is not None:
         improvement_latitude = _validate_improvement_latitude(str(raw_improvement_latitude))
         improvement_latitude_source = "repo-config"
+    raw_optimization_bias = raw_workspace.get("optimization_bias")
+    if raw_optimization_bias is not None:
+        optimization_bias = _validate_optimization_bias(str(raw_optimization_bias))
+        optimization_bias_source = "repo-config"
 
     update_modules = dict(defaults)
     raw_update = payload.get("update", {})
@@ -4086,6 +4233,8 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, ModuleDe
         workflow_artifact_profile_source=workflow_artifact_profile_source,
         improvement_latitude=improvement_latitude,
         improvement_latitude_source=improvement_latitude_source,
+        optimization_bias=optimization_bias,
+        optimization_bias_source=optimization_bias_source,
         detected_agent_instructions_files=detected_agent_instruction_files,
         update_modules=update_modules,
         local_override=local_override,
@@ -4621,11 +4770,14 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "workflow_artifact_profile_source": config.workflow_artifact_profile_source,
             "improvement_latitude": config.improvement_latitude,
             "improvement_latitude_source": config.improvement_latitude_source,
+            "optimization_bias": config.optimization_bias,
+            "optimization_bias_source": config.optimization_bias_source,
             "workflow_artifact_adapter": _workflow_artifact_profile_payload(config.workflow_artifact_profile),
             "detected_agent_instructions_files": list(config.detected_agent_instructions_files),
             "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
             "supported_workflow_artifact_profiles": list(SUPPORTED_WORKFLOW_ARTIFACT_PROFILES),
             "supported_improvement_latitudes": list(SUPPORTED_IMPROVEMENT_LATITUDES),
+            "supported_optimization_biases": list(SUPPORTED_OPTIMIZATION_BIASES),
         },
         "update": {
             "wrapper_rule": "normal update execution stays behind agentic-workspace",
@@ -4655,6 +4807,7 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
         f"({payload['workspace']['workflow_artifact_profile_source']})"
     )
     print(f"Improvement latitude: {payload['workspace']['improvement_latitude']} ({payload['workspace']['improvement_latitude_source']})")
+    print(f"Optimization bias: {payload['workspace']['optimization_bias']} ({payload['workspace']['optimization_bias_source']})")
     print(f"Wrapper rule: {payload['update']['wrapper_rule']}")
     print("Update modules:")
     for module in payload["update"]["modules"]:

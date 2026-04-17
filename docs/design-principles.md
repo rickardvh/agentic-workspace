@@ -272,6 +272,7 @@ Avoid:
 
 If a proposed surface mostly tells the agent exactly how to work rather than helping it work better, ask whether it is actually reducing repository operating cost.
 Prefer boundaries over procedures: if a surface mostly tells the agent how to work instead of what boundary to preserve, look for a thinner contract or a clearer handoff instead.
+Repo-owned output preferences should follow the same rule: a surface such as `optimization_bias` may change rendering density or residue style, but it should not prescribe the agent's internal execution method.
 
 ### 15. Portability matters more than local cleverness
 

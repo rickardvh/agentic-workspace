@@ -261,6 +261,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["config"]["command"] == "agentic-workspace config --target ./repo --format json"
     assert "workspace.default_preset" in payload["config"]["supported_fields"]
     assert "workspace.improvement_latitude" in payload["config"]["supported_fields"]
+    assert "workspace.optimization_bias" in payload["config"]["supported_fields"]
     assert "workspace.workflow_artifact_profile" in payload["config"]["supported_fields"]
     assert payload["improvement_latitude"]["canonical_doc"] == "docs/workspace-config-contract.md"
     assert payload["improvement_latitude"]["command"] == "agentic-workspace defaults --section improvement_latitude --format json"
@@ -281,6 +282,13 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "the improvement changes what counts as success instead of only changing the means"
         in payload["improvement_latitude"]["decision_test"]["changed_task_when"]
     )
+    assert payload["optimization_bias"]["canonical_doc"] == "docs/workspace-config-contract.md"
+    assert payload["optimization_bias"]["command"] == "agentic-workspace defaults --section optimization_bias --format json"
+    assert payload["optimization_bias"]["owner_surface"] == "workspace"
+    assert payload["optimization_bias"]["default_mode"] == "balanced"
+    assert payload["optimization_bias"]["supported_modes"][0]["mode"] == "agent-efficiency"
+    assert payload["optimization_bias"]["supported_modes"][2]["mode"] == "human-legibility"
+    assert "execution method" in payload["optimization_bias"]["must_not_change"]
     assert payload["workflow_artifact_adapters"]["canonical_doc"] == "docs/workspace-config-contract.md"
     assert (
         payload["workflow_artifact_adapters"]["command"] == "agentic-workspace defaults --section workflow_artifact_adapters --format json"
@@ -328,6 +336,9 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "default mode: conservative" in text
     assert "none: Do not perform opportunistic repo-friction reduction" in text
     assert "reporting: Notice and surface notable repo friction" in text
+    assert "Optimization bias:" in text
+    assert "default mode: balanced" in text
+    assert "agent-efficiency: Prefer terse durable outputs" in text
     assert "Delegation posture:" in text
     assert "docs/delegation-posture-contract.md" in text
     assert "Compact contract profile:" in text
@@ -397,6 +408,8 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["workspace"]["workflow_artifact_profile_source"] == "product-default"
     assert payload["workspace"]["improvement_latitude"] == "conservative"
     assert payload["workspace"]["improvement_latitude_source"] == "product-default"
+    assert payload["workspace"]["optimization_bias"] == "balanced"
+    assert payload["workspace"]["optimization_bias_source"] == "product-default"
     assert payload["workspace"]["workflow_artifact_adapter"]["canonical_surfaces"] == ["TODO.md", "docs/execplans/"]
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
@@ -432,6 +445,20 @@ def test_config_command_accepts_reporting_improvement_latitude_mode(tmp_path: Pa
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["improvement_latitude"] == "reporting"
     assert payload["workspace"]["improvement_latitude_source"] == "repo-config"
+
+
+def test_config_command_accepts_agent_efficiency_optimization_bias(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "agentic-workspace.toml").write_text(
+        'schema_version = 1\n\n[workspace]\noptimization_bias = "agent-efficiency"\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workspace"]["optimization_bias"] == "agent-efficiency"
+    assert payload["workspace"]["optimization_bias_source"] == "repo-config"
 
 
 def test_config_command_autodetects_existing_supported_agent_instructions_file(tmp_path: Path, capsys) -> None:
@@ -557,6 +584,24 @@ def test_defaults_section_selector_returns_improvement_latitude_answer(capsys) -
         "the improvement changes what counts as success instead of only changing the means"
         in payload["answer"]["decision_test"]["changed_task_when"]
     )
+    assert "docs/workspace-config-contract.md" in payload["refs"]
+    assert "agentic-workspace defaults --format json" in payload["refs"]
+
+
+def test_defaults_section_selector_returns_optimization_bias_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "optimization_bias", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "optimization_bias"}
+    assert payload["matched"] is True
+    assert payload["answer"]["canonical_doc"] == "docs/workspace-config-contract.md"
+    assert payload["answer"]["default_mode"] == "balanced"
+    assert payload["answer"]["supported_modes"][0]["mode"] == "agent-efficiency"
+    assert payload["answer"]["supported_modes"][1]["mode"] == "balanced"
+    assert payload["answer"]["supported_modes"][2]["mode"] == "human-legibility"
+    assert "canonical state semantics" in payload["answer"]["must_not_change"]
     assert "docs/workspace-config-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
@@ -1664,9 +1709,14 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["schema"]["command"] == "agentic-workspace report --target ./repo --format json"
     assert "discovery" in payload["schema"]["shared_fields"]
     assert "repo_friction" in payload["schema"]["shared_fields"]
+    assert "output_contract" in payload["schema"]["shared_fields"]
     assert payload["selected_modules"] == ["planning", "memory"]
     assert payload["installed_modules"] == ["planning", "memory"]
     assert payload["health"] == "healthy"
+    assert payload["output_contract"]["optimization_bias"] == "balanced"
+    assert payload["output_contract"]["optimization_bias_source"] == "product-default"
+    assert payload["output_contract"]["surface"] == "report"
+    assert payload["output_contract"]["rendered_view_style"] == "brief-explanatory"
     assert payload["next_action"]["summary"] == "No immediate action"
     assert any(
         item["surface"]
@@ -1693,6 +1743,40 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["repo_friction"]["external_evidence"] == []
     assert payload["reports"][0]["module"] == "planning"
     assert payload["config"]["mixed_agent"]["status"] == "reporting-only"
+
+
+def test_report_surfaces_agent_efficiency_output_contract_from_repo_config(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "agentic-workspace.toml").write_text(
+        'schema_version = 1\n\n[workspace]\noptimization_bias = "agent-efficiency"\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["output_contract"]["optimization_bias"] == "agent-efficiency"
+    assert payload["output_contract"]["optimization_bias_source"] == "repo-config"
+    assert payload["output_contract"]["report_density"] == "compact"
+    assert "execution method" in payload["output_contract"]["must_not_change"]
+
+
+def test_report_text_mentions_agent_efficiency_bias(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "agentic-workspace.toml").write_text(
+        'schema_version = 1\n\n[workspace]\noptimization_bias = "agent-efficiency"\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target)]) == 0
+
+    text = capsys.readouterr().out
+    assert "Output bias: agent-efficiency (repo-config)" in text
+    assert "Rendering: keep this view terse" in text
 
 
 def test_report_surfaces_large_file_hotspots_as_repo_friction_evidence(tmp_path: Path, capsys) -> None:

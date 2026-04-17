@@ -30,6 +30,7 @@ The surrounding report payload keeps these fields separate:
 - `selected_modules`
 - `installed_modules`
 - `health`
+- `output_contract`
 - `findings`
 - `next_action`
 - `discovery`
@@ -67,6 +68,7 @@ Use the machine-readable report as the default combined-state inspection path wh
 
 - what modules are installed?
 - what is the combined workspace health?
+- what output/residue bias is shaping this report's rendering defaults?
 - what mixed-agent posture is in effect?
 - what explicit repo-friction hotspots exist right now?
 - what concept or routing surfaces are getting large enough to act as concept friction?
@@ -80,6 +82,7 @@ Use `agentic-workspace defaults --section clarification --format json` when the 
 Use `agentic-workspace defaults --section prompt_routing --format json` when the question is which proof lane or owner should absorb a vague prompt.
 Use `agentic-workspace defaults --section relay --format json` when the question is how a strong planner should hand a compact contract to a cheap implementer.
 Use `agentic-workspace defaults --section improvement_latitude --format json` when the question is how much evidence-backed repo-friction reduction is welcome by default.
+Use `agentic-workspace defaults --section optimization_bias --format json` when the question is how shared report density and residue style should lean by default.
 Use the `repo_friction.reporting_destinations` field when the question is where reporting-only findings may surface without creating implicit active work.
 
 If the report already answers the question, stop there.
@@ -89,6 +92,7 @@ Only open raw module files or broader docs when the report points you to a follo
 
 - Do not treat the report as a second state store.
 - Do not require raw module files before the report when the report already answers the question.
+- Keep `output_contract` explicit when repo policy affects reporting density or rendered view style.
 - Keep findings, warnings, and next-action guidance separate.
 - Keep repo-friction evidence derived and queryable instead of turning it into a second editable state store.
 - When a repo already has a compatible generated hotspot artifact, prefer consuming it as additional evidence instead of requiring the workspace layer to own the analyzer.
@@ -98,6 +102,7 @@ Only open raw module files or broader docs when the report points you to a follo
 - Keep concern-shaped subobjects narrow enough that one question does not force unrelated contract domains to load.
 - Keep discovery read-only until a setup promotion explicitly decides to seed.
 - Keep `agentic-planning-bootstrap summary --format json` as the planning-side companion surface rather than stretching the workspace report into a second planning schema.
+- Let optimization bias change report density and rendered text style only; do not let it change report truth, execution posture, or module ownership semantics.
 
 ## Relationship To Lazy Discovery
 

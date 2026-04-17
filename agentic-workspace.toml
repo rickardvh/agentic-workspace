@@ -3,6 +3,7 @@ schema_version = 1
 [workspace]
 default_preset = "full"
 improvement_latitude = "proactive"
+optimization_bias = "agent-efficiency"
 
 [update.modules.planning]
 source_type = "git"

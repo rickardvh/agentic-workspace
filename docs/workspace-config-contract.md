@@ -25,6 +25,7 @@ default_preset = "full" # memory | planning | full
 agent_instructions_file = "AGENTS.md" # AGENTS.md | GEMINI.md
 workflow_artifact_profile = "repo-owned" # repo-owned | gemini
 improvement_latitude = "conservative" # none | reporting | conservative | balanced | proactive
+optimization_bias = "balanced" # agent-efficiency | balanced | human-legibility
 
 [update.modules.planning]
 source_type = "git" # git | local
@@ -48,6 +49,7 @@ recommended_upgrade_after_days = 30
 - If `workspace.agent_instructions_file` is omitted, the workspace defaults to `AGENTS.md` and may conservatively autodetect one existing supported startup file in the target repo.
 - `workspace.workflow_artifact_profile` tells the workspace which native runtime artifacts may exist before the repo-owned planning surfaces must be updated.
 - `workspace.improvement_latitude` sets how much bounded repo-friction initiative is welcome by default when the repo already has evidence that a local hotspot is expensive to keep extending.
+- `workspace.optimization_bias` sets whether durable outputs and rendered views should lean toward agent efficiency, balance, or human legibility when canonical truth would stay unchanged.
 - Improvement-latitude policy and repo-friction evidence stay workspace-level shared surfaces; they should not become a third core module unless a future independent lifecycle clearly justifies it.
 - `repo-owned` means do not rely on native runtime artifacts at all; keep durable state directly in `TODO.md` and `docs/execplans/`.
 - `gemini` allows Gemini-style files such as `implementation_plan.md`, `task.md`, or `walkthrough.md` as local execution aids, but durable cross-agent state must still be mirrored back into `TODO.md` and `docs/execplans/` before review, handoff, or session end.
@@ -57,7 +59,12 @@ recommended_upgrade_after_days = 30
 - `balanced` means one evidence-backed hotspot may justify bounded cleanup when proof and ownership stay inside the current lane.
 - `proactive` means small standalone cleanup slices are allowed when evidence is explicit and the work still stays bounded by delegated judgment, proof, and ownership.
 - `reporting` findings belong in derived report output, review output, or planning residue that already exists for the current slice; they must not create active work on their own.
+- `agent-efficiency` means prefer terse durable outputs, compact residue, and low-prose rendered views when machine-readable state already carries the contract safely.
+- `balanced` means keep outputs compact by default while preserving enough explanation for routine human inspection.
+- `human-legibility` means prefer clearer explanatory rendering and slightly more legible residue when truth would remain unchanged.
+- `optimization_bias` may influence reporting density, rendered human-view density, and residue style, but it must not change execution method, reasoning depth, delegated-judgment limits, proof requirements, or canonical state semantics.
 - Use `agentic-workspace defaults --section improvement_latitude --format json` to inspect the shipped decision test for when friction reduction still counts as local means versus a changed task.
+- Use `agentic-workspace defaults --section optimization_bias --format json` to inspect the shipped output/residue bias contract and its semantic guardrails.
 - Use `agentic-workspace report --target ./repo --format json` to inspect both workspace-derived evidence and any compatible external hotspot artifacts the repo already maintains.
 - When `agentic-workspace.toml` is absent, product defaults remain authoritative and the config report should say so rather than implying a live repo policy.
 - Update policy is module-specific in v1; there is no separate public module upgrade entrypoint.
@@ -70,6 +77,7 @@ Future config expansion should stay narrow.
 
 - Repo-owned checked-in config should continue to own only stable repo policy that deserves review and portability.
 - Improvement latitude belongs here as repo policy because it states what bounded initiative is welcome, not how the agent must reason or delegate internally.
+- Optimization bias belongs here as repo policy because it states how shared durable outputs should lean by default, not how an agent must analyze or execute internally.
 - The main motivation for any mixed-agent extension is lower long-run token cost plus smoother switching across subscriptions, agent tools, and future local models.
 - Runtime model choice, internal delegation strategy, and reasoning-depth selection should remain tool-owned unless a future surface can express them as capability-oriented hints without turning the repo into a scheduler.
 - The product should prefer task/runtime inference first, config second, and explicit prompting last.
@@ -131,6 +139,7 @@ That surface reports:
 - the resolved default preset
 - the resolved canonical startup-entrypoint filename plus whether it came from repo config, autodetection, product defaults, or an explicit CLI override
 - the effective improvement-latitude mode plus whether it came from repo config or product defaults
+- the effective optimization-bias mode plus whether it came from repo config or product defaults
 - the effective per-module update policy
 - whether each module's `UPGRADE-SOURCE.toml` metadata matches the resolved policy
 - the current mixed-agent reporting boundary: repo-policy source, reserved local-override status, and the fact that runtime orchestration remains tool-owned
@@ -146,6 +155,7 @@ If mixed-agent policy grows beyond the v1 surface, effective reporting should al
 
 Use `agentic-workspace defaults --section delegation_posture --format json` to see how the current config and local override resolve into the current delegation posture.
 Use `agentic-workspace defaults --section improvement_latitude --format json` to inspect the bounded initiative modes and their interaction with repo-friction evidence.
+Use `agentic-workspace defaults --section optimization_bias --format json` to inspect which output/residue surfaces the current bias may influence without changing semantics.
 
 When runtime inference materially changes behavior, reporting should make that inference auditable rather than hidden.
 

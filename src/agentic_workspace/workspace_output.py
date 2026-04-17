@@ -62,9 +62,20 @@ def _emit_lifecycle_text(payload: dict[str, Any]) -> None:
 
 
 def _emit_report_text(payload: dict[str, Any]) -> None:
+    output_contract = payload.get("output_contract", {})
+    bias = output_contract.get("optimization_bias")
+    bias_source = output_contract.get("optimization_bias_source")
+    rendered_view_style = output_contract.get("rendered_view_style")
     print(f"Target: {payload['target']}")
     print("Command: report")
     print(f"Health: {payload['health']}")
+    if bias:
+        source_suffix = f" ({bias_source})" if bias_source else ""
+        print(f"Output bias: {bias}{source_suffix}")
+        if rendered_view_style == "minimal-prose":
+            print("Rendering: keep this view terse when machine-readable state already carries the contract.")
+        elif rendered_view_style == "explicit-labels-and-context":
+            print("Rendering: prefer explicit labels and a little more context for human inspection.")
     installed = ", ".join(payload.get("installed_modules", []))
     selected = ", ".join(payload.get("selected_modules", []))
     print(f"Installed modules: {installed if installed else '(none)'}")
