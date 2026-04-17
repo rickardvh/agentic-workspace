@@ -1,0 +1,13 @@
+{
+  "name": "memory package context",
+  "case_type": "general",
+  "files": ["packages/memory/src/repo_memory_bootstrap/installer.py"],
+  "surfaces": [],
+  "expected_required": ["memory/index.md"],
+  "expected_optional": [
+    "memory/domains/memory-package-context.md",
+    "memory/runbooks/package-context-inspection.md"
+  ],
+  "unexpected_notes": [],
+  "missing_note_candidates": []
+}

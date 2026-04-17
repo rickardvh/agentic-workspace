@@ -50,7 +50,7 @@ Expected routing signal
 - When the user explicitly names a repo/package skill, search checked-in and installed `SKILL.md` surfaces before declaring it unavailable.
 
 Status
-- resolved on 2026-04-08 by explicit bundled-skill and repo-owned skill registries plus the `agentic-workspace skills` discovery surface.
+- externalized on 2026-04-17 via `agentic-workspace skills`; this is no longer a Memory routing miss.
 
 ### Case: review-skill-routing-missed-review-shaped-requests
 
@@ -81,7 +81,7 @@ Expected routing signal
 - When the task asks for a review or clearly describes a bounded review pass, search the bundled planning review skill and prefer it over generic repo reasoning.
 
 Status
-- open as of 2026-04-09; current skill discovery and recommendation are still not strong enough to infer review-skill use from natural review requests alone.
+- externalized on 2026-04-17 via `agentic-workspace skills`; generic review-skill recommendation belongs to workspace skill discovery, not Memory routing.
 
 ## Over-routing entries
 
@@ -94,8 +94,8 @@ Status
 - Do not restate durable routing guidance here once it has a better long-lived home.
 - Prefer one live case per routing issue and prune resolved entries quickly so the note stays merge-friendly.
 - Compress tuned or rejected cases into a short summary or remove them once the routing rule is stable.
-- Current case is retained briefly as a just-landed regression example and can be removed after one ordinary maintenance cycle confirms the new registry-backed discovery path stays reliable.
+- Externalized skill-discovery cases are retained only long enough to document why they no longer belong in Memory routing review.
 
 ## Last confirmed
 
-2026-04-09 during review-skill dogfooding follow-up
+2026-04-17 during memory cheap-path follow-through

@@ -6,8 +6,7 @@
   "expected_required": ["memory/index.md"],
   "expected_optional": [
     "memory/domains/README.md",
-    "memory/invariants/README.md",
-    "memory/decisions/README.md"
+    "memory/invariants/README.md"
   ],
   "unexpected_notes": [
     "memory/current/project-state.md",

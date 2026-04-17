@@ -1678,6 +1678,7 @@ def _build_route_review_cases(
     unresolved_case_count = 0
 
     for case in feedback_cases:
+        externalized = _routing_case_is_externalized(case.status)
         routed = routed_results.get(case.case_id)
         if routed is None:
             unresolved_case_count += 1
@@ -1690,6 +1691,7 @@ def _build_route_review_cases(
                     "matched": False,
                     "status": case.status or "unknown",
                     "unresolved": True,
+                    "externalized": externalized,
                 }
             )
             continue
@@ -1701,11 +1703,11 @@ def _build_route_review_cases(
         current_set = set(current_routed)
         if case.case_type == "missed_note":
             matched = expected_set.issubset(current_set)
-            if not matched:
+            if not matched and not externalized:
                 still_missed_count += 1
         else:
             matched = expected_set.isdisjoint(current_set)
-            if not matched:
+            if not matched and not externalized:
                 still_over_routed_count += 1
         review_cases.append(
             {
@@ -1716,6 +1718,7 @@ def _build_route_review_cases(
                 "matched": matched,
                 "status": case.status or "unknown",
                 "unresolved": False,
+                "externalized": externalized,
             }
         )
 
@@ -1732,21 +1735,33 @@ def _build_route_report_feedback_summary(
     feedback_cases: list[RoutingFeedbackCase],
     review_cases: list[dict[str, object]],
 ) -> dict[str, object]:
+    live_feedback_cases = [case for case in feedback_cases if not _routing_case_is_externalized(case.status)]
     return {
-        "total_feedback_case_count": len(feedback_cases),
-        "reviewed_feedback_case_count": sum(1 for case in review_cases if not case.get("unresolved")),
-        "unresolved_feedback_case_count": sum(1 for case in review_cases if case.get("unresolved")),
-        "missed_note_case_count": sum(1 for case in feedback_cases if case.case_type == "missed_note"),
+        "total_feedback_case_count": len(live_feedback_cases),
+        "reviewed_feedback_case_count": sum(1 for case in review_cases if not case.get("unresolved") and not case.get("externalized")),
+        "unresolved_feedback_case_count": sum(1 for case in review_cases if case.get("unresolved") and not case.get("externalized")),
+        "externalized_case_count": sum(1 for case in review_cases if case.get("externalized")),
+        "missed_note_case_count": sum(1 for case in live_feedback_cases if case.case_type == "missed_note"),
         "still_missed_count": sum(
-            1 for case in review_cases if case.get("case_type") == "missed_note" and not case.get("matched") and not case.get("unresolved")
+            1
+            for case in review_cases
+            if case.get("case_type") == "missed_note"
+            and not case.get("matched")
+            and not case.get("unresolved")
+            and not case.get("externalized")
         ),
-        "over_routing_case_count": sum(1 for case in feedback_cases if case.case_type == "over_routing"),
+        "over_routing_case_count": sum(1 for case in live_feedback_cases if case.case_type == "over_routing"),
         "still_over_routed_count": sum(
-            1 for case in review_cases if case.get("case_type") == "over_routing" and not case.get("matched") and not case.get("unresolved")
+            1
+            for case in review_cases
+            if case.get("case_type") == "over_routing"
+            and not case.get("matched")
+            and not case.get("unresolved")
+            and not case.get("externalized")
         ),
-        "open_case_count": sum(1 for case in feedback_cases if case.status == "open"),
-        "tuned_case_count": sum(1 for case in feedback_cases if case.status == "tuned"),
-        "rejected_case_count": sum(1 for case in feedback_cases if case.status == "rejected"),
+        "open_case_count": sum(1 for case in live_feedback_cases if case.status == "open"),
+        "tuned_case_count": sum(1 for case in live_feedback_cases if case.status == "tuned"),
+        "rejected_case_count": sum(1 for case in live_feedback_cases if case.status == "rejected"),
     }
 
 
@@ -2411,7 +2426,16 @@ def _path_matches_pattern(raw_path: str, pattern: str) -> bool:
     patterns = [normalised_pattern]
     if "/**/" in normalised_pattern:
         patterns.append(normalised_pattern.replace("/**/", "/"))
+    if normalised_pattern.endswith("/**"):
+        prefix = normalised_pattern[: -len("/**")].strip("/")
+        if prefix and (normalised_path == prefix or normalised_path.startswith(prefix + "/")):
+            return True
     return any(path.match(candidate) for candidate in patterns)
+
+
+def _routing_case_is_externalized(status: str) -> bool:
+    status_text = status.strip().lower()
+    return status_text.startswith("externalized") or "externalized" in status_text
 
 
 def _parse_route_sections(index_path: Path) -> list[tuple[str, list[str]]]:

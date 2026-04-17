@@ -380,9 +380,10 @@ Main commands:
 - `current show|check` to inspect current-memory notes
 - `route` and `sync-memory` to review likely relevant memory notes
 - `route-review` to replay checked-in routing-feedback cases against current routing behaviour
-- `route-report` to summarise fixture-backed routing health, missed-note vs over-routing drift, and working-set/startup-cost pressure
+- `route-report` to summarise fixture-backed routing health, separate live Memory misses from externalized non-memory residue, and report working-set/startup-cost pressure
 - `promotion-report` to suggest notes that should graduate into canonical checked-in docs or become elimination candidates for skills, scripts, tests, or refactors
 - `report` to surface compact module-state, note trust states, usefulness/cleanup guidance, and next-action guidance derived from doctor/current/routing/promotion surfaces
+- `sync-memory` to surface the cheapest useful note-update path first, so changed files map quickly to one bounded note review instead of broad memory browsing
 - `verify-payload` to validate the packaged bootstrap contract
 - `scripts/check/check_memory_freshness.py --strict` to fail CI on selected freshness contract violations
 

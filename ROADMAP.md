@@ -17,20 +17,20 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - No active handoff right now.
 ## GitHub Issue Intake
 
-- Latest open planning tranche: GitHub issue `#98`.
+- Latest open planning tranche: none right now.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/reporting tranches are complete; the remaining queue is the low-friction Memory routing/capture follow-on.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/routing/capture tranches are complete.
 
 ## Candidate Lanes
-- Lane: Low-friction Memory routing and capture
-  ID: memory-routing-capture-cheap-path
-  Priority: first
-  Issues: `#98`
-  Outcome: make Memory the cheap habitual path in ordinary work by tightening routing and lowering capture/update friction without broad memory browsing.
-  Why now: trust/usefulness/reporting is now in place, and live dogfooding shows the remaining gap is still missed routing and sparse cheap capture proof rather than note trust or cleanup visibility.
-  Promotion signal: promote when the next bounded slice is ready or when ordinary-work dogfooding still shows Memory being bypassed because route selection or note capture is not the cheapest path.
-  Suggested first slice: tighten one or two common missed-note work shapes, add cheap fixture/feedback proof for them, and expose one lower-friction capture/update affordance that does not compete with Planning.
+- Lane: No queued candidates right now
+  ID: none-active
+  Priority: none
+  Issues: none
+  Outcome: keep the roadmap empty until a distinct new bounded candidate is justified by fresh dogfooding, review findings, or maintainer direction.
+  Why now: every previously queued lane is complete, and there is no honest remaining inactive candidate today.
+  Promotion signal: reopen only when repeated friction, repeated dogfooding, or explicit maintainer direction produces a new bounded candidate worth promoting.
+  Suggested first slice: none until a genuinely new candidate appears.
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.

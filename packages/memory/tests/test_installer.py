@@ -1588,6 +1588,34 @@ def test_sync_memory_with_explicit_file_produces_recommendations(
     assert any(action.kind in {"review", "update", "update index"} for action in result.actions)
 
 
+def test_sync_memory_emits_compact_primary_note_summary(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+    (target / "memory" / "domains" / "cli.md").write_text("# CLI\n", encoding="utf-8")
+    (target / "memory" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes."memory/domains/cli.md"]
+note_type = "domain"
+canonical_home = "memory/domains/cli.md"
+authority = "canonical"
+audience = "human+agent"
+routes_from = ["src/**"]
+stale_when = ["src/**"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.sync_memory(target=target, files=["src/service/api.py"])
+
+    assert result.sync_summary["status"] == "actionable"
+    assert result.sync_summary["primary_note"]["path"] == "memory/domains/cli.md"
+    assert "Start with memory/domains/cli.md" in result.sync_summary["summary"]
+
+
 def test_sync_memory_uses_manifest_staleness_triggers(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True)
@@ -3419,11 +3447,11 @@ def test_route_report_fixture_counts_and_working_set_metrics_are_correct(tmp_pat
     assert summary["passing_fixture_count"] == 2
     assert summary["failing_fixture_count"] == 1
     assert summary["invalid_fixture_count"] == 0
-    assert summary["average_routed_note_count"] == 3.33
+    assert summary["average_routed_note_count"] == 3.0
     assert summary["average_required_note_count"] == 1.0
-    assert summary["average_optional_note_count"] == 2.33
-    assert summary["max_routed_note_count"] == 4
-    assert summary["fixture_count_exceeding_target"] == 1
+    assert summary["average_optional_note_count"] == 2.0
+    assert summary["max_routed_note_count"] == 3
+    assert summary["fixture_count_exceeding_target"] == 0
     assert summary["fixture_count_exceeding_strong_warning"] == 0
     assert summary["average_routed_line_count"] > 0
     assert summary["max_routed_line_count"] > 0
@@ -3461,6 +3489,43 @@ def test_route_report_text_output_lists_only_failing_or_unresolved_items(tmp_pat
     assert "fixture 'failing' fails" in output
     assert "case 'unresolved' is unresolved" in output
     assert "fixture 'runtime-basic' fails" not in output
+
+
+def test_route_report_excludes_externalized_feedback_cases_from_live_counts(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    _setup_routing_fixture_repo(target, "runtime-basic.json")
+    _write_repo_file(
+        target,
+        "memory/current/routing-feedback.md",
+        _routing_feedback_note(
+            missed_cases=[
+                "### Case: externalized\n"
+                "Task surface summary\n"
+                "- Skill recommendation moved elsewhere.\n"
+                "Files\n"
+                "- AGENTS.md\n"
+                "Surfaces\n"
+                "- review\n"
+                "Routed notes returned\n"
+                "- memory/index.md\n"
+                "Expected missing note\n"
+                "- tools/skills/review/SKILL.md\n"
+                "Why it was needed\n"
+                "- Not a Memory routing issue anymore.\n"
+                "Expected routing signal\n"
+                "- handled by another product surface\n"
+                "Status\n"
+                "- externalized on 2026-04-17 via another checked-in skill-discovery surface"
+            ]
+        ),
+    )
+
+    result = installer.report_routes(target=target)
+
+    assert result.route_report_summary["feedback"]["total_feedback_case_count"] == 0
+    assert result.route_report_summary["feedback"]["externalized_case_count"] == 1
+    assert result.route_report_feedback_cases[0]["externalized"] is True
+    assert not any(action.kind == "manual review" and "externalized" in action.detail for action in result.actions)
 
 
 def test_route_report_does_not_emit_combined_routing_score(tmp_path: Path) -> None:

@@ -531,6 +531,13 @@ def _emit_result(result, *, output_format: str, include_install_summary: bool = 
             f"still_over_routed={result.review_summary.get('still_over_routed_count', 0)}, "
             f"unresolved={result.review_summary.get('unresolved_case_count', 0)}"
         )
+    if result.sync_summary:
+        primary = result.sync_summary.get("primary_note", {})
+        summary = result.sync_summary.get("summary", "")
+        if summary:
+            print(f"Sync summary: {summary}")
+        if isinstance(primary, dict) and primary.get("path"):
+            print(f"Primary note: {primary.get('path')} ({primary.get('action', 'review')})")
     if result.route_report_summary:
         feedback = result.route_report_summary.get("feedback", {})
         fixtures = result.route_report_summary.get("fixtures", {})
@@ -543,6 +550,7 @@ def _emit_result(result, *, output_format: str, include_install_summary: bool = 
             f"  total={feedback.get('total_feedback_case_count', 0)}, "
             f"reviewed={feedback.get('reviewed_feedback_case_count', 0)}, "
             f"unresolved={feedback.get('unresolved_feedback_case_count', 0)}, "
+            f"externalized={feedback.get('externalized_case_count', 0)}, "
             f"missed_note_cases={feedback.get('missed_note_case_count', 0)}, "
             f"still_missed={feedback.get('still_missed_count', 0)}, "
             f"over_routing_cases={feedback.get('over_routing_case_count', 0)}, "

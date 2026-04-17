@@ -1,0 +1,13 @@
+{
+  "name": "vague prompt contract",
+  "case_type": "general",
+  "files": ["docs/intent-contract.md"],
+  "surfaces": [],
+  "expected_required": ["memory/index.md"],
+  "expected_optional": [
+    "memory/domains/vague-prompt-domain-understanding.md",
+    "memory/runbooks/vague-instruction-failure-capture.md"
+  ],
+  "unexpected_notes": [],
+  "missing_note_candidates": []
+}

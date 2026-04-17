@@ -332,6 +332,7 @@ class InstallResult:
     missing_note_hint: str = ""
     review_summary: dict[str, object] = field(default_factory=dict)
     review_cases: list[dict[str, object]] = field(default_factory=list)
+    sync_summary: dict[str, object] = field(default_factory=dict)
     route_report_summary: dict[str, object] = field(default_factory=dict)
     route_report_feedback_cases: list[dict[str, object]] = field(default_factory=list)
     route_report_fixture_results: list[dict[str, object]] = field(default_factory=list)
@@ -392,6 +393,7 @@ class InstallResult:
             "missing_note_hint": self.missing_note_hint,
             "review_summary": self.review_summary,
             "review_cases": self.review_cases,
+            "sync_summary": self.sync_summary,
             "route_report_summary": self.route_report_summary,
             "route_report_feedback_cases": self.route_report_feedback_cases,
             "route_report_fixture_results": self.route_report_fixture_results,

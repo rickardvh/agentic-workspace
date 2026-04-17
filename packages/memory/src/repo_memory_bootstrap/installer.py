@@ -110,6 +110,7 @@ from repo_memory_bootstrap._installer_shared import (
     CurrentNoteView,
     CurrentViewResult,
     InstallResult,
+    MemoryManifest,
     MemoryNoteRecord,
     RepoDetectionError,
 )
@@ -927,7 +928,14 @@ def route_memory(
         use_staleness=False,
     )
     suggestions.extend(
-        (recommendation, note, reason, match_source, 1) for recommendation, note, reason, match_source in manifest_suggestions
+        (
+            recommendation,
+            note,
+            reason,
+            match_source,
+            _route_priority_for_note(_lookup_manifest_note(manifest, Path(note))),
+        )
+        for recommendation, note, reason, match_source in manifest_suggestions
     )
     covered_surfaces = _covered_manifest_surfaces(manifest, manifest_suggestions, selected_surfaces)
     for section_surface, notes in _parse_route_sections(target_root / "memory" / "index.md"):
@@ -965,7 +973,7 @@ def route_memory(
     kept_optionals: list[tuple[str, str, str, str, int]] = []
     for suggestion in optional:
         _, _, _, match_source, priority = suggestion
-        if len(required) + len(kept_optionals) >= ROUTE_WORKING_SET_TARGET and priority >= 4:
+        if len(required) + len(kept_optionals) >= ROUTE_WORKING_SET_TARGET and priority >= 3:
             continue
         kept_optionals.append(suggestion)
 
@@ -1115,6 +1123,17 @@ def review_routes(*, target: str | Path | None = None) -> InstallResult:
                 safety="manual",
                 source=feedback_path.relative_to(target_root).as_posix(),
                 category="manual-review",
+            )
+            continue
+        if review_case.get("externalized"):
+            result.add(
+                "current",
+                feedback_path,
+                f"routing-feedback case '{case.case_id}' is externalized outside Memory routing ({case.status or 'externalized'})",
+                role="route-review",
+                safety="safe",
+                source=feedback_path.relative_to(target_root).as_posix(),
+                category="safe-update",
             )
             continue
         result.add(
@@ -1268,7 +1287,7 @@ def report_routes(*, target: str | Path | None = None) -> InstallResult:
         expected_notes = [str(item) for item in expected_notes_obj] if isinstance(expected_notes_obj, (list, tuple, set)) else []
         current_notes_obj = case.get("current_routed_notes")
         current_notes = [str(item) for item in current_notes_obj] if isinstance(current_notes_obj, (list, tuple, set)) else []
-        if case.get("matched") and not case.get("unresolved"):
+        if (case.get("matched") and not case.get("unresolved")) or case.get("externalized"):
             continue
         if case.get("unresolved"):
             detail = f"{case['case_type']} case '{case['case_id']}' is unresolved; add files or surfaces plus expected notes"
@@ -1364,6 +1383,7 @@ def sync_memory(
         surfaces=_infer_surfaces_from_paths(changed_files),
         use_staleness=True,
     )
+    manifest_suggestions = _filter_low_value_sync_suggestions(manifest=manifest, suggestions=manifest_suggestions)
 
     seen_sync_paths: set[Path] = set()
     for _, note, reason, _match_source in manifest_suggestions:
@@ -1470,6 +1490,7 @@ def sync_memory(
             source=note,
             category="manual-review",
         )
+    result.sync_summary = _build_sync_summary(result=result)
     return result
 
 
@@ -1487,6 +1508,97 @@ def _covered_manifest_surfaces(
             continue
         covered.update(surface for surface in manifest_note.surfaces if surface in selected_surfaces)
     return covered
+
+
+def _route_priority_for_note(note: MemoryNoteRecord | None) -> int:
+    if note is None:
+        return 1
+    if note.note_type == "version-marker":
+        return 5
+    if _is_starter_example_note(note):
+        return 4
+    if note.note_type == "decision":
+        return 3
+    return 1
+
+
+def _is_starter_example_note(note: MemoryNoteRecord | None) -> bool:
+    if note is None:
+        return False
+    if "starter-example" in note.subsystems:
+        return True
+    return note.path.name.startswith("example-")
+
+
+def _is_low_value_sync_note(note: MemoryNoteRecord | None) -> bool:
+    if note is None:
+        return False
+    return note.note_type == "version-marker" or _is_starter_example_note(note)
+
+
+def _filter_low_value_sync_suggestions(
+    *,
+    manifest: MemoryManifest | None,
+    suggestions: list[tuple[str, str, str, str]],
+) -> list[tuple[str, str, str, str]]:
+    if manifest is None:
+        return suggestions
+    classified: list[tuple[tuple[str, str, str, str], bool]] = []
+    for suggestion in suggestions:
+        _recommendation, note_path, _reason, _match_source = suggestion
+        note = _lookup_manifest_note(manifest, Path(note_path))
+        classified.append((suggestion, _is_low_value_sync_note(note)))
+    if not any(not is_low_value for _suggestion, is_low_value in classified):
+        return suggestions
+    return [suggestion for suggestion, is_low_value in classified if not is_low_value]
+
+
+def _build_sync_summary(*, result: InstallResult) -> dict[str, object]:
+    sync_actions = [
+        action for action in result.actions if action.role == "memory-sync" and action.kind in {"update", "review", "update index"}
+    ]
+    if not sync_actions:
+        return {}
+
+    def _rank(action) -> tuple[int, int, str]:
+        relative_path = action.source or action.path.as_posix()
+        is_index = Path(relative_path).name == "index.md"
+        if relative_path.startswith("memory/domains/"):
+            path_rank = 0
+        elif relative_path.startswith("memory/runbooks/"):
+            path_rank = 1
+        elif relative_path.startswith("memory/mistakes/"):
+            path_rank = 2
+        elif relative_path.startswith("memory/decisions/"):
+            path_rank = 3
+        else:
+            path_rank = 4
+        return (
+            1 if is_index else 0,
+            0 if action.kind == "update" else 1,
+            path_rank,
+            relative_path,
+        )
+
+    primary = sorted(sync_actions, key=_rank)[0]
+    primary_path = (
+        primary.path.relative_to(result.target_root).as_posix()
+        if primary.path.is_relative_to(result.target_root)
+        else primary.path.as_posix()
+    )
+    status = "actionable"
+    if len(sync_actions) == 1 and primary.kind == "update index":
+        status = "index-only"
+    return {
+        "status": status,
+        "candidate_note_count": len(sync_actions),
+        "primary_note": {
+            "path": primary_path,
+            "action": primary.kind,
+            "reason": primary.detail,
+        },
+        "summary": f"Start with {primary_path} ({primary.kind}) before widening into broader memory inspection.",
+    }
 
 
 def _should_suggest_project_state(
