@@ -209,6 +209,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     ]
     assert ".agentic-workspace/bootstrap-handoff.md" in payload["recovery"]["handoff_surfaces"]
     assert ".agentic-workspace/bootstrap-handoff.json" in payload["recovery"]["handoff_surfaces"]
+    assert payload["recovery"]["effective_output_posture"]["command"] == "agentic-workspace config --target ./repo --format json"
+    assert payload["recovery"]["effective_output_posture"]["field"] == "workspace.optimization_bias"
     assert payload["completion"]["rule"] == (
         "When a completed slice came from TODO.md or ROADMAP.md, clear the matched queue residue in the same pass."
     )
@@ -378,6 +380,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Combined install:" in text
     assert "Recovery:" in text
     assert "docs/environment-recovery-contract.md" in text
+    assert "effective output posture: agentic-workspace config --target ./repo --format json -> workspace.optimization_bias" in text
     assert "Completion:" in text
     assert "Config:" in text
     assert "Workflow artifact adapters:" in text

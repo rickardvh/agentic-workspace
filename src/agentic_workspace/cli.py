@@ -3711,6 +3711,14 @@ def _defaults_payload() -> dict[str, Any]:
                 ".agentic-workspace/bootstrap-handoff.md",
                 ".agentic-workspace/bootstrap-handoff.json",
             ],
+            "effective_output_posture": {
+                "command": "agentic-workspace config --target ./repo --format json",
+                "field": "workspace.optimization_bias",
+                "rule": (
+                    "When startup or recovery needs the effective repo output posture, inspect it through config "
+                    "instead of inferring it from rendered report density alone."
+                ),
+            },
         },
         "completion": {
             "rule": "When a completed slice came from TODO.md or ROADMAP.md, clear the matched queue residue in the same pass.",
@@ -3938,6 +3946,11 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print("Recovery:")
     print(f"- doc: {payload['recovery']['canonical_doc']}")
     print(f"- rule: {payload['recovery']['rule']}")
+    print(
+        "- effective output posture: "
+        f"{payload['recovery']['effective_output_posture']['command']} -> "
+        f"{payload['recovery']['effective_output_posture']['field']}"
+    )
     print("Completion:")
     print(f"- rule: {payload['completion']['rule']}")
     print("Delegated judgment:")
