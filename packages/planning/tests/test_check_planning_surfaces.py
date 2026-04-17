@@ -261,7 +261,15 @@ The minimum questions are:
 - What residue remains if this slice stops? -> `follow_through_contract`
 - When do I fall back to prose? -> only when the compact summary leaves the answer ambiguous
 
-Use [`docs/execplans/README.md`](execplans/README.md) for the meaning boundary behind those answers: machine-readable state owns restart-critical meanings, compact prose owns route guidance and stable framing, and raw execplan detail stays fallback-only.
+Use [`docs/execplans/README.md`](execplans/README.md) for the meaning boundary behind those answers.
+
+The compact rule is:
+
+- machine-readable state keeps restart-critical meanings
+- compact prose keeps stable route guidance and framing
+- raw execplan detail keeps slice-local narrative and change-log residue
+
+Example: "What should I do next?" belongs in `resumable_contract`; the route that gets you there belongs in compact prose; the line-by-line change log belongs in raw execplan detail.
 """
 
 
@@ -293,13 +301,13 @@ Use raw `TODO.md` and execplan prose after that only when the compact summary is
 
 ## Meaning Boundary
 
-Use this split when deciding where a planning meaning belongs:
+Use one compact rule when deciding where a planning meaning belongs:
 
-- Machine-readable state: meanings that must be cheap to recover during restart, including active work, next action, follow-on owner, proof state, and escalation boundaries.
-- Compact prose: meanings that are stable but cheaper to keep as compact route or contract guidance than as queryable state.
-- Raw execplan detail: slice-specific narrative, implementation notes, drift-log residue, and other maintenance detail that should not be the default recovery path.
+- machine-readable state keeps the restart-critical meanings that must be recovered cheaply and unambiguously, including active work, next action, follow-on owner, proof state, and escalation boundaries
+- compact prose keeps stable route guidance and framing when a queryable field would not reduce recovery cost enough to justify a second owner
+- raw execplan detail keeps slice-specific narrative, implementation notes, drift-log residue, and other maintenance detail that should not be the default recovery path
 
-Example: "What should I do next?" belongs in `resumable_contract`; the route that gets you there belongs in compact prose; the line-by-line change log belongs in the execplan detail.
+Example: "What should I do next?" belongs in `resumable_contract`; the route that gets you there belongs in compact prose; the line-by-line change log belongs in raw execplan detail.
 """
 
 

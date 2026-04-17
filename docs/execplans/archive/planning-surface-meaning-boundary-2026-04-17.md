@@ -29,8 +29,8 @@
 - What this slice enabled: later planning-surface refinements can target one compact owner with less ambiguity about whether a meaning belongs in state, prose, or raw plan detail.
 - Intentionally deferred: the actual follow-on surface compression win.
 - Discovered implications: the routine-recovery question set is a useful test, but not every question needs a machine-readable answer if compact prose remains cheaper and authoritative enough.
-- Proof achieved now: the meaning boundary is checked in and tied back to the routine-recovery questions plus one realistic restart/use example.
-- Validation still needed: one future dogfood pass should confirm the boundary stays cheaper than broad prose rereads when the next surface is tightened.
+- Proof achieved now: one compact meaning-boundary rule is checked in with a realistic restart example and tied back to the routine-recovery questions.
+- Validation still needed: none beyond ordinary future dogfooding on later planning-surface tightening slices.
 - Next likely slice: tighten the highest-value compact planning surface or field set revealed by this boundary.
 
 ## Delegated Judgment
@@ -89,6 +89,7 @@
 - uv run python scripts/check/check_planning_surfaces.py
 - uv run agentic-planning-bootstrap summary --format json
 - uv run agentic-planning-bootstrap report --format json
+- rg "Use this split when deciding where a planning meaning belongs|line-by-line change log belongs in the execplan detail" docs packages/planning
 
 ## Required Tools
 
@@ -100,14 +101,21 @@
 - The rule makes the next high-value surface-tightening target clearer rather than broader.
 - The slice leaves behind a clear follow-on target in `ROADMAP.md` or active planning without reopening general planning redesign.
 
+## Smaller-Agent Handoff
+
+- Use this plan as the sole execution contract; do not infer a broader redesign from the parent lane.
+- Read only the minimum relevant surfaces: `AGENTS.md`, `TODO.md`, this execplan, `ROADMAP.md` lane stub, `docs/default-path-contract.md`, `docs/execplans/README.md`, and any directly touched planning docs/tests.
+- Prefer one compact meaning-boundary rule plus one realistic restart/use example over a broad taxonomy pass.
+- If the best expression is a doc clarification with narrow checker/test updates, do only that.
+- If the best expression would require broad schema extraction or multiple competing owners, stop and escalate rather than widening the slice.
+
 ## Execution Summary
 
-- Outcome delivered: Recorded a compact meaning-boundary rule in `docs/execplans/README.md` and tied the routine-recovery answers back to that rule from the default-path contract.
-- Validation confirmed: `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-planning-bootstrap summary --format json`; `uv run agentic-planning-bootstrap report --format json`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`
-- Follow-on routed to: `ROADMAP.md`
-- Resume from: the `planning-surface-clarity-routine-recovery` roadmap lane
+- Outcome delivered: one compact meaning-boundary rule was checked into the default path contract and execplans README, with package bootstrap mirrors and test fixtures kept aligned.
+- Validation confirmed: `uv run python scripts/check/check_planning_surfaces.py`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run agentic-planning-bootstrap summary --format json`; `rg "Use this split when deciding where a planning meaning belongs|line-by-line change log belongs in the execplan detail" docs packages/planning`
+- Follow-on routed to: `ROADMAP.md` / the next planning-surface tightening slice (`#164`)
+- Resume from: the next highest-value compact planning surface or field set
 
 ## Drift Log
 
-- 2026-04-17: Promoted the next bounded slice from `planning-surface-clarity-routine-recovery` after the routine recovery path itself was clarified and archived.
-- 2026-04-17: Completed the meaning-boundary slice by classifying restart-critical meanings in `docs/execplans/README.md` and linking the routine-recovery questions back to that rule.
+- 2026-04-17: Re-promoted the next bounded slice from `planning-surface-clarity-routine-recovery` for orchestrated smaller-agent execution.

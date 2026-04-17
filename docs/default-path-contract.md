@@ -42,6 +42,14 @@ The minimum questions are:
 Keep these answers on the compact summary path before opening raw `TODO.md` or execplan prose.
 Use [`docs/execplans/README.md`](docs/execplans/README.md) for the meaning boundary behind those answers: machine-readable state owns restart-critical meanings, compact prose owns route guidance and stable framing, and raw execplan detail stays fallback-only.
 
+The compact rule is:
+
+- machine-readable state keeps the restart-critical meanings that must survive a handoff cheaply
+- compact prose keeps stable route guidance and framing when a queryable field would not reduce recovery cost enough to justify a second owner
+- raw execplan detail keeps slice-local narrative, implementation notes, and change-log residue
+
+Example: "What should I do next?" belongs in `resumable_contract`; the route that gets you there belongs in compact prose; the line-by-line change log belongs in raw execplan detail.
+
 ## Default Answers
 
 | Question | Default path | Secondary path |
