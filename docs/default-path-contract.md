@@ -27,6 +27,20 @@ That means:
 Use [`docs/which-package.md`](which-package.md) when you want the smaller operating-map view over those same buckets.
 Use this page when you need the fuller route contract after the compact map points you here.
 
+## Routine Planning Recovery
+
+Use `agentic-planning-bootstrap summary --format json` first when the question is active planning recovery.
+
+The minimum questions are:
+
+- What is active right now? -> `planning_record`
+- What should I do next? -> `resumable_contract`
+- What larger chunk or queue owns follow-on? -> `hierarchy_contract`
+- What residue remains if this slice stops? -> `follow_through_contract`
+- When do I fall back to prose? -> only when the compact summary leaves the answer ambiguous
+
+Keep these answers on the compact summary path before opening raw `TODO.md` or execplan prose.
+
 ## Default Answers
 
 | Question | Default path | Secondary path |
@@ -38,7 +52,7 @@ Use this page when you need the fuller route contract after the compact map poin
 | How do I route a vague prompt to the right lane? | `agentic-workspace defaults --section prompt_routing --format json` | Guessing at proof or owner from the prompt alone |
 | How do I hand the compact contract from planner to implementer? | `agentic-workspace defaults --section relay --format json` | Freezing the handoff without routed Memory or a clear planner/implementer split |
 | How do I start in a repo? | The configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`) -> `TODO.md` -> active execplan when relevant | `ROADMAP.md` only when promoting work |
-| How do I inspect current active planning state? | `agentic-planning-bootstrap summary --format json` and its `planning_record` object inside the `planning-summary/v1` payload | Reading raw `TODO.md` or execplan prose first |
+| How do I inspect current active planning state? | `agentic-planning-bootstrap summary --format json` and the routine planning recovery questions above | Reading raw `TODO.md` or execplan prose first |
 | How do I inspect current long-horizon planning candidates? | `agentic-planning-bootstrap summary --format json` and its `roadmap.candidates` list, then `ROADMAP.md` only when the thin candidate view is not enough | Reading narrative roadmap prose first |
 | How do I inspect combined workspace state? | `agentic-workspace report --target ./repo --format json` and its `schema` plus report payload | Reading raw module files before the report |
 | How do I inspect mature-repo setup candidates? | `agentic-workspace setup --target ./repo --format json` and its compact orientation payload | Guessing at Memory/Planning candidates by reading prose first |

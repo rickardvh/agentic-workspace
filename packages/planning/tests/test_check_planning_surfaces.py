@@ -248,6 +248,18 @@ def _baseline_default_path_contract() -> str:
 
 - use `agentic-planning-bootstrap summary --format json` before opening `TODO.md` or execplan prose
 - use `agentic-workspace report --target ./repo --format json` before reading raw module files
+
+## Routine Planning Recovery
+
+Use `agentic-planning-bootstrap summary --format json` first when the question is active planning recovery.
+
+The minimum questions are:
+
+- What is active right now? -> `planning_record`
+- What should I do next? -> `resumable_contract`
+- What larger chunk or queue owns follow-on? -> `hierarchy_contract`
+- What residue remains if this slice stops? -> `follow_through_contract`
+- When do I fall back to prose? -> only when the compact summary leaves the answer ambiguous
 """
 
 
@@ -378,6 +390,37 @@ def test_todo_shape_drift_for_finished_work_section(tmp_path: Path) -> None:
 
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "todo_shape_drift" in classes
+
+
+def test_default_path_contract_without_routine_recovery_questions_warns(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_default_path_recovery")
+    _write(
+        tmp_path / "TODO.md",
+        _baseline_todo(),
+    )
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(
+        tmp_path / "docs" / "default-path-contract.md",
+        """
+# Default Path Contract
+
+## Inspection Order
+
+1. report or summary
+2. narrow selector
+3. raw file or richer prose only when the compact surface is insufficient
+
+- use `agentic-planning-bootstrap summary --format json` before opening `TODO.md` or execplan prose
+- use `agentic-workspace report --target ./repo --format json` before reading raw module files
+""",
+    )
+    _write(tmp_path / "docs" / "intent-contract.md", _baseline_intent_contract())
+    _write(tmp_path / "docs" / "resumable-execution-contract.md", _baseline_resumable_contract())
+    _write(tmp_path / "docs" / "execplans" / "README.md", _baseline_execplans_readme())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    assert any(warning.warning_class == "docs_surface_role_drift" for warning in warnings)
 
 
 def test_execplan_readiness_missing_warning(tmp_path: Path) -> None:

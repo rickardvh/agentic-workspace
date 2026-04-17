@@ -171,9 +171,7 @@ def standing_intent_payload(
     return {
         "canonical_doc": STANDING_INTENT_CANONICAL_DOC,
         "schema_version": "standing-intent-report/v1",
-        "promotion_rule": (
-            "Promote durable repo-wide guidance into the strongest existing owner surface instead of leaving it in chat."
-        ),
+        "promotion_rule": ("Promote durable repo-wide guidance into the strongest existing owner surface instead of leaving it in chat."),
         "precedence_order": _standing_intent_precedence_order(),
         "supersession_rules": _standing_intent_supersession_rules(),
         "stronger_home_model": _standing_intent_stronger_home_model(
@@ -382,19 +380,32 @@ def _standing_intent_supersession_rules() -> list[dict[str, Any]]:
     return [
         {
             "rule": "newer_same_owner_replaces_older",
-            "summary": "When two standing instructions live in the same owner surface for the same concern, the newer or more specific checked-in instruction replaces the older one.",
+            "summary": (
+                "When two standing instructions live in the same owner surface for the same concern, "
+                "the newer or more specific checked-in instruction replaces the older one."
+            ),
         },
         {
             "rule": "stronger_home_replaces_weaker_for_same_concern",
-            "summary": "When the same concern moves from doctrine or understanding into config or enforceable workflow, the stronger home becomes authoritative and the older prose becomes explanatory or should shrink.",
+            "summary": (
+                "When the same concern moves from doctrine or understanding into config or enforceable "
+                "workflow, the stronger home becomes authoritative and the older prose becomes "
+                "explanatory or should shrink."
+            ),
         },
         {
             "rule": "active_lane_direction_is_slice_scoped",
-            "summary": "Active directional intent may narrow broader doctrine for the current slice, but it should not silently rewrite repo-wide policy beyond that slice.",
+            "summary": (
+                "Active directional intent may narrow broader doctrine for the current slice, but it "
+                "should not silently rewrite repo-wide policy beyond that slice."
+            ),
         },
         {
             "rule": "superseded_residue_should_stop_governing",
-            "summary": "Archived or explicitly superseded residue may remain for history, but reporting should treat it as non-authoritative once a clearer current owner exists.",
+            "summary": (
+                "Archived or explicitly superseded residue may remain for history, but reporting should "
+                "treat it as non-authoritative once a clearer current owner exists."
+            ),
         },
     ]
 
@@ -421,7 +432,10 @@ def _standing_intent_stronger_home_model(*, target_root: Path, config_policy: di
                 "to_class": "config_policy",
                 "current_owner": "agentic-workspace.toml",
                 "status": "already-promoted",
-                "why": "The repo's reporting and residue preference is enforced through config-backed defaults rather than reminder text alone.",
+                "why": (
+                    "The repo's reporting and residue preference is enforced through config-backed "
+                    "defaults rather than reminder text alone."
+                ),
                 "refs": ["agentic-workspace.toml", "docs/reporting-contract.md"],
             }
         )
