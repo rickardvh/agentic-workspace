@@ -15,22 +15,6 @@ Use `docs/generated-surface-trust.md` when a change touches generated docs, mirr
 Use `docs/proof-surfaces-contract.md` when the missing judgment is which proof lane actually answers the current trust question.
 Use `docs/ownership-authority-contract.md` when the missing judgment is who owns a concern or which checked-in surface is authoritative.
 
-## Agent Maintainer Path
-
-Default startup path for an agent maintainer:
-
-1. Read `AGENTS.md`.
-2. Read `TODO.md`.
-3. Use `agentic-planning-bootstrap summary --format json` when the question is active planning state rather than raw prose semantics.
-4. Read one active execplan only when `TODO.md` points to it and the compact summary is insufficient.
-5. Read package-local `AGENTS.md` only for the package you will edit.
-6. Use this playbook to pick the right ownership surface and narrow validation lane.
-
-Prefer repository-native state over chat-only context. If a follow-up matters after the current turn, record it in planning or memory instead of relying on conversational residue.
-
-If you are maintaining the repo through git commits locally, run `make setup` to sync the shared environment and install hooks for this clone. If the environment is already synced and you only need to restore the hook, run `make install-hooks`. The repo-managed pre-commit Git hook formats staged Ruff-managed files, stages those formatter edits automatically, then runs the shared lint lane and the remaining commit checks. On `master`, the hook also runs the full test lane before allowing the commit. If you intentionally want the stock pre-commit wrapper behavior instead, reinstall it explicitly with `uv run pre-commit install`.
-The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`, so tracked files cannot introduce absolute filesystem paths.
-
 ## Start Here
 
 1. Read `AGENTS.md`.
@@ -39,6 +23,12 @@ The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`,
 4. If you need the combined workspace state, ask `agentic-workspace report --target ./repo --format json` before reading raw module files.
 5. If `TODO.md` points at an active execplan and the compact surfaces are insufficient, read that plan before editing code.
 6. Load package-local docs only for the package you will touch.
+7. Use this playbook to pick the right ownership surface and narrow validation lane.
+
+Prefer repository-native state over chat-only context. If a follow-up matters after the current turn, record it in planning or memory instead of relying on conversational residue.
+
+If you are maintaining the repo through git commits locally, run `make setup` to sync the shared environment and install hooks for this clone. If the environment is already synced and you only need to restore the hook, run `make install-hooks`. The repo-managed pre-commit Git hook formats staged Ruff-managed files, stages those formatter edits automatically, then runs the shared lint lane and the remaining commit checks. On `master`, the hook also runs the full test lane before allowing the commit. If you intentionally want the stock pre-commit wrapper behavior instead, reinstall it explicitly with `uv run pre-commit install`.
+The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`, so tracked files cannot introduce absolute filesystem paths.
 
 ## Ownership Map
 
@@ -132,7 +122,7 @@ When internal use reveals friction, classify it before routing it onward.
 - Monorepo-only friction
 
 Use `memory/runbooks/dogfooding-feedback-routing.md` for the capture convention and preferred destinations.
-Use `docs/reviews/README.md` ordinary-use-pull mode when the question is which surfaces are actually used, skipped, or too insider-shaped for normal work.
+Use `docs/reviews/README.md` `context-cost` mode when the question is which startup or handoff surfaces are actually used, skipped, or too insider-shaped for normal work.
 
 Use `docs/installed-contract-design-checklist.md` when a package change adds or materially reshapes an installed file, generated mirror, or other collaboration-sensitive contract surface.
 
