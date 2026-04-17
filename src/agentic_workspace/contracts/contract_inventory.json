@@ -1,0 +1,72 @@
+{
+  "schema_version": "workspace-contract-inventory/v1",
+  "canonical_doc": "docs/declarative-contract-boundary.md",
+  "areas": [
+    {
+      "area": "compact_contract_profile",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/compact_contract_profile.json",
+      "consumers": [
+        "agentic_workspace.cli:_defaults_payload",
+        "agentic_workspace.cli:_compact_contract_answer"
+      ],
+      "notes": "Stable compact answer envelope shape and selector metadata are manifest-backed."
+    },
+    {
+      "area": "proof_routes",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/proof_routes.json",
+      "consumers": [
+        "agentic_workspace.cli:_defaults_payload",
+        "agentic_workspace.cli:_proof_payload"
+      ],
+      "notes": "Stable proof route ids and commands are manifest-backed."
+    },
+    {
+      "area": "report_contract",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/report_contract.json",
+      "consumers": [
+        "agentic_workspace.cli:_reporting_schema_payload"
+      ],
+      "notes": "Stable report schema metadata is manifest-backed."
+    },
+    {
+      "area": "report_payload_derivation",
+      "classification": "derived",
+      "owner_surface": "src/agentic_workspace/cli.py",
+      "consumers": [
+        "agentic-workspace report --target ./repo --format json"
+      ],
+      "notes": "Combined workspace report payload is derived from manifests, config, and live repo state."
+    },
+    {
+      "area": "defaults_contract_assembly",
+      "classification": "procedural",
+      "owner_surface": "src/agentic_workspace/cli.py",
+      "consumers": [
+        "agentic-workspace defaults --format json"
+      ],
+      "notes": "Defaults still assemble declarative and procedural contract answers into one emitted payload."
+    },
+    {
+      "area": "lifecycle_execution",
+      "classification": "procedural",
+      "owner_surface": "src/agentic_workspace/cli.py",
+      "consumers": [
+        "agentic-workspace init/adopt/upgrade/uninstall/status/doctor"
+      ],
+      "notes": "Lifecycle execution stays Python-owned in the first tranche."
+    },
+    {
+      "area": "reconciliation_and_drift_handling",
+      "classification": "procedural",
+      "owner_surface": "src/agentic_workspace/cli.py",
+      "consumers": [
+        "status/doctor/install reconciliation",
+        "setup/report live state"
+      ],
+      "notes": "Reconciliation and drift decisions still depend on live repo state and remain procedural."
+    }
+  ]
+}
