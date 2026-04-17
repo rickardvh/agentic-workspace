@@ -13,6 +13,7 @@ from typing import Any
 
 from agentic_workspace import __version__
 from agentic_workspace.contract_tooling import compact_contract_manifest, proof_routes_manifest, report_contract_manifest
+from agentic_workspace.reporting_support import output_contract_payload, repo_friction_payload, setup_discovery_payload
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 from agentic_workspace.workspace_output import (
     _display_path,
@@ -93,58 +94,12 @@ SUPPORTED_OPTIMIZATION_BIASES = (
     "balanced",
     "human-legibility",
 )
-REPO_FRICTION_LARGE_FILE_THRESHOLD = 400
-REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD = 200
-REPO_FRICTION_MAX_HOTSPOTS = 5
 SETUP_FINDINGS_PATH = Path("tools/setup-findings.json")
 SETUP_FINDINGS_KIND = "workspace-setup-findings/v1"
 SUPPORTED_SETUP_FINDING_CLASSES = (
     "repo_friction_evidence",
     "planning_candidate",
 )
-REPO_FRICTION_SCAN_SUFFIXES = {
-    ".c",
-    ".cc",
-    ".cfg",
-    ".cpp",
-    ".cs",
-    ".css",
-    ".go",
-    ".html",
-    ".ini",
-    ".java",
-    ".js",
-    ".json",
-    ".jsx",
-    ".md",
-    ".mjs",
-    ".py",
-    ".ps1",
-    ".rb",
-    ".rs",
-    ".scss",
-    ".sh",
-    ".sql",
-    ".text",
-    ".toml",
-    ".ts",
-    ".tsx",
-    ".txt",
-    ".yaml",
-    ".yml",
-}
-REPO_FRICTION_SKIP_DIRS = {
-    ".git",
-    ".mypy_cache",
-    ".pytest_cache",
-    ".ruff_cache",
-    ".uv-cache",
-    ".venv",
-    "__pycache__",
-    "build",
-    "dist",
-    "node_modules",
-}
 
 
 @dataclass(frozen=True)
@@ -2428,8 +2383,19 @@ def _run_report_command(
         "commands": next_steps,
     }
     installed_modules = [entry["name"] for entry in status_payload.get("registry", []) if entry.get("installed")]
-    discovery = _setup_discovery_payload(target_root=target_root, status_payload=status_payload)
-    repo_friction = _repo_friction_payload(target_root=target_root, config=config)
+    discovery = setup_discovery_payload(
+        target_root=target_root,
+        status_payload=status_payload,
+        active_todo_surface=_active_todo_surface(target_root=target_root),
+    )
+    repo_friction = repo_friction_payload(
+        target_root=target_root,
+        improvement_latitude=config.improvement_latitude,
+        improvement_latitude_source=config.improvement_latitude_source,
+        policy_payload=_improvement_latitude_payload(config.improvement_latitude),
+        boundary_test_payload=_improvement_boundary_test_payload(),
+        external_setup_findings_payload=_repo_friction_external_setup_findings_payload(target_root=target_root),
+    )
     return {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -2438,7 +2404,12 @@ def _run_report_command(
         "selected_modules": selected_modules,
         "installed_modules": installed_modules,
         "health": status_payload["health"],
-        "output_contract": _output_contract_payload(config=config, surface="report"),
+        "output_contract": output_contract_payload(
+            optimization_bias=config.optimization_bias,
+            optimization_bias_source=config.optimization_bias_source,
+            bias_payload=_optimization_bias_payload(config.optimization_bias),
+            surface="report",
+        ),
         "findings": findings,
         "next_action": next_action,
         "discovery": discovery,
@@ -2447,315 +2418,6 @@ def _run_report_command(
         "config": status_payload["config"],
         "reports": status_payload["reports"],
         "module_reports": module_reports,
-    }
-
-
-def _repo_friction_kind_for_path(path: Path) -> str:
-    suffix = path.suffix.lower()
-    if suffix in {".md", ".txt", ".text"}:
-        return "docs"
-    if suffix in {".toml", ".json", ".yaml", ".yml", ".ini", ".cfg"}:
-        return "config"
-    return "code"
-
-
-def _repo_friction_surface_role(relative_path: str) -> str:
-    if relative_path in {
-        "AGENTS.md",
-        "TODO.md",
-        "ROADMAP.md",
-        "llms.txt",
-        "agentic-workspace.toml",
-    }:
-        return "front-door"
-    if relative_path.startswith("docs/execplans/"):
-        return "planning-state"
-    if relative_path.startswith("docs/"):
-        return "canonical-doc"
-    if relative_path.startswith("tools/"):
-        return "generated-maintainer-surface"
-    if relative_path.startswith(".agentic-workspace/"):
-        return "managed-surface"
-    return "repo-surface"
-
-
-def _repo_friction_hotspots(*, target_root: Path) -> list[dict[str, Any]]:
-    hotspots: list[dict[str, Any]] = []
-    for path in sorted(target_root.rglob("*")):
-        if not path.is_file():
-            continue
-        if any(part in REPO_FRICTION_SKIP_DIRS or part.startswith(".uv-cache") for part in path.parts):
-            continue
-        if path.suffix.lower() not in REPO_FRICTION_SCAN_SUFFIXES:
-            continue
-        try:
-            line_count = sum(1 for _ in path.open("r", encoding="utf-8"))
-        except (UnicodeDecodeError, OSError):
-            continue
-        if line_count < REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD:
-            continue
-        relative = path.relative_to(target_root).as_posix()
-        hotspots.append(
-            {
-                "path": relative,
-                "line_count": line_count,
-                "kind": _repo_friction_kind_for_path(path),
-                "surface_role": _repo_friction_surface_role(relative),
-            }
-        )
-    hotspots.sort(key=lambda item: (-int(item["line_count"]), str(item["path"])))
-    return hotspots
-
-
-def _int_or_none(value: Any) -> int | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, int):
-        return value
-    if isinstance(value, float):
-        return int(value)
-    if isinstance(value, str) and value.strip().isdigit():
-        return int(value.strip())
-    return None
-
-
-def _repo_friction_external_codebase_map_payload(*, target_root: Path) -> dict[str, Any] | None:
-    path = target_root / "tools" / "codebase-map.json"
-    if not path.exists():
-        return None
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return {
-            "kind": "codebase-map",
-            "path": "tools/codebase-map.json",
-            "status": "unreadable",
-            "items": [],
-        }
-    if not isinstance(payload, dict):
-        return {
-            "kind": "codebase-map",
-            "path": "tools/codebase-map.json",
-            "status": "unsupported-shape",
-            "items": [],
-        }
-
-    candidate_lists: list[Any] = []
-    for key in ("large_modules", "hotspots", "modules"):
-        value = payload.get(key)
-        if isinstance(value, list):
-            candidate_lists.append(value)
-
-    items: list[dict[str, Any]] = []
-    for candidate_list in candidate_lists:
-        for entry in candidate_list:
-            if not isinstance(entry, dict):
-                continue
-            path_value = entry.get("path") or entry.get("module") or entry.get("name")
-            if not isinstance(path_value, str) or not path_value.strip():
-                continue
-            line_count = _int_or_none(entry.get("line_count"))
-            if line_count is None:
-                line_count = _int_or_none(entry.get("lines"))
-            normalized: dict[str, Any] = {
-                "path": path_value.strip().replace("\\", "/"),
-                "line_count": line_count,
-            }
-            function_count = _int_or_none(entry.get("function_count"))
-            if function_count is None:
-                function_count = _int_or_none(entry.get("functions"))
-            if function_count is not None:
-                normalized["function_count"] = function_count
-            class_count = _int_or_none(entry.get("class_count"))
-            if class_count is None:
-                class_count = _int_or_none(entry.get("classes"))
-            if class_count is not None:
-                normalized["class_count"] = class_count
-            items.append(normalized)
-
-    items.sort(
-        key=lambda item: (
-            -(item["line_count"] if isinstance(item.get("line_count"), int) else -1),
-            str(item["path"]),
-        )
-    )
-    return {
-        "kind": "codebase-map",
-        "path": "tools/codebase-map.json",
-        "status": "loaded",
-        "items": items[:REPO_FRICTION_MAX_HOTSPOTS],
-    }
-
-
-def _repo_friction_payload(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
-    policy = _improvement_latitude_payload(config.improvement_latitude)
-    hotspots = _repo_friction_hotspots(target_root=target_root)
-    large_file_hotspots = [item.copy() for item in hotspots if int(item["line_count"]) >= REPO_FRICTION_LARGE_FILE_THRESHOLD][
-        :REPO_FRICTION_MAX_HOTSPOTS
-    ]
-    concept_hotspots = [item.copy() for item in hotspots if item["kind"] in {"docs", "config"}][:REPO_FRICTION_MAX_HOTSPOTS]
-    external_evidence: list[dict[str, Any]] = []
-    external_codebase_map = _repo_friction_external_codebase_map_payload(target_root=target_root)
-    if external_codebase_map is not None:
-        external_evidence.append(external_codebase_map)
-    external_setup_findings = _repo_friction_external_setup_findings_payload(target_root=target_root)
-    if external_setup_findings is not None:
-        external_evidence.append(external_setup_findings)
-    evidence_classes = ["large_file_hotspots", "concept_surface_hotspots"]
-    if external_evidence:
-        evidence_classes.append("external_evidence")
-    return {
-        "owner_surface": "workspace",
-        "owner_rule": (
-            "Repo-friction policy and evidence stay workspace-level shared surfaces unless a future "
-            "independent lifecycle justifies a new module."
-        ),
-        "policy_mode": config.improvement_latitude,
-        "policy_source": config.improvement_latitude_source,
-        "initiative_posture": policy["initiative_posture"],
-        "rule": policy["reporting_rule"],
-        "reporting_destinations": policy["reporting_destinations"],
-        "decision_test": _improvement_boundary_test_payload(),
-        "evidence_classes": evidence_classes,
-        "large_file_hotspots": {
-            "threshold_lines": REPO_FRICTION_LARGE_FILE_THRESHOLD,
-            "count": len(large_file_hotspots),
-            "items": large_file_hotspots,
-        },
-        "concept_surface_hotspots": {
-            "threshold_lines": REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD,
-            "count": len(concept_hotspots),
-            "items": concept_hotspots,
-        },
-        "external_evidence": external_evidence,
-    }
-
-
-def _output_contract_payload(*, config: WorkspaceConfig, surface: str) -> dict[str, Any]:
-    bias = _optimization_bias_payload(config.optimization_bias)
-    return {
-        "owner_surface": "workspace",
-        "surface": surface,
-        "optimization_bias": config.optimization_bias,
-        "optimization_bias_source": config.optimization_bias_source,
-        "rule": (
-            "Optimization bias may change rendering density and residue style only; "
-            "it must not change execution method or canonical state semantics."
-        ),
-        "applies_to": [
-            "derived reporting density",
-            "rendered human-facing view density",
-            "durable residue style when truth stays unchanged",
-        ],
-        "report_density": bias["report_density"],
-        "residue_density": bias["residue_density"],
-        "rendered_view_style": bias["rendered_view_style"],
-        "must_not_change": list(bias["does_not_affect"]),
-    }
-
-
-def _setup_discovery_payload(*, target_root: Path, status_payload: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
-    memory_candidates: list[dict[str, Any]] = []
-    planning_candidates: list[dict[str, Any]] = []
-    ambiguous: list[dict[str, Any]] = []
-    seen: set[tuple[str, str]] = set()
-
-    def _add_candidate(
-        bucket: list[dict[str, Any]],
-        *,
-        surface: str,
-        reason: str,
-        confidence: float,
-        refs: list[str],
-    ) -> None:
-        key = (surface, reason)
-        if key in seen:
-            return
-        seen.add(key)
-        bucket.append(
-            {
-                "surface": surface,
-                "reason": reason,
-                "confidence": confidence,
-                "refs": refs,
-            }
-        )
-
-    for surface, reason, confidence, refs in (
-        (
-            "docs/delegated-judgment-contract.md",
-            "bounded human/agent decision boundaries",
-            0.94,
-            ["docs/delegated-judgment-contract.md"],
-        ),
-        (
-            "docs/resumable-execution-contract.md",
-            "restart and continuation boundaries",
-            0.91,
-            ["docs/resumable-execution-contract.md"],
-        ),
-        (
-            "docs/capability-aware-execution.md",
-            "task-shape and capability-fit rules",
-            0.89,
-            ["docs/capability-aware-execution.md"],
-        ),
-        (
-            "docs/execution-summary-contract.md",
-            "compact execution outcome and follow-through shape",
-            0.87,
-            ["docs/execution-summary-contract.md"],
-        ),
-    ):
-        if (target_root / surface).exists():
-            _add_candidate(memory_candidates, surface=surface, reason=reason, confidence=confidence, refs=refs)
-
-    if (target_root / "TODO.md").exists():
-        _add_candidate(
-            planning_candidates,
-            surface="TODO.md",
-            reason="active queue carries the current work slice",
-            confidence=0.94,
-            refs=["TODO.md"],
-        )
-    todo_surface = _active_todo_surface(target_root=target_root)
-    if todo_surface and todo_surface != "TODO.md" and (target_root / todo_surface).exists():
-        _add_candidate(
-            planning_candidates,
-            surface=todo_surface,
-            reason="active execplan carries the current bounded work slice",
-            confidence=0.96,
-            refs=[todo_surface, "TODO.md"],
-        )
-
-    if (target_root / "ROADMAP.md").exists():
-        _add_candidate(
-            ambiguous,
-            surface="ROADMAP.md",
-            reason="long-horizon follow-ons should not be seeded without promotion",
-            confidence=0.82,
-            refs=["ROADMAP.md"],
-        )
-
-    for warning in status_payload.get("warnings", []):
-        if isinstance(warning, dict):
-            surface = str(warning.get("path") or "workspace")
-            message = str(warning.get("message") or "requires review")
-        else:
-            surface = "workspace"
-            message = str(warning)
-        _add_candidate(
-            ambiguous,
-            surface=surface,
-            reason=message,
-            confidence=0.5,
-            refs=[surface],
-        )
-
-    return {
-        "memory_candidates": memory_candidates,
-        "planning_candidates": planning_candidates,
-        "ambiguous": ambiguous,
     }
 
 
@@ -4138,7 +3800,11 @@ def _setup_payload(
         non_interactive=False,
         config=config,
     )
-    discovery = _setup_discovery_payload(target_root=target_root, status_payload=status_payload)
+    discovery = setup_discovery_payload(
+        target_root=target_root,
+        status_payload=status_payload,
+        active_todo_surface=_active_todo_surface(target_root=target_root),
+    )
     findings_input = _setup_findings_input_payload(target_root=target_root)
     mature_repo = _repo_looks_setup_mature(target_root=target_root)
     if mature_repo:

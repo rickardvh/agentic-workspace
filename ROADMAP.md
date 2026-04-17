@@ -17,22 +17,22 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - No active handoff right now.
 ## GitHub Issue Intake
 
-- Latest intake tranche: GitHub issue `#134`.
+- Latest intake tranche: GitHub issue `#135`.
 - Earlier open planning issues still available for intake: `#96` through `#100`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, declarative contract-tooling, and canonical module-reporting tranches are complete; the remaining queue is the bounded workspace CLI hotspot slice followed by the memory trust/usefulness lane.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, declarative contract-tooling, canonical module-reporting, and bounded workspace CLI hotspot tranches are complete; the remaining queue is the native candidate-lane planning gap followed by the memory trust/usefulness lane.
 
 ## Next Candidate Queue
-- Highest priority when shared workspace CLI hotspot evidence repeats enough to justify bounded refactoring: Shared workspace CLI hotspot reduction.
-  Issues: `#134`
-  Why now: the reporting tranche is complete, so the next queue should spend one bounded slice reducing the shared workspace CLI reread hotspot that setup/report dogfooding already preserved as explicit friction evidence.
-  Promotion signal: promote after another ordinary-work pass confirms the same hotspot pressure or when one coherent concern can be extracted without changing the workspace/package boundary.
-  Suggested first slice: remove one coherent shared concern from `src/agentic_workspace/cli.py` or tighten one helper boundary that lowers reread cost while keeping the root CLI thin.
+- Highest priority when the ad hoc roadmap queue shape itself becomes the next planning friction: Native candidate-lane queue for deferred grouped work.
+  Issues: `#135`
+  Why now: the roadmap just carried another grouped deferred lane through ad hoc queue structure, which confirms the planning-system gap and makes this the smallest next slice with immediate dogfooding value.
+  Promotion signal: promote when one thin native shape can capture grouped deferred lanes without turning planning into a backlog system.
+  Suggested first slice: inventory what the current roadmap queue is expressing beyond existing planning shapes, define the minimum candidate-lane fields, and translate the remaining memory lane into that native form.
 - Second priority when Memory becomes the main restart or trust bottleneck again: Memory trust, usefulness, and cleanup ergonomics.
   Issues: `#96`, `#97`, `#98`, `#99`, `#100`
-  Why later: the new compact memory report now exposes real trust/usefulness follow-through, but the bounded workspace CLI hotspot still sits in front of it as the smaller next slice.
-  Promotion signal: promote when the CLI hotspot slice lands or when another ordinary-work pass shows Memory as the primary remaining trust or rediscovery bottleneck.
+  Why later: the new compact memory report now exposes real trust/usefulness follow-through, but the planning-system gap around grouped deferred work has become the smaller next slice with immediate repo-native payoff.
+  Promotion signal: promote when the native candidate-lane slice lands or when another ordinary-work pass shows Memory as the primary remaining trust or rediscovery bottleneck.
   Suggested first slice: start with evidence-backed note trust states and cleanup/usefulness reporting on top of the new memory module report rather than widening immediately into automatic invalidation.
 ## Reopen Conditions
 
