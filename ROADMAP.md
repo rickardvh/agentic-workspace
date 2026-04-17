@@ -19,7 +19,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## GitHub Issue Intake
 
-- Latest open planning tranche: GitHub issues `#146`-`#170`, grouped below into ordered inactive candidate lanes.
+- Latest open planning tranche: GitHub issues `#146`-`#174`, grouped below into ordered inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 - The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/routing/capture tranches are complete.
@@ -29,11 +29,11 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Lane: Workspace optimization bias and setup findings
   ID: workspace-optimization-bias-findings
   Priority: first
-  Issues: #148, #149, #151, #152, #153, #154, #155, #156
-  Outcome: integrate optimization bias and setup or jumpstart findings into normal repo operation without adding a second analysis framework.
-  Why later: wait until the compact planning recovery path is clearer so the reporting path has a stable target and visibility model.
-  Promotion signal: promote when repeated dogfooding shows the bias and findings path is still hidden, noisy, or too hard to recover.
-  Suggested first slice: surface the effective optimization bias in the compact normal recovery path.
+  Issues: #148, #149, #151, #152, #153, #154, #155, #156, #174
+  Outcome: integrate optimization bias, setup or jumpstart findings, and planning-friction evidence into normal repo operation without adding a second analysis framework.
+  Why later: wait until the compact planning recovery path is clearer so the reporting path has a stable target and visibility model, then fold planning-friction in as another repo-friction signal instead of a separate planning dashboard.
+  Promotion signal: promote when repeated dogfooding shows the bias and findings path is still hidden, noisy, or too hard to recover, or when hard-to-plan work itself becomes a repeated signal that seams or ownership are unclear.
+  Suggested first slice: surface the effective optimization bias in the compact normal recovery path, then decide where planning-friction belongs in the existing repo-friction reporting path.
 
 - Lane: Memory trust and habitual pull
   ID: memory-trust-habitual-pull

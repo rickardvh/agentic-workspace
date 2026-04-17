@@ -102,6 +102,8 @@ The workflow contract should therefore describe:
 
 It should not prescribe a specific executor brand, API, or model name.
 
+For example, a bounded slice could delegate to an external CLI runner like `opencode run -m opencode/big-pickle -f ./handoff.json "Complete this bounded slice from the attached handoff contract only. Stop and escalate if scope changes."`, where the attached handoff file carries the derived worker contract and the external executor still respects the same boundary rules.
+
 ## Relationship To Other Docs
 
 - Use `docs/capability-aware-execution.md` for the task-shape decision about whether delegation is worthwhile at all.
