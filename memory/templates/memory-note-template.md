@@ -55,8 +55,6 @@ Examples:
 ## Failure signals
 
 - <Signals indicating this note may apply>
-- Repeated clarification, proof-lane, or owner-inference questions about the same repo fact.
-- A vague prompt keeps forcing broad rereads even after the clarification surfaces exist.
 
 ## Rule or lesson
 

@@ -75,7 +75,7 @@ That summary now carries a top-level schema envelope:
 - `kind = "planning-summary/v1"`
 - `schema.schema_version = "planning-summary-schema/v1"`
 
-The `planning_record` object is the compact machine-readable active record for current work when planning has one active TODO item and one active execplan. The `active_contract` object remains as the narrower intent view over that canonical record.
+The `planning_record` object is the compact machine-readable active record for current work when planning has one active TODO item and one active execplan. The `active_contract` object remains as the narrower intent view over that canonical record, and `follow_through_contract` may carry compact iterative residue when the active plan records it clearly enough.
 
 Use the summary first when the question is active intent, constraints, proof, or escalation boundaries.
 Do not start by parsing `TODO.md` or execplan prose when the compact summary already answers the question.
@@ -97,14 +97,8 @@ The canonical planning record currently carries:
 - `blockers`
 - `minimal_refs`
 
-When a request belongs to a longer line of work, the canonical record should also preserve the convergence context:
-
-- the larger intended outcome
-- the checked-in continuation owner or surface
-- what must remain intact after interruption or diversion
-- whether the current request pauses the arc or replaces it
-
 `active_contract` remains available as a compatibility projection focused on intent and escalation boundaries.
+`follow_through_contract` remains available as a compatibility projection focused on iterative carry-forward across bounded slices.
 
 ## Rules
 
@@ -113,7 +107,6 @@ When a request belongs to a longer line of work, the canonical record should als
 - Keep it small enough that a weaker or later agent can recover the intended end state without broad rereading.
 - Treat it as unavailable when active planning is ambiguous instead of fabricating certainty from several partial surfaces.
 - Preserve explicit escalation boundaries; the contract must not silently widen requested outcome, ownership scope, or time horizon.
-- Preserve the larger convergence arc when the current slice is only part of it; the record should survive interruptions without the next contributor having to reconstruct the bigger picture from chat.
 - When a plan declares `Required Tools`, expose that requirement directly so weaker agents can stop or escalate before attempting impossible work.
 - If an agent runtime uses native planning artifacts, project any durable state back into the canonical planning record before handoff or review instead of treating runtime-local files as authoritative.
 - Treat raw planning prose as a thin human maintenance view and semantic fallback, not the default inspection path for ordinary state questions.
@@ -121,6 +114,7 @@ When a request belongs to a longer line of work, the canonical record should als
 ## Relationship To Other Contracts
 
 - Use `docs/delegated-judgment-contract.md` for the prose rule about what the human sets and what the agent may decide locally.
+- Use `docs/iterative-follow-through-contract.md` for bounded-slice carry-forward and deferred-proof residue.
 - Use `docs/execution-summary-contract.md` for completed-slice summaries.
 - Use `docs/execplans/README.md` for the active execplan authoring rules that supply this compact contract.
 

@@ -71,6 +71,15 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
 - Owner surface: none
 - Activation trigger: none
 
+## Iterative Follow-Through
+
+- What this slice enabled: Added one bounded planning improvement.
+- Intentionally deferred: none
+- Discovered implications: none yet
+- Proof achieved now: validation remains pending until the current milestone closes.
+- Validation still needed: run the bounded planning checker test before archive.
+- Next likely slice: finish the current milestone and archive if no larger follow-on remains.
+
 ## Delegated Judgment
 
 - Requested outcome: Land plan alpha end to end.

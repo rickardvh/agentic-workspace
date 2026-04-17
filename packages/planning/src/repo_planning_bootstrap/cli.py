@@ -203,6 +203,16 @@ def _print_summary(summary: dict) -> None:
             "Resumable contract view: "
             f"{resumable_contract.get('status')} ({resumable_contract.get('reason', 'no resumable contract available')})"
         )
+    follow_through_contract = summary.get("follow_through_contract", {})
+    if follow_through_contract.get("status") == "present":
+        print("Follow-through contract view:")
+        print(f"- Enabled: {follow_through_contract['what_this_slice_enabled']}")
+        print(f"- Next likely slice: {follow_through_contract['next_likely_slice']}")
+    elif follow_through_contract:
+        print(
+            "Follow-through contract view: "
+            f"{follow_through_contract.get('status')} ({follow_through_contract.get('reason', 'no follow-through contract available')})"
+        )
     if summary["todo"]["active_items"]:
         print("Active items:")
         for item in summary["todo"]["active_items"]:

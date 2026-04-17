@@ -44,31 +44,6 @@ What this document adds is capability fit:
 - whether delegation is likely to save cost
 - when an agent should stop and escalate instead of continuing wastefully
 
-## Token-Efficient Default
-
-Use this as the default operating rule when quality must stay high and long-run token cost matters:
-
-- use the cheapest safe executor directly when the task is already crisp, local, and low-ambiguity
-- use a stronger planner first when intent, proof, ownership, or boundaries are still unclear
-- after the contract is sharp, hand bounded implementation to a cheaper executor when that path is available
-- keep cross-session or cross-agent continuity in checked-in planning, memory, or workspace surfaces instead of relying only on internal delegation
-- treat internal subagents as an optimization, not as the durable continuity mechanism
-
-The goal is not minimum tokens in one run. The goal is minimum total cost across:
-
-- orientation
-- implementation
-- validation
-- interruption
-- handoff
-- restart
-
-This usually means:
-
-- strong planning for ambiguity
-- cheap execution for bounded slices
-- checked-in state for continuity
-
 ## Task-Shape Dimensions
 
 Judge capability fit using the smallest set of dimensions that materially affect safe execution:
@@ -199,7 +174,6 @@ When the assistant or tool already performs automatic capability selection:
 - do use this contract to decide whether the work should stay direct, be planned first, be delegated, or stop
 
 Capability-aware execution should make tool-local routing easier, not noisier.
-Prefer boundaries over procedures: if a thinner boundary rule can keep the task safe, do not replace it with a longer workflow script.
 
 ## Bounded Initiative And Scope Expansion
 

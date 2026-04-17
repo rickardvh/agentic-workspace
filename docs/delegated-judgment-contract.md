@@ -49,13 +49,9 @@ Allowed local judgment includes:
 - selecting the relevant skill or registry-backed workflow
 - preferring a checked-in plan when direct execution is no longer safe
 - capturing durable residue in the correct checked-in surface
-- choosing the cheapest local method that still preserves the boundary and proof story
-- reducing proven repo friction when the configured `improvement_latitude` mode allows it and the work still stays inside the current ownership and proof lane
-- surfacing notable repo friction through bounded reporting or residue when the configured `improvement_latitude` mode is `reporting`
 
 This is bounded initiative.
 It is not permission to replace the requested outcome with a broader or more ambitious one.
-It is also not permission to prescribe local execution choreography when a boundary rule or proof boundary is enough.
 
 ## What Requires Promotion Or Escalation
 
@@ -72,9 +68,6 @@ Promotion or escalation is required when:
 - the requested path would violate a stable contract or ownership boundary
 - validation would be meaningless without the added work
 - confidence drops below the point where silent continuation is defensible
-- friction reduction would turn a local means improvement into a changed requested end state
-
-Use the machine-readable decision test in `agentic-workspace defaults --section improvement_latitude --format json` when a cheaper agent should not have to infer that boundary from prose alone.
 
 The safe pattern is:
 
@@ -120,9 +113,6 @@ The structured surface should answer:
 - what the human sets
 - what the agent may decide locally
 - what forces promotion or escalation
-- what was confirmed by the human versus interpreted by the workspace
-
-Use `agentic-workspace defaults --section intent --format json` for the confirmed/interpreted split and `agentic-workspace defaults --section delegation_posture --format json` for the direct/local decision boundary.
 
 That keeps the contract queryable for agents that should not have to rely on richer prose first.
 

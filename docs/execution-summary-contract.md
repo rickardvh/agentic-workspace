@@ -57,6 +57,7 @@ Do not use the execution summary as:
 
 If a fact is durable technical knowledge, route it to memory or canonical docs instead.
 If a task remains active, keep the live execution contract in the plan itself rather than faking closure through the summary.
+If the slice stopped with meaningful deferred work or discovered implications, preserve that in `Iterative Follow-Through` instead of overloading `Execution Summary`.
 
 ## Relationship To Intent Continuity
 
@@ -64,8 +65,10 @@ Execution summaries complement, but do not replace:
 
 - `Intent Continuity`
 - `Required Continuation`
+- `Iterative Follow-Through`
 
 Those sections answer whether the larger intended outcome is complete and what checked-in surface owns follow-through.
+`Iterative Follow-Through` carries the deferred work, discovered implications, and proof/validation carry-forward that the next bounded slice should inherit.
 
 The execution summary answers:
 

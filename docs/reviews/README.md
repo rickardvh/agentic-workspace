@@ -72,7 +72,6 @@ Choose `contract-integrity` when the core question is whether a repo claim that 
 | `doctrine-refresh` | Check whether long-horizon doctrine still matches current dogfooding reality without turning into stale narrative or hidden backlog. | doctrine pages, maturity framing, ecosystem stance, recent archived execplans and review outcomes | stale direction, conflicting doctrine, hidden queue residue, outdated maturity claims | canonical docs or `ROADMAP.md` | 2 findings |
 | `validation-lane` | Check whether the documented validation lane still proves the promised contract. | package tests, repo checks, maintainer command docs, failing gaps | missing regression coverage, weak check aggregation, undocumented required steps | `ROADMAP.md` or `TODO.md` | 3 findings |
 | `context-cost` | Check whether startup and handoff surfaces stay cheap enough for routine agent use. | startup docs, agent manifest, memory routing surfaces, review/read requirements | over-reading, oversized startup bundles, repeated low-signal reads | `ROADMAP.md`, memory, or canonical docs | 2 findings |
-| `ordinary-use-pull` | Check which Memory and Planning surfaces are actually used in ordinary work, which are skipped, and what should be merged, demoted, or retired. | feedback routing, usage ledger, startup docs, report/default-path surfaces, representative repo tasks | low-pull scaffolding, outsider-legibility gaps, self-hosting bias, missing consolidation opportunities | `ROADMAP.md`, canonical docs, or memory | 3 findings |
 | `review-promotion` | Check whether review findings are being promoted, deferred, or deleted with discipline. | `docs/reviews/`, roadmap intake, archived plans, status footers | stale review residue, duplicate candidates, weak promotion hygiene | `ROADMAP.md` or review cleanup | 2 findings |
 
 Treat the first nine modes as the default recurring portfolio. Use `validation-lane`, `context-cost`, and `review-promotion` as occasional audit modes when repeated friction suggests them.
@@ -88,7 +87,6 @@ Choose the narrowest primary mode that matches the first question you need answe
 - Use `skill-system` when the main question is about skill discovery, naming, recommendation quality, arsenal coverage, or whether a skill belongs in one ownership domain versus another.
 - Use `doctrine-refresh` when the main question is whether long-horizon direction, maturity framing, or ecosystem stance still matches current dogfooding reality.
 - Use `context-cost` when the main question is reading cost or restart cost rather than contract correctness.
-- Use `ordinary-use-pull` when the main question is which surfaces get used in everyday work, which get skipped, and whether the repo is still optimized for fresh external agents or only for insiders.
 
 If two modes both seem plausible, pick the one that best describes the first surface you would inspect. If that later proves wrong, split the review instead of widening the artifact.
 
@@ -124,7 +122,6 @@ Use staged promotion:
 
 Do not promote every finding. Dismiss weak, duplicate, or low-value findings instead of turning the queue into an analysis backlog.
 By default, do not promote a new work item unless there is measured friction, repeated failure, repeated dogfooding pain, or an explicit maintainer override for why the work should exist now.
-For contract-growth reviews, explicitly ask what older path can now be deleted, collapsed, or demoted before promoting a new surface.
 
 ## Improvement-targeting workflow
 

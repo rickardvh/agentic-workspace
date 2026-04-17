@@ -40,7 +40,6 @@ The resumable view currently carries:
 - `minimal_refs`
 
 `planning_record` is the canonical active state. `resumable_contract` is a restart projection over that state.
-When the slice belongs to a larger line of work, `minimal_refs` should include the continuation surface or convergence owner that preserves the bigger arc, not only the immediate task file.
 
 ## Rules
 
@@ -49,7 +48,6 @@ When the slice belongs to a larger line of work, `minimal_refs` should include t
 - Treat `planning_record` as the canonical active planning state when it is available; `resumable_contract` is a restart projection over that state.
 - Treat it as unavailable when active planning is ambiguous or under-specified rather than fabricating restart certainty.
 - Preserve proof and escalation boundaries explicitly so a weaker or later agent does not have to infer them from prose.
-- Preserve the larger convergence arc explicitly when the current slice is only one part of it, so a later contributor can recover the bigger picture after interruption.
 - Keep tool verification advisory in the first slice: declare required tools clearly, then stop or escalate when they are unavailable.
 - If the runtime also used native planning artifacts, make sure the resumable view has already absorbed the durable next step before relying on cross-agent continuation.
 - Treat raw planning prose as the semantic fallback and maintenance layer rather than the default restart-inspection path.

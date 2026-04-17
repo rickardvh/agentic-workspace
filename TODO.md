@@ -1,6 +1,6 @@
 # TODO
 
-Last pruned: 2026-04-16
+Last pruned: 2026-04-17
 
 ## Purpose
 
@@ -9,4 +9,4 @@ Completed work belongs in archived execplans and roadmap history, not in the act
 
 ## Now
 
-- No active item. Promote the next bounded slice from `ROADMAP.md` when ready.
+- No active work right now.

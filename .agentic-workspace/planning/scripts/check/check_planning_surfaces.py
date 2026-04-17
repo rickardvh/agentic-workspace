@@ -57,6 +57,7 @@ EXPECTED_EXECPLAN_SECTIONS = [
     "Non-Goals",
     "Intent Continuity",
     "Required Continuation",
+    "Iterative Follow-Through",
     "Delegated Judgment",
     "Active Milestone",
     "Immediate Next Action",

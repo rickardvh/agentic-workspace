@@ -74,6 +74,15 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 - Owner surface: none
 - Activation trigger: none
 
+## Iterative Follow-Through
+
+- What this slice enabled: Added one bounded planning improvement.
+- Intentionally deferred: none
+- Discovered implications: none yet
+- Proof achieved now: validation remains pending until the current milestone closes.
+- Validation still needed: run the bounded planning checker test before archive.
+- Next likely slice: finish the current milestone and archive if no larger follow-on remains.
+
 ## Delegated Judgment
 
 - Requested outcome: Keep scope clear.
@@ -455,15 +464,18 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     )
     quickstart_text = render_module.render_quickstart(manifest_payload)
 
-    assert "Execplans now treat three fields as first-class" in readme_text
+    assert "Execplans now treat four fields as first-class" in readme_text
     assert "clear the matched queue residue in the same pass" in readme_text
     assert "`Required Continuation`" in readme_text
+    assert "`Iterative Follow-Through`" in readme_text
     assert "`Execution Summary`" in readme_text
     assert "Required continuation for an unfinished larger intended outcome" in readme_text
     assert "the execplan must record both `Intent Continuity` and `Required Continuation` before archive" in bootstrap_agents_text
+    assert "keep `Iterative Follow-Through` current" in bootstrap_agents_text
     assert "remove or archive the matched planning residue in the same pass" in bootstrap_agents_text
     assert "record the required next owner and activation trigger explicitly before archive" in bootstrap_agents_text
     assert "remove or archive the matched queue residue in the same pass" in execplans_readme_text
+    assert "Iterative carry-forward belongs under `## Iterative Follow-Through`" in execplans_readme_text
     assert any(
         "prefer `agentic-workspace defaults --format json`, then use `llms.txt` or `AGENTS.md` when those surfaces are present" in item
         for item in manifest_payload["bootstrap"]["conditional_reads"]
@@ -484,6 +496,8 @@ def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
     assert "larger intended outcome" in text
     assert "Required follow-on for the larger intended outcome" in text
     assert "Activation trigger" in text
+    assert "## Iterative Follow-Through" in text
+    assert "What this slice enabled" in text
     assert "## Delegated Judgment" in text
     assert "Requested outcome" in text
     assert "Agent may decide locally" in text
@@ -506,6 +520,17 @@ def test_bootstrap_execution_summary_contract_is_part_of_payload() -> None:
     assert Path("docs/execution-summary-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
+def test_bootstrap_iterative_follow_through_contract_is_part_of_payload() -> None:
+    text = (installer_mod.payload_root() / "docs" / "iterative-follow-through-contract.md").read_text(encoding="utf-8")
+
+    assert "# Iterative Follow-Through Contract" in text
+    assert "## Canonical Shape" in text
+    assert "What this slice enabled" in text
+    assert "Intentionally deferred" in text
+    assert "follow_through_contract" in text
+    assert Path("docs/iterative-follow-through-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+
+
 def test_bootstrap_intent_contract_is_part_of_payload() -> None:
     text = (installer_mod.payload_root() / "docs" / "intent-contract.md").read_text(encoding="utf-8")
 
@@ -513,6 +538,7 @@ def test_bootstrap_intent_contract_is_part_of_payload() -> None:
     assert "active_contract" in text
     assert "planning-summary-schema/v1" in text
     assert "tool_verification" in text
+    assert "follow_through_contract" in text
     assert "native planning artifacts" in text
     assert "agentic-planning-bootstrap summary --format json" in text
     assert Path("docs/intent-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
@@ -1361,6 +1387,10 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["resumable_contract"]["active_milestone"]["scope"] == "maintain planning discipline."
     assert summary["resumable_contract"]["completion_criteria"] == ["Warning classes are emitted for known drift."]
     assert summary["resumable_contract"]["tool_verification"]["status"] == "unspecified"
+    assert summary["follow_through_contract"]["status"] == "present"
+    assert summary["follow_through_contract"]["what_this_slice_enabled"] == "Added one bounded planning improvement."
+    assert summary["follow_through_contract"]["validation_still_needed"] == ("run the bounded planning checker test before archive.")
+    assert summary["follow_through_contract"]["larger_intended_outcome"] == "Land plan alpha end to end."
     assert summary["roadmap"]["candidate_count"] == 1
     assert summary["roadmap"]["candidates"] == [
         {
@@ -1413,6 +1443,7 @@ def test_planning_summary_can_expose_active_contract_from_execplan_without_todo_
     assert summary["planning_record"]["continuation_owner"] == "docs/execplans/plan-alpha.md"
     assert summary["active_contract"]["status"] == "present"
     assert summary["resumable_contract"]["status"] == "present"
+    assert summary["follow_through_contract"]["status"] == "present"
     assert summary["active_contract"]["todo_item"]["id"] == ""
     assert summary["active_contract"]["minimal_refs"] == ["TODO.md", "docs/execplans/plan-alpha.md"]
 
@@ -1427,6 +1458,8 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert summary["schema"]["view_fields"]["planning_record"][0] == "task"
     assert "tool_verification" in summary["schema"]["view_fields"]["planning_record"]
     assert "tool_verification" in summary["schema"]["view_fields"]["resumable_contract"]
+    assert "follow_through_contract" in summary["schema"]["shared_fields"]
+    assert "next_likely_slice" in summary["schema"]["view_fields"]["follow_through_contract"]
 
 
 def test_planning_summary_human_view_starts_with_planning_record(tmp_path: Path, capsys) -> None:
@@ -1456,6 +1489,7 @@ def test_planning_summary_human_view_starts_with_planning_record(tmp_path: Path,
     assert "Continuation owner: docs/execplans/plan-alpha.md" in out
     assert "Active contract view:" in out
     assert "Resumable contract view:" in out
+    assert "Follow-through contract view:" in out
 
 
 def test_summary_text_prints_planning_record_before_contract_views(tmp_path: Path, capsys) -> None:

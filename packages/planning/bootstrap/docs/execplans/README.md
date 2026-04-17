@@ -103,6 +103,19 @@ Use this section to distinguish required continuation from optional nice-to-have
 If a completed slice leaves the larger intended outcome unfinished, record the required next owner and activation trigger here before archiving.
 Do not rely on drift-log prose, completion-note prose, or chat residue to carry mandatory follow-through.
 
+Iterative carry-forward belongs under `## Iterative Follow-Through` when a bounded slice is expected to stop before the broader goal is complete:
+
+- `What this slice enabled`
+- `Intentionally deferred`
+- `Discovered implications`
+- `Proof achieved now`
+- `Validation still needed`
+- `Next likely slice`
+
+Use this section to preserve the minimal residue a later contributor should not have to reconstruct after the slice stops intentionally.
+Keep it distinct from `Required Continuation`: required continuation answers who owns mandatory follow-on and when it activates; iterative follow-through answers what this slice changed about that larger line of work.
+Keep it distinct from `Execution Summary`: follow-through carries forward deferred work and discovered implications, while execution summary records the bounded slice outcome once the slice stops.
+
 Delegated judgment belongs under `## Delegated Judgment` for active plans that should preserve broad direction across sessions:
 
 - `Requested outcome`
@@ -147,6 +160,7 @@ Execution summaries belong under `## Execution Summary` for completed or nearly-
 Keep this section compact and decision-shaped.
 It exists so later contributors do not have to reconstruct what the slice achieved, how it was proved, and where follow-through now lives.
 Do not turn it into a second drift log, a notebook, or a memory note.
+If the slice ended with intentionally deferred work or newly discovered implications, leave those in `Iterative Follow-Through` instead of stretching `Execution Summary` into a backlog.
 
 Closure discipline should stay cheap and explicit:
 

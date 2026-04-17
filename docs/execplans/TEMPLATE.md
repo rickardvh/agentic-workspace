@@ -24,15 +24,6 @@ This file is a thin human view over the canonical `planning_record` surfaced by 
 Use `none` only when this slice actually completes the larger intended outcome.
 If the larger intended outcome is still unfinished, point `Continuation surface` at the checked-in surface that now owns follow-through.
 
-## Convergence Context
-
-- Larger intended outcome:
-- Convergence owner:
-- What must remain intact after interruption:
-- Current interruption boundary:
-
-Use this section when the larger picture needs to survive interruption or diversion without being restated from chat.
-
 ## Required Continuation
 
 - Required follow-on for the larger intended outcome:
@@ -41,6 +32,19 @@ Use this section when the larger picture needs to survive interruption or divers
 
 Use `no` / `none` only when this slice actually finishes the larger intended outcome.
 If required follow-on remains, record its checked-in owner and what should cause activation.
+
+## Iterative Follow-Through
+
+- What this slice enabled:
+- Intentionally deferred:
+- Discovered implications:
+- Proof achieved now:
+- Validation still needed:
+- Next likely slice:
+
+Use this section when the slice is expected to stop before the broader goal is complete or when the work is likely to surface new implications that the next iteration should not have to rediscover.
+Keep it compact and carry-forward shaped.
+Record what this slice changed about the broader line of work, not a backlog dump or a second drift log.
 
 ## Delegated Judgment
 
@@ -131,6 +135,7 @@ Keep the first slice advisory: if a required tool is unavailable, stop or escala
 
 Keep this compact and completion-shaped.
 Before archiving a completed plan, replace placeholders with the durable summary a later contributor should not have to reconstruct from chat or drift prose.
+Use `Iterative Follow-Through` to preserve deferred work and discovered implications; use `Execution Summary` to record the bounded slice outcome once this plan stops.
 
 ## Drift Log
 

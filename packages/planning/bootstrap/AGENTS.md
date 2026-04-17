@@ -37,6 +37,7 @@ Use `docs/capability-aware-execution.md` when deciding whether the cheapest safe
 Use `docs/environment-recovery-contract.md` when deciding whether task-local recovery belongs in the active plan or should remain in module-local docs.
 Do not treat that contract as a standing instruction to switch models or override tools that already perform automatic capability selection well.
 When a bounded slice completes only part of a larger intended outcome, the execplan must record both `Intent Continuity` and `Required Continuation` before archive so the next owner and activation trigger live in checked-in planning, not only in prose or chat.
+When the slice is expected to stop intentionally before that broader outcome is complete, keep `Iterative Follow-Through` current as the compact residue for what was enabled, deferred, newly discovered, and still awaiting proof.
 
 Do not start coding from chat context alone when the same knowledge should live in checked-in files.
 

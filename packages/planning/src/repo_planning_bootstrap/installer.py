@@ -37,6 +37,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path("docs/delegated-judgment-contract.md"),
     Path("docs/environment-recovery-contract.md"),
     Path("docs/execution-summary-contract.md"),
+    Path("docs/iterative-follow-through-contract.md"),
     Path("docs/intent-contract.md"),
     Path("docs/resumable-execution-contract.md"),
     Path("docs/execplans/README.md"),
@@ -66,6 +67,7 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("docs/delegated-judgment-contract.md"),
     Path("docs/environment-recovery-contract.md"),
     Path("docs/execution-summary-contract.md"),
+    Path("docs/iterative-follow-through-contract.md"),
     Path("docs/intent-contract.md"),
     Path("docs/resumable-execution-contract.md"),
     Path("docs/execplans/README.md"),
@@ -419,6 +421,11 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         active_contract=active_contract,
         resumable_contract=resumable_contract,
     )
+    follow_through_contract = _active_follow_through_contract(
+        target_root=target_root,
+        planning_record=planning_record,
+        active_execplans=active_execplans,
+    )
     return {
         "kind": "planning-summary/v1",
         "schema": _planning_summary_schema(),
@@ -438,6 +445,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         "planning_record": planning_record,
         "active_contract": _contract_projection(active_contract, view_name="active_contract"),
         "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
+        "follow_through_contract": _contract_projection(follow_through_contract, view_name="follow_through_contract"),
         "roadmap": {
             "candidate_count": len(roadmap_candidates),
             "candidates": roadmap_candidates,
@@ -452,6 +460,7 @@ def _planning_summary_schema() -> dict[str, Any]:
         "schema_version": "planning-summary-schema/v1",
         "canonical_docs": [
             "docs/intent-contract.md",
+            "docs/iterative-follow-through-contract.md",
             "docs/resumable-execution-contract.md",
             "docs/execplans/README.md",
         ],
@@ -466,6 +475,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "planning_record",
             "active_contract",
             "resumable_contract",
+            "follow_through_contract",
             "roadmap",
             "warnings",
             "warning_count",
@@ -504,6 +514,17 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "blockers",
                 "minimal_refs",
             ],
+            "follow_through_contract": [
+                "larger_intended_outcome",
+                "continuation_surface",
+                "what_this_slice_enabled",
+                "intentionally_deferred",
+                "discovered_implications",
+                "proof_achieved_now",
+                "validation_still_needed",
+                "next_likely_slice",
+                "minimal_refs",
+            ],
             "roadmap": [
                 "candidate_count",
                 "candidates",
@@ -511,7 +532,7 @@ def _planning_summary_schema() -> dict[str, Any]:
         },
         "rules": [
             "planning_record is the canonical compact active planning state when it is available",
-            "active_contract and resumable_contract remain thinner projections over that state",
+            "active_contract, resumable_contract, and follow_through_contract remain thinner projections over that state",
             "prefer the summary schema over raw TODO or execplan parsing when one structured answer is enough",
         ],
     }
@@ -694,6 +715,69 @@ def _canonical_planning_record(
         "touched_scope": list(active_contract.get("touched_scope", [])),
         "completion_criteria": list(resumable_contract.get("completion_criteria", [])),
         "blockers": list(resumable_contract.get("blockers", [])),
+        "minimal_refs": minimal_refs,
+    }
+
+
+def _active_follow_through_contract(
+    *,
+    target_root: Path,
+    planning_record: dict[str, Any],
+    active_execplans: list[dict[str, str]],
+) -> dict[str, Any]:
+    if planning_record.get("status") != "present" or len(active_execplans) != 1:
+        return {
+            "status": "unavailable",
+            "reason": "requires one active execplan with a present planning record",
+        }
+
+    plan_path = _resolve_execplan_path(target_root, active_execplans[0]["path"])
+    if plan_path is None or not plan_path.exists():
+        return {
+            "status": "unavailable",
+            "reason": "active execplan path is not available for follow-through extraction",
+        }
+
+    follow_through = _execplan_iterative_follow_through(plan_path)
+    required_fields = {
+        "what this slice enabled",
+        "intentionally deferred",
+        "discovered implications",
+        "proof achieved now",
+        "validation still needed",
+        "next likely slice",
+    }
+    if not required_fields.issubset(follow_through):
+        return {
+            "status": "unavailable",
+            "reason": "active execplan is missing iterative follow-through fields",
+        }
+
+    intent_continuity = _execplan_intent_continuity(plan_path)
+    larger_intended_outcome = intent_continuity.get("larger intended outcome", "").strip()
+    continuation_surface = intent_continuity.get("continuation surface", "").strip()
+    if not larger_intended_outcome:
+        return {
+            "status": "unavailable",
+            "reason": "active execplan is missing larger intended outcome for iterative follow-through",
+        }
+
+    minimal_refs = _dedupe(
+        [
+            *planning_record.get("minimal_refs", []),
+            *([continuation_surface] if continuation_surface and continuation_surface.lower() != "none" else []),
+        ]
+    )
+    return {
+        "status": "present",
+        "larger_intended_outcome": larger_intended_outcome,
+        "continuation_surface": continuation_surface,
+        "what_this_slice_enabled": follow_through.get("what this slice enabled", "").strip(),
+        "intentionally_deferred": follow_through.get("intentionally deferred", "").strip(),
+        "discovered_implications": follow_through.get("discovered implications", "").strip(),
+        "proof_achieved_now": follow_through.get("proof achieved now", "").strip(),
+        "validation_still_needed": follow_through.get("validation still needed", "").strip(),
+        "next_likely_slice": follow_through.get("next likely slice", "").strip(),
         "minimal_refs": minimal_refs,
     }
 
@@ -1440,6 +1524,13 @@ def _render_execplan_from_todo_item(
         "- Required follow-on for the larger intended outcome: no\n"
         "- Owner surface: none\n"
         "- Activation trigger: none\n\n"
+        "## Iterative Follow-Through\n\n"
+        "- What this slice enabled: none yet\n"
+        "- Intentionally deferred: none\n"
+        "- Discovered implications: none yet\n"
+        "- Proof achieved now: pending\n"
+        "- Validation still needed: current milestone validation remains pending\n"
+        "- Next likely slice: continue the current milestone until the completion criteria are met\n\n"
         "## Delegated Judgment\n\n"
         f"- Requested outcome: {goal}\n"
         "- Hard constraints: Keep scope bounded to the promoted TODO item and its stated touched paths.\n"
@@ -1532,6 +1623,11 @@ def _execplan_intent_continuity(path: Path) -> dict[str, str]:
 def _execplan_required_continuation(path: Path) -> dict[str, str]:
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Required Continuation"))
+
+
+def _execplan_iterative_follow_through(path: Path) -> dict[str, str]:
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Iterative Follow-Through"))
 
 
 def _execplan_delegated_judgment(path: Path) -> dict[str, str]:

@@ -179,10 +179,11 @@ When a repo also installs Agentic Memory, Planning should borrow durable context
 When a direct task completes, remove it from `TODO.md` promptly. If the task changed durable repo knowledge or left important follow-up work, record that residue in memory, canonical docs, `ROADMAP.md`, or a newly promoted execplan rather than leaving chat-only context behind.
 If the completed slice came from `TODO.md` or `ROADMAP.md`, clear the matched queue residue in the same pass instead of leaving stale completed entries behind.
 When a bounded slice completes only part of a larger intended outcome, do not close it with required continuation only in prose.
-Execplans now treat three fields as first-class:
+Execplans now treat four fields as first-class:
 
 - `Intent Continuity`: whether the larger intended outcome is actually complete and what checked-in surface now owns it if not
 - `Required Continuation`: whether follow-on is mandatory for that larger outcome, plus the owner surface and activation trigger
+- `Iterative Follow-Through`: what the slice enabled, what it intentionally deferred, what new implications were discovered, and what proof or validation still carries forward
 - `Execution Summary`: what the slice delivered, how validation was confirmed, where follow-on was routed, and how later work should resume
 When an execplan is carrying broad direction across sessions, it should also record a compact `Delegated Judgment` section:
 
@@ -193,6 +194,7 @@ When an execplan is carrying broad direction across sessions, it should also rec
 
 If required follow-on remains, archive should happen only after those fields point at a checked-in next owner.
 Completed plans should also leave an explicit execution summary before archive so later contributors do not have to reconstruct the outcome from drift prose or chat.
+If the slice stopped intentionally rather than finishing the broader goal, keep `Iterative Follow-Through` current so the next bounded slice inherits the right residue without rereading the full plan.
 Optional nice-to-have follow-up can still stay out of the archive gate.
 
 ## Direct-Task Recovery Cases
