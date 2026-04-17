@@ -56,6 +56,7 @@ WORKSPACE_PAYLOAD_FILES = (
 )
 WORKSPACE_CONFIG_PATH = Path("agentic-workspace.toml")
 WORKSPACE_LOCAL_CONFIG_PATH = Path("agentic-workspace.local.toml")
+WORKSPACE_DELEGATION_OUTCOMES_PATH = Path("agentic-workspace.delegation-outcomes.json")
 WORKSPACE_EXTERNAL_AGENT_PATH = Path("llms.txt")
 WORKSPACE_BOOTSTRAP_HANDOFF_PATH = Path(".agentic-workspace/bootstrap-handoff.md")
 WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH = Path(".agentic-workspace/bootstrap-handoff.json")
@@ -112,6 +113,22 @@ SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS = (
     "internal",
     "cli",
     "api",
+)
+DELEGATION_OUTCOMES_KIND = "agentic-workspace/delegation-outcomes/v1"
+SUPPORTED_DELEGATION_OUTCOMES = (
+    "success",
+    "mixed",
+    "failed",
+)
+SUPPORTED_HANDOFF_SUFFICIENCY = (
+    "sufficient",
+    "borderline",
+    "insufficient",
+)
+SUPPORTED_REVIEW_BURDENS = (
+    "light",
+    "normal",
+    "high",
 )
 SETUP_FINDINGS_PATH = Path("tools/setup-findings.json")
 SETUP_FINDINGS_KIND = "workspace-setup-findings/v1"
@@ -282,6 +299,17 @@ class DelegationTargetProfile:
     task_fit: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class DelegationOutcomeRecord:
+    recorded_at: str
+    delegation_target: str
+    task_class: str
+    outcome: str
+    handoff_sufficiency: str
+    review_burden: str
+    escalation_required: bool
+
+
 class ModuleSelectionError(ValueError):
     """Raised when the orchestrator cannot resolve a safe module set."""
 
@@ -339,6 +367,38 @@ def build_parser() -> argparse.ArgumentParser:
     )
     config_parser.add_argument("--target", help="Optional repository path used to resolve repo-owned config.")
     _add_format_argument(config_parser)
+
+    delegation_outcome_parser = subparsers.add_parser(
+        "note-delegation-outcome",
+        help="Append one local-only delegation outcome record for target-profile tuning.",
+    )
+    delegation_outcome_parser.add_argument("--target", help="Optional repository path used to record the local outcome.")
+    delegation_outcome_parser.add_argument("--delegation-target", required=True, help="Local delegation target alias.")
+    delegation_outcome_parser.add_argument("--task-class", required=True, help="Bounded task class label for this delegated run.")
+    delegation_outcome_parser.add_argument(
+        "--outcome",
+        required=True,
+        choices=SUPPORTED_DELEGATION_OUTCOMES,
+        help="High-level delegated execution outcome.",
+    )
+    delegation_outcome_parser.add_argument(
+        "--handoff-sufficiency",
+        choices=SUPPORTED_HANDOFF_SUFFICIENCY,
+        default="sufficient",
+        help="Whether the checked-in handoff was enough for the delegated worker.",
+    )
+    delegation_outcome_parser.add_argument(
+        "--review-burden",
+        choices=SUPPORTED_REVIEW_BURDENS,
+        default="normal",
+        help="How much review/rework burden remained after delegation.",
+    )
+    delegation_outcome_parser.add_argument(
+        "--escalation-required",
+        action="store_true",
+        help="Record that the delegated run had to stop and escalate.",
+    )
+    _add_format_argument(delegation_outcome_parser)
 
     skills_parser = subparsers.add_parser(
         "skills",
@@ -877,7 +937,7 @@ def main(argv: list[str] | None = None) -> int:
         except WorkspaceUsageError as exc:
             parser.error(str(exc))
 
-    if args.command in {"proof", "ownership", "config"}:
+    if args.command in {"proof", "ownership", "config", "note-delegation-outcome"}:
         try:
             target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
             _validate_target_root(command_name=args.command, target_root=target_root)
@@ -896,6 +956,19 @@ def main(argv: list[str] | None = None) -> int:
                     descriptors=descriptors,
                     concern=getattr(args, "concern", None),
                     repo_path=getattr(args, "path", None),
+                )
+            elif args.command == "note-delegation-outcome":
+                _emit_payload(
+                    payload=_record_delegation_outcome(
+                        target_root=target_root,
+                        delegation_target=args.delegation_target,
+                        task_class=args.task_class,
+                        outcome=args.outcome,
+                        handoff_sufficiency=args.handoff_sufficiency,
+                        review_burden=args.review_burden,
+                        escalation_required=bool(args.escalation_required),
+                    ),
+                    format_name=args.format,
                 )
             else:
                 _emit_config(format_name=args.format, config=_load_workspace_config(target_root=target_root, descriptors=descriptors))
@@ -3469,6 +3542,11 @@ def _defaults_payload() -> dict[str, Any]:
                     "available delegation target hints that stay advisory and local-only",
                 ],
             },
+            "local_outcome_artifact": {
+                "path": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
+                "kind": DELEGATION_OUTCOMES_KIND,
+                "rule": "local-only delegation outcome evidence used to derive advisory tuning suggestions over time",
+            },
             "runtime_inference": {
                 "tool_owned": True,
                 "report_when_behavior_changes": True,
@@ -3513,6 +3591,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "agentic-workspace.local.toml runtime.cheap_bounded_executor_available",
                 "agentic-workspace.local.toml handoff.prefer_internal_delegation_when_available",
                 "agentic-workspace.local.toml delegation_targets.<target>.*",
+                "agentic-workspace.delegation-outcomes.json",
             ],
             "secondary": [
                 "Do not treat config as a scheduler.",
@@ -4544,6 +4623,16 @@ def _load_toml_payload(*, path: Path, surface_name: str) -> dict[str, Any]:
         raise WorkspaceUsageError(f"{surface_name} is invalid TOML: {exc}.") from exc
 
 
+def _load_json_payload(*, path: Path, surface_name: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError as exc:
+        raise WorkspaceUsageError(f"{surface_name} is invalid JSON: {exc}.") from exc
+    if not isinstance(payload, dict):
+        raise WorkspaceUsageError(f"{surface_name} must contain a JSON object.")
+    return payload
+
+
 def _require_optional_confidence(*, payload: dict[str, Any], key: str, config_path: Path) -> float | None:
     if key not in payload:
         return None
@@ -4621,6 +4710,151 @@ def _load_delegation_target_profiles(*, raw_targets: dict[str, Any], config_path
             )
         )
     return tuple(profiles)
+
+
+def _normalize_delegation_outcome_record(raw: Any, *, surface_name: str) -> DelegationOutcomeRecord:
+    if not isinstance(raw, dict):
+        raise WorkspaceUsageError(f"{surface_name} records entries must be objects.")
+    recorded_at = raw.get("recorded_at")
+    delegation_target = raw.get("delegation_target")
+    task_class = raw.get("task_class")
+    outcome = raw.get("outcome")
+    handoff_sufficiency = raw.get("handoff_sufficiency")
+    review_burden = raw.get("review_burden")
+    escalation_required = raw.get("escalation_required")
+    if not isinstance(recorded_at, str) or not recorded_at.strip():
+        raise WorkspaceUsageError(f"{surface_name} record recorded_at must be a non-empty string.")
+    if not isinstance(delegation_target, str) or not delegation_target.strip():
+        raise WorkspaceUsageError(f"{surface_name} record delegation_target must be a non-empty string.")
+    if not isinstance(task_class, str) or not task_class.strip():
+        raise WorkspaceUsageError(f"{surface_name} record task_class must be a non-empty string.")
+    if outcome not in SUPPORTED_DELEGATION_OUTCOMES:
+        allowed = ", ".join(SUPPORTED_DELEGATION_OUTCOMES)
+        raise WorkspaceUsageError(f"{surface_name} record outcome must be one of: {allowed}.")
+    if handoff_sufficiency not in SUPPORTED_HANDOFF_SUFFICIENCY:
+        allowed = ", ".join(SUPPORTED_HANDOFF_SUFFICIENCY)
+        raise WorkspaceUsageError(f"{surface_name} record handoff_sufficiency must be one of: {allowed}.")
+    if review_burden not in SUPPORTED_REVIEW_BURDENS:
+        allowed = ", ".join(SUPPORTED_REVIEW_BURDENS)
+        raise WorkspaceUsageError(f"{surface_name} record review_burden must be one of: {allowed}.")
+    if not isinstance(escalation_required, bool):
+        raise WorkspaceUsageError(f"{surface_name} record escalation_required must be a boolean.")
+    return DelegationOutcomeRecord(
+        recorded_at=recorded_at.strip(),
+        delegation_target=delegation_target.strip(),
+        task_class=task_class.strip(),
+        outcome=outcome,
+        handoff_sufficiency=handoff_sufficiency,
+        review_burden=review_burden,
+        escalation_required=escalation_required,
+    )
+
+
+def _load_delegation_outcomes(*, target_root: Path) -> tuple[Path, dict[str, Any], tuple[DelegationOutcomeRecord, ...]]:
+    path = target_root / WORKSPACE_DELEGATION_OUTCOMES_PATH
+    if not path.exists():
+        return path, {"kind": DELEGATION_OUTCOMES_KIND, "records": []}, ()
+    payload = _load_json_payload(path=path, surface_name=WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix())
+    if payload.get("kind") != DELEGATION_OUTCOMES_KIND:
+        raise WorkspaceUsageError(f"{WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix()} must set kind to {DELEGATION_OUTCOMES_KIND}.")
+    raw_records = payload.get("records", [])
+    if not isinstance(raw_records, list):
+        raise WorkspaceUsageError(f"{WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix()} records must be a list.")
+    records = tuple(
+        _normalize_delegation_outcome_record(raw_record, surface_name=WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix())
+        for raw_record in raw_records
+    )
+    return path, payload, records
+
+
+def _write_delegation_outcomes(*, path: Path, payload: dict[str, Any]) -> None:
+    path.write_text(json.dumps(serialise_value(payload), indent=2) + "\n", encoding="utf-8")
+
+
+def _delegation_signal_score(record: DelegationOutcomeRecord) -> float:
+    outcome_score = {
+        "success": 1.0,
+        "mixed": 0.0,
+        "failed": -1.0,
+    }[record.outcome]
+    handoff_score = {
+        "sufficient": 0.25,
+        "borderline": 0.0,
+        "insufficient": -0.25,
+    }[record.handoff_sufficiency]
+    review_score = {
+        "light": 0.25,
+        "normal": 0.0,
+        "high": -0.25,
+    }[record.review_burden]
+    escalation_score = -0.5 if record.escalation_required else 0.0
+    return outcome_score + handoff_score + review_score + escalation_score
+
+
+def _default_confidence_for_strength(strength: str) -> float:
+    return {
+        "strong": 0.8,
+        "medium": 0.65,
+        "weak": 0.5,
+    }[strength]
+
+
+def _round_confidence(value: float) -> float:
+    return round(max(0.0, min(value, 1.0)), 2)
+
+
+def _task_fit_suggestions(*, current_task_fit: tuple[str, ...], records: tuple[DelegationOutcomeRecord, ...]) -> dict[str, list[str]]:
+    by_task: dict[str, list[float]] = {}
+    for record in records:
+        by_task.setdefault(record.task_class, []).append(_delegation_signal_score(record))
+    suggest_add: list[str] = []
+    suggest_remove: list[str] = []
+    for task_class, scores in sorted(by_task.items()):
+        average = sum(scores) / len(scores)
+        if len(scores) >= 2 and average >= 0.75 and task_class not in current_task_fit:
+            suggest_add.append(task_class)
+        if average <= -0.5 and task_class in current_task_fit:
+            suggest_remove.append(task_class)
+    return {
+        "suggest_add": suggest_add,
+        "suggest_remove": suggest_remove,
+    }
+
+
+def _delegation_outcome_advisory(
+    *,
+    profile: DelegationTargetProfile,
+    records: tuple[DelegationOutcomeRecord, ...],
+) -> dict[str, Any]:
+    if not records:
+        return {
+            "record_count": 0,
+            "status": "no-local-evidence",
+        }
+    scores = [_delegation_signal_score(record) for record in records]
+    average_score = sum(scores) / len(scores)
+    baseline_confidence = profile.confidence if profile.confidence is not None else _default_confidence_for_strength(profile.strength)
+    suggested_confidence = _round_confidence(baseline_confidence + (average_score * 0.1))
+    confidence_delta = round(suggested_confidence - baseline_confidence, 2)
+    if confidence_delta > 0.03:
+        confidence_action = "raise"
+    elif confidence_delta < -0.03:
+        confidence_action = "lower"
+    else:
+        confidence_action = "keep"
+    task_fit = _task_fit_suggestions(current_task_fit=profile.task_fit, records=records)
+    return {
+        "record_count": len(records),
+        "average_signal": round(average_score, 2),
+        "confidence": {
+            "current": profile.confidence,
+            "suggested": suggested_confidence,
+            "action": confidence_action,
+            "delta": confidence_delta,
+        },
+        "task_fit": task_fit,
+        "recent_task_classes": sorted({record.task_class for record in records}),
+    }
 
 
 def _load_mixed_agent_local_override(*, target_root: Path) -> MixedAgentLocalOverride:
@@ -4742,9 +4976,73 @@ def _delegation_target_advisory(profile: DelegationTargetProfile) -> dict[str, s
     }
 
 
+def _record_delegation_outcome(
+    *,
+    target_root: Path,
+    delegation_target: str,
+    task_class: str,
+    outcome: str,
+    handoff_sufficiency: str,
+    review_burden: str,
+    escalation_required: bool,
+) -> dict[str, Any]:
+    path, payload, records = _load_delegation_outcomes(target_root=target_root)
+    record = DelegationOutcomeRecord(
+        recorded_at=date.today().isoformat(),
+        delegation_target=delegation_target.strip(),
+        task_class=task_class.strip(),
+        outcome=outcome,
+        handoff_sufficiency=handoff_sufficiency,
+        review_burden=review_burden,
+        escalation_required=escalation_required,
+    )
+    updated_payload = {
+        "kind": DELEGATION_OUTCOMES_KIND,
+        "records": [
+            *[
+                {
+                    "recorded_at": existing.recorded_at,
+                    "delegation_target": existing.delegation_target,
+                    "task_class": existing.task_class,
+                    "outcome": existing.outcome,
+                    "handoff_sufficiency": existing.handoff_sufficiency,
+                    "review_burden": existing.review_burden,
+                    "escalation_required": existing.escalation_required,
+                }
+                for existing in records
+            ],
+            {
+                "recorded_at": record.recorded_at,
+                "delegation_target": record.delegation_target,
+                "task_class": record.task_class,
+                "outcome": record.outcome,
+                "handoff_sufficiency": record.handoff_sufficiency,
+                "review_burden": record.review_burden,
+                "escalation_required": record.escalation_required,
+            },
+        ],
+    }
+    _write_delegation_outcomes(path=path, payload=updated_payload)
+    return {
+        "kind": DELEGATION_OUTCOMES_KIND,
+        "path": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
+        "recorded": updated_payload["records"][-1],
+        "record_count": len(updated_payload["records"]),
+        "rule": "local-only delegation outcome evidence; advisory input for tuning only",
+    }
+
+
 def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     defaults = _defaults_payload()["mixed_agent"]
     local_override = config.local_override
+    outcome_records: tuple[DelegationOutcomeRecord, ...] = ()
+    outcome_status = "unavailable"
+    if config.target_root is not None:
+        _, _, outcome_records = _load_delegation_outcomes(target_root=config.target_root)
+        outcome_status = "configured" if outcome_records else "available-not-set"
+    records_by_target: dict[str, tuple[DelegationOutcomeRecord, ...]] = {}
+    for target_name in sorted({record.delegation_target for record in outcome_records}):
+        records_by_target[target_name] = tuple(record for record in outcome_records if record.delegation_target == target_name)
     planner_executor_pattern = "unspecified"
     if local_override.strong_planner_available and local_override.cheap_bounded_executor_available:
         planner_executor_pattern = "strong-planner-cheap-executor-available"
@@ -4792,9 +5090,23 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                     "task_fit": list(profile.task_fit),
                     "execution_methods": list(profile.execution_methods),
                     "advisory": _delegation_target_advisory(profile),
+                    "outcome_evidence": _delegation_outcome_advisory(
+                        profile=profile,
+                        records=records_by_target.get(profile.name, ()),
+                    ),
                 }
                 for profile in local_override.delegation_targets
             ],
+            "outcome_artifact": {
+                "path": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
+                "status": outcome_status,
+                "record_count": len(outcome_records),
+            },
+            "unprofiled_targets_with_evidence": sorted(
+                target_name
+                for target_name in records_by_target
+                if target_name not in {profile.name for profile in local_override.delegation_targets}
+            ),
         },
         "runtime_inference": {
             "tool_owned": defaults["runtime_inference"]["tool_owned"],
@@ -4906,6 +5218,10 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
         f"cheap bounded executor={payload['mixed_agent']['effective_posture']['cheap_bounded_executor_available']['value']}"
     )
     print(f"- delegation targets: {len(payload['mixed_agent']['delegation_targets']['profiles'])} configured")
+    print(
+        f"- delegation outcome evidence: {payload['mixed_agent']['delegation_targets']['outcome_artifact']['path']} "
+        f"({payload['mixed_agent']['delegation_targets']['outcome_artifact']['status']})"
+    )
 
 
 def _current_module_upgrade_source_state(

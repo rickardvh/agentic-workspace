@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/delegation-outcomes.schema.json",
+  "title": "Agentic Workspace Local Delegation Outcomes",
+  "type": "object",
+  "required": [
+    "kind",
+    "records"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/delegation-outcomes/v1"
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "recorded_at",
+          "delegation_target",
+          "task_class",
+          "outcome",
+          "handoff_sufficiency",
+          "review_burden",
+          "escalation_required"
+        ],
+        "properties": {
+          "recorded_at": {
+            "type": "string",
+            "minLength": 1
+          },
+          "delegation_target": {
+            "type": "string",
+            "minLength": 1
+          },
+          "task_class": {
+            "type": "string",
+            "minLength": 1
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "success",
+              "mixed",
+              "failed"
+            ]
+          },
+          "handoff_sufficiency": {
+            "type": "string",
+            "enum": [
+              "sufficient",
+              "borderline",
+              "insufficient"
+            ]
+          },
+          "review_burden": {
+            "type": "string",
+            "enum": [
+              "light",
+              "normal",
+              "high"
+            ]
+          },
+          "escalation_required": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -115,6 +115,23 @@ def _sample_workspace_local_override_payload() -> dict[str, object]:
     }
 
 
+def _sample_delegation_outcomes_payload() -> dict[str, object]:
+    return {
+        "kind": "agentic-workspace/delegation-outcomes/v1",
+        "records": [
+            {
+                "recorded_at": "2026-04-17",
+                "delegation_target": "mini_impl",
+                "task_class": "bounded-docs",
+                "outcome": "success",
+                "handoff_sufficiency": "sufficient",
+                "review_burden": "light",
+                "escalation_required": False,
+            }
+        ],
+    }
+
+
 def main() -> int:
     checks: list[tuple[str, list[str]]] = [
         ("compact_contract_profile.json", _validate(compact_contract_manifest(), "selector_contracts_manifest.schema.json")),
@@ -127,6 +144,10 @@ def main() -> int:
         (
             "workspace local override sample",
             _validate(_sample_workspace_local_override_payload(), "workspace_local_override.schema.json"),
+        ),
+        (
+            "delegation outcomes sample",
+            _validate(_sample_delegation_outcomes_payload(), "delegation_outcomes.schema.json"),
         ),
     ]
 
@@ -177,6 +198,14 @@ def main() -> int:
         cli.SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS
     ):
         checks.append(("workspace local override schema parity", ["delegation target execution methods drifted from supported local override fields"]))
+    delegation_outcome_schema = contract_schema("delegation_outcomes.schema.json")
+    record_schema = delegation_outcome_schema["properties"]["records"]["items"]
+    if record_schema["properties"]["outcome"]["enum"] != list(cli.SUPPORTED_DELEGATION_OUTCOMES):
+        checks.append(("delegation outcomes schema parity", ["delegation outcome enums drifted from cli supported values"]))
+    if record_schema["properties"]["handoff_sufficiency"]["enum"] != list(cli.SUPPORTED_HANDOFF_SUFFICIENCY):
+        checks.append(("delegation outcomes schema parity", ["handoff sufficiency enums drifted from cli supported values"]))
+    if record_schema["properties"]["review_burden"]["enum"] != list(cli.SUPPORTED_REVIEW_BURDENS):
+        checks.append(("delegation outcomes schema parity", ["review burden enums drifted from cli supported values"]))
 
     failures = [(name, errors) for name, errors in checks if errors]
     if failures:

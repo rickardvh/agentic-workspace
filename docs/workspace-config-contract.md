@@ -21,6 +21,7 @@ The config shapes are now also defined formally in:
 
 - `src/agentic_workspace/contracts/schemas/workspace_config.schema.json`
 - `src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json`
+- `src/agentic_workspace/contracts/schemas/delegation_outcomes.schema.json`
 
 Treat those schemas as development-time contract artifacts and drift checks.
 `docs/workspace-config-contract.md` remains the canonical semantic explanation, while the schemas make the supported shape explicit for tooling and future integrations.
@@ -115,6 +116,10 @@ The workspace now supports one optional local-only mixed-agent override file:
 
 - `agentic-workspace.local.toml`
 
+It may also use one optional local-only delegation outcome artifact:
+
+- `agentic-workspace.delegation-outcomes.json`
+
 This file is for machine-, account-, and cost-profile-specific capability posture.
 It is not part of checked-in repo policy and should stay gitignored.
 
@@ -161,6 +166,30 @@ Rules:
 - `execution_methods` tells the orchestrator whether the target is reachable through internal delegation, a CLI runner, an API runner, or more than one of those paths.
 - These hints may influence handoff detail and review burden, but they must not become automatic routing policy.
 
+## Local Delegation Outcome Evidence
+
+The workspace may also keep a separate local-only outcome log at `agentic-workspace.delegation-outcomes.json`.
+
+Use:
+
+```bash
+agentic-workspace note-delegation-outcome --target ./repo --delegation-target gpt_5_4_mini --task-class bounded-implementation --outcome success --handoff-sufficiency sufficient --review-burden normal
+```
+
+Rules:
+
+- This artifact is optional and gitignored.
+- It is evidence for local tuning, not checked-in repo state.
+- It should record only a few bounded signals:
+  - target alias
+  - task class
+  - outcome
+  - handoff sufficiency
+  - review burden
+  - whether escalation was required
+- The config surface may derive suggested confidence or task-fit adjustments from this evidence.
+- Those suggestions must stay advisory and auditable; they must not silently rewrite the local profile or auto-route future work.
+
 ## Effective Config
 
 Use:
@@ -183,6 +212,7 @@ That surface reports:
 - the current mixed-agent reporting boundary: repo-policy source, reserved local-override status, and the fact that runtime orchestration remains tool-owned
 - the effective local mixed-agent posture when `agentic-workspace.local.toml` is present
 - the configured local delegation target profiles and their derived advisory handoff/review hints
+- the local delegation outcome artifact status and any derived confidence/task-fit suggestions
 - the effective workflow-artifact adapter profile and its sync rule
 
 If mixed-agent policy grows beyond the v1 surface, effective reporting should also make clear:

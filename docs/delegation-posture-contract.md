@@ -39,7 +39,8 @@ Use `agentic-planning-bootstrap handoff --format json` when the question is what
       "agentic-workspace.local.toml runtime.strong_planner_available",
       "agentic-workspace.local.toml runtime.cheap_bounded_executor_available",
       "agentic-workspace.local.toml handoff.prefer_internal_delegation_when_available",
-      "agentic-workspace.local.toml delegation_targets.<target>.*"
+      "agentic-workspace.local.toml delegation_targets.<target>.*",
+      "agentic-workspace.delegation-outcomes.json"
     ],
     "secondary": [
       "Do not treat config as a scheduler.",
@@ -58,7 +59,7 @@ The text form should stay short and stable:
 - `command: agentic-workspace defaults --section delegation_posture --format json`
 - `rule: Use the effective mixed-agent posture to decide whether to keep work direct, split it, or escalate.`
 - `preferred split: planner -> implementer -> validator`
-- `config controls: agentic-workspace.local.toml runtime, handoff, and optional delegation-target posture fields`
+- `config controls: agentic-workspace.local.toml runtime, handoff, optional delegation-target posture fields, and local delegation outcome evidence`
 
 ## Relationship To Other Docs
 

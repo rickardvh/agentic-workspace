@@ -17,6 +17,7 @@ Use:
 
 ```bash
 agentic-workspace config --target ./repo --format json
+agentic-workspace note-delegation-outcome --target ./repo --delegation-target <target> --task-class <class> --outcome <success|mixed|failed>
 agentic-workspace defaults --section relay --format json
 agentic-planning-bootstrap handoff --format json
 ```
@@ -28,11 +29,13 @@ Use the config surface first to inspect whether the local environment reports:
 - cheap bounded executor availability
 - preference for internal delegation when available
 - any configured local delegation target profiles with coarse strength, confidence, task-fit, and execution-method hints
+- any local delegation outcome evidence and derived tuning suggestions for those targets
 
 Those settings live in `agentic-workspace.local.toml`.
 They are local capability and cost posture only.
 They must not rewrite repo-owned planning semantics.
 If delegation target profiles are present, use them only as advisory input for handoff detail, review burden, and whether a target is even plausible for the current bounded slice.
+If local outcome evidence is present, use it only to tune those advisory hints over time; it must not become hidden scheduler policy.
 
 Use the relay selector for the stable planner/implementer rule and the planning handoff command for the active delegated slice contract.
 

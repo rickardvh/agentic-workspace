@@ -32,6 +32,7 @@ Use it when you need to know which checked-in file owns a machine-readable contr
 | `contract_inventory.schema.json` | boundary inventory |
 | `workspace_config.schema.json` | `agentic-workspace.toml` |
 | `workspace_local_override.schema.json` | `agentic-workspace.local.toml` |
+| `delegation_outcomes.schema.json` | `agentic-workspace.delegation-outcomes.json` |
 
 ## Guardrails
 

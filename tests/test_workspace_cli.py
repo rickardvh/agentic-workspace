@@ -250,6 +250,11 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     ]
     assert payload["mixed_agent"]["local_override"]["supported_target_strengths"] == ["strong", "medium", "weak"]
     assert payload["mixed_agent"]["local_override"]["supported_target_execution_methods"] == ["internal", "cli", "api"]
+    assert payload["mixed_agent"]["local_outcome_artifact"] == {
+        "path": "agentic-workspace.delegation-outcomes.json",
+        "kind": "agentic-workspace/delegation-outcomes/v1",
+        "rule": "local-only delegation outcome evidence used to derive advisory tuning suggestions over time",
+    }
     assert payload["mixed_agent"]["runtime_inference"]["tool_owned"] is True
     assert payload["mixed_agent"]["handoff_quality"]["must_recover"] == [
         "current intent",
@@ -271,6 +276,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "agentic-workspace.local.toml runtime.cheap_bounded_executor_available",
         "agentic-workspace.local.toml handoff.prefer_internal_delegation_when_available",
         "agentic-workspace.local.toml delegation_targets.<target>.*",
+        "agentic-workspace.delegation-outcomes.json",
     ]
     assert payload["delegation_posture"]["secondary"] == [
         "Do not treat config as a scheduler.",
@@ -1125,6 +1131,109 @@ def test_config_command_accepts_utf8_bom_local_override(tmp_path: Path, capsys) 
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["mixed_agent"]["delegation_targets"]["profiles"][0]["name"] == "fast_docs"
+
+
+def test_note_delegation_outcome_command_writes_local_artifact(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert (
+        cli.main(
+            [
+                "note-delegation-outcome",
+                "--target",
+                str(target),
+                "--delegation-target",
+                "gpt_5_4_mini",
+                "--task-class",
+                "bounded-docs",
+                "--outcome",
+                "success",
+                "--handoff-sufficiency",
+                "sufficient",
+                "--review-burden",
+                "light",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["path"] == "agentic-workspace.delegation-outcomes.json"
+    assert payload["record_count"] == 1
+    artifact = json.loads((target / "agentic-workspace.delegation-outcomes.json").read_text(encoding="utf-8"))
+    assert artifact["kind"] == "agentic-workspace/delegation-outcomes/v1"
+    assert artifact["records"][0]["delegation_target"] == "gpt_5_4_mini"
+
+
+def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "agentic-workspace.local.toml").write_text(
+        "schema_version = 1\n\n"
+        "[delegation_targets.gpt_5_4_mini]\n"
+        'strength = "weak"\n'
+        "confidence = 0.62\n"
+        'task_fit = ["bounded-docs"]\n'
+        'execution_methods = ["cli"]\n',
+        encoding="utf-8",
+    )
+    (target / "agentic-workspace.delegation-outcomes.json").write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/delegation-outcomes/v1",
+                "records": [
+                    {
+                        "recorded_at": "2026-04-17",
+                        "delegation_target": "gpt_5_4_mini",
+                        "task_class": "bounded-docs",
+                        "outcome": "success",
+                        "handoff_sufficiency": "sufficient",
+                        "review_burden": "light",
+                        "escalation_required": False,
+                    },
+                    {
+                        "recorded_at": "2026-04-17",
+                        "delegation_target": "gpt_5_4_mini",
+                        "task_class": "narrow-tests",
+                        "outcome": "success",
+                        "handoff_sufficiency": "sufficient",
+                        "review_burden": "normal",
+                        "escalation_required": False,
+                    },
+                    {
+                        "recorded_at": "2026-04-17",
+                        "delegation_target": "gpt_5_4_mini",
+                        "task_class": "narrow-tests",
+                        "outcome": "success",
+                        "handoff_sufficiency": "sufficient",
+                        "review_burden": "light",
+                        "escalation_required": False,
+                    },
+                ],
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    targets = payload["mixed_agent"]["delegation_targets"]
+    assert targets["outcome_artifact"] == {
+        "path": "agentic-workspace.delegation-outcomes.json",
+        "status": "configured",
+        "record_count": 3,
+    }
+    mini = targets["profiles"][0]
+    assert mini["outcome_evidence"]["record_count"] == 3
+    assert mini["outcome_evidence"]["confidence"]["action"] == "raise"
+    assert mini["outcome_evidence"]["task_fit"]["suggest_add"] == ["narrow-tests"]
 
 
 def test_modules_command_reports_installation_state_for_target(monkeypatch, tmp_path: Path, capsys) -> None:

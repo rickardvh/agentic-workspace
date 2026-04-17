@@ -2,6 +2,7 @@
 .venv/
 .env.local
 agentic-workspace.local.toml
+agentic-workspace.delegation-outcomes.json
 
 # Python caches
 **/__pycache__/
