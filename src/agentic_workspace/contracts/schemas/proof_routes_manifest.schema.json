@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/proof-routes-manifest.schema.json",
+  "title": "Proof Routes Manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "canonical_doc",
+    "command",
+    "default_routes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "proof-routes-manifest/v1"
+    },
+    "canonical_doc": {
+      "type": "string"
+    },
+    "command": {
+      "type": "string"
+    },
+    "default_routes": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}

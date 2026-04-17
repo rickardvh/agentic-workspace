@@ -1,0 +1,40 @@
+{
+  "schema_version": "selector-contracts-manifest/v1",
+  "canonical_doc": "docs/compact-contract-profile.md",
+  "profile": "compact-contract-answer/v1",
+  "answer_shape": [
+    "profile",
+    "surface",
+    "selector",
+    "matched",
+    "answer",
+    "refs"
+  ],
+  "selectors": {
+    "defaults": {
+      "surface": "defaults",
+      "selector_key": "section",
+      "command": "agentic-workspace defaults --section <section> --format json"
+    },
+    "proof_route": {
+      "surface": "proof",
+      "selector_key": "route",
+      "command": "agentic-workspace proof --target ./repo --route <id> --format json"
+    },
+    "proof_current": {
+      "surface": "proof",
+      "selector_key": "current",
+      "command": "agentic-workspace proof --target ./repo --current --format json"
+    },
+    "ownership_concern": {
+      "surface": "ownership",
+      "selector_key": "concern",
+      "command": "agentic-workspace ownership --target ./repo --concern <concern> --format json"
+    },
+    "ownership_path": {
+      "surface": "ownership",
+      "selector_key": "path",
+      "command": "agentic-workspace ownership --target ./repo --path <repo-path> --format json"
+    }
+  }
+}

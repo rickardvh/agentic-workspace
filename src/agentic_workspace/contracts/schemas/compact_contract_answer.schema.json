@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/compact-contract-answer.schema.json",
+  "title": "Compact Contract Answer",
+  "type": "object",
+  "required": [
+    "profile",
+    "surface",
+    "selector",
+    "matched",
+    "answer",
+    "refs"
+  ],
+  "properties": {
+    "profile": {
+      "type": "string"
+    },
+    "surface": {
+      "type": "string"
+    },
+    "selector": {
+      "type": "object"
+    },
+    "matched": {
+      "type": "boolean"
+    },
+    "answer": {},
+    "refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "target": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

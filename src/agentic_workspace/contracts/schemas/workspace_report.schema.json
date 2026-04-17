@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/workspace-report.schema.json",
+  "title": "Workspace Report",
+  "type": "object",
+  "required": [
+    "kind",
+    "schema",
+    "command",
+    "target",
+    "selected_modules",
+    "installed_modules",
+    "health",
+    "output_contract",
+    "findings",
+    "next_action",
+    "discovery",
+    "repo_friction",
+    "registry",
+    "config",
+    "reports"
+  ],
+  "properties": {
+    "kind": {
+      "const": "workspace-report/v1"
+    },
+    "schema": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "canonical_doc",
+        "command",
+        "shared_fields",
+        "report_principles"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "workspace-reporting-schema/v1"
+        },
+        "canonical_doc": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "shared_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "report_principles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "command": {
+      "type": "string"
+    },
+    "target": {
+      "type": "string"
+    },
+    "selected_modules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "installed_modules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "health": {
+      "type": "string"
+    },
+    "output_contract": {
+      "type": "object"
+    },
+    "findings": {
+      "type": "array"
+    },
+    "next_action": {
+      "type": "object"
+    },
+    "discovery": {
+      "type": "object"
+    },
+    "repo_friction": {
+      "type": "object"
+    },
+    "registry": {
+      "type": "array"
+    },
+    "config": {
+      "type": "object"
+    },
+    "reports": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": false
+}

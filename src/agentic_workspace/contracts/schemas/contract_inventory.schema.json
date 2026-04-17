@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/contract-inventory.schema.json",
+  "title": "Workspace Contract Inventory",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "canonical_doc",
+    "areas"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "workspace-contract-inventory/v1"
+    },
+    "canonical_doc": {
+      "type": "string"
+    },
+    "areas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "area",
+          "classification",
+          "owner_surface",
+          "consumers",
+          "notes"
+        ],
+        "properties": {
+          "area": {
+            "type": "string"
+          },
+          "classification": {
+            "enum": [
+              "declarative",
+              "procedural",
+              "derived"
+            ]
+          },
+          "owner_surface": {
+            "type": "string"
+          },
+          "consumers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

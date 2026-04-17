@@ -1,0 +1,30 @@
+{
+  "schema_version": "workspace-reporting-schema/v1",
+  "canonical_doc": "docs/reporting-contract.md",
+  "command": "agentic-workspace report --target ./repo --format json",
+  "shared_fields": [
+    "kind",
+    "schema",
+    "command",
+    "target",
+    "selected_modules",
+    "installed_modules",
+    "health",
+    "output_contract",
+    "findings",
+    "next_action",
+    "discovery",
+    "repo_friction",
+    "registry",
+    "config",
+    "reports"
+  ],
+  "report_principles": [
+    "keep the shared report compact and machine-readable",
+    "derive module and workspace summaries from canonical surfaces",
+    "prefer one report surface over reading raw module files first",
+    "keep findings, warnings, and next-action guidance explicitly separated",
+    "treat setup discovery as pre-write and pre-seed only",
+    "let optimization bias change rendering density, not canonical truth or execution method"
+  ]
+}

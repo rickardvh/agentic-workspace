@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from agentic_workspace import __version__
+from agentic_workspace.contract_tooling import compact_contract_manifest, proof_routes_manifest, report_contract_manifest
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 from agentic_workspace.workspace_output import (
     _display_path,
@@ -78,8 +79,6 @@ MEMORY_WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
 MEMORY_POINTER_BLOCK = (
     f"{MEMORY_WORKFLOW_MARKER_START}\nRead `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n{MEMORY_WORKFLOW_MARKER_END}"
 )
-COMPACT_CONTRACT_PROFILE = "compact-contract-answer/v1"
-COMPACT_CONTRACT_PROFILE_DOC = "docs/compact-contract-profile.md"
 DEFAULT_IMPROVEMENT_LATITUDE = "conservative"
 SUPPORTED_IMPROVEMENT_LATITUDES = (
     "none",
@@ -3288,36 +3287,7 @@ def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
 
 
 def _reporting_schema_payload() -> dict[str, Any]:
-    return {
-        "schema_version": "workspace-reporting-schema/v1",
-        "canonical_doc": "docs/reporting-contract.md",
-        "command": "agentic-workspace report --target ./repo --format json",
-        "shared_fields": [
-            "kind",
-            "schema",
-            "command",
-            "target",
-            "selected_modules",
-            "installed_modules",
-            "health",
-            "output_contract",
-            "findings",
-            "next_action",
-            "discovery",
-            "repo_friction",
-            "registry",
-            "config",
-            "reports",
-        ],
-        "report_principles": [
-            "keep the shared report compact and machine-readable",
-            "derive module and workspace summaries from canonical surfaces",
-            "prefer one report surface over reading raw module files first",
-            "keep findings, warnings, and next-action guidance explicitly separated",
-            "treat setup discovery as pre-write and pre-seed only",
-            "let optimization bias change rendering density, not canonical truth or execution method",
-        ],
-    }
+    return report_contract_manifest().copy()
 
 
 def _build_lifecycle_handoff_prompt(payload: dict[str, Any]) -> str:
@@ -3439,6 +3409,8 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
 
 
 def _defaults_payload() -> dict[str, Any]:
+    compact_manifest = compact_contract_manifest()
+    proof_manifest = proof_routes_manifest()
     validation_lanes = [
         {
             "id": "workspace_cli",
@@ -3555,23 +3527,10 @@ def _defaults_payload() -> dict[str, Any]:
             ],
         },
         "compact_contract_profile": {
-            "canonical_doc": COMPACT_CONTRACT_PROFILE_DOC,
+            "canonical_doc": compact_manifest["canonical_doc"],
             "rule": "When one bounded answer is enough, prefer a narrow selector over a whole-surface dump.",
-            "answer_shape": [
-                "profile",
-                "surface",
-                "selector",
-                "matched",
-                "answer",
-                "refs",
-            ],
-            "selectors": {
-                "defaults": "agentic-workspace defaults --section <section> --format json",
-                "proof_route": "agentic-workspace proof --target ./repo --route <id> --format json",
-                "proof_current": "agentic-workspace proof --target ./repo --current --format json",
-                "ownership_concern": "agentic-workspace ownership --target ./repo --concern <concern> --format json",
-                "ownership_path": "agentic-workspace ownership --target ./repo --path <repo-path> --format json",
-            },
+            "answer_shape": list(compact_manifest["answer_shape"]),
+            "selectors": {key: value["command"] for key, value in compact_manifest["selectors"].items()},
         },
         "lifecycle": {
             "primary_entrypoint": "agentic-workspace",
@@ -3802,19 +3761,10 @@ def _defaults_payload() -> dict[str, Any]:
             ],
         },
         "proof_surfaces": {
-            "canonical_doc": "docs/proof-surfaces-contract.md",
-            "command": "agentic-workspace proof --target ./repo --format json",
+            "canonical_doc": proof_manifest["canonical_doc"],
+            "command": proof_manifest["command"],
             "rule": "Use the narrowest proof lane that answers the current trust question.",
-            "default_routes": {
-                "workspace_proof": "agentic-workspace proof --target ./repo --format json",
-                "workspace_status": "agentic-workspace status --target ./repo",
-                "workspace_doctor": "agentic-workspace doctor --target ./repo",
-                "planning_surfaces": "uv run python scripts/check/check_planning_surfaces.py",
-                "maintainer_surfaces": "make maintainer-surfaces",
-                "source_payload_install": "uv run pytest tests/test_source_payload_operational_install.py",
-                "planning_payload": "uv run agentic-planning-bootstrap upgrade --target .",
-                "memory_payload": "uv run agentic-memory-bootstrap upgrade --target .",
-            },
+            "default_routes": dict(proof_manifest["default_routes"]),
             "secondary": [
                 "Use package-local tests or payload verification only when the trust question is package-specific.",
             ],
@@ -3949,8 +3899,9 @@ def _compact_contract_answer(
     matched: bool = True,
     target: str | None = None,
 ) -> dict[str, Any]:
+    compact_manifest = compact_contract_manifest()
     payload: dict[str, Any] = {
-        "profile": COMPACT_CONTRACT_PROFILE,
+        "profile": compact_manifest["profile"],
         "surface": surface,
         "selector": selector,
         "matched": matched,
@@ -3982,7 +3933,7 @@ def _emit_compact_answer_text(payload: dict[str, Any]) -> None:
 
 
 def _selector_refs(*, command: str, answer: Any) -> list[str]:
-    refs = [COMPACT_CONTRACT_PROFILE_DOC, command]
+    refs = [compact_contract_manifest()["canonical_doc"], command]
     if isinstance(answer, dict):
         for key in ("canonical_doc", "command", "path", "surface", "ledger_path"):
             value = answer.get(key)
@@ -4459,7 +4410,7 @@ def _select_proof_payload(
             "command": payload["default_routes"].get(route),
         }
         matched = answer["command"] is not None
-        refs = [COMPACT_CONTRACT_PROFILE_DOC, payload["command"], payload["canonical_doc"]]
+        refs = [compact_contract_manifest()["canonical_doc"], payload["command"], payload["canonical_doc"]]
         return _compact_contract_answer(
             surface="proof",
             selector={"route": route},
@@ -4470,7 +4421,7 @@ def _select_proof_payload(
         )
     if current_only:
         answer = payload["current"]
-        refs = [COMPACT_CONTRACT_PROFILE_DOC, payload["command"], payload["canonical_doc"]]
+        refs = [compact_contract_manifest()["canonical_doc"], payload["command"], payload["canonical_doc"]]
         return _compact_contract_answer(
             surface="proof",
             selector={"current": True},
@@ -4653,7 +4604,7 @@ def _select_ownership_payload(
 ) -> dict[str, Any]:
     if concern and repo_path:
         raise WorkspaceUsageError("ownership selectors are mutually exclusive; use either --concern or --path.")
-    refs = [COMPACT_CONTRACT_PROFILE_DOC, payload["command"], payload["canonical_doc"], payload["ledger_path"]]
+    refs = [compact_contract_manifest()["canonical_doc"], payload["command"], payload["canonical_doc"], payload["ledger_path"]]
     if concern:
         answer = next((entry for entry in payload["authority_surfaces"] if entry.get("concern") == concern), {"concern": concern})
         return _compact_contract_answer(

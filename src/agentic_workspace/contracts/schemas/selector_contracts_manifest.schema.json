@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/selector-contracts-manifest.schema.json",
+  "title": "Selector Contracts Manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "canonical_doc",
+    "profile",
+    "answer_shape",
+    "selectors"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "selector-contracts-manifest/v1"
+    },
+    "canonical_doc": {
+      "type": "string"
+    },
+    "profile": {
+      "type": "string"
+    },
+    "answer_shape": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "selectors": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "surface",
+          "selector_key",
+          "command"
+        ],
+        "properties": {
+          "surface": {
+            "type": "string"
+          },
+          "selector_key": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
