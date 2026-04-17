@@ -19,21 +19,21 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## GitHub Issue Intake
 
-- Latest open planning tranche: GitHub issues `#146`-`#171`, grouped below into ordered inactive candidate lanes.
+- Latest open planning tranche: GitHub issues `#146`-`#172`, grouped below into ordered inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/routing/capture tranches are complete.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/routing/capture tranches are complete.
 
 ## Candidate Lanes
 
-- Lane: Planner-to-worker orchestrator workflow optimization
-  ID: planner-worker-orchestrator-workflow
+- Lane: Local delegation target profiles and confidence hints
+  ID: local-delegation-target-profiles
   Priority: first
-  Issues: #171
-  Outcome: make lane-scale delegated execution cheaper than ad hoc prompting by deriving a reusable worker handoff from checked-in planning and pushing safe closure work down to bounded workers.
-  Why now: the planning-surface-clarity lane produced direct dogfood evidence about what planner-to-worker orchestration saves and what still wastes tokens.
-  Promotion signal: promote when orchestrated work still needs hand-authored worker prompts, duplicated context rereads, or too much orchestrator-owned closure work.
-  Suggested first slice: capture the optimized orchestrator workflow contract from the new evidence, including reusable handoff structure, minimal context refs, and worker-owned closure boundaries.
+  Issues: #172
+  Outcome: let orchestrators stop guessing blindly about how much to trust available delegation targets while keeping that knowledge local-only and advisory.
+  Why now: the first committed orchestrator-workflow dogfood pass showed the contract itself is usable, but target capability/confidence is still an uncovered cost class for internal and external executors.
+  Promotion signal: promote when the orchestrator still has to guess how detailed a handoff should be or which task classes are safe for a given local/external target.
+  Suggested first slice: define the smallest local-only target profile shape and reporting surface, then prove the orchestrator can use it as advisory input without becoming a scheduler.
 
 - Lane: Workspace optimization bias and setup findings
   ID: workspace-optimization-bias-findings

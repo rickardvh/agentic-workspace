@@ -71,6 +71,15 @@ recommended_upgrade_after_days = 30
 - Normal update execution stays behind `agentic-workspace`.
 - Config does not own active state, long instructions, free-form prompts, or scheduler semantics.
 
+## Delegated Workflow
+
+Use [`docs/orchestrator-workflow-contract.md`](docs/orchestrator-workflow-contract.md) for the agent-agnostic planner/worker contract that sits on top of this config.
+
+- `agentic-workspace.local.toml` may say whether internal delegation is supported or preferred, but it stays a capability/cost posture file, not a scheduler.
+- `agentic-planning-bootstrap handoff --format json` is the canonical worker-facing contract for the active delegated slice.
+- The same handoff should work whether the executor is another internal subagent, a local model, or an external CLI/API target.
+- The repo does not prescribe executor brand, vendor, or model name in checked-in policy.
+
 ## Mixed-Agent Expansion Discipline
 
 Future config expansion should stay narrow.
@@ -88,6 +97,7 @@ Future config expansion should stay narrow.
 - Persisted checked-in state should remain the primary way to make agent switching cheap; config should only tune stable preferences and capability asymmetries around that core contract.
 - Mixed-agent extensions should be justified by measured or repeatedly observed restart, handoff, or token-cost improvement rather than preference alone.
 - Those extensions should also stay aligned with the product boundary in [`docs/design-principles.md`](docs/design-principles.md): help the agent do the job, do not script the job.
+- If a future local-only confidence map is used to label delegation targets as stronger or weaker on a task class, keep it advisory and local-only; do not fold target confidence into repo-owned policy.
 
 ## Local Override Contract
 

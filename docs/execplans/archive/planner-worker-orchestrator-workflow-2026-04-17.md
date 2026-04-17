@@ -14,24 +14,24 @@
 ## Intent Continuity
 
 - Larger intended outcome: make delegated execution cheaper than ad hoc prompting while preserving checked-in continuity across agents, tools, subscriptions, and local models.
-- This slice completes the larger intended outcome: no
-- Continuation surface: ROADMAP.md
+- This slice completes the larger intended outcome: yes
+- Continuation surface: none
 - Parent lane: planner-worker-orchestrator-workflow
 
 ## Required Continuation
 
-- Required follow-on for the larger intended outcome: yes
-- Owner surface: ROADMAP.md
-- Activation trigger: when this lane either reveals another repeated workflow-cost class or leaves one unresolved boundary that still needs a later bounded slice.
+- Required follow-on for the larger intended outcome: no
+- Owner surface: none
+- Activation trigger: none
 
 ## Iterative Follow-Through
 
 - What this slice enabled: planning can emit a reusable delegated handoff contract and a bundled workflow for orchestrated execution instead of relying on handwritten prompts alone.
 - Intentionally deferred: any future runtime-specific adapter or CLI helper beyond the first agent-agnostic contract and skill.
-- Discovered implications: the first derived handoff is good enough for lane-level continuity but still too broad to be a perfect worker write-scope without an explicit slice assignment from the orchestrator.
-- Proof achieved now: the reusable handoff command, bundled skill, and relay/default-path reporting surfaces are implemented and queryable.
-- Validation still needed: one real delegated dogfood pass using the new workflow, then closure routing for any remaining workflow-cost class.
-- Next likely slice: dogfood the workflow on a bounded docs-only delegated slice, then decide whether narrow slice-assignment support or local target-capability notes should become the next candidate.
+- Discovered implications: the base handoff is strong enough to carry a delegated slice, but target capability confidence still belongs in a local-only advisory layer rather than in repo-owned planning policy.
+- Proof achieved now: the reusable handoff command, bundled skill, relay/config integration, and one real delegated docs slice all completed cleanly.
+- Validation still needed: none for this lane beyond archive and issue closure.
+- Next likely slice: promote `#172` if local target-confidence notes are worth productizing as the next delegation-cost reduction.
 
 ## Delegated Judgment
 
@@ -43,15 +43,15 @@
 ## Active Milestone
 
 - ID: planner-worker-workflow-contract
-- Status: in-progress
-- Scope: ship the first reusable delegated handoff contract and bundled workflow, then prove it on one real delegated slice.
+- Status: completed
+- Scope: shipped the first reusable delegated handoff contract and bundled workflow, then proved it on one real delegated slice.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Use the new handoff contract and skill on one bounded delegated docs slice, then capture the remaining workflow friction in checked-in evidence.
+- Archive this lane, close `#171`, and route the local target-confidence follow-on into `ROADMAP.md` as `#172`.
 
 ## Blockers
 
@@ -112,12 +112,13 @@
 
 ## Execution Summary
 
-- Outcome delivered: pending
-- Validation confirmed: pending
-- Follow-on routed to: pending
-- Resume from: current milestone
+- Outcome delivered: the repo now ships a formal orchestrator workflow contract, a reusable `agentic-planning-bootstrap handoff --format json` surface, a bundled `planning-orchestrator-workflow` skill, and front-door docs that explain how the local mixed-agent posture and active handoff fit together.
+- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`; `uv run pytest packages/planning/tests/test_installer.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace defaults --section relay --format json`; `uv run agentic-planning-bootstrap handoff --format json`.
+- Follow-on routed to: `docs/reviews/orchestrator-workflow-dogfood-2026-04-17.md`, GitHub issue `#172`, and `ROADMAP.md`.
+- Resume from: `#172` if local delegation-target capability/confidence support is promoted.
 
 ## Drift Log
 
 - 2026-04-17: Promoted from roadmap issue `#171` immediately after the planning-surface-clarity dogfood pass showed the workflow value was real but still too manual.
 - 2026-04-17: Core workflow tranche landed with a reusable handoff command, bundled orchestrator skill, and relay/config integration; next proof is a real delegated slice on top of that contract.
+- 2026-04-17: Delegated docs dogfood pass landed through the new workflow and confirmed the next uncovered cost class is local target-confidence, not repo-owned orchestration policy.
