@@ -19,21 +19,21 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## GitHub Issue Intake
 
-- Latest open planning tranche: GitHub issues `#146`-`#170`, grouped below into ordered inactive candidate lanes.
+- Latest open planning tranche: GitHub issues `#146`-`#171`, grouped below into ordered inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/routing/capture tranches are complete.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/routing/capture tranches are complete.
 
 ## Candidate Lanes
 
-- Lane: Planning surface clarity and routine recovery
-  ID: planning-surface-clarity-routine-recovery
+- Lane: Planner-to-worker orchestrator workflow optimization
+  ID: planner-worker-orchestrator-workflow
   Priority: first
-  Issues: #160, #162, #163, #164, #165
-  Outcome: make planning surfaces cheaper for agents to distinguish, recover from, and trust without broad prose rereads.
-  Why now: standing-intent is now settled enough that planning-surface meaning can be tightened against a stable surrounding contract.
-  Promotion signal: promote when ordinary work still needs raw planning-prose rereads or repeated inference to answer routine recovery questions.
-  Suggested first slice: audit repeated ambiguity and reread pressure, then define the minimum routine-recovery questions compact planning surfaces must answer cheaply.
+  Issues: #171
+  Outcome: make lane-scale delegated execution cheaper than ad hoc prompting by deriving a reusable worker handoff from checked-in planning and pushing safe closure work down to bounded workers.
+  Why now: the planning-surface-clarity lane produced direct dogfood evidence about what planner-to-worker orchestration saves and what still wastes tokens.
+  Promotion signal: promote when orchestrated work still needs hand-authored worker prompts, duplicated context rereads, or too much orchestrator-owned closure work.
+  Suggested first slice: capture the optimized orchestrator workflow contract from the new evidence, including reusable handoff structure, minimal context refs, and worker-owned closure boundaries.
 
 - Lane: Workspace optimization bias and setup findings
   ID: workspace-optimization-bias-findings

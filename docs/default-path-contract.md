@@ -33,14 +33,16 @@ Use `agentic-planning-bootstrap summary --format json` first when the question i
 
 The minimum questions are:
 
-- What is active right now? -> `planning_record`
-- What should I do next? -> `resumable_contract`
-- What larger chunk or queue owns follow-on? -> `hierarchy_contract`
-- What residue remains if this slice stops? -> `follow_through_contract`
-- When do I fall back to prose? -> only when the compact summary leaves the answer ambiguous
+| Question | Cheapest owner surface |
+| --- | --- |
+| What is active right now? | `planning_record` |
+| What should I do next? | `resumable_contract.current_next_action` |
+| What larger chunk or queue owns follow-on? | `hierarchy_contract` |
+| What residue remains if this slice stops? | `follow_through_contract` |
+| When do I fall back to prose? | only when the compact summary leaves the answer ambiguous |
 
 Keep these answers on the compact summary path before opening raw `TODO.md` or execplan prose.
-Use [`docs/execplans/README.md`](docs/execplans/README.md) for the meaning boundary behind those answers: machine-readable state owns restart-critical meanings, compact prose owns route guidance and stable framing, and raw execplan detail stays fallback-only.
+Use [`docs/execplans/README.md`](docs/execplans/README.md) for the meaning boundary and fallback pointer.
 
 The compact rule is:
 

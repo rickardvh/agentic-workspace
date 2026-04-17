@@ -8,9 +8,8 @@ Use `docs/candidate-lanes-contract.md` for the native `ROADMAP.md` lane shape wh
 Use `docs/planning-routing-contract.md` when deciding whether newly discovered work belongs in `ROADMAP.md`, `TODO.md`, `docs/execplans/`, or `docs/reviews/`.
 Use `python scripts/check/check_planning_surfaces.py` for advisory shape and drift warnings across `TODO.md`, active execplans, and `ROADMAP.md`.
 Use `promote-to-plan` and `archive-plan` as thin file-native helpers around the same checked-in contract.
-Use `docs/environment-recovery-contract.md` for the canonical way to express task-local recovery and environment assumptions without adding another plan section.
-Use `docs/intent-contract.md` for the compact machine-readable active intent contract exposed through `agentic-planning-bootstrap summary`.
-Use `docs/resumable-execution-contract.md` for the smaller current-state restart contract exposed through the same summary surface.
+Use `docs/environment-recovery-contract.md` for task-local recovery and environment assumptions.
+Use `docs/intent-contract.md` and `docs/resumable-execution-contract.md` for the compact planning summary contracts.
 Use `docs/execution-summary-contract.md` for the compact outcome shape that completed slices should leave behind before archive.
 Use `archive-plan --apply-cleanup` only when you want the helper to also remove completed TODO references and compress matching `ROADMAP.md` Active Handoff residue for the same archived thread.
 
