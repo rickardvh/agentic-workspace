@@ -34,6 +34,7 @@ The surrounding report payload keeps these fields separate:
 - `findings`
 - `next_action`
 - `discovery`
+- `standing_intent`
 - `repo_friction`
 - `registry`
 - `config`
@@ -57,6 +58,25 @@ Each candidate item carries:
 - `confidence`
 - `refs`
 
+## Standing Intent Shape
+
+The `standing_intent` object is the compact effective standing-intent view.
+
+It keeps:
+
+- `canonical_doc`
+- `schema_version`
+- `promotion_rule`
+- `classes`
+- `effective_view`
+
+Use it when the question is:
+
+- what durable repo guidance is currently in force?
+- which parts are policy, doctrine, active direction, durable understanding, or enforceable workflow?
+- which owner surface currently carries each class?
+- where should newly durable chat-borne guidance be promoted instead of left in chat?
+
 ## Usage
 
 Prefer:
@@ -70,6 +90,7 @@ Use the machine-readable report as the default combined-state inspection path wh
 - what modules are installed?
 - what is the combined workspace health?
 - what output/residue bias is shaping this report's rendering defaults?
+- what durable standing intent is currently in force and where does it come from?
 - what mixed-agent posture is in effect?
 - what explicit repo-friction hotspots exist right now?
 - what concept or routing surfaces are getting large enough to act as concept friction?
@@ -78,6 +99,7 @@ Use the machine-readable report as the default combined-state inspection path wh
 - what should happen next?
 - what state is each installed module in without opening its raw files first?
 - what existing repo surfaces look like durable Memory or Planning seed candidates?
+- what standing-intent class should a durable repo-wide instruction belong to?
 - what findings or warnings need attention?
 
 Use `agentic-workspace defaults --section intent --format json` when the question is confirmed versus interpreted intent; keep report for combined workspace state.
@@ -97,6 +119,7 @@ Only open raw module files or broader docs when the report points you to a follo
 - Do not require raw module files before the report when the report already answers the question.
 - Keep `output_contract` explicit when repo policy affects reporting density or rendered view style.
 - Keep findings, warnings, and next-action guidance separate.
+- Keep standing-intent reporting compact, source-attributed, and subordinate to the canonical owner surfaces.
 - Keep repo-friction evidence derived and queryable instead of turning it into a second editable state store.
 - When a repo already has a compatible generated hotspot artifact, prefer consuming it as additional evidence instead of requiring the workspace layer to own the analyzer.
 - When setup has already preserved compatible `repo_friction_evidence` findings, consume them as shared repo-friction evidence instead of forcing re-analysis.
@@ -108,6 +131,7 @@ Only open raw module files or broader docs when the report points you to a follo
 - Keep discovery read-only until a setup promotion explicitly decides to seed.
 - Keep `agentic-planning-bootstrap summary --format json` as the planning-side companion surface rather than stretching the workspace report into a second planning schema.
 - Let optimization bias change report density and rendered text style only; do not let it change report truth, execution posture, or module ownership semantics.
+- Treat standing-intent reporting as an inspection and routing surface, not as a new editable source of truth.
 
 ## Relationship To Lazy Discovery
 
@@ -116,3 +140,4 @@ Use [`docs/compact-contract-profile.md`](docs/compact-contract-profile.md) for t
 Use [`docs/lazy-discovery-measurements.md`](docs/lazy-discovery-measurements.md) when you want to check whether a narrow query is actually cheaper than a broad dump.
 
 Use `agentic-workspace setup --target ./repo --format json` when the report has already identified a bounded follow-through path and you want the public setup surface rather than the broader combined report.
+Use [`docs/standing-intent-contract.md`](docs/standing-intent-contract.md) for the standing-intent classes and owner mapping behind the effective report view.

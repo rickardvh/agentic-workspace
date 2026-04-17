@@ -108,6 +108,21 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
                 surface = item.get("surface", "")
                 reason = item.get("reason", "")
                 print(f"- {surface}: {reason}")
+    standing_intent = payload.get("standing_intent", {})
+    if isinstance(standing_intent, dict):
+        effective_view = standing_intent.get("effective_view", {})
+        if isinstance(effective_view, dict):
+            items = effective_view.get("items", [])
+            present_items = [
+                item for item in items if isinstance(item, dict) and item.get("status") == "present"
+            ]
+            if present_items:
+                print("Standing intent:")
+                for item in present_items:
+                    owner_surface = item.get("owner_surface", "")
+                    print(f"- {item.get('class', '')}: {item.get('summary', '')}")
+                    if owner_surface:
+                        print(f"  owner: {owner_surface}")
     findings = payload.get("findings", [])
     if isinstance(findings, list) and findings:
         print("Findings:")

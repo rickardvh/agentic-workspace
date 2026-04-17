@@ -13,7 +13,12 @@ from typing import Any
 
 from agentic_workspace import __version__
 from agentic_workspace.contract_tooling import compact_contract_manifest, proof_routes_manifest, report_contract_manifest
-from agentic_workspace.reporting_support import output_contract_payload, repo_friction_payload, setup_discovery_payload
+from agentic_workspace.reporting_support import (
+    output_contract_payload,
+    repo_friction_payload,
+    setup_discovery_payload,
+    standing_intent_payload,
+)
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 from agentic_workspace.workspace_output import (
     _display_path,
@@ -2396,6 +2401,19 @@ def _run_report_command(
         boundary_test_payload=_improvement_boundary_test_payload(),
         external_setup_findings_payload=_repo_friction_external_setup_findings_payload(target_root=target_root),
     )
+    standing_intent = standing_intent_payload(
+        target_root=target_root,
+        config_policy={
+            "improvement_latitude": config.improvement_latitude,
+            "improvement_latitude_source": config.improvement_latitude_source,
+            "optimization_bias": config.optimization_bias,
+            "optimization_bias_source": config.optimization_bias_source,
+            "workflow_artifact_profile": config.workflow_artifact_profile,
+            "workflow_artifact_profile_source": config.workflow_artifact_profile_source,
+        },
+        active_planning=_effective_active_direction_payload(module_reports=module_reports),
+        memory_installed="memory" in installed_modules,
+    )
     return {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -2413,11 +2431,39 @@ def _run_report_command(
         "findings": findings,
         "next_action": next_action,
         "discovery": discovery,
+        "standing_intent": standing_intent,
         "repo_friction": repo_friction,
         "registry": status_payload["registry"],
         "config": status_payload["config"],
         "reports": status_payload["reports"],
         "module_reports": module_reports,
+    }
+
+
+def _effective_active_direction_payload(*, module_reports: list[dict[str, Any]]) -> dict[str, Any] | None:
+    planning_report = next(
+        (
+            report
+            for report in module_reports
+            if isinstance(report, dict) and report.get("module") == "planning"
+        ),
+        None,
+    )
+    if not isinstance(planning_report, dict):
+        return None
+    planning_record = planning_report.get("active", {}).get("planning_record", {})
+    if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
+        return None
+    task = planning_record.get("task", {})
+    refs = planning_record.get("minimal_refs", [])
+    owner_surface = ""
+    if isinstance(task, dict):
+        owner_surface = str(task.get("surface") or "")
+    return {
+        "owner_surface": owner_surface or "TODO.md",
+        "summary": str(planning_record.get("next_action") or "Active planning carries the current bounded direction."),
+        "requested_outcome": str(planning_record.get("requested_outcome") or ""),
+        "refs": refs if isinstance(refs, list) else [],
     }
 
 

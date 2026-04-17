@@ -30,6 +30,8 @@ REPO_FRICTION_SKIP_DIRS = {
     "build",
 }
 
+STANDING_INTENT_CANONICAL_DOC = "docs/standing-intent-contract.md"
+
 
 def output_contract_payload(
     *,
@@ -56,6 +58,135 @@ def output_contract_payload(
         "residue_density": bias_payload["residue_density"],
         "rendered_view_style": bias_payload["rendered_view_style"],
         "must_not_change": list(bias_payload["does_not_affect"]),
+    }
+
+
+def standing_intent_payload(
+    *,
+    target_root: Path,
+    config_policy: dict[str, Any],
+    active_planning: dict[str, Any] | None,
+    memory_installed: bool,
+) -> dict[str, Any]:
+    classes = [
+        _standing_intent_class_payload(
+            intent_class="config_policy",
+            summary="Stable repo policy that should be queryable and preferably machine-readable.",
+            default_owner="agentic-workspace.toml",
+            authoritative_kind="policy",
+            durable_when=[
+                "the guidance should survive startup without rereading prose",
+                "the repo benefits from a compact machine-readable policy surface",
+            ],
+            transient_when=[
+                "the guidance is only local execution choreography",
+                "the rule is still too vague to encode as repo policy safely",
+            ],
+            stronger_home="config plus checks when verification is needed",
+        ),
+        _standing_intent_class_payload(
+            intent_class="repo_doctrine",
+            summary="Broad repo doctrine or design constraints that explain how the repo should be run.",
+            default_owner="AGENTS.md or docs/design-principles.md",
+            authoritative_kind="doctrine",
+            durable_when=[
+                "the guidance is repo-wide rather than task-local",
+                "the guidance should remain legible as shared doctrine rather than a toggle",
+            ],
+            transient_when=[
+                "the guidance only matters for the current active slice",
+                "the better owner is actually config, Memory, or checks",
+            ],
+            stronger_home="config policy or enforceable workflow when prose becomes too weak",
+        ),
+        _standing_intent_class_payload(
+            intent_class="durable_understanding",
+            summary="Repo-specific interpretive understanding that lowers rediscovery cost without becoming hard policy.",
+            default_owner="Memory",
+            authoritative_kind="interpretive-understanding",
+            durable_when=[
+                "future work would pay rediscovery cost without the note",
+                "the content explains repo-specific understanding rather than a hard rule",
+            ],
+            transient_when=[
+                "a canonical doc or stronger owner now explains it better",
+                "the note is only a local convenience or stale residue",
+            ],
+            stronger_home="canonical docs, config, or checks when the understanding becomes shared rule rather than interpretation",
+        ),
+        _standing_intent_class_payload(
+            intent_class="active_directional_intent",
+            summary="Bounded current direction that should steer work now without being mistaken for timeless doctrine.",
+            default_owner="TODO.md or docs/execplans/",
+            authoritative_kind="active-direction",
+            durable_when=[
+                "the direction still matters after the immediate chat turn",
+                "the repo needs a bounded active owner surface for continuation",
+            ],
+            transient_when=[
+                "the direction ends with the current local step",
+                "the work has already been completed or archived",
+            ],
+            stronger_home="doctrine, policy, or checks only after the direction stops being lane-local",
+        ),
+        _standing_intent_class_payload(
+            intent_class="enforceable_workflow",
+            summary="Guidance that should be verified through checks, validation commands, or workflow tooling instead of prose alone.",
+            default_owner="scripts/check/, validation workflows, or config plus checks",
+            authoritative_kind="enforceable",
+            durable_when=[
+                "the guidance should be verifiable rather than merely remembered",
+                "drift should be detectable through checks or validation",
+            ],
+            transient_when=[
+                "the guidance is still exploratory and not ready for enforcement",
+                "prose remains the strongest justified home for now",
+            ],
+            stronger_home="checks or validation workflows with doctrine left as explanation only",
+        ),
+        _standing_intent_class_payload(
+            intent_class="temporary_local_guidance",
+            summary="Useful local guidance that should stay transient unless repetition proves broader durable value.",
+            default_owner="current execution context only",
+            authoritative_kind="temporary",
+            durable_when=[
+                "none by default; promote only after repeated reminder cost or broader impact appears",
+            ],
+            transient_when=[
+                "the guidance ends with the current bounded step",
+                "the guidance is tool- or model-specific convenience only",
+            ],
+            stronger_home="reclassify into one of the durable standing-intent classes when warranted",
+        ),
+    ]
+
+    effective_items = [
+        _config_policy_effective_item(config_policy=config_policy),
+        _repo_doctrine_effective_item(target_root=target_root),
+        _durable_understanding_effective_item(memory_installed=memory_installed),
+        _active_directional_intent_effective_item(active_planning=active_planning),
+        _enforceable_workflow_effective_item(target_root=target_root),
+    ]
+    in_force_count = sum(1 for item in effective_items if item["status"] == "present")
+    return {
+        "canonical_doc": STANDING_INTENT_CANONICAL_DOC,
+        "schema_version": "standing-intent-report/v1",
+        "promotion_rule": (
+            "Promote durable repo-wide guidance into the strongest existing owner surface instead of leaving it in chat."
+        ),
+        "classes": classes,
+        "effective_view": {
+            "sources_considered": [
+                "agentic-workspace.toml",
+                "AGENTS.md",
+                "docs/design-principles.md",
+                "TODO.md and docs/execplans/",
+                "Memory report/install state",
+                "scripts/check/",
+            ],
+            "in_force_count": in_force_count,
+            "items": effective_items,
+        },
     }
 
 
@@ -165,6 +296,150 @@ def setup_discovery_payload(
         "memory_candidates": memory_candidates,
         "planning_candidates": planning_candidates,
         "ambiguous": ambiguous,
+    }
+
+
+def _standing_intent_class_payload(
+    *,
+    intent_class: str,
+    summary: str,
+    default_owner: str,
+    authoritative_kind: str,
+    durable_when: list[str],
+    transient_when: list[str],
+    stronger_home: str,
+) -> dict[str, Any]:
+    return {
+        "class": intent_class,
+        "summary": summary,
+        "default_owner": default_owner,
+        "authoritative_kind": authoritative_kind,
+        "durable_when": durable_when,
+        "transient_when": transient_when,
+        "stronger_home": stronger_home,
+    }
+
+
+def _config_policy_effective_item(*, config_policy: dict[str, Any]) -> dict[str, Any]:
+    policy_items = [
+        {
+            "key": key,
+            "value": value,
+            "source": source,
+        }
+        for key, value, source in (
+            (
+                "improvement_latitude",
+                str(config_policy["improvement_latitude"]),
+                str(config_policy["improvement_latitude_source"]),
+            ),
+            (
+                "optimization_bias",
+                str(config_policy["optimization_bias"]),
+                str(config_policy["optimization_bias_source"]),
+            ),
+            (
+                "workflow_artifact_profile",
+                str(config_policy["workflow_artifact_profile"]),
+                str(config_policy["workflow_artifact_profile_source"]),
+            ),
+        )
+    ]
+    repo_owned_items = [item for item in policy_items if item["source"] == "repo-config"]
+    status = "present" if repo_owned_items else "default-only"
+    summary = "Workspace config carries stable repo policy currently in force."
+    if status == "default-only":
+        summary = "No repo-owned standing config policy is set yet; only product defaults are in force."
+    return {
+        "class": "config_policy",
+        "status": status,
+        "authority": "authoritative-policy",
+        "owner_surface": "agentic-workspace.toml",
+        "summary": summary,
+        "items": policy_items,
+    }
+
+
+def _repo_doctrine_effective_item(*, target_root: Path) -> dict[str, Any]:
+    refs = [path for path in ("AGENTS.md", "docs/design-principles.md") if (target_root / path).exists()]
+    status = "present" if refs else "absent"
+    summary = "Repo-owned startup guidance and design doctrine carry standing explanatory intent."
+    if status == "absent":
+        summary = "No canonical repo-doctrine surface was found."
+    return {
+        "class": "repo_doctrine",
+        "status": status,
+        "authority": "authoritative-doctrine",
+        "owner_surface": refs[0] if refs else "docs/design-principles.md",
+        "summary": summary,
+        "refs": refs,
+    }
+
+
+def _durable_understanding_effective_item(*, memory_installed: bool) -> dict[str, Any]:
+    return {
+        "class": "durable_understanding",
+        "status": "present" if memory_installed else "absent",
+        "authority": "interpretive-understanding",
+        "owner_surface": "memory/",
+        "summary": (
+            "Memory remains the durable-understanding home for repo-specific interpretive knowledge."
+            if memory_installed
+            else "Memory is not installed, so durable-understanding guidance has no dedicated owner surface yet."
+        ),
+        "refs": (
+            [
+                "memory/",
+                "agentic-memory-bootstrap report --target ./repo --format json",
+            ]
+            if memory_installed
+            else []
+        ),
+    }
+
+
+def _active_directional_intent_effective_item(*, active_planning: dict[str, Any] | None) -> dict[str, Any]:
+    if not active_planning:
+        return {
+            "class": "active_directional_intent",
+            "status": "absent",
+            "authority": "active-direction",
+            "owner_surface": "TODO.md",
+            "summary": "No active planning slice is in force right now.",
+            "refs": ["TODO.md", "docs/execplans/"],
+        }
+    refs = [ref for ref in active_planning.get("refs", []) if isinstance(ref, str) and ref]
+    return {
+        "class": "active_directional_intent",
+        "status": "present",
+        "authority": "active-direction",
+        "owner_surface": str(active_planning.get("owner_surface") or "TODO.md"),
+        "summary": str(active_planning.get("summary") or "Active planning carries the current bounded direction."),
+        "requested_outcome": str(active_planning.get("requested_outcome") or ""),
+        "refs": refs,
+    }
+
+
+def _enforceable_workflow_effective_item(*, target_root: Path) -> dict[str, Any]:
+    refs = [
+        path
+        for path in (
+            "scripts/check/check_planning_surfaces.py",
+            "scripts/check/check_source_payload_operational_install.py",
+        )
+        if (target_root / path).exists()
+    ]
+    status = "present" if refs else "absent"
+    summary = "Checks and validation scripts provide enforceable workflow homes for standing guidance."
+    if status == "absent":
+        summary = "No enforceable workflow surface was found."
+    return {
+        "class": "enforceable_workflow",
+        "status": status,
+        "authority": "enforceable",
+        "owner_surface": refs[0] if refs else "scripts/check/",
+        "summary": summary,
+        "refs": refs,
     }
 
 

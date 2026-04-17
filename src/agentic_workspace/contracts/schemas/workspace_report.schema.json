@@ -15,6 +15,7 @@
     "findings",
     "next_action",
     "discovery",
+    "standing_intent",
     "repo_friction",
     "registry",
     "config",
@@ -90,6 +91,9 @@
       "type": "object"
     },
     "discovery": {
+      "type": "object"
+    },
+    "standing_intent": {
       "type": "object"
     },
     "repo_friction": {

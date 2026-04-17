@@ -1808,6 +1808,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["schema"]["schema_version"] == "workspace-reporting-schema/v1"
     assert payload["schema"]["command"] == "agentic-workspace report --target ./repo --format json"
     assert "discovery" in payload["schema"]["shared_fields"]
+    assert "standing_intent" in payload["schema"]["shared_fields"]
     assert "repo_friction" in payload["schema"]["shared_fields"]
     assert "output_contract" in payload["schema"]["shared_fields"]
     assert "module_reports" in payload["schema"]["shared_fields"]
@@ -1831,6 +1832,14 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     )
     assert any(item["surface"] == "TODO.md" for item in payload["discovery"]["planning_candidates"])
     assert any(item["surface"] == "ROADMAP.md" for item in payload["discovery"]["ambiguous"])
+    assert payload["standing_intent"]["canonical_doc"] == "docs/standing-intent-contract.md"
+    assert payload["standing_intent"]["effective_view"]["in_force_count"] == 3
+    standing_classes = {item["class"]: item for item in payload["standing_intent"]["effective_view"]["items"]}
+    assert standing_classes["config_policy"]["status"] == "default-only"
+    assert standing_classes["repo_doctrine"]["status"] == "present"
+    assert standing_classes["durable_understanding"]["status"] == "present"
+    assert standing_classes["active_directional_intent"]["status"] == "absent"
+    assert standing_classes["enforceable_workflow"]["status"] == "present"
     assert payload["repo_friction"]["policy_mode"] == "conservative"
     assert payload["repo_friction"]["owner_surface"] == "workspace"
     assert payload["repo_friction"]["initiative_posture"] == "local-touched-scope-only"
@@ -1849,6 +1858,77 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert planning_report["schema"]["command"] == "agentic-planning-bootstrap report --format json"
     assert memory_report["schema"]["command"] == "agentic-memory-bootstrap report --target ./repo --format json"
     assert payload["config"]["mixed_agent"]["status"] == "reporting-only"
+
+
+def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    (target / "TODO.md").write_text(
+        "# TODO\n\n## Next\n\n- ID: standing-intent-slice\n"
+        "  Status: in-progress\n"
+        "  Surface: docs/execplans/standing-intent-slice.md\n"
+        "  Why now: standing intent needs a durable owner.\n",
+        encoding="utf-8",
+    )
+    (target / "docs" / "execplans" / "standing-intent-slice.md").write_text(
+        "# Standing Intent Slice\n\n"
+        "## Goal\n\n"
+        "- Give standing intent a durable owner.\n\n"
+        "## Non-Goals\n\n"
+        "- None.\n\n"
+        "## Intent Continuity\n\n"
+        "- Larger intended outcome: make durable repo guidance recoverable.\n"
+        "- This slice completes the larger intended outcome: no\n"
+        "- Continuation surface: ROADMAP.md candidate lane `standing-intent-durability`\n\n"
+        "## Required Continuation\n\n"
+        "- Required follow-on for the larger intended outcome: yes\n"
+        "- Owner surface: ROADMAP.md\n"
+        "- Activation trigger: precedence rules still need to land.\n\n"
+        "## Iterative Follow-Through\n\n"
+        "- What this slice enabled: standing intent is classifiable.\n"
+        "- Intentionally deferred: precedence rules.\n"
+        "- Discovered implications: reporting should surface effective standing intent.\n"
+        "- Proof achieved now: pending\n"
+        "- Validation still needed: pending\n"
+        "- Next likely slice: precedence and supersession.\n\n"
+        "## Delegated Judgment\n\n"
+        "- Requested outcome: Give standing intent a durable owner.\n"
+        "- Hard constraints: Keep the first slice compact.\n"
+        "- Agent may decide locally: the smallest report shape.\n"
+        "- Escalate when: a new source of truth would be required.\n\n"
+        "## Active Milestone\n\n"
+        "- Status: in-progress\n"
+        "- Scope: ship standing-intent classification and reporting.\n"
+        "- Ready: ready\n"
+        "- Blocked: none\n"
+        "- optional_deps: none\n\n"
+        "## Immediate Next Action\n\n"
+        "- Add the standing-intent report view.\n\n"
+        "## Blockers\n\n"
+        "- None.\n\n"
+        "## Touched Paths\n\n"
+        "- docs/standing-intent-contract.md\n\n"
+        "## Invariants\n\n"
+        "- Standing intent stays subordinate to owner surfaces.\n\n"
+        "## Validation Commands\n\n"
+        "- uv run agentic-workspace report --target ./repo --format json\n\n"
+        "## Completion Criteria\n\n"
+        "- Standing intent is visible in reporting.\n\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    standing_classes = {item["class"]: item for item in payload["standing_intent"]["effective_view"]["items"]}
+    active_direction = standing_classes["active_directional_intent"]
+    assert active_direction["status"] == "present"
+    assert active_direction["owner_surface"] == "docs/execplans/standing-intent-slice.md"
+    assert active_direction["summary"] == "Add the standing-intent report view."
+    assert active_direction["requested_outcome"] == "Give standing intent a durable owner."
 
 
 def test_report_surfaces_agent_efficiency_output_contract_from_repo_config(tmp_path: Path, capsys) -> None:

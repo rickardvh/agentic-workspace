@@ -14,6 +14,7 @@
     "findings",
     "next_action",
     "discovery",
+    "standing_intent",
     "repo_friction",
     "registry",
     "config",
@@ -26,6 +27,7 @@
     "prefer one report surface over reading raw module files first",
     "keep findings, warnings, and next-action guidance explicitly separated",
     "treat setup discovery as pre-write and pre-seed only",
+    "surface effective standing intent with source provenance instead of leaving it implicit in chat",
     "let optimization bias change rendering density, not canonical truth or execution method"
   ]
 }
