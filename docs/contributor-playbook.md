@@ -17,12 +17,14 @@ Use `docs/ownership-authority-contract.md` when the missing judgment is who owns
 
 ## Start Here
 
+Default startup path for an agent maintainer:
+
 1. Read `AGENTS.md`.
 2. Read `TODO.md`.
 3. If you need the current planning state, ask `agentic-planning-bootstrap summary --format json` before opening raw planning files.
 4. If you need the combined workspace state, ask `agentic-workspace report --target ./repo --format json` before reading raw module files.
 5. If `TODO.md` points at an active execplan and the compact surfaces are insufficient, read that plan before editing code.
-6. Load package-local docs only for the package you will touch.
+6. Read package-local `AGENTS.md` only for the package you will touch.
 7. Use this playbook to pick the right ownership surface and narrow validation lane.
 
 Prefer repository-native state over chat-only context. If a follow-up matters after the current turn, record it in planning or memory instead of relying on conversational residue.
