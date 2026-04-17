@@ -33,7 +33,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
   Outcome: make durable repo intent classifiable, recoverable, and promotable into stronger enforcement and reporting.
   Why now: the repo keeps generating chat-borne guidance that needs a durable home and precedence rules.
   Promotion signal: promote when the repo can carry standing intent without ambiguity between doctrine, policy, and enforcement surfaces.
-  Suggested first slice: add precedence and supersession rules, then tighten promotion into stronger enforcement.
+  Suggested first slice: tighten promotion from doctrine and policy into stronger enforcement when prose is too weak.
 
 - Lane: Workspace optimization bias and setup findings
   ID: workspace-optimization-bias-findings

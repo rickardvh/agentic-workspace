@@ -112,6 +112,9 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
     if isinstance(standing_intent, dict):
         effective_view = standing_intent.get("effective_view", {})
         if isinstance(effective_view, dict):
+            conflict_rule = effective_view.get("conflict_rule")
+            if conflict_rule:
+                print(f"Standing intent rule: {conflict_rule}")
             items = effective_view.get("items", [])
             present_items = [
                 item for item in items if isinstance(item, dict) and item.get("status") == "present"

@@ -67,6 +67,8 @@ It keeps:
 - `canonical_doc`
 - `schema_version`
 - `promotion_rule`
+- `precedence_order`
+- `supersession_rules`
 - `classes`
 - `effective_view`
 
@@ -75,6 +77,7 @@ Use it when the question is:
 - what durable repo guidance is currently in force?
 - which parts are policy, doctrine, active direction, durable understanding, or enforceable workflow?
 - which owner surface currently carries each class?
+- what rule resolves conflicts across those surfaces?
 - where should newly durable chat-borne guidance be promoted instead of left in chat?
 
 ## Usage

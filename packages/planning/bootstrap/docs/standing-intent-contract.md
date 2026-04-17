@@ -130,6 +130,35 @@ Keep it transient when any of these are true:
 - `active_directional_intent` may harden into doctrine, policy, or checks only after it stops being merely lane-local.
 - `durable_understanding` should shrink or move when a stable canonical doc or stronger enforcement now explains it better.
 
+## Precedence Order
+
+When standing-intent surfaces conflict, use this first compact precedence order:
+
+1. explicit current human instruction
+2. active directional intent for the current bounded lane
+3. checked-in config policy
+4. enforceable workflow or validation/check surfaces
+5. standing repo doctrine
+6. durable interpretive understanding such as Memory
+7. superseded residue kept only for history or explanation
+
+Interpret this compactly:
+
+- current human instruction can always redirect the current work
+- active lane-local direction may narrow broader doctrine for the current slice
+- active lane-local direction should not silently override checked-in hard policy
+- config and enforceable workflow outrank broader doctrine when the repo has chosen a machine-readable or verifiable rule
+- Memory informs interpretation but should not overrule clearer doctrine or policy
+
+## Supersession Rules
+
+Use these first supersession rules:
+
+- newer durable guidance in the same owner surface replaces older guidance for the same concern
+- when the same concern moves into a stronger home such as config or checks, that stronger home becomes authoritative and older prose becomes explanatory or should shrink
+- active directional intent is slice-scoped; it may temporarily narrow doctrine, but it does not rewrite repo-wide policy after the slice ends
+- explicitly superseded or archived residue may remain for history, but it should stop governing current work
+
 ## First Effective View
 
 Use `agentic-workspace report --target ./repo --format json` for the first compact effective standing-intent view.
@@ -140,6 +169,7 @@ That view should answer, without broad rereading:
 - which surfaces own them
 - what is authoritative policy versus doctrine versus interpretive understanding
 - what active directional intent currently matters
+- what precedence order should resolve conflicts among those surfaces
 
 ## Boundaries
 

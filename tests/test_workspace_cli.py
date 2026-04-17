@@ -1833,6 +1833,11 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert any(item["surface"] == "TODO.md" for item in payload["discovery"]["planning_candidates"])
     assert any(item["surface"] == "ROADMAP.md" for item in payload["discovery"]["ambiguous"])
     assert payload["standing_intent"]["canonical_doc"] == "docs/standing-intent-contract.md"
+    assert payload["standing_intent"]["precedence_order"][0]["source"] == "explicit_current_human_instruction"
+    assert payload["standing_intent"]["precedence_order"][1]["source"] == "active_directional_intent"
+    assert payload["standing_intent"]["precedence_order"][2]["source"] == "config_policy"
+    assert payload["standing_intent"]["supersession_rules"][0]["rule"] == "newer_same_owner_replaces_older"
+    assert "checked-in policy" in payload["standing_intent"]["effective_view"]["conflict_rule"]
     assert payload["standing_intent"]["effective_view"]["in_force_count"] == 3
     standing_classes = {item["class"]: item for item in payload["standing_intent"]["effective_view"]["items"]}
     assert standing_classes["config_policy"]["status"] == "default-only"
@@ -1929,6 +1934,10 @@ def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path,
     assert active_direction["owner_surface"] == "docs/execplans/standing-intent-slice.md"
     assert active_direction["summary"] == "Add the standing-intent report view."
     assert active_direction["requested_outcome"] == "Give standing intent a durable owner."
+    assert payload["standing_intent"]["precedence_order"][1]["rule"] == (
+        "Active planning direction governs the current bounded slice unless it conflicts with checked-in hard policy."
+    )
+    assert payload["standing_intent"]["supersession_rules"][2]["rule"] == "active_lane_direction_is_slice_scoped"
 
 
 def test_report_surfaces_agent_efficiency_output_contract_from_repo_config(tmp_path: Path, capsys) -> None:

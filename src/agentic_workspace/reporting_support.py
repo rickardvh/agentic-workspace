@@ -174,8 +174,15 @@ def standing_intent_payload(
         "promotion_rule": (
             "Promote durable repo-wide guidance into the strongest existing owner surface instead of leaving it in chat."
         ),
+        "precedence_order": _standing_intent_precedence_order(),
+        "supersession_rules": _standing_intent_supersession_rules(),
         "classes": classes,
         "effective_view": {
+            "conflict_rule": (
+                "Explicit current human instruction outranks all durable standing intent. Within durable repo state, "
+                "active lane-local direction may narrow broader doctrine for the current slice, but checked-in policy "
+                "and enforceable workflow still outrank broader interpretive guidance."
+            ),
             "sources_considered": [
                 "agentic-workspace.toml",
                 "AGENTS.md",
@@ -318,6 +325,74 @@ def _standing_intent_class_payload(
         "transient_when": transient_when,
         "stronger_home": stronger_home,
     }
+
+
+def _standing_intent_precedence_order() -> list[dict[str, Any]]:
+    return [
+        {
+            "rank": 1,
+            "source": "explicit_current_human_instruction",
+            "authority": "human-current-intent",
+            "rule": "Current explicit user direction outranks durable standing intent when they conflict.",
+        },
+        {
+            "rank": 2,
+            "source": "active_directional_intent",
+            "authority": "current-lane-direction",
+            "rule": "Active planning direction governs the current bounded slice unless it conflicts with checked-in hard policy.",
+        },
+        {
+            "rank": 3,
+            "source": "config_policy",
+            "authority": "checked-in-policy",
+            "rule": "Checked-in config policy outranks broader doctrine and interpretive understanding.",
+        },
+        {
+            "rank": 4,
+            "source": "enforceable_workflow",
+            "authority": "verified-workflow",
+            "rule": "Checks and validation rules enforce standing guidance once the repo chooses verification over prose-only handling.",
+        },
+        {
+            "rank": 5,
+            "source": "repo_doctrine",
+            "authority": "standing-doctrine",
+            "rule": "Broad doctrine guides normal work unless a higher-precedence surface narrows or replaces it.",
+        },
+        {
+            "rank": 6,
+            "source": "durable_understanding",
+            "authority": "interpretive-understanding",
+            "rule": "Memory and similar durable understanding inform interpretation but should not override clearer policy or doctrine.",
+        },
+        {
+            "rank": 7,
+            "source": "superseded_residue",
+            "authority": "historical-only",
+            "rule": "Older superseded residue may remain as explanation or archive context but should not govern current work.",
+        },
+    ]
+
+
+def _standing_intent_supersession_rules() -> list[dict[str, Any]]:
+    return [
+        {
+            "rule": "newer_same_owner_replaces_older",
+            "summary": "When two standing instructions live in the same owner surface for the same concern, the newer or more specific checked-in instruction replaces the older one.",
+        },
+        {
+            "rule": "stronger_home_replaces_weaker_for_same_concern",
+            "summary": "When the same concern moves from doctrine or understanding into config or enforceable workflow, the stronger home becomes authoritative and the older prose becomes explanatory or should shrink.",
+        },
+        {
+            "rule": "active_lane_direction_is_slice_scoped",
+            "summary": "Active directional intent may narrow broader doctrine for the current slice, but it should not silently rewrite repo-wide policy beyond that slice.",
+        },
+        {
+            "rule": "superseded_residue_should_stop_governing",
+            "summary": "Archived or explicitly superseded residue may remain for history, but reporting should treat it as non-authoritative once a clearer current owner exists.",
+        },
+    ]
 
 
 def _config_policy_effective_item(*, config_policy: dict[str, Any]) -> dict[str, Any]:
