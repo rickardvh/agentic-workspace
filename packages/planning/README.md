@@ -144,6 +144,7 @@ It also defines the bounded-initiative rule: improve means locally, but do not s
 `docs/execution-summary-contract.md` defines the compact completion summary that archived slices should leave behind.
 
 For active planning, `agentic-planning-bootstrap summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. `active_contract` and `resumable_contract` remain thinner views over that record.
+For compact module-state reporting without opening raw planning files first, use `agentic-planning-bootstrap report --format json`. It stays derived from the same canonical planning state and does not create a second state store.
 
 Use a direct task in `TODO.md` when the work is small enough to finish in one coherent pass and does not need milestone sequencing, blocker tracking, or a wider validation story.
 

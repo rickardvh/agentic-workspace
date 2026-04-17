@@ -1810,6 +1810,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "discovery" in payload["schema"]["shared_fields"]
     assert "repo_friction" in payload["schema"]["shared_fields"]
     assert "output_contract" in payload["schema"]["shared_fields"]
+    assert "module_reports" in payload["schema"]["shared_fields"]
     assert payload["selected_modules"] == ["planning", "memory"]
     assert payload["installed_modules"] == ["planning", "memory"]
     assert payload["health"] == "healthy"
@@ -1842,6 +1843,11 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["repo_friction"]["concept_surface_hotspots"]["threshold_lines"] == 200
     assert payload["repo_friction"]["external_evidence"] == []
     assert payload["reports"][0]["module"] == "planning"
+    assert {report["module"] for report in payload["module_reports"]} == {"planning", "memory"}
+    planning_report = next(report for report in payload["module_reports"] if report["module"] == "planning")
+    memory_report = next(report for report in payload["module_reports"] if report["module"] == "memory")
+    assert planning_report["schema"]["command"] == "agentic-planning-bootstrap report --format json"
+    assert memory_report["schema"]["command"] == "agentic-memory-bootstrap report --target ./repo --format json"
     assert payload["config"]["mixed_agent"]["status"] == "reporting-only"
 
 

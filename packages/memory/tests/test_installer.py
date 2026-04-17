@@ -1970,6 +1970,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     route_args = parser.parse_args(["route", "--files", "src/app.py"])
     sync_args = parser.parse_args(["sync-memory", "--notes", "memory/index.md"])
     promotion_args = parser.parse_args(["promotion-report", "--notes", "memory/domains/api.md", "--mode", "remediation"])
+    report_args = parser.parse_args(["report", "--target", ".", "--format", "json"])
     verify_args = parser.parse_args(["verify-payload", "--format", "json"])
     install_args = parser.parse_args(
         [
@@ -2002,6 +2003,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     assert sync_args.command == "sync-memory"
     assert promotion_args.command == "promotion-report"
     assert promotion_args.mode == "remediation"
+    assert report_args.command == "report"
     assert verify_args.command == "verify-payload"
     assert install_args.project_purpose == "purpose"
     assert install_args.policy_profile == "strict-doc-ownership"
@@ -2116,6 +2118,21 @@ def test_memory_freshness_reports_current_planning_state_residue(tmp_path: Path)
     assert "memory/current/project-state.md" in result.stdout
 
 
+def test_memory_report_derives_compact_module_state(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+
+    report = installer.memory_report(target=target)
+
+    assert report["kind"] == "memory-module-report/v1"
+    assert report["schema"]["command"] == "agentic-memory-bootstrap report --target ./repo --format json"
+    assert report["status"]["note_count"] >= 1
+    assert report["status"]["current_note_count"] >= 2
+    assert "current_notes" in report["active"]
+    assert "manual_review_count" in report["trust"]
+
+
 def test_cli_version_flag_prints_package_version(capsys) -> None:
     with pytest.raises(SystemExit) as excinfo:
         cli.main(["--version"])
@@ -2140,6 +2157,7 @@ def test_cli_version_flag_prints_package_version(capsys) -> None:
         (["route", "--target", ".", "--files", "src/app.py", "--format", "json"], True),
         (["sync-memory", "--target", ".", "--files", "src/app.py", "--format", "json"], True),
         (["promotion-report", "--target", ".", "--notes", "memory/index.md", "--mode", "remediation", "--format", "json"], True),
+        (["report", "--target", ".", "--format", "json"], True),
         (["upgrade", "--target", ".", "--dry-run", "--format", "json"], True),
         (["uninstall", "--target", ".", "--dry-run", "--format", "json"], True),
         (["bootstrap-cleanup", "--target", ".", "--format", "json"], True),

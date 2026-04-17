@@ -38,6 +38,7 @@ The surrounding report payload keeps these fields separate:
 - `registry`
 - `config`
 - `reports`
+- `module_reports`
 
 ## Discovery Shape
 
@@ -75,6 +76,7 @@ Use the machine-readable report as the default combined-state inspection path wh
 - what compatible external hotspot artifacts already exist that the workspace can consume instead of recomputing everything itself?
 - what agent-produced setup findings have already been preserved as repo-friction evidence?
 - what should happen next?
+- what state is each installed module in without opening its raw files first?
 - what existing repo surfaces look like durable Memory or Planning seed candidates?
 - what findings or warnings need attention?
 
@@ -101,6 +103,7 @@ Only open raw module files or broader docs when the report points you to a follo
 - Keep repo-friction policy and evidence as shared workspace-level concerns rather than introducing a new core module for them.
 - Keep reporting-only repo-friction follow-through bounded to report output, review output, or already-owned planning residue instead of auto-promoting it into active work.
 - Keep module reports compact and derived.
+- Prefer `agentic-planning-bootstrap report --format json` and `agentic-memory-bootstrap report --format json` when the question is module state alone rather than combined workspace state.
 - Keep concern-shaped subobjects narrow enough that one question does not force unrelated contract domains to load.
 - Keep discovery read-only until a setup promotion explicitly decides to seed.
 - Keep `agentic-planning-bootstrap summary --format json` as the planning-side companion surface rather than stretching the workspace report into a second planning schema.

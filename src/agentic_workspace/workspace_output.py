@@ -117,6 +117,13 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
             module = f"[{finding['module']}] " if finding.get("module") else ""
             path = f"{finding['path']}: " if finding.get("path") else ""
             print(f"- {finding.get('severity', 'info')}: {module}{path}{finding.get('message', '')}")
+    module_reports = payload.get("module_reports", [])
+    if isinstance(module_reports, list) and module_reports:
+        print("Module reports:")
+        for report in module_reports:
+            if not isinstance(report, dict):
+                continue
+            print(f"- {report.get('module', '')}: {report.get('health', 'unknown')}")
 
 
 def _emit_setup_text(payload: dict[str, Any]) -> None:

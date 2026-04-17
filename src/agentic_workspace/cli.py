@@ -2362,6 +2362,9 @@ def _run_report_command(
     descriptors: dict[str, ModuleDescriptor],
     config: WorkspaceConfig,
 ) -> dict[str, Any]:
+    from repo_memory_bootstrap.installer import memory_report
+    from repo_planning_bootstrap.installer import planning_report
+
     status_payload = _run_lifecycle_command(
         command_name="status",
         target_root=target_root,
@@ -2401,6 +2404,24 @@ def _run_report_command(
                 path=warning.get("path"),
                 message=str(warning.get("message", "")),
             )
+    module_reports: list[dict[str, Any]] = []
+    for module_name in selected_modules:
+        if module_name == "planning":
+            module_report = planning_report(target=target_root)
+        elif module_name == "memory":
+            module_report = memory_report(target=target_root)
+        else:
+            continue
+        module_reports.append(module_report)
+        for finding in module_report.get("findings", []):
+            if not isinstance(finding, dict):
+                continue
+            _add_finding(
+                severity=str(finding.get("severity", "info")),
+                module=module_name,
+                path=str(finding.get("path")) if finding.get("path") else None,
+                message=str(finding.get("message", "")),
+            )
     next_steps = list(status_payload.get("next_steps", []))
     next_action = {
         "summary": next_steps[0] if next_steps else "No immediate action",
@@ -2425,6 +2446,7 @@ def _run_report_command(
         "registry": status_payload["registry"],
         "config": status_payload["config"],
         "reports": status_payload["reports"],
+        "module_reports": module_reports,
     }
 
 

@@ -455,6 +455,86 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
     }
 
 
+def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
+    summary = planning_summary(target=target)
+    planning_record = summary.get("planning_record", {})
+    active_contract = summary.get("active_contract", {})
+    resumable_contract = summary.get("resumable_contract", {})
+    follow_through_contract = summary.get("follow_through_contract", {})
+    warnings = list(summary.get("warnings", []))
+    findings = [
+        {
+            "severity": "warning",
+            "path": warning.get("path"),
+            "message": warning.get("message", ""),
+            "warning_class": warning.get("warning_class", ""),
+        }
+        for warning in warnings
+    ]
+    next_action = "No active planning work right now."
+    commands: list[str] = []
+    if planning_record.get("status") == "present":
+        next_action = str(planning_record.get("next_action", next_action))
+    elif summary["todo"]["active_count"]:
+        first_item = summary["todo"]["active_items"][0]
+        next_action = f"Continue active TODO item {first_item.get('id', '')}: {first_item.get('surface', '')}".strip(": ")
+    elif summary["roadmap"]["candidate_count"]:
+        next_action = "Promote the highest-priority roadmap candidate when the next bounded slice is ready."
+        commands.append("Read ROADMAP.md")
+
+    health = "healthy"
+    if summary["warning_count"]:
+        health = "attention-needed"
+    elif summary["todo"]["active_count"] or summary["execplans"]["active_count"]:
+        health = "active"
+
+    return {
+        "kind": "planning-module-report/v1",
+        "schema": {
+            "schema_version": "module-report-schema/v1",
+            "module": "planning",
+            "command": "agentic-planning-bootstrap report --format json",
+            "canonical_docs": [
+                "docs/reporting-contract.md",
+                "packages/planning/README.md",
+            ],
+            "shared_fields": [
+                "kind",
+                "schema",
+                "module",
+                "target_root",
+                "health",
+                "status",
+                "active",
+                "findings",
+                "next_action",
+            ],
+        },
+        "module": "planning",
+        "target_root": summary["target_root"],
+        "health": health,
+        "status": {
+            "adoption_mode": summary["adoption_mode"],
+            "active_todo_count": summary["todo"]["active_count"],
+            "todo_item_count": summary["todo"]["item_count"],
+            "active_execplan_count": summary["execplans"]["active_count"],
+            "roadmap_candidate_count": summary["roadmap"]["candidate_count"],
+            "warning_count": summary["warning_count"],
+        },
+        "active": {
+            "planning_record": planning_record,
+            "active_contract": active_contract,
+            "resumable_contract": resumable_contract,
+            "follow_through_contract": follow_through_contract,
+        },
+        "findings": findings,
+        "next_action": {
+            "summary": next_action,
+            "commands": commands,
+        },
+    }
+
+
 def _planning_summary_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-summary-schema/v1",

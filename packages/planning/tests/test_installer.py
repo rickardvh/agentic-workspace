@@ -17,6 +17,7 @@ from repo_planning_bootstrap.installer import (
     collect_status,
     doctor_bootstrap,
     install_bootstrap,
+    planning_report,
     planning_summary,
     promote_todo_item_to_execplan,
     uninstall_bootstrap,
@@ -1425,6 +1426,33 @@ def test_planning_summary_reports_required_tools_when_execplan_declares_them(tmp
     assert summary["planning_record"]["tool_verification"]["required_tools"] == ["browser", "gh"]
     assert summary["active_contract"]["tool_verification"]["required_tools"] == ["browser", "gh"]
     assert summary["resumable_contract"]["tool_verification"]["required_tools"] == ["browser", "gh"]
+
+
+def test_planning_report_derives_compact_module_state_from_summary(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: report-lane
+  Status: in-progress
+  Surface: docs/execplans/report-lane.md
+  Why now: derive compact module state.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n\n## Next Candidate Queue\n- Later lane.\n")
+    _write(tmp_path / "docs" / "execplans" / "report-lane.md", _minimal_execplan())
+
+    report = planning_report(target=tmp_path)
+
+    assert report["kind"] == "planning-module-report/v1"
+    assert report["schema"]["command"] == "agentic-planning-bootstrap report --format json"
+    assert report["status"]["active_todo_count"] == 1
+    assert report["status"]["active_execplan_count"] == 1
+    assert report["next_action"]["summary"] == "Add one checker."
 
 
 def test_planning_summary_can_expose_active_contract_from_execplan_without_todo_row(tmp_path: Path) -> None:

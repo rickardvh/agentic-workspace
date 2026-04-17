@@ -17,7 +17,8 @@
     "repo_friction",
     "registry",
     "config",
-    "reports"
+    "reports",
+    "module_reports"
   ],
   "report_principles": [
     "keep the shared report compact and machine-readable",

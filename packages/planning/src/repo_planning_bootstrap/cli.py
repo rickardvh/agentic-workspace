@@ -16,6 +16,7 @@ from repo_planning_bootstrap.installer import (
     format_summary_json,
     install_bootstrap,
     list_payload_files,
+    planning_report,
     planning_summary,
     promote_todo_item_to_execplan,
     uninstall_bootstrap,
@@ -61,6 +62,10 @@ def build_parser() -> argparse.ArgumentParser:
     summary_parser = subparsers.add_parser("summary", help="Summarise the active planning surfaces in a machine-readable way.")
     summary_parser.add_argument("--target")
     summary_parser.add_argument("--format", choices=("text", "json"), default="text")
+
+    report_parser = subparsers.add_parser("report", help="Report compact planning module state without reading raw planning files first.")
+    report_parser.add_argument("--target")
+    report_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     promote_parser = subparsers.add_parser("promote-to-plan", help="Promote a direct TODO item into an execplan scaffold.")
     promote_parser.add_argument("item_id")
@@ -114,6 +119,13 @@ def main(argv: list[str] | None = None) -> int:
             print(format_summary_json(summary))
         else:
             _print_summary(summary)
+        return 0
+    if args.command == "report":
+        report = planning_report(target=args.target)
+        if args.format == "json":
+            print(json.dumps(report, indent=2))
+        else:
+            _print_report(report)
         return 0
     if args.command == "promote-to-plan":
         return _emit(
@@ -223,6 +235,29 @@ def _print_summary(summary: dict) -> None:
             print(f"- [{warning['warning_class']}] {warning['path']}: {warning['message']}")
     else:
         print("Warnings: none")
+
+
+def _print_report(report: dict) -> None:
+    print(f"Target: {report['target_root']}")
+    print("Command: report")
+    print(f"Health: {report['health']}")
+    status = report.get("status", {})
+    if isinstance(status, dict):
+        print(
+            "Status: "
+            f"{status.get('active_todo_count', 0)} active TODO / "
+            f"{status.get('active_execplan_count', 0)} active execplans / "
+            f"{status.get('roadmap_candidate_count', 0)} roadmap candidates"
+        )
+    next_action = report.get("next_action", {})
+    if isinstance(next_action, dict) and next_action.get("summary"):
+        print(f"Next action: {next_action['summary']}")
+    findings = report.get("findings", [])
+    if findings:
+        print("Findings:")
+        for finding in findings:
+            path = f"{finding['path']}: " if finding.get("path") else ""
+            print(f"- {path}{finding.get('message', '')}")
 
 
 def _build_prompt(command: str, target: str | None) -> str:

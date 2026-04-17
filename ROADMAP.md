@@ -18,27 +18,22 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 ## GitHub Issue Intake
 
 - Latest intake tranche: GitHub issue `#134`.
-- Earlier open planning issues still available for intake: `#40`, `#96` through `#100`.
+- Earlier open planning issues still available for intake: `#96` through `#100`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, and declarative contract-tooling tranches are complete; the next queue is led by canonical module reporting follow-through, followed by the two bounded dogfood findings from the setup-findings pass.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, declarative contract-tooling, and canonical module-reporting tranches are complete; the remaining queue is the bounded workspace CLI hotspot slice followed by the memory trust/usefulness lane.
 
 ## Next Candidate Queue
-- Highest priority when the setup-findings planning candidate should become real module follow-through: Canonical module reporting surfaces.
-  Issues: `#40`
-  Why later: the setup-findings dogfood pass surfaced one bounded planning candidate for the next module-reporting slice, and the declarative contract-tooling lane is now complete.
-  Promotion signal: promote when shared report work again bottoms out on module-specific state questions that still require raw file reads or when the next reporting slice can stay bounded to one module-owned contract.
-  Suggested first slice: tighten one per-module derived report contract rather than broad reporting expansion.
-- Second priority when shared workspace CLI hotspot evidence repeats enough to justify bounded refactoring: Shared workspace CLI hotspot reduction.
+- Highest priority when shared workspace CLI hotspot evidence repeats enough to justify bounded refactoring: Shared workspace CLI hotspot reduction.
   Issues: `#134`
-  Why later: the setup-findings dogfood pass produced promotable repo-friction evidence for `src/agentic_workspace/cli.py`, but a single hotspot signal should become one bounded cleanup slice rather than a broad rewrite campaign.
+  Why now: the reporting tranche is complete, so the next queue should spend one bounded slice reducing the shared workspace CLI reread hotspot that setup/report dogfooding already preserved as explicit friction evidence.
   Promotion signal: promote after another ordinary-work pass confirms the same hotspot pressure or when one coherent concern can be extracted without changing the workspace/package boundary.
   Suggested first slice: remove one coherent shared concern from `src/agentic_workspace/cli.py` or tighten one helper boundary that lowers reread cost while keeping the root CLI thin.
-- Third priority when Memory becomes the main restart or trust bottleneck again: Memory trust, usefulness, and cleanup ergonomics.
+- Second priority when Memory becomes the main restart or trust bottleneck again: Memory trust, usefulness, and cleanup ergonomics.
   Issues: `#96`, `#97`, `#98`, `#99`, `#100`
-  Why later: this remains important, but the immediate pain is still workspace/planning-side moderation burden and coherence rather than Memory operations alone.
-  Promotion signal: promote when Memory again becomes the main restart/trust bottleneck or when one bounded cleanup/usefulness slice can be proved independently of the workspace lane.
-  Suggested first slice: start with usefulness audit plus cleanup ergonomics before broader evidence-backed note invalidation.
+  Why later: the new compact memory report now exposes real trust/usefulness follow-through, but the bounded workspace CLI hotspot still sits in front of it as the smaller next slice.
+  Promotion signal: promote when the CLI hotspot slice lands or when another ordinary-work pass shows Memory as the primary remaining trust or rediscovery bottleneck.
+  Suggested first slice: start with evidence-backed note trust states and cleanup/usefulness reporting on top of the new memory module report rather than widening immediately into automatic invalidation.
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.

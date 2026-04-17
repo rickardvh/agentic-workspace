@@ -18,7 +18,8 @@
     "repo_friction",
     "registry",
     "config",
-    "reports"
+    "reports",
+    "module_reports"
   ],
   "properties": {
     "kind": {
@@ -101,6 +102,9 @@
       "type": "object"
     },
     "reports": {
+      "type": "array"
+    },
+    "module_reports": {
       "type": "array"
     }
   },

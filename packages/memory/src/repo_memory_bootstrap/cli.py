@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 from pathlib import Path
 
@@ -19,6 +20,7 @@ from repo_memory_bootstrap.installer import (
     install_bootstrap,
     list_bundled_skills,
     list_payload_files,
+    memory_report,
     migrate_layout,
     promotion_report,
     report_routes,
@@ -210,6 +212,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Report all candidates or only medium/high-confidence remediation candidates.",
     )
     _add_format_argument(promotion_parser)
+
+    report_parser = subparsers.add_parser(
+        "report",
+        help="Report compact memory module state without broad note-tree inspection first.",
+    )
+    _add_target_arguments(report_parser)
+    _add_format_argument(report_parser)
 
     verify_parser = subparsers.add_parser("verify-payload", help="Verify the packaged bootstrap payload contract.")
     _add_target_arguments(verify_parser)
@@ -429,6 +438,15 @@ def _handle_promotion_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_report(args: argparse.Namespace) -> int:
+    report = memory_report(target=args.target)
+    if args.format == "json":
+        print(json.dumps(report, indent=2))
+    else:
+        _print_report(report)
+    return 0
+
+
 def _handle_verify_payload(args: argparse.Namespace) -> int:
     _emit_result(verify_payload(target=args.target), output_format=args.format)
     return 0
@@ -458,6 +476,7 @@ COMMAND_HANDLERS = {
     "route-report": _handle_route_report,
     "sync-memory": _handle_sync_memory,
     "promotion-report": _handle_promotion_report,
+    "report": _handle_report,
     "verify-payload": _handle_verify_payload,
     "bootstrap-cleanup": _handle_bootstrap_cleanup,
 }
@@ -630,6 +649,44 @@ def _print_install_summary(result) -> None:
         )
     print("- Run agentic-memory-bootstrap doctor --target <repo> before upgrading an older install.")
     print("- Run python scripts/check/check_memory_freshness.py after customising memory notes.")
+
+
+def _print_report(report: dict[str, object]) -> None:
+    print(f"Target: {report['target_root']}")
+    print("Command: report")
+    print(f"Health: {report['health']}")
+    status = report.get("status", {})
+    if isinstance(status, dict):
+        print(
+            "Status: "
+            f"{status.get('note_count', 0)} notes / "
+            f"{status.get('current_note_count', 0)} current notes / "
+            f"version {status.get('detected_version', 'unknown')}"
+        )
+    trust = report.get("trust", {})
+    if isinstance(trust, dict):
+        print(
+            "Trust: "
+            f"{trust.get('manual_review_count', 0)} manual-review / "
+            f"{trust.get('warning_count', 0)} warning / "
+            f"{trust.get('promotion_candidate_count', 0)} promotion candidates"
+        )
+    next_action = report.get("next_action", {})
+    if isinstance(next_action, dict) and next_action.get("summary"):
+        print(f"Next action: {next_action['summary']}")
+        commands = next_action.get("commands", [])
+        if isinstance(commands, list) and commands:
+            print("Commands:")
+            for command in commands:
+                print(f"- {command}")
+    findings = report.get("findings", [])
+    if findings:
+        print("Findings:")
+        for finding in findings:
+            if not isinstance(finding, dict):
+                continue
+            path = f"{finding['path']}: " if finding.get("path") else ""
+            print(f"- {finding.get('severity', 'info')}: {path}{finding.get('message', '')}")
 
 
 def _created_current_memory_notes(result) -> bool:

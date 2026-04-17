@@ -172,6 +172,7 @@ __all__ = [
     "install_bootstrap",
     "list_bundled_skills",
     "list_payload_files",
+    "memory_report",
     "payload_root",
     "promotion_report",
     "report_routes",
@@ -1587,6 +1588,146 @@ def promotion_report(
                     category="manual-review",
                 )
     return result
+
+
+def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
+    target_root = resolve_target_root(target)
+    manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
+    doctor = doctor_bootstrap(target=target_root)
+    current_check = check_current_memory(target=target_root)
+    current_view = show_current_memory(target=target_root)
+    route_snapshot = report_routes(target=target_root)
+    remediation = promotion_report(target=target_root, mode="remediation")
+
+    note_type_counts: dict[str, int] = {}
+    memory_role_counts: dict[str, int] = {}
+    for note in manifest.notes:
+        note_type_counts[note.note_type] = note_type_counts.get(note.note_type, 0) + 1
+        role = note.memory_role or "unclassified"
+        memory_role_counts[role] = memory_role_counts.get(role, 0) + 1
+
+    findings: list[dict[str, object]] = []
+    seen_findings: set[tuple[str, str, str, str]] = set()
+    significant_actions: list[Action] = []
+
+    def _is_context_warning(action: Action) -> bool:
+        return action.detail == "nested repository detected under target; installer will not recurse into repo roots automatically"
+
+    def _add_findings(result: InstallResult, *, source_report: str) -> None:
+        for action in result.actions:
+            if action.kind not in {"warning", "missing", "manual review"}:
+                continue
+            if _is_context_warning(action):
+                continue
+            if source_report == "promotion-report" and action.detail.startswith("no promotion or elimination candidates found"):
+                continue
+            significant_actions.append(action)
+            severity = "warning"
+            key = (severity, action.path.as_posix(), action.detail, source_report)
+            if key in seen_findings:
+                continue
+            seen_findings.add(key)
+            findings.append(
+                {
+                    "severity": severity,
+                    "path": action.path.as_posix(),
+                    "message": action.detail,
+                    "source_report": source_report,
+                    "category": action.category,
+                }
+            )
+
+    _add_findings(doctor, source_report="doctor")
+    _add_findings(current_check, source_report="current-check")
+    _add_findings(route_snapshot, source_report="route-report")
+    _add_findings(remediation, source_report="promotion-report")
+
+    current_notes = []
+    for note in current_view.notes:
+        current_notes.append(
+            {
+                "path": note.path.as_posix(),
+                "exists": note.exists,
+                "line_count": len(note.content.splitlines()) if note.exists else 0,
+            }
+        )
+
+    remediation_counts = remediation.counts()
+    manual_review_total = sum(1 for action in significant_actions if action.kind in {"manual review", "missing"})
+    warning_total = sum(1 for action in significant_actions if action.kind == "warning")
+    advisory_total = 0
+    if manual_review_total or warning_total:
+        health = "attention-needed"
+    else:
+        health = "healthy"
+
+    next_action_summary = "Memory looks healthy right now."
+    next_action_commands: list[str] = []
+    if manual_review_total or warning_total:
+        first_finding = findings[0] if findings else None
+        if isinstance(first_finding, dict):
+            next_action_summary = str(first_finding.get("message", next_action_summary))
+        next_action_commands = [
+            "agentic-memory-bootstrap doctor --target ./repo",
+            "agentic-memory-bootstrap promotion-report --target ./repo --mode remediation",
+        ]
+    elif remediation_counts.get("candidate", 0):
+        next_action_summary = "Review bounded promotion or elimination candidates before memory residue grows."
+        next_action_commands = ["agentic-memory-bootstrap promotion-report --target ./repo --mode remediation"]
+    elif route_snapshot.route_report_summary:
+        next_action_summary = "Use the routing report when ordinary work should prove Memory is the cheapest relevant path."
+        next_action_commands = ["agentic-memory-bootstrap route-report --target ./repo"]
+
+    return {
+        "kind": "memory-module-report/v1",
+        "schema": {
+            "schema_version": "module-report-schema/v1",
+            "module": "memory",
+            "command": "agentic-memory-bootstrap report --target ./repo --format json",
+            "canonical_docs": [
+                "docs/reporting-contract.md",
+                "packages/memory/README.md",
+            ],
+            "shared_fields": [
+                "kind",
+                "schema",
+                "module",
+                "target_root",
+                "health",
+                "status",
+                "active",
+                "trust",
+                "findings",
+                "next_action",
+            ],
+        },
+        "module": "memory",
+        "target_root": str(target_root),
+        "health": health,
+        "status": {
+            "detected_version": doctor.detected_version,
+            "bootstrap_version": doctor.bootstrap_version,
+            "note_count": len(manifest.notes),
+            "note_type_counts": note_type_counts,
+            "memory_role_counts": memory_role_counts,
+            "current_note_count": len(current_notes),
+        },
+        "active": {
+            "current_notes": current_notes,
+            "route_report_summary": route_snapshot.route_report_summary,
+        },
+        "trust": {
+            "warning_count": warning_total,
+            "manual_review_count": manual_review_total,
+            "advisory_count": advisory_total,
+            "promotion_candidate_count": remediation_counts.get("candidate", 0),
+        },
+        "findings": findings,
+        "next_action": {
+            "summary": next_action_summary,
+            "commands": next_action_commands,
+        },
+    }
 
 
 def verify_payload(target: str | Path | None = None) -> InstallResult:
