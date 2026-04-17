@@ -39,6 +39,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path("docs/execution-summary-contract.md"),
     Path("docs/iterative-follow-through-contract.md"),
     Path("docs/intent-contract.md"),
+    Path("docs/candidate-lanes-contract.md"),
     Path("docs/resumable-execution-contract.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
@@ -69,6 +70,7 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("docs/execution-summary-contract.md"),
     Path("docs/iterative-follow-through-contract.md"),
     Path("docs/intent-contract.md"),
+    Path("docs/candidate-lanes-contract.md"),
     Path("docs/resumable-execution-contract.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
@@ -391,6 +393,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
                 }
             )
 
+    roadmap_lanes = _roadmap_candidate_lanes(roadmap_path)
     roadmap_candidates = _roadmap_candidates(roadmap_path)
 
     active_execplans: list[dict[str, str]] = []
@@ -447,6 +450,8 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
         "follow_through_contract": _contract_projection(follow_through_contract, view_name="follow_through_contract"),
         "roadmap": {
+            "lane_count": len(roadmap_lanes),
+            "candidate_lanes": roadmap_lanes,
             "candidate_count": len(roadmap_candidates),
             "candidates": roadmap_candidates,
         },
@@ -518,6 +523,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "active_todo_count": summary["todo"]["active_count"],
             "todo_item_count": summary["todo"]["item_count"],
             "active_execplan_count": summary["execplans"]["active_count"],
+            "roadmap_lane_count": summary["roadmap"].get("lane_count", 0),
             "roadmap_candidate_count": summary["roadmap"]["candidate_count"],
             "warning_count": summary["warning_count"],
         },
@@ -540,6 +546,7 @@ def _planning_summary_schema() -> dict[str, Any]:
         "schema_version": "planning-summary-schema/v1",
         "canonical_docs": [
             "docs/intent-contract.md",
+            "docs/candidate-lanes-contract.md",
             "docs/iterative-follow-through-contract.md",
             "docs/resumable-execution-contract.md",
             "docs/execplans/README.md",
@@ -606,6 +613,8 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "minimal_refs",
             ],
             "roadmap": [
+                "lane_count",
+                "candidate_lanes",
                 "candidate_count",
                 "candidates",
             ],
@@ -618,7 +627,85 @@ def _planning_summary_schema() -> dict[str, Any]:
     }
 
 
+def _roadmap_candidate_lanes(roadmap_path: Path) -> list[dict[str, Any]]:
+    lane_lines = _section_lines(_read_lines(roadmap_path), "Candidate Lanes")
+    if not lane_lines:
+        return []
+
+    lanes: list[dict[str, Any]] = []
+    current_block: list[str] = []
+    for line in lane_lines:
+        if re.match(r"^\s*-\s+", line):
+            if current_block:
+                lane = _parse_candidate_lane_block(current_block)
+                if lane is not None:
+                    lanes.append(lane)
+            current_block = [line]
+            continue
+        if current_block:
+            current_block.append(line)
+    if current_block:
+        lane = _parse_candidate_lane_block(current_block)
+        if lane is not None:
+            lanes.append(lane)
+    return lanes
+
+
+def _parse_candidate_lane_block(lines: list[str]) -> dict[str, Any] | None:
+    if not lines:
+        return None
+    first = re.sub(r"^\s*-\s+", "", lines[0]).strip()
+    if not first:
+        return None
+
+    fields: dict[str, str] = {}
+    if ":" in first:
+        key, value = first.split(":", 1)
+        fields[key.strip().lower()] = value.strip()
+    else:
+        fields["lane"] = first
+
+    for line in lines[1:]:
+        match = re.match(r"^\s+([^:]+):\s*(.*)\s*$", line)
+        if not match:
+            continue
+        fields[match.group(1).strip().lower()] = match.group(2).strip()
+
+    title = fields.get("lane", "").strip()
+    if not title:
+        return None
+
+    lane_id = fields.get("id", "").strip()
+    priority = fields.get("priority", "").strip()
+    outcome = fields.get("outcome", "").strip()
+    issues = [item.strip() for item in re.split(r"\s*,\s*", fields.get("issues", "")) if item.strip()]
+    reason = fields.get("why now", "").strip() or fields.get("why later", "").strip()
+    promotion_signal = fields.get("promotion signal", "").strip()
+    suggested_first_slice = fields.get("suggested first slice", "").strip()
+
+    return {
+        "id": lane_id,
+        "title": title,
+        "priority": priority,
+        "issues": issues,
+        "outcome": outcome,
+        "reason": reason,
+        "promotion_signal": promotion_signal,
+        "suggested_first_slice": suggested_first_slice,
+    }
+
+
 def _roadmap_candidates(roadmap_path: Path) -> list[dict[str, str]]:
+    lanes = _roadmap_candidate_lanes(roadmap_path)
+    if lanes:
+        return [
+            {
+                "priority": str(lane.get("priority", "")),
+                "summary": str(lane.get("title", "")),
+            }
+            for lane in lanes
+        ]
+
     candidate_lines = _section_lines(_read_lines(roadmap_path), "Next Candidate Queue")
     candidates: list[dict[str, str]] = []
     for line in candidate_lines:
@@ -1897,7 +1984,12 @@ def _cleanup_todo_now_section(lines: list[str], plan_stem: str) -> tuple[list[st
 
 
 def _plan_stem_tokens(plan_path: Path) -> list[str]:
-    return [token for token in re.split(r"[^a-z0-9]+", plan_path.stem.lower()) if len(token) >= 4 and not token.isdigit()]
+    stop_tokens = {"plan", "lane", "slice", "tranche", "candidate", "native"}
+    return [
+        token
+        for token in re.split(r"[^a-z0-9]+", plan_path.stem.lower())
+        if len(token) >= 4 and not token.isdigit() and token not in stop_tokens
+    ]
 
 
 def _label_tokens(value: str | None) -> list[str]:
@@ -1908,7 +2000,7 @@ def _label_tokens(value: str | None) -> list[str]:
 
 def _roadmap_continuation_label(plan_path: Path) -> str | None:
     continuation_surface = _execplan_intent_continuity(plan_path).get("continuation surface", "").strip()
-    match = re.search(r"`?roadmap\.md`?\s+candidate\s+`?([^`]+?)`?$", continuation_surface, re.IGNORECASE)
+    match = re.search(r"`?roadmap\.md`?\s+candidate(?:\s+lane)?\s+`?([^`]+?)`?$", continuation_surface, re.IGNORECASE)
     if match:
         return match.group(1).strip()
     return None
@@ -1946,6 +2038,17 @@ def _cleanup_roadmap_archive_followup(roadmap_path: Path, plan_path: Path) -> di
         changed = True
         details.append("remove archived-plan candidate residue from Next Candidate Queue")
 
+    lines, lane_removed = _cleanup_roadmap_section(
+        lines,
+        "Candidate Lanes",
+        tokens,
+        empty_line=None,
+        preserve_label=continuation_label,
+    )
+    if lane_removed:
+        changed = True
+        details.append("remove archived-plan candidate residue from Candidate Lanes")
+
     if not changed:
         return {"changed": False, "text": None, "details": [], "note": None}
     return {
@@ -1977,18 +2080,46 @@ def _cleanup_roadmap_section(
     kept_lines: list[str] = []
     removed = False
     preserved_tokens = _label_tokens(preserve_label)
-    for line in section:
-        if not re.match(r"^\s*-\s+", line):
+    if heading.lower() == "candidate lanes":
+        blocks: list[list[str]] = []
+        current_block: list[str] = []
+        for line in section:
+            if re.match(r"^\s*-\s+", line):
+                if current_block:
+                    blocks.append(current_block)
+                current_block = [line]
+            elif current_block:
+                current_block.append(line)
+            else:
+                kept_lines.append(line)
+        if current_block:
+            blocks.append(current_block)
+
+        for block in blocks:
+            lane = _parse_candidate_lane_block(block) or {}
+            lane_identity = " ".join(
+                value for value in (str(lane.get("title", "")).strip(), str(lane.get("id", "")).strip()) if value
+            ).lower()
+            if preserved_tokens and all(token in lane_identity for token in preserved_tokens):
+                kept_lines.extend(block)
+                continue
+            if tokens and any(token in lane_identity for token in tokens):
+                removed = True
+                continue
+            kept_lines.extend(block)
+    else:
+        for line in section:
+            if not re.match(r"^\s*-\s+", line):
+                kept_lines.append(line)
+                continue
+            lowered = line.lower()
+            if preserved_tokens and all(token in lowered for token in preserved_tokens):
+                kept_lines.append(line)
+                continue
+            if tokens and any(token in lowered for token in tokens):
+                removed = True
+                continue
             kept_lines.append(line)
-            continue
-        lowered = line.lower()
-        if preserved_tokens and all(token in lowered for token in preserved_tokens):
-            kept_lines.append(line)
-            continue
-        if tokens and any(token in lowered for token in tokens):
-            removed = True
-            continue
-        kept_lines.append(line)
 
     if not removed:
         return lines, False

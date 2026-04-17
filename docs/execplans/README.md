@@ -4,6 +4,7 @@ Checked-in execution plans for multi-milestone or multi-thread work live in this
 
 Use `agentic-planning-bootstrap summary --format json` first when the question is active planning state.
 Use raw `TODO.md` and execplan prose after that only when the compact summary is insufficient or when you are maintaining the human-readable plan directly.
+Use `docs/candidate-lanes-contract.md` for the native `ROADMAP.md` lane shape when grouped deferred work needs more structure than a flat candidate bullet.
 Use `python scripts/check/check_planning_surfaces.py` for advisory shape and drift warnings across `TODO.md`, active execplans, and `ROADMAP.md`.
 Use `promote-to-plan` and `archive-plan` as thin file-native helpers around the same checked-in contract.
 Use `docs/environment-recovery-contract.md` for the canonical way to express task-local recovery and environment assumptions without adding another plan section.

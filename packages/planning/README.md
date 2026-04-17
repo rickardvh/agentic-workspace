@@ -265,7 +265,7 @@ Development is organised across three horizons:
 
 | Horizon | Surface | Role |
 | ------ | ------- | ---- |
-| Direction | `ROADMAP.md` | What might matter next |
+| Direction | `ROADMAP.md` | What might matter next through compact candidate lanes |
 | Activation | `TODO.md` | What matters now |
 | Execution | `docs/execplans/` | How the active work is completed |
 
@@ -275,7 +275,7 @@ Each layer has a single responsibility and should not duplicate the others.
 
 ### 1. Preserves long-horizon direction
 
-Candidate epics and strategic intent stay visible without being forced into active execution.
+Candidate lanes and strategic intent stay visible without being forced into active execution.
 
 ### 2. Constrains active work
 

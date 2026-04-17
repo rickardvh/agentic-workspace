@@ -17,22 +17,19 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - No active handoff right now.
 ## GitHub Issue Intake
 
-- Latest intake tranche: GitHub issue `#135`.
-- Earlier open planning issues still available for intake: `#96` through `#100`.
+- Latest open planning tranche: GitHub issues `#96` through `#100`.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, declarative contract-tooling, canonical module-reporting, and bounded workspace CLI hotspot tranches are complete; the remaining queue is the native candidate-lane planning gap followed by the memory trust/usefulness lane.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, and native candidate-lane tranches are complete; the remaining queue is the Memory trust/usefulness lane.
 
-## Next Candidate Queue
-- Highest priority when the ad hoc roadmap queue shape itself becomes the next planning friction: Native candidate-lane queue for deferred grouped work.
-  Issues: `#135`
-  Why now: the roadmap just carried another grouped deferred lane through ad hoc queue structure, which confirms the planning-system gap and makes this the smallest next slice with immediate dogfooding value.
-  Promotion signal: promote when one thin native shape can capture grouped deferred lanes without turning planning into a backlog system.
-  Suggested first slice: inventory what the current roadmap queue is expressing beyond existing planning shapes, define the minimum candidate-lane fields, and translate the remaining memory lane into that native form.
-- Second priority when Memory becomes the main restart or trust bottleneck again: Memory trust, usefulness, and cleanup ergonomics.
+## Candidate Lanes
+- Lane: Memory trust, usefulness, and cleanup ergonomics
+  ID: memory-trust-usefulness-cleanup
+  Priority: first
   Issues: `#96`, `#97`, `#98`, `#99`, `#100`
-  Why later: the new compact memory report now exposes real trust/usefulness follow-through, but the planning-system gap around grouped deferred work has become the smaller next slice with immediate repo-native payoff.
-  Promotion signal: promote when the native candidate-lane slice lands or when another ordinary-work pass shows Memory as the primary remaining trust or rediscovery bottleneck.
+  Outcome: make Memory cheaper to trust, inspect, clean up, and prove useful in ordinary restart-heavy work.
+  Why now: the planning-system gap around grouped deferred work is now closed, so Memory is the main remaining restart and trust bottleneck in the roadmap.
+  Promotion signal: promote when the next bounded slice is ready or when another ordinary-work pass shows Memory as the primary remaining trust or rediscovery bottleneck.
   Suggested first slice: start with evidence-backed note trust states and cleanup/usefulness reporting on top of the new memory module report rather than widening immediately into automatic invalidation.
 ## Reopen Conditions
 

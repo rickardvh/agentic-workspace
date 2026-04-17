@@ -184,7 +184,7 @@ def _print_summary(summary: dict) -> None:
     print(f"Mode: {summary['adoption_mode']}")
     print(f"TODO: {summary['todo']['active_count']} active / {summary['todo']['item_count']} items / {summary['todo']['line_count']} lines")
     print(f"Execplans: {summary['execplans']['active_count']} active / {summary['execplans']['archived_count']} archived")
-    print(f"Roadmap: {summary['roadmap']['candidate_count']} candidate bullets")
+    print(f"Roadmap: {summary['roadmap'].get('lane_count', 0)} candidate lanes / {summary['roadmap']['candidate_count']} candidate bullets")
     planning_record = summary.get("planning_record", {})
     if planning_record.get("status") == "present":
         task = planning_record.get("task", {})
@@ -247,6 +247,7 @@ def _print_report(report: dict) -> None:
             "Status: "
             f"{status.get('active_todo_count', 0)} active TODO / "
             f"{status.get('active_execplan_count', 0)} active execplans / "
+            f"{status.get('roadmap_lane_count', 0)} roadmap lanes / "
             f"{status.get('roadmap_candidate_count', 0)} roadmap candidates"
         )
     next_action = report.get("next_action", {})

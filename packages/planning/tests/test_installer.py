@@ -1241,6 +1241,99 @@ def test_archive_execplan_apply_cleanup_removes_matching_candidate_queue_entry(t
     )
 
 
+def test_archive_execplan_apply_cleanup_removes_matching_candidate_lane_entry(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: memory-trust-lane
+  Status: completed
+  Surface: docs/execplans/memory-trust-lane-2026-04-17.md
+  Why now: already finished.
+""",
+    )
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Candidate Lanes
+
+- Lane: Memory trust, usefulness, and cleanup ergonomics
+  ID: memory-trust-usefulness-cleanup
+  Priority: second
+  Issues: #96, #97, #98, #99, #100
+  Outcome: make Memory cheaper to trust, inspect, and clean up.
+  Why later: wait until the current planning tranche lands.
+  Promotion signal: promote when the current planning tranche completes.
+  Suggested first slice: start with evidence-backed note trust states.
+- Lane: Separate lane
+  ID: separate-lane
+  Priority: third
+  Issues: #999
+  Outcome: keep another candidate lane.
+  Why later: later.
+  Promotion signal: promote when later.
+  Suggested first slice: later slice.
+""",
+    )
+    plan_path = tmp_path / "docs" / "execplans" / "memory-trust-lane-2026-04-17.md"
+    _write(plan_path, _minimal_execplan(status="completed").replace("plan-alpha", "memory-trust-lane"))
+
+    result = archive_execplan("memory-trust-lane-2026-04-17", target=tmp_path, apply_cleanup=True)
+
+    roadmap_text = (tmp_path / "ROADMAP.md").read_text(encoding="utf-8")
+    assert "Memory trust, usefulness, and cleanup ergonomics" not in roadmap_text
+    assert "Separate lane" in roadmap_text
+    assert any(
+        action.kind == "updated" and action.path == tmp_path / "ROADMAP.md" and "Candidate Lanes" in action.detail
+        for action in result.actions
+    )
+
+
+def test_archive_execplan_cleanup_does_not_remove_unrelated_candidate_lane_from_generic_plan_stem(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: native-candidate-lanes
+  Status: completed
+  Surface: docs/execplans/native-candidate-lanes-first-slice-2026-04-17.md
+  Why now: already finished.
+""",
+    )
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Candidate Lanes
+
+- Lane: Memory trust, usefulness, and cleanup ergonomics
+  ID: memory-trust-usefulness-cleanup
+  Priority: first
+  Issues: #96, #97, #98, #99, #100
+  Outcome: make Memory cheaper to trust, inspect, and clean up.
+  Why now: Memory is the main remaining trust bottleneck.
+  Promotion signal: promote when the next bounded slice is ready or when the candidate-lane slice lands.
+  Suggested first slice: start with evidence-backed note trust states.
+""",
+    )
+    plan_path = tmp_path / "docs" / "execplans" / "native-candidate-lanes-first-slice-2026-04-17.md"
+    _write(plan_path, _minimal_execplan(status="completed").replace("plan-alpha", "native-candidate-lanes"))
+
+    archive_execplan("native-candidate-lanes-first-slice-2026-04-17", target=tmp_path, apply_cleanup=True)
+
+    roadmap_text = (tmp_path / "ROADMAP.md").read_text(encoding="utf-8")
+    assert "Memory trust, usefulness, and cleanup ergonomics" in roadmap_text
+
+
 def test_archive_execplan_preserves_explicit_roadmap_continuation_candidate(tmp_path: Path) -> None:
     _write(tmp_path / "TODO.md", "# TODO\n")
     _write(
@@ -1402,6 +1495,49 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["warning_count"] == 0
 
 
+def test_planning_summary_reports_candidate_lanes(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Candidate Lanes
+
+- Lane: Native candidate-lane queue for deferred grouped work
+  ID: native-candidate-lanes
+  Priority: highest
+  Issues: #135
+  Outcome: keep grouped deferred work repo-native and promotable without ad hoc queue prose.
+  Why now: the ad hoc roadmap queue shape itself is the next planning friction.
+  Promotion signal: promote when one thin native shape can replace the grouped queue prose.
+  Suggested first slice: define the minimum lane fields and translate one real lane into them.
+- Lane: Memory trust, usefulness, and cleanup ergonomics
+  ID: memory-trust-usefulness-cleanup
+  Priority: second
+  Issues: #96, #97, #98, #99, #100
+  Outcome: make Memory cheaper to trust, inspect, and clean up.
+  Why later: wait until the planning slice lands.
+  Promotion signal: promote when the candidate-lane slice lands.
+  Suggested first slice: start with evidence-backed note trust states.
+""",
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    assert summary["roadmap"]["lane_count"] == 2
+    assert summary["roadmap"]["candidate_count"] == 2
+    assert summary["roadmap"]["candidates"] == [
+        {"priority": "highest", "summary": "Native candidate-lane queue for deferred grouped work"},
+        {"priority": "second", "summary": "Memory trust, usefulness, and cleanup ergonomics"},
+    ]
+    assert summary["roadmap"]["candidate_lanes"][0]["id"] == "native-candidate-lanes"
+    assert summary["roadmap"]["candidate_lanes"][0]["issues"] == ["#135"]
+    assert summary["roadmap"]["candidate_lanes"][1]["issues"] == ["#96", "#97", "#98", "#99", "#100"]
+    assert summary["roadmap"]["candidate_lanes"][1]["promotion_signal"] == "promote when the candidate-lane slice lands."
+
+
 def test_planning_summary_reports_required_tools_when_execplan_declares_them(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
@@ -1452,6 +1588,7 @@ def test_planning_report_derives_compact_module_state_from_summary(tmp_path: Pat
     assert report["schema"]["command"] == "agentic-planning-bootstrap report --format json"
     assert report["status"]["active_todo_count"] == 1
     assert report["status"]["active_execplan_count"] == 1
+    assert report["status"]["roadmap_lane_count"] == 0
     assert report["next_action"]["summary"] == "Add one checker."
 
 

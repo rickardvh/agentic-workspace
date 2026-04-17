@@ -217,6 +217,42 @@ def _section_content(lines: list[str], section_name: str) -> list[str]:
     return lines[start:end]
 
 
+def _candidate_lane_blocks(lines: list[str]) -> list[list[str]]:
+    section = _section_content(lines, "Candidate Lanes")
+    if not section:
+        return []
+    blocks: list[list[str]] = []
+    current: list[str] = []
+    for line in section:
+        if re.match(r"^\s*-\s+", line):
+            if current:
+                blocks.append(current)
+            current = [line]
+            continue
+        if current:
+            current.append(line)
+    if current:
+        blocks.append(current)
+    return blocks
+
+
+def _candidate_lane_fields(block: list[str]) -> dict[str, str]:
+    if not block:
+        return {}
+    fields: dict[str, str] = {}
+    first = re.sub(r"^\s*-\s+", "", block[0]).strip()
+    if ":" in first:
+        key, value = first.split(":", 1)
+        fields[key.strip().lower()] = value.strip()
+    elif first:
+        fields["lane"] = first
+    for line in block[1:]:
+        match = re.match(r"^\s+([^:]+):\s*(.*)\s*$", line)
+        if match:
+            fields[match.group(1).strip().lower()] = match.group(2).strip()
+    return fields
+
+
 def _heading_titles(lines: list[str]) -> set[str]:
     titles: set[str] = set()
     for line in lines:
@@ -1342,8 +1378,12 @@ def _check_roadmap(path: Path, todo_active_ids: set[str]) -> list[PlanningWarnin
             )
         )
 
+    lane_blocks = _candidate_lane_blocks(lines)
+    lane_fields = [_candidate_lane_fields(block) for block in lane_blocks]
     candidate_section = _section_content(lines, "Next Candidate Queue")
     top_level_candidate_bullets = [line.strip() for line in candidate_section if re.match(r"^-\s+", line)]
+    if lane_blocks:
+        top_level_candidate_bullets = [f"- Lane: {fields.get('lane', '')}".strip() for fields in lane_fields if fields.get("lane")]
 
     if len(top_level_candidate_bullets) > ROADMAP_MAX_CANDIDATES or len(candidate_section) > ROADMAP_MAX_CANDIDATE_SECTION_LINES:
         warnings.append(
@@ -1354,10 +1394,67 @@ def _check_roadmap(path: Path, todo_active_ids: set[str]) -> list[PlanningWarnin
             )
         )
 
-    for bullet in top_level_candidate_bullets:
-        if len(bullet) < 6:
-            continue
-        lowered_bullet = bullet.lower()
+    if lane_blocks:
+        for fields in lane_fields:
+            lane_name = fields.get("lane", "").strip() or "candidate lane"
+            missing = [
+                field_name
+                for field_name in ("id", "priority", "outcome", "promotion signal", "suggested first slice")
+                if not fields.get(field_name, "").strip()
+            ]
+            if missing:
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_ROADMAP_MISSING_PROMOTION_SIGNAL,
+                        _render_path(path),
+                        f"ROADMAP candidate lane '{lane_name}' is missing required fields: {', '.join(missing)}.",
+                    )
+                )
+                break
+            if not (fields.get("why now", "").strip() or fields.get("why later", "").strip()):
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_ROADMAP_MISSING_PROMOTION_SIGNAL,
+                        _render_path(path),
+                        f"ROADMAP candidate lane '{lane_name}' is missing a compact reason field (`Why now` or `Why later`).",
+                    )
+                )
+                break
+    else:
+        for bullet in top_level_candidate_bullets:
+            if len(bullet) < 6:
+                continue
+            lowered_bullet = bullet.lower()
+            if not any(hint in lowered_bullet for hint in PROMOTION_SIGNAL_HINTS):
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_ROADMAP_MISSING_PROMOTION_SIGNAL,
+                        _render_path(path),
+                        "ROADMAP candidate entry is missing an explicit promotion signal/trigger.",
+                    )
+                )
+                break
+
+    if not lane_blocks and not candidate_section:
+        warnings.append(
+            PlanningWarning(
+                WARNING_ROADMAP_EXECUTION_DRIFT,
+                _render_path(path),
+                "ROADMAP.md is missing both `Candidate Lanes` and `Next Candidate Queue`; keep one compact inactive-candidate surface.",
+            )
+        )
+
+    if lane_blocks and candidate_section:
+        warnings.append(
+            PlanningWarning(
+                WARNING_ROADMAP_STALE_CANDIDATE_PRESSURE,
+                _render_path(path),
+                "ROADMAP.md uses both `Candidate Lanes` and `Next Candidate Queue`; keep one native inactive-candidate shape.",
+            )
+        )
+
+    for block in lane_blocks:
+        lowered_bullet = "\n".join(block).lower()
         if not any(hint in lowered_bullet for hint in PROMOTION_SIGNAL_HINTS):
             warnings.append(
                 PlanningWarning(
@@ -1504,6 +1601,7 @@ def gather_planning_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
             active_execplans.append({"path": _render_path(plan_path), "status": status})
 
     candidate_section = _section_content(_read_lines(roadmap_path), "Next Candidate Queue")
+    lane_blocks = _candidate_lane_blocks(_read_lines(roadmap_path))
     warnings = gather_planning_warnings(repo_root=repo_root)
 
     return {
@@ -1523,7 +1621,8 @@ def gather_planning_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
             else 0,
         },
         "roadmap": {
-            "candidate_count": sum(1 for line in candidate_section if re.match(r"^\s*-\s+", line)),
+            "lane_count": len(lane_blocks),
+            "candidate_count": len(lane_blocks) if lane_blocks else sum(1 for line in candidate_section if re.match(r"^\s*-\s+", line)),
         },
     }
 
