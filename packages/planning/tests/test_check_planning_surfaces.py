@@ -260,6 +260,8 @@ The minimum questions are:
 - What larger chunk or queue owns follow-on? -> `hierarchy_contract`
 - What residue remains if this slice stops? -> `follow_through_contract`
 - When do I fall back to prose? -> only when the compact summary leaves the answer ambiguous
+
+Use [`docs/execplans/README.md`](execplans/README.md) for the meaning boundary behind those answers: machine-readable state owns restart-critical meanings, compact prose owns route guidance and stable framing, and raw execplan detail stays fallback-only.
 """
 
 
@@ -288,6 +290,16 @@ def _baseline_execplans_readme() -> str:
 Use `agentic-planning-bootstrap summary --format json` first when the question is active planning state.
 Use raw `TODO.md` and execplan prose after that only when the compact summary is insufficient.
 `agentic-planning-bootstrap summary --format json` exposes a typed payload and `planning_record` is the canonical active planning record.
+
+## Meaning Boundary
+
+Use this split when deciding where a planning meaning belongs:
+
+- Machine-readable state: meanings that must be cheap to recover during restart, including active work, next action, follow-on owner, proof state, and escalation boundaries.
+- Compact prose: meanings that are stable but cheaper to keep as compact route or contract guidance than as queryable state.
+- Raw execplan detail: slice-specific narrative, implementation notes, drift-log residue, and other maintenance detail that should not be the default recovery path.
+
+Example: "What should I do next?" belongs in `resumable_contract`; the route that gets you there belongs in compact prose; the line-by-line change log belongs in the execplan detail.
 """
 
 
@@ -392,7 +404,7 @@ def test_todo_shape_drift_for_finished_work_section(tmp_path: Path) -> None:
     assert "todo_shape_drift" in classes
 
 
-def test_default_path_contract_without_routine_recovery_questions_warns(tmp_path: Path) -> None:
+def test_default_path_contract_without_meaning_boundary_warns(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_default_path_recovery")
     _write(
         tmp_path / "TODO.md",
@@ -412,6 +424,18 @@ def test_default_path_contract_without_routine_recovery_questions_warns(tmp_path
 
 - use `agentic-planning-bootstrap summary --format json` before opening `TODO.md` or execplan prose
 - use `agentic-workspace report --target ./repo --format json` before reading raw module files
+
+## Routine Planning Recovery
+
+Use `agentic-planning-bootstrap summary --format json` first when the question is active planning recovery.
+
+The minimum questions are:
+
+- What is active right now? -> `planning_record`
+- What should I do next? -> `resumable_contract`
+- What larger chunk or queue owns follow-on? -> `hierarchy_contract`
+- What residue remains if this slice stops? -> `follow_through_contract`
+- When do I fall back to prose? -> only when the compact summary leaves the answer ambiguous
 """,
     )
     _write(tmp_path / "docs" / "intent-contract.md", _baseline_intent_contract())
@@ -421,6 +445,20 @@ def test_default_path_contract_without_routine_recovery_questions_warns(tmp_path
 
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     assert any(warning.warning_class == "docs_surface_role_drift" for warning in warnings)
+
+
+def test_default_path_contract_with_meaning_boundary_passes(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_default_path_boundary")
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write(tmp_path / "docs" / "default-path-contract.md", _baseline_default_path_contract())
+    _write(tmp_path / "docs" / "intent-contract.md", _baseline_intent_contract())
+    _write(tmp_path / "docs" / "resumable-execution-contract.md", _baseline_resumable_contract())
+    _write(tmp_path / "docs" / "execplans" / "README.md", _baseline_execplans_readme())
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    assert not [warning for warning in warnings if warning.warning_class == "docs_surface_role_drift"]
 
 
 def test_execplan_readiness_missing_warning(tmp_path: Path) -> None:

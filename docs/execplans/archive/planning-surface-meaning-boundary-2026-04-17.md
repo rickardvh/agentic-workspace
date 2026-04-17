@@ -29,8 +29,8 @@
 - What this slice enabled: later planning-surface refinements can target one compact owner with less ambiguity about whether a meaning belongs in state, prose, or raw plan detail.
 - Intentionally deferred: the actual follow-on surface compression win.
 - Discovered implications: the routine-recovery question set is a useful test, but not every question needs a machine-readable answer if compact prose remains cheaper and authoritative enough.
-- Proof achieved now: pending until the meaning boundary is checked in and tied back to the routine-recovery questions plus one realistic restart/use example.
-- Validation still needed: planning-surface checks and one dogfood pass showing the boundary makes the next tightening target easier to choose.
+- Proof achieved now: the meaning boundary is checked in and tied back to the routine-recovery questions plus one realistic restart/use example.
+- Validation still needed: one future dogfood pass should confirm the boundary stays cheaper than broad prose rereads when the next surface is tightened.
 - Next likely slice: tighten the highest-value compact planning surface or field set revealed by this boundary.
 
 ## Delegated Judgment
@@ -43,7 +43,7 @@
 ## Active Milestone
 
 - ID: planning-surface-meaning-boundary
-- Status: in-progress
+- Status: completed
 - Scope: define and dogfood one compact meaning-boundary rule for planning surfaces.
 - Ready: ready
 - Blocked: none
@@ -51,7 +51,7 @@
 
 ## Immediate Next Action
 
-- Classify the routine-recovery meanings from the previous slice into machine-readable state, compact prose, and raw execplan detail, then record the rule in one canonical planning doc.
+- None; the slice is complete and follow-on work is routed to `ROADMAP.md`.
 
 ## Blockers
 
@@ -102,11 +102,12 @@
 
 ## Execution Summary
 
-- Outcome delivered: pending
-- Validation confirmed: pending
-- Follow-on routed to: pending
-- Resume from: current milestone
+- Outcome delivered: Recorded a compact meaning-boundary rule in `docs/execplans/README.md` and tied the routine-recovery answers back to that rule from the default-path contract.
+- Validation confirmed: `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-planning-bootstrap summary --format json`; `uv run agentic-planning-bootstrap report --format json`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`
+- Follow-on routed to: `ROADMAP.md`
+- Resume from: the `planning-surface-clarity-routine-recovery` roadmap lane
 
 ## Drift Log
 
 - 2026-04-17: Promoted the next bounded slice from `planning-surface-clarity-routine-recovery` after the routine recovery path itself was clarified and archived.
+- 2026-04-17: Completed the meaning-boundary slice by classifying restart-critical meanings in `docs/execplans/README.md` and linking the routine-recovery questions back to that rule.

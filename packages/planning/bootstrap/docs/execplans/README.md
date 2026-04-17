@@ -134,6 +134,16 @@ Use `none` only when the slice is so local that delegated-judgment framing would
 `agentic-planning-bootstrap summary --format json` exposes a typed `planning-summary/v1` payload. Inside that payload, `planning_record` is the canonical active planning record when planning has one active TODO item and one active execplan. `active_contract` is the narrower intent projection over that record.
 Treat `planning_record` as canonical active state when it is available; raw `TODO.md` and execplan prose remain the thin human maintenance layer and semantic fallback.
 
+## Meaning Boundary
+
+Use this split when deciding where a planning meaning belongs:
+
+- Machine-readable state: meanings that must be cheap to recover during restart, including active work, next action, follow-on owner, proof state, and escalation boundaries.
+- Compact prose: meanings that are stable but cheaper to keep as compact route or contract guidance than as queryable state.
+- Raw execplan detail: slice-specific narrative, implementation notes, drift-log residue, and other maintenance detail that should not be the default recovery path.
+
+Example: "What should I do next?" belongs in `resumable_contract`; the route that gets you there belongs in compact prose; the line-by-line change log belongs in the execplan detail.
+
 Current-state restart belongs in the compact `resumable_contract` projection:
 
 - `current_next_action`

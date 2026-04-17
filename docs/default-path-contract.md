@@ -40,6 +40,7 @@ The minimum questions are:
 - When do I fall back to prose? -> only when the compact summary leaves the answer ambiguous
 
 Keep these answers on the compact summary path before opening raw `TODO.md` or execplan prose.
+Use [`docs/execplans/README.md`](docs/execplans/README.md) for the meaning boundary behind those answers: machine-readable state owns restart-critical meanings, compact prose owns route guidance and stable framing, and raw execplan detail stays fallback-only.
 
 ## Default Answers
 
