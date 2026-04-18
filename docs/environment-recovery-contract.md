@@ -102,6 +102,7 @@ Do not stretch it into:
 
 - Prefer `agentic-workspace` as the public recovery entrypoint.
 - Treat `status` and `doctor` as the first inspection lane, not direct file spelunking.
+- `doctor` should carry the compact upstream health checks that belong in the workspace layer itself, including contract-integrity drift and committed absolute-path leaks, so recovery does not depend on remembering ad hoc helper scripts first.
 - Use `defaults` and `config` when the question is "what is the normal contract here?" rather than "what failed?"
 - When recovery needs the effective output posture, inspect `agentic-workspace config --target ./repo --format json` and read `workspace.optimization_bias` directly instead of inferring it from rendered surfaces.
 - Distinguish package drift from repo-local warnings:

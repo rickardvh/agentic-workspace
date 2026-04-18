@@ -110,6 +110,9 @@
     },
     "module_reports": {
       "type": "array"
+    },
+    "execution_shape": {
+      "type": "object"
     }
   },
   "additionalProperties": false

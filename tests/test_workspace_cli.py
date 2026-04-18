@@ -526,6 +526,62 @@ def test_config_command_autodetects_existing_supported_agent_instructions_file(t
     assert payload["workspace"]["detected_agent_instructions_files"] == ["GEMINI.md"]
 
 
+def test_config_command_discovers_workspace_root_from_subdirectory(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "agentic-workspace.toml").write_text(
+        'schema_version = 1\n\n[workspace]\nimprovement_latitude = "balanced"\n',
+        encoding="utf-8",
+    )
+    nested = tmp_path / "src" / "agentic_workspace"
+    nested.mkdir(parents=True)
+    previous_cwd = Path.cwd()
+    monkeypatch.chdir(nested)
+    try:
+        assert cli.main(["config", "--format", "json"]) == 0
+    finally:
+        monkeypatch.chdir(previous_cwd)
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["target"] == tmp_path.as_posix()
+    assert payload["config_path"] == (tmp_path / "agentic-workspace.toml").as_posix()
+    assert payload["workspace"]["improvement_latitude"] == "balanced"
+    assert payload["workspace"]["improvement_latitude_source"] == "repo-config"
+
+
+def test_config_command_surfaces_unknown_local_override_fields_as_warnings(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "agentic-workspace.local.toml").write_text(
+        "\n".join(
+            (
+                "schema_version = 1",
+                "",
+                "[runtime]",
+                "supports_internal_delegation = true",
+                "mystery_flag = true",
+                "",
+                "[delegation_targets.gpt_5_4_mini]",
+                'strength = "weak"',
+                'execution_methods = ["internal"]',
+                'unexpected = "note"',
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mixed_agent"]["local_override"]["exists"] is True
+    assert payload["mixed_agent"]["effective_posture"]["supports_internal_delegation"] == {
+        "value": True,
+        "source": "local-override",
+    }
+    assert payload["warnings"] == [
+        "agentic-workspace.local.toml [runtime] contains unsupported field(s): mystery_flag.",
+        "agentic-workspace.local.toml delegation_targets.gpt_5_4_mini contains unsupported field(s): unexpected.",
+    ]
+
+
 def test_defaults_section_selector_returns_compact_contract_answer(capsys) -> None:
     assert cli.main(["defaults", "--section", "validation", "--format", "json"]) == 0
 
@@ -2055,9 +2111,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["execution_shape"]["status"] == "present"
     assert payload["execution_shape"]["task_shape"]["id"] == "direct-or-no-active-plan"
     assert payload["execution_shape"]["recommendation"]["id"] == "stay-direct"
-    assert payload["execution_shape"]["recommendation"]["consult"] == [
-        "agentic-workspace config --target ./repo --format json"
-    ]
+    assert payload["execution_shape"]["recommendation"]["consult"] == ["agentic-workspace config --target ./repo --format json"]
     assert payload["next_action"]["summary"] == "No immediate action"
     assert any(
         item["surface"]

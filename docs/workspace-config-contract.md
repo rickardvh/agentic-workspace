@@ -14,6 +14,7 @@ Use it when the repository wants to keep one checked-in source of truth for life
 
 - Repo-owned config lives at `agentic-workspace.toml` when present.
 - Product-managed workflow and ownership state still lives under `.agentic-workspace/`.
+- `agentic-workspace config --format json` may be run from a workspace subdirectory; the workspace layer should discover the nearest repo root that owns `agentic-workspace.toml` instead of requiring the caller to restate `--target` everywhere.
 
 ## Formal Schemas
 
@@ -200,6 +201,7 @@ Rules:
 - The file is optional.
 - Supported fields are intentionally narrow and capability-shaped.
 - The local file may affect effective reporting, but it must not silently change repo-owned semantics.
+- Unknown local-only fields should surface as config warnings in `agentic-workspace config --format json` instead of forcing a hard failure for ordinary reporting and recovery.
 - The current workspace surface reports these values; it does not turn them into scheduler control.
 - `delegation_targets` is a local-only advisory inventory of available executors.
 - Target names are local aliases, not checked-in repo policy.
