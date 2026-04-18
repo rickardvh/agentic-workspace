@@ -14,24 +14,24 @@
 ## Intent Continuity
 
 - Larger intended outcome: the workspace should make configured mixed-agent posture visible enough at the moment of execution shaping that agents naturally follow it as the default when the task shape fits, and record deviations as exceptions rather than letting them disappear silently.
-- This slice completes the larger intended outcome: no
-- Continuation surface: `TODO.md`
+- This slice completes the larger intended outcome: yes
+- Continuation surface: none
 - Parent lane: config-driven-execution-posture-follow-through
 
 ## Required Continuation
 
-- Required follow-on for the larger intended outcome: yes
-- Owner surface: `TODO.md`
-- Activation trigger: after the contract for default execution-shaping guidance is frozen and ready for implementation
+- Required follow-on for the larger intended outcome: no
+- Owner surface: none
+- Activation trigger: none
 
 ## Iterative Follow-Through
 
-- What this slice should enable: a bounded implementation pass can add the right decision-time surface without re-litigating whether the gap is product-side or Memory-side.
-- Intentionally deferred: the implementation itself, any new runtime heuristics, and any Memory follow-on unless the contract still proves insufficient.
-- Discovered implications: this lane should first answer where the recommendation belongs, what it should say, and how a deviation stays visible, because the recent misses indicate a surfacing problem more than a missing capability.
-- Proof still needed: checked-in planning should name the owner surface, the compact answer shape, and the boundary against scheduler behavior.
-- Validation still needed: planning-surface checks after promotion; implementation validation will belong to the next slice.
-- Next likely slice: implement the chosen compact execution-shaping answer in the existing recovery/planning contract and dogfood it on a real lane.
+- What this slice enabled: one combined execution-shaping answer now joins active planning state with effective local posture in the shared workspace report.
+- Intentionally deferred: none
+- Discovered implications: the shared workspace report is the right owner surface for this answer because it can combine config-backed posture with active planning without teaching planning to parse workspace-local policy.
+- Proof achieved now: `agentic-workspace report --target ./repo --format json` now exposes `execution_shape` with an explicit default recommendation and deviation visibility rule.
+- Validation still needed: none
+- Next likely slice: none
 
 ## Delegated Judgment
 
@@ -43,7 +43,7 @@
 ## Active Milestone
 
 - ID: execution-posture-contract-shaping
-- Status: in-progress
+- Status: completed
 - Scope: identify the compact execution-shaping answer, the owner surface that should carry it, how config-backed default posture should be expressed, and the first bounded implementation slice for `#179`.
 - Ready: ready
 - Blocked: none
@@ -55,7 +55,7 @@
 
 ## Immediate Next Action
 
-- Inspect the existing delegation-posture, default-path, and planning-summary/handoff surfaces, then freeze where the authoritative default execution-shaping recommendation should live, what it should contain, and how deviations should stay visible.
+- None; slice complete.
 
 ## Blockers
 
@@ -65,7 +65,12 @@
 
 - TODO.md
 - ROADMAP.md
-- docs/execplans/config-driven-execution-posture-follow-through-2026-04-18.md
+- docs/default-path-contract.md
+- docs/reporting-contract.md
+- src/agentic_workspace/cli.py
+- src/agentic_workspace/contracts/report_contract.json
+- src/agentic_workspace/workspace_output.py
+- tests/test_workspace_cli.py
 
 ## Invariants
 
@@ -76,20 +81,20 @@
 
 ## Contract Decisions To Freeze
 
-- Which existing owner surface should carry the default execution-shaping answer.
-- What the minimum answer shape is.
-- How the answer stays advisory and agent-agnostic.
-- How deviations from the config-backed default posture should remain visible and explainable without turning into hard enforcement.
+- The authoritative compact execution-shaping answer lives in `agentic-workspace report --target ./repo --format json` as `execution_shape`.
+- The minimum answer shape combines effective posture, current task shape, one default recommendation, and an explicit deviation-visibility rule.
+- The answer remains advisory and agent-agnostic.
+- Deviations stay possible, but the report now makes clear that a broad-slice exception should be explained in checked-in planning residue rather than left implicit.
 
 ## Open Questions To Close
 
-- Should the recommended execution shape live in `agentic-workspace defaults --section delegation_posture`, planning summary, handoff, or another existing compact surface?
-- What task-shape threshold should trigger the answer to matter?
-- What is the smallest implementation slice that will prove the recommendation becomes harder to bypass in ordinary work while still allowing explicit justified deviation?
+- None.
 
 ## Validation Commands
 
+- uv run pytest tests/test_workspace_cli.py -q
 - uv run python scripts/check/check_planning_surfaces.py
+- uv run agentic-workspace report --target . --format json
 
 ## Required Tools
 
@@ -105,11 +110,12 @@
 
 ## Execution Summary
 
-- Outcome delivered: pending.
-- Validation confirmed: pending.
-- Follow-on routed to: pending.
-- Resume from: the active milestone in this execplan.
+- Outcome delivered: `agentic-workspace report --target ./repo --format json` now exposes a compact `execution_shape` answer that combines active planning state with effective config posture, and the report text surfaces the same default recommendation tersely for human inspection.
+- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace report --target . --format json`.
+- Follow-on routed to: lane retired from `TODO.md` and `ROADMAP.md`; GitHub issue `#179` closed.
+- Resume from: the next roadmap lane, `memory-trust-habitual-pull`, when active queue capacity opens again.
 
 ## Drift Log
 
 - 2026-04-18: Promoted issue `#179` immediately after direct dogfooding showed that configured delegation posture was still too easy to bypass at execution-shaping time.
+- 2026-04-18: Completed by adding the combined `execution_shape` report surface, documenting it as the default current-slice owner, and retiring the lane.

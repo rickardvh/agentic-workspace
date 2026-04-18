@@ -2624,6 +2624,7 @@ def _run_report_command(
         active_planning=_effective_active_direction_payload(module_reports=module_reports),
         memory_installed="memory" in installed_modules,
     )
+    execution_shape = _execution_shape_payload(config=config, module_reports=module_reports)
     return {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -2638,6 +2639,7 @@ def _run_report_command(
             bias_payload=_optimization_bias_payload(config.optimization_bias),
             surface="report",
         ),
+        "execution_shape": execution_shape,
         "findings": findings,
         "next_action": next_action,
         "discovery": discovery,
@@ -2671,6 +2673,141 @@ def _effective_active_direction_payload(*, module_reports: list[dict[str, Any]])
         "requested_outcome": str(planning_record.get("requested_outcome") or ""),
         "refs": refs if isinstance(refs, list) else [],
     }
+
+
+def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[dict[str, Any]]) -> dict[str, Any]:
+    mixed_agent = _mixed_agent_payload(config=config)
+    planning_module_report = next(
+        (report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"),
+        None,
+    )
+    if not isinstance(planning_module_report, dict):
+        return {
+            "owner_surface": "workspace-report",
+            "rule": (
+                "Treat effective config posture as the authoritative default execution posture, "
+                "but keep the recommendation advisory and make justified deviation visible."
+            ),
+            "advisory_only": True,
+            "status": "unavailable",
+            "reason": "planning module report is unavailable",
+            "sources": [
+                "agentic-workspace config --target ./repo --format json",
+                "agentic-planning-bootstrap summary --format json",
+            ],
+        }
+
+    planning_status = planning_module_report.get("status", {})
+    active = planning_module_report.get("active", {})
+    planning_record = active.get("planning_record", {})
+    handoff_contract = active.get("handoff_contract", {})
+    has_active_execplan = bool(planning_status.get("active_execplan_count"))
+    strong_planner = bool(mixed_agent["effective_posture"]["strong_planner_available"]["value"])
+    cheap_executor = bool(mixed_agent["effective_posture"]["cheap_bounded_executor_available"]["value"])
+    internal_delegation = bool(mixed_agent["effective_posture"]["supports_internal_delegation"]["value"])
+    prefer_internal = bool(mixed_agent["effective_posture"]["prefer_internal_delegation_when_available"]["value"])
+    sources = [
+        "agentic-workspace config --target ./repo --format json",
+        "agentic-planning-bootstrap summary --format json",
+    ]
+    if isinstance(handoff_contract, dict) and handoff_contract.get("status") == "present":
+        sources.append("agentic-planning-bootstrap handoff --format json")
+
+    payload: dict[str, Any] = {
+        "owner_surface": "workspace-report",
+        "rule": (
+            "Treat effective config posture as the authoritative default execution posture, "
+            "but keep the recommendation advisory and make justified deviation visible."
+        ),
+        "advisory_only": True,
+        "status": "present",
+        "sources": sources,
+        "default_posture": {
+            "planner_executor_pattern": mixed_agent["derived_mode"]["planner_executor_pattern"],
+            "handoff_preference": mixed_agent["derived_mode"]["handoff_preference"],
+            "authoritative_sources": [
+                "agentic-workspace.toml",
+                "agentic-workspace.local.toml",
+            ],
+        },
+    }
+
+    if isinstance(planning_record, dict) and planning_record.get("status") == "present" and has_active_execplan:
+        payload["task_shape"] = {
+            "id": "planning-backed-broad-work",
+            "summary": "The current slice is already planning-backed with an active execplan.",
+            "why": (
+                "The work already needs checked-in planning continuity, so repeating broad direct rediscovery "
+                "is usually more expensive than deriving a bounded handoff once."
+            ),
+        }
+        payload["current_slice"] = {
+            "task_id": planning_record.get("task", {}).get("id", ""),
+            "surface": planning_record.get("task", {}).get("surface", ""),
+            "next_action": planning_record.get("next_action", ""),
+        }
+        if strong_planner and cheap_executor:
+            payload["recommendation"] = {
+                "id": "planner-first-then-bounded-executor",
+                "summary": "Default to stronger planning plus a bounded executor for the current slice.",
+                "why": [
+                    "The active slice is broad enough that checked-in planning already exists.",
+                    "The effective posture reports both a strong planner and a cheap bounded executor.",
+                    "The delegated worker handoff can stay canonical even if execution remains internal, external, or direct.",
+                ],
+                "consult": ["agentic-planning-bootstrap handoff --format json"],
+                "allowed_execution_methods": handoff_contract.get("worker_contract", {}).get(
+                    "allowed_execution_methods",
+                    ["internal delegation", "external cli or api", "single-agent fallback"],
+                ),
+                "deviation_visibility": (
+                    "If you intentionally stay direct for this planning-backed slice, record the reason in the active "
+                    "execplan's Iterative Follow-Through, Execution Summary, or Drift Log instead of leaving the deviation implicit."
+                ),
+            }
+        else:
+            payload["recommendation"] = {
+                "id": "direct-with-checked-in-plan",
+                "summary": "Keep execution direct unless delegation becomes cheaper than rereading.",
+                "why": [
+                    "The active slice is broad enough to benefit from a compact plan.",
+                    "The effective local posture does not currently report the strong-planner/cheap-executor pattern needed for a clear default split.",
+                ],
+                "consult": ["agentic-planning-bootstrap summary --format json"],
+                "allowed_execution_methods": ["single-agent fallback"],
+                "deviation_visibility": (
+                    "If you later delegate anyway, derive the handoff from checked-in planning and note why the exception beat the direct default."
+                ),
+            }
+        payload["deviation_rule"] = (
+            "Local judgment may still choose another execution method, but the deviation should stay explainable in checked-in planning residue."
+        )
+        return payload
+
+    payload["task_shape"] = {
+        "id": "direct-or-no-active-plan",
+        "summary": "No planning-backed broad slice is active right now.",
+        "why": "Without an active execplan-backed slice, the cheapest honest default is still direct execution.",
+    }
+    payload["recommendation"] = {
+        "id": "stay-direct",
+        "summary": "Stay direct unless the work widens enough to need checked-in planning or a compact handoff.",
+        "why": [
+            "There is no active planning-backed slice that justifies a planner-to-worker split by default.",
+            "The mixed-agent posture remains advisory rather than scheduler-like when work is still cheap and self-sufficient.",
+        ],
+        "consult": ["agentic-workspace config --target ./repo --format json"],
+        "allowed_execution_methods": ["single-agent fallback"],
+        "deviation_visibility": (
+            "If the task stops being cheap and direct, promote or tighten planning first instead of silently widening the run."
+        ),
+    }
+    payload["deviation_rule"] = (
+        "Do not force delegation for trivial work; promote into planning first when the cheap direct path stops being safe."
+    )
+    if internal_delegation and prefer_internal and strong_planner and cheap_executor:
+        payload["default_posture"]["note"] = "Delegation is available and preferred when a later slice becomes broad enough."
+    return payload
 
 
 def _active_todo_surface(*, target_root: Path) -> str | None:

@@ -11,6 +11,7 @@
     "installed_modules",
     "health",
     "output_contract",
+    "execution_shape",
     "findings",
     "next_action",
     "discovery",
@@ -28,6 +29,7 @@
     "keep findings, warnings, and next-action guidance explicitly separated",
     "treat setup discovery as pre-write and pre-seed only",
     "surface effective standing intent with source provenance instead of leaving it implicit in chat",
+    "surface one default execution-shaping answer when planning state and local posture together make it cheap to do so",
     "let optimization bias change rendering density, not canonical truth or execution method"
   ]
 }

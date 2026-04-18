@@ -31,6 +31,7 @@ The surrounding report payload keeps these fields separate:
 - `installed_modules`
 - `health`
 - `output_contract`
+- `execution_shape`
 - `findings`
 - `next_action`
 - `discovery`
@@ -82,6 +83,29 @@ Use it when the question is:
 - when should doctrine or understanding move into config or checks?
 - where should newly durable chat-borne guidance be promoted instead of left in chat?
 
+## Execution Shape
+
+The `execution_shape` object is the compact combined answer for the current slice's default execution method.
+
+It keeps:
+
+- `owner_surface`
+- `rule`
+- `advisory_only`
+- `status`
+- `sources`
+- `default_posture`
+- `task_shape`
+- `current_slice` when active planning makes one present
+- `recommendation`
+- `deviation_rule`
+
+Use it when the question is:
+
+- what execution shape should I default to for the current slice?
+- does the active planning shape plus local posture justify stronger planning and a bounded executor by default?
+- if I choose a different method anyway, where should that deviation remain visible?
+
 ## Usage
 
 Prefer:
@@ -97,6 +121,7 @@ Use the machine-readable report as the default combined-state inspection path wh
 - what output/residue bias is shaping this report's rendering defaults?
 - what durable standing intent is currently in force and where does it come from?
 - what mixed-agent posture is in effect?
+- what default execution shape is recommended for the current slice once active planning state and effective posture are combined?
 - what explicit repo-friction hotspots exist right now?
 - how repo-directed initiative differs from workspace-self-adaptation under the current policy?
 - what concept or routing surfaces are getting large enough to act as concept friction?
@@ -114,6 +139,7 @@ Use `agentic-workspace defaults --section intent --format json` when the questio
 Use `agentic-workspace defaults --section clarification --format json` when the question is how to ask the smallest useful follow-up.
 Use `agentic-workspace defaults --section prompt_routing --format json` when the question is which proof lane or owner should absorb a vague prompt.
 Use `agentic-workspace defaults --section relay --format json` when the question is how a strong planner should hand a compact contract to a bounded executor, and `agentic-planning-bootstrap handoff --format json` when the active delegated slice itself needs to be handed off.
+Use `agentic-workspace config --target ./repo --format json` when the question is posture alone; keep `execution_shape` for the combined current-slice recommendation.
 Use `agentic-workspace defaults --section improvement_latitude --format json` when the question is how much evidence-backed repo-friction reduction is welcome by default.
 Use `agentic-workspace defaults --section optimization_bias --format json` when the question is how shared report density and residue style should lean by default.
 Use the `repo_friction.reporting_destinations` field when the question is where reporting-only findings may surface without creating implicit active work.
@@ -127,6 +153,7 @@ Only open raw module files or broader docs when the report points you to a follo
 - Do not require raw module files before the report when the report already answers the question.
 - Keep `output_contract` explicit when repo policy affects reporting density or rendered view style.
 - Keep findings, warnings, and next-action guidance separate.
+- Keep execution-shaping guidance advisory, source-attributed, and compact instead of turning report into a scheduler.
 - Keep standing-intent reporting compact, source-attributed, and subordinate to the canonical owner surfaces.
 - Keep repo-friction evidence derived and queryable instead of turning it into a second editable state store.
 - Keep the repo-directed improvement policy separate from the always-bounded workspace-self-adaptation allowance.

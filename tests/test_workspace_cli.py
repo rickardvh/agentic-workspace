@@ -2035,6 +2035,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "standing_intent" in payload["schema"]["shared_fields"]
     assert "repo_friction" in payload["schema"]["shared_fields"]
     assert "output_contract" in payload["schema"]["shared_fields"]
+    assert "execution_shape" in payload["schema"]["shared_fields"]
     assert "module_reports" in payload["schema"]["shared_fields"]
     assert payload["selected_modules"] == ["planning", "memory"]
     assert payload["installed_modules"] == ["planning", "memory"]
@@ -2045,6 +2046,12 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["output_contract"]["rendered_view_style"] == "brief-explanatory"
     assert payload["output_contract"]["surface_boundary"]["honors_bias"][1] == "rendered human-facing views"
     assert "ownership semantics" in payload["output_contract"]["surface_boundary"]["stays_invariant"]
+    assert payload["execution_shape"]["status"] == "present"
+    assert payload["execution_shape"]["task_shape"]["id"] == "direct-or-no-active-plan"
+    assert payload["execution_shape"]["recommendation"]["id"] == "stay-direct"
+    assert payload["execution_shape"]["recommendation"]["consult"] == [
+        "agentic-workspace config --target ./repo --format json"
+    ]
     assert payload["next_action"]["summary"] == "No immediate action"
     assert any(
         item["surface"]
@@ -2183,6 +2190,91 @@ def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path,
     )
     assert payload["standing_intent"]["supersession_rules"][2]["rule"] == "active_lane_direction_is_slice_scoped"
     assert payload["standing_intent"]["stronger_home_model"]["candidate_classes"][1]["class"] == "active_directional_intent"
+
+
+def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    (target / "agentic-workspace.local.toml").write_text(
+        "schema_version = 1\n\n"
+        "[runtime]\n"
+        "supports_internal_delegation = true\n"
+        "strong_planner_available = true\n"
+        "cheap_bounded_executor_available = true\n\n"
+        "[handoff]\n"
+        "prefer_internal_delegation_when_available = true\n",
+        encoding="utf-8",
+    )
+    (target / "TODO.md").write_text(
+        "# TODO\n\n## Next\n\n- ID: execution-shape-slice\n"
+        "  Status: in-progress\n"
+        "  Surface: docs/execplans/execution-shape-slice.md\n"
+        "  Why now: make default execution shape visible.\n",
+        encoding="utf-8",
+    )
+    (target / "docs" / "execplans" / "execution-shape-slice.md").write_text(
+        "# Execution Shape Slice\n\n"
+        "## Goal\n\n"
+        "- Make default execution shape visible.\n\n"
+        "## Non-Goals\n\n"
+        "- Add scheduler behavior.\n\n"
+        "## Intent Continuity\n\n"
+        "- Larger intended outcome: make config-backed execution posture decisive.\n"
+        "- This slice completes the larger intended outcome: yes\n"
+        "- Continuation surface: none\n\n"
+        "## Required Continuation\n\n"
+        "- Required follow-on for the larger intended outcome: no\n"
+        "- Owner surface: none\n"
+        "- Activation trigger: none\n\n"
+        "## Iterative Follow-Through\n\n"
+        "- What this slice enabled: one compact execution-shaping answer.\n"
+        "- Intentionally deferred: none\n"
+        "- Discovered implications: deviations should stay visible.\n"
+        "- Proof achieved now: pending\n"
+        "- Validation still needed: pending\n"
+        "- Next likely slice: none.\n\n"
+        "## Delegated Judgment\n\n"
+        "- Requested outcome: Make default execution shape visible.\n"
+        "- Hard constraints: Keep it advisory and config-driven.\n"
+        "- Agent may decide locally: the smallest combined report surface.\n"
+        "- Escalate when: a new source of truth would be required.\n\n"
+        "## Active Milestone\n\n"
+        "- ID: execution-shape\n"
+        "- Status: in-progress\n"
+        "- Scope: expose one combined execution recommendation.\n"
+        "- Ready: ready\n"
+        "- Blocked: none\n"
+        "- optional_deps: none\n\n"
+        "## Immediate Next Action\n\n"
+        "- Add the combined execution-shape report answer.\n\n"
+        "## Blockers\n\n"
+        "- None.\n\n"
+        "## Touched Paths\n\n"
+        "- src/agentic_workspace/cli.py\n\n"
+        "## Invariants\n\n"
+        "- Config remains posture rather than scheduler policy.\n\n"
+        "## Validation Commands\n\n"
+        "- uv run pytest tests/test_workspace_cli.py -q\n\n"
+        "## Completion Criteria\n\n"
+        "- One combined execution-shape answer is visible.\n\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    execution_shape = payload["execution_shape"]
+    assert execution_shape["status"] == "present"
+    assert execution_shape["task_shape"]["id"] == "planning-backed-broad-work"
+    assert execution_shape["default_posture"]["planner_executor_pattern"] == "strong-planner-cheap-executor-available"
+    assert execution_shape["default_posture"]["handoff_preference"] == "prefer-internal-when-safe"
+    assert execution_shape["recommendation"]["id"] == "planner-first-then-bounded-executor"
+    assert execution_shape["recommendation"]["consult"] == ["agentic-planning-bootstrap handoff --format json"]
+    assert execution_shape["current_slice"]["task_id"] == "execution-shape-slice"
+    assert "active execplan" in execution_shape["task_shape"]["summary"]
 
 
 def test_report_surfaces_agent_efficiency_output_contract_from_repo_config(tmp_path: Path, capsys) -> None:

@@ -81,6 +81,20 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
     print(f"Installed modules: {installed if installed else '(none)'}")
     if selected:
         print(f"Selected modules: {selected}")
+    execution_shape = payload.get("execution_shape", {})
+    if isinstance(execution_shape, dict) and execution_shape.get("status") == "present":
+        recommendation = execution_shape.get("recommendation", {})
+        if isinstance(recommendation, dict):
+            print("Execution shape:")
+            print(f"- default: {recommendation.get('summary', '')}")
+            task_shape = execution_shape.get("task_shape", {})
+            if isinstance(task_shape, dict) and task_shape.get("summary"):
+                print(f"  task shape: {task_shape['summary']}")
+            for reason in recommendation.get("why", [])[:2]:
+                print(f"  why: {reason}")
+            deviation_visibility = recommendation.get("deviation_visibility")
+            if deviation_visibility:
+                print(f"  deviation: {deviation_visibility}")
     next_action = payload.get("next_action", {})
     if isinstance(next_action, dict):
         summary = next_action.get("summary")
