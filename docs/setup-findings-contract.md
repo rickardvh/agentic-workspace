@@ -21,6 +21,19 @@ Use it when an agent has already analyzed a repo and you want Agentic Workspace 
 - Setup findings should be preserved only when they have a clear durable owner and would still matter after the current session.
 - The artifact should usually stay absent unless a setup or jumpstart pass has already produced promotable findings worth preserving.
 
+## Promotion Path
+
+The intended bridge is:
+
+1. an agent performs setup or jumpstart analysis however it wants
+2. only the small durable remainder is optionally written to `tools/setup-findings.json`
+3. `agentic-workspace setup --target ./repo --format json` classifies that remainder into:
+   - shared repo-friction evidence for reporting
+   - bounded planning-promotion guidance for `TODO.md` or `docs/execplans/`
+4. everything else stays transient
+
+This contract is complete when that bridge feels quiet and sufficient without turning setup into a built-in analyzer.
+
 ## First Accepted Classes
 
 ### `repo_friction_evidence`

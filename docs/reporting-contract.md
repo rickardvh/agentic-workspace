@@ -128,6 +128,7 @@ Only open raw module files or broader docs when the report points you to a follo
 - Keep repo-friction evidence derived and queryable instead of turning it into a second editable state store.
 - When a repo already has a compatible generated hotspot artifact, prefer consuming it as additional evidence instead of requiring the workspace layer to own the analyzer.
 - When setup has already preserved compatible `repo_friction_evidence` findings, consume them as shared repo-friction evidence instead of forcing re-analysis.
+- Treat setup findings as a bounded bridge from agent-native analysis into reporting or planning, not as a second analysis framework that tries to preserve every finding class.
 - Keep repo-friction policy and evidence as shared workspace-level concerns rather than introducing a new core module for them.
 - Keep reporting-only repo-friction follow-through bounded to report output, review output, or already-owned planning residue instead of auto-promoting it into active work.
 - Keep module reports compact and derived.
