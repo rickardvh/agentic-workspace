@@ -3497,7 +3497,7 @@ def _defaults_payload() -> dict[str, Any]:
             "supported_modes": [_improvement_latitude_payload(mode) for mode in SUPPORTED_IMPROVEMENT_LATITUDES],
             "decision_test": _improvement_boundary_test_payload(),
             "evidence_source": "agentic-workspace report --target ./repo --format json",
-            "evidence_classes": ["large_file_hotspots", "concept_surface_hotspots"],
+            "evidence_classes": ["large_file_hotspots", "concept_surface_hotspots", "planning_friction"],
         },
         "optimization_bias": {
             "canonical_doc": "docs/workspace-config-contract.md",

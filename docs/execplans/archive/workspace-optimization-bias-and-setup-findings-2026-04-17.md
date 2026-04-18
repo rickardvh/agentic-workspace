@@ -135,14 +135,14 @@
 
 ## Execution Summary
 
-- Outcome delivered: pending
-- Validation confirmed: pending
-- Follow-on routed to: `docs/reviews/optimization-bias-visibility-audit-2026-04-17.md` for issue `#151`, then the remaining issue-sized milestones in this lane.
-- Follow-on routed to: `docs/reviews/optimization-bias-visibility-audit-2026-04-17.md` for issue `#151`, `docs/reviews/setup-findings-classes-review-2026-04-18.md` for issue `#156`, then the remaining issue-sized milestones in this lane.
-- Resume from: this lane until all nine issues are closed.
+- Outcome delivered: integrated optimization bias into ordinary recovery and workspace posture, completed the quiet setup-findings promotion bridge with a formal schema and class-scope review, and added planning-friction as explicit repo-friction evidence.
+- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`; `uv run pytest tests/test_contract_tooling.py -q`; `uv run python scripts/check/check_contract_tooling_surfaces.py`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace report --target . --format json`.
+- Follow-on routed to: `docs/reviews/optimization-bias-visibility-audit-2026-04-17.md`, `docs/reviews/setup-findings-classes-review-2026-04-18.md`, `docs/reviews/planning-friction-signal-review-2026-04-18.md`, and `ROADMAP.md` next candidate `validation-friction-repo-friction`.
+- Resume from: `ROADMAP.md` once the next bounded repo-friction lane is promoted.
 
 ## Drift Log
 
 - 2026-04-17: Promoted roadmap lane `workspace-optimization-bias-findings` into active planning with issue-sized milestones for optimization-bias integration, setup-findings completion, and planning-friction evidence.
 - 2026-04-17: Captured the bounded optimization-bias visibility audit in checked-in review form to anchor the remaining integration work.
 - 2026-04-18: Recorded the setup-findings class-scope review and kept the contract at the first two durable classes only.
+- 2026-04-18: Closed the lane after shipping the optimization-bias integration, setup-findings completion, and planning-friction repo-friction slices.

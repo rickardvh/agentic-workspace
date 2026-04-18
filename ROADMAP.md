@@ -1,6 +1,6 @@
 # Roadmap
 
-Last reviewed: 2026-04-17
+Last reviewed: 2026-04-18
 
 ## Purpose
 
@@ -19,21 +19,21 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## GitHub Issue Intake
 
-- Latest open planning tranche: GitHub issues `#146`-`#174`, grouped below into ordered inactive candidate lanes.
+- Latest open planning tranche: GitHub issues `#146`-`#175`, grouped below into ordered inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 - The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/routing/capture tranches are complete.
 
 ## Candidate Lanes
 
-- Lane: Workspace optimization bias and setup findings
-  ID: workspace-optimization-bias-findings
+- Lane: Validation friction as repo-friction evidence
+  ID: validation-friction-repo-friction
   Priority: first
-  Issues: #148, #149, #151, #152, #153, #154, #155, #156, #174
-  Outcome: integrate optimization bias, setup or jumpstart findings, and planning-friction evidence into normal repo operation without adding a second analysis framework.
-  Why later: wait until the compact planning recovery path is clearer so the reporting path has a stable target and visibility model, then fold planning-friction in as another repo-friction signal instead of a separate planning dashboard.
-  Promotion signal: promote when repeated dogfooding shows the bias and findings path is still hidden, noisy, or too hard to recover, or when hard-to-plan work itself becomes a repeated signal that seams or ownership are unclear.
-  Suggested first slice: surface the effective optimization bias in the compact normal recovery path, then decide where planning-friction belongs in the existing repo-friction reporting path.
+  Issues: #175
+  Outcome: treat hard-to-validate work as explicit repo-friction evidence when proof lanes, tranche boundaries, or safe validation scope are still unclear after the compact proof path.
+  Why later: wait until planning-friction lands cleanly in ordinary work so validation-friction stays distinct from planning difficulty or one-off failing tests.
+  Promotion signal: promote when repeated dogfooding shows that the hardest part of a task is still choosing the narrowest safe proof lane or validation boundary rather than implementing the change itself.
+  Suggested first slice: define validation-friction operationally, distinguish it from ordinary test work, and decide how it should appear in the existing repo-friction report path.
 
 - Lane: Memory trust and habitual pull
   ID: memory-trust-habitual-pull

@@ -647,7 +647,7 @@ def repo_friction_payload(
         external_evidence.append(external_codebase_map)
     if external_setup_findings_payload is not None:
         external_evidence.append(external_setup_findings_payload)
-    evidence_classes = ["large_file_hotspots", "concept_surface_hotspots"]
+    evidence_classes = ["large_file_hotspots", "concept_surface_hotspots", "planning_friction"]
     if external_evidence:
         evidence_classes.append("external_evidence")
     return {
@@ -672,6 +672,30 @@ def repo_friction_payload(
             "threshold_lines": REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD,
             "count": len(concept_hotspots),
             "items": concept_hotspots,
+        },
+        "planning_friction": {
+            "status": "explicit-contract",
+            "rule": (
+                "Treat planning friction as repo-friction evidence only when the smallest safe slice, proof boundary, "
+                "ownership boundary, or minimum read set stays unclear after the normal compact recovery path."
+            ),
+            "distinguish_from": [
+                "ordinary task difficulty with otherwise clear seams",
+                "one-off weak-model confusion",
+                "broad refactor desire without bounded operational evidence",
+            ],
+            "subtypes": [
+                "unclear_seam",
+                "unclear_proof_boundary",
+                "ownership_ambiguity",
+                "chunking_instability",
+                "reread_pressure",
+            ],
+            "reporting_destinations": [
+                "repo_friction review output",
+                "bounded planning residue when a follow-on slice is justified",
+                "ordinary report output without implicit active work",
+            ],
         },
         "external_evidence": external_evidence,
     }

@@ -114,6 +114,7 @@ That surface is the queryable contract for:
 - shared workspace reporting
 - repo-owned lifecycle defaults and update intent
 - improvement-latitude policy and current repo-friction evidence
+- planning-friction as repo-friction evidence when the smallest safe slice or proof path stays unclear
 - effective repo output posture through `workspace.optimization_bias`
 - current mixed-agent reporting boundaries
 
