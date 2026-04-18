@@ -16,8 +16,10 @@ Use it when an agent has already analyzed a repo and you want Agentic Workspace 
 - Setup findings input is optional.
 - Agentic Workspace does not own how the analysis was produced.
 - The first accepted artifact path is `tools/setup-findings.json`.
+- `tools/setup-findings.json` is the quiet default because it is repo-local, optional, easy to ignore when absent, and already sits near other generated or agent-facing maintainer surfaces.
 - The first accepted artifact kind is `workspace-setup-findings/v1`.
 - Setup findings should be preserved only when they have a clear durable owner and would still matter after the current session.
+- The artifact should usually stay absent unless a setup or jumpstart pass has already produced promotable findings worth preserving.
 
 ## First Accepted Classes
 
@@ -61,6 +63,9 @@ Leave transient when:
 ## Artifact Shape
 
 Use `agentic-workspace setup --target ./repo --format json` for the queryable contract and accepted-input status.
+
+When `tools/setup-findings.json` is absent, that is the normal quiet state rather than a warning condition.
+Create it only when an agent has already produced setup or jumpstart findings that are plausible durable candidates for reporting or planning.
 
 The optional artifact shape is:
 

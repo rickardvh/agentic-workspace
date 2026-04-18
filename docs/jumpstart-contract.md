@@ -35,8 +35,12 @@ Setup may also accept one optional agent-produced findings artifact at `tools/se
 That input stays bounded:
 
 - the workspace does not own how the analysis was produced
+- `tools/setup-findings.json` is the quiet default path because it is local, optional, and easy to leave absent in repos that have nothing worth preserving
 - only findings with a clear durable owner should be preserved
 - low-value or weakly grounded findings should stay transient
+
+The normal state is that the artifact does not exist.
+Create it only when a setup or jumpstart pass already has promotable findings worth handing to the workspace layer.
 
 Use [`docs/setup-findings-contract.md`](docs/setup-findings-contract.md) for the accepted artifact shape, first finding classes, and promotion-versus-transient rules.
 
