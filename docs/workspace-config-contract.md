@@ -66,6 +66,10 @@ recommended_upgrade_after_days = 30
   - `workspace.improvement_latitude` governs autonomous initiative directed at repo-owned or otherwise external surfaces
   - bounded workspace-self-adaptation inside Agentic Workspace-owned reporting, routing, selector, recovery, and contract surfaces remains allowed under every mode
 - Workspace-self-adaptation must still stay bounded by correctness, ownership, proof, and portability rules; it is not blanket permission for repo changes.
+- The default friction-response order is:
+  1. adapt inside Agentic Workspace first when the friction can be removed there safely and cheaply
+  2. promote repo-directed improvement only when the friction reflects a real repo problem that should not be masked by workspace adaptation
+  3. do not externalize friction to the user when Agentic Workspace can honestly absorb it itself
 - `repo-owned` means do not rely on native runtime artifacts at all; keep durable state directly in `TODO.md` and `docs/execplans/`.
 - `gemini` allows Gemini-style files such as `implementation_plan.md`, `task.md`, or `walkthrough.md` as local execution aids, but durable cross-agent state must still be mirrored back into `TODO.md` and `docs/execplans/` before review, handoff, or session end.
 - `none` means do not perform opportunistic repo-directed friction reduction outside the explicitly requested work.
@@ -75,6 +79,10 @@ recommended_upgrade_after_days = 30
 - `proactive` means small standalone repo-directed cleanup slices are allowed when evidence is explicit and the work still stays bounded by delegated judgment, proof, and ownership.
 - `reporting` findings belong in derived report output, review output, or planning residue that already exists for the current slice; they must not create active work on their own.
 - Under all five modes, Agentic Workspace may still improve its own fit to the repo when the change stays inside workspace-owned surfaces and remains the cheapest correct fix.
+- Mode interaction follows the same order:
+  - `none`: repo-directed initiative stays off, but bounded workspace self-adaptation remains allowed
+  - `reporting`: repo-directed follow-through stays reporting-only, but bounded workspace self-adaptation remains allowed
+  - `proactive`: still prefer workspace adaptation first; use repo-directed action only when the root problem is genuinely external and the work stays bounded
 - `agent-efficiency` means prefer terse durable outputs, compact residue, and low-prose rendered views when machine-readable state already carries the contract safely.
 - `balanced` means keep outputs compact by default while preserving enough explanation for routine human inspection.
 - `human-legibility` means prefer clearer explanatory rendering and slightly more legible residue when truth would remain unchanged.
@@ -85,6 +93,9 @@ recommended_upgrade_after_days = 30
 - Use `agentic-workspace defaults --section improvement_latitude --format json` to inspect the shipped decision test for when friction reduction still counts as local means versus a changed task, and to inspect the explicit split between repo-directed improvement and workspace-self-adaptation.
 - Use `agentic-workspace defaults --section optimization_bias --format json` to inspect the shipped output/residue bias contract and its semantic guardrails.
 - Use `agentic-workspace report --target ./repo --format json` to inspect both workspace-derived evidence and any compatible external hotspot artifacts the repo already maintains.
+- Examples:
+  - Workspace adaptation first: tighten a selector, recovery hint, or report field so the workspace points agents at the right repo surface without asking the repo to restructure itself.
+  - Repo-directed improvement next: after the workspace already routes correctly, repeated friction still comes from unclear repo seams, tranche boundaries, or ownership and should be surfaced as repo-directed follow-on work instead of another workspace-only patch.
 - When `agentic-workspace.toml` is absent, product defaults remain authoritative and the config report should say so rather than implying a live repo policy.
 - Update policy is module-specific in v1; there is no separate public module upgrade entrypoint.
 - Normal update execution stays behind `agentic-workspace`.

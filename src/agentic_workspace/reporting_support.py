@@ -667,6 +667,20 @@ def repo_friction_payload(
             "status": "allowed-with-bounds",
             "bounded_by": ["correctness", "ownership", "proof", "portability"],
         },
+        "friction_response_order": [
+            {
+                "step": 1,
+                "action": "adapt-inside-workspace-first",
+            },
+            {
+                "step": 2,
+                "action": "promote-repo-directed-improvement-when-external",
+            },
+            {
+                "step": 3,
+                "action": "avoid-externalizing-honestly-absorbable-friction",
+            },
+        ],
         "initiative_posture": policy_payload["initiative_posture"],
         "rule": policy_payload["reporting_rule"],
         "reporting_destinations": policy_payload["reporting_destinations"],

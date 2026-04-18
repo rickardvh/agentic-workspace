@@ -42,25 +42,20 @@
 
 ## Active Milestone
 
-- ID: friction-response-order
+- ID: self-adaptation-guardrails
 - Status: in-progress
-- Scope: close `#177` by defining the default response order and clarifying how `none`, `reporting`, and `proactive` apply.
+- Scope: close `#178` by freezing one compact guardrail test and anchoring it in docs/report guidance with examples from this repo.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
 
 ## Upcoming Milestones
 
-- ID: self-adaptation-guardrails
-- Status: pending
-- Scope: close `#178` by freezing one compact guardrail test and anchoring it in docs/report guidance with examples from this repo.
-- Ready: ready
-- Blocked: depends on the policy split and response-order wording
-- optional_deps: none
+- None.
 
 ## Immediate Next Action
 
-- Implement the `#177` response-order wording in the config contract, reporting contract, default-path contract, defaults payload, report payload, and CLI tests, then add one or two examples that show workspace adaptation first versus repo-directed improvement.
+- Implement the `#178` guardrail test in the config contract, reporting contract, design principles, defaults payload, report payload, and CLI tests so workspace self-adaptation stays general, bounded, and cheaper than repeated repo or user burden.
 
 ## Blockers
 
@@ -129,3 +124,4 @@
 
 - 2026-04-18: Promoted roadmap lane `workspace-self-adaptation-friction-order` into active planning after issue intake clarified that `improvement_latitude` semantics were still ambiguous.
 - 2026-04-18: Landed the `#176` policy split so `improvement_latitude` now governs repo-directed initiative only while bounded workspace-self-adaptation remains allowed under every mode.
+- 2026-04-18: Landed the `#177` response-order contract so the workspace now adapts itself first when that is the honest cheap fix and only then promotes repo-directed improvement.

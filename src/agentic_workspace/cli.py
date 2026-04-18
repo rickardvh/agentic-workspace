@@ -674,6 +674,29 @@ def _workspace_self_adaptation_payload() -> dict[str, Any]:
     }
 
 
+def _friction_response_order_payload() -> list[dict[str, Any]]:
+    return [
+        {
+            "step": 1,
+            "action": "adapt-inside-workspace-first",
+            "rule": ("Adapt inside Agentic Workspace first when the friction can be removed there safely and cheaply."),
+        },
+        {
+            "step": 2,
+            "action": "promote-repo-directed-improvement-when-external",
+            "rule": (
+                "Promote repo-directed improvement only when the friction reflects a real repo "
+                "problem that should not be masked by workspace adaptation."
+            ),
+        },
+        {
+            "step": 3,
+            "action": "avoid-externalizing-honestly-absorbable-friction",
+            "rule": ("Do not externalize friction to the user when Agentic Workspace can honestly absorb it itself."),
+        },
+    ]
+
+
 def _improvement_boundary_test_payload() -> dict[str, Any]:
     return {
         "stays_local_when": [
@@ -3523,6 +3546,22 @@ def _defaults_payload() -> dict[str, Any]:
                 "The improvement-latitude modes govern autonomous initiative directed at repo-owned or otherwise external surfaces."
             ),
             "workspace_self_adaptation": _workspace_self_adaptation_payload(),
+            "friction_response_order": _friction_response_order_payload(),
+            "mode_interpretation": {
+                "none": ("Repo-directed initiative stays off, but bounded workspace self-adaptation remains allowed."),
+                "reporting": ("Repo-directed follow-through stays reporting-only, but bounded workspace self-adaptation remains allowed."),
+                "proactive": (
+                    "Prefer workspace adaptation first; use repo-directed action only when the root problem is genuinely external and the work stays bounded."
+                ),
+            },
+            "examples": {
+                "workspace_adaptation_first": [
+                    "tighten a selector, recovery hint, or report field so the workspace points agents at the right repo surface without asking the repo to restructure itself"
+                ],
+                "repo_directed_improvement_next": [
+                    "after the workspace already routes correctly, repeated friction still comes from unclear repo seams, tranche boundaries, or ownership and should be promoted as repo-directed follow-on work"
+                ],
+            },
             "default_mode": DEFAULT_IMPROVEMENT_LATITUDE,
             "supported_modes": [_improvement_latitude_payload(mode) for mode in SUPPORTED_IMPROVEMENT_LATITUDES],
             "decision_test": _improvement_boundary_test_payload(),
