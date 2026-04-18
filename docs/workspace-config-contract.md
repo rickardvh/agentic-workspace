@@ -59,17 +59,22 @@ recommended_upgrade_after_days = 30
 - `workspace.agent_instructions_file` sets the canonical root startup-entrypoint filename for workspace lifecycle surfaces.
 - If `workspace.agent_instructions_file` is omitted, the workspace defaults to `AGENTS.md` and may conservatively autodetect one existing supported startup file in the target repo.
 - `workspace.workflow_artifact_profile` tells the workspace which native runtime artifacts may exist before the repo-owned planning surfaces must be updated.
-- `workspace.improvement_latitude` sets how much bounded repo-friction initiative is welcome by default when the repo already has evidence that a local hotspot is expensive to keep extending.
+- `workspace.improvement_latitude` sets how much bounded repo-directed friction reduction is welcome by default when the repo already has evidence that a local hotspot is expensive to keep extending.
 - `workspace.optimization_bias` sets whether durable outputs and rendered views should lean toward agent efficiency, balance, or human legibility when canonical truth would stay unchanged.
 - Improvement-latitude policy and repo-friction evidence stay workspace-level shared surfaces; they should not become a third core module unless a future independent lifecycle clearly justifies it.
+- Workspace-self-adaptation and repo-directed improvement are separate policy targets:
+  - `workspace.improvement_latitude` governs autonomous initiative directed at repo-owned or otherwise external surfaces
+  - bounded workspace-self-adaptation inside Agentic Workspace-owned reporting, routing, selector, recovery, and contract surfaces remains allowed under every mode
+- Workspace-self-adaptation must still stay bounded by correctness, ownership, proof, and portability rules; it is not blanket permission for repo changes.
 - `repo-owned` means do not rely on native runtime artifacts at all; keep durable state directly in `TODO.md` and `docs/execplans/`.
 - `gemini` allows Gemini-style files such as `implementation_plan.md`, `task.md`, or `walkthrough.md` as local execution aids, but durable cross-agent state must still be mirrored back into `TODO.md` and `docs/execplans/` before review, handoff, or session end.
-- `none` means do not perform opportunistic repo-friction reduction outside the explicitly requested work.
-- `reporting` means notice and surface notable repo friction through bounded reporting or residue, but do not act on it without explicit direction.
-- `conservative` means reduce friction only inside already-touched scope unless the work is explicitly promoted.
-- `balanced` means one evidence-backed hotspot may justify bounded cleanup when proof and ownership stay inside the current lane.
-- `proactive` means small standalone cleanup slices are allowed when evidence is explicit and the work still stays bounded by delegated judgment, proof, and ownership.
+- `none` means do not perform opportunistic repo-directed friction reduction outside the explicitly requested work.
+- `reporting` means notice and surface notable repo-directed friction through bounded reporting or residue, but do not act on it without explicit direction.
+- `conservative` means reduce repo-directed friction only inside already-touched scope unless the work is explicitly promoted.
+- `balanced` means one evidence-backed repo-directed hotspot may justify bounded cleanup when proof and ownership stay inside the current lane.
+- `proactive` means small standalone repo-directed cleanup slices are allowed when evidence is explicit and the work still stays bounded by delegated judgment, proof, and ownership.
 - `reporting` findings belong in derived report output, review output, or planning residue that already exists for the current slice; they must not create active work on their own.
+- Under all five modes, Agentic Workspace may still improve its own fit to the repo when the change stays inside workspace-owned surfaces and remains the cheapest correct fix.
 - `agent-efficiency` means prefer terse durable outputs, compact residue, and low-prose rendered views when machine-readable state already carries the contract safely.
 - `balanced` means keep outputs compact by default while preserving enough explanation for routine human inspection.
 - `human-legibility` means prefer clearer explanatory rendering and slightly more legible residue when truth would remain unchanged.
@@ -77,7 +82,7 @@ recommended_upgrade_after_days = 30
 - The compact surface boundary is:
   - honors bias: derived report rendering density, rendered human-facing views, and durable residue style when canonical truth stays unchanged
   - stays invariant: execution method, reasoning depth, delegated-judgment boundaries, proof requirements, ownership semantics, machine-readable report truth, and canonical state semantics
-- Use `agentic-workspace defaults --section improvement_latitude --format json` to inspect the shipped decision test for when friction reduction still counts as local means versus a changed task.
+- Use `agentic-workspace defaults --section improvement_latitude --format json` to inspect the shipped decision test for when friction reduction still counts as local means versus a changed task, and to inspect the explicit split between repo-directed improvement and workspace-self-adaptation.
 - Use `agentic-workspace defaults --section optimization_bias --format json` to inspect the shipped output/residue bias contract and its semantic guardrails.
 - Use `agentic-workspace report --target ./repo --format json` to inspect both workspace-derived evidence and any compatible external hotspot artifacts the repo already maintains.
 - When `agentic-workspace.toml` is absent, product defaults remain authoritative and the config report should say so rather than implying a live repo policy.

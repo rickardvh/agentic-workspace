@@ -658,6 +658,15 @@ def repo_friction_payload(
         ),
         "policy_mode": improvement_latitude,
         "policy_source": improvement_latitude_source,
+        "policy_target": "repo-directed-improvement",
+        "policy_target_rule": (
+            "The improvement-latitude mode governs repo-directed initiative; bounded workspace-self-adaptation "
+            "inside Agentic Workspace-owned surfaces remains allowed under every mode."
+        ),
+        "workspace_self_adaptation": {
+            "status": "allowed-with-bounds",
+            "bounded_by": ["correctness", "ownership", "proof", "portability"],
+        },
         "initiative_posture": policy_payload["initiative_posture"],
         "rule": policy_payload["reporting_rule"],
         "reporting_destinations": policy_payload["reporting_destinations"],

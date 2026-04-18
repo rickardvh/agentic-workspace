@@ -98,6 +98,7 @@ Use the machine-readable report as the default combined-state inspection path wh
 - what durable standing intent is currently in force and where does it come from?
 - what mixed-agent posture is in effect?
 - what explicit repo-friction hotspots exist right now?
+- how repo-directed initiative differs from workspace-self-adaptation under the current policy?
 - what concept or routing surfaces are getting large enough to act as concept friction?
 - what bounded planning-friction signals suggest unclear seams, proof boundaries, ownership, or minimum-read pressure?
 - what compatible external hotspot artifacts already exist that the workspace can consume instead of recomputing everything itself?
@@ -127,6 +128,7 @@ Only open raw module files or broader docs when the report points you to a follo
 - Keep findings, warnings, and next-action guidance separate.
 - Keep standing-intent reporting compact, source-attributed, and subordinate to the canonical owner surfaces.
 - Keep repo-friction evidence derived and queryable instead of turning it into a second editable state store.
+- Keep the repo-directed improvement policy separate from the always-bounded workspace-self-adaptation allowance.
 - Treat planning friction as repo-friction evidence when the cheap planning path itself stops being clear because seam, proof, ownership, or minimum-read boundaries are unclear.
 - When a repo already has a compatible generated hotspot artifact, prefer consuming it as additional evidence instead of requiring the workspace layer to own the analyzer.
 - When setup has already preserved compatible `repo_friction_evidence` findings, consume them as shared repo-friction evidence instead of forcing re-analysis.

@@ -649,6 +649,31 @@ def _improvement_latitude_payload(mode: str) -> dict[str, Any]:
     return policies[mode].copy()
 
 
+def _workspace_self_adaptation_payload() -> dict[str, Any]:
+    return {
+        "status": "allowed-with-bounds",
+        "summary": (
+            "Workspace-self-adaptation may reduce friction inside Agentic Workspace-owned surfaces under every improvement-latitude mode."
+        ),
+        "rule": (
+            "Treat improvement_latitude as the policy for repo-directed initiative only; do not read "
+            "it as a ban on bounded workspace self-improvement."
+        ),
+        "applies_to": [
+            "reporting surfaces",
+            "routing and selector surfaces",
+            "recovery surfaces",
+            "workspace contract clarity",
+        ],
+        "bounded_by": [
+            "correctness",
+            "ownership",
+            "proof",
+            "portability",
+        ],
+    }
+
+
 def _improvement_boundary_test_payload() -> dict[str, Any]:
     return {
         "stays_local_when": [
@@ -3493,6 +3518,11 @@ def _defaults_payload() -> dict[str, Any]:
             ),
             "owner_surface": "workspace",
             "owner_rule": ("Repo-friction policy and evidence remain workspace-level shared surfaces rather than a separate core module."),
+            "policy_target": "repo-directed-improvement",
+            "policy_target_rule": (
+                "The improvement-latitude modes govern autonomous initiative directed at repo-owned or otherwise external surfaces."
+            ),
+            "workspace_self_adaptation": _workspace_self_adaptation_payload(),
             "default_mode": DEFAULT_IMPROVEMENT_LATITUDE,
             "supported_modes": [_improvement_latitude_payload(mode) for mode in SUPPORTED_IMPROVEMENT_LATITUDES],
             "decision_test": _improvement_boundary_test_payload(),

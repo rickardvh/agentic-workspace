@@ -19,25 +19,34 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## GitHub Issue Intake
 
-- Latest open planning tranche: GitHub issues `#146`-`#175`, grouped below into ordered inactive candidate lanes.
+- Latest open planning tranche: GitHub issues `#146`-`#178`, grouped below into ordered inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 - The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/routing/capture tranches are complete.
 
 ## Candidate Lanes
 
+- Lane: Workspace self-adaptation and friction-response order
+  ID: workspace-self-adaptation-friction-order
+  Priority: first
+  Issues: #176, #177, #178
+  Outcome: define workspace-self-adaptation as distinct from repo-directed improvement, make the default friction-response order explicit, and add guardrails so internal adaptation stays bounded instead of becoming a hidden workaround layer.
+  Why later: wait until the planning-friction lane is archived and visible in ordinary work so the next policy clarification can build on a settled repo-friction model rather than colliding with that active integration work.
+  Promotion signal: promote when repeated dogfooding shows ambiguity about whether the workspace should adapt itself first, surface repo-directed cleanup, or both, especially under `improvement_latitude = none|reporting|proactive`.
+  Suggested first slice: define the two policy targets clearly, state the default friction-response order, and freeze one compact guardrail test for when workspace adaptation is honest fit improvement versus hidden compensation.
+
 - Lane: Validation friction as repo-friction evidence
   ID: validation-friction-repo-friction
-  Priority: first
+  Priority: second
   Issues: #175
   Outcome: treat hard-to-validate work as explicit repo-friction evidence when proof lanes, tranche boundaries, or safe validation scope are still unclear after the compact proof path.
-  Why later: wait until planning-friction lands cleanly in ordinary work so validation-friction stays distinct from planning difficulty or one-off failing tests.
+  Why later: wait until the workspace adaptation and friction-response semantics are clearer so validation-friction can attach to the same repo-friction model without conflating internal workspace fit problems with genuinely external validation seams.
   Promotion signal: promote when repeated dogfooding shows that the hardest part of a task is still choosing the narrowest safe proof lane or validation boundary rather than implementing the change itself.
   Suggested first slice: define validation-friction operationally, distinguish it from ordinary test work, and decide how it should appear in the existing repo-friction report path.
 
 - Lane: Memory trust and habitual pull
   ID: memory-trust-habitual-pull
-  Priority: second
+  Priority: third
   Issues: #146, #150, #157, #158, #159
   Outcome: prove Memory is a cheap habitual path for ordinary work and clarify its boundary with other standing guidance.
   Why later: wait until the planning recovery path stops shifting so Memory can converge against a stable operating contract.
@@ -46,7 +55,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 - Lane: Portable declarative contracts beyond Python CLI
   ID: portable-declarative-contracts-beyond-python-cli
-  Priority: third
+  Priority: fourth
   Issues: #161, #166, #167, #168, #169, #170
   Outcome: move stable lifecycle and runtime truth toward declarative portable contract sources so Python remains a strong reference implementation rather than the only credible operational embodiment.
   Why later: wait until the current planning/reporting lanes settle so the next declarative extraction tranche targets stable truths rather than moving boundaries.

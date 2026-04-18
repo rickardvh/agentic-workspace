@@ -207,6 +207,10 @@ It should not erase:
 
 Convenience must not blur responsibility.
 
+Workspace-self-adaptation should also remain distinct from repo-directed improvement.
+The workspace may improve its own fit to a repo through clearer reporting, routing, recovery, or contract surfaces even when repo-directed initiative is tightly constrained.
+That distinction should stay explicit so `improvement_latitude = "none"` does not accidentally freeze legitimate workspace self-improvement.
+
 ### 12. Generated surfaces must stay trustworthy
 
 Generated docs and routing artifacts are useful only when they remain reliable.

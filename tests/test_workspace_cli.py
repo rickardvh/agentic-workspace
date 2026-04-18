@@ -295,6 +295,9 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["improvement_latitude"]["canonical_doc"] == "docs/workspace-config-contract.md"
     assert payload["improvement_latitude"]["command"] == "agentic-workspace defaults --section improvement_latitude --format json"
     assert payload["improvement_latitude"]["owner_surface"] == "workspace"
+    assert payload["improvement_latitude"]["policy_target"] == "repo-directed-improvement"
+    assert payload["improvement_latitude"]["workspace_self_adaptation"]["status"] == "allowed-with-bounds"
+    assert "proof" in payload["improvement_latitude"]["workspace_self_adaptation"]["bounded_by"]
     assert payload["improvement_latitude"]["default_mode"] == "conservative"
     assert payload["improvement_latitude"]["supported_modes"][0]["mode"] == "none"
     assert payload["improvement_latitude"]["supported_modes"][1]["mode"] == "reporting"
@@ -613,6 +616,8 @@ def test_defaults_section_selector_returns_improvement_latitude_answer(capsys) -
     assert payload["answer"]["canonical_doc"] == "docs/workspace-config-contract.md"
     assert payload["answer"]["default_mode"] == "conservative"
     assert payload["answer"]["owner_surface"] == "workspace"
+    assert payload["answer"]["policy_target"] == "repo-directed-improvement"
+    assert payload["answer"]["workspace_self_adaptation"]["status"] == "allowed-with-bounds"
     assert payload["answer"]["supported_modes"][0]["mode"] == "none"
     assert payload["answer"]["supported_modes"][1]["mode"] == "reporting"
     assert payload["answer"]["supported_modes"][1]["initiative_posture"] == "reporting-only"
@@ -2058,6 +2063,8 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert standing_classes["enforceable_workflow"]["status"] == "present"
     assert payload["repo_friction"]["policy_mode"] == "conservative"
     assert payload["repo_friction"]["owner_surface"] == "workspace"
+    assert payload["repo_friction"]["policy_target"] == "repo-directed-improvement"
+    assert payload["repo_friction"]["workspace_self_adaptation"]["status"] == "allowed-with-bounds"
     assert payload["repo_friction"]["initiative_posture"] == "local-touched-scope-only"
     assert payload["repo_friction"]["reporting_destinations"] == [
         "agentic-workspace report --target ./repo --format json",
@@ -2332,6 +2339,7 @@ def test_report_surfaces_reporting_only_repo_friction_posture(tmp_path: Path, ca
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["repo_friction"]["policy_mode"] == "reporting"
+    assert payload["repo_friction"]["policy_target"] == "repo-directed-improvement"
     assert payload["repo_friction"]["initiative_posture"] == "reporting-only"
     assert payload["repo_friction"]["rule"] == (
         "Surface notable friction through bounded reporting or residue; do not act on it without explicit direction."
