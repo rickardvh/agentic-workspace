@@ -138,9 +138,11 @@
 - Outcome delivered: pending
 - Validation confirmed: pending
 - Follow-on routed to: `docs/reviews/optimization-bias-visibility-audit-2026-04-17.md` for issue `#151`, then the remaining issue-sized milestones in this lane.
+- Follow-on routed to: `docs/reviews/optimization-bias-visibility-audit-2026-04-17.md` for issue `#151`, `docs/reviews/setup-findings-classes-review-2026-04-18.md` for issue `#156`, then the remaining issue-sized milestones in this lane.
 - Resume from: this lane until all nine issues are closed.
 
 ## Drift Log
 
 - 2026-04-17: Promoted roadmap lane `workspace-optimization-bias-findings` into active planning with issue-sized milestones for optimization-bias integration, setup-findings completion, and planning-friction evidence.
 - 2026-04-17: Captured the bounded optimization-bias visibility audit in checked-in review form to anchor the remaining integration work.
+- 2026-04-18: Recorded the setup-findings class-scope review and kept the contract at the first two durable classes only.
