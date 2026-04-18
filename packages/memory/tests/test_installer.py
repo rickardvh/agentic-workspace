@@ -2158,10 +2158,30 @@ def test_memory_report_derives_compact_module_state(tmp_path: Path) -> None:
     assert report["status"]["note_count"] >= 1
     assert report["status"]["current_note_count"] >= 2
     assert "current_notes" in report["active"]
+    assert report["habitual_pull"]["status"] in {
+        "ready-for-ordinary-work",
+        "attention-needed",
+        "needs-more-proof",
+    }
+    assert report["habitual_pull"]["ordinary_work_bundle"]["always_load"] == ["memory/index.md"]
     assert "manual_review_count" in report["trust"]
     assert "state_counts" in report["trust"]
     assert "usefulness_audit" in report
     assert report["usefulness_audit"]["status"] in {"measured", "needs-more-proof", "attention-needed", "actionable"}
+
+
+def test_memory_report_exposes_habitual_pull_boundary_and_evidence(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+
+    report = installer.memory_report(target=target)
+
+    habitual_pull = report["habitual_pull"]
+    assert "repo-specific interpretive norms and recurring distinction hints" in habitual_pull["owner_boundary"]["memory_owns"]
+    assert "broad repo doctrine or machine-readable policy" in habitual_pull["owner_boundary"]["memory_does_not_own"]
+    assert habitual_pull["evidence"]["routing_fixture_count"] >= 0
+    assert habitual_pull["ordinary_work_bundle"]["working_set_target"] == 3
 
 
 def test_memory_report_classifies_trust_states_from_manifest_metadata(tmp_path: Path) -> None:

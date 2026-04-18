@@ -14,6 +14,7 @@ For shared memory policy, note hygiene, and ownership rules, read `.agentic-work
 
 ## Common task bundles
 
+- ordinary-work first pull: `memory/index.md` first, then at most 2 additional route-matched durable notes; load `memory/current/project-state.md` only when re-orientation is genuinely useful
 - current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` when needed
 - live decision review: `memory/current/active-decisions.md` plus `memory/decisions/README.md`
 - monorepo memory-package work: `memory/domains/memory-package-context.md` plus `memory/current/active-decisions.md`
@@ -35,6 +36,7 @@ Prefer the smallest bundle that still covers the task surface.
 - Do not load all of `/memory` by default.
 - Start from the smallest useful working set.
 - Default to `memory/index.md` plus at most 2 additional notes unless the task clearly justifies more.
+- Treat that default bundle as the ordinary-work cheap path for durable understanding and repo-specific interpretive norms, not as a reason to read current-context notes by reflex.
 - Load `memory/current/project-state.md` or `memory/current/task-context.md` only when they reduce re-orientation cost for the current task.
 - Use touched files, modules, commands, or surfaces to decide which notes to load first.
 

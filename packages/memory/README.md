@@ -120,6 +120,7 @@ When both modules are installed, the combined install should be cheaper than eit
 - **Structured taxonomy.** Notes are split into `domains/` for subsystem orientation, `invariants/` for contracts and authority boundaries, `runbooks/` for operator procedures, `mistakes/` for recurring traps and verified failure lessons, `decisions/` for longer-lived rationale, and `current/` for weak-authority project overview, optional task-continuation compression, and compact routing calibration.
 - **Route-indexed, not bulk-loaded.** `memory/index.md` maps task types to minimal note bundles, and a machine-readable `manifest.toml` annotates every note with audience, authority, routing triggers (`routes_from`, `stale_when`), and task relevance so agents read only what matters for the current change. Good memory helps an agent read *less*, not more.
 - **Clear ownership boundary.** Memory owns durable repo knowledge that is expensive to reconstruct from code alone: invariants, authority boundaries, recurring failure modes, operator sequences, and routing hints. The repository's active planning surface (`TODO.md`, issue trackers, and similar systems) keeps ownership of active intent and sequencing. Memory complements planning; it never competes with it.
+- **Cheap ordinary-work pull.** The compact module report exposes a `habitual_pull` view that answers the ordinary-work question directly: start from `memory/index.md`, route only into the smallest durable note bundle that matches touched files or explicit surfaces, and keep current-context notes optional unless re-orientation is genuinely needed.
 - **Combined-install leverage.** When planning is installed too, memory should help execplans stay smaller and restart cheaper: plans borrow durable context instead of restating it, and repeated plan prose becomes a signal that memory or canonical docs should improve.
 - **Improvement pressure without memory dependence.** Each note can declare whether it is *durable truth* or an *improvement signal* - something that exists because the repo still needs better tests, docs, validation, or design. Manifest fields like `preferred_remediation` and `elimination_target` let the `doctor` command, the freshness audit, and the sync workflow surface actionable suggestions that drive improvements into the codebase without assuming memory volume should follow one universal trend.
 - **Explicit improvement-targeting workflow.** Symptomatic notes should move through a concrete path: symptom captured -> remediation target chosen -> follow-up routed -> remediation lands -> note retained, shrunk, stubbed, or deleted. The workflow distinguishes when a signal should stay in memory, become a review artifact, enter issue intake, or promote into roadmap or active planning.
@@ -142,6 +143,7 @@ Memory owns:
 - recurring failure modes
 - operator runbooks
 - compact continuation context
+- repo-specific interpretive norms and recurring distinctions that make future instructions cheaper to interpret correctly
 - memory routing metadata and note hygiene rules
 
 Memory does not own:
@@ -151,6 +153,8 @@ Memory does not own:
 - backlog state
 - execution logs
 - issue triage or bug-history catch-all
+- broad repo doctrine or machine-readable policy
+- enforceable workflow or validation behavior
 - broad canonical documentation
 - archived planning history
 

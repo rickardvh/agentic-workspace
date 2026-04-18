@@ -1812,6 +1812,76 @@ def _memory_usefulness_audit(*, route_snapshot: InstallResult, remediation: Inst
     }
 
 
+def _memory_habitual_pull_view(
+    *,
+    manifest: MemoryManifest,
+    route_snapshot: InstallResult,
+    usefulness_audit: dict[str, object],
+) -> dict[str, object]:
+    routing_baseline = [path.as_posix() for path in _routing_baseline_paths(manifest)]
+    high_level_paths = [
+        path.as_posix()
+        for path in _high_level_paths(manifest)
+        if path.as_posix() not in routing_baseline
+    ]
+    summary = route_snapshot.route_report_summary or {}
+    feedback = summary.get("feedback", {}) if isinstance(summary, dict) else {}
+    routing_confidence = summary.get("routing_confidence", {}) if isinstance(summary, dict) else {}
+    working_set = summary.get("working_set", {}) if isinstance(summary, dict) else {}
+    startup_cost = summary.get("startup_cost", {}) if isinstance(summary, dict) else {}
+
+    unresolved_feedback = int(feedback.get("unresolved_feedback_case_count", 0) or 0)
+    low_confidence = int(routing_confidence.get("low_confidence_fixture_count", 0) or 0)
+    over_target = int(working_set.get("fixture_count_exceeding_target", 0) or 0)
+    usefulness_status = str(usefulness_audit.get("status", "needs-more-proof"))
+
+    status = "needs-more-proof"
+    summary_text = "Ordinary-work pull still needs proof; start from memory/index.md and validate the route in real work."
+    if usefulness_status == "attention-needed" or unresolved_feedback or low_confidence or over_target:
+        status = "attention-needed"
+        summary_text = (
+            "Memory has an ordinary-work entry path, but routing confidence or working-set cost still needs tightening "
+            "before it is a trustworthy habitual pull."
+        )
+    elif usefulness_status in {"measured", "actionable"}:
+        status = "ready-for-ordinary-work"
+        summary_text = (
+            "Start with memory/index.md, then load only the route-matched durable notes; keep current-context notes "
+            "optional and treat Memory as the cheap first pull for durable understanding."
+        )
+
+    return {
+        "status": status,
+        "summary": summary_text,
+        "ordinary_work_bundle": {
+            "always_load": routing_baseline,
+            "optional_reorientation": high_level_paths,
+            "route_rule": "after the baseline, load only manifest- or index-routed durable notes from touched files or explicit surfaces",
+            "working_set_target": ROUTE_WORKING_SET_TARGET,
+        },
+        "owner_boundary": {
+            "memory_owns": [
+                "durable repo understanding that is expensive to rediscover",
+                "repo-specific interpretive norms and recurring distinction hints",
+                "durable authority boundaries, recurring failure modes, and operator context",
+            ],
+            "memory_does_not_own": [
+                "active task state, next actions, or milestone sequencing",
+                "broad repo doctrine or machine-readable policy",
+                "enforceable workflow and validation behavior",
+            ],
+        },
+        "evidence": {
+            "routing_feedback_case_count": int(feedback.get("total_feedback_case_count", 0) or 0),
+            "unresolved_feedback_case_count": unresolved_feedback,
+            "routing_fixture_count": int(usefulness_audit.get("routing_fixture_count", 0) or 0),
+            "high_confidence_fixture_count": int(routing_confidence.get("high_confidence_fixture_count", 0) or 0),
+            "average_routed_note_count": working_set.get("average_routed_note_count", 0),
+            "average_routed_line_count": startup_cost.get("average_routed_line_count", 0),
+        },
+    }
+
+
 def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
     target_root = resolve_target_root(target)
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
@@ -1885,6 +1955,11 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
     questionable_notes = [item for item in trust_items if item["state"] == "questionable"]
     elimination_candidates = [item for item in trust_items if item["state"] == "elimination_candidate"]
     usefulness_audit = _memory_usefulness_audit(route_snapshot=route_snapshot, remediation=remediation)
+    habitual_pull = _memory_habitual_pull_view(
+        manifest=manifest,
+        route_snapshot=route_snapshot,
+        usefulness_audit=usefulness_audit,
+    )
     manual_review_total = sum(1 for action in significant_actions if action.kind in {"manual review", "missing"})
     warning_total = sum(1 for action in significant_actions if action.kind == "warning")
     advisory_total = 0
@@ -1945,6 +2020,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
                 "health",
                 "status",
                 "active",
+                "habitual_pull",
                 "trust",
                 "usefulness_audit",
                 "findings",
@@ -1966,6 +2042,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
             "current_notes": current_notes,
             "route_report_summary": route_snapshot.route_report_summary,
         },
+        "habitual_pull": habitual_pull,
         "trust": {
             "warning_count": warning_total,
             "manual_review_count": manual_review_total,

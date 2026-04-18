@@ -691,6 +691,9 @@ def _print_report(report: dict[str, object]) -> None:
     usefulness_audit = report.get("usefulness_audit", {})
     if isinstance(usefulness_audit, dict) and usefulness_audit.get("summary"):
         print(f"Usefulness: {usefulness_audit['summary']}")
+    habitual_pull = report.get("habitual_pull", {})
+    if isinstance(habitual_pull, dict) and habitual_pull.get("summary"):
+        print(f"Habitual pull: {habitual_pull['summary']}")
     next_action = report.get("next_action", {})
     if isinstance(next_action, dict) and next_action.get("summary"):
         print(f"Next action: {next_action['summary']}")

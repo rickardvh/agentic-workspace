@@ -22,22 +22,13 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Latest open planning tranche: GitHub issues `#146`-`#170`, grouped below into ordered inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, validation-friction repo-friction, config-driven execution posture, and Memory trust/usefulness/routing/capture tranches are complete.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, validation-friction repo-friction, config-driven execution posture, Memory trust/usefulness/routing/capture, and Memory trust/habitual-pull tranches are complete.
 
 ## Candidate Lanes
 
-- Lane: Memory trust and habitual pull
-  ID: memory-trust-habitual-pull
-  Priority: first
-  Issues: #146, #150, #157, #158, #159
-  Outcome: prove Memory is a cheap habitual path for ordinary work and clarify its boundary with other standing guidance.
-  Why later: wait until the planning recovery path stops shifting so Memory can converge against a stable operating contract.
-  Promotion signal: promote when the repo can show a clear remaining bypass reason or a bounded final follow-through slice.
-  Suggested first slice: audit ordinary-work cases to separate real consultation from hypothetical usefulness.
-
 - Lane: Portable declarative contracts beyond Python CLI
   ID: portable-declarative-contracts-beyond-python-cli
-  Priority: second
+  Priority: first
   Issues: #161, #166, #167, #168, #169, #170
   Outcome: move stable lifecycle and runtime truth toward declarative portable contract sources so Python remains a strong reference implementation rather than the only credible operational embodiment.
   Why later: wait until the current planning/reporting lanes settle so the next declarative extraction tranche targets stable truths rather than moving boundaries.
