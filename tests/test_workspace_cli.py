@@ -301,6 +301,11 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["improvement_latitude"]["friction_response_order"][0]["action"] == "adapt-inside-workspace-first"
     assert "validation friction" in payload["improvement_latitude"]["guardrail_test"]["surface_repo_friction_when"][0]
     assert payload["improvement_latitude"]["guardrail_test"]["prefer"] == "one clear adaptation over accumulating many narrow special cases"
+    threshold = payload["improvement_latitude"]["repo_directed_improvement_threshold"]
+    assert threshold["status"] == "explicit-contract"
+    assert "two independent friction confirmations" in threshold["minimum_threshold"][0]
+    assert threshold["not_enough"][0] == "one-off agent discomfort"
+    assert "shared repeated evidence" in threshold["collaboration_bias"]
     assert "workspace self-adaptation remains allowed" in payload["improvement_latitude"]["mode_interpretation"]["none"]
     assert "repo seams" in payload["improvement_latitude"]["examples"]["repo_directed_improvement_next"][0]
     assert payload["improvement_latitude"]["default_mode"] == "conservative"
@@ -309,6 +314,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["improvement_latitude"]["supported_modes"][1]["initiative_posture"] == "reporting-only"
     assert "review outputs" in payload["improvement_latitude"]["supported_modes"][1]["reporting_destinations"]
     assert payload["improvement_latitude"]["supported_modes"][3]["mode"] == "balanced"
+    assert "repeated shared evidence" in payload["improvement_latitude"]["supported_modes"][3]["allows"][1]
     assert payload["improvement_latitude"]["evidence_source"] == "agentic-workspace report --target ./repo --format json"
     assert payload["improvement_latitude"]["evidence_classes"] == [
         "large_file_hotspots",
@@ -2088,6 +2094,10 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["repo_friction"]["workspace_self_adaptation"]["status"] == "allowed-with-bounds"
     assert payload["repo_friction"]["friction_response_order"][0]["action"] == "adapt-inside-workspace-first"
     assert "validation friction" in payload["repo_friction"]["guardrail_test"]["surface_repo_friction_when"][0]
+    threshold = payload["repo_friction"]["repo_directed_improvement_threshold"]
+    assert threshold["status"] == "explicit-contract"
+    assert "two independent friction confirmations" in threshold["minimum_threshold"][0]
+    assert threshold["not_enough"][1] == "one contributor or one model preferring a different repo shape"
     assert payload["repo_friction"]["initiative_posture"] == "local-touched-scope-only"
     assert payload["repo_friction"]["reporting_destinations"] == [
         "agentic-workspace report --target ./repo --format json",

@@ -608,11 +608,12 @@ def _improvement_latitude_payload(mode: str) -> dict[str, Any]:
             ),
             "allows": [
                 "simplifying a touched hotspot during the current slice",
-                "small repo-friction reductions when one evidence signal is present and proof stays narrow",
+                "small repo-friction reductions when repeated shared evidence is present and proof stays narrow",
                 "turning repeated friction into a bounded follow-on candidate",
             ],
             "forbids": [
                 "rewriting requested ends in the name of cleanup",
+                "treating one-off agent discomfort or local taste as enough evidence for repo-directed change",
                 "broad cross-owner refactors without promotion",
             ],
             "reporting_destinations": [
@@ -631,12 +632,13 @@ def _improvement_latitude_payload(mode: str) -> dict[str, Any]:
                 "work can still stay inside clear ownership and proof lanes."
             ),
             "allows": [
-                "small standalone cleanup slices backed by explicit friction evidence",
+                "small standalone cleanup slices backed by repeated shared friction evidence",
                 "collapsing low-value local complexity before it grows further",
                 "promoting repeated friction into planning earlier",
             ],
             "forbids": [
                 "unsignaled broad redesign under a cleanup label",
+                "using one-off preference or single-agent discomfort as the proof threshold for repo-directed cleanup",
                 "using proactive mode as a scheduler or blanket refactor permission",
             ],
             "reporting_destinations": [
@@ -713,6 +715,33 @@ def _workspace_self_adaptation_guardrail_payload() -> dict[str, Any]:
             "new adaptation paths stay cheaper than repeated repo or user burden",
         ],
         "prefer": "one clear adaptation over accumulating many narrow special cases",
+    }
+
+
+def _repo_directed_improvement_evidence_threshold_payload() -> dict[str, Any]:
+    return {
+        "status": "explicit-contract",
+        "summary": (
+            "Repo-directed improvement requires repeated shared evidence that the repo is the real friction source, "
+            "not one-off agent preference or local discomfort."
+        ),
+        "minimum_threshold": [
+            "at least two independent friction confirmations, or one bounded review artifact plus one repeated maintenance or dogfooding pass",
+            "evidence should point to the repo as the real source after honest workspace adaptation has already been tried or would become concealment",
+        ],
+        "not_enough": [
+            "one-off agent discomfort",
+            "one contributor or one model preferring a different repo shape",
+            "friction the workspace can still remove honestly inside its own surfaces",
+        ],
+        "promote_when": [
+            "repeated evidence shows the same repo-owned seam, boundary, ownership, or validation problem",
+            "further workspace adaptation would hide the repo problem instead of solving it honestly",
+            "the follow-on can stay bounded and explain why the repo change is more honest than another workspace-only patch",
+        ],
+        "collaboration_bias": (
+            "In collaborative repos, prefer the higher bar: shared repeated evidence beats local agent taste before repo-directed change."
+        ),
     }
 
 
@@ -3742,11 +3771,12 @@ def _defaults_payload() -> dict[str, Any]:
                     "tighten a selector, recovery hint, or report field so the workspace points agents at the right repo surface without asking the repo to restructure itself"
                 ],
                 "repo_directed_improvement_next": [
-                    "after the workspace already routes correctly, repeated friction still comes from unclear repo seams, tranche boundaries, or ownership and should be promoted as repo-directed follow-on work",
+                    "after the workspace already routes correctly, repeated shared friction still comes from unclear repo seams, tranche boundaries, or ownership and should be promoted as repo-directed follow-on work",
                     "when validation keeps bouncing across unclear seams or proof expectations, keep that visible as validation-friction evidence instead of treating it as just another one-off failure",
                 ],
             },
             "guardrail_test": _workspace_self_adaptation_guardrail_payload(),
+            "repo_directed_improvement_threshold": _repo_directed_improvement_evidence_threshold_payload(),
             "default_mode": DEFAULT_IMPROVEMENT_LATITUDE,
             "supported_modes": [_improvement_latitude_payload(mode) for mode in SUPPORTED_IMPROVEMENT_LATITUDES],
             "decision_test": _improvement_boundary_test_payload(),

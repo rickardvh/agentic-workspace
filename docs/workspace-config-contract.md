@@ -70,6 +70,11 @@ recommended_upgrade_after_days = 30
   1. adapt inside Agentic Workspace first when the friction can be removed there safely and cheaply
   2. promote repo-directed improvement only when the friction reflects a real repo problem that should not be masked by workspace adaptation
   3. do not externalize friction to the user when Agentic Workspace can honestly absorb it itself
+- The repeated-evidence threshold for repo-directed improvement is:
+  - require at least two independent friction confirmations, or one bounded review artifact plus one repeated maintenance or dogfooding pass
+  - require the evidence to keep pointing at the repo after honest workspace adaptation has already been tried, or when further workspace adaptation would become concealment rather than help
+  - do not treat one-off agent discomfort, single-model preference, or local repo-shape taste as enough evidence for repo-directed improvement
+  - in collaborative repos, prefer the higher bar: shared repeated evidence should beat local agent preference before repo-directed change is justified
 - The compact guardrail test for workspace-self-adaptation is:
   - adapt internally when the friction is genuinely about workspace fit, reporting, routing, selector design, recovery clarity, or contract wording
   - surface repo friction when the root problem is really unclear seams, tranche boundaries, validation friction, or ownership in the repo
@@ -113,7 +118,7 @@ recommended_upgrade_after_days = 30
 - Use `agentic-workspace report --target ./repo --format json` to inspect both workspace-derived evidence and any compatible external hotspot artifacts the repo already maintains.
 - Examples:
   - Workspace adaptation first: tighten a selector, recovery hint, or report field so the workspace points agents at the right repo surface without asking the repo to restructure itself.
-  - Repo-directed improvement next: after the workspace already routes correctly, repeated friction still comes from unclear repo seams, tranche boundaries, or ownership and should be surfaced as repo-directed follow-on work instead of another workspace-only patch.
+  - Repo-directed improvement next: after the workspace already routes correctly, repeated shared friction still comes from unclear repo seams, tranche boundaries, or ownership and should be surfaced as repo-directed follow-on work instead of another workspace-only patch.
   - Guardrail check: if the only way to avoid surfacing repeated tranche-boundary or validation friction is to keep adding one-off workspace compensations, stop and keep the repo-friction evidence visible instead.
 - When `agentic-workspace.toml` is absent, product defaults remain authoritative and the config report should say so rather than implying a live repo policy.
 - Update policy is module-specific in v1; there is no separate public module upgrade entrypoint.

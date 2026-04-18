@@ -211,6 +211,7 @@ Workspace-self-adaptation should also remain distinct from repo-directed improve
 The workspace may improve its own fit to a repo through clearer reporting, routing, recovery, or contract surfaces even when repo-directed initiative is tightly constrained.
 That distinction should stay explicit so `improvement_latitude = "none"` does not accidentally freeze legitimate workspace self-improvement.
 The matching guardrail is that workspace-self-adaptation should stay general, bounded, and cheaper than repeated repo or user burden; it should not accrete into a concealment layer for real repo problems.
+Repo-directed improvement should therefore clear a higher bar: repeated shared evidence that the repo is the real friction source, not one-off agent taste, single-run discomfort, or a workspace friction that the product can still honestly absorb inside its own surfaces.
 
 ### 12. Generated surfaces must stay trustworthy
 

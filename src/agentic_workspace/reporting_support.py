@@ -692,6 +692,30 @@ def repo_friction_payload(
             ],
             "prefer": "one clear adaptation over accumulating many narrow special cases",
         },
+        "repo_directed_improvement_threshold": {
+            "status": "explicit-contract",
+            "summary": (
+                "Repo-directed improvement requires repeated shared evidence that the repo is the real friction source, "
+                "not one-off agent preference or local discomfort."
+            ),
+            "minimum_threshold": [
+                "at least two independent friction confirmations, or one bounded review artifact plus one repeated maintenance or dogfooding pass",
+                "evidence should point to the repo as the real source after honest workspace adaptation has already been tried or would become concealment",
+            ],
+            "not_enough": [
+                "one-off agent discomfort",
+                "one contributor or one model preferring a different repo shape",
+                "friction the workspace can still remove honestly inside its own surfaces",
+            ],
+            "promote_when": [
+                "repeated evidence shows the same repo-owned seam, boundary, ownership, or validation problem",
+                "further workspace adaptation would hide the repo problem instead of solving it honestly",
+                "the follow-on can stay bounded and explain why the repo change is more honest than another workspace-only patch",
+            ],
+            "collaboration_bias": (
+                "In collaborative repos, prefer the higher bar: shared repeated evidence beats local agent taste before repo-directed change."
+            ),
+        },
         "initiative_posture": policy_payload["initiative_posture"],
         "rule": policy_payload["reporting_rule"],
         "reporting_destinations": policy_payload["reporting_destinations"],
