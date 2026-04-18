@@ -3448,6 +3448,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "that reduce rediscovery and have a clear durable owner."
             ),
             "artifact_path": SETUP_FINDINGS_PATH.as_posix(),
+            "schema_path": "src/agentic_workspace/contracts/schemas/setup_findings.schema.json",
             "accepted_kind": SETUP_FINDINGS_KIND,
             "accepted_classes": [_setup_finding_class_payload(finding_class) for finding_class in SUPPORTED_SETUP_FINDING_CLASSES],
             "preserve_rule": (
@@ -4067,6 +4068,7 @@ def _setup_payload(
         "findings_promotion": {
             "canonical_doc": "docs/setup-findings-contract.md",
             "artifact_path": SETUP_FINDINGS_PATH.as_posix(),
+            "schema_path": "src/agentic_workspace/contracts/schemas/setup_findings.schema.json",
             "accepted_kind": SETUP_FINDINGS_KIND,
             "accepted_classes": [_setup_finding_class_payload(finding_class) for finding_class in SUPPORTED_SETUP_FINDING_CLASSES],
             "rule": (

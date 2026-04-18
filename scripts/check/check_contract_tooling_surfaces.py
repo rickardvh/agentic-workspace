@@ -132,6 +132,28 @@ def _sample_delegation_outcomes_payload() -> dict[str, object]:
     }
 
 
+def _sample_setup_findings_payload() -> dict[str, object]:
+    return {
+        "kind": "workspace-setup-findings/v1",
+        "findings": [
+            {
+                "class": "repo_friction_evidence",
+                "summary": "Large shared workspace CLI surface is still a hotspot.",
+                "confidence": 0.91,
+                "path": "src/agentic_workspace/cli.py",
+                "refs": ["docs/reporting-contract.md"],
+                "why": "Would reduce rediscovery during later repo work.",
+            },
+            {
+                "class": "planning_candidate",
+                "summary": "One module-reporting follow-on still needs promotion.",
+                "confidence": 0.82,
+                "next_action": "Promote the next bounded reporting slice into TODO.md when current setup work finishes.",
+            },
+        ],
+    }
+
+
 def main() -> int:
     checks: list[tuple[str, list[str]]] = [
         ("compact_contract_profile.json", _validate(compact_contract_manifest(), "selector_contracts_manifest.schema.json")),
@@ -148,6 +170,10 @@ def main() -> int:
         (
             "delegation outcomes sample",
             _validate(_sample_delegation_outcomes_payload(), "delegation_outcomes.schema.json"),
+        ),
+        (
+            "setup findings sample",
+            _validate(_sample_setup_findings_payload(), "setup_findings.schema.json"),
         ),
     ]
 
@@ -206,6 +232,12 @@ def main() -> int:
         checks.append(("delegation outcomes schema parity", ["handoff sufficiency enums drifted from cli supported values"]))
     if record_schema["properties"]["review_burden"]["enum"] != list(cli.SUPPORTED_REVIEW_BURDENS):
         checks.append(("delegation outcomes schema parity", ["review burden enums drifted from cli supported values"]))
+    setup_findings_schema = contract_schema("setup_findings.schema.json")
+    if setup_findings_schema["properties"]["kind"]["const"] != cli.SETUP_FINDINGS_KIND:
+        checks.append(("setup findings schema parity", ["setup findings kind drifted from cli supported value"]))
+    finding_schema = setup_findings_schema["properties"]["findings"]["items"]
+    if finding_schema["properties"]["class"]["enum"] != list(cli.SUPPORTED_SETUP_FINDING_CLASSES):
+        checks.append(("setup findings schema parity", ["setup findings classes drifted from cli supported values"]))
 
     failures = [(name, errors) for name, errors in checks if errors]
     if failures:

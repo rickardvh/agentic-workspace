@@ -90,6 +90,13 @@ The optional artifact shape is:
 }
 ```
 
+The formal machine-readable schema is [`src/agentic_workspace/contracts/schemas/setup_findings.schema.json`](../src/agentic_workspace/contracts/schemas/setup_findings.schema.json).
+The minimal stable shape is intentionally small:
+
+- required: `kind`, `findings[].class`, `findings[].summary`
+- optional: `confidence`, `path`, `refs`, `next_action`, `why`
+- `refs` stays capped at 5 items so the artifact remains routing-oriented rather than turning into a broad analysis dump
+
 ## Boundaries
 
 - Do not turn setup findings into a generic analysis exchange format.

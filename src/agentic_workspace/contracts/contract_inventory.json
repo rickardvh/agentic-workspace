@@ -52,6 +52,17 @@
       "notes": "Local mixed-agent override shape is now documented as a formal schema in addition to parser enforcement."
     },
     {
+      "area": "setup_findings_schema",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/schemas/setup_findings.schema.json",
+      "consumers": [
+        "docs/setup-findings-contract.md",
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "agentic_workspace.cli:_setup_findings_input_payload"
+      ],
+      "notes": "The optional setup/jumpstart findings artifact shape is formalized separately so the workspace can standardize promotion without owning the analysis method."
+    },
+    {
       "area": "delegation_outcomes_schema",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/schemas/delegation_outcomes.schema.json",

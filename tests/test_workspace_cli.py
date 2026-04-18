@@ -122,6 +122,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["setup_findings_promotion"]["canonical_doc"] == "docs/setup-findings-contract.md"
     assert payload["setup_findings_promotion"]["command"] == "agentic-workspace setup --target ./repo --format json"
     assert payload["setup_findings_promotion"]["artifact_path"] == "tools/setup-findings.json"
+    assert payload["setup_findings_promotion"]["schema_path"] == "src/agentic_workspace/contracts/schemas/setup_findings.schema.json"
     assert payload["setup_findings_promotion"]["accepted_kind"] == "workspace-setup-findings/v1"
     assert payload["setup_findings_promotion"]["accepted_classes"][0]["class"] == "repo_friction_evidence"
     assert payload["setup_findings_promotion"]["accepted_classes"][1]["class"] == "planning_candidate"
@@ -663,6 +664,7 @@ def test_defaults_setup_findings_promotion_section_selector_returns_compact_cont
     assert payload["matched"] is True
     assert payload["answer"]["canonical_doc"] == "docs/setup-findings-contract.md"
     assert payload["answer"]["artifact_path"] == "tools/setup-findings.json"
+    assert payload["answer"]["schema_path"] == "src/agentic_workspace/contracts/schemas/setup_findings.schema.json"
     assert payload["answer"]["accepted_classes"][0]["class"] == "repo_friction_evidence"
     assert "docs/setup-findings-contract.md" in payload["refs"]
     assert "agentic-workspace setup --target ./repo --format json" in payload["refs"]
@@ -686,6 +688,7 @@ def test_setup_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Pa
     assert payload["orientation"]["mode"] == "no-new-seed-surfaces-needed"
     assert "no new seed surfaces are needed" in payload["orientation"]["summary"].lower()
     assert payload["findings_promotion"]["artifact_path"] == "tools/setup-findings.json"
+    assert payload["findings_promotion"]["schema_path"] == "src/agentic_workspace/contracts/schemas/setup_findings.schema.json"
     assert payload["analysis_input"]["status"] == "not-found"
     assert payload["next_action"]["summary"] == "No new seed surfaces needed"
     assert payload["next_action"]["commands"] == ["agentic-workspace report --target ./repo --format json"]
