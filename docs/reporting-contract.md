@@ -101,6 +101,7 @@ Use the machine-readable report as the default combined-state inspection path wh
 - how repo-directed initiative differs from workspace-self-adaptation under the current policy?
 - what concept or routing surfaces are getting large enough to act as concept friction?
 - what bounded planning-friction signals suggest unclear seams, proof boundaries, ownership, or minimum-read pressure?
+- what bounded validation-friction signals suggest weak seams, bad tranche boundaries, unclear proof contracts, or validation bounce/re-entry?
 - what compatible external hotspot artifacts already exist that the workspace can consume instead of recomputing everything itself?
 - what agent-produced setup findings have already been preserved as repo-friction evidence?
 - what should happen next?
@@ -132,6 +133,8 @@ Only open raw module files or broader docs when the report points you to a follo
 - Keep the default friction-response order explicit: adapt inside the workspace first when that is the honest cheap fix, and only then promote repo-directed improvement when the root problem is genuinely external.
 - Keep the guardrail explicit as well: if repeated friction still points to repo-owned seams, tranche boundaries, proof boundaries, or ownership problems, reporting should preserve that evidence instead of hiding it behind narrow workspace compensations.
 - Treat planning friction as repo-friction evidence when the cheap planning path itself stops being clear because seam, proof, ownership, or minimum-read boundaries are unclear.
+- Treat validation friction as repo-friction evidence when otherwise straightforward work keeps stalling at validation because repo seams, tranche boundaries, proof expectations, or rerun/re-entry paths stay unclear.
+- Keep validation friction distinct from ordinary bug-fixing, one-off failures, or genuinely difficult domains where the hard part is the domain logic itself rather than validation fit.
 - When a repo already has a compatible generated hotspot artifact, prefer consuming it as additional evidence instead of requiring the workspace layer to own the analyzer.
 - When setup has already preserved compatible `repo_friction_evidence` findings, consume them as shared repo-friction evidence instead of forcing re-analysis.
 - Treat setup findings as a bounded bridge from agent-native analysis into reporting or planning, not as a second analysis framework that tries to preserve every finding class.

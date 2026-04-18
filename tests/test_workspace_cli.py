@@ -314,7 +314,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "large_file_hotspots",
         "concept_surface_hotspots",
         "planning_friction",
+        "validation_friction",
     ]
+    assert payload["improvement_latitude"]["validation_friction"]["status"] == "explicit-contract"
+    assert "weak_seam" in payload["improvement_latitude"]["validation_friction"]["subtypes"]
     assert (
         "the requested outcome still means the same thing after the improvement"
         in payload["improvement_latitude"]["decision_test"]["stays_local_when"]
@@ -634,7 +637,10 @@ def test_defaults_section_selector_returns_improvement_latitude_answer(capsys) -
         "large_file_hotspots",
         "concept_surface_hotspots",
         "planning_friction",
+        "validation_friction",
     ]
+    assert payload["answer"]["validation_friction"]["status"] == "explicit-contract"
+    assert "validation_bounce_reentry" in payload["answer"]["validation_friction"]["subtypes"]
     assert (
         "the improvement changes what counts as success instead of only changing the means"
         in payload["answer"]["decision_test"]["changed_task_when"]
@@ -2084,11 +2090,15 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
         "large_file_hotspots",
         "concept_surface_hotspots",
         "planning_friction",
+        "validation_friction",
     ]
     assert payload["repo_friction"]["large_file_hotspots"]["threshold_lines"] == 400
     assert payload["repo_friction"]["concept_surface_hotspots"]["threshold_lines"] == 200
     assert payload["repo_friction"]["planning_friction"]["status"] == "explicit-contract"
     assert "unclear_seam" in payload["repo_friction"]["planning_friction"]["subtypes"]
+    assert payload["repo_friction"]["validation_friction"]["status"] == "explicit-contract"
+    assert "weak_seam" in payload["repo_friction"]["validation_friction"]["subtypes"]
+    assert "ordinary bug-fixing" in payload["repo_friction"]["validation_friction"]["distinguish_from"][0]
     assert payload["repo_friction"]["external_evidence"] == []
     assert payload["reports"][0]["module"] == "planning"
     assert {report["module"] for report in payload["module_reports"]} == {"planning", "memory"}
@@ -2280,6 +2290,7 @@ def test_report_consumes_external_codebase_map_when_present(tmp_path: Path, caps
         "large_file_hotspots",
         "concept_surface_hotspots",
         "planning_friction",
+        "validation_friction",
         "external_evidence",
     ]
     assert payload["repo_friction"]["external_evidence"][0]["kind"] == "codebase-map"
@@ -2326,6 +2337,7 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
         "large_file_hotspots",
         "concept_surface_hotspots",
         "planning_friction",
+        "validation_friction",
         "external_evidence",
     ]
     setup_findings = next(evidence for evidence in payload["repo_friction"]["external_evidence"] if evidence["kind"] == "setup-findings")

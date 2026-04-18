@@ -716,6 +716,33 @@ def _workspace_self_adaptation_guardrail_payload() -> dict[str, Any]:
     }
 
 
+def _validation_friction_payload() -> dict[str, Any]:
+    return {
+        "status": "explicit-contract",
+        "rule": (
+            "Treat validation friction as repo-friction evidence only when otherwise straightforward work keeps "
+            "stalling at validation because repo seams, tranche boundaries, proof expectations, or rerun/re-entry "
+            "paths stay unclear."
+        ),
+        "distinguish_from": [
+            "ordinary bug-fixing where the failing check and expected fix are already clear",
+            "one-off broken tests or environment failures that do not reveal a repeated repo seam problem",
+            "genuinely difficult domains where the hard part is the domain logic itself rather than validation fit",
+        ],
+        "subtypes": [
+            "weak_seam",
+            "bad_tranche_boundary",
+            "unclear_proof_contract",
+            "validation_bounce_reentry",
+        ],
+        "reporting_destinations": [
+            "repo_friction review output",
+            "bounded planning residue when a follow-on slice is justified",
+            "ordinary report output without implicit active work",
+        ],
+    }
+
+
 def _improvement_boundary_test_payload() -> dict[str, Any]:
     return {
         "stays_local_when": [
@@ -3578,7 +3605,8 @@ def _defaults_payload() -> dict[str, Any]:
                     "tighten a selector, recovery hint, or report field so the workspace points agents at the right repo surface without asking the repo to restructure itself"
                 ],
                 "repo_directed_improvement_next": [
-                    "after the workspace already routes correctly, repeated friction still comes from unclear repo seams, tranche boundaries, or ownership and should be promoted as repo-directed follow-on work"
+                    "after the workspace already routes correctly, repeated friction still comes from unclear repo seams, tranche boundaries, or ownership and should be promoted as repo-directed follow-on work",
+                    "when validation keeps bouncing across unclear seams or proof expectations, keep that visible as validation-friction evidence instead of treating it as just another one-off failure",
                 ],
             },
             "guardrail_test": _workspace_self_adaptation_guardrail_payload(),
@@ -3586,7 +3614,13 @@ def _defaults_payload() -> dict[str, Any]:
             "supported_modes": [_improvement_latitude_payload(mode) for mode in SUPPORTED_IMPROVEMENT_LATITUDES],
             "decision_test": _improvement_boundary_test_payload(),
             "evidence_source": "agentic-workspace report --target ./repo --format json",
-            "evidence_classes": ["large_file_hotspots", "concept_surface_hotspots", "planning_friction"],
+            "evidence_classes": [
+                "large_file_hotspots",
+                "concept_surface_hotspots",
+                "planning_friction",
+                "validation_friction",
+            ],
+            "validation_friction": _validation_friction_payload(),
         },
         "optimization_bias": {
             "canonical_doc": "docs/workspace-config-contract.md",

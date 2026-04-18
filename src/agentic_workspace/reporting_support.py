@@ -647,7 +647,7 @@ def repo_friction_payload(
         external_evidence.append(external_codebase_map)
     if external_setup_findings_payload is not None:
         external_evidence.append(external_setup_findings_payload)
-    evidence_classes = ["large_file_hotspots", "concept_surface_hotspots", "planning_friction"]
+    evidence_classes = ["large_file_hotspots", "concept_surface_hotspots", "planning_friction", "validation_friction"]
     if external_evidence:
         evidence_classes.append("external_evidence")
     return {
@@ -724,6 +724,30 @@ def repo_friction_payload(
                 "ownership_ambiguity",
                 "chunking_instability",
                 "reread_pressure",
+            ],
+            "reporting_destinations": [
+                "repo_friction review output",
+                "bounded planning residue when a follow-on slice is justified",
+                "ordinary report output without implicit active work",
+            ],
+        },
+        "validation_friction": {
+            "status": "explicit-contract",
+            "rule": (
+                "Treat validation friction as repo-friction evidence only when otherwise straightforward work keeps "
+                "stalling at validation because repo seams, tranche boundaries, proof expectations, or rerun/re-entry "
+                "paths stay unclear."
+            ),
+            "distinguish_from": [
+                "ordinary bug-fixing where the failing check and expected fix are already clear",
+                "one-off broken tests or environment failures that do not reveal a repeated repo seam problem",
+                "genuinely difficult domains where the hard part is the domain logic itself rather than validation fit",
+            ],
+            "subtypes": [
+                "weak_seam",
+                "bad_tranche_boundary",
+                "unclear_proof_contract",
+                "validation_bounce_reentry",
             ],
             "reporting_destinations": [
                 "repo_friction review output",

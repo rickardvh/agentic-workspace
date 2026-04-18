@@ -96,6 +96,19 @@ recommended_upgrade_after_days = 30
   - honors bias: derived report rendering density, rendered human-facing views, and durable residue style when canonical truth stays unchanged
   - stays invariant: execution method, reasoning depth, delegated-judgment boundaries, proof requirements, ownership semantics, machine-readable report truth, and canonical state semantics
 - Use `agentic-workspace defaults --section improvement_latitude --format json` to inspect the shipped decision test for when friction reduction still counts as local means versus a changed task, and to inspect the explicit split between repo-directed improvement and workspace-self-adaptation.
+- The current repo-friction evidence classes are:
+  - `large_file_hotspots`
+  - `concept_surface_hotspots`
+  - `planning_friction`
+  - `validation_friction`
+- `validation_friction` is evidence-only. It should stay compact and operational:
+  - it applies when otherwise straightforward work keeps stalling at validation because seams, tranche boundaries, proof expectations, or rerun/re-entry paths stay unclear
+  - it does not apply to ordinary bug-fixing with an already-clear failing check, one-off failures, or genuinely difficult domains where the hard part is the domain logic itself
+- The compact `validation_friction` subtype set is:
+  - `weak_seam`
+  - `bad_tranche_boundary`
+  - `unclear_proof_contract`
+  - `validation_bounce_reentry`
 - Use `agentic-workspace defaults --section optimization_bias --format json` to inspect the shipped output/residue bias contract and its semantic guardrails.
 - Use `agentic-workspace report --target ./repo --format json` to inspect both workspace-derived evidence and any compatible external hotspot artifacts the repo already maintains.
 - Examples:

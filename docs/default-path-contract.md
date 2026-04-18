@@ -73,6 +73,7 @@ Example: "What should I do next?" belongs in `resumable_contract`; the route tha
 | Where is the proof-selection contract? | `agentic-workspace defaults --section proof_selection --format json` and [`docs/proof-surfaces-contract.md`](docs/proof-surfaces-contract.md) | Mining prose for the narrowest proof lane first |
 | Where is the delegation posture contract? | [`docs/delegation-posture-contract.md`](docs/delegation-posture-contract.md) and `agentic-workspace defaults --section delegation_posture --format json` | Treating config as a scheduler or ignoring the effective mixed-agent posture |
 | Where is the bounded repo-friction initiative contract? | `agentic-workspace defaults --section improvement_latitude --format json` plus `agentic-workspace report --target ./repo --format json`; that surface governs repo-directed initiative, not bounded workspace-self-adaptation inside Agentic Workspace-owned surfaces, and it spells out the default friction-response order | Treating one hotspot as blanket permission for broad cleanup, reading `improvement_latitude = none` as if it also froze legitimate workspace self-improvement, or jumping straight to repo cleanup when the workspace itself is the cheaper honest fix |
+| Where is validation friction defined? | `agentic-workspace report --target ./repo --format json` and `agentic-workspace defaults --section improvement_latitude --format json`; `validation_friction` is repo-friction evidence for weak seams, bad tranche boundaries, unclear proof contracts, or validation bounce/re-entry | Treating ordinary bug-fixing, one-off failures, or inherently difficult domains as if they were all validation-friction signals |
 | Where should I point an external agent? | The repository's `llms.txt` | Richer docs only when that handoff file points there |
 | Where is the post-bootstrap next action? | `.agentic-workspace/bootstrap-handoff.md` when bootstrap says review is still needed | Ad hoc chat instructions |
 | Where is the compact bootstrap handoff contract? | `.agentic-workspace/bootstrap-handoff.json` when bootstrap writes a checked-in finishing handoff | Mining the prose brief for scope or escalation boundaries |
@@ -115,6 +116,7 @@ That surface is the queryable contract for:
 - repo-owned lifecycle defaults and update intent
 - improvement-latitude policy and current repo-friction evidence
 - planning-friction as repo-friction evidence when the smallest safe slice or proof path stays unclear
+- validation-friction as repo-friction evidence when validation repeatedly stalls on unclear seams, tranche boundaries, proof contracts, or rerun/re-entry paths
 - effective repo output posture through `workspace.optimization_bias`
 - current mixed-agent reporting boundaries
 
