@@ -14,11 +14,7 @@ Repo-native prompt interpretation and the durable domain knowledge needed to res
 
 ## Applies to
 
-- `src/agentic_workspace/cli.py`
-- `docs/intent-contract.md`
-- `docs/default-path-contract.md`
-- `docs/reporting-contract.md`
-- `docs/delegated-judgment-contract.md`
+This understanding currently matters for src/agentic_workspace/cli.py and the front-door contract pages under docs/: intent-contract, default-path-contract, reporting-contract, and delegated-judgment-contract.
 
 ## Load when
 
@@ -45,6 +41,7 @@ Repo-native prompt interpretation and the durable domain knowledge needed to res
 - If the same prompt class keeps recurring, capture the missing repo knowledge in Memory or canonical docs instead of re-solving it every time.
 - Memory should store durable domain understanding, not only task context.
 - If the content becomes stable policy or front-door contract wording, promote it into canonical docs.
+- Keep reusable maintenance choreography in a companion skill instead of turning this note into a workflow dump.
 
 ## How to recognise it
 
@@ -52,25 +49,18 @@ Repo-native prompt interpretation and the durable domain knowledge needed to res
 - Clarification asks for the same repo facts repeatedly.
 - A cheap implementer would otherwise need broad rereads.
 
-## What to do
+## Companion procedure
 
-- Read the smallest relevant memory note first.
-- Consult the intent, clarification, prompt-routing, and relay surfaces.
-- Promote repeated domain knowledge into canonical docs if it is stable enough.
+Use the companion skill at memory/skills/vague-prompt-domain-understanding/SKILL.md when the task is the repeatable workflow for handling this prompt class.
+Keep this note focused on the recurring domain fact: vague prompts get cheaper when routed Memory supplies repo-specific understanding before proof-lane or owner selection.
 
 ## Verify
 
-- `agentic-workspace defaults --section clarification --format json`
-- `agentic-workspace defaults --section prompt_routing --format json`
-- `agentic-workspace defaults --section relay --format json`
+The clarification, prompt-routing, and relay selectors should still agree on the cheap-first vague-prompt path.
 
 ## Verified against
 
-- `docs/intent-contract.md`
-- `docs/default-path-contract.md`
-- `docs/reporting-contract.md`
-- `docs/delegated-judgment-contract.md`
-- `src/agentic_workspace/cli.py`
+Verified against docs/intent-contract.md, docs/default-path-contract.md, docs/reporting-contract.md, docs/delegated-judgment-contract.md, and src/agentic_workspace/cli.py.
 
 ## Last confirmed
 

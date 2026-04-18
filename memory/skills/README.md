@@ -11,3 +11,4 @@ Current repo-specific skills:
 
 - `package-context-inspection`
 - `memory-reporting`
+- `vague-prompt-domain-understanding`

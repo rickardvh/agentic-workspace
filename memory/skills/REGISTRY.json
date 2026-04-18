@@ -35,6 +35,24 @@
         ],
         "when": ["need memory status without reading notes", "handoff memory state", "memory hygiene pass", "post-change memory check"]
       }
+    },
+    {
+      "id": "vague-prompt-domain-understanding",
+      "path": "vague-prompt-domain-understanding/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "use the compact vague-prompt workflow without turning the domain note into repeatable procedure",
+      "activation_hints": {
+        "verbs": ["clarify", "route", "interpret", "tighten"],
+        "nouns": ["vague prompt", "prompt class", "owner inference", "proof lane"],
+        "phrases": [
+          "vague prompt workflow",
+          "vague prompt interpretation",
+          "prompt routing ambiguity",
+          "owner inference for vague prompt"
+        ],
+        "when": ["repeated vague prompt class", "proof-lane uncertainty", "owner-inference uncertainty"]
+      }
     }
   ]
 }
