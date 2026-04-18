@@ -70,6 +70,11 @@ recommended_upgrade_after_days = 30
   1. adapt inside Agentic Workspace first when the friction can be removed there safely and cheaply
   2. promote repo-directed improvement only when the friction reflects a real repo problem that should not be masked by workspace adaptation
   3. do not externalize friction to the user when Agentic Workspace can honestly absorb it itself
+- The compact guardrail test for workspace-self-adaptation is:
+  - adapt internally when the friction is genuinely about workspace fit, reporting, routing, selector design, recovery clarity, or contract wording
+  - surface repo friction when the root problem is really unclear seams, tranche boundaries, validation friction, or ownership in the repo
+  - keep new adaptation paths general, bounded, and cheaper than repeated repo or user burden
+  - prefer one clear adaptation over accumulating many narrow special cases
 - `repo-owned` means do not rely on native runtime artifacts at all; keep durable state directly in `TODO.md` and `docs/execplans/`.
 - `gemini` allows Gemini-style files such as `implementation_plan.md`, `task.md`, or `walkthrough.md` as local execution aids, but durable cross-agent state must still be mirrored back into `TODO.md` and `docs/execplans/` before review, handoff, or session end.
 - `none` means do not perform opportunistic repo-directed friction reduction outside the explicitly requested work.
@@ -96,6 +101,7 @@ recommended_upgrade_after_days = 30
 - Examples:
   - Workspace adaptation first: tighten a selector, recovery hint, or report field so the workspace points agents at the right repo surface without asking the repo to restructure itself.
   - Repo-directed improvement next: after the workspace already routes correctly, repeated friction still comes from unclear repo seams, tranche boundaries, or ownership and should be surfaced as repo-directed follow-on work instead of another workspace-only patch.
+  - Guardrail check: if the only way to avoid surfacing repeated tranche-boundary or validation friction is to keep adding one-off workspace compensations, stop and keep the repo-friction evidence visible instead.
 - When `agentic-workspace.toml` is absent, product defaults remain authoritative and the config report should say so rather than implying a live repo policy.
 - Update policy is module-specific in v1; there is no separate public module upgrade entrypoint.
 - Normal update execution stays behind `agentic-workspace`.

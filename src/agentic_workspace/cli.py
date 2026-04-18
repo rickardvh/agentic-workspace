@@ -697,6 +697,25 @@ def _friction_response_order_payload() -> list[dict[str, Any]]:
     ]
 
 
+def _workspace_self_adaptation_guardrail_payload() -> dict[str, Any]:
+    return {
+        "adapt_when": [
+            "the friction is genuinely about workspace fit, reporting, routing, selector design, recovery clarity, or contract wording",
+            "one bounded workspace change can remove the friction without hiding repo-owned structural problems",
+        ],
+        "surface_repo_friction_when": [
+            "the root problem is really unclear repo seams, tranche boundaries, validation friction, or ownership",
+            "repeated friction would otherwise require accumulating narrow workspace compensations",
+        ],
+        "keep_true": [
+            "new adaptation paths stay general",
+            "new adaptation paths stay bounded",
+            "new adaptation paths stay cheaper than repeated repo or user burden",
+        ],
+        "prefer": "one clear adaptation over accumulating many narrow special cases",
+    }
+
+
 def _improvement_boundary_test_payload() -> dict[str, Any]:
     return {
         "stays_local_when": [
@@ -3562,6 +3581,7 @@ def _defaults_payload() -> dict[str, Any]:
                     "after the workspace already routes correctly, repeated friction still comes from unclear repo seams, tranche boundaries, or ownership and should be promoted as repo-directed follow-on work"
                 ],
             },
+            "guardrail_test": _workspace_self_adaptation_guardrail_payload(),
             "default_mode": DEFAULT_IMPROVEMENT_LATITUDE,
             "supported_modes": [_improvement_latitude_payload(mode) for mode in SUPPORTED_IMPROVEMENT_LATITUDES],
             "decision_test": _improvement_boundary_test_payload(),

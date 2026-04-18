@@ -681,6 +681,17 @@ def repo_friction_payload(
                 "action": "avoid-externalizing-honestly-absorbable-friction",
             },
         ],
+        "guardrail_test": {
+            "adapt_when": [
+                "workspace fit and contract clarity are the real friction source",
+                "one bounded workspace change removes the friction without hiding repo-owned structural problems",
+            ],
+            "surface_repo_friction_when": [
+                "the root problem is really repo seams, tranche boundaries, validation friction, or ownership",
+                "the alternative would be accumulating narrow workspace compensations",
+            ],
+            "prefer": "one clear adaptation over accumulating many narrow special cases",
+        },
         "initiative_posture": policy_payload["initiative_posture"],
         "rule": policy_payload["reporting_rule"],
         "reporting_destinations": policy_payload["reporting_destinations"],

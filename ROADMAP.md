@@ -22,25 +22,16 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Latest open planning tranche: GitHub issues `#146`-`#178`, grouped below into ordered inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, and Memory trust/usefulness/routing/capture tranches are complete.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, and Memory trust/usefulness/routing/capture tranches are complete.
 
 ## Candidate Lanes
 
-- Lane: Workspace self-adaptation and friction-response order
-  ID: workspace-self-adaptation-friction-order
-  Priority: first
-  Issues: #176, #177, #178
-  Outcome: define workspace-self-adaptation as distinct from repo-directed improvement, make the default friction-response order explicit, and add guardrails so internal adaptation stays bounded instead of becoming a hidden workaround layer.
-  Why later: wait until the planning-friction lane is archived and visible in ordinary work so the next policy clarification can build on a settled repo-friction model rather than colliding with that active integration work.
-  Promotion signal: promote when repeated dogfooding shows ambiguity about whether the workspace should adapt itself first, surface repo-directed cleanup, or both, especially under `improvement_latitude = none|reporting|proactive`.
-  Suggested first slice: define the two policy targets clearly, state the default friction-response order, and freeze one compact guardrail test for when workspace adaptation is honest fit improvement versus hidden compensation.
-
 - Lane: Validation friction as repo-friction evidence
   ID: validation-friction-repo-friction
-  Priority: second
+  Priority: first
   Issues: #175
   Outcome: treat hard-to-validate work as explicit repo-friction evidence when proof lanes, tranche boundaries, or safe validation scope are still unclear after the compact proof path.
-  Why later: wait until the workspace adaptation and friction-response semantics are clearer so validation-friction can attach to the same repo-friction model without conflating internal workspace fit problems with genuinely external validation seams.
+  Why later: wait until repeated dogfooding shows that validation choice remains the dominant friction class after the workspace-self-adaptation lane has settled.
   Promotion signal: promote when repeated dogfooding shows that the hardest part of a task is still choosing the narrowest safe proof lane or validation boundary rather than implementing the change itself.
   Suggested first slice: define validation-friction operationally, distinguish it from ordinary test work, and decide how it should appear in the existing repo-friction report path.
 

@@ -299,6 +299,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["improvement_latitude"]["workspace_self_adaptation"]["status"] == "allowed-with-bounds"
     assert "proof" in payload["improvement_latitude"]["workspace_self_adaptation"]["bounded_by"]
     assert payload["improvement_latitude"]["friction_response_order"][0]["action"] == "adapt-inside-workspace-first"
+    assert "validation friction" in payload["improvement_latitude"]["guardrail_test"]["surface_repo_friction_when"][0]
+    assert payload["improvement_latitude"]["guardrail_test"]["prefer"] == "one clear adaptation over accumulating many narrow special cases"
     assert "workspace self-adaptation remains allowed" in payload["improvement_latitude"]["mode_interpretation"]["none"]
     assert "repo seams" in payload["improvement_latitude"]["examples"]["repo_directed_improvement_next"][0]
     assert payload["improvement_latitude"]["default_mode"] == "conservative"
@@ -622,6 +624,7 @@ def test_defaults_section_selector_returns_improvement_latitude_answer(capsys) -
     assert payload["answer"]["policy_target"] == "repo-directed-improvement"
     assert payload["answer"]["workspace_self_adaptation"]["status"] == "allowed-with-bounds"
     assert payload["answer"]["friction_response_order"][1]["action"] == "promote-repo-directed-improvement-when-external"
+    assert "workspace fit" in payload["answer"]["guardrail_test"]["adapt_when"][0]
     assert "reporting-only" in payload["answer"]["mode_interpretation"]["reporting"]
     assert payload["answer"]["supported_modes"][0]["mode"] == "none"
     assert payload["answer"]["supported_modes"][1]["mode"] == "reporting"
@@ -2071,6 +2074,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["repo_friction"]["policy_target"] == "repo-directed-improvement"
     assert payload["repo_friction"]["workspace_self_adaptation"]["status"] == "allowed-with-bounds"
     assert payload["repo_friction"]["friction_response_order"][0]["action"] == "adapt-inside-workspace-first"
+    assert "validation friction" in payload["repo_friction"]["guardrail_test"]["surface_repo_friction_when"][0]
     assert payload["repo_friction"]["initiative_posture"] == "local-touched-scope-only"
     assert payload["repo_friction"]["reporting_destinations"] == [
         "agentic-workspace report --target ./repo --format json",

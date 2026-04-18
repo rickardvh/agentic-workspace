@@ -130,6 +130,7 @@ Only open raw module files or broader docs when the report points you to a follo
 - Keep repo-friction evidence derived and queryable instead of turning it into a second editable state store.
 - Keep the repo-directed improvement policy separate from the always-bounded workspace-self-adaptation allowance.
 - Keep the default friction-response order explicit: adapt inside the workspace first when that is the honest cheap fix, and only then promote repo-directed improvement when the root problem is genuinely external.
+- Keep the guardrail explicit as well: if repeated friction still points to repo-owned seams, tranche boundaries, proof boundaries, or ownership problems, reporting should preserve that evidence instead of hiding it behind narrow workspace compensations.
 - Treat planning friction as repo-friction evidence when the cheap planning path itself stops being clear because seam, proof, ownership, or minimum-read boundaries are unclear.
 - When a repo already has a compatible generated hotspot artifact, prefer consuming it as additional evidence instead of requiring the workspace layer to own the analyzer.
 - When setup has already preserved compatible `repo_friction_evidence` findings, consume them as shared repo-friction evidence instead of forcing re-analysis.
