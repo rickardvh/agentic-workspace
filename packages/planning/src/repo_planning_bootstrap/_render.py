@@ -28,6 +28,22 @@ def render_quickstart(manifest: dict[str, Any]) -> str:
         lines.append(f"- `{path}`")
     lines.append("")
 
+    first_queries = bootstrap.get("first_queries", [])
+    if isinstance(first_queries, list) and first_queries:
+        lines.append("## First queries")
+        lines.append("")
+        for item in first_queries:
+            lines.append(f"- {item}")
+        lines.append("")
+
+    surface_roles = bootstrap.get("surface_roles", [])
+    if isinstance(surface_roles, list) and surface_roles:
+        lines.append("## Surface roles")
+        lines.append("")
+        for item in surface_roles:
+            lines.append(f"- {item}")
+        lines.append("")
+
     conditional_reads = bootstrap.get("conditional_reads", [])
     if isinstance(conditional_reads, list) and conditional_reads:
         lines.append("## Conditional reads")

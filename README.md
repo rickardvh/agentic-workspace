@@ -79,11 +79,18 @@ Install or adopt Agentic Workspace in the repository you are working in by follo
 
 Canonical handoff surfaces after install:
 
-- [`llms.txt`](llms.txt) is the checked-in external-agent front door.
-- [`AGENTS.md`](AGENTS.md) remains the startup entrypoint for normal repo work after the front door.
-- [`tools/AGENT_QUICKSTART.md`](tools/AGENT_QUICKSTART.md) is the compact generated task-shaped helper when a cold agent needs the shortest useful route.
-- [`tools/AGENT_ROUTING.md`](tools/AGENT_ROUTING.md) is the compact generated routing reference when a cold agent needs a little more guidance without reading deeper docs.
+- [`llms.txt`](llms.txt) is the bounded external install/adopt handoff only.
+- [`AGENTS.md`](AGENTS.md) is the canonical ordinary repo startup entrypoint after install/adopt.
+- [`TODO.md`](TODO.md) is the canonical active queue once normal repo work starts.
+- [`tools/AGENT_QUICKSTART.md`](tools/AGENT_QUICKSTART.md) is a generated compact helper, not a doctrine owner.
+- [`tools/AGENT_ROUTING.md`](tools/AGENT_ROUTING.md) is a generated routing helper, not a doctrine owner.
 - `.agentic-workspace/bootstrap-handoff.md` is the bounded next-action brief when bootstrap reports that review or reconciliation is still required.
+
+Compact first-contact queries after install/adopt:
+
+- `agentic-workspace defaults --section startup --format json`
+- `agentic-workspace config --target ./repo --format json`
+- `agentic-planning-bootstrap summary --format json`
 
 ## Normal next commands
 

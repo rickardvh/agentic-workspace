@@ -27,6 +27,28 @@ That means:
 Use [`docs/which-package.md`](which-package.md) when you want the smaller operating-map view over those same buckets.
 Use this page when you need the fuller route contract after the compact map points you here.
 
+## Startup And First Contact
+
+Use `agentic-workspace defaults --section startup --format json` first when the question is startup order, first-contact routing, or surface authority.
+
+The compact startup map is:
+
+| Question | Cheapest owner surface |
+| --- | --- |
+| What is the ordinary repo startup path? | `startup.primary` |
+| Which startup file is canonical here? | `agentic-workspace config --target ./repo --format json` |
+| What do I query before broad prose rereads? | `startup.first_queries` |
+| Which startup surfaces are canonical versus generated helpers? | `startup.surface_roles` |
+| When should I use `llms.txt`? | `startup.external_handoff` |
+| What if I am not a Codex-style agent or do not know the startup filename? | `startup.fallbacks` |
+
+Keep the startup order explicit:
+
+- ordinary repo startup: configured startup file -> `TODO.md` -> active execplan only when `TODO.md` points to one
+- active planning recovery: `agentic-planning-bootstrap summary --format json` before raw planning prose
+- external install/adopt first contact: `llms.txt`, then return to the configured startup file after bootstrap
+- generated helper docs: `tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md` only after the canonical surfaces or compact queries
+
 ## Routine Planning Recovery
 
 Use `agentic-planning-bootstrap summary --format json` first when the question is active planning recovery.
@@ -63,6 +85,9 @@ Example: "What should I do next?" belongs in `resumable_contract`; the route tha
 | How do I route a vague prompt to the right lane? | `agentic-workspace defaults --section prompt_routing --format json` | Guessing at proof or owner from the prompt alone |
 | How do I hand the compact contract from planner to implementer? | `agentic-workspace defaults --section relay --format json`, then `agentic-planning-bootstrap handoff --format json` for the active delegated slice | Freezing the handoff without routed Memory, a clear planner/implementer split, or a checked-in active handoff |
 | How do I start in a repo? | The configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`) -> `TODO.md` -> active execplan when relevant | `ROADMAP.md` only when promoting work |
+| How do I recover startup or first-contact routing cheaply? | `agentic-workspace defaults --section startup --format json`, then `agentic-workspace config --target ./repo --format json` and `agentic-planning-bootstrap summary --format json` as needed | Broad rereads across `README.md`, generated helper docs, and raw planning prose |
+| Where do I inspect canonical versus generated startup surfaces? | `agentic-workspace defaults --section startup --format json` and its `surface_roles` map | Inferring editability or authority from filenames alone |
+| What if I am not a Codex-style agent or do not know the startup filename? | `agentic-workspace config --target ./repo --format json`, then the `startup.fallbacks` rules in `agentic-workspace defaults --section startup --format json` | Treating `llms.txt` as the normal repo startup surface or guessing from one vendor-specific convention |
 | How do I inspect current active planning state? | `agentic-planning-bootstrap summary --format json` and the routine planning recovery questions above | Reading raw `TODO.md` or execplan prose first |
 | How do I inspect current long-horizon planning candidates? | `agentic-planning-bootstrap summary --format json` and its `roadmap.candidates` list, then `ROADMAP.md` only when the thin candidate view is not enough | Reading narrative roadmap prose first |
 | How do I inspect combined workspace state? | `agentic-workspace report --target ./repo --format json` and its `schema` plus report payload | Reading raw module files before the report |
@@ -90,6 +115,7 @@ Example: "What should I do next?" belongs in `resumable_contract`; the route tha
 Use:
 
 ```bash
+agentic-workspace defaults --section startup --format json
 agentic-workspace defaults --format json
 agentic-workspace config --target ./repo --format json
 agentic-workspace proof --target ./repo --format json

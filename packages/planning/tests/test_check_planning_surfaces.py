@@ -176,8 +176,15 @@ def _baseline_manifest() -> dict[str, object]:
     return {
         "bootstrap": {
             "first_reads": ["AGENTS.md", "TODO.md"],
+            "first_queries": [
+                "Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
+            ],
+            "surface_roles": [
+                "`llms.txt` is only the external install/adopt handoff surface.",
+            ],
             "conditional_reads": [
                 "Read `ROADMAP.md` only when promoting work.",
+                "Treat `llms.txt` as the external install/adopt handoff only; after bootstrap, return to the configured startup entrypoint for normal repo work.",
                 "Do not bulk-read all planning surfaces.",
             ],
             "task_source_of_truth": "TODO.md",
@@ -210,6 +217,19 @@ def _baseline_agents() -> str:
 4. Read `ROADMAP.md` only when promoting work.
 
 Do not bulk-read all planning surfaces.
+When the question is active planning recovery rather than startup order, prefer `agentic-planning-bootstrap summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
+"""
+
+
+def _baseline_llms() -> str:
+    return """
+# Agentic Workspace External Install Or Adopt Handoff
+
+This file is only the external install/adopt handoff.
+Do not treat it as the normal repo startup surface after bootstrap or adoption.
+
+- After install or adopt, inspect `agentic-workspace config --target ./repo --format json`.
+- When the question is active planning recovery rather than bootstrap, prefer `agentic-planning-bootstrap summary --format json`.
 """
 
 
@@ -334,6 +354,7 @@ def _write_startup_surfaces(
     manifest: dict[str, object] | None = None,
 ) -> None:
     _write(tmp_path / "AGENTS.md", _baseline_agents())
+    _write(tmp_path / "llms.txt", _baseline_llms())
     _write(tmp_path / "README.md", readme or _baseline_readme())
     _write(
         tmp_path / "docs" / "contributor-playbook.md",
@@ -889,6 +910,19 @@ def test_generated_docs_warn_for_drift_and_missing_marker(tmp_path: Path) -> Non
     assert _has_warning_path_suffix(generated_warnings, "tools/agent-manifest.json")
     assert _has_warning_path_suffix(generated_warnings, "tools/AGENT_QUICKSTART.md")
     assert _has_warning_path_suffix(generated_warnings, "tools/AGENT_ROUTING.md")
+
+
+def test_active_execplan_space_warns_for_review_artifact(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_active_surface_hygiene")
+    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write_startup_surfaces(tmp_path)
+    _write_hierarchy_docs(tmp_path)
+    _write(tmp_path / "docs" / "execplans" / "review-alpha.md", "# Review\n\nCompleted audit notes.\n")
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    docs_warnings = [warning for warning in warnings if warning.warning_class == "docs_surface_role_drift"]
+    assert _has_warning_path_suffix(docs_warnings, "docs/execplans/review-alpha.md")
 
 
 def test_docs_surface_role_drift_warns_when_summary_first_hierarchy_is_missing(tmp_path: Path) -> None:

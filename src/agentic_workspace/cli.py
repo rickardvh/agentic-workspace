@@ -3537,23 +3537,98 @@ def _defaults_payload() -> dict[str, Any]:
     return {
         "startup": {
             "primary": [
-                "Read `AGENTS.md`.",
+                "Read the configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`).",
                 "Read `TODO.md`.",
                 "Read the active execplan only when `TODO.md` points to one.",
             ],
             "default_canonical_agent_instructions_file": DEFAULT_AGENT_INSTRUCTIONS_FILE,
             "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
+            "first_queries": [
+                {
+                    "question": "What is the ordinary repo startup path?",
+                    "command": "agentic-workspace defaults --section startup --format json",
+                    "why": "startup defaults carry the compact ordered route without reopening broader prose first",
+                },
+                {
+                    "question": "Which startup file is canonical here?",
+                    "command": "agentic-workspace config --target ./repo --format json",
+                    "field": "workspace.agent_instructions_file",
+                    "why": "repo config is authoritative when the startup filename differs from the default `AGENTS.md`",
+                },
+                {
+                    "question": "What is active right now?",
+                    "command": "agentic-planning-bootstrap summary --format json",
+                    "field": "planning_record",
+                    "why": "active-state recovery should come from the compact planning summary before raw planning prose",
+                },
+            ],
+            "surface_roles": [
+                {
+                    "surface": "AGENTS.md",
+                    "role": "canonical ordinary repo startup entrypoint",
+                    "owner": "repo",
+                    "kind": "canonical",
+                    "edit_rule": "edit directly when repo startup policy changes",
+                },
+                {
+                    "surface": "TODO.md",
+                    "role": "canonical active queue after startup",
+                    "owner": "repo",
+                    "kind": "canonical",
+                    "edit_rule": "edit directly as the active queue surface",
+                },
+                {
+                    "surface": "llms.txt",
+                    "role": "external install/adopt handoff only",
+                    "owner": "repo",
+                    "kind": "canonical",
+                    "edit_rule": "keep bounded to external bootstrap and adopt flow",
+                },
+                {
+                    "surface": "tools/AGENT_QUICKSTART.md",
+                    "role": "generated compact helper",
+                    "owner": ".agentic-workspace/planning/agent-manifest.json",
+                    "kind": "generated-helper",
+                    "edit_rule": "rerender, do not edit manually",
+                },
+                {
+                    "surface": "tools/AGENT_ROUTING.md",
+                    "role": "generated routing helper",
+                    "owner": ".agentic-workspace/planning/agent-manifest.json",
+                    "kind": "generated-helper",
+                    "edit_rule": "rerender, do not edit manually",
+                },
+            ],
+            "external_handoff": {
+                "surface": "llms.txt",
+                "when": "external install or adopt first contact",
+                "rule": "Use `llms.txt` only to bootstrap or adopt the workspace, then return to the configured startup entrypoint for ordinary repo work.",
+            },
             "secondary": [
                 "Read `ROADMAP.md` only when promoting work.",
                 "Read package-local `AGENTS.md` only for the package being edited.",
                 "Read memory only when installed and the task needs durable context.",
             ],
+            "fallbacks": [
+                (
+                    "If the current agent does not natively look for `AGENTS.md`, inspect "
+                    "`agentic-workspace config --target ./repo --format json` and follow "
+                    "the configured startup file; if the CLI is unavailable, fall back to "
+                    "`AGENTS.md` or another supported startup file already present."
+                ),
+                (
+                    "If the question is active planning recovery rather than startup order, "
+                    "prefer `agentic-planning-bootstrap summary --format json` before raw "
+                    "`TODO.md` or execplan prose."
+                ),
+            ],
             "workflow_recovery": [
                 (
-                    "When startup or workflow routing is unclear, prefer "
-                    "`agentic-workspace defaults --format json`, then use `llms.txt` "
-                    "or `AGENTS.md` when those surfaces are present, before "
-                    "repo-local workaround guidance."
+                    "When startup, first-contact routing, or recovery is unclear, prefer "
+                    "`agentic-workspace defaults --section startup --format json`, "
+                    "`agentic-workspace config --target ./repo --format json`, and "
+                    "`agentic-planning-bootstrap summary --format json` before broader "
+                    "prose or repo-local workaround guidance."
                 ),
             ],
         },
@@ -4050,6 +4125,8 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print("Startup:")
     for step in payload["startup"]["primary"]:
         print(f"- {step}")
+    for query in payload["startup"].get("first_queries", []):
+        print(f"- first query: {query['command']}")
     for step in payload["startup"].get("workflow_recovery", []):
         print(f"- {step}")
     print("Lifecycle:")

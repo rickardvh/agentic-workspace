@@ -101,6 +101,13 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     payload = json.loads(capsys.readouterr().out)
     assert payload["startup"]["default_canonical_agent_instructions_file"] == "AGENTS.md"
     assert payload["startup"]["supported_agent_instructions_files"] == ["AGENTS.md", "GEMINI.md"]
+    assert payload["startup"]["first_queries"][0]["command"] == "agentic-workspace defaults --section startup --format json"
+    assert payload["startup"]["first_queries"][1]["field"] == "workspace.agent_instructions_file"
+    assert payload["startup"]["first_queries"][2]["field"] == "planning_record"
+    assert payload["startup"]["surface_roles"][0]["surface"] == "AGENTS.md"
+    assert payload["startup"]["surface_roles"][2]["role"] == "external install/adopt handoff only"
+    assert payload["startup"]["surface_roles"][3]["kind"] == "generated-helper"
+    assert any("current agent does not natively look for `AGENTS.md`" in step for step in payload["startup"]["fallbacks"])
     assert payload["compact_contract_profile"]["canonical_doc"] == "docs/compact-contract-profile.md"
     assert payload["compact_contract_profile"]["rule"] == (
         "When one bounded answer is enough, prefer a narrow selector over a whole-surface dump."
@@ -354,10 +361,11 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert any("ROADMAP.md" in step for step in payload["startup"]["secondary"])
     assert payload["startup"]["workflow_recovery"] == [
         (
-            "When startup or workflow routing is unclear, prefer "
-            "`agentic-workspace defaults --format json`, then use `llms.txt` "
-            "or `AGENTS.md` when those surfaces are present, before "
-            "repo-local workaround guidance."
+            "When startup, first-contact routing, or recovery is unclear, prefer "
+            "`agentic-workspace defaults --section startup --format json`, "
+            "`agentic-workspace config --target ./repo --format json`, and "
+            "`agentic-planning-bootstrap summary --format json` before broader "
+            "prose or repo-local workaround guidance."
         ),
     ]
     assert any("skills --target ./repo --task" in step for step in payload["skill_discovery"]["primary"])
@@ -368,7 +376,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
 
     text = capsys.readouterr().out
     assert "Startup:" in text
-    assert "agentic-workspace defaults --format json" in text
+    assert "agentic-workspace defaults --section startup --format json" in text
     assert "Lifecycle:" in text
     assert "primary entrypoint: agentic-workspace" in text
     assert "bootstrap handoff record: .agentic-workspace/bootstrap-handoff.json" in text

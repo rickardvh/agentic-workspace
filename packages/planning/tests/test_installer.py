@@ -478,14 +478,18 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "keep `Iterative Follow-Through` current" in bootstrap_agents_text
     assert "remove or archive the matched planning residue in the same pass" in bootstrap_agents_text
     assert "record the required next owner and activation trigger explicitly before archive" in bootstrap_agents_text
+    assert "agentic-planning-bootstrap summary --format json" in bootstrap_agents_text
+    assert "agentic-workspace defaults --section startup --format json" in bootstrap_agents_text
     assert "remove or archive the matched queue residue in the same pass" in execplans_readme_text
     assert "Iterative carry-forward belongs under `## Iterative Follow-Through`" in execplans_readme_text
     assert any(
-        "prefer `agentic-workspace defaults --format json`, then use `llms.txt` or `AGENTS.md` when those surfaces are present" in item
+        "prefer `agentic-workspace defaults --section startup --format json` and `agentic-workspace config --target ./repo --format json` before broader prose"
+        in item
         for item in manifest_payload["bootstrap"]["conditional_reads"]
     )
     assert any("clear the matched queue residue in the same pass" in item for item in manifest_payload["bootstrap"]["completion_reminders"])
-    assert "agentic-workspace defaults --format json" in quickstart_text
+    assert "agentic-workspace defaults --section startup --format json" in quickstart_text
+    assert "## Surface roles" in quickstart_text
     assert "clear the matched queue residue in the same pass" in quickstart_text
 
 

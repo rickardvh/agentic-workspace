@@ -552,6 +552,7 @@ def _check_promotion_linkage(*, roadmap_path: Path, active_items: list[dict[str,
 def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     warnings: list[PlanningWarning] = []
     agents_path = repo_root / "AGENTS.md"
+    llms_path = repo_root / "llms.txt"
     manifest_path = repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json"
     quickstart_path = repo_root / "tools" / "AGENT_QUICKSTART.md"
     readme_path = repo_root / "README.md"
@@ -562,6 +563,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
 
     agents_text = "\n".join(_read_lines(agents_path)).lower()
     quickstart_text = "\n".join(_read_lines(quickstart_path)).lower()
+    llms_text = "\n".join(_read_lines(llms_path)).lower() if llms_path.exists() else ""
     readme_text = "\n".join(_read_lines(readme_path)).lower() if readme_path.exists() else ""
     contributor_text = "\n".join(_read_lines(contributor_path)).lower() if contributor_path.exists() else ""
 
@@ -570,6 +572,8 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         "read the active feature plan in `docs/execplans/`",
         "read `roadmap.md` only when promoting work",
         "do not bulk-read all planning surfaces",
+        "agentic-planning-bootstrap summary --format json",
+        "agentic-workspace defaults --section startup --format json",
     )
     if not all(fragment in agents_text for fragment in required_agents_fragments):
         warnings.append(
@@ -583,12 +587,31 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     if (
         "read `roadmap.md` only when promoting work" not in quickstart_text
         or "do not bulk-read all planning surfaces" not in quickstart_text
+        or "## first queries" not in quickstart_text
+        or "## surface roles" not in quickstart_text
     ):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(quickstart_path),
-                "Quickstart conditional reads are missing roadmap/bulk-read startup constraints.",
+                "Quickstart must keep startup query order, surface roles, and roadmap/bulk-read constraints explicit.",
+            )
+        )
+
+    if llms_text and not all(
+        fragment in llms_text
+        for fragment in (
+            "external install or adopt handoff",
+            "do not treat it as the normal repo startup surface",
+            "agentic-workspace config --target ./repo --format json",
+            "agentic-planning-bootstrap summary --format json",
+        )
+    ):
+        warnings.append(
+            PlanningWarning(
+                WARNING_STARTUP_POLICY_DRIFT,
+                _render_path(llms_path),
+                "llms.txt must stay bounded to external install/adopt handoff and point normal work back to config/startup surfaces.",
             )
         )
 
@@ -642,17 +665,39 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
 
     bootstrap = manifest.get("bootstrap", {}) if isinstance(manifest, dict) else {}
     first_reads = bootstrap.get("first_reads", []) if isinstance(bootstrap, dict) else []
+    first_queries = bootstrap.get("first_queries", []) if isinstance(bootstrap, dict) else []
+    surface_roles = bootstrap.get("surface_roles", []) if isinstance(bootstrap, dict) else []
     conditional_reads = bootstrap.get("conditional_reads", []) if isinstance(bootstrap, dict) else []
 
     first_reads_lower = [str(item).lower() for item in first_reads]
+    first_queries_lower = [str(item).lower() for item in first_queries]
+    surface_roles_lower = [str(item).lower() for item in surface_roles]
     conditional_reads_lower = [str(item).lower() for item in conditional_reads]
 
-    if "todo.md" not in first_reads_lower or "roadmap.md" in first_reads_lower:
+    if "todo.md" not in first_reads_lower or "roadmap.md" in first_reads_lower or "docs/execplans/readme.md" in first_reads_lower:
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
-                "Manifest first_reads must include TODO.md and must not include ROADMAP.md.",
+                "Manifest first_reads must stay lightweight: include TODO.md, exclude ROADMAP.md, and keep execplan conventions conditional.",
+            )
+        )
+
+    if not any("defaults --section startup" in row for row in first_queries_lower):
+        warnings.append(
+            PlanningWarning(
+                WARNING_STARTUP_POLICY_DRIFT,
+                _render_path(manifest_path),
+                "Manifest first_queries must point agents at the compact startup selector first.",
+            )
+        )
+
+    if not any("llms.txt" in row and "external install/adopt handoff" in row for row in surface_roles_lower):
+        warnings.append(
+            PlanningWarning(
+                WARNING_STARTUP_POLICY_DRIFT,
+                _render_path(manifest_path),
+                "Manifest surface_roles must keep llms.txt bounded to external install/adopt handoff.",
             )
         )
 
@@ -676,6 +721,36 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             )
         )
 
+    if not any("llms.txt" in row and "external install/adopt handoff" in row for row in conditional_reads_lower):
+        warnings.append(
+            PlanningWarning(
+                WARNING_STARTUP_POLICY_DRIFT,
+                _render_path(manifest_path),
+                "Manifest conditional_reads must keep llms.txt scoped to external install/adopt only.",
+            )
+        )
+
+    return warnings
+
+
+def _check_active_surface_hygiene(repo_root: Path) -> list[PlanningWarning]:
+    warnings: list[PlanningWarning] = []
+    execplan_dir = repo_root / "docs" / "execplans"
+    if not execplan_dir.exists():
+        return warnings
+
+    for path in sorted(execplan_dir.glob("*.md")):
+        if path.name in {"README.md", "TEMPLATE.md"}:
+            continue
+        text = "\n".join(_read_lines(path)).lower()
+        if any(token in path.stem.lower() for token in ("review", "audit", "findings")) or text.startswith("# review"):
+            warnings.append(
+                PlanningWarning(
+                    WARNING_DOCS_SURFACE_ROLE_DRIFT,
+                    _render_path(path),
+                    "Non-execplan review/audit artifacts should not live in active execplan space; move them to docs/reviews/ or archive.",
+                )
+            )
     return warnings
 
 
@@ -1587,6 +1662,7 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
     warnings.extend(_check_promotion_linkage(roadmap_path=roadmap_path, active_items=todo_active_items))
     warnings.extend(_check_startup_policy(repo_root))
     warnings.extend(_check_docs_surface_roles(repo_root))
+    warnings.extend(_check_active_surface_hygiene(repo_root))
     warnings.extend(_check_generated_agent_docs(repo_root))
     return warnings
 

@@ -40,6 +40,8 @@ def render_quickstart(manifest: dict) -> str:
     lines.append("")
 
     for title, key in (
+        ("First queries", "first_queries"),
+        ("Surface roles", "surface_roles"),
         ("Conditional reads", "conditional_reads"),
         ("Small-task mode", "small_task_mode"),
         ("When to create a plan", "plan_threshold"),

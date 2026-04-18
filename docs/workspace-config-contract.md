@@ -59,6 +59,7 @@ recommended_upgrade_after_days = 30
 - `workspace.default_preset` affects `init` and `prompt` only when the user does not pass `--preset` or `--modules`.
 - `workspace.agent_instructions_file` sets the canonical root startup-entrypoint filename for workspace lifecycle surfaces.
 - If `workspace.agent_instructions_file` is omitted, the workspace defaults to `AGENTS.md` and may conservatively autodetect one existing supported startup file in the target repo.
+- User-defined startup filename is the authoritative default posture for repo startup surfaces; generated helpers and external handoff files should point back to it rather than competing with it.
 - `workspace.workflow_artifact_profile` tells the workspace which native runtime artifacts may exist before the repo-owned planning surfaces must be updated.
 - `workspace.improvement_latitude` sets how much bounded repo-directed friction reduction is welcome by default when the repo already has evidence that a local hotspot is expensive to keep extending.
 - `workspace.optimization_bias` sets whether durable outputs and rendered views should lean toward agent efficiency, balance, or human legibility when canonical truth would stay unchanged.

@@ -15,7 +15,7 @@ Resolve instruction conflicts in this order:
 3. Package-local `AGENTS.md` under `packages/*/` once imported.
 4. Routed memory or canonical repo docs when present.
 
-## Startup Procedure
+## Startup Path
 
 1. Read `AGENTS.md`.
 2. Read `TODO.md`.
@@ -28,8 +28,11 @@ Resolve instruction conflicts in this order:
 
 Do not start coding from chat context alone when the same information exists in checked-in files.
 Do not bulk-read all planning surfaces.
+When the question is active planning recovery rather than startup order, prefer `agentic-planning-bootstrap summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
 
-## Execution Posture
+## Operating Rules
+
+### Execution Posture
 
 - Prefer task-by-task judgment about whether work should stay direct, be split into planner/implementer/validator subtasks, or be escalated to a stronger planner.
 - Use the effective mixed-agent posture from `agentic-workspace config --target . --format json` when deciding how much to delegate and how much reasoning to spend.
@@ -37,13 +40,40 @@ Do not bulk-read all planning surfaces.
 - Do not require the user to restate this preference every session when the config already makes the posture clear.
 - Keep the chosen execution shape bounded and explicit in checked-in planning when the task is broad enough to survive across sessions.
 
-## Sources Of Truth
+### Sources Of Truth
 
 - Active queue: `TODO.md`
 - Long-horizon candidate work: `ROADMAP.md`
 - Design constraints for future changes: `docs/design-principles.md`
 
-## Product Direction
+### Repo Rules
+
+- Keep package boundaries explicit.
+- Preserve independent package versioning and CLI entry points.
+- Treat line-ending-only drift in generated `tools/` mirrors as noise unless the canonical manifest or rendered content changed.
+- In checked-in human-facing docs, keep links clickable but use repo-relative paths only; do not commit absolute filesystem paths in Markdown links or prose path references unless a non-repo absolute path is the subject of the documentation itself.
+
+### Validation
+
+- Run the narrowest validation that proves a change.
+- Prefer package-local checks after package import.
+- Add monorepo-wide checks only when cross-package integration changes.
+- As a final repo-level test after package work, refresh the root install to the latest checked-in version of both shipped packages: `uv run agentic-planning-bootstrap upgrade --target .` and `uv run agentic-memory-bootstrap upgrade --target .`.
+- When verifying that the repo is on the latest shipped package contract, distinguish payload freshness from repo-local advisory warnings: run the package upgrade flow, `verify-payload`, package/root doctor surfaces, and report separately whether remaining warnings are package drift or expected repo-local customisation/noise.
+
+### Dogfooding Rule
+
+- Treat this monorepo as the proving ground for shipped agent workflows.
+- When normal work exposes a plausible product-level deficiency, explicitly ask whether the repo symptom should be dogfooded into a product improvement even if the user did not request that step.
+- Do not wait for an explicit prompt before suggesting the checked-in dogfooding path when the answer is plausibly yes.
+- If repo-local work exposes a real product deficiency in planning, memory, routing, checks, or lifecycle behavior, capture it in the checked-in planning or memory system so the signal survives the current session.
+- Prefer promoting the signal into planned work instead of making unauthorised direct package changes solely because the repo exposed the issue.
+- Make direct package or shipped-contract fixes only when they are already in active scope, explicitly requested, or clearly the smallest approved way to complete the current planned work.
+- When a repo-specific symptom does not generalise cleanly, record the signal in memory, docs, roadmap, or an execplan instead of forcing a package change.
+- When a finding surfaces about this repo, explicitly ask whether it could or should have been found, prevented, or remediated by the shipped product itself.
+- If the answer is plausibly yes, record that as part of the checked-in feedback loop and treat the repo-local symptom as a potential package or contract improvement, with the product surface as the preferred remediation target when planning later promotes the work.
+
+## Product Doctrine
 
 This repository exists to build agent-first workspace infrastructure: systems that make coding agents more capable, more reliable, and easier to trust in real repositories.
 The one-word summary of the product goal is `efficiency`: maximum quality at minimum token cost over time for a single repository.
@@ -80,30 +110,3 @@ The standard for success is not novelty. It is giving agents real operating leve
 When several plausible improvements compete, prefer the one that most directly removes an efficiency tax from normal repo work.
 
 When changing product shape, ownership boundaries, lifecycle behavior, or maintainer workflow, re-check `docs/design-principles.md` and make sure the change still passes those design tests.
-
-## Repo Rules
-
-- Keep package boundaries explicit.
-- Preserve independent package versioning and CLI entry points.
-- Treat line-ending-only drift in generated `tools/` mirrors as noise unless the canonical manifest or rendered content changed.
-- In checked-in human-facing docs, keep links clickable but use repo-relative paths only; do not commit absolute filesystem paths in Markdown links or prose path references unless a non-repo absolute path is the subject of the documentation itself.
-
-## Validation
-
-- Run the narrowest validation that proves a change.
-- Prefer package-local checks after package import.
-- Add monorepo-wide checks only when cross-package integration changes.
-- As a final repo-level test after package work, refresh the root install to the latest checked-in version of both shipped packages: `uv run agentic-planning-bootstrap upgrade --target .` and `uv run agentic-memory-bootstrap upgrade --target .`.
-- When verifying that the repo is on the latest shipped package contract, distinguish payload freshness from repo-local advisory warnings: run the package upgrade flow, `verify-payload`, package/root doctor surfaces, and report separately whether remaining warnings are package drift or expected repo-local customisation/noise.
-
-## Dogfooding Rule
-
-- Treat this monorepo as the proving ground for shipped agent workflows.
-- When normal work exposes a plausible product-level deficiency, explicitly ask whether the repo symptom should be dogfooded into a product improvement even if the user did not request that step.
-- Do not wait for an explicit prompt before suggesting the checked-in dogfooding path when the answer is plausibly yes.
-- If repo-local work exposes a real product deficiency in planning, memory, routing, checks, or lifecycle behavior, capture it in the checked-in planning or memory system so the signal survives the current session.
-- Prefer promoting the signal into planned work instead of making unauthorised direct package changes solely because the repo exposed the issue.
-- Make direct package or shipped-contract fixes only when they are already in active scope, explicitly requested, or clearly the smallest approved way to complete the current planned work.
-- When a repo-specific symptom does not generalise cleanly, record the signal in memory, docs, roadmap, or an execplan instead of forcing a package change.
-- When a finding surfaces about this repo, explicitly ask whether it could or should have been found, prevented, or remediated by the shipped product itself.
-- If the answer is plausibly yes, record that as part of the checked-in feedback loop and treat the repo-local symptom as a potential package or contract improvement, with the product surface as the preferred remediation target when planning later promotes the work.

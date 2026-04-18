@@ -22,7 +22,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Latest open planning tranche: GitHub issues `#161`-`#170`, grouped below into ordered inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, repo-directed improvement evidence-threshold, validation-friction repo-friction, config-driven execution posture, config-driven autonomy and agnostic improvements, Memory trust/usefulness/routing/capture, and Memory trust/habitual-pull tranches are complete.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, repo-directed improvement evidence-threshold, validation-friction repo-friction, config-driven execution posture, config-driven autonomy and agnostic improvements, startup front door clarity and agent-agnostic first contact, Memory trust/usefulness/routing/capture, and Memory trust/habitual-pull tranches are complete.
 
 ## Candidate Lanes
 
@@ -31,7 +31,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
   Priority: first
   Issues: #161, #166, #167, #168, #169, #170
   Outcome: move stable lifecycle and runtime truth toward declarative portable contract sources so Python remains a strong reference implementation rather than the only credible operational embodiment.
-  Why later: wait until the current planning/reporting lanes settle so the next declarative extraction tranche targets stable truths rather than moving boundaries.
+  Why now: the startup/front-door lane is complete, and the remaining open tranche is now the next stable extraction target for broader portability work.
   Promotion signal: promote when the repo can name one stable next extraction target or a clear portable architecture/tool-selection rule without inventing a bespoke workflow language.
   Suggested first slice: inventory which truths still live mainly in Python, define the declarative/procedural/generated-layer boundary, and pick the next bounded extraction target only where stability is proven.
 
