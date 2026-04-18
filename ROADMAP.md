@@ -19,16 +19,25 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## GitHub Issue Intake
 
-- Latest open planning tranche: GitHub issues `#146`-`#178`, grouped below into ordered inactive candidate lanes.
+- Latest open planning tranche: GitHub issues `#146`-`#179`, grouped below into ordered inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 - The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, validation-friction repo-friction, and Memory trust/usefulness/routing/capture tranches are complete.
 
 ## Candidate Lanes
 
+- Lane: Config-driven execution posture follow-through
+  ID: config-driven-execution-posture-follow-through
+  Priority: first
+  Issues: #179
+  Outcome: make the effective config-driven delegation posture more decisive at execution-shaping time so broad work stops bypassing the already-configured strong-planner / cheap-executor posture casually.
+  Why later: wait only long enough to capture the recent ordinary-work misses cleanly so the fix targets real decision-time friction rather than a generic mixed-agent idea.
+  Promotion signal: explicit maintainer override based on direct dogfooding failure where the configured posture existed but still did not shape execution consistently.
+  Suggested first slice: identify the one compact execution-shaping answer the product should surface by default, expose it in the existing recovery/planning contract, and test it against the recent delegation misses in this repo.
+
 - Lane: Memory trust and habitual pull
   ID: memory-trust-habitual-pull
-  Priority: first
+  Priority: second
   Issues: #146, #150, #157, #158, #159
   Outcome: prove Memory is a cheap habitual path for ordinary work and clarify its boundary with other standing guidance.
   Why later: wait until the planning recovery path stops shifting so Memory can converge against a stable operating contract.
@@ -37,7 +46,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 - Lane: Portable declarative contracts beyond Python CLI
   ID: portable-declarative-contracts-beyond-python-cli
-  Priority: second
+  Priority: third
   Issues: #161, #166, #167, #168, #169, #170
   Outcome: move stable lifecycle and runtime truth toward declarative portable contract sources so Python remains a strong reference implementation rather than the only credible operational embodiment.
   Why later: wait until the current planning/reporting lanes settle so the next declarative extraction tranche targets stable truths rather than moving boundaries.
