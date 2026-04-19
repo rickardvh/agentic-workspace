@@ -95,9 +95,10 @@ This contract defines how to enter the repository, orient quickly, and pick the 
 ## 1. Startup and First Contact
 
 Use the following order for a fresh entry:
-1. AGENTS.md
-2. TODO.md
-3. Compact queries:
+1. [Cold-Start Protocol](cold-start-protocol.md)
+2. AGENTS.md
+3. TODO.md
+4. Compact queries:
    - agentic-workspace summary --format json
    - agentic-workspace report --target ./repo --format json
 """,
@@ -141,6 +142,13 @@ Use the following order for a fresh entry:
 ## Non-Goals
 
 - No runtime changes.
+
+## Machine-Readable Contract
+
+```yaml
+intent:
+  outcome: "Keep scope clear."
+```
 
 ## Active Milestone
 

@@ -72,6 +72,7 @@ WARNING_PLANNING_MEMORY_BOUNDARY_BLUR = "planning_memory_boundary_blur"
 EXPECTED_EXECPLAN_SECTIONS = [
     "Goal",
     "Non-Goals",
+    "Machine-Readable Contract",
     "Intent Continuity",
     "Required Continuation",
     "Iterative Follow-Through",
@@ -638,6 +639,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         for fragment in (
             "authoritative routing home",
             "startup and first contact",
+            "cold-start protocol",
             "agentic-workspace summary --format json",
             "agentic-workspace report --target ./repo --format json",
         )

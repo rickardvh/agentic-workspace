@@ -15,6 +15,26 @@ This file is a thin human view over the canonical `planning_record` surfaced by 
 
 -
 
+## Machine-Readable Contract
+
+```yaml
+# This section is for high-efficiency agentic parsing. 
+# Keep it in sync with the prose sections below.
+intent:
+  outcome: ""
+  constraints: ""
+  latitude: ""
+  escalation: ""
+execution:
+  milestone: ""
+  status: ""
+  next_step: ""
+  proof: ""
+scope:
+  touched: []
+  invariants: []
+```
+
 ## Intent Continuity
 
 - Larger intended outcome:

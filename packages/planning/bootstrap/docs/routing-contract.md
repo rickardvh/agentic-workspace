@@ -6,9 +6,10 @@ This document acts as the authoritative routing home for all agentic work in thi
 
 Use the following order for a fresh entry:
 
-1. **Configured Startup File**: Check `agentic-workspace config --target ./repo --format json` for the entrypoint (default `AGENTS.md`).
-2. **Active Queue**: Read `TODO.md` to see what is currently active.
-3. **Compact Queries**: Before reading broad prose, use:
+1. **High-Efficiency Entry**: Use the [Cold-Start Protocol](cold-start-protocol.md) for a <3 turn activation.
+2. **Configured Startup File**: Check `agentic-workspace config --target ./repo --format json` for the entrypoint (default `AGENTS.md`).
+3. **Active Queue**: Read `TODO.md` to see what is currently active.
+4. **Compact Queries**: Before reading broad prose, use:
    - `agentic-workspace defaults --section startup --format json`: For startup order and surface roles.
    - `agentic-workspace summary --format json`: For active planning state.
    - `agentic-workspace report --target ./repo --format json`: For combined workspace/module status.
