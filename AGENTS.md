@@ -32,6 +32,13 @@ When the question is active planning recovery rather than startup order, prefer 
 Read `docs/routing-contract.md` when execution hits an edge case, routing ambiguity, or requires deep context on the operating model.
 Read `docs/lifecycle-and-config-contract.md` before editing CLI initialization or configuration logic.
 
+### Planning Continuity
+- the execplan must record both `Intent Continuity` and `Required Continuation` before archive.
+- Every active slice must belong to a larger intended outcome.
+- record the required next owner and activation trigger explicitly before archive if the larger outcome is unfinished.
+- keep `Iterative Follow-Through` current.
+- remove or archive the matched planning residue in the same pass.
+
 ## Operating Rules
 
 ### Execution Posture

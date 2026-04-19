@@ -90,4 +90,4 @@ The final state before archive must include:
 - `agentic-workspace summary --format json`: Compact machine-readable state recovery.
 - `agentic-planning-bootstrap handoff --format json`: Derived worker contract.
 - `agentic-workspace report --target ./repo --format json`: Combined workspace status.
-- `agentic-workspace doctor --target ./repo`: Health check and suggested fixes for planning surfaces.
+- `agentic-workspace doctor --target ./repo`: Run deep diagnostics and planning hygiene checks.
