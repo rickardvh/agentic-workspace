@@ -1,6 +1,6 @@
 # Roadmap
 
-Last reviewed: 2026-04-18
+Last reviewed: 2026-04-19
 
 ## Purpose
 
@@ -29,7 +29,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 - Lane: Signal hygiene and evidence-based improvement
   ID: signal-hygiene-and-evidence-based-improvement
-  Priority: second
+  Priority: first
   Issues: #188, #190, #192, #193, #195, #209, #210
   Outcome: Formalise the “workspace adapts first, repo changes later” rule. Use planning/validation friction as structural signals and make 'Proof Reports' and 'Knowledge Promotion' standard repo practices.
   Why now: As the core feature set stabilizes, preventing speculative sprawl and ensuring improvement is driven by evidence becomes the primary maintenance challenge.
@@ -38,7 +38,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 - Lane: Local-only adoption and external-agent ergonomics
   ID: local-only-adoption-and-external-agent-ergonomics
-  Priority: third
+  Priority: second
   Issues: #206
   Outcome: Enable agents to use Agentic Workspace in repositories they do not own (or where checked-in adoption is not desired) through a local-only installation mode.
   Why now: This is a common "read-only" or "guest" agent use case that currently lacks a first-class supported path.
