@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import Any, cast
 
 from repo_memory_bootstrap._installer_memory import (
     _audit_memory_doc_ownership,
@@ -1494,6 +1495,59 @@ def sync_memory(
     return result
 
 
+def search_memory(
+    *,
+    query: str,
+    target: str | Path | None = None,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = _new_result(target_root, dry_run=True, message=f"Memory search results for '{query}'")
+
+    memory_dirs = ["memory", ".agentic-workspace/memory"]
+    found_any = False
+
+    for mdir in memory_dirs:
+        root = target_root / mdir
+        if not root.exists():
+            continue
+        for path in sorted(root.rglob("*.md")):
+            try:
+                content = path.read_text(encoding="utf-8")
+                if query.lower() in content.lower():
+                    # Find the first matching line for detail
+                    match_line = ""
+                    for line in content.splitlines():
+                        if query.lower() in line.lower():
+                            match_line = line.strip()
+                            break
+
+                    result.add(
+                        "found",
+                        path,
+                        f"matched query: {match_line}",
+                        role="memory-search",
+                        safety="safe",
+                        source=path.relative_to(target_root).as_posix(),
+                        category="search-result",
+                    )
+                    found_any = True
+            except (UnicodeDecodeError, PermissionError):
+                continue
+
+    if not found_any:
+        result.add(
+            "not found",
+            target_root / Path("memory/index.md"),
+            f"no matches found for '{query}' in memory notes",
+            role="memory-search",
+            safety="safe",
+            source="memory/index.md",
+            category="search-result",
+        )
+
+    return result
+
+
 def _covered_manifest_surfaces(
     manifest,
     suggestions: list[tuple[str, str, str, str]],
@@ -1560,7 +1614,7 @@ def _build_sync_summary(*, result: InstallResult) -> dict[str, object]:
     if not sync_actions:
         return {}
 
-    def _rank(action) -> tuple[int, int, str]:
+    def _rank(action) -> tuple[int, int, int, str]:
         relative_path = action.source or action.path.as_posix()
         is_index = Path(relative_path).name == "index.md"
         if relative_path.startswith("memory/domains/"):
@@ -1779,10 +1833,10 @@ def _memory_usefulness_audit(*, route_snapshot: InstallResult, remediation: Inst
     startup_cost = summary.get("startup_cost", {}) if isinstance(summary, dict) else {}
     remediation_counts = remediation.counts()
 
-    feedback_cases = int(feedback.get("total_feedback_case_count", 0) or 0)
-    fixture_cases = int(fixtures.get("fixture_count", 0) or 0)
-    low_confidence = int(routing_confidence.get("low_confidence_fixture_count", 0) or 0)
-    over_target = int(working_set.get("fixture_count_exceeding_target", 0) or 0)
+    feedback_cases = int(cast(dict[str, Any], feedback).get("total_feedback_case_count", 0) or 0)
+    fixture_cases = int(cast(dict[str, Any], fixtures).get("fixture_count", 0) or 0)
+    low_confidence = int(cast(dict[str, Any], routing_confidence).get("low_confidence_fixture_count", 0) or 0)
+    over_target = int(cast(dict[str, Any], working_set).get("fixture_count_exceeding_target", 0) or 0)
     promotion_candidates = int(remediation_counts.get("candidate", 0) or 0)
 
     status = "measured"
@@ -1806,8 +1860,8 @@ def _memory_usefulness_audit(*, route_snapshot: InstallResult, remediation: Inst
         "routing_fixture_count": fixture_cases,
         "low_confidence_fixture_count": low_confidence,
         "working_set_fixture_count_exceeding_target": over_target,
-        "average_routed_note_count": working_set.get("average_routed_note_count", 0),
-        "average_routed_line_count": startup_cost.get("average_routed_line_count", 0),
+        "average_routed_note_count": cast(dict[str, Any], working_set).get("average_routed_note_count", 0),
+        "average_routed_line_count": cast(dict[str, Any], startup_cost).get("average_routed_line_count", 0),
         "promotion_candidate_count": promotion_candidates,
     }
 
@@ -1819,20 +1873,16 @@ def _memory_habitual_pull_view(
     usefulness_audit: dict[str, object],
 ) -> dict[str, object]:
     routing_baseline = [path.as_posix() for path in _routing_baseline_paths(manifest)]
-    high_level_paths = [
-        path.as_posix()
-        for path in _high_level_paths(manifest)
-        if path.as_posix() not in routing_baseline
-    ]
+    high_level_paths = [path.as_posix() for path in _high_level_paths(manifest) if path.as_posix() not in routing_baseline]
     summary = route_snapshot.route_report_summary or {}
     feedback = summary.get("feedback", {}) if isinstance(summary, dict) else {}
     routing_confidence = summary.get("routing_confidence", {}) if isinstance(summary, dict) else {}
     working_set = summary.get("working_set", {}) if isinstance(summary, dict) else {}
     startup_cost = summary.get("startup_cost", {}) if isinstance(summary, dict) else {}
 
-    unresolved_feedback = int(feedback.get("unresolved_feedback_case_count", 0) or 0)
-    low_confidence = int(routing_confidence.get("low_confidence_fixture_count", 0) or 0)
-    over_target = int(working_set.get("fixture_count_exceeding_target", 0) or 0)
+    unresolved_feedback = cast(int, cast(dict[str, Any], feedback).get("unresolved_feedback_case_count", 0) or 0)
+    low_confidence = cast(int, cast(dict[str, Any], routing_confidence).get("low_confidence_fixture_count", 0) or 0)
+    over_target = cast(int, cast(dict[str, Any], working_set).get("fixture_count_exceeding_target", 0) or 0)
     usefulness_status = str(usefulness_audit.get("status", "needs-more-proof"))
 
     status = "needs-more-proof"
@@ -1872,14 +1922,89 @@ def _memory_habitual_pull_view(
             ],
         },
         "evidence": {
-            "routing_feedback_case_count": int(feedback.get("total_feedback_case_count", 0) or 0),
+            "routing_feedback_case_count": int(cast(Any, cast(dict[str, Any], feedback).get("total_feedback_case_count", 0) or 0)),
             "unresolved_feedback_case_count": unresolved_feedback,
-            "routing_fixture_count": int(usefulness_audit.get("routing_fixture_count", 0) or 0),
-            "high_confidence_fixture_count": int(routing_confidence.get("high_confidence_fixture_count", 0) or 0),
-            "average_routed_note_count": working_set.get("average_routed_note_count", 0),
-            "average_routed_line_count": startup_cost.get("average_routed_line_count", 0),
+            "routing_fixture_count": int(cast(Any, usefulness_audit.get("routing_fixture_count", 0) or 0)),
+            "high_confidence_fixture_count": int(
+                cast(Any, cast(dict[str, Any], routing_confidence).get("high_confidence_fixture_count", 0) or 0)
+            ),
+            "average_routed_note_count": cast(dict[str, Any], working_set).get("average_routed_note_count", 0),
+            "average_routed_line_count": cast(dict[str, Any], startup_cost).get("average_routed_line_count", 0),
         },
     }
+
+
+def _detect_payload_drift(target_root: Path) -> list[dict[str, object]]:
+    """Detect differences between root source files and bootstrap payload mirror."""
+    mirror_root = payload_root()
+    # In a packaged installation, mirror_root will be '_payload' inside the site-packages.
+    # We only report drift if we can find the development workspace root.
+    dev_workspace_root = mirror_root.parents[2]
+    if not (dev_workspace_root / "pyproject.toml").exists():
+        return []
+
+    # Only report drift if the target we are reporting on is the dev workspace itself.
+    if target_root.resolve() != dev_workspace_root.resolve():
+        return []
+
+    drift: list[dict[str, object]] = []
+    managed_by_mirror = set(PAYLOAD_REQUIRED_FILES)
+
+    # Check for missing or differing files in the mirror
+    for relative in managed_by_mirror:
+        # We only care about docs and surface files that are mirrored from root
+        if not (relative.parts[0] == "docs" or relative.name == AGENTS_PATH.name):
+            continue
+
+        source_path = dev_workspace_root / relative
+        mirror_path = mirror_root / relative
+
+        if not source_path.exists():
+            # Required file missing from root is handled by other checks or ignored if optional
+            continue
+
+        if not mirror_path.exists():
+            drift.append(
+                {
+                    "severity": "warning",
+                    "path": relative.as_posix(),
+                    "message": f"Payload mirror missing: '{relative.as_posix()}' exists in root but not in bootstrap mirror.",
+                    "warning_class": "payload_drift",
+                }
+            )
+            continue
+
+        if source_path.read_text(encoding="utf-8") != mirror_path.read_text(encoding="utf-8"):
+            drift.append(
+                {
+                    "severity": "warning",
+                    "path": relative.as_posix(),
+                    "message": f"Payload drift detected: '{relative.as_posix()}' in root differs from bootstrap mirror.",
+                    "warning_class": "payload_drift",
+                }
+            )
+
+    # Check for extra files in the mirror
+    for mirror_file in mirror_root.rglob("*"):
+        if mirror_file.is_dir() or mirror_file.name == ".git":
+            continue
+
+        relative = mirror_file.relative_to(mirror_root)
+        # Skip skills and bootstrap-specific files
+        if relative in managed_by_mirror or relative.parts[0] in {"skills", "bootstrap"}:
+            continue
+
+        if relative.parts[0] == "docs" or relative.name == AGENTS_PATH.name:
+            drift.append(
+                {
+                    "severity": "warning",
+                    "path": relative.as_posix(),
+                    "message": f"Extra payload file: '{relative.as_posix()}' exists in bootstrap mirror but is not in PAYLOAD_REQUIRED_FILES.",
+                    "warning_class": "payload_drift",
+                }
+            )
+
+    return drift
 
 
 def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
@@ -1890,6 +2015,31 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
     current_view = show_current_memory(target=target_root)
     route_snapshot = report_routes(target=target_root)
     remediation = promotion_report(target=target_root, mode="remediation")
+
+    findings: list[dict[str, object]] = []
+    seen_findings: set[tuple[str, str, str, str]] = set()
+    significant_actions: list[Action] = []
+
+    # Add payload drift detection
+    findings.extend(_detect_payload_drift(target_root))
+
+    if manifest is None:
+        return {
+            "kind": "memory-report/v1",
+            "module": "memory",
+            "health": "attention-needed",
+            "findings": [
+                {
+                    "severity": "warning",
+                    "path": MANIFEST_PATH.as_posix(),
+                    "message": "Memory manifest not found or invalid.",
+                }
+            ],
+            "status": {
+                "detected_version": doctor.detected_version,
+                "bootstrap_version": doctor.bootstrap_version,
+            },
+        }
 
     note_type_counts: dict[str, int] = {}
     memory_role_counts: dict[str, int] = {}
@@ -1903,10 +2053,6 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
         trust_items.append(trust_item)
         state = str(trust_item["state"])
         trust_state_counts[state] = trust_state_counts.get(state, 0) + 1
-
-    findings: list[dict[str, object]] = []
-    seen_findings: set[tuple[str, str, str, str]] = set()
-    significant_actions: list[Action] = []
 
     def _is_context_warning(action: Action) -> bool:
         return action.detail == "nested repository detected under target; installer will not recurse into repo roots automatically"

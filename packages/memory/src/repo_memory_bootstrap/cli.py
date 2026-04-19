@@ -4,6 +4,7 @@ import argparse
 import json
 import shutil
 from pathlib import Path
+from typing import Any, cast
 
 from repo_memory_bootstrap import __version__
 from repo_memory_bootstrap.installer import (
@@ -27,6 +28,7 @@ from repo_memory_bootstrap.installer import (
     resolve_upgrade_source,
     review_routes,
     route_memory,
+    search_memory,
     show_current_memory,
     sync_memory,
     uninstall_bootstrap,
@@ -219,6 +221,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_target_arguments(report_parser)
     _add_format_argument(report_parser)
+
+    search_parser = subparsers.add_parser(
+        "search",
+        help="Search for keywords across all memory notes.",
+    )
+    _add_target_arguments(search_parser)
+    search_parser.add_argument("query", help="Keyword or pattern to search for.")
+    _add_format_argument(search_parser)
 
     verify_parser = subparsers.add_parser("verify-payload", help="Verify the packaged bootstrap payload contract.")
     _add_target_arguments(verify_parser)
@@ -447,6 +457,14 @@ def _handle_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_search(args: argparse.Namespace) -> int:
+    _emit_result(
+        search_memory(target=args.target, query=args.query),
+        output_format=args.format,
+    )
+    return 0
+
+
 def _handle_verify_payload(args: argparse.Namespace) -> int:
     _emit_result(verify_payload(target=args.target), output_format=args.format)
     return 0
@@ -477,6 +495,7 @@ COMMAND_HANDLERS = {
     "sync-memory": _handle_sync_memory,
     "promotion-report": _handle_promotion_report,
     "report": _handle_report,
+    "search": _handle_search,
     "verify-payload": _handle_verify_payload,
     "bootstrap-cleanup": _handle_bootstrap_cleanup,
 }
@@ -663,7 +682,7 @@ def _print_report(report: dict[str, object]) -> None:
     print(f"Target: {report['target_root']}")
     print("Command: report")
     print(f"Health: {report['health']}")
-    status = report.get("status", {})
+    status = cast(dict[str, Any], report.get("status", {}))
     if isinstance(status, dict):
         print(
             "Status: "
@@ -671,9 +690,9 @@ def _print_report(report: dict[str, object]) -> None:
             f"{status.get('current_note_count', 0)} current notes / "
             f"version {status.get('detected_version', 'unknown')}"
         )
-    trust = report.get("trust", {})
+    trust = cast(dict[str, Any], report.get("trust", {}))
     if isinstance(trust, dict):
-        state_counts = trust.get("state_counts", {})
+        state_counts = cast(dict[str, Any], trust.get("state_counts", {}))
         print(
             "Trust: "
             f"{trust.get('manual_review_count', 0)} manual-review / "
@@ -688,28 +707,29 @@ def _print_report(report: dict[str, object]) -> None:
                 f"{state_counts.get('stale', 0)} stale / "
                 f"{state_counts.get('elimination_candidate', 0)} elimination-biased"
             )
-    usefulness_audit = report.get("usefulness_audit", {})
+    usefulness_audit = cast(dict[str, Any], report.get("usefulness_audit", {}))
     if isinstance(usefulness_audit, dict) and usefulness_audit.get("summary"):
         print(f"Usefulness: {usefulness_audit['summary']}")
-    habitual_pull = report.get("habitual_pull", {})
+    habitual_pull = cast(dict[str, Any], report.get("habitual_pull", {}))
     if isinstance(habitual_pull, dict) and habitual_pull.get("summary"):
         print(f"Habitual pull: {habitual_pull['summary']}")
-    next_action = report.get("next_action", {})
+    next_action = cast(dict[str, Any], report.get("next_action", {}))
     if isinstance(next_action, dict) and next_action.get("summary"):
         print(f"Next action: {next_action['summary']}")
-        commands = next_action.get("commands", [])
+        commands = cast(list[str], next_action.get("commands", []))
         if isinstance(commands, list) and commands:
             print("Commands:")
             for command in commands:
                 print(f"- {command}")
     findings = report.get("findings", [])
-    if findings:
+    if isinstance(findings, list) and findings:
         print("Findings:")
         for finding in findings:
             if not isinstance(finding, dict):
                 continue
-            path = f"{finding['path']}: " if finding.get("path") else ""
-            print(f"- {finding.get('severity', 'info')}: {path}{finding.get('message', '')}")
+            f_dict = cast(dict[str, Any], finding)
+            path = f"{f_dict['path']}: " if f_dict.get("path") else ""
+            print(f"- {f_dict.get('severity', 'info')}: {path}{f_dict.get('message', '')}")
 
 
 def _created_current_memory_notes(result) -> bool:

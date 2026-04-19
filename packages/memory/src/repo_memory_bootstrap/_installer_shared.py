@@ -78,6 +78,8 @@ PAYLOAD_REQUIRED_FILES = (
     Path("memory/runbooks/README.md"),
     Path("memory/mistakes/recurring-failures.md"),
     Path("memory/decisions/README.md"),
+    Path("docs/memory-metadata-contract.md"),
+    Path("docs/installer-behavior.md"),
     AUDIT_SCRIPT_PATH,
     *BOOTSTRAP_WORKSPACE_FILES,
     *CORE_PAYLOAD_SKILL_FILES,
@@ -95,6 +97,7 @@ MEMORY_COMPATIBILITY_CONTRACT_FILES = (
     Path("memory/runbooks/README.md"),
     Path("memory/mistakes/recurring-failures.md"),
     Path("memory/decisions/README.md"),
+    Path("docs/memory-metadata-contract.md"),
 )
 MEMORY_LOWER_STABILITY_HELPER_FILES = tuple(
     relative for relative in PAYLOAD_REQUIRED_FILES if relative not in MEMORY_COMPATIBILITY_CONTRACT_FILES

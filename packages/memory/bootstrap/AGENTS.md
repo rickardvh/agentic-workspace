@@ -1,58 +1,77 @@
 # Agent Instructions
 
-This file is the local bootstrap contract for agents working in this repository.
+<!-- agentic-workspace:workflow:start -->
+Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules.
+<!-- agentic-workspace:workflow:end -->
 
-Keep it short and repo-specific.
+Local bootstrap contract for agents working in this monorepo.
 
-<!-- agentic-memory:workflow:start -->
-Read `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.
-<!-- agentic-memory:workflow:end -->
+## Precedence
 
-## Before doing work
+Resolve instruction conflicts in this order:
 
-1. Read `memory/index.md`.
-2. Consult the repository's active planning/status surface or the user's request for what to work on next.
-3. Load only the memory files routed by `memory/index.md` that are relevant to the task.
-4. Read `.agentic-workspace/memory/WORKFLOW.md` only when the shared policy boundary is unclear.
-5. Read any repository docs referenced by those files.
+1. Explicit user request.
+2. `AGENTS.md`.
+3. Package-local `AGENTS.md` under `packages/*/` once imported.
+4. Routed memory or canonical repo docs when present.
 
-Use built-in agent planning and memory for task execution.
-Do not rely on transient chat context when the same knowledge should exist in checked-in files.
+## Startup Path
 
-`memory/index.md` is the routing layer for task-relevant durable knowledge.
-`.agentic-workspace/memory/WORKFLOW.md` is a compact policy shim for the shared operating model.
-`.agentic-workspace/memory/SKILLS.md` defines how repo-owned `memory/skills/` and bundled bootstrap-managed skills should coexist.
+1. Read `AGENTS.md`.
+2. Read `TODO.md`.
+3. Read the active feature plan in `docs/execplans/` when the TODO surface points there.
+4. Read `ROADMAP.md` only when promoting work.
+5. Load package-local docs only for the package being edited.
+6. Before touching a shipped package, refresh it to the latest checked-in version through that package's canonical update workflow so local work starts from the current package contract.
+7. When a change crosses package source, package payload, and root install boundaries, read `docs/extraction-and-discovery-contract.md` before editing.
+8. When making claims about GitHub issue state, verify the live issue set with `gh` instead of relying only on checked-in intake notes.
 
-Keep durable repo knowledge in checked-in files. Prefer skills for repeatable procedures that operate on that knowledge.
-`memory/skills/` is only for repo-owned skills whose primary purpose is operating on checked-in memory or maintaining the repo's memory system; general non-memory skills do not belong there.
-Treat `.agentic-workspace/memory/` as the bootstrap-managed surface that may be replaced on upgrade. Put repo-specific durable knowledge in other `/memory` notes and repo-specific memory procedures in repo-owned sibling skills under `memory/skills/`.
+Do not start coding from chat context alone when the same information exists in checked-in files.
+Do not bulk-read all planning surfaces.
+When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
+Read `docs/routing-contract.md` when execution hits an edge case, routing ambiguity, or requires deep context on the operating model.
+Read `docs/lifecycle-and-config-contract.md` before editing CLI initialization or configuration logic.
 
-## Repo scope
+### Planning Continuity
 
-Replace the placeholders below with repository-specific details.
+- the execplan must record both `Intent Continuity` and `Required Continuation` before archive.
+- Every active slice must belong to a larger intended outcome.
+- record the required next owner and activation trigger explicitly before archive if the larger outcome is unfinished.
+- keep `Iterative Follow-Through` current.
+- remove or archive the matched planning residue in the same pass.
 
-- Project purpose: `<PROJECT_PURPOSE>`
-- Key repository docs: `<KEY_REPO_DOCS>`
-- Key commands: `<PRIMARY_BUILD_COMMAND>`, `<PRIMARY_TEST_COMMAND>`, `<OTHER_KEY_COMMANDS>`
-- Key subsystems: `<KEY_SUBSYSTEMS>`
+## Operating Rules
 
-This section should remain short and high-level.
+### Execution Posture
 
-## Workspace guardrails
+- Prefer task-by-task judgment about whether work should stay direct, be split into planner/implementer/validator subtasks, or be escalated to a stronger planner.
+- Use the effective mixed-agent posture from `agentic-workspace config --target . --format json` when deciding how much to delegate and how much reasoning to spend.
+- Treat `agentic-workspace.local.toml` as the control surface for capability/cost posture: if it says internal delegation or a strong planner is available, prefer that mode when it reduces cost or risk; if it does not, stay direct unless the task shape clearly justifies promotion or escalation.
+- Do not require the user to restate this preference every session when the config already makes the posture clear.
+- Keep the chosen execution shape bounded and explicit in checked-in planning when the task is broad enough to survive across sessions.
 
-- Work from the repository root.
-- Do not edit sibling repositories unless explicitly requested.
-- Prefer the existing project tooling, layout, and conventions.
-- Avoid introducing new tooling or structure unless it clearly improves maintainability.
+### Sources Of Truth
 
-## Task-system boundary
+- Active queue: `TODO.md`
+- Long-horizon candidate work: `ROADMAP.md`
+- Design constraints for future changes: `docs/design-principles.md`
 
-- This bootstrap does not install or define a task system.
-- Use the repository's active planning/status surface or explicit user request to decide what to work on.
-- Use built-in agent planning to execute the current task.
+### Repo Rules
 
-## Optional working notes
+- Keep package boundaries explicit.
+- Preserve independent package versioning and CLI entry points.
+- Treat line-ending-only drift in generated `tools/` mirrors as noise unless the canonical manifest or rendered content changed.
+- In checked-in human-facing docs, keep links clickable but use repo-relative paths only; do not commit absolute filesystem paths in Markdown links or prose path references unless a non-repo absolute path is the subject of the documentation itself.
 
-Local working notes may be used when helpful, but are not required.
+### Validation
 
-Do not treat local working notes as durable memory. Persist reusable knowledge in `/memory`.
+- Run the narrowest validation that proves a change.
+- Prefer package-local checks after package import.
+- Add monorepo-wide checks only when cross-package integration changes.
+- As a final repo-level test after package work, refresh the root install to the latest checked-in version of both shipped packages: `uv run agentic-planning-bootstrap upgrade --target .` and `uv run agentic-memory-bootstrap upgrade --target .`.
+- When verifying that the repo is on the latest shipped package contract, distinguish payload freshness from repo-local advisory warnings: run the package upgrade flow, `verify-payload`, package/root doctor surfaces, and report separately whether remaining warnings are package drift or expected repo-local customisation/noise.
+
+### Dogfooding Rule
+
+- Treat this monorepo as the proving ground for shipped agent workflows.
+- For detailed dogfooding and product doctrine, see `docs/design-principles.md`.

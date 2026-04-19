@@ -1,6 +1,6 @@
-# Routing and Entry Contract
+# Routing and Entry Contract (Authoritative Routing Home)
 
-This document acts as the authoritative routing home for all agentic work in this workspace. It defines how to enter the repository, orient quickly, and pick the right execution lane.
+This contract defines how to enter the repository, orient quickly, and pick the right execution lane.
 
 ## 1. Startup and First Contact
 

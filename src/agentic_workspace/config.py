@@ -502,7 +502,9 @@ def default_module_update_policies() -> dict[str, ModuleUpdatePolicy]:
             source_type=str(memory_default["source_type"]),
             source_ref=str(memory_default["source_ref"]),
             source_label=str(memory_default["source_label"]),
-            recommended_upgrade_after_days=int(memory_default["recommended_upgrade_after_days"]),
+            recommended_upgrade_after_days=int(memory_default["recommended_upgrade_after_days"])
+            if isinstance(memory_default["recommended_upgrade_after_days"], (int, str))
+            else 0,
             source="product-default",
         ),
     }

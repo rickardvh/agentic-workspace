@@ -35,7 +35,7 @@ def _payload_entries(
     source_root: Path, *, include_bootstrap_workspace: bool = True, target_layout: str = "managed-root"
 ) -> list[PayloadEntry]:
     entries: list[PayloadEntry] = []
-    file_roots = [AGENTS_PATH, AUDIT_SCRIPT_PATH, Path("memory")]
+    file_roots = [AGENTS_PATH, AUDIT_SCRIPT_PATH, Path("memory"), Path("docs")]
     for relative_root in file_roots:
         source_path = source_root / relative_root
         if not source_path.exists():

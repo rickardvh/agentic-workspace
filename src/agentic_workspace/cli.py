@@ -8,10 +8,15 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
+from agentic_workspace._schema import (
+    ModuleDescriptor,
+    ModuleResultContract,
+    RootAgentsCleanupBlock,
+)
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
     DEFAULT_IMPROVEMENT_LATITUDE,
@@ -123,41 +128,7 @@ SUPPORTED_SETUP_FINDING_CLASSES = (
 )
 
 
-@dataclass(frozen=True)
-class RootAgentsCleanupBlock:
-    block: str
-    start_marker: str
-    end_marker: str
-    label: str
-
-
-@dataclass(frozen=True)
-class ModuleResultContract:
-    schema_version: str
-    guaranteed_fields: tuple[str, ...]
-    action_fields: tuple[str, ...]
-    warning_fields: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class ModuleDescriptor:
-    name: str
-    description: str
-    commands: dict[str, Callable[..., Any]]
-    detector: Callable[[Path], bool]
-    selection_rank: int
-    include_in_full_preset: bool
-    install_signals: tuple[Path, ...]
-    workflow_surfaces: tuple[Path, ...]
-    generated_artifacts: tuple[Path, ...]
-    command_args: dict[str, tuple[str, ...]]
-    startup_steps: tuple[str, ...]
-    sources_of_truth: tuple[str, ...]
-    root_agents_cleanup_blocks: tuple[RootAgentsCleanupBlock, ...]
-    capabilities: tuple[str, ...]
-    dependencies: tuple[str, ...]
-    conflicts: tuple[str, ...]
-    result_contract: ModuleResultContract
+# Types moved to _schema.py
 
 
 @dataclass(frozen=True)
@@ -2537,9 +2508,11 @@ def _run_report_command(
         else:
             continue
         module_reports.append(module_report)
-        for finding in module_report.get("findings", []):
-            if not isinstance(finding, dict):
-                continue
+        findings = cast(Any, module_report.get("findings"))
+        if isinstance(findings, list):
+            for finding in findings:
+                if not isinstance(finding, dict):
+                    continue
             _add_finding(
                 severity=str(finding.get("severity", "info")),
                 module=module_name,
@@ -5171,8 +5144,12 @@ def _current_module_upgrade_source_state(
             "source_label": current["source_label"],
             "recommended_upgrade_after_days": current["recommended_upgrade_after_days"],
             "recorded_at": current.get("recorded_at"),
-            "path": current["path"].as_posix() if current.get("path") is not None else None,
         }
+        current_path = current.get("path")
+        if isinstance(current_path, Path):
+            current_payload["path"] = current_path.as_posix()
+        else:
+            current_payload["path"] = None
     if not metadata_path.exists():
         return current_payload, "missing"
     if (

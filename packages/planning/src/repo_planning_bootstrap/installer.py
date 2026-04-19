@@ -185,25 +185,43 @@ def payload_root() -> Path:
     return Path(__file__).resolve().parents[2] / "bootstrap"
 
 
-def _detect_payload_drift() -> list[dict[str, str]]:
+def _detect_payload_drift(target_root: Path) -> list[dict[str, str]]:
     """Detect differences between root source files and bootstrap payload mirror."""
     mirror_root = payload_root()
     # In a packaged installation, mirror_root will be '_payload' inside the site-packages.
     # We only report drift if we can find the development workspace root.
-    workspace_root = mirror_root.parents[2]
-    if not (workspace_root / "pyproject.toml").exists():
+    dev_workspace_root = mirror_root.parents[2]
+    if not (dev_workspace_root / "pyproject.toml").exists():
+        return []
+
+    # Only report drift if the target we are reporting on is the dev workspace itself.
+    if target_root.resolve() != dev_workspace_root.resolve():
         return []
 
     drift = []
-    for relative in REQUIRED_PAYLOAD_FILES:
+    managed_by_mirror = set(REQUIRED_PAYLOAD_FILES)
+
+    # Check for missing or differing files in the mirror
+    for relative in managed_by_mirror:
         # We only care about docs and surface files that are mirrored from root
         if not (relative.parts[0] == "docs" or relative.name in {"AGENTS.md", "TODO.md", "ROADMAP.md"}):
             continue
 
-        source_path = workspace_root / relative
+        source_path = dev_workspace_root / relative
         mirror_path = mirror_root / relative
 
-        if not source_path.exists() or not mirror_path.exists():
+        if not source_path.exists():
+            # This is a different kind of error: required file missing from root
+            continue
+
+        if not mirror_path.exists():
+            drift.append(
+                {
+                    "path": relative.as_posix(),
+                    "message": f"Payload mirror missing: '{relative.as_posix()}' exists in root but not in bootstrap mirror.",
+                    "warning_class": "payload_drift",
+                }
+            )
             continue
 
         if source_path.read_text(encoding="utf-8") != mirror_path.read_text(encoding="utf-8"):
@@ -214,6 +232,24 @@ def _detect_payload_drift() -> list[dict[str, str]]:
                     "warning_class": "payload_drift",
                 }
             )
+
+    # Check for extra files in the mirror that aren't in REQUIRED_PAYLOAD_FILES
+    for mirror_file in mirror_root.rglob("*"):
+        if mirror_file.is_dir() or mirror_file.name == ".git":
+            continue
+
+        relative = mirror_file.relative_to(mirror_root)
+        if relative not in managed_by_mirror and relative.parts[0] != "skills":
+            # Ignore files that are legitimately bootstrap-only if they aren't docs/root surfaces
+            if relative.parts[0] == "docs" or relative.name in {"AGENTS.md", "TODO.md", "ROADMAP.md"}:
+                drift.append(
+                    {
+                        "path": relative.as_posix(),
+                        "message": f"Extra payload file: '{relative.as_posix()}' exists in bootstrap mirror but is not in REQUIRED_PAYLOAD_FILES.",
+                        "warning_class": "payload_drift",
+                    }
+                )
+
     return drift
 
 
@@ -483,7 +519,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
             archived_execplans = sum(1 for path in archive_dir.glob("*.md") if path.is_file())
 
     warnings = _run_planning_checker(target_root)
-    drift = _detect_payload_drift()
+    drift = _detect_payload_drift(target_root)
     warnings.extend(drift)
 
     active_contract = _active_intent_contract(
