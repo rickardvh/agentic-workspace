@@ -44,6 +44,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path("docs/knowledge-promotion-workflow.md"),
     Path("docs/standing-intent-contract.md"),
     Path("docs/candidate-lanes-contract.md"),
+    Path("docs/installer-behavior.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
     Path("docs/execplans/archive/README.md"),
@@ -78,6 +79,7 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("docs/knowledge-promotion-workflow.md"),
     Path("docs/standing-intent-contract.md"),
     Path("docs/candidate-lanes-contract.md"),
+    Path("docs/installer-behavior.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
     Path("docs/execplans/archive/README.md"),
@@ -183,6 +185,38 @@ def payload_root() -> Path:
     return Path(__file__).resolve().parents[2] / "bootstrap"
 
 
+def _detect_payload_drift() -> list[dict[str, str]]:
+    """Detect differences between root source files and bootstrap payload mirror."""
+    mirror_root = payload_root()
+    # In a packaged installation, mirror_root will be '_payload' inside the site-packages.
+    # We only report drift if we can find the development workspace root.
+    workspace_root = mirror_root.parents[2]
+    if not (workspace_root / "pyproject.toml").exists():
+        return []
+
+    drift = []
+    for relative in REQUIRED_PAYLOAD_FILES:
+        # We only care about docs and surface files that are mirrored from root
+        if not (relative.parts[0] == "docs" or relative.name in {"AGENTS.md", "TODO.md", "ROADMAP.md"}):
+            continue
+
+        source_path = workspace_root / relative
+        mirror_path = mirror_root / relative
+
+        if not source_path.exists() or not mirror_path.exists():
+            continue
+
+        if source_path.read_text(encoding="utf-8") != mirror_path.read_text(encoding="utf-8"):
+            drift.append(
+                {
+                    "path": relative.as_posix(),
+                    "message": f"Payload drift detected: '{relative.as_posix()}' in root differs from bootstrap mirror.",
+                    "warning_class": "payload_drift",
+                }
+            )
+    return drift
+
+
 def _bundled_skill_relative_paths() -> tuple[Path, ...]:
     root = skills_root()
     if not root.exists():
@@ -201,8 +235,12 @@ def _installed_surface_files() -> tuple[Path, ...]:
     return REQUIRED_PAYLOAD_FILES + PLANNING_BUNDLED_SKILL_FILES
 
 
-def resolve_target_root(target: str | Path | None) -> Path:
+def resolve_target_root(target: str | Path | None, *, local_only: bool = False) -> Path:
     resolved = Path(target).resolve() if target else Path.cwd().resolve()
+    if local_only:
+        resolved = resolved / ".gemini" / "agentic-workspace"
+    elif not (resolved / ".agentic-workspace").exists() and (resolved / ".gemini" / "agentic-workspace").exists():
+        resolved = resolved / ".gemini" / "agentic-workspace"
     resolved.mkdir(parents=True, exist_ok=True)
     return resolved
 
@@ -212,13 +250,31 @@ def list_payload_files() -> list[str]:
     return [path.relative_to(root).as_posix() for path in sorted(root.rglob("*")) if _should_include_payload_path(path, root)]
 
 
-def install_bootstrap(*, target: str | Path | None = None, dry_run: bool = False, force: bool = False) -> InstallResult:
-    target_root = resolve_target_root(target)
+def install_bootstrap(
+    *,
+    target: str | Path | None = None,
+    dry_run: bool = False,
+    force: bool = False,
+    local_only: bool = False,
+) -> InstallResult:
+    target_root = resolve_target_root(target, local_only=local_only)
     result = InstallResult(target_root=target_root, message="Install plan", dry_run=dry_run)
     _copy_payload(target_root=target_root, result=result, conservative=False, force=force)
     _copy_bundled_skills(target_root=target_root, result=result, conservative=False, force=force)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
+    if local_only and not dry_run:
+        _ensure_local_ignored(target or Path.cwd())
     return result
+
+
+def _ensure_local_ignored(repo_root: str | Path) -> None:
+    gitignore = Path(repo_root) / ".gitignore"
+    if not gitignore.exists():
+        return
+    text = gitignore.read_text(encoding="utf-8")
+    if ".gemini/" not in text:
+        with gitignore.open("a", encoding="utf-8") as f:
+            f.write("\n# Agentic Workspace local-only storage\n.gemini/\n")
 
 
 def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) -> InstallResult:
@@ -427,6 +483,9 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
             archived_execplans = sum(1 for path in archive_dir.glob("*.md") if path.is_file())
 
     warnings = _run_planning_checker(target_root)
+    drift = _detect_payload_drift()
+    warnings.extend(drift)
+
     active_contract = _active_intent_contract(
         target_root=target_root,
         active_items=active_items,

@@ -39,6 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
         command_parser.add_argument("--target")
         command_parser.add_argument("--dry-run", action="store_true")
         command_parser.add_argument("--force", action="store_true")
+        command_parser.add_argument("--local", action="store_true", help="Set up the workspace in a local, non-tracked directory.")
         command_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     adopt_parser = subparsers.add_parser("adopt", help="Conservatively add planning bootstrap files to an existing repository.")
@@ -107,7 +108,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command in {"install", "init"}:
-        return _emit(install_bootstrap(target=args.target, dry_run=args.dry_run, force=args.force), args.format)
+        return _emit(install_bootstrap(target=args.target, dry_run=args.dry_run, force=args.force, local_only=args.local), args.format)
     if args.command == "adopt":
         return _emit(adopt_bootstrap(target=args.target, dry_run=args.dry_run), args.format)
     if args.command == "upgrade":
