@@ -15,6 +15,26 @@ This file is a thin human view over the canonical `planning_record` surfaced by 
 
 -
 
+## Machine-Readable Contract
+
+```yaml
+# This section is for high-efficiency agentic parsing. 
+# Keep it in sync with the prose sections below.
+intent:
+  outcome: ""
+  constraints: ""
+  latitude: ""
+  escalation: ""
+execution:
+  milestone: ""
+  status: ""
+  next_step: ""
+  proof: ""
+scope:
+  touched: []
+  invariants: []
+```
+
 ## Intent Continuity
 
 - Larger intended outcome:
@@ -128,11 +148,18 @@ Keep the first slice advisory: if a required tool is unavailable, stop or escala
 
 -
 
+## Proof Report
+
+- Validation proof (logs, command output, or screenshots):
+- Proof achieved now:
+- Evidence for "Proof achieved" state:
+
 ## Execution Summary
 
 - Outcome delivered:
 - Validation confirmed:
 - Follow-on routed to:
+- Knowledge promoted (Memory/Docs/Config):
 - Resume from:
 
 Keep this compact and completion-shaped.

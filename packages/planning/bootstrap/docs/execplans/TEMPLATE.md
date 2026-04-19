@@ -148,11 +148,18 @@ Keep the first slice advisory: if a required tool is unavailable, stop or escala
 
 -
 
+## Proof Report
+
+- Validation proof (logs, command output, or screenshots):
+- Proof achieved now:
+- Evidence for "Proof achieved" state:
+
 ## Execution Summary
 
 - Outcome delivered:
 - Validation confirmed:
 - Follow-on routed to:
+- Knowledge promoted (Memory/Docs/Config):
 - Resume from:
 
 Keep this compact and completion-shaped.

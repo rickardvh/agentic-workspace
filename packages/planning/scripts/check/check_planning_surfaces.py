@@ -1385,7 +1385,13 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 )
             )
         else:
-            for field_name in ("outcome delivered", "validation confirmed", "follow-on routed to", "resume from"):
+            for field_name in (
+                "outcome delivered",
+                "validation confirmed",
+                "follow-on routed to",
+                "knowledge promoted (memory/docs/config)",
+                "resume from",
+            ):
                 value = execution_summary_fields.get(field_name, "").strip().lower()
                 if not value or value in {"pending", "tbd", "todo", "not completed yet", "none yet", "current milestone"}:
                     warnings.append(
@@ -1414,6 +1420,34 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 "Completed rename/refactor-like work is missing a stale-reference sweep in Validation Commands.",
             )
         )
+
+    proof_report, proof_report_bullets = _extract_section_stats(lines, "Proof Report")
+    proof_report_fields = _extract_kv_fields(proof_report)
+    if has_only_completed_status:
+        if proof_report_bullets == 0:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Completed execplan is missing a Proof Report.",
+                )
+            )
+        else:
+            for field_name in (
+                "validation proof (logs, command output, or screenshots)",
+                "proof achieved now",
+                'evidence for "proof achieved" state',
+            ):
+                value = proof_report_fields.get(field_name, "").strip().lower()
+                if not value or value in {"pending", "tbd", "todo", "none yet", "current milestone"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_UNDER_SPECIFIED,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Proof Report field: {field_name}.",
+                        )
+                    )
+                    break
 
     drift_log = _section_content(lines, "Drift Log")
     drift_entries = [line for line in drift_log if re.match(r"^\s*[-*]\s+\d{4}-\d{2}-\d{2}:", line)]

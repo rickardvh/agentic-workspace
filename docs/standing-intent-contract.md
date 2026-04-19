@@ -217,5 +217,6 @@ That view should answer, without broad rereading:
 ## Relationship To Other Docs
 
 - Use [`docs/reporting-contract.md`](docs/reporting-contract.md) for the compact report surface that exposes the effective standing-intent view.
+- Use [`docs/knowledge-promotion-workflow.md`](docs/knowledge-promotion-workflow.md) for the canonical workflow for moving chat-borne guidance into durable homes.
 - Use [`docs/intent-contract.md`](docs/intent-contract.md) when the question is confirmed versus interpreted task intent for one slice rather than durable repo-wide guidance.
 - Use [`docs/design-principles.md`](docs/design-principles.md) for standing doctrine already adopted by the repo.
