@@ -54,6 +54,24 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
   Promotion signal: Promote when a guest-agent workflow needs to persist local planning/memory without polluting the target repository's tracked files.
   Suggested first slice: Define the local-only storage and configuration shim for unowned repositories.
 
+- Lane: Agent-native memory and habitual-pull ergonomics
+  ID: agent-native-memory-habitual-pull
+  Priority: fourth
+  Issues: #218
+  Outcome: Add an agent-native memory retrieval surface so agents can pull relevant knowledge tranches for a task without manual exploratory scans.
+  Why now: Reduces token cost and reasoning depth by narrowing the context-discovery window.
+  Promotion signal: Promote when task context discovery becomes a significant part of the startup cost.
+  Suggested first slice: Define the metadata/search contract for task-specific knowledge retrieval.
+
+- Lane: Signal hygiene and validation hardening
+  ID: signal-hygiene-validation-hardening
+  Priority: fifth
+  Issues: #219
+  Outcome: Fix persistent type-check and validation noise in the root workspace to restore high trust in the primary check lanes.
+  Why now: Noise in 'make check' leads to missed real regressions and increases developer cognitive load.
+  Promotion signal: Promote immediately to clear the master branch.
+  Suggested first slice: Fix the type diagnostics in _schema.py.
+
 ## Reopen Conditions
 
 - Reopen roadmap planning when the active queue completes or a new bounded candidate is ready to promote.
