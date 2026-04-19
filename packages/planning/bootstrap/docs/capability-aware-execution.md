@@ -8,9 +8,9 @@ This contract is task-shape based. It does not depend on vendor-specific model n
 
 ## Operating Stance
 
-This contract is advisory and tool-agnostic.
-
 Use it to shape work, not to fight assistants that already perform automatic capability selection well.
+
+The authoritative machine-readable version of this contract is available at [`docs/capability-contract.json`](capability-contract.json).
 
 The normal goal is quiet execution:
 
