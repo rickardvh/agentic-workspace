@@ -97,6 +97,36 @@ Fast path for autonomous agents working on this repo.
 - Shared memory workflow skills: `.agentic-workspace/memory/skills`
 - Repo-specific memory skills: `memory/skills`
 
+## Capability and Escalation
+
+- Machine-readable contract: `docs/capability-contract.json`
+- Evaluation mode: `task-shape-aware`
+- Escalation triggers:
+  - unresolvable ambiguity
+  - unknown validation story
+  - architecture sensitivity exceeds local latitude
+  - missing required executor capability
+
+## Core Tooling
+
+### `agentic_workspace`
+
+Authoritative workspace orientation and planning recovery.
+
+| Command | Purpose |
+| --- | --- |
+| `report` | Combined workspace status and cold-start orientation. |
+| `summary` | Compact planning state recovery. |
+| `defaults` | Startup order and surface roles. |
+| `config` | Repo posture and entrypoint lookup. |
+| `doctor` | Health check and remediation for planning surfaces. |
+
+### `planning_checker`
+
+Enforce planning contract hygiene and schema alignment.
+
+- Source: `packages/planning/scripts/check/check_planning_surfaces.py`
+
 ## Core invariants
 
 - TODO.md owns active queue state and lightweight direct tasks.

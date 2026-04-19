@@ -143,6 +143,32 @@
       ]
     }
   },
+  "capabilities": {
+    "contract": "docs/capability-contract.json",
+    "evaluation_mode": "task-shape-aware",
+    "escalation_triggers": [
+      "unresolvable ambiguity",
+      "unknown validation story",
+      "architecture sensitivity exceeds local latitude",
+      "missing required executor capability"
+    ]
+  },
+  "tools": {
+    "agentic_workspace": {
+      "purpose": "Authoritative workspace orientation and planning recovery.",
+      "commands": {
+        "report": "Combined workspace status and cold-start orientation.",
+        "summary": "Compact planning state recovery.",
+        "defaults": "Startup order and surface roles.",
+        "config": "Repo posture and entrypoint lookup.",
+        "doctor": "Health check and remediation for planning surfaces."
+      }
+    },
+    "planning_checker": {
+      "purpose": "Enforce planning contract hygiene and schema alignment.",
+      "path": "packages/planning/scripts/check/check_planning_surfaces.py"
+    }
+  },
   "invariants": [
     "TODO.md owns active queue state and lightweight direct tasks.",
     "Active execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work.",
