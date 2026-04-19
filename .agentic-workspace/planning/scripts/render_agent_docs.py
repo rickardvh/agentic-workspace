@@ -100,38 +100,6 @@ def render_quickstart(manifest: dict) -> str:
         lines.append(f"- Repo-specific memory skills: `{repo_memory_source_dir}`")
     lines.append("")
 
-    capabilities = manifest.get("capabilities", {})
-    if capabilities:
-        lines.append("## Capability and Escalation")
-        lines.append("")
-        lines.append(f"- Machine-readable contract: `{capabilities.get('contract')}`")
-        lines.append(f"- Evaluation mode: `{capabilities.get('evaluation_mode')}`")
-        lines.append("- Escalation triggers:")
-        for trigger in capabilities.get("escalation_triggers", []):
-            lines.append(f"  - {trigger}")
-        lines.append("")
-
-    tools = manifest.get("tools", {})
-    if tools:
-        lines.append("## Core Tooling")
-        lines.append("")
-        for tool_name, payload in tools.items():
-            lines.append(f"### `{tool_name}`")
-            lines.append("")
-            lines.append(f"{payload.get('purpose', '')}")
-            lines.append("")
-            commands = payload.get("commands", {})
-            if commands:
-                lines.append("| Command | Purpose |")
-                lines.append("| --- | --- |")
-                for cmd, purpose in commands.items():
-                    lines.append(f"| `{cmd}` | {purpose} |")
-                lines.append("")
-            path = payload.get("path")
-            if path:
-                lines.append(f"- Source: `{path}`")
-                lines.append("")
-
     lines.append("## Core invariants")
     lines.append("")
     for invariant in manifest.get("invariants", []):

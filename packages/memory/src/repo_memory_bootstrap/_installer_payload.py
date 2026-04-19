@@ -38,10 +38,17 @@ def _payload_entries(
     file_roots = [AGENTS_PATH, AUDIT_SCRIPT_PATH, Path("memory"), Path("docs")]
     for relative_root in file_roots:
         source_path = source_root / relative_root
+        if not source_path.exists() and relative_root.name.endswith(".md"):
+            template_path = source_root / relative_root.with_name(relative_root.name.replace(".md", ".template.md"))
+            if template_path.exists():
+                source_path = template_path
+
         if not source_path.exists():
             continue
         if source_path.is_file():
             relative_path = source_path.relative_to(source_root)
+            if relative_path.name.endswith(".template.md"):
+                relative_path = relative_path.with_name(relative_path.name.replace(".template.md", ".md"))
             role = _classify_role(relative_path)
             entries.append(
                 PayloadEntry(
@@ -82,6 +89,8 @@ def _target_relative_path(relative_path: Path, *, target_layout: str) -> Path:
         return Path(".agentic-workspace/memory/bootstrap") / relative_path.relative_to(LEGACY_BOOTSTRAP_WORKSPACE_ROOT)
     if path_str.startswith("memory/skills/"):
         return Path(".agentic-workspace/memory/skills") / relative_path.relative_to(LEGACY_SHIPPED_SKILLS_ROOT)
+    if relative_path.name.endswith(".template.md"):
+        relative_path = relative_path.with_name(relative_path.name.replace(".template.md", ".md"))
     return relative_path
 
 

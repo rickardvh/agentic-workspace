@@ -219,11 +219,15 @@ def main() -> int:
         checks.append(("workspace local override schema parity", ["safety properties drifted from supported local override fields"]))
     delegation_target_schema = local_override_schema["properties"]["delegation_targets"]["patternProperties"]["^.+$"]
     if delegation_target_schema["properties"]["strength"]["enum"] != list(cli.SUPPORTED_DELEGATION_TARGET_STRENGTHS):
-        checks.append(("workspace local override schema parity", ["delegation target strengths drifted from supported local override fields"]))
+        checks.append(
+            ("workspace local override schema parity", ["delegation target strengths drifted from supported local override fields"])
+        )
     if delegation_target_schema["properties"]["execution_methods"]["items"]["enum"] != list(
         cli.SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS
     ):
-        checks.append(("workspace local override schema parity", ["delegation target execution methods drifted from supported local override fields"]))
+        checks.append(
+            ("workspace local override schema parity", ["delegation target execution methods drifted from supported local override fields"])
+        )
     delegation_outcome_schema = contract_schema("delegation_outcomes.schema.json")
     record_schema = delegation_outcome_schema["properties"]["records"]["items"]
     if record_schema["properties"]["outcome"]["enum"] != list(cli.SUPPORTED_DELEGATION_OUTCOMES):

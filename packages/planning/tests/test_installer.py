@@ -204,8 +204,9 @@ def test_ownership_module_root_matches_workspace_ledger() -> None:
 
 
 def test_planning_contract_file_shortlist_is_explicit() -> None:
-    assert Path("AGENTS.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert Path("TODO.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path("AGENTS.template.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path("TODO.template.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path("ROADMAP.template.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/capability-aware-execution.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/execplans/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
@@ -454,7 +455,7 @@ def test_bootstrap_environment_recovery_contract_is_part_of_payload() -> None:
 
 def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routing() -> None:
     readme_text = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
-    bootstrap_agents_text = (installer_mod.payload_root() / "AGENTS.md").read_text(encoding="utf-8")
+    bootstrap_agents_text = (installer_mod.payload_root() / "AGENTS.template.md").read_text(encoding="utf-8")
     execplans_readme_text = (installer_mod.payload_root() / "docs" / "execplans" / "README.md").read_text(encoding="utf-8")
     manifest_payload = json.loads(
         (installer_mod.payload_root() / ".agentic-workspace" / "planning" / "agent-manifest.json").read_text(encoding="utf-8")

@@ -1059,6 +1059,10 @@ def main(argv: list[str] | None = None) -> int:
             descriptors=descriptors,
             config=config,
         )
+        if payload.get("health") != "healthy" and args.format == "json":
+            import sys
+
+            print(f"DEBUG findings: {payload.get('findings')}", file=sys.stderr)
         _emit_payload(payload=payload, format_name=args.format)
         return 0
 

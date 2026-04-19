@@ -1,0 +1,27 @@
+# TODO
+
+Last pruned: [LAST_PRUNED_DATE]
+
+## Purpose
+
+This file is the active queue and activation surface.
+Use it to show what is active now, what owns execution, and which small direct tasks still need doing.
+Historical rationale, completed tranche detail, and long-form execution context belong in active execplans, archived execplans, docs, memory, and git history.
+Long-horizon planning belongs in `ROADMAP.md`.
+When there is no active task, keep this file minimal.
+
+## Hygiene Rules
+
+- Keep this file under ~150 lines.
+- Keep only active work and near-term queued work.
+- Maximum 3 `Now` items in progress at once.
+- Planned work should list only: `ID`, `Status`, `Surface`, and `Why now`.
+- Small direct tasks that do not justify an execplan may also include `Next action` and `Done when`.
+- Keep direct-task rows self-sufficient: if they need milestone sequencing, blocker handling, non-obvious validation, rollback or migration notes, or long narrative text, promote them into `docs/execplans/`.
+- Do not restate phase scope, blockers, validation, or completion criteria here when an execplan already owns them.
+- Remove completed implementation detail immediately after closure.
+- Do not store architecture essays, migration logs, or full retrospectives here.
+
+## Next
+
+- No active work right now.

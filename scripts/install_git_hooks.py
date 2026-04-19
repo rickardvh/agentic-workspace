@@ -12,10 +12,7 @@ def _repo_root() -> Path:
 def _hook_script(python_executable: Path, hook_runner: Path) -> str:
     python_path = python_executable.resolve().as_posix()
     runner_path = hook_runner.resolve().as_posix()
-    return (
-        "#!/bin/sh\n"
-        f'"{python_path}" "{runner_path}" "$@"\n'
-    )
+    return f'#!/bin/sh\n"{python_path}" "{runner_path}" "$@"\n'
 
 
 def main() -> int:

@@ -47,18 +47,20 @@ Extract a new package only when:
 
 ## 4. Source, Payload, and Install Boundaries
 
-This monorepo maintains three distinct layers for package-related work:
+This monorepo maintains four distinct layers to separate the shipped product from operational usage and repo-local configuration:
 
-| Layer | Purpose | Paths |
-| --- | --- | --- |
-| **Source** | Reusable logic and tests. | `packages/*/src/` |
-| **Payload** | Files installed into a target repo. | `packages/*/bootstrap/` |
-| **Operational** | Live surfaces used by this monorepo. | `AGENTS.md`, `.agentic-workspace/`, etc. |
+| Layer | Purpose | Paths | Direction of Change |
+| --- | --- | --- | --- |
+| **Source Code** | Procedural Python logic, CLI commands, and installer logic. | `packages/*/src/` | Authority for tool behavior. |
+| **Shipped Product** | Authoritative contracts, templates, and default skills (the "Bootstrap"). | `packages/*/bootstrap/` | **Primary Source of Truth** for shipped content. Edit here first. |
+| **Installed Product** | The operational installation of the shipped product into this repo. | `docs/`, `AGENTS.md`, `TODO.md`, etc. | **Dogfooding layer.** Update via `upgrade` command after editing the Payload. |
+| **Repo-Specific Files**| Metadata unique to this monorepo's identity, build, and environment. | `pyproject.toml`, `README.md`, `Makefile` | **Local configuration.** Entirely separate from shipped logic. |
 
-### Default Rule
-- Fix the authoritative layer (Source or Payload) first.
-- Do not patch the root operational install alone if a package upgrade would overwrite it.
-- Keep source and payload aligned before or alongside the root install.
+### Operational Hygiene
+- **Edit Payload First**: Changes to distributed contracts (e.g., `docs/*-contract.md`) must be made in the `packages/*/bootstrap/` payload. 
+- **Upgrade to Dogfood**: After editing the payload, run the package's `upgrade` command (e.g., `uv run agentic-planning-bootstrap upgrade`) to apply the changes to the monorepo root.
+- **Template Separation**: To prevent confusion, generic tracking files in the payload are named with a `.template.md` suffix (e.g., `TODO.template.md`). The installer strips this suffix during deployment to ensure the target repo receives standard operational filenames.
+- **Do not patch root alone**: Do not patch the root operational install alone if a package upgrade would overwrite it or if the change is intended for distribution.
 
 ---
 

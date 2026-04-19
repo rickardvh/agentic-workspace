@@ -13,7 +13,6 @@ Fast path for autonomous agents working on this repo.
 
 ## First queries
 
-- Use `agentic-workspace report --startup --format json` for immediate high-signal orientation (Active Goal, Next Action, Constraints).
 - Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.
 - Use `agentic-workspace config --target ./repo --format json` to find the configured startup entrypoint and effective repo posture.
 - Use `agentic-workspace summary --format json` when the question is active planning recovery rather than startup order.
@@ -96,36 +95,6 @@ Fast path for autonomous agents working on this repo.
 - Repo development skills: `tools/skills`
 - Shared memory workflow skills: `.agentic-workspace/memory/skills`
 - Repo-specific memory skills: `memory/skills`
-
-## Capability and Escalation
-
-- Machine-readable contract: `docs/capability-contract.json`
-- Evaluation mode: `task-shape-aware`
-- Escalation triggers:
-  - unresolvable ambiguity
-  - unknown validation story
-  - architecture sensitivity exceeds local latitude
-  - missing required executor capability
-
-## Core Tooling
-
-### `agentic_workspace`
-
-Authoritative workspace orientation and planning recovery.
-
-| Command | Purpose |
-| --- | --- |
-| `report` | Combined workspace status and cold-start orientation. |
-| `summary` | Compact planning state recovery. |
-| `defaults` | Startup order and surface roles. |
-| `config` | Repo posture and entrypoint lookup. |
-| `doctor` | Health check and remediation for planning surfaces. |
-
-### `planning_checker`
-
-Enforce planning contract hygiene and schema alignment.
-
-- Source: `packages/planning/scripts/check/check_planning_surfaces.py`
 
 ## Core invariants
 

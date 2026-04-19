@@ -11,7 +11,7 @@ from zipfile import ZipFile
 MEMORY_PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_MANAGED_PATHS = {
-    "bootstrap/AGENTS.md",
+    "bootstrap/AGENTS.template.md",
     "bootstrap/README.md",
     "bootstrap/memory/index.md",
     "bootstrap/memory/manifest.toml",

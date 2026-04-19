@@ -14,6 +14,7 @@ import re
 from pathlib import Path
 from typing import NamedTuple
 
+
 def _find_repo_root() -> Path:
     """Find repo root based on script location (canonical or bootstrap)."""
     current = Path(__file__).resolve()
@@ -27,7 +28,8 @@ def _find_repo_root() -> Path:
     for parent in current.parents:
         if (parent / "AGENTS.md").exists():
             return parent
-    return current.parents[2] # Best guess for standard bootstrap
+    return current.parents[2]  # Best guess for standard bootstrap
+
 
 REPO_ROOT = _find_repo_root()
 TODO_PATH = REPO_ROOT / "TODO.md"
@@ -568,6 +570,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     warnings: list[PlanningWarning] = []
     agents_path = repo_root / "AGENTS.md"
     llms_path = repo_root / "llms.txt"
+    routing_path = repo_root / "docs" / "routing-contract.md"
     manifest_path = repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json"
     quickstart_path = repo_root / "tools" / "AGENT_QUICKSTART.md"
     readme_path = repo_root / "README.md"
@@ -579,6 +582,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     agents_text = "\n".join(_read_lines(agents_path)).lower()
     quickstart_text = "\n".join(_read_lines(quickstart_path)).lower()
     llms_text = "\n".join(_read_lines(llms_path)).lower() if llms_path.exists() else ""
+    routing_text = "\n".join(_read_lines(routing_path)).lower() if routing_path.exists() else ""
     readme_text = "\n".join(_read_lines(readme_path)).lower() if readme_path.exists() else ""
     contributor_text = "\n".join(_read_lines(contributor_path)).lower() if contributor_path.exists() else ""
 
@@ -629,8 +633,6 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             )
         )
 
-    routing_path = repo_root / "docs" / "routing-contract.md"
-    routing_text = "\n".join(_read_lines(routing_path)).lower() if routing_path.exists() else ""
     if routing_text and not all(
         fragment in routing_text
         for fragment in (

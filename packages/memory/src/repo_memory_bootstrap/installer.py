@@ -1956,8 +1956,13 @@ def _detect_payload_drift(target_root: Path) -> list[dict[str, object]]:
         if not (relative.parts[0] == "docs" or relative.name == AGENTS_PATH.name):
             continue
 
-        source_path = dev_workspace_root / relative
+        target_relative = relative
+        source_path = dev_workspace_root / target_relative
         mirror_path = mirror_root / relative
+        if not mirror_path.exists() and relative.name.endswith(".md"):
+            template_mirror = mirror_root / relative.with_name(relative.name.replace(".md", ".template.md"))
+            if template_mirror.exists():
+                mirror_path = template_mirror
 
         if not source_path.exists():
             # Required file missing from root is handled by other checks or ignored if optional
@@ -1972,6 +1977,11 @@ def _detect_payload_drift(target_root: Path) -> list[dict[str, object]]:
                     "warning_class": "payload_drift",
                 }
             )
+            continue
+
+        if relative.name == AGENTS_PATH.name:
+            # Root surface files are generic templates in the mirror, but active state in the root.
+            # They are expected to differ, so we only check existence, not content.
             continue
 
         if source_path.read_text(encoding="utf-8") != mirror_path.read_text(encoding="utf-8"):
@@ -2254,10 +2264,14 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
         )
 
     for required in PAYLOAD_REQUIRED_FILES:
-        present = required in payload_paths
+        target_required = required
+        if target_required.name.endswith(".template.md"):
+            target_required = target_required.with_name(target_required.name.replace(".template.md", ".md"))
+
+        present = target_required in payload_paths
         result.add(
             "current" if present else "manual review",
-            target_root / required,
+            target_root / target_required,
             "required payload file present" if present else "required payload file missing",
             role="payload-contract",
             safety="safe" if present else "manual",

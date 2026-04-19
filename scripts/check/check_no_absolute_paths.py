@@ -23,8 +23,7 @@ WINDOWS_ABSOLUTE_PATH = re.compile(r"(?<![A-Za-z0-9_./-])[A-Za-z]:[\\/]\S+")
 POSIX_ABSOLUTE_PATH = re.compile(
     r"(?<![A-Za-z0-9_./-])(?:"
     + "|".join(
-        [rf"/(?:{'|'.join(_POSIX_ROOT_NAMES)})\S*"]
-        + [re.escape("/" + "/".join(parts)) + r"\S*" for parts in _POSIX_PLACEHOLDER_ROOTS]
+        [rf"/(?:{'|'.join(_POSIX_ROOT_NAMES)})\S*"] + [re.escape("/" + "/".join(parts)) + r"\S*" for parts in _POSIX_PLACEHOLDER_ROOTS]
     )
     + r")"
 )

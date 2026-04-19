@@ -30,9 +30,9 @@ ROOT_MAINTAINER_CHECKER_PATH = Path("scripts/check/check_maintainer_surfaces.py"
 ROOT_MANIFEST_MIRROR_PATH = Path("tools/agent-manifest.json")
 
 REQUIRED_PAYLOAD_FILES = (
-    Path("AGENTS.md"),
-    Path("TODO.md"),
-    Path("ROADMAP.md"),
+    Path("AGENTS.template.md"),
+    Path("TODO.template.md"),
+    Path("ROADMAP.template.md"),
     Path("docs/execution-flow-contract.md"),
     Path("docs/routing-contract.md"),
     Path("docs/lifecycle-and-config-contract.md"),
@@ -65,9 +65,9 @@ REQUIRED_PAYLOAD_FILES = (
 )
 
 PLANNING_COMPATIBILITY_CONTRACT_FILES = (
-    Path("AGENTS.md"),
-    Path("TODO.md"),
-    Path("ROADMAP.md"),
+    Path("AGENTS.template.md"),
+    Path("TODO.template.md"),
+    Path("ROADMAP.template.md"),
     Path("docs/execution-flow-contract.md"),
     Path("docs/routing-contract.md"),
     Path("docs/lifecycle-and-config-contract.md"),
@@ -94,9 +94,9 @@ PLANNING_LOWER_STABILITY_HELPER_FILES = tuple(
 )
 
 ROOT_SURFACE_FILES = (
-    Path("AGENTS.md"),
-    Path("TODO.md"),
-    Path("ROADMAP.md"),
+    Path("AGENTS.template.md"),
+    Path("TODO.template.md"),
+    Path("ROADMAP.template.md"),
 )
 
 GENERATED_PAYLOAD_FILES = (
@@ -132,8 +132,14 @@ def skills_root() -> Path:
 
 
 def _add_contract_surface_summary(result: InstallResult, root: Path) -> None:
-    compatibility = ", ".join(path.as_posix() for path in PLANNING_COMPATIBILITY_CONTRACT_FILES)
-    helpers = ", ".join(path.as_posix() for path in PLANNING_LOWER_STABILITY_HELPER_FILES)
+    def resolve_template(path: Path) -> str:
+        name = path.name
+        if name.endswith(".template.md"):
+            return (path.parent / (name[:-12] + ".md")).as_posix()
+        return path.as_posix()
+
+    compatibility = ", ".join(resolve_template(path) for path in PLANNING_COMPATIBILITY_CONTRACT_FILES)
+    helpers = ", ".join(resolve_template(path) for path in PLANNING_LOWER_STABILITY_HELPER_FILES)
     result.add(
         "current",
         root / PLANNING_MANIFEST_PATH,
@@ -203,11 +209,14 @@ def _detect_payload_drift(target_root: Path) -> list[dict[str, str]]:
 
     # Check for missing or differing files in the mirror
     for relative in managed_by_mirror:
-        # We only care about docs and surface files that are mirrored from root
-        if not (relative.parts[0] == "docs" or relative.name in {"AGENTS.md", "TODO.md", "ROADMAP.md"}):
+        if not (relative.parts[0] == "docs" or relative.name in {"AGENTS.template.md", "TODO.template.md", "ROADMAP.template.md"}):
             continue
 
-        source_path = dev_workspace_root / relative
+        target_relative = relative
+        if target_relative.name.endswith(".template.md"):
+            target_relative = target_relative.with_name(target_relative.name[:-12] + ".md")
+
+        source_path = dev_workspace_root / target_relative
         mirror_path = mirror_root / relative
 
         if not source_path.exists():
@@ -222,6 +231,11 @@ def _detect_payload_drift(target_root: Path) -> list[dict[str, str]]:
                     "warning_class": "payload_drift",
                 }
             )
+            continue
+
+        if relative in ROOT_SURFACE_FILES:
+            # Root surface files are generic templates in the mirror, but active state in the root.
+            # They are expected to differ, so we only check existence, not content.
             continue
 
         if source_path.read_text(encoding="utf-8") != mirror_path.read_text(encoding="utf-8"):
@@ -241,7 +255,7 @@ def _detect_payload_drift(target_root: Path) -> list[dict[str, str]]:
         relative = mirror_file.relative_to(mirror_root)
         if relative not in managed_by_mirror and relative.parts[0] != "skills":
             # Ignore files that are legitimately bootstrap-only if they aren't docs/root surfaces
-            if relative.parts[0] == "docs" or relative.name in {"AGENTS.md", "TODO.md", "ROADMAP.md"}:
+            if relative.parts[0] == "docs" or relative.name in {"AGENTS.template.md", "TODO.template.md", "ROADMAP.template.md"}:
                 drift.append(
                     {
                         "path": relative.as_posix(),
@@ -344,7 +358,11 @@ def uninstall_bootstrap(*, target: str | Path | None = None, dry_run: bool = Fal
 
     removable: list[Path] = []
     for relative in _installed_surface_files():
-        destination = target_root / relative
+        target_relative = relative
+        if target_relative.name.endswith(".template.md"):
+            target_relative = target_relative.with_name(target_relative.name[:-12] + ".md")
+
+        destination = target_root / target_relative
         if not destination.exists():
             result.add("skipped", destination, "already absent")
             continue
@@ -353,7 +371,7 @@ def uninstall_bootstrap(*, target: str | Path | None = None, dry_run: bool = Fal
         else:
             removable_check = _can_remove_payload_file(relative=relative, target_root=target_root)
         if removable_check:
-            removable.append(relative)
+            removable.append(target_relative)
             result.add("would remove" if dry_run else "removed", destination, "matches managed payload content")
             continue
         result.add("manual review", destination, "local file differs from managed payload; remove manually if intended")
@@ -376,7 +394,12 @@ def collect_status(*, target: str | Path | None = None) -> InstallResult:
     result = InstallResult(target_root=target_root, message=f"Status report ({mode} mode)", dry_run=False)
     result.add("mode", target_root, f"detected adoption mode: {mode}")
     for relative in _installed_surface_files():
-        destination = target_root / relative
+        name = relative.name
+        if name.endswith(".template.md"):
+            installed_relative = relative.parent / (name[:-12] + ".md")
+        else:
+            installed_relative = relative
+        destination = target_root / installed_relative
         detail = "file exists" if destination.exists() else "file missing"
         result.add("present" if destination.exists() else "missing", destination, detail)
     return result
@@ -405,7 +428,12 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
             )
 
     for relative in _installed_surface_files():
-        destination = target_root / relative
+        name = relative.name
+        if name.endswith(".template.md"):
+            installed_relative = relative.parent / (name[:-12] + ".md")
+        else:
+            installed_relative = relative
+        destination = target_root / installed_relative
         detail = "required file present" if destination.exists() else "required file missing"
         result.add("current" if destination.exists() else "manual review", destination, detail)
 
@@ -442,8 +470,12 @@ def verify_payload() -> InstallResult:
     result = InstallResult(target_root=root, message="Payload verification", dry_run=False)
     payload_files = {Path(item) for item in list_payload_files()}
     for relative in REQUIRED_PAYLOAD_FILES:
+        target_relative = relative
+        if target_relative.name.endswith(".template.md"):
+            target_relative = target_relative.with_name(target_relative.name[:-12] + ".md")
+
         detail = "required payload file present" if relative in payload_files else "required payload file missing"
-        result.add("current" if relative in payload_files else "manual review", root / relative, detail)
+        result.add("current" if relative in payload_files else "manual review", root / target_relative, detail)
 
     _add_contract_surface_summary(result, root)
 
@@ -1673,7 +1705,10 @@ def _copy_payload(*, target_root: Path, result: InstallResult, conservative: boo
         if not _should_include_payload_path(source, root):
             continue
         relative = source.relative_to(root)
-        destination = target_root / relative
+        target_relative = relative
+        if target_relative.name.endswith(".template.md"):
+            target_relative = target_relative.with_name(target_relative.name[:-12] + ".md")
+        destination = target_root / target_relative
         existed = destination.exists()
         if existed and conservative:
             result.add("skipped", destination, "already present")
@@ -1717,7 +1752,10 @@ def _copy_bundled_skills(*, target_root: Path, result: InstallResult, conservati
 
 def _copy_payload_file(*, relative: Path, target_root: Path, result: InstallResult, overwrite: bool) -> None:
     source = payload_root() / relative
-    destination = target_root / relative
+    target_relative = relative
+    if target_relative.name.endswith(".template.md"):
+        target_relative = target_relative.with_name(target_relative.name[:-12] + ".md")
+    destination = target_root / target_relative
     if not source.exists():
         result.add("manual review", destination, "payload source file is missing")
         return
@@ -1870,7 +1908,14 @@ def _warning_remediation(warning_class: str) -> str | None:
 
 
 def _detect_adoption_mode(target_root: Path) -> str:
-    required_present = sum(1 for relative in _installed_surface_files() if (target_root / relative).exists())
+    count = 0
+    for relative in _installed_surface_files():
+        target_relative = relative
+        if target_relative.name.endswith(".template.md"):
+            target_relative = target_relative.with_name(target_relative.name[:-12] + ".md")
+        if (target_root / target_relative).exists():
+            count += 1
+    required_present = count
     if required_present == 0:
         return "uninitialised"
     if (target_root / "src" / "repo_planning_bootstrap").exists() and (target_root / "bootstrap").exists():
@@ -1890,7 +1935,10 @@ def _should_include_payload_path(path: Path, root: Path) -> bool:
 
 
 def _can_remove_payload_file(*, relative: Path, target_root: Path) -> bool:
-    destination = target_root / relative
+    target_relative = relative
+    if target_relative.name.endswith(".template.md"):
+        target_relative = target_relative.with_name(target_relative.name[:-12] + ".md")
+    destination = target_root / target_relative
     if not destination.exists() or not destination.is_file():
         return False
     if relative in GENERATED_PAYLOAD_FILES:

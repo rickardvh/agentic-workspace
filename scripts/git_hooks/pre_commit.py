@@ -27,11 +27,7 @@ def _git_paths(*args: str) -> list[Path]:
 
 def _format_candidates() -> list[Path]:
     staged_paths = _git_paths("diff", "--cached", "--name-only", "--diff-filter=ACMR")
-    return [
-        path
-        for path in staged_paths
-        if path.suffix in FORMAT_EXTENSIONS and path.parts and path.parts[0] in FORMAT_ROOTS
-    ]
+    return [path for path in staged_paths if path.suffix in FORMAT_EXTENSIONS and path.parts and path.parts[0] in FORMAT_ROOTS]
 
 
 def _partial_stage_conflicts(format_candidates: list[Path]) -> list[Path]:

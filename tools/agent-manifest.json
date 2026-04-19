@@ -10,23 +10,11 @@
       "TODO.md"
     ],
     "first_queries": [
-      "Use `agentic-workspace report --startup --format json` for immediate high-signal orientation (Active Goal, Next Action, Constraints).",
       "Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
       "Use `agentic-workspace config --target ./repo --format json` to find the configured startup entrypoint and effective repo posture.",
       "Use `agentic-workspace summary --format json` when the question is active planning recovery rather than startup order.",
       "Use `agentic-workspace report --target ./repo --format json` when the question is combined workspace state."
     ],
-    "cold_start_protocol": {
-      "command": "agentic-workspace report --startup --format json",
-      "fields": [
-        "active_intent",
-        "immediate_next_action",
-        "critical_invariants",
-        "escalation_boundaries",
-        "relevant_handoff_context"
-      ],
-      "why": "Provides immediate high-signal orientation in one tool call for fresh agents."
-    },
     "surface_roles": [
       "`AGENTS.md` is the canonical ordinary repo startup entrypoint.",
       "`TODO.md` is the canonical active queue after startup.",
@@ -141,32 +129,6 @@
         "make maintainer-surfaces",
         "make render-agent-docs"
       ]
-    }
-  },
-  "capabilities": {
-    "contract": "docs/capability-contract.json",
-    "evaluation_mode": "task-shape-aware",
-    "escalation_triggers": [
-      "unresolvable ambiguity",
-      "unknown validation story",
-      "architecture sensitivity exceeds local latitude",
-      "missing required executor capability"
-    ]
-  },
-  "tools": {
-    "agentic_workspace": {
-      "purpose": "Authoritative workspace orientation and planning recovery.",
-      "commands": {
-        "report": "Combined workspace status and cold-start orientation.",
-        "summary": "Compact planning state recovery.",
-        "defaults": "Startup order and surface roles.",
-        "config": "Repo posture and entrypoint lookup.",
-        "doctor": "Health check and remediation for planning surfaces."
-      }
-    },
-    "planning_checker": {
-      "purpose": "Enforce planning contract hygiene and schema alignment.",
-      "path": "packages/planning/scripts/check/check_planning_surfaces.py"
     }
   },
   "invariants": [

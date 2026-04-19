@@ -17,6 +17,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 WARNING_PACKAGE_LOCAL_INSTALL_DRIFT = "package_local_install_drift"
 WARNING_ROOT_OPERATIONAL_INSTALL_DRIFT = "root_operational_install_drift"
+WARNING_CONTRACT_DRIFT = "contract_drift"
 
 
 class BoundaryWarning(NamedTuple):
@@ -55,6 +56,18 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
         repo_root / "packages" / "planning" / "tools" / "AGENT_ROUTING.md": (
             "Package-local generated planning mirrors detected under packages/planning; generated maintainer mirrors belong at repo root only."
         ),
+        repo_root / "packages" / "planning" / "bootstrap" / "TODO.md": (
+            "Active surface `TODO.md` found in bootstrap; rename to `TODO.template.md` to maintain the boundary."
+        ),
+        repo_root / "packages" / "planning" / "bootstrap" / "ROADMAP.md": (
+            "Active surface `ROADMAP.md` found in bootstrap; rename to `ROADMAP.template.md` to maintain the boundary."
+        ),
+        repo_root / "packages" / "planning" / "bootstrap" / "AGENTS.md": (
+            "Active surface `AGENTS.md` found in bootstrap; rename to `AGENTS.template.md` to maintain the boundary."
+        ),
+        repo_root / "packages" / "memory" / "bootstrap" / "AGENTS.md": (
+            "Active surface `AGENTS.md` found in bootstrap; rename to `AGENTS.template.md` to maintain the boundary."
+        ),
     }
 
     for path, message in package_local_candidates.items():
@@ -77,21 +90,13 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
         ),
         repo_root / "TODO.md": "Root operational planning install is missing `TODO.md`.",
         repo_root / "ROADMAP.md": "Root operational planning install is missing `ROADMAP.md`.",
-        repo_root / "docs" / "execplans" / "README.md": (
-            "Root operational planning install is missing `docs/execplans/README.md`."
-        ),
+        repo_root / "docs" / "execplans" / "README.md": ("Root operational planning install is missing `docs/execplans/README.md`."),
         repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json": (
             "Root operational planning install is missing `.agentic-workspace/planning/agent-manifest.json`."
         ),
-        repo_root / "tools" / "agent-manifest.json": (
-            "Root operational planning install is missing `tools/agent-manifest.json`."
-        ),
-        repo_root / "tools" / "AGENT_QUICKSTART.md": (
-            "Root operational planning install is missing `tools/AGENT_QUICKSTART.md`."
-        ),
-        repo_root / "tools" / "AGENT_ROUTING.md": (
-            "Root operational planning install is missing `tools/AGENT_ROUTING.md`."
-        ),
+        repo_root / "tools" / "agent-manifest.json": ("Root operational planning install is missing `tools/agent-manifest.json`."),
+        repo_root / "tools" / "AGENT_QUICKSTART.md": ("Root operational planning install is missing `tools/AGENT_QUICKSTART.md`."),
+        repo_root / "tools" / "AGENT_ROUTING.md": ("Root operational planning install is missing `tools/AGENT_ROUTING.md`."),
     }
 
     for path, message in required_root_surfaces.items():
@@ -103,6 +108,29 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
                     message,
                 )
             )
+
+    # Contract drift checks (Shipped Product -> Installed Product)
+    for pkg_name in ("planning", "memory"):
+        pkg_docs = repo_root / "packages" / pkg_name / "bootstrap" / "docs"
+        root_docs = repo_root / "docs"
+
+        if pkg_docs.exists():
+            for source_path in pkg_docs.glob("*.md"):
+                target_path = root_docs / source_path.name
+                if target_path.exists():
+                    source_content = source_path.read_text(encoding="utf-8").strip()
+                    target_content = target_path.read_text(encoding="utf-8").strip()
+                    if source_content != target_content:
+                        warnings.append(
+                            BoundaryWarning(
+                                WARNING_CONTRACT_DRIFT,
+                                _render_path(target_path),
+                                (
+                                    f"Drift detected between shipped contract `{_render_path(source_path)}` and installed surface. "
+                                    f"Modify the authoritative file in `packages/{pkg_name}/bootstrap/`, then run `uv run agentic-{pkg_name}-bootstrap upgrade` to apply it to the root."
+                                ),
+                            )
+                        )
 
     return warnings
 

@@ -88,8 +88,7 @@ def _capture_artifact(spec: ArtifactSpec, *, target_root: Path) -> dict[str, Any
             missing_list = ", ".join(path.relative_to(target_root).as_posix() for path in missing)
             raise FileNotFoundError(f"Baseline file bundle is missing: {missing_list}")
         rendered = "\n\n".join(
-            f"## {path.relative_to(target_root).as_posix()}\n\n{path.read_text(encoding='utf-8')}"
-            for path in resolved_paths
+            f"## {path.relative_to(target_root).as_posix()}\n\n{path.read_text(encoding='utf-8')}" for path in resolved_paths
         )
         return {
             "kind": spec.kind,
@@ -285,8 +284,7 @@ def measure_lazy_discovery(*, target_root: Path) -> dict[str, Any]:
         "target": target_root.as_posix(),
         "method": {
             "rule": (
-                "Compare the preferred compact/query-first route for one workflow question "
-                "against the broader plausible fallback route."
+                "Compare the preferred compact/query-first route for one workflow question against the broader plausible fallback route."
             ),
             "token_proxy": "approx_tokens = ceil(character_count / 4)",
             "artifact_proxy": "count files or query outputs loaded before the first safe action",

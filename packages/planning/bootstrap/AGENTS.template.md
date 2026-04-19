@@ -33,7 +33,6 @@ Read `docs/routing-contract.md` when execution hits an edge case, routing ambigu
 Read `docs/lifecycle-and-config-contract.md` before editing CLI initialization or configuration logic.
 
 ### Planning Continuity
-
 - the execplan must record both `Intent Continuity` and `Required Continuation` before archive.
 - Every active slice must belong to a larger intended outcome.
 - record the required next owner and activation trigger explicitly before archive if the larger outcome is unfinished.
