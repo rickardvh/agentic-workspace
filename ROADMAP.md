@@ -19,7 +19,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## GitHub Issue Intake
 
-- Latest open planning tranche: GitHub issues `#161`-`#211`, grouped below into ordered inactive candidate lanes.
+- Latest open planning tranche: GitHub issues `#161`-`#217`, grouped below into ordered inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
 - The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, repo-directed improvement evidence-threshold, validation-friction repo-friction, config-driven execution posture, config-driven autonomy and agnostic improvements, startup front door clarity and agent-agnostic first contact, Memory trust/usefulness/routing/capture, Memory trust/habitual-pull, routine recovery compression/convergence, compression-and-convergence-of-operating-model, rotating-agent-economics, portable-declarative-contracts-beyond-python-cli, and signal-hygiene-and-evidence-based-improvement tranches are complete.
@@ -27,9 +27,27 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 ## Candidate Lanes
 
 
+- Lane: Intent-satisfaction validation
+  ID: intent-satisfaction-validation
+  Priority: first
+  Issues: #216, #217
+  Outcome: Add intent-satisfaction validation and review reports so archived plans and closed issues distinguish local slice completion from actual achievement of the original goal.
+  Why now: Essential to ensure that "completed" work actually solved the underlying problem, reducing false completion states.
+  Promotion signal: Promote immediately as top priority.
+  Suggested first slice: Add intent-satisfaction validation to archived plans and closed issues.
+
+- Lane: Payload drift and installer knowledge
+  ID: payload-drift-and-installer-knowledge
+  Priority: second
+  Issues: #214, #215
+  Outcome: Add early payload-drift detection to reports and promote installer behavior into durable operator guidance.
+  Why now: Reduces manual payload mirroring friction and prevents agents from rediscovering installer logic.
+  Promotion signal: Promote when friction with payload syncing occurs again.
+  Suggested first slice: Add payload-drift detection to agentic-workspace report.
+
 - Lane: Local-only adoption and external-agent ergonomics
   ID: local-only-adoption-and-external-agent-ergonomics
-  Priority: first
+  Priority: third
   Issues: #206
   Outcome: Enable agents to use Agentic Workspace in repositories they do not own (or where checked-in adoption is not desired) through a local-only installation mode.
   Why now: This is a common "read-only" or "guest" agent use case that currently lacks a first-class supported path.
