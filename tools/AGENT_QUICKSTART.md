@@ -13,6 +13,7 @@ Fast path for autonomous agents working on this repo.
 
 ## First queries
 
+- Use `agentic-workspace report --startup --format json` for immediate high-signal orientation (Active Goal, Next Action, Constraints).
 - Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.
 - Use `agentic-workspace config --target ./repo --format json` to find the configured startup entrypoint and effective repo posture.
 - Use `agentic-workspace summary --format json` when the question is active planning recovery rather than startup order.
@@ -22,7 +23,7 @@ Fast path for autonomous agents working on this repo.
 
 - `AGENTS.md` is the canonical ordinary repo startup entrypoint.
 - `TODO.md` is the canonical active queue after startup.
-- `docs/agent-installation.md` is only the external install/adopt handoff surface.
+- `docs/routing-contract.md` is the authoritative routing home.
 - `llms.txt` is the agent entrypoint router.
 - `tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md` are generated helpers, not doctrine owners.
 - `.agentic-workspace/planning/agent-manifest.json` is the canonical source for the generated helper docs.
@@ -31,9 +32,10 @@ Fast path for autonomous agents working on this repo.
 
 - Read the active feature plan in `docs/execplans/` when the task belongs to one.
 - Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.
-- Read `docs/advanced-routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.
+- Read `docs/routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.
 - Do not bulk-read all planning surfaces for ordinary execution work; start from `TODO.md` and then the one relevant active plan.
 - Read only the repo docs explicitly referenced by that route.
+- When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json`. For configuration and routing, prefer `agentic-workspace defaults --section startup --format json` and `agentic-workspace config --target ./repo --format json` before broader prose.
 
 ## Small-task mode
 
@@ -48,7 +50,7 @@ Fast path for autonomous agents working on this repo.
 - Promote a direct task once it picks up blocker handling, validation scope, rollback or migration detail, ownership reconciliation, enough context pressure that a smaller or less capable agent would need checked-in state, or enough narrative that the TODO row stops being self-sufficient.
 - If the task is no longer a good fit for the current execution capability, use `docs/capability-aware-execution.md` to decide whether stronger planning, delegation, explicit escalation, or quieter task shaping is the right next step.
 - If multi-agent or multi-model delegation is available, a more capable agent may write the compact plan first and hand implementation to a smaller one only when that is likely to save tokens without sacrificing quality.
-- Treat repeated stronger-capability outcomes as improvement-targeting signals for decomposition, validation, docs, or workflow shaping rather than normal steady-state routing.
+- Use `docs/execution-flow-contract.md` for orchestrator-worker handoff rules.
 
 ## Source of truth
 
@@ -81,12 +83,12 @@ Fast path for autonomous agents working on this repo.
 - `review_workflow`
   Use when: Handling a bounded review, audit, or review-shaped request that should capture findings without activating work automatically.
   Prefer this route when: the request asks for a review, audit, or compact finding capture over one repo area or change.
-  Touches: `docs/reviews/`, `docs/skill-discovery-contract.md`, `.agentic-workspace/planning/skills/planning-review-pass/SKILL.md`, `.agentic-workspace/planning/skills/REGISTRY.json`
+  Touches: `docs/reviews/`, `docs/extraction-and-discovery-contract.md`, `.agentic-workspace/planning/skills/planning-review-pass/SKILL.md`, `.agentic-workspace/planning/skills/REGISTRY.json`
   Validate: `uv run agentic-workspace skills --target ./repo --task "<task>" --format json`; `make maintainer-surfaces`
 - `planning_surface_change`
   Use when: Editing planning-for-execution surfaces, plan templates, or planning-surface checks.
   Prefer this route when: the change affects TODO, ROADMAP, execplans, or the planning bootstrap itself.
-  Touches: `AGENTS.md`, `TODO.md`, `ROADMAP.md`, `docs/upstream-task-intake.md`, `docs/environment-recovery-contract.md`, `docs/execplans/`, `scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/render_agent_docs.py`, `.agentic-workspace/planning/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`
+  Touches: `AGENTS.md`, `TODO.md`, `ROADMAP.md`, `docs/upstream-task-intake.md`, `docs/lifecycle-and-config-contract.md`, `docs/routing-contract.md`, `docs/execution-flow-contract.md`, `docs/execplans/`, `scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`, `.agentic-workspace/planning/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`
   Validate: `make maintainer-surfaces`; `make render-agent-docs`
 
 ## Skills

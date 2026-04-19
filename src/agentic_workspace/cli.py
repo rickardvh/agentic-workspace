@@ -334,6 +334,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show a compact combined workspace report for installed modules, mixed-agent posture, and next-action guidance.",
     )
     _add_selection_arguments(report_parser)
+    report_parser.add_argument(
+        "--startup",
+        action="store_true",
+        help="Return the high-signal orientation block for fresh agents.",
+    )
 
     init_parser = subparsers.add_parser("init", help="Bootstrap selected modules into a target repository.")
     _add_selection_arguments(init_parser)
@@ -1070,6 +1075,12 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(str(exc))
 
     if args.command == "report":
+        if getattr(args, "startup", False):
+            try:
+                _emit_startup_report(format_name=args.format, target_root=target_root, descriptors=descriptors, config=config)
+                return 0
+            except WorkspaceUsageError as exc:
+                parser.error(str(exc))
         payload = _run_report_command(
             target_root=target_root,
             selected_modules=selected_modules,
@@ -3339,6 +3350,38 @@ def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
 
 def _reporting_schema_payload() -> dict[str, Any]:
     return report_contract_manifest().copy()
+
+
+def _emit_startup_report(
+    *,
+    format_name: str,
+    target_root: Path,
+    descriptors: dict[str, ModuleDescriptor],
+    config: WorkspaceConfig,
+) -> None:
+    from repo_planning_bootstrap.installer import planning_report
+
+    plan_report = planning_report(target=target_root)
+    active_record = plan_report.get("active", {}).get("planning_record", {})
+
+    manifest_path = target_root / ".agentic-workspace" / "planning" / "agent-manifest.json"
+    manifest = {}
+    if manifest_path.exists():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    payload = {
+        "kind": "startup-report/v1",
+        "active_intent": active_record.get("requested_outcome") or "No active intent",
+        "immediate_next_action": active_record.get("next_action") or "No next action",
+        "critical_invariants": manifest.get("invariants") or [],
+        "escalation_boundaries": active_record.get("escalate_when") or [],
+        "relevant_handoff_context": plan_report.get("active", {}).get("handoff_contract") or {},
+    }
+
+    _emit_payload(payload=payload, format_name=format_name)
 
 
 def _build_lifecycle_handoff_prompt(payload: dict[str, Any]) -> str:

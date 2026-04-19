@@ -14,7 +14,24 @@ import re
 from pathlib import Path
 from typing import NamedTuple
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+
+def _find_repo_root() -> Path:
+    """Find repo root based on script location (canonical or bootstrap)."""
+    current = Path(__file__).resolve()
+    # If we are in the canonical .agentic-workspace/... location
+    if ".agentic-workspace" in current.parts:
+        return current.parents[4]
+    # If we are in the bootstrap scripts/check/ location
+    if current.parts[-3:] == ("scripts", "check", current.name):
+        return current.parents[2]
+    # Fallback to searching for AGENTS.md
+    for parent in current.parents:
+        if (parent / "AGENTS.md").exists():
+            return parent
+    return current.parents[2]  # Best guess for standard bootstrap
+
+
+REPO_ROOT = _find_repo_root()
 TODO_PATH = REPO_ROOT / "TODO.md"
 ROADMAP_PATH = REPO_ROOT / "ROADMAP.md"
 EXECPLAN_DIR = REPO_ROOT / "docs" / "execplans"
@@ -553,7 +570,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     warnings: list[PlanningWarning] = []
     agents_path = repo_root / "AGENTS.md"
     llms_path = repo_root / "llms.txt"
-    install_path = repo_root / "docs" / "agent-installation.md"
+    routing_path = repo_root / "docs" / "routing-contract.md"
     manifest_path = repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json"
     quickstart_path = repo_root / "tools" / "AGENT_QUICKSTART.md"
     readme_path = repo_root / "README.md"
@@ -565,7 +582,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     agents_text = "\n".join(_read_lines(agents_path)).lower()
     quickstart_text = "\n".join(_read_lines(quickstart_path)).lower()
     llms_text = "\n".join(_read_lines(llms_path)).lower() if llms_path.exists() else ""
-    install_text = "\n".join(_read_lines(install_path)).lower() if install_path.exists() else ""
+    routing_text = "\n".join(_read_lines(routing_path)).lower() if routing_path.exists() else ""
     readme_text = "\n".join(_read_lines(readme_path)).lower() if readme_path.exists() else ""
     contributor_text = "\n".join(_read_lines(contributor_path)).lower() if contributor_path.exists() else ""
 
@@ -605,7 +622,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         for fragment in (
             "agent entrypoint router",
             "read `agents.md`",
-            "read `docs/agent-installation.md`",
+            "read `docs/routing-contract.md`",
         )
     ):
         warnings.append(
@@ -616,20 +633,20 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             )
         )
 
-    if install_text and not all(
-        fragment in install_text
+    if routing_text and not all(
+        fragment in routing_text
         for fragment in (
-            "external install or adopt handoff",
-            "do not treat it as the normal repo startup surface",
-            "agentic-workspace config --target ./repo --format json",
-            "agentic-planning-bootstrap summary --format json",
+            "authoritative routing home",
+            "startup and first contact",
+            "agentic-workspace summary --format json",
+            "agentic-workspace report --target ./repo --format json",
         )
     ):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(install_path),
-                "agent-installation.md must stay bounded to external install/adopt handoff and point normal work back to config/startup surfaces.",
+                _render_path(routing_path),
+                "routing-contract.md must act as the authoritative routing home and point normal work back to compact summary surfaces.",
             )
         )
 
@@ -710,12 +727,12 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             )
         )
 
-    if not any("docs/agent-installation.md" in row and "external install/adopt handoff" in row for row in surface_roles_lower):
+    if not any("docs/routing-contract.md" in row and "authoritative routing home" in row for row in surface_roles_lower):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
-                "Manifest surface_roles must keep agent-installation.md bounded to external install/adopt handoff.",
+                "Manifest surface_roles must keep routing-contract.md as the authoritative routing home.",
             )
         )
 
@@ -803,7 +820,7 @@ def _check_docs_surface_roles(repo_root: Path) -> list[PlanningWarning]:
                 "1. report or summary",
                 "2. narrow selector",
                 "3. raw file or richer prose only when the compact surface is insufficient",
-                "agentic-planning-bootstrap summary --format json",
+                "agentic-workspace summary --format json",
                 "routine planning recovery",
                 "planning_record",
                 "resumable_contract",
@@ -821,7 +838,7 @@ def _check_docs_surface_roles(repo_root: Path) -> list[PlanningWarning]:
         (
             repo_root / "docs" / "contributor-playbook.md",
             (
-                "agentic-planning-bootstrap summary --format json",
+                "agentic-workspace summary --format json",
                 "agentic-workspace report --target ./repo --format json",
                 "compact surfaces are insufficient",
             ),

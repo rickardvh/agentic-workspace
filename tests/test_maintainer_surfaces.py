@@ -37,12 +37,12 @@ def _baseline_manifest() -> dict[str, object]:
                 "Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
             ],
             "surface_roles": [
-                "`docs/agent-installation.md` is only the external install/adopt handoff surface.",
+                "`docs/routing-contract.md` is the authoritative routing home.",
                 "`llms.txt` is the agent entrypoint router.",
             ],
             "conditional_reads": [
                 "Read `ROADMAP.md` only when promoting work.",
-                "Treat `docs/agent-installation.md` as the external install/adopt handoff only; after bootstrap, return to the configured startup entrypoint for normal repo work.",
+                "Read `docs/routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.",
                 "Do not bulk-read all planning surfaces.",
             ],
         }
@@ -82,19 +82,24 @@ When the question is active planning recovery rather than startup order, prefer 
 # Agent Entrypoint Router
 
 - If you are here to DEVELOP this repository: Read `AGENTS.md`
-- If you are here to INSTALL Agentic Workspace: Read `docs/agent-installation.md`
+- If you are here to INSTALL or ADOPT Agentic Workspace: Read `docs/routing-contract.md`
 """,
     )
     _write(
-        tmp_path / "docs" / "agent-installation.md",
+        tmp_path / "docs" / "routing-contract.md",
         """
-# Agentic Workspace External Install Or Adopt Handoff
+# Routing and Entry Contract (Authoritative Routing Home)
 
-This file is only the external install/adopt handoff.
-Do not treat it as the normal repo startup surface after bootstrap or adoption.
+This contract defines how to enter the repository, orient quickly, and pick the right execution lane.
 
-- After install or adopt, inspect `agentic-workspace config --target ./repo --format json`.
-- When the question is active planning recovery rather than bootstrap, prefer `agentic-workspace summary --format json`.
+## 1. Startup and First Contact
+
+Use the following order for a fresh entry:
+1. AGENTS.md
+2. TODO.md
+3. Compact queries:
+   - agentic-workspace summary --format json
+   - agentic-workspace report --target ./repo --format json
 """,
     )
     _write(

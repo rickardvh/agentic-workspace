@@ -1,4 +1,4 @@
 # Agent Entrypoint Router
 
 - If you are here to DEVELOP this repository: Read `AGENTS.md`
-- If you are here to INSTALL Agentic Workspace: Read `docs/agent-installation.md`
+- If you are here to INSTALL or ADOPT Agentic Workspace: Read `docs/routing-contract.md`

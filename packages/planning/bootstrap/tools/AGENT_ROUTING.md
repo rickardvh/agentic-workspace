@@ -21,7 +21,7 @@ Focused routing reference derived from `.agentic-workspace/planning/agent-manife
 - Prefer when: the request asks for a review, audit, or compact finding capture over one repo area or change.
 - Touches:
   - `docs/reviews/`
-  - `docs/skill-discovery-contract.md`
+  - `docs/extraction-and-discovery-contract.md`
   - `.agentic-workspace/planning/skills/planning-review-pass/SKILL.md`
   - `.agentic-workspace/planning/skills/REGISTRY.json`
 - Validation:
@@ -37,12 +37,12 @@ Focused routing reference derived from `.agentic-workspace/planning/agent-manife
   - `TODO.md`
   - `ROADMAP.md`
   - `docs/upstream-task-intake.md`
-  - `docs/environment-recovery-contract.md`
+  - `docs/lifecycle-and-config-contract.md`
+  - `docs/routing-contract.md`
+  - `docs/execution-flow-contract.md`
   - `docs/execplans/`
   - `scripts/check/check_maintainer_surfaces.py`
   - `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`
-  - `.agentic-workspace/planning/scripts/check/check_maintainer_surfaces.py`
-  - `.agentic-workspace/planning/scripts/render_agent_docs.py`
   - `.agentic-workspace/planning/agent-manifest.json`
   - `tools/AGENT_QUICKSTART.md`
   - `tools/AGENT_ROUTING.md`

@@ -9,4 +9,8 @@ Completed work belongs in archived execplans and roadmap history, not in the act
 
 ## Now
 
-- No active work right now.
+- ID: PORTABLE-CONTRACTS
+  Status: in-progress
+  Surface: docs/execplans/portable-declarative-contracts.md
+  Why Now: Active slice.
+

@@ -74,12 +74,12 @@ pipx run --spec git+https://github.com/rickardvh/agentic-workspace agentic-works
 If you want an external coding agent to bootstrap Agentic Workspace into another repository, give it this prompt:
 
 ```text
-Install or adopt Agentic Workspace in the repository you are working in by following the instructions in that repository's `docs/agent-installation.md`. Do not assume `agentic-workspace` is already installed. Use the workspace lifecycle path described there as the default bootstrap route.
+Install or adopt Agentic Workspace in the repository you are working in by following the instructions in that repository's `docs/routing-contract.md`. Do not assume `agentic-workspace` is already installed. Use the workspace lifecycle path described there as the default bootstrap route.
 ```
 
 Canonical handoff surfaces after install:
 
-- [`docs/agent-installation.md`](docs/agent-installation.md) is the bounded external install/adopt handoff only.
+- [`docs/routing-contract.md`](docs/routing-contract.md) is the authoritative routing home and external install/adopt handoff.
 - [`llms.txt`](llms.txt) is the agent entrypoint router.
 - [`AGENTS.md`](AGENTS.md) is the canonical ordinary repo startup entrypoint after install/adopt.
 - [`TODO.md`](TODO.md) is the canonical active queue once normal repo work starts.
@@ -91,7 +91,7 @@ Compact first-contact queries after install/adopt:
 
 - `agentic-workspace defaults --section startup --format json`
 - `agentic-workspace config --target ./repo --format json`
-- `agentic-planning-bootstrap summary --format json`
+- `agentic-workspace summary --format json`
 
 ## Normal next commands
 
@@ -203,9 +203,9 @@ agentic-workspace config --target ./repo --format json
 That surface layers `agentic-workspace.toml` over product defaults and reports the effective default preset, canonical root startup-entrypoint filename, per-module update intent, and whether repo policy is authoritative or defaults-only.
 It also reports the current mixed-agent contract boundary: repo policy source, optional local-override posture from `agentic-workspace.local.toml`, and whether runtime inference is still tool-owned rather than workspace-controlled.
 
-For the repo-owned config contract itself, use [`docs/workspace-config-contract.md`](docs/workspace-config-contract.md).
+For the repo-owned config contract itself, use [`docs/lifecycle-and-config-contract.md`](docs/lifecycle-and-config-contract.md).
 
-For the bounded "human sets direction, agent owns local means" contract, use [`docs/delegated-judgment-contract.md`](docs/delegated-judgment-contract.md).
+For the bounded "human sets direction, agent owns local means" contract, use [`docs/execution-flow-contract.md`](docs/execution-flow-contract.md).
 
 For agent maintainers, the primary operating path is:
 
@@ -246,12 +246,12 @@ Start here:
 - [`tools/AGENT_QUICKSTART.md`](tools/AGENT_QUICKSTART.md)
 - [`tools/AGENT_ROUTING.md`](tools/AGENT_ROUTING.md)
 - [`docs/which-package.md`](docs/which-package.md) for the compact operating map
-- [`docs/default-path-contract.md`](docs/default-path-contract.md)
-- [`docs/workspace-config-contract.md`](docs/workspace-config-contract.md)
+- [`docs/routing-contract.md`](docs/routing-contract.md)
+- [`docs/lifecycle-and-config-contract.md`](docs/lifecycle-and-config-contract.md)
 
 Then, if needed:
 
-- [`docs/init-lifecycle.md`](docs/init-lifecycle.md)
+- [`docs/lifecycle-and-config-contract.md`](docs/lifecycle-and-config-contract.md)
 - [`docs/architecture.md`](docs/architecture.md)
 - [`docs/integration-contract.md`](docs/integration-contract.md)
 - [`docs/contributor-playbook.md`](docs/contributor-playbook.md)

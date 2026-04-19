@@ -18,7 +18,7 @@
     "surface_roles": [
       "`AGENTS.md` is the canonical ordinary repo startup entrypoint.",
       "`TODO.md` is the canonical active queue after startup.",
-      "`docs/agent-installation.md` is only the external install/adopt handoff surface.",
+      "`docs/routing-contract.md` is the authoritative routing home.",
       "`llms.txt` is the agent entrypoint router.",
       "`tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md` are generated helpers, not doctrine owners.",
       "`.agentic-workspace/planning/agent-manifest.json` is the canonical source for the generated helper docs."
@@ -26,9 +26,10 @@
     "conditional_reads": [
       "Read the active feature plan in `docs/execplans/` when the task belongs to one.",
       "Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.",
-      "Read `docs/advanced-routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.",
+      "Read `docs/routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.",
       "Do not bulk-read all planning surfaces for ordinary execution work; start from `TODO.md` and then the one relevant active plan.",
-      "Read only the repo docs explicitly referenced by that route."
+      "Read only the repo docs explicitly referenced by that route.",
+      "When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json`. For configuration and routing, prefer `agentic-workspace defaults --section startup --format json` and `agentic-workspace config --target ./repo --format json` before broader prose."
     ],
     "small_task_mode": [
       "For very local changes, skip plans unless this manifest, the active plan, or the nearest descendant `AGENTS.md` says they are needed.",
@@ -41,7 +42,7 @@
       "Promote a direct task once it picks up blocker handling, validation scope, rollback or migration detail, ownership reconciliation, enough context pressure that a smaller or less capable agent would need checked-in state, or enough narrative that the TODO row stops being self-sufficient.",
       "If the task is no longer a good fit for the current execution capability, use `docs/capability-aware-execution.md` to decide whether stronger planning, delegation, explicit escalation, or quieter task shaping is the right next step.",
       "If multi-agent or multi-model delegation is available, a more capable agent may write the compact plan first and hand implementation to a smaller one only when that is likely to save tokens without sacrificing quality.",
-      "Treat repeated stronger-capability outcomes as improvement-targeting signals for decomposition, validation, docs, or workflow shaping rather than normal steady-state routing."
+      "Use `docs/execution-flow-contract.md` for orchestrator-worker handoff rules."
     ],
     "completion_reminders": [
       "Do not leave completed task detail in `TODO.md` once it no longer changes execution.",
@@ -73,16 +74,17 @@
     "docs/execplans/README.md": "execplan-convention",
     "docs/execplans/archive/README.md": "execplan-archive-convention",
     "docs/upstream-task-intake.md": "upstream-task-intake-contract",
-    "docs/intent-contract.md": "intent-interpretation-contract",
+    "docs/execution-flow-contract.md": "execution-flow-contract",
+    "docs/routing-contract.md": "routing-contract",
+    "docs/lifecycle-and-config-contract.md": "lifecycle-and-config-contract",
+    "docs/extraction-and-discovery-contract.md": "extraction-and-discovery-contract",
     "docs/capability-aware-execution.md": "capability-fit-contract",
-    "docs/environment-recovery-contract.md": "environment-recovery-contract",
     "memory/index.md": "memory-routing",
     ".agentic-workspace/memory/WORKFLOW.md": "shared-memory-workflow-policy",
     ".agentic-workspace/planning/agent-manifest.json": "agent-manifest-source",
     "tools/agent-manifest.json": "agent-manifest-generated-mirror",
     "tools/AGENT_QUICKSTART.md": "agent-hot-paths",
-    "tools/AGENT_ROUTING.md": "agent-routing-reference",
-    "docs/advanced-routing-contract.md": "advanced-routing-rules"
+    "tools/AGENT_ROUTING.md": "agent-routing-reference"
   },
   "skills": {
     "repo_dev_source_dir": "tools/skills",
@@ -96,7 +98,7 @@
       "prefer_when": "the request asks for a review, audit, or compact finding capture over one repo area or change.",
       "touches": [
         "docs/reviews/",
-        "docs/skill-discovery-contract.md",
+        "docs/extraction-and-discovery-contract.md",
         ".agentic-workspace/planning/skills/planning-review-pass/SKILL.md",
         ".agentic-workspace/planning/skills/REGISTRY.json"
       ],
@@ -113,12 +115,12 @@
         "TODO.md",
         "ROADMAP.md",
         "docs/upstream-task-intake.md",
-        "docs/environment-recovery-contract.md",
+        "docs/lifecycle-and-config-contract.md",
+        "docs/routing-contract.md",
+        "docs/execution-flow-contract.md",
         "docs/execplans/",
         "scripts/check/check_maintainer_surfaces.py",
         ".agentic-workspace/planning/scripts/check/check_planning_surfaces.py",
-        ".agentic-workspace/planning/scripts/check/check_maintainer_surfaces.py",
-        ".agentic-workspace/planning/scripts/render_agent_docs.py",
         ".agentic-workspace/planning/agent-manifest.json",
         "tools/AGENT_QUICKSTART.md",
         "tools/AGENT_ROUTING.md"

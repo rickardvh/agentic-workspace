@@ -10,8 +10,8 @@ This playbook is primarily for maintainers operating as coding agents. Human con
 
 Use `docs/design-principles.md` when a change affects product shape, ownership, lifecycle behavior, or the amount of ceremony the repo imposes on normal work.
 Use `docs/compatibility-policy.md` when you need to judge whether a surface is stable, mutable, or generated before making the change.
-Use `docs/init-lifecycle.md` when you need the canonical root `init` mode matrix or prompt semantics.
-Use `docs/orchestrator-workflow-contract.md` when you are delegating a bounded slice and need the agent-agnostic planner/worker contract.
+Use `docs/lifecycle-and-config-contract.md` when you need the canonical root `init` mode matrix, configuration rules, or prompt semantics.
+Use `docs/execution-flow-contract.md` when you are delegating a bounded slice, handling intent continuity, or managing resumable milestones.
 Use `docs/generated-surface-trust.md` when a change touches generated docs, mirrors, or rerender expectations.
 Use `docs/proof-surfaces-contract.md` when the missing judgment is which proof lane actually answers the current trust question.
 Use `docs/ownership-authority-contract.md` when the missing judgment is who owns a concern or which checked-in surface is authoritative.
@@ -26,7 +26,7 @@ Default startup path for an agent maintainer:
 4. If you need the current planning state, ask `agentic-workspace summary --format json` before opening raw planning files.
 5. If you need the combined workspace state, ask `agentic-workspace report --target ./repo --format json` before reading raw module files.
 6. If `TODO.md` points at an active execplan and the compact surfaces are insufficient, read that plan before editing code.
-7. If you are handing the active slice to another executor, derive the worker contract from `agentic-planning-bootstrap handoff --format json` rather than drafting a fresh ad hoc prompt.
+7. If you are handing the active slice to another executor, derive the worker contract from `agentic-workspace summary --format json` rather than drafting a fresh ad hoc prompt.
 8. Use `agentic-workspace config --target ./repo --format json` to inspect the effective mixed-agent posture, including the optional local capability/cost override in `agentic-workspace.local.toml`.
 9. Read package-local `AGENTS.md` only for the package you will touch.
 10. Use this playbook to pick the right ownership surface and narrow validation lane.
@@ -47,10 +47,10 @@ The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`,
 - Use root planning surfaces for active work, roadmap candidates, and execplans.
 - Use root memory notes for durable repo knowledge, decisions, and recurring failure modes.
 - Treat `memory/current/` as weak-authority current context: concise re-orientation only, not the durable home for facts.
-- Use `docs/source-payload-operational-install.md` when one change spans package source, packaged payload, and the root installed surfaces.
+- Use `docs/extraction-and-discovery-contract.md` when one change spans package source, packaged payload, and the root installed surfaces.
 - Leave touched surfaces cleaner than you found them, and route broader cleanup as follow-up instead of treating it as invisible task residue.
 - Use `docs/compatibility-policy.md` for surface-stability questions before deciding whether a doc, manifest, or managed mirror is safe to change directly.
-- Use `docs/init-lifecycle.md` before changing or explaining root `init` behavior so the mode semantics stay canonical.
+- Use `docs/lifecycle-and-config-contract.md` before changing or explaining root lifecycle behavior or configuration so the semantics stay canonical.
 - Use `docs/generated-surface-trust.md` for canonical-source and freshness questions before editing mirrors or routing docs.
 - Edit package code only when the change belongs to that package's shipped behavior or tests.
 - Keep the root `agentic-workspace` CLI thin; push module-specific lifecycle logic back into the module packages.
@@ -82,7 +82,7 @@ For execution scaling specifically:
 - when an execplan completes only part of a larger intended outcome, record both `Intent Continuity` and `Required Continuation` before archive; required follow-on must name a checked-in owner surface and activation trigger instead of surviving only in prose or chat
 - do not create an execplan just because a stronger agent is available; use one when the checked-in artifact is likely to save tokens or reduce coordination risk overall
 - when the environment supports multiple agents or models, a stronger one may write a compact execution contract for a smaller one, but that handoff is optional and should stay cheaper than the rediscovery it prevents
-- when a slice is delegated, use `agentic-planning-bootstrap handoff --format json` as the worker-facing contract and pass it to whichever executor is available internally or externally; the repo does not prescribe the executor brand, API, or model
+- when a slice is delegated, use `agentic-workspace summary --format json` (the `handoff_contract` view) as the worker-facing contract and pass it to whichever executor is available internally or externally; the repo does not prescribe the executor brand, API, or model
 - if stronger capability keeps seeming necessary for the same class of work, treat that as an improvement-targeting signal for better decomposition, validation, or guidance rather than as a standing instruction to keep raising executor strength
 - if the same human correction keeps repeating for the same class of work, treat that as an improvement-targeting signal for better defaults, contracts, proof, ownership, or handoff rather than as normal conversational steering
 - treat direct execution as a valid success path, then record only the minimum durable residue that outlives the task
@@ -115,7 +115,7 @@ Final repo sync after package work:
 - Lifecycle orchestration or root CLI: start at `src/agentic_workspace/` and `README.md`.
 - Memory bootstrap behavior: start at `packages/memory/AGENTS.md`, then `packages/memory/README.md` and `packages/memory/src/`.
 - Planning bootstrap behavior: start at `packages/planning/AGENTS.md`, then `packages/planning/README.md` and `packages/planning/src/`.
-- Planning contract or archive behavior: start at `TODO.md`, the active execplan, and `packages/planning/src/repo_planning_bootstrap/installer.py`.
+- Planning contract or archive behavior: start at `TODO.md`, the active execplan, and `docs/execution-flow-contract.md`.
 
 Generated guidance lives under `tools/`, but the source of truth for that guidance is `.agentic-workspace/planning/agent-manifest.json`. When routing docs drift, update the managed manifest and rerender instead of editing generated files directly.
 

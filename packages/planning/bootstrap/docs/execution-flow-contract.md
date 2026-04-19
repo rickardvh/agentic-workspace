@@ -1,0 +1,93 @@
+# Execution and Milestone Flow Contract
+
+This contract defines how active work moves from intent to completion, including milestone sequencing, resumability, and follow-through.
+
+## Core Flow
+
+1. **Intent Continuity**: Every active slice must belong to a larger intended outcome.
+2. **Active Milestone**: Work happens in bounded, ready-to-execute milestones.
+3. **Immediate Next Action**: The next safe step is always explicit and small.
+4. **Validation and Proof**: Success is defined by narrow, verifiable criteria.
+5. **Closure and Continuity**: Finished work must capture any required continuation before archive.
+
+---
+
+## 1. Intent and Resumability
+
+### Intent Continuity
+Every execution slice must record:
+- **Larger intended outcome**: The broad goal this work contributes to.
+- **Slice completion of larger outcome**: Whether this specific slice finishes the parent goal.
+- **Continuation surface**: Where the next slice or follow-on work belongs.
+
+### Resumable Execution
+Execution is resumable by default. If a task is interrupted, the checked-in state should be sufficient to restart:
+- **Environment and State Recovery**: Use `agentic-workspace report` and `summary` to recover current context.
+- **Intent Recovery**: Use the `Intent Continuity` section of the active plan.
+- **Milestone Progress**: Use the `Active Milestone` and `Drift Log` to see what was tried and what remains.
+
+---
+
+## 2. Milestone Management
+
+### Active Milestone
+The active milestone must be:
+- **Status**: `in-progress`, `ready`, or `blocked`.
+- **Scope**: A bounded set of changes that can be completed in one or two sessions.
+- **Ready**: Explicit signal that work can begin.
+
+### Immediate Next Action
+- Must be a single, concrete, and verifiable next step.
+- Should avoid vague verbs like "continue" or "fix".
+- Updated after every turn to ensure the handoff is always fresh.
+
+---
+
+## 3. Delegated Judgment and Workflow
+
+### Delegated Judgment
+Agents have bounded initiative to:
+- Choose the best local means (tools, paths, narrow tests).
+- Tighten validation.
+- Select skills or registry-backed workflows.
+
+**Escalation is required** when:
+- The requested solution changes the intended outcome.
+- The path is blocked or violates a stable contract.
+- Confidence drops below the point where silent continuation is defensible.
+
+### Orchestrator-Worker Handoff
+When a stronger planner delegates work to a smaller or separate executor:
+- **Contract Source**: Derive the handoff from `agentic-planning-bootstrap handoff --format json`.
+- **Agent-Agnostic**: The handoff should not prescribe a specific executor model or brand.
+- **Write Scope**: The worker's assigned scope must be explicit and narrow.
+
+---
+
+## 4. Closure and Follow-Through
+
+### Iterative Follow-Through
+Active work often leaves "residue" (follow-up tasks, cleanup, minor drift).
+- **Follow-Through Section**: Record minor, same-thread tasks that should be finished before the plan is archived.
+- **Convergence Rule**: If a task remains after the main milestone is complete, it belongs in follow-through or must be promoted to a new milestone/plan.
+
+### Required Continuation
+Before archiving a completed slice that belongs to an unfinished larger outcome:
+- **Required Follow-on**: Explicitly state "yes" if more work is needed for the larger goal.
+- **Next Owner**: Name the surface (e.g. `ROADMAP.md` or a new plan) that owns the continuation.
+- **Activation Trigger**: State what signal (e.g. "human review", "CI success") triggers the next slice.
+
+### Execution Summary
+The final state before archive must include:
+- **Captured Outcome**: What was actually accomplished.
+- **Unfinished Detail**: What was deferred or moved to a different owner.
+- **Stable References**: Links to key decisions or artifacts.
+
+---
+
+## 5. Relationship to Tooling
+
+- `agentic-workspace summary --format json`: Compact machine-readable state recovery.
+- `agentic-planning-bootstrap handoff --format json`: Derived worker contract.
+- `agentic-workspace report --target ./repo --format json`: Combined workspace status.
+- `agentic-workspace doctor --target ./repo`: Health check and suggested fixes for planning surfaces.

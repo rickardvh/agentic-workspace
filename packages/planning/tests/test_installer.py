@@ -162,10 +162,10 @@ def _rename_like_execplan(*, status: str = "completed", with_reference_sweep: bo
 def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     result = install_bootstrap(target=tmp_path)
     capability_fit_doc_path = tmp_path / "docs" / "capability-aware-execution.md"
-    environment_recovery_doc_path = tmp_path / "docs" / "environment-recovery-contract.md"
-    execution_summary_doc_path = tmp_path / "docs" / "execution-summary-contract.md"
-    intent_contract_doc_path = tmp_path / "docs" / "intent-contract.md"
-    resumable_contract_doc_path = tmp_path / "docs" / "resumable-execution-contract.md"
+    routing_doc_path = tmp_path / "docs" / "routing-contract.md"
+    execution_flow_doc_path = tmp_path / "docs" / "execution-flow-contract.md"
+    lifecycle_doc_path = tmp_path / "docs" / "lifecycle-and-config-contract.md"
+    extraction_doc_path = tmp_path / "docs" / "extraction-and-discovery-contract.md"
     skill_readme_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "README.md"
     skill_registry_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json"
     skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
@@ -178,10 +178,10 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert (tmp_path / "TODO.md").exists()
     assert (tmp_path / "ROADMAP.md").exists()
     assert capability_fit_doc_path.exists()
-    assert environment_recovery_doc_path.exists()
-    assert execution_summary_doc_path.exists()
-    assert intent_contract_doc_path.exists()
-    assert resumable_contract_doc_path.exists()
+    assert routing_doc_path.exists()
+    assert execution_flow_doc_path.exists()
+    assert lifecycle_doc_path.exists()
+    assert extraction_doc_path.exists()
     assert review_readme_path.exists()
     assert review_template_path.exists()
     assert intake_doc_path.exists()
@@ -207,11 +207,11 @@ def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path("AGENTS.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("TODO.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/capability-aware-execution.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert Path("docs/environment-recovery-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path("docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/execplans/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/reviews/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/upstream-task-intake.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert Path("docs/planning-routing-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path("docs/routing-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("tools/AGENT_QUICKSTART.md") in PLANNING_LOWER_STABILITY_HELPER_FILES
     assert Path("scripts/render_agent_docs.py") in PLANNING_LOWER_STABILITY_HELPER_FILES
     assert set(PLANNING_COMPATIBILITY_CONTRACT_FILES).isdisjoint(PLANNING_LOWER_STABILITY_HELPER_FILES)
@@ -429,34 +429,27 @@ def test_bootstrap_capability_aware_execution_doc_defines_categories() -> None:
 
 
 def test_bootstrap_delegated_judgment_doc_is_part_of_contract() -> None:
-    text = (installer_mod.payload_root() / "docs" / "delegated-judgment-contract.md").read_text(encoding="utf-8")
+    text = (installer_mod.payload_root() / "docs" / "execution-flow-contract.md").read_text(encoding="utf-8")
 
-    assert "# Delegated Judgment Contract" in text
-    assert "## What The Human Sets" in text
-    assert "## What The Agent May Decide Locally" in text
-    assert "## What Requires Promotion Or Escalation" in text
-    assert "## Scope-Expansion Rule" in text
-    assert "Improve means locally" in text
-    assert "The agent must not silently widen" in text
-    assert "active execplans should carry a compact delegated-judgment section" in text
-    assert Path("docs/delegated-judgment-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert "# Execution and Milestone Flow Contract" in text
+    assert "## Delegated Judgment" in text
+    assert "Agents have bounded initiative to" in text
+    assert "Escalation is required" in text
+    assert "The path is blocked" in text
+    assert Path("docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
 def test_bootstrap_environment_recovery_contract_is_part_of_payload() -> None:
-    text = (installer_mod.payload_root() / "docs" / "environment-recovery-contract.md").read_text(encoding="utf-8")
+    text = (installer_mod.payload_root() / "docs" / "execution-flow-contract.md").read_text(encoding="utf-8")
 
-    assert "# Environment And Recovery Contract" in text
-    assert "## Canonical Shape" in text
-    assert "Immediate Next Action" in text
-    assert "Validation Commands" in text
-    assert "Do not add a new dedicated recovery section to every execplan." in text
-    assert "Do not stretch TODO rows into shadow execplans." in text
-    assert "## Ordered Recovery Path" in text
-    assert "agentic-workspace status --target ./repo" in text
+    assert "agentic-workspace report" in text
+    assert "summary" in text
+    assert "recover current context" in text
+    assert "### Resumable Execution" in text
+    assert "Environment and State Recovery" in text
+    assert "agentic-workspace report" in text
     assert "agentic-workspace doctor --target ./repo" in text
-    assert "uv run agentic-planning-bootstrap upgrade --target ." in text
-    assert ".agentic-workspace/bootstrap-handoff.md" in text
-    assert Path("docs/environment-recovery-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path("docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
 def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routing() -> None:
@@ -516,52 +509,41 @@ def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
 
 
 def test_bootstrap_execution_summary_contract_is_part_of_payload() -> None:
-    text = (installer_mod.payload_root() / "docs" / "execution-summary-contract.md").read_text(encoding="utf-8")
-
-    assert "# Execution Summary Contract" in text
-    assert "## Canonical Shape" in text
-    assert "Outcome delivered" in text
-    assert "Validation confirmed" in text
-    assert "stale-reference sweep" in text
-    assert "Follow-on routed to" in text
-    assert "Resume from" in text
-    assert Path("docs/execution-summary-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    text = (installer_mod.payload_root() / "docs" / "execution-flow-contract.md").read_text(encoding="utf-8")
+    assert Path("docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert "Execution Summary" in text
+    assert "Execution Summary" in text
+    assert "Captured Outcome" in text
+    assert "Unfinished Detail" in text
+    assert "Stable References" in text
 
 
 def test_bootstrap_iterative_follow_through_contract_is_part_of_payload() -> None:
-    text = (installer_mod.payload_root() / "docs" / "iterative-follow-through-contract.md").read_text(encoding="utf-8")
+    text = (installer_mod.payload_root() / "docs" / "execution-flow-contract.md").read_text(encoding="utf-8")
 
-    assert "# Iterative Follow-Through Contract" in text
-    assert "## Canonical Shape" in text
-    assert "What this slice enabled" in text
-    assert "Intentionally deferred" in text
-    assert "follow_through_contract" in text
-    assert Path("docs/iterative-follow-through-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert "## Iterative Follow-Through" in text
+    assert "Follow-Through Section" in text
+    assert "residue" in text
+    assert Path("docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
 def test_bootstrap_intent_contract_is_part_of_payload() -> None:
-    text = (installer_mod.payload_root() / "docs" / "intent-contract.md").read_text(encoding="utf-8")
-
-    assert "planning_record" in text
-    assert "active_contract" in text
-    assert "planning-summary-schema/v1" in text
-    assert "tool_verification" in text
-    assert "follow_through_contract" in text
-    assert "native planning artifacts" in text
-    assert "agentic-workspace summary --format json" in text
-    assert Path("docs/intent-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    text = (installer_mod.payload_root() / "docs" / "standing-intent-contract.md").read_text(encoding="utf-8")
+    assert Path("docs/standing-intent-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert "Standing Intent Contract" in text
+    assert "active_directional_intent" in text
+    assert "repo_doctrine" in text
+    assert "config_policy" in text
+    assert "agentic-workspace report" in text
+    assert Path("docs/standing-intent-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
 def test_bootstrap_resumable_execution_contract_is_part_of_payload() -> None:
-    text = (installer_mod.payload_root() / "docs" / "resumable-execution-contract.md").read_text(encoding="utf-8")
-
-    assert "planning_record" in text
-    assert "resumable_contract" in text
-    assert "current_next_action" in text
-    assert "planning-summary-schema/v1" in text
-    assert "tool_verification" in text
-    assert "runtime also used native planning artifacts" in text
-    assert Path("docs/resumable-execution-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    text = (installer_mod.payload_root() / "docs" / "execution-flow-contract.md").read_text(encoding="utf-8")
+    assert Path("docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert "Resumable Execution" in text
+    assert "agentic-workspace report" in text
+    assert Path("docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
 def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
@@ -713,7 +695,7 @@ Long narrative status update line eleven.
     assert any(
         action.kind == "suggested fix"
         and action.path == plan_path
-        and "docs/execution-summary-contract.md" in action.detail
+        and "docs/execution-flow-contract.md" in action.detail
         and "docs/execplans/README.md" in action.detail
         for action in result.actions
     )
@@ -1678,7 +1660,7 @@ def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> Non
 
     assert handoff["kind"] == "planning-handoff/v1"
     assert handoff["schema"]["schema_version"] == "planning-handoff-schema/v1"
-    assert handoff["schema"]["canonical_doc"] == "docs/orchestrator-workflow-contract.md"
+    assert handoff["schema"]["canonical_doc"] == "docs/execution-flow-contract.md"
     assert handoff["handoff_contract"]["status"] == "present"
     assert handoff["handoff_contract"]["next_action"] == "Add one checker."
     assert handoff["handoff_contract"]["worker_contract"]["worker_must_not_own_by_default"][0] == "roadmap routing"

@@ -33,18 +33,13 @@ REQUIRED_PAYLOAD_FILES = (
     Path("AGENTS.md"),
     Path("TODO.md"),
     Path("ROADMAP.md"),
+    Path("docs/execution-flow-contract.md"),
+    Path("docs/routing-contract.md"),
+    Path("docs/lifecycle-and-config-contract.md"),
+    Path("docs/extraction-and-discovery-contract.md"),
     Path("docs/capability-aware-execution.md"),
-    Path("docs/delegated-judgment-contract.md"),
-    Path("docs/environment-recovery-contract.md"),
-    Path("docs/execution-summary-contract.md"),
-    Path("docs/iterative-follow-through-contract.md"),
-    Path("docs/intent-contract.md"),
-    Path("docs/orchestrator-workflow-contract.md"),
     Path("docs/standing-intent-contract.md"),
     Path("docs/candidate-lanes-contract.md"),
-    Path("docs/planning-routing-contract.md"),
-    Path("docs/advanced-routing-contract.md"),
-    Path("docs/resumable-execution-contract.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
     Path("docs/execplans/archive/README.md"),
@@ -68,18 +63,13 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("AGENTS.md"),
     Path("TODO.md"),
     Path("ROADMAP.md"),
+    Path("docs/execution-flow-contract.md"),
+    Path("docs/routing-contract.md"),
+    Path("docs/lifecycle-and-config-contract.md"),
+    Path("docs/extraction-and-discovery-contract.md"),
     Path("docs/capability-aware-execution.md"),
-    Path("docs/delegated-judgment-contract.md"),
-    Path("docs/environment-recovery-contract.md"),
-    Path("docs/execution-summary-contract.md"),
-    Path("docs/iterative-follow-through-contract.md"),
-    Path("docs/intent-contract.md"),
-    Path("docs/orchestrator-workflow-contract.md"),
     Path("docs/standing-intent-contract.md"),
     Path("docs/candidate-lanes-contract.md"),
-    Path("docs/planning-routing-contract.md"),
-    Path("docs/advanced-routing-contract.md"),
-    Path("docs/resumable-execution-contract.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
     Path("docs/execplans/archive/README.md"),
@@ -598,13 +588,11 @@ def _planning_summary_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-summary-schema/v1",
         "canonical_docs": [
-            "docs/intent-contract.md",
-            "docs/orchestrator-workflow-contract.md",
+            "docs/execution-flow-contract.md",
+            "docs/routing-contract.md",
+            "docs/lifecycle-and-config-contract.md",
+            "docs/extraction-and-discovery-contract.md",
             "docs/candidate-lanes-contract.md",
-            "docs/planning-routing-contract.md",
-            "docs/advanced-routing-contract.md",
-            "docs/iterative-follow-through-contract.md",
-            "docs/resumable-execution-contract.md",
             "docs/execplans/README.md",
         ],
         "command": "agentic-workspace summary --format json",
@@ -718,7 +706,7 @@ def _planning_summary_schema() -> dict[str, Any]:
 def _planning_handoff_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-handoff-schema/v1",
-        "canonical_doc": "docs/orchestrator-workflow-contract.md",
+        "canonical_doc": "docs/execution-flow-contract.md",
         "command": "agentic-planning-bootstrap handoff --format json",
         "shared_fields": [
             "kind",
@@ -1756,7 +1744,7 @@ def _warning_remediation(warning_class: str) -> str | None:
         "execplan_structure_drift": (
             "Restore the current template sections, especially Intent Continuity, Required Continuation, "
             "Delegated Judgment, Active Milestone, and Execution Summary, so the plan matches the newer contract; "
-            "compare the plan with docs/execplans/README.md and docs/execution-summary-contract.md."
+            "compare the plan with docs/execplans/README.md and docs/execution-flow-contract.md."
         ),
         "execplan_immediate_next_action_drift": "Reduce Immediate Next Action to one concrete next step.",
         "execplan_readiness_drift": "Set Ready/Blocked explicitly so the active milestone can be resumed without re-deriving state.",
@@ -1764,7 +1752,7 @@ def _warning_remediation(warning_class: str) -> str | None:
         "execplan_notebook_drift": "Strip status-journal residue out of the plan and keep only the current execution contract.",
         "execplan_under_specified": (
             "Fill in the missing contract sections so the plan can survive upgrades without extra chat context; "
-            "compare the plan with docs/execplans/README.md and docs/execution-summary-contract.md."
+            "compare the plan with docs/execplans/README.md and docs/execution-flow-contract.md."
         ),
         "roadmap_execution_drift": "Reduce ROADMAP back to candidate framing; keep active sequencing in TODO and execplans.",
         "roadmap_stale_candidate_pressure": "Prune stale candidate detail and leave compact candidate stubs only.",

@@ -23,12 +23,14 @@ Resolve instruction conflicts in this order:
 4. Read `ROADMAP.md` only when promoting work.
 5. Load package-local docs only for the package being edited.
 6. Before touching a shipped package, refresh it to the latest checked-in version through that package's canonical update workflow so local work starts from the current package contract.
-7. When a change crosses package source, package payload, and root install boundaries, read `docs/source-payload-operational-install.md` before editing.
+7. When a change crosses package source, package payload, and root install boundaries, read `docs/extraction-and-discovery-contract.md` before editing.
 8. When making claims about GitHub issue state, verify the live issue set with `gh` instead of relying only on checked-in intake notes.
 
 Do not start coding from chat context alone when the same information exists in checked-in files.
 Do not bulk-read all planning surfaces.
 When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
+Read `docs/routing-contract.md` when execution hits an edge case, routing ambiguity, or requires deep context on the operating model.
+Read `docs/lifecycle-and-config-contract.md` before editing CLI initialization or configuration logic.
 
 ## Operating Rules
 
