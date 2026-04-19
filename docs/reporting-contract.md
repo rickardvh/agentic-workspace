@@ -173,7 +173,7 @@ Only open raw module files or broader docs when the report points you to a follo
 - Prefer `agentic-planning-bootstrap report --format json` and `agentic-memory-bootstrap report --format json` when the question is module state alone rather than combined workspace state.
 - Keep concern-shaped subobjects narrow enough that one question does not force unrelated contract domains to load.
 - Keep discovery read-only until a setup promotion explicitly decides to seed.
-- Keep `agentic-planning-bootstrap summary --format json` as the planning-side companion surface rather than stretching the workspace report into a second planning schema.
+- Keep `agentic-workspace summary --format json` as the planning-side companion surface rather than stretching the workspace report into a second planning schema.
 - Let optimization bias change report density and rendered text style only; do not let it change report truth, execution posture, or module ownership semantics.
 - Keep the optimization-bias surface boundary explicit:
   - honors bias: derived report rendering density, rendered human-facing views, and durable residue style when truth stays unchanged

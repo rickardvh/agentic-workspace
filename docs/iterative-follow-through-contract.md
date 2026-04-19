@@ -70,6 +70,6 @@ If the work becomes a different requested outcome, promote or escalate instead o
 
 ## Summary Projection
 
-When an active execplan carries this section clearly enough, `agentic-planning-bootstrap summary --format json` may expose it as `follow_through_contract`.
+When an active execplan carries this section clearly enough, `agentic-workspace summary --format json` may expose it as `follow_through_contract`.
 
 Treat that view as a projection over the active planning state, not as a second authority.

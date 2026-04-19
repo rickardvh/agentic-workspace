@@ -68,6 +68,6 @@ Use either `Why now` or `Why later` as the compact reason field.
 
 ## Machine-Readable Projection
 
-`agentic-planning-bootstrap summary --format json` exposes candidate lanes through `roadmap.candidate_lanes` and keeps a flattened `roadmap.candidates` compatibility view for older callers.
+`agentic-workspace summary --format json` exposes candidate lanes through `roadmap.candidate_lanes` and keeps a flattened `roadmap.candidates` compatibility view for older callers.
 
 `agentic-planning-bootstrap report --format json` may surface lane counts in module status, but active execution state still belongs to `planning_record`, `active_contract`, `resumable_contract`, and `hierarchy_contract`.

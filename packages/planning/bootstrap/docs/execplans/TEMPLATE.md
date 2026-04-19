@@ -5,7 +5,7 @@ Use this template for an active plan in `docs/execplans/`. Move the file into
 Before archiving, set `## Active Milestone` `Status` to `completed`.
 Prefer a feature-scoped file over expanding a shared hot plan, and keep headings stable so concurrent edits merge cleanly.
 Prefer replacing resolved status lines instead of appending pass-by-pass history, and do not add retrospective sections such as `Added In This Pass`.
-This file is a thin human view over the canonical `planning_record` surfaced by `agentic-planning-bootstrap summary --format json`; use the summary first when you need the compact active state.
+This file is a thin human view over the canonical `planning_record` surfaced by `agentic-workspace summary --format json`; use the summary first when you need the compact active state.
 
 ## Goal
 

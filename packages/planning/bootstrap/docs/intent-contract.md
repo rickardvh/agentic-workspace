@@ -75,7 +75,7 @@ when the question is not only the relay rule, but the active worker handoff deri
 Use:
 
 ```bash
-agentic-planning-bootstrap summary --format json
+agentic-workspace summary --format json
 ```
 
 That summary now carries a top-level schema envelope:

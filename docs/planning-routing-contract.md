@@ -61,7 +61,7 @@ Route the broader line of work through `ROADMAP.md` and, when helpful, `Parent l
 
 ## Machine-Readable Companions
 
-`agentic-planning-bootstrap summary --format json` should answer the compact hierarchy question without rereading the raw files:
+`agentic-workspace summary --format json` should answer the compact hierarchy question without rereading the raw files:
 
 - active chunk
 - near-term TODO queue

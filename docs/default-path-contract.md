@@ -20,7 +20,7 @@ Use this order for ordinary inspection work:
 
 That means:
 
-- use `agentic-planning-bootstrap summary --format json` before opening `TODO.md` or execplan prose when the question is active planning state
+- use `agentic-workspace summary --format json` before opening `TODO.md` or execplan prose when the question is active planning state
 - use `agentic-workspace report --target ./repo --format json` before reading raw module files when the question is combined workspace state
 - use defaults/proof/ownership selectors before broad docs when the question is already narrow
 
@@ -45,13 +45,13 @@ The compact startup map is:
 Keep the startup order explicit:
 
 - ordinary repo startup: configured startup file -> `TODO.md` -> active execplan only when `TODO.md` points to one
-- active planning recovery: `agentic-planning-bootstrap summary --format json` before raw planning prose
+- active planning recovery: `agentic-workspace summary --format json` before raw planning prose
 - external install/adopt first contact: `llms.txt`, then return to the configured startup file after bootstrap
 - generated helper docs: `tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md` only after the canonical surfaces or compact queries
 
 ## Routine Planning Recovery
 
-Use `agentic-planning-bootstrap summary --format json` first when the question is active planning recovery.
+Use `agentic-workspace summary --format json` first when the question is active planning recovery.
 
 The minimum questions are:
 
@@ -85,11 +85,11 @@ Example: "What should I do next?" belongs in `resumable_contract`; the route tha
 | How do I route a vague prompt to the right lane? | `agentic-workspace defaults --section prompt_routing --format json` | Guessing at proof or owner from the prompt alone |
 | How do I hand the compact contract from planner to implementer? | `agentic-workspace defaults --section relay --format json`, then `agentic-planning-bootstrap handoff --format json` for the active delegated slice | Freezing the handoff without routed Memory, a clear planner/implementer split, or a checked-in active handoff |
 | How do I start in a repo? | The configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`) -> `TODO.md` -> active execplan when relevant | `ROADMAP.md` only when promoting work |
-| How do I recover startup or first-contact routing cheaply? | `agentic-workspace defaults --section startup --format json`, then `agentic-workspace config --target ./repo --format json` and `agentic-planning-bootstrap summary --format json` as needed | Broad rereads across `README.md`, generated helper docs, and raw planning prose |
+| How do I recover startup or first-contact routing cheaply? | `agentic-workspace defaults --section startup --format json`, then `agentic-workspace config --target ./repo --format json` and `agentic-workspace summary --format json` as needed | Broad rereads across `README.md`, generated helper docs, and raw planning prose |
 | Where do I inspect canonical versus generated startup surfaces? | `agentic-workspace defaults --section startup --format json` and its `surface_roles` map | Inferring editability or authority from filenames alone |
 | What if I am not a Codex-style agent or do not know the startup filename? | `agentic-workspace config --target ./repo --format json`, then the `startup.fallbacks` rules in `agentic-workspace defaults --section startup --format json` | Treating `llms.txt` as the normal repo startup surface or guessing from one vendor-specific convention |
-| How do I inspect current active planning state? | `agentic-planning-bootstrap summary --format json` and the routine planning recovery questions above | Reading raw `TODO.md` or execplan prose first |
-| How do I inspect current long-horizon planning candidates? | `agentic-planning-bootstrap summary --format json` and its `roadmap.candidates` list, then `ROADMAP.md` only when the thin candidate view is not enough | Reading narrative roadmap prose first |
+| How do I inspect current active planning state? | `agentic-workspace summary --format json` and the routine planning recovery questions above | Reading raw `TODO.md` or execplan prose first |
+| How do I inspect current long-horizon planning candidates? | `agentic-workspace summary --format json` and its `roadmap.candidates` list, then `ROADMAP.md` only when the thin candidate view is not enough | Reading narrative roadmap prose first |
 | How do I inspect combined workspace state? | `agentic-workspace report --target ./repo --format json` and its `schema` plus report payload | Reading raw module files before the report |
 | Where do I inspect the default execution shape for the current slice? | `agentic-workspace report --target ./repo --format json` and `execution_shape` | Looking at config posture or planning state alone and inferring the combined recommendation manually |
 | Where do I inspect the effective repo output posture during startup or recovery? | `agentic-workspace config --target ./repo --format json` and `workspace.optimization_bias` | Guessing from rendered report density or broad prose alone |

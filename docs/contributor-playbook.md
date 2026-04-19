@@ -23,7 +23,7 @@ Default startup path for an agent maintainer:
 1. Read `AGENTS.md`.
 2. Read `TODO.md`.
 3. If the question is startup order or first-contact routing, ask `agentic-workspace defaults --section startup --format json` before broader prose.
-4. If you need the current planning state, ask `agentic-planning-bootstrap summary --format json` before opening raw planning files.
+4. If you need the current planning state, ask `agentic-workspace summary --format json` before opening raw planning files.
 5. If you need the combined workspace state, ask `agentic-workspace report --target ./repo --format json` before reading raw module files.
 6. If `TODO.md` points at an active execplan and the compact surfaces are insufficient, read that plan before editing code.
 7. If you are handing the active slice to another executor, derive the worker contract from `agentic-planning-bootstrap handoff --format json` rather than drafting a fresh ad hoc prompt.

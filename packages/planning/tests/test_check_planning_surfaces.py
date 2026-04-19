@@ -180,11 +180,12 @@ def _baseline_manifest() -> dict[str, object]:
                 "Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
             ],
             "surface_roles": [
-                "`llms.txt` is only the external install/adopt handoff surface.",
+                "`docs/agent-installation.md` is only the external install/adopt handoff surface.",
+                "`llms.txt` is the agent entrypoint router.",
             ],
             "conditional_reads": [
                 "Read `ROADMAP.md` only when promoting work.",
-                "Treat `llms.txt` as the external install/adopt handoff only; after bootstrap, return to the configured startup entrypoint for normal repo work.",
+                "Treat `docs/agent-installation.md` as the external install/adopt handoff only; after bootstrap, return to the configured startup entrypoint for normal repo work.",
                 "Do not bulk-read all planning surfaces.",
             ],
             "task_source_of_truth": "TODO.md",
@@ -217,11 +218,20 @@ def _baseline_agents() -> str:
 4. Read `ROADMAP.md` only when promoting work.
 
 Do not bulk-read all planning surfaces.
-When the question is active planning recovery rather than startup order, prefer `agentic-planning-bootstrap summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
+When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
 """
 
 
 def _baseline_llms() -> str:
+    return """
+# Agent Entrypoint Router
+
+- If you are here to DEVELOP this repository: Read `AGENTS.md`
+- If you are here to INSTALL Agentic Workspace: Read `docs/agent-installation.md`
+"""
+
+
+def _baseline_install() -> str:
     return """
 # Agentic Workspace External Install Or Adopt Handoff
 
@@ -229,7 +239,7 @@ This file is only the external install/adopt handoff.
 Do not treat it as the normal repo startup surface after bootstrap or adoption.
 
 - After install or adopt, inspect `agentic-workspace config --target ./repo --format json`.
-- When the question is active planning recovery rather than bootstrap, prefer `agentic-planning-bootstrap summary --format json`.
+- When the question is active planning recovery rather than bootstrap, prefer `agentic-workspace summary --format json`.
 """
 
 
@@ -249,7 +259,7 @@ The default startup path for an agent maintainer is:
 
 - Read `AGENTS.md`.
 - Read `TODO.md`.
-- Use `agentic-planning-bootstrap summary --format json` when the question is active planning state.
+- Use `agentic-workspace summary --format json` when the question is active planning state.
 - Use `agentic-workspace report --target ./repo --format json` when the question is combined workspace state.
 - Open the active execplan only when the compact surfaces are insufficient.
 - Read package-local `AGENTS.md` only for the package being edited.
@@ -266,12 +276,12 @@ def _baseline_default_path_contract() -> str:
 2. narrow selector
 3. raw file or richer prose only when the compact surface is insufficient
 
-- use `agentic-planning-bootstrap summary --format json` before opening `TODO.md` or execplan prose
+- use `agentic-workspace summary --format json` before opening `TODO.md` or execplan prose
 - use `agentic-workspace report --target ./repo --format json` before reading raw module files
 
 ## Routine Planning Recovery
 
-Use `agentic-planning-bootstrap summary --format json` first when the question is active planning recovery.
+Use `agentic-workspace summary --format json` first when the question is active planning recovery.
 
 The minimum questions are:
 
@@ -315,9 +325,9 @@ def _baseline_execplans_readme() -> str:
     return """
 # Execution Plans
 
-Use `agentic-planning-bootstrap summary --format json` first when the question is active planning state.
+Use `agentic-workspace summary --format json` first when the question is active planning state.
 Use raw `TODO.md` and execplan prose after that only when the compact summary is insufficient.
-`agentic-planning-bootstrap summary --format json` exposes a typed payload and `planning_record` is the canonical active planning record.
+`agentic-workspace summary --format json` exposes a typed payload and `planning_record` is the canonical active planning record.
 
 ## Meaning Boundary
 
@@ -355,6 +365,7 @@ def _write_startup_surfaces(
 ) -> None:
     _write(tmp_path / "AGENTS.md", _baseline_agents())
     _write(tmp_path / "llms.txt", _baseline_llms())
+    _write(tmp_path / "docs" / "agent-installation.md", _baseline_install())
     _write(tmp_path / "README.md", readme or _baseline_readme())
     _write(
         tmp_path / "docs" / "contributor-playbook.md",
@@ -451,12 +462,12 @@ def test_default_path_contract_without_meaning_boundary_warns(tmp_path: Path) ->
 2. narrow selector
 3. raw file or richer prose only when the compact surface is insufficient
 
-- use `agentic-planning-bootstrap summary --format json` before opening `TODO.md` or execplan prose
+- use `agentic-workspace summary --format json` before opening `TODO.md` or execplan prose
 - use `agentic-workspace report --target ./repo --format json` before reading raw module files
 
 ## Routine Planning Recovery
 
-Use `agentic-planning-bootstrap summary --format json` first when the question is active planning recovery.
+Use `agentic-workspace summary --format json` first when the question is active planning recovery.
 
 The minimum questions are:
 

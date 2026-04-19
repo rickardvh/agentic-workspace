@@ -65,6 +65,7 @@ Use this ordered path when normal work is blocked by repo-state ambiguity, inter
 2. Reconfirm the default operating contract:
    - `agentic-workspace defaults --format json`
    - `agentic-workspace config --target ./repo --format json`
+   - Treat `workspace.optimization_bias` in the config output as the effective repo output posture during ordinary recovery.
 3. If the issue is package-contract freshness rather than repo-owned customization, refresh the shipped contract:
    - `uv run agentic-planning-bootstrap upgrade --target .`
    - `uv run agentic-memory-bootstrap upgrade --target .`
@@ -101,7 +102,9 @@ Do not stretch it into:
 
 - Prefer `agentic-workspace` as the public recovery entrypoint.
 - Treat `status` and `doctor` as the first inspection lane, not direct file spelunking.
+- `doctor` should carry the compact upstream health checks that belong in the workspace layer itself, including contract-integrity drift and committed absolute-path leaks, so recovery does not depend on remembering ad hoc helper scripts first.
 - Use `defaults` and `config` when the question is "what is the normal contract here?" rather than "what failed?"
+- When recovery needs the effective output posture, inspect `agentic-workspace config --target ./repo --format json` and read `workspace.optimization_bias` directly instead of inferring it from rendered surfaces.
 - Distinguish package drift from repo-local warnings:
   - package drift means the shipped payload is stale relative to checked-in package source
   - repo-local warnings may still be expected customization, nested-repo noise, or optional-surface absence

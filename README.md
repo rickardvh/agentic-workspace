@@ -74,12 +74,13 @@ pipx run --spec git+https://github.com/rickardvh/agentic-workspace agentic-works
 If you want an external coding agent to bootstrap Agentic Workspace into another repository, give it this prompt:
 
 ```text
-Install or adopt Agentic Workspace in the repository you are working in by following the instructions in that repository's `llms.txt`. Do not assume `agentic-workspace` is already installed. Use the workspace lifecycle path described there as the default bootstrap route.
+Install or adopt Agentic Workspace in the repository you are working in by following the instructions in that repository's `docs/agent-installation.md`. Do not assume `agentic-workspace` is already installed. Use the workspace lifecycle path described there as the default bootstrap route.
 ```
 
 Canonical handoff surfaces after install:
 
-- [`llms.txt`](llms.txt) is the bounded external install/adopt handoff only.
+- [`docs/agent-installation.md`](docs/agent-installation.md) is the bounded external install/adopt handoff only.
+- [`llms.txt`](llms.txt) is the agent entrypoint router.
 - [`AGENTS.md`](AGENTS.md) is the canonical ordinary repo startup entrypoint after install/adopt.
 - [`TODO.md`](TODO.md) is the canonical active queue once normal repo work starts.
 - [`tools/AGENT_QUICKSTART.md`](tools/AGENT_QUICKSTART.md) is a generated compact helper, not a doctrine owner.

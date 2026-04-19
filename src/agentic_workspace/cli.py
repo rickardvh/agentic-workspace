@@ -247,6 +247,10 @@ def build_parser() -> argparse.ArgumentParser:
     modules_parser.add_argument("--target", help="Optional repository path used to report installed modules.")
     _add_format_argument(modules_parser)
 
+    summary_parser = subparsers.add_parser("summary", help="Show the active execution summary from the planning module.")
+    summary_parser.add_argument("--target", help="Optional repository path to read summary from.")
+    _add_format_argument(summary_parser)
+
     defaults_parser = subparsers.add_parser(
         "defaults",
         help="Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
@@ -950,6 +954,22 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         except WorkspaceUsageError as exc:
             parser.error(str(exc))
+
+    if args.command == "summary":
+        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+        _validate_target_root(command_name="summary", target_root=target_root)
+        try:
+            from repo_planning_bootstrap.cli import _print_summary
+            from repo_planning_bootstrap.installer import format_summary_json, planning_summary
+
+            summary = planning_summary(target=target_root.as_posix())
+            if args.format == "json":
+                print(format_summary_json(summary))
+            else:
+                _print_summary(summary)
+            return 0
+        except ImportError:
+            parser.error("The planning module must be installed to use the summary command.")
 
     if args.command in {"proof", "ownership", "config", "note-delegation-outcome"}:
         try:

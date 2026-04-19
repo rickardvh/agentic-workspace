@@ -43,6 +43,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path("docs/standing-intent-contract.md"),
     Path("docs/candidate-lanes-contract.md"),
     Path("docs/planning-routing-contract.md"),
+    Path("docs/advanced-routing-contract.md"),
     Path("docs/resumable-execution-contract.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
@@ -77,6 +78,7 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("docs/standing-intent-contract.md"),
     Path("docs/candidate-lanes-contract.md"),
     Path("docs/planning-routing-contract.md"),
+    Path("docs/advanced-routing-contract.md"),
     Path("docs/resumable-execution-contract.md"),
     Path("docs/execplans/README.md"),
     Path("docs/execplans/TEMPLATE.md"),
@@ -600,11 +602,12 @@ def _planning_summary_schema() -> dict[str, Any]:
             "docs/orchestrator-workflow-contract.md",
             "docs/candidate-lanes-contract.md",
             "docs/planning-routing-contract.md",
+            "docs/advanced-routing-contract.md",
             "docs/iterative-follow-through-contract.md",
             "docs/resumable-execution-contract.md",
             "docs/execplans/README.md",
         ],
-        "command": "agentic-planning-bootstrap summary --format json",
+        "command": "agentic-workspace summary --format json",
         "shared_fields": [
             "kind",
             "schema",
@@ -1752,7 +1755,8 @@ def _warning_remediation(warning_class: str) -> str | None:
         "todo_broken_surface_reference": "Repair Surface so it points at a live docs/execplans path, or remove the stale item.",
         "execplan_structure_drift": (
             "Restore the current template sections, especially Intent Continuity, Required Continuation, "
-            "Delegated Judgment, Active Milestone, and Execution Summary, so the plan matches the newer contract."
+            "Delegated Judgment, Active Milestone, and Execution Summary, so the plan matches the newer contract; "
+            "compare the plan with docs/execplans/README.md and docs/execution-summary-contract.md."
         ),
         "execplan_immediate_next_action_drift": "Reduce Immediate Next Action to one concrete next step.",
         "execplan_readiness_drift": "Set Ready/Blocked explicitly so the active milestone can be resumed without re-deriving state.",

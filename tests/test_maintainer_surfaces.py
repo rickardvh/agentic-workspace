@@ -37,11 +37,12 @@ def _baseline_manifest() -> dict[str, object]:
                 "Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
             ],
             "surface_roles": [
-                "`llms.txt` is only the external install/adopt handoff surface.",
+                "`docs/agent-installation.md` is only the external install/adopt handoff surface.",
+                "`llms.txt` is the agent entrypoint router.",
             ],
             "conditional_reads": [
                 "Read `ROADMAP.md` only when promoting work.",
-                "Treat `llms.txt` as the external install/adopt handoff only; after bootstrap, return to the configured startup entrypoint for normal repo work.",
+                "Treat `docs/agent-installation.md` as the external install/adopt handoff only; after bootstrap, return to the configured startup entrypoint for normal repo work.",
                 "Do not bulk-read all planning surfaces.",
             ],
         }
@@ -72,11 +73,20 @@ def _write_planning_surfaces(tmp_path: Path) -> None:
 4. Read `ROADMAP.md` only when promoting work.
 
 Do not bulk-read all planning surfaces.
-When the question is active planning recovery rather than startup order, prefer `agentic-planning-bootstrap summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
+When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
 """,
     )
     _write(
         tmp_path / "llms.txt",
+        """
+# Agent Entrypoint Router
+
+- If you are here to DEVELOP this repository: Read `AGENTS.md`
+- If you are here to INSTALL Agentic Workspace: Read `docs/agent-installation.md`
+""",
+    )
+    _write(
+        tmp_path / "docs" / "agent-installation.md",
         """
 # Agentic Workspace External Install Or Adopt Handoff
 
@@ -84,7 +94,7 @@ This file is only the external install/adopt handoff.
 Do not treat it as the normal repo startup surface after bootstrap or adoption.
 
 - After install or adopt, inspect `agentic-workspace config --target ./repo --format json`.
-- When the question is active planning recovery rather than bootstrap, prefer `agentic-planning-bootstrap summary --format json`.
+- When the question is active planning recovery rather than bootstrap, prefer `agentic-workspace summary --format json`.
 """,
     )
     _write(
@@ -203,7 +213,7 @@ Default startup path for an agent maintainer:
 1. Read `AGENTS.md`.
 2. Read `TODO.md`.
 3. If the question is startup order or first-contact routing, ask `agentic-workspace defaults --section startup --format json` before broader prose.
-4. If you need the current planning state, ask `agentic-planning-bootstrap summary --format json` before opening raw planning files.
+4. If you need the current planning state, ask `agentic-workspace summary --format json` before opening raw planning files.
 5. Read one active execplan only when `TODO.md` points to it.
 6. Read package-local `AGENTS.md` only for the package you will edit.
 """,

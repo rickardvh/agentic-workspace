@@ -478,7 +478,7 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "keep `Iterative Follow-Through` current" in bootstrap_agents_text
     assert "remove or archive the matched planning residue in the same pass" in bootstrap_agents_text
     assert "record the required next owner and activation trigger explicitly before archive" in bootstrap_agents_text
-    assert "agentic-planning-bootstrap summary --format json" in bootstrap_agents_text
+    assert "agentic-workspace summary --format json" in bootstrap_agents_text
     assert "agentic-workspace defaults --section startup --format json" in bootstrap_agents_text
     assert "remove or archive the matched queue residue in the same pass" in execplans_readme_text
     assert "Iterative carry-forward belongs under `## Iterative Follow-Through`" in execplans_readme_text
@@ -548,7 +548,7 @@ def test_bootstrap_intent_contract_is_part_of_payload() -> None:
     assert "tool_verification" in text
     assert "follow_through_contract" in text
     assert "native planning artifacts" in text
-    assert "agentic-planning-bootstrap summary --format json" in text
+    assert "agentic-workspace summary --format json" in text
     assert Path("docs/intent-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
@@ -1457,7 +1457,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
 
     assert summary["kind"] == "planning-summary/v1"
     assert summary["schema"]["schema_version"] == "planning-summary-schema/v1"
-    assert summary["schema"]["command"] == "agentic-planning-bootstrap summary --format json"
+    assert summary["schema"]["command"] == "agentic-workspace summary --format json"
     assert "planning_record" in summary["schema"]["shared_fields"]
     assert summary["todo"]["active_count"] == 1
     assert summary["execplans"]["active_count"] == 1
@@ -1514,6 +1514,8 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
             "summary": "Candidate alpha; promote when maintained report signal appears.",
         }
     ]
+    if summary["warning_count"] != 0:
+        print(f"DEBUG: warnings found: {summary['warnings']}")
     assert summary["warning_count"] == 0
 
 

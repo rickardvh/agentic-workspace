@@ -17,6 +17,7 @@ Use:
 
 ```bash
 agentic-workspace config --target ./repo --format json
+agentic-workspace note-delegation-outcome --target ./repo --delegation-target <target> --task-class <class> --outcome <success|mixed|failed>
 agentic-workspace defaults --section relay --format json
 agentic-planning-bootstrap handoff --format json
 ```
@@ -27,10 +28,14 @@ Use the config surface first to inspect whether the local environment reports:
 - strong planner availability
 - cheap bounded executor availability
 - preference for internal delegation when available
+- any configured local delegation target profiles with coarse strength, confidence, task-fit, and execution-method hints
+- any local delegation outcome evidence and derived tuning suggestions for those targets
 
 Those settings live in `agentic-workspace.local.toml`.
 They are local capability and cost posture only.
 They must not rewrite repo-owned planning semantics.
+If delegation target profiles are present, use them only as advisory input for handoff detail, review burden, and whether a target is even plausible for the current bounded slice.
+If local outcome evidence is present, use it only to tune those advisory hints over time; it must not become hidden scheduler policy.
 
 Use the relay selector for the stable planner/implementer rule and the planning handoff command for the active delegated slice contract.
 
@@ -39,6 +44,7 @@ Use the relay selector for the stable planner/implementer rule and the planning 
 - Let a stronger planner shape the compact contract once when that is cheaper than repeated re-derivation.
 - Keep the handoff agent-agnostic: internal delegation, local CLI/API execution, or another vendor executor may all use the same checked-in contract.
 - Prefer internal delegation only when the local posture says it is available and desirable.
+- If local delegation target profiles exist, use them to reduce blind guessing about target capability, but keep the checked-in worker handoff canonical.
 - Otherwise use the same handoff contract with any external CLI/API path that can preserve the checked-in boundaries.
 - Stay direct when delegation would cost more than it saves.
 
@@ -95,6 +101,8 @@ The workflow contract should therefore describe:
 - what must stop and escalate
 
 It should not prescribe a specific executor brand, API, or model name.
+
+For example, a bounded slice could delegate to an external CLI runner like `opencode run -m opencode/big-pickle -f ./handoff.json "Complete this bounded slice from the attached handoff contract only. Stop and escalate if scope changes."`, where the attached handoff file carries the derived worker contract and the external executor still respects the same boundary rules.
 
 ## Relationship To Other Docs
 

@@ -15,7 +15,7 @@ Use it when the question is "what does the next agent need right now to continue
 Use:
 
 ```bash
-agentic-planning-bootstrap summary --format json
+agentic-workspace summary --format json
 ```
 
 That summary now carries a top-level schema envelope:

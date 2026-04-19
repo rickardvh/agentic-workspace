@@ -2,7 +2,7 @@
 
 Checked-in execution plans for multi-milestone or multi-thread work live in this directory.
 
-Use `agentic-planning-bootstrap summary --format json` first when the question is active planning state.
+Use `agentic-workspace summary --format json` first when the question is active planning state.
 Use raw `TODO.md` and execplan prose after that only when the compact summary is insufficient or when you are maintaining the human-readable plan directly.
 Use `docs/candidate-lanes-contract.md` for the native `ROADMAP.md` lane shape when grouped deferred work needs more structure than a flat candidate bullet.
 Use `docs/planning-routing-contract.md` when deciding whether newly discovered work belongs in `ROADMAP.md`, `TODO.md`, `docs/execplans/`, or `docs/reviews/`.
@@ -48,7 +48,7 @@ Silent shaping may improve means, decomposition, and validation scope, but it mu
 
 For ordinary inspection, keep the hierarchy explicit:
 
-1. `agentic-planning-bootstrap summary --format json`
+1. `agentic-workspace summary --format json`
 2. one relevant selector or view inside that payload
 3. raw `TODO.md` or execplan prose only when the compact state is insufficient
 
@@ -130,7 +130,7 @@ Delegated judgment belongs under `## Delegated Judgment` for active plans that s
 Keep this section compact.
 It exists to preserve the intended end state, the allowed local latitude, and the escalation boundary when a safe first slice might otherwise drift into a substitute for the larger request.
 Use `none` only when the slice is so local that delegated-judgment framing would add no value beyond the surrounding plan.
-`agentic-planning-bootstrap summary --format json` exposes a typed `planning-summary/v1` payload. Inside that payload, `planning_record` is the canonical active planning record when planning has one active TODO item and one active execplan. `active_contract` is the narrower intent projection over that record.
+`agentic-workspace summary --format json` exposes a typed `planning-summary/v1` payload. Inside that payload, `planning_record` is the canonical active planning record when planning has one active TODO item and one active execplan. `active_contract` is the narrower intent projection over that record.
 Treat `planning_record` as canonical active state when it is available; raw `TODO.md` and execplan prose remain the thin human maintenance layer and semantic fallback.
 
 ## Meaning Boundary

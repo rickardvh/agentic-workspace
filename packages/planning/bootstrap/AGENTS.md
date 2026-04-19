@@ -1,4 +1,4 @@
-﻿# Agent Instructions
+# Agent Instructions
 
 Local bootstrap contract for agents working in this repository.
 
@@ -30,7 +30,7 @@ Prefer checked-in knowledge over durable chat memory when both exist.
 11. Read `memory/index.md` and `\.agentic-workspace/memory/WORKFLOW.md` only when memory is installed and the task is not already well-routed by the plan or manifest, or when changing workflow, planning, or memory itself.
 
 Do not bulk-read all planning surfaces for ordinary execution work. Start from `TODO.md`, then read at most one relevant active execplan.
-When the question is active planning recovery rather than startup order, prefer `agentic-planning-bootstrap summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
+When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
 
 Direct execution is valid when one coherent pass can finish the work and the `TODO.md` item can stay compact with `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`.
 Promote that task into `docs/execplans/` once it needs milestone sequencing, blocker handling, non-obvious validation scope, rollback or migration detail, or enough ambiguity that restart would require more than the TODO row.
