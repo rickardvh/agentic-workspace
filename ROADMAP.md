@@ -22,19 +22,10 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Latest open planning tranche: GitHub issues `#161`-`#211`, grouped below into ordered inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, repo-directed improvement evidence-threshold, validation-friction repo-friction, config-driven execution posture, config-driven autonomy and agnostic improvements, startup front door clarity and agent-agnostic first contact, Memory trust/usefulness/routing/capture, Memory trust/habitual-pull, routine recovery compression/convergence, compression-and-convergence-of-operating-model, and rotating-agent-economics tranches are complete.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, repo-directed improvement evidence-threshold, validation-friction repo-friction, config-driven execution posture, config-driven autonomy and agnostic improvements, startup front door clarity and agent-agnostic first contact, Memory trust/usefulness/routing/capture, Memory trust/habitual-pull, routine recovery compression/convergence, compression-and-convergence-of-operating-model, rotating-agent-economics, and portable-declarative-contracts-beyond-python-cli tranches are complete.
 
 ## Candidate Lanes
 
-
-- Lane: Portable declarative contracts and agent-native alignment
-  ID: portable-declarative-contracts-beyond-python-cli
-  Priority: first
-  Issues: #161, #166, #167, #168, #169, #170, #194, #207, #208, #211
-  Outcome: move stable lifecycle and runtime truth toward declarative portable contract sources and align repo planning schemas with agent-native structures (cold-start protocols, escalation boundaries).
-  Why now: The operating model is compressed; the next level of efficiency comes from matching repo surfaces to the internal reasoning structures of strong agents.
-  Promotion signal: promote when the repo can name one stable next extraction target or a clear portable architecture/tool-selection rule without inventing a bespoke workflow language.
-  Suggested first slice: Define a machine-readable 'Cold-Start' Protocol or align the `execplan` schema with agent-native planning structure.
 
 - Lane: Signal hygiene and evidence-based improvement
   ID: signal-hygiene-and-evidence-based-improvement
