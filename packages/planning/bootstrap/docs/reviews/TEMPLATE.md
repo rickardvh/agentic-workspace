@@ -18,7 +18,7 @@ Promote only the findings that justify future work; do not treat this file as an
 
 ## Review Mode
 
-- Mode:
+- Mode: intent-satisfaction | static-analysis | friction-log | architecture-review
 - Review question:
 - Default finding cap:
 - Inputs inspected first:

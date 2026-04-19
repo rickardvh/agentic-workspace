@@ -1449,6 +1449,35 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                     )
                     break
 
+    intent_satisfaction, intent_satisfaction_bullets = _extract_section_stats(lines, "Intent Satisfaction")
+    intent_satisfaction_fields = _extract_kv_fields(intent_satisfaction)
+    if has_only_completed_status:
+        if intent_satisfaction_bullets == 0:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Completed execplan is missing an Intent Satisfaction section.",
+                )
+            )
+        else:
+            for field_name in (
+                "original intent",
+                "was original intent fully satisfied?",
+                "evidence of intent satisfaction",
+                "unsolved intent passed to",
+            ):
+                value = intent_satisfaction_fields.get(field_name, "").strip().lower()
+                if not value or value in {"pending", "tbd", "todo", "none yet", "current milestone"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_UNDER_SPECIFIED,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Intent Satisfaction field: {field_name}.",
+                        )
+                    )
+                    break
+
     drift_log = _section_content(lines, "Drift Log")
     drift_entries = [line for line in drift_log if re.match(r"^\s*[-*]\s+\d{4}-\d{2}-\d{2}:", line)]
     if len(drift_entries) > DRIFT_LOG_MAX_ENTRIES or len(drift_log) > DRIFT_LOG_MAX_LINES:

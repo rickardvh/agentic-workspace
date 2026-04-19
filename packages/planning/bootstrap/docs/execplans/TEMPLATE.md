@@ -154,6 +154,13 @@ Keep the first slice advisory: if a required tool is unavailable, stop or escala
 - Proof achieved now:
 - Evidence for "Proof achieved" state:
 
+## Intent Satisfaction
+
+- Original intent:
+- Was original intent fully satisfied?:
+- Evidence of intent satisfaction:
+- Unsolved intent passed to:
+
 ## Execution Summary
 
 - Outcome delivered:
