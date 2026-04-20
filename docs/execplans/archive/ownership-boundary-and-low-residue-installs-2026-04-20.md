@@ -14,24 +14,24 @@
 ## Intent Continuity
 
 - Larger intended outcome: Cleaner package/repo separation with lower install and uninstall residue.
-- This slice completes the larger intended outcome: no
-- Continuation surface: docs/execplans/ownership-boundary-and-low-residue-installs.md
+- This slice completes the larger intended outcome: yes
+- Continuation surface: none
 - Parent lane: ownership-boundary-and-local-only-mode
 
 ## Required Continuation
 
-- Required follow-on for the larger intended outcome: yes
-- Owner surface: docs/execplans/ownership-boundary-and-low-residue-installs.md
-- Activation trigger: completion of the initial boundary inventory and repo-hook classification slice
+- Required follow-on for the larger intended outcome: no
+- Owner surface: none
+- Activation trigger: none
 
 ## Iterative Follow-Through
 
-- What this slice enabled: a concrete ownership review surface that now classifies package-owned, repo-owned, and middle-ground surfaces directly in the `ownership` command.
+- What this slice enabled: a concrete ownership review surface plus a local-only uninstall path that removes the `.gemini/agentic-workspace/` install tree and its ignore residue.
 - Intentionally deferred: broader installer architecture changes and any storage-backend redesign.
 - Discovered implications: the boundary review needs to stay explicit enough that future storage backends can move without changing ownership semantics.
 - Proof achieved now: the ownership command returns a current surface inventory and points to the smallest explicit repo hook.
-- Validation still needed: dogfood the review and local-only uninstall cleanup against a repo with more ambiguous middle-ground surfaces before widening the lane.
-- Next likely slice: keep pressure on any remaining residue path and verify whether another small hook needs narrowing.
+- Validation still needed: none for this lane.
+- Next likely slice: none.
 
 ## Delegated Judgment
 
@@ -42,15 +42,15 @@
 
 ## Active Milestone
 
-- Status: in-progress
-- Scope: Classify package-owned, repo-owned, and ambiguous middle-ground surfaces.
-- Ready: ready
+- Status: completed
+- Scope: Classify package-owned, repo-owned, and ambiguous middle-ground surfaces; clean up local-only residue.
+- Ready: no
 - Blocked: no
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Use the boundary review to confirm the smallest stable repo hook before changing install or uninstall behavior.
+- No further action required for this execplan slice.
 
 ## Blockers
 
@@ -60,13 +60,14 @@
 
 - TODO.md
 - ROADMAP.md
-- docs/execplans/ownership-boundary-and-low-residue-installs.md
+- docs/execplans/archive/ownership-boundary-and-low-residue-installs-2026-04-20.md
 
 ## Invariants
 
 - Local-only install and uninstall must remain compatible with repo-owned startup surfaces.
 - Package-owned state should be identified before any implementation changes widen the boundary.
 - The first slice must stay bounded to classification and repo-hook review.
+- Local-only uninstall must remove the whole `.gemini/agentic-workspace/` install tree when the repo owns no additional local-only residue.
 
 ## Validation Commands
 
@@ -79,15 +80,15 @@
 
 - The current surface set is classified into package-owned, repo-owned, and ambiguous middle-ground groups.
 - The minimum explicit repo hook is identified and justified.
-- The boundary review is ready for implementation follow-through without widening the lane.
+- The boundary review and local-only uninstall cleanup are ready for implementation follow-through without widening the lane.
 
 ## Execution Summary
 
-- Outcome delivered: added a queryable ownership boundary review to `agentic-workspace ownership` so the repo can see package-owned, repo-owned, and middle-ground surfaces without inferring them from prose.
+- Outcome delivered: added a queryable ownership boundary review to `agentic-workspace ownership` and a local-only uninstall path that removes the `.gemini/agentic-workspace/` tree plus local-only ignore residue.
 - Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`.
-- Follow-on routed to: local-only residue cleanup and any remaining narrow install/uninstall follow-on.
-- Knowledge promoted (Memory/Docs/Config): docs/ownership-authority-contract.md, docs/agent-installation.md, docs/memory-metadata-contract.md
-- Resume from: the boundary review payload when the next slice starts.
+- Follow-on routed to: none.
+- Knowledge promoted (Memory/Docs/Config): docs/ownership-authority-contract.md, docs/agent-installation.md, docs/memory-metadata-contract.md, docs/installer-behavior.md, docs/routing-contract.md
+- Resume from: none.
 
 ## Drift Log
 

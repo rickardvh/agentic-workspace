@@ -13,19 +13,13 @@ This file is a concise sequencing queue, not the canonical home for product doct
 Keep long-horizon narrative in `docs/ecosystem-roadmap.md` and design constraints in `docs/design-principles.md`.
 Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
-## Active Handoff
-
-- Lane: Ownership boundary and low-residue installs
-  ID: ownership-boundary-and-local-only-mode
-  Surface: docs/execplans/ownership-boundary-and-low-residue-installs.md
-  Why now: Promoted into active work so the boundary review can start from checked-in planning rather than chat residue.
-
 ## GitHub Issue Intake
 
-- Latest open planning tranche: GitHub issues `#206` and `#220`-`#232`.
+- Latest open planning tranche: GitHub issues `#206` and `#220`-`#230`, `#232`.
 - The active TODO/execplan already owns `#206`; the remaining open issues are grouped below as inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
+- Issue `#231` is complete in the archived ownership-boundary lane.
 - The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, repo-directed improvement evidence-threshold, validation-friction repo-friction, config-driven execution posture, config-driven autonomy and agnostic improvements, startup front door clarity and agent-agnostic first contact, Memory trust/usefulness/routing/capture, Memory trust/habitual-pull, routine recovery compression/convergence, compression-and-convergence-of-operating-model, rotating-agent-economics, portable-declarative-contracts-beyond-python-cli, signal-hygiene-and-evidence-based-improvement, intent-satisfaction-validation, and the earlier `#220`-`#231` tranche are complete.
 
 ## Candidate Lanes
