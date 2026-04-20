@@ -4,6 +4,7 @@ import importlib.util
 import json
 import re
 import shutil
+import tomllib
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -536,6 +537,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
 
     roadmap_lanes = _roadmap_candidate_lanes(roadmap_path)
     roadmap_candidates = _roadmap_candidates(roadmap_path)
+    ownership_review = _ownership_review(target_root)
 
     active_execplans: list[dict[str, str]] = []
     completed_execplans: list[dict[str, Any]] = []
@@ -629,6 +631,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
             "candidate_count": len(roadmap_candidates),
             "candidates": roadmap_candidates,
         },
+        "ownership_review": ownership_review,
         "warnings": [warning.copy() for warning in warnings],
         "warning_count": len(warnings),
     }
@@ -688,6 +691,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
                 "health",
                 "status",
                 "completed_execplans",
+                "ownership_review",
                 "active",
                 "findings",
                 "next_action",
@@ -708,6 +712,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "warning_count": summary["warning_count"],
         },
         "completed_execplans": completed_execplans,
+        "ownership_review": summary.get("ownership_review", {}),
         "active": {
             "planning_record": planning_record,
             "active_contract": active_contract,
@@ -755,6 +760,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "adoption_mode",
             "todo",
             "execplans",
+            "ownership_review",
             "planning_record",
             "active_contract",
             "resumable_contract",
@@ -875,6 +881,63 @@ def _planning_handoff_schema() -> dict[str, Any]:
             "treat runtime delegation method as tool-owned and agent-agnostic",
             "keep worker closure bounded; lane shaping and roadmap routing stay orchestrator-owned",
         ],
+    }
+
+
+def _ownership_review(target_root: Path) -> dict[str, Any]:
+    manifest_path = target_root / ".agentic-workspace" / "OWNERSHIP.toml"
+    if not manifest_path.exists():
+        manifest_path = Path(__file__).resolve().with_name("_ownership.toml")
+
+    with manifest_path.open("rb") as handle:
+        ledger = tomllib.load(handle)
+
+    module_roots = [
+        {
+            "module": str(entry.get("module", "")).strip(),
+            "path": str(entry.get("path", "")).strip(),
+            "ownership": str(entry.get("ownership", "")).strip(),
+            "uninstall_policy": str(entry.get("uninstall_policy", "")).strip(),
+        }
+        for entry in ledger.get("module_roots", [])
+        if isinstance(entry, dict)
+    ]
+    authority_surfaces = [
+        {
+            "concern": str(entry.get("concern", "")).strip(),
+            "surface": str(entry.get("surface", "")).strip(),
+            "owner": str(entry.get("owner", "")).strip(),
+            "ownership": str(entry.get("ownership", "")).strip(),
+            "authority": str(entry.get("authority", "")).strip(),
+            "summary": str(entry.get("summary", "")).strip(),
+        }
+        for entry in ledger.get("authority_surfaces", [])
+        if isinstance(entry, dict)
+    ]
+    fences = [
+        {
+            "name": str(entry.get("name", "")).strip(),
+            "file": str(entry.get("file", "")).strip(),
+            "start": str(entry.get("start", "")).strip(),
+            "end": str(entry.get("end", "")).strip(),
+            "ownership": str(entry.get("ownership", "")).strip(),
+            "uninstall_policy": str(entry.get("uninstall_policy", "")).strip(),
+        }
+        for entry in ledger.get("fences", [])
+        if isinstance(entry, dict)
+    ]
+    package_owned_roots = [entry["path"] for entry in module_roots if entry.get("ownership") == "module_managed" and entry.get("path")]
+    repo_owned_surfaces = [entry["surface"] for entry in authority_surfaces if entry.get("ownership") == "repo_owned" and entry.get("surface")]
+    module_managed_surfaces = [entry["surface"] for entry in authority_surfaces if entry.get("ownership") == "module_managed" and entry.get("surface")]
+    minimal_repo_hook = next((f"{entry['file']}#agentic-workspace:workflow" for entry in fences if entry.get("file")), "")
+    return {
+        "status": "present",
+        "package_owned_roots": package_owned_roots,
+        "repo_owned_surfaces": repo_owned_surfaces,
+        "module_managed_surfaces": module_managed_surfaces,
+        "managed_fences": fences,
+        "minimal_repo_hook": minimal_repo_hook,
+        "authority_surfaces": authority_surfaces,
     }
 
 

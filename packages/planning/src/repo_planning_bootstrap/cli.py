@@ -206,6 +206,12 @@ def _print_summary(summary: dict) -> None:
         f"{summary['execplans']['archived_count']} archived"
     )
     print(f"Roadmap: {summary['roadmap'].get('lane_count', 0)} candidate lanes / {summary['roadmap']['candidate_count']} candidate bullets")
+    ownership_review = summary.get("ownership_review", {})
+    if ownership_review.get("status") == "present":
+        print("Ownership review:")
+        print(f"- Package-owned roots: {', '.join(ownership_review.get('package_owned_roots', []))}")
+        print(f"- Repo-owned surfaces: {', '.join(ownership_review.get('repo_owned_surfaces', []))}")
+        print(f"- Minimal repo hook: {ownership_review.get('minimal_repo_hook', '')}")
     hierarchy_contract = summary.get("hierarchy_contract", {})
     if hierarchy_contract.get("status") == "present":
         parent_lane = hierarchy_contract.get("parent_lane", {})
@@ -324,6 +330,13 @@ def _print_report(report: dict) -> None:
     next_action = report.get("next_action", {})
     if isinstance(next_action, dict) and next_action.get("summary"):
         print(f"Next action: {next_action['summary']}")
+    ownership_review = report.get("ownership_review", {})
+    if isinstance(ownership_review, dict) and ownership_review.get("status") == "present":
+        print(
+            "Ownership review: "
+            f"{len(ownership_review.get('repo_owned_surfaces', []))} repo-owned / "
+            f"{len(ownership_review.get('package_owned_roots', []))} package-owned roots"
+        )
     active = report.get("active", {})
     if isinstance(active, dict):
         hierarchy_contract = active.get("hierarchy_contract", {})

@@ -1763,6 +1763,27 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "read_first" in summary["schema"]["view_fields"]["handoff_contract"]
 
 
+def test_planning_summary_exposes_ownership_review(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+
+    summary = planning_summary(target=tmp_path)
+    report = planning_report(target=tmp_path)
+    planning_cli._print_summary(summary)
+    planning_cli._print_report(report)
+    out = capsys.readouterr().out
+
+    ownership_review = summary["ownership_review"]
+    assert ownership_review["status"] == "present"
+    assert ".agentic-workspace/planning/" in ownership_review["package_owned_roots"]
+    assert "TODO.md" in ownership_review["repo_owned_surfaces"]
+    assert "ROADMAP.md" in ownership_review["repo_owned_surfaces"]
+    assert ownership_review["minimal_repo_hook"] == "AGENTS.md#agentic-workspace:workflow"
+    assert "ownership_review" in summary["schema"]["shared_fields"]
+    assert "Ownership review:" in out
+
+
 def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
