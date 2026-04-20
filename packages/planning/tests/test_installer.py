@@ -53,6 +53,23 @@ def _minimal_execplan(status: str = "in-progress") -> str:
         "- Follow-on routed to: none yet\n"
         "- Resume from: current milestone\n"
     )
+    proof_report = (
+        "\n## Proof Report\n\n"
+        "- Validation proof: uv run pytest tests/test_check_planning_surfaces.py\n"
+        '- Proof achieved now: validation and closure checks passed for the bounded slice.\n'
+        '- Evidence for "Proof achieved" state: archive gate and planning checks were satisfied.\n'
+        if status in {"completed", "done", "closed"}
+        else ""
+    )
+    intent_satisfaction = (
+        "\n## Intent Satisfaction\n\n"
+        "- Original intent: Keep scope clear.\n"
+        "- Was original intent fully satisfied?: yes\n"
+        "- Evidence of intent satisfaction: the bounded slice landed and the lane-level evidence was recorded.\n"
+        "- Unsolved intent passed to: none\n"
+        if status in {"completed", "done", "closed"}
+        else ""
+    )
     return f"""
 # Plan Alpha
 
@@ -133,6 +150,9 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 ## Execution Summary
 
 {execution_summary}
+
+{proof_report}
+{intent_satisfaction}
 
 ## Drift Log
 
@@ -987,6 +1007,54 @@ def test_archive_execplan_blocks_missing_execution_summary(tmp_path: Path) -> No
     )
 
 
+def test_archive_execplan_blocks_missing_proof_report(tmp_path: Path) -> None:
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
+    plan = _minimal_execplan(status="completed").split("\n## Proof Report\n\n", 1)[0] + "\n"
+    _write(plan_path, plan)
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_missing_proof_report" for warning in result.warnings)
+    assert any(
+        action.kind == "manual review" and action.path == plan_path and "Proof Report" in action.detail for action in result.actions
+    )
+
+
+def test_archive_execplan_blocks_incomplete_intent_satisfaction(tmp_path: Path) -> None:
+    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
+    completed = _minimal_execplan(status="completed")
+    proof_section = completed.split("\n## Proof Report\n\n", 1)[1].split("\n## Intent Satisfaction\n\n", 1)[0]
+    plan = (
+        completed.split("\n## Proof Report\n\n", 1)[0]
+        + "\n## Proof Report\n\n"
+        + proof_section
+        + "\n## Intent Satisfaction\n\n"
+        + "- Original intent: Keep scope clear.\n"
+        + "- Was original intent fully satisfied?: no\n"
+        + "- Evidence of intent satisfaction: the lane still has open follow-on work.\n"
+        + "- Unsolved intent passed to: docs/execplans/local-only-residue-via-git-exclude.md\n"
+        + "\n"
+    )
+    _write(plan_path, plan)
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(
+        warning["warning_class"] in {"archive_missing_intent_satisfaction", "archive_intent_not_fully_satisfied"}
+        for warning in result.warnings
+    )
+    assert any(
+        action.kind == "manual review" and action.path == plan_path and "Intent Satisfaction" in action.detail
+        for action in result.actions
+    )
+
+
 def test_archive_execplan_blocks_missing_delegated_judgment(tmp_path: Path) -> None:
     _write(tmp_path / "TODO.md", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
@@ -1597,6 +1665,62 @@ def test_planning_report_derives_compact_module_state_from_summary(tmp_path: Pat
     assert report["status"]["active_execplan_count"] == 1
     assert report["status"]["roadmap_lane_count"] == 0
     assert report["next_action"]["summary"] == "Add one checker."
+
+
+def test_planning_summary_exposes_closure_evidence(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: docs/execplans/plan-alpha.md
+  Why now: expose closure evidence.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan(status="completed"))
+
+    summary = planning_summary(target=tmp_path)
+
+    completed_execplans = summary["execplans"]["completed_execplans"]
+    assert summary["planning_record"]["status"] == "unavailable"
+    assert len(completed_execplans) == 1
+    assert completed_execplans[0]["proof_report"]["proof achieved now"] == "validation and closure checks passed for the bounded slice."
+    assert completed_execplans[0]["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
+    assert "proof_report" in summary["schema"]["view_fields"]["planning_record"]
+    assert "intent_satisfaction" in summary["schema"]["view_fields"]["planning_record"]
+
+
+def test_planning_report_prints_closure_evidence(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / "TODO.md",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: docs/execplans/plan-alpha.md
+  Why now: expose closure evidence.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan(status="completed"))
+
+    exit_code = planning_cli.main(["report", "--target", str(tmp_path)])
+    out = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Completed execplans awaiting archive: 1" in out
+    assert "Proof report: validation and closure checks passed for the bounded slice." in out
+    assert "Intent satisfaction: yes" in out
 
 
 def test_planning_summary_can_expose_active_contract_from_execplan_without_todo_row(tmp_path: Path) -> None:

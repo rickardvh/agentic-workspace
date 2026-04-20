@@ -200,7 +200,11 @@ def _print_summary(summary: dict) -> None:
         f"{summary['todo'].get('queued_count', 0)} queued / "
         f"{summary['todo']['item_count']} items / {summary['todo']['line_count']} lines"
     )
-    print(f"Execplans: {summary['execplans']['active_count']} active / {summary['execplans']['archived_count']} archived")
+    print(
+        f"Execplans: {summary['execplans']['active_count']} active / "
+        f"{summary['execplans'].get('completed_count', 0)} completed / "
+        f"{summary['execplans']['archived_count']} archived"
+    )
     print(f"Roadmap: {summary['roadmap'].get('lane_count', 0)} candidate lanes / {summary['roadmap']['candidate_count']} candidate bullets")
     hierarchy_contract = summary.get("hierarchy_contract", {})
     if hierarchy_contract.get("status") == "present":
@@ -239,12 +243,32 @@ def _print_summary(summary: dict) -> None:
         print(f"- Next action: {planning_record['next_action']}")
         print(f"- Continuation owner: {planning_record['continuation_owner']}")
         print(f"- Proof expectations: {', '.join(planning_record['proof_expectations'])}")
+        proof_report = planning_record.get("proof_report", {})
+        if proof_report:
+            proof_evidence = proof_report.get('evidence for "proof achieved" state', "")
+            print(f"- Proof achieved now: {proof_report.get('proof achieved now', '')}")
+            print(f"- Evidence for \"Proof achieved\" state: {proof_evidence}")
+        intent_satisfaction = planning_record.get("intent_satisfaction", {})
+        if intent_satisfaction:
+            print(f"- Was original intent fully satisfied?: {intent_satisfaction.get('was original intent fully satisfied?', '')}")
+            print(f"- Unsolved intent passed to: {intent_satisfaction.get('unsolved intent passed to', '')}")
         tool_verification = planning_record.get("tool_verification", {})
         required_tools = tool_verification.get("required_tools", [])
         if required_tools:
             print(f"- Required tools: {', '.join(required_tools)}")
     elif planning_record:
         print(f"Planning record: {planning_record.get('status')} ({planning_record.get('reason', 'no compact record available')})")
+    completed_execplans = summary.get("execplans", {}).get("completed_execplans", [])
+    if completed_execplans:
+        print("Completed execplans awaiting archive:")
+        for item in completed_execplans:
+            print(f"- {item.get('path', '')}: {item.get('status', '')}")
+            proof_report = item.get("proof_report", {})
+            if proof_report:
+                print(f"  - Proof achieved now: {proof_report.get('proof achieved now', '')}")
+            intent_satisfaction = item.get("intent_satisfaction", {})
+            if intent_satisfaction:
+                print(f"  - Intent satisfied: {intent_satisfaction.get('was original intent fully satisfied?', '')}")
     active_contract = summary.get("active_contract", {})
     if active_contract.get("status") == "present":
         print("Active contract view:")
@@ -293,6 +317,7 @@ def _print_report(report: dict) -> None:
             f"{status.get('active_todo_count', 0)} active TODO / "
             f"{status.get('queued_todo_count', 0)} queued TODO / "
             f"{status.get('active_execplan_count', 0)} active execplans / "
+            f"{status.get('completed_execplan_count', 0)} completed execplans / "
             f"{status.get('roadmap_lane_count', 0)} roadmap lanes / "
             f"{status.get('roadmap_candidate_count', 0)} roadmap candidates"
         )
@@ -307,6 +332,25 @@ def _print_report(report: dict) -> None:
             active_chunk = hierarchy_contract.get("active_chunk", {})
             lane_label = parent_lane.get("id") or parent_lane.get("title") or "unspecified"
             print(f"Hierarchy: {lane_label} -> {active_chunk.get('milestone_id', '') or active_chunk.get('todo_id', '')}")
+        planning_record = active.get("planning_record", {})
+        if isinstance(planning_record, dict) and planning_record.get("status") == "present":
+            proof_report = planning_record.get("proof_report", {})
+            intent_satisfaction = planning_record.get("intent_satisfaction", {})
+            if proof_report:
+                print(f"Proof report: {proof_report.get('proof achieved now', '')}")
+            if intent_satisfaction:
+                print(f"Intent satisfaction: {intent_satisfaction.get('was original intent fully satisfied?', '')}")
+    completed_execplans = report.get("completed_execplans", [])
+    if completed_execplans:
+        print(f"Completed execplans awaiting archive: {len(completed_execplans)}")
+        for item in completed_execplans:
+            print(f"- {item.get('path', '')}: {item.get('status', '')}")
+            proof_report = item.get("proof_report", {})
+            if proof_report:
+                print(f"  Proof report: {proof_report.get('proof achieved now', '')}")
+            intent_satisfaction = item.get("intent_satisfaction", {})
+            if intent_satisfaction:
+                print(f"  Intent satisfaction: {intent_satisfaction.get('was original intent fully satisfied?', '')}")
     findings = report.get("findings", [])
     if findings:
         print("Findings:")

@@ -48,6 +48,23 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
         "- Follow-on routed to: none yet\n"
         "- Resume from: current milestone\n"
     )
+    proof_report = (
+        "\n## Proof Report\n\n"
+        "- Validation proof: uv run pytest tests/test_check_planning_surfaces.py\n"
+        '- Proof achieved now: validation and closure checks passed for the bounded slice.\n'
+        '- Evidence for "Proof achieved" state: archive gate and planning checks were satisfied.\n'
+        if status in {"completed", "done", "closed"}
+        else ""
+    )
+    intent_satisfaction = (
+        "\n## Intent Satisfaction\n\n"
+        "- Original intent: Keep scope clear.\n"
+        "- Was original intent fully satisfied?: yes\n"
+        "- Evidence of intent satisfaction: the bounded slice landed and the lane-level evidence was recorded.\n"
+        "- Unsolved intent passed to: none\n"
+        if status in {"completed", "done", "closed"}
+        else ""
+    )
     return """
 # Plan Alpha
 
@@ -124,10 +141,13 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
 
 {execution_summary}
 
+{proof_report}
+{intent_satisfaction}
+
 ## Drift Log
 
 - 2026-04-04: Initial plan created.
-""".format(status=status, execution_summary=execution_summary)
+""".format(status=status, execution_summary=execution_summary, proof_report=proof_report, intent_satisfaction=intent_satisfaction)
 
 
 def _rename_like_execplan(*, with_reference_sweep: bool = False) -> str:

@@ -538,6 +538,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
     roadmap_candidates = _roadmap_candidates(roadmap_path)
 
     active_execplans: list[dict[str, str]] = []
+    completed_execplans: list[dict[str, Any]] = []
     archived_execplans = 0
     if execplan_dir.exists():
         for path in sorted(execplan_dir.glob("*.md")):
@@ -546,6 +547,15 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
             status = _execplan_status(path)
             if status and status not in {"completed", "done", "closed", "planned", "pending", "not-started"}:
                 active_execplans.append({"path": path.relative_to(target_root).as_posix(), "status": status})
+            elif status in {"completed", "done", "closed"}:
+                completed_execplans.append(
+                    {
+                        "path": path.relative_to(target_root).as_posix(),
+                        "status": status,
+                        "proof_report": _execplan_proof_report(path),
+                        "intent_satisfaction": _execplan_intent_satisfaction(path),
+                    }
+                )
         archive_dir = execplan_dir / "archive"
         if archive_dir.exists():
             archived_execplans = sum(1 for path in archive_dir.glob("*.md") if path.is_file())
@@ -565,6 +575,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         active_execplans=active_execplans,
     )
     planning_record = _canonical_planning_record(
+        target_root=target_root,
         active_contract=active_contract,
         resumable_contract=resumable_contract,
     )
@@ -602,6 +613,8 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         "execplans": {
             "active_count": len(active_execplans),
             "active_execplans": active_execplans,
+            "completed_count": len(completed_execplans),
+            "completed_execplans": completed_execplans,
             "archived_count": archived_execplans,
         },
         "planning_record": planning_record,
@@ -624,6 +637,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
 def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
     summary = planning_summary(target=target)
     planning_record = summary.get("planning_record", {})
+    completed_execplans = list(summary.get("execplans", {}).get("completed_execplans", []))
     active_contract = summary.get("active_contract", {})
     resumable_contract = summary.get("resumable_contract", {})
     follow_through_contract = summary.get("follow_through_contract", {})
@@ -673,6 +687,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
                 "target_root",
                 "health",
                 "status",
+                "completed_execplans",
                 "active",
                 "findings",
                 "next_action",
@@ -687,10 +702,12 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "queued_todo_count": summary["todo"].get("queued_count", 0),
             "todo_item_count": summary["todo"]["item_count"],
             "active_execplan_count": summary["execplans"]["active_count"],
+            "completed_execplan_count": summary["execplans"].get("completed_count", 0),
             "roadmap_lane_count": summary["roadmap"].get("lane_count", 0),
             "roadmap_candidate_count": summary["roadmap"]["candidate_count"],
             "warning_count": summary["warning_count"],
         },
+        "completed_execplans": completed_execplans,
         "active": {
             "planning_record": planning_record,
             "active_contract": active_contract,
@@ -756,6 +773,8 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "agent_may_decide",
                 "next_action",
                 "proof_expectations",
+                "proof_report",
+                "intent_satisfaction",
                 "tool_verification",
                 "escalate_when",
                 "continuation_owner",
@@ -1076,6 +1095,7 @@ def _active_resumable_contract(
 
 def _canonical_planning_record(
     *,
+    target_root: Path,
     active_contract: dict[str, Any],
     resumable_contract: dict[str, Any],
 ) -> dict[str, Any]:
@@ -1093,6 +1113,12 @@ def _canonical_planning_record(
     todo_item = active_contract.get("todo_item", {})
     active_milestone = resumable_contract.get("active_milestone", {})
     minimal_refs = list(resumable_contract.get("minimal_refs", []))
+    plan_path = _resolve_execplan_path(target_root, str(todo_item.get("surface", "")).strip() or active_milestone.get("id", ""))
+    proof_report: dict[str, str] = {}
+    intent_satisfaction: dict[str, str] = {}
+    if plan_path is not None:
+        proof_report = _execplan_proof_report(plan_path)
+        intent_satisfaction = _execplan_intent_satisfaction(plan_path)
     continuation_owner = str(todo_item.get("surface", "")).strip()
     if not continuation_owner and minimal_refs:
         continuation_owner = minimal_refs[-1]
@@ -1108,6 +1134,8 @@ def _canonical_planning_record(
         "agent_may_decide": str(active_contract["intent"]["agent_may_decide"]).strip(),
         "next_action": str(resumable_contract["current_next_action"]).strip(),
         "proof_expectations": list(resumable_contract.get("proof_expectations", [])),
+        "proof_report": proof_report,
+        "intent_satisfaction": intent_satisfaction,
         "tool_verification": dict(resumable_contract.get("tool_verification", {})),
         "escalate_when": str(resumable_contract.get("escalate_when", "")).strip(),
         "continuation_owner": continuation_owner,
@@ -1297,6 +1325,8 @@ def _active_handoff_contract(
         "read_first": list(planning_record.get("minimal_refs", [])),
         "owned_write_scope": list(planning_record.get("touched_scope", [])),
         "proof_expectations": list(planning_record.get("proof_expectations", [])),
+        "proof_report": dict(planning_record.get("proof_report", {})),
+        "intent_satisfaction": dict(planning_record.get("intent_satisfaction", {})),
         "tool_verification": dict(planning_record.get("tool_verification", {})),
         "continuation_owner": str(planning_record.get("continuation_owner", "")).strip(),
         "worker_contract": {
@@ -1486,6 +1516,15 @@ def archive_execplan(
     validation_confirmed = execution_summary.get("validation confirmed", "").strip()
     follow_on_routed_to = execution_summary.get("follow-on routed to", "").strip()
     resume_from = execution_summary.get("resume from", "").strip()
+    proof_report = _execplan_proof_report(plan_path)
+    validation_proof = proof_report.get("validation proof", "").strip()
+    proof_achieved_now = proof_report.get("proof achieved now", "").strip()
+    proof_evidence = proof_report.get('evidence for "proof achieved" state', "").strip()
+    intent_satisfaction = _execplan_intent_satisfaction(plan_path)
+    original_intent = intent_satisfaction.get("original intent", "").strip()
+    fully_satisfied = intent_satisfaction.get("was original intent fully satisfied?", "").strip().lower()
+    satisfaction_evidence = intent_satisfaction.get("evidence of intent satisfaction", "").strip()
+    unsolved_intent = intent_satisfaction.get("unsolved intent passed to", "").strip()
     validation_commands = _execplan_validation_commands(plan_path)
     if completes_larger_outcome == "no" and (not continuation_surface or continuation_surface.lower() in {"none", "n/a"}):
         result.warnings.append(
@@ -1590,6 +1629,36 @@ def archive_execplan(
             }
         )
         result.add("manual review", plan_path, "fill `Execution Summary` with the post-archive resume cue before archiving")
+        return result
+    if not validation_proof or not proof_achieved_now or not proof_evidence:
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_proof_report",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Completed execplan is missing a complete proof report.",
+            }
+        )
+        result.add("manual review", plan_path, "fill `Proof Report` with validation proof and evidence before archiving")
+        return result
+    if not original_intent or fully_satisfied not in {"yes", "true"} or not satisfaction_evidence:
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_intent_satisfaction",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Completed execplan is missing a complete intent satisfaction report.",
+            }
+        )
+        result.add("manual review", plan_path, "fill `Intent Satisfaction` with satisfied intent evidence before archiving")
+        return result
+    if unsolved_intent and unsolved_intent.lower() not in {"none", "n/a", "none yet"}:
+        result.warnings.append(
+            {
+                "warning_class": "archive_intent_not_fully_satisfied",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Completed execplan still routes unsolved intent to a follow-on owner.",
+            }
+        )
+        result.add("manual review", plan_path, "keep the lane open until the original intent is fully satisfied")
         return result
     if _execplan_needs_reference_sweep(plan_path) and not _validation_has_reference_sweep(validation_commands):
         result.warnings.append(
@@ -2253,6 +2322,16 @@ def _execplan_active_milestone(path: Path) -> dict[str, str]:
 def _execplan_execution_summary(path: Path) -> dict[str, str]:
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Execution Summary"))
+
+
+def _execplan_proof_report(path: Path) -> dict[str, str]:
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Proof Report"))
+
+
+def _execplan_intent_satisfaction(path: Path) -> dict[str, str]:
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Intent Satisfaction"))
 
 
 def _execplan_validation_commands(path: Path) -> list[str]:
