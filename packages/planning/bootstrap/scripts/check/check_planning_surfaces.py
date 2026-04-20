@@ -58,6 +58,8 @@ WARNING_EXECPLAN_NOTEBOOK_DRIFT = "execplan_notebook_drift"
 WARNING_EXECPLAN_UNDER_SPECIFIED = "execplan_under_specified"
 WARNING_EXECPLAN_CLOSURE_DRIFT = "execplan_closure_drift"
 WARNING_EXECPLAN_ACTIVE_SET_PRESSURE = "execplan_active_set_pressure"
+WARNING_EXECPLAN_PROOF_DRIFT = "execplan_proof_drift"
+WARNING_EXECPLAN_INTENT_SATISFACTION_DRIFT = "execplan_intent_satisfaction_drift"
 WARNING_ROADMAP_EXECUTION_DRIFT = "roadmap_execution_drift"
 WARNING_ROADMAP_MISSING_PROMOTION_SIGNAL = "roadmap_missing_promotion_signal"
 WARNING_ROADMAP_MISSING_REOPEN_SIGNAL = "roadmap_missing_reopen_signal"
@@ -1391,6 +1393,57 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                             WARNING_EXECPLAN_UNDER_SPECIFIED,
                             _render_path(path),
                             f"Completed execplan has an incomplete Execution Summary field: {field_name}.",
+                        )
+                    )
+                    break
+
+        proof_report, proof_report_bullets = _extract_section_stats(lines, "Proof Report")
+        proof_report_fields = _extract_kv_fields(proof_report)
+        if proof_report_bullets == 0 or not [line for line in proof_report if line.strip()]:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_PROOF_DRIFT,
+                    _render_path(path),
+                    "Completed execplan is missing a Proof Report.",
+                )
+            )
+        else:
+            for field_name in ("validation proof", "proof achieved now", 'evidence for "proof achieved" state'):
+                value = proof_report_fields.get(field_name, "").strip()
+                if not value or value.lower() in {"pending", "tbd", "todo", "not completed yet", "none yet"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_PROOF_DRIFT,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Proof Report field: {field_name}.",
+                        )
+                    )
+                    break
+
+        intent_satisfaction, intent_satisfaction_bullets = _extract_section_stats(lines, "Intent Satisfaction")
+        intent_satisfaction_fields = _extract_kv_fields(intent_satisfaction)
+        if intent_satisfaction_bullets == 0 or not [line for line in intent_satisfaction if line.strip()]:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_INTENT_SATISFACTION_DRIFT,
+                    _render_path(path),
+                    "Completed execplan is missing an Intent Satisfaction section.",
+                )
+            )
+        else:
+            for field_name in (
+                "original intent",
+                "was original intent fully satisfied?",
+                "evidence of intent satisfaction",
+                "unsolved intent passed to",
+            ):
+                value = intent_satisfaction_fields.get(field_name, "").strip()
+                if not value or value.lower() in {"pending", "tbd", "todo", "not completed yet", "none yet"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_INTENT_SATISFACTION_DRIFT,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Intent Satisfaction field: {field_name}.",
                         )
                     )
                     break

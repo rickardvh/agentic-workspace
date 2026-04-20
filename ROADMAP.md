@@ -22,7 +22,12 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Active Handoff
 
+- Lane: Ownership boundary and low-residue installs
+  ID: ownership-boundary-and-local-only-mode
+  Surface: docs/execplans/local-only-residue-via-git-exclude.md
+  Why now: The lane is really about consolidating package-owned state into one unambiguous home inside the package install tree; residue cleanup is the downstream consequence that makes the boundary feel unobtrusive.
 - The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, repo-directed improvement evidence-threshold, validation-friction repo-friction, config-driven execution posture, config-driven autonomy and agnostic improvements, startup front door clarity and agent-agnostic first contact, Memory trust/usefulness/routing/capture, Memory trust/habitual-pull, routine recovery compression/convergence, compression-and-convergence-of-operating-model, rotating-agent-economics, portable-declarative-contracts-beyond-python-cli, signal-hygiene-and-evidence-based-improvement, intent-satisfaction-validation, the earlier `#220`-`#231` tranche, and the ownership-boundary-and-local-only-mode lane are complete.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, repo-directed improvement evidence-threshold, validation-friction repo-friction, config-driven execution posture, config-driven autonomy and agnostic improvements, startup front door clarity and agent-agnostic first contact, Memory trust/usefulness/routing/capture, Memory trust/habitual-pull, routine recovery compression/convergence, compression-and-convergence-of-operating-model, rotating-agent-economics, portable-declarative-contracts-beyond-python-cli, signal-hygiene-and-evidence-based-improvement, intent-satisfaction-validation, and the earlier `#220`-`#231` tranche are complete.
 
 ## Candidate Lanes
 
@@ -38,7 +43,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Lane: System intent and planning trust
   ID: system-intent-and-planning-trust
   Priority: third
-  Issues: #232, #229, #220, #222, #221
+  Issues: #236, #237, #238, #232, #229, #220, #222, #221
   Outcome: Preserve higher-level product intent and make durable planning/closure semantics more trustworthy across tasks, issues, and sessions.
   Why now: The repo already validates local slices well; the remaining gap is durable intent and honest follow-through.
   Promotion signal: Promote when local success is not enough to preserve later proof, closure truthfulness, or cross-session alignment.
