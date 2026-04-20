@@ -721,7 +721,12 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             )
         )
 
-    if "TODO.md" in first_reads_lower or ".agentic-workspace/planning/state.toml" in first_reads_lower or "roadmap.md" in first_reads_lower or "docs/execplans/readme.md" in first_reads_lower:
+    if (
+        "TODO.md" in first_reads_lower
+        or ".agentic-workspace/planning/state.toml" in first_reads_lower
+        or "roadmap.md" in first_reads_lower
+        or "docs/execplans/readme.md" in first_reads_lower
+    ):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
@@ -765,7 +770,6 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
                 "Manifest conditional_reads must mention the summary-first planning recovery query.",
             )
         )
-
 
     if not any("do not bulk-read all planning surfaces" in row for row in conditional_reads_lower):
         warnings.append(

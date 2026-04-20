@@ -23,7 +23,8 @@ def test_planning_clean_install() -> None:
 
         # Verify required files exist
         assert (target / ".agentic-workspace/planning/state.toml").exists(), "state.toml not found after install"
-        assert not (target / "ROADMAP.md").exists(), "ROADMAP.md should not be created on clean install"
+        assert (target / "TODO.md").exists(), "TODO.md compatibility view not found after install"
+        assert (target / "ROADMAP.md").exists(), "ROADMAP.md compatibility view not found after install"
         assert (target / "AGENTS.md").exists(), "AGENTS.md not found after install"
 
 

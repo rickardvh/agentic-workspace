@@ -53,7 +53,9 @@ def render_quickstart(manifest: dict) -> str:
         if key is None:
             lines.append("## Source of truth")
             lines.append("")
-            lines.append(f"- Active queue and lightweight direct tasks: `{bootstrap.get('task_source_of_truth', '.agentic-workspace/planning/state.toml')}`")
+            lines.append(
+                f"- Active queue and lightweight direct tasks: `{bootstrap.get('task_source_of_truth', '.agentic-workspace/planning/state.toml')}`"
+            )
             lines.append(f"- Active feature plans: `{bootstrap.get('active_plan_dir', 'docs/execplans/')}`")
             lines.append(f"- Archived plans: `{bootstrap.get('archived_plan_dir', 'docs/execplans/archive/')}`")
             lines.append(f"- Long-horizon planning: `{bootstrap.get('roadmap_source_of_truth', '.agentic-workspace/planning/state.toml')}`")
