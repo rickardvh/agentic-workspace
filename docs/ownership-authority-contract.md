@@ -32,6 +32,7 @@ That command is the workspace-level query surface for:
 - module-managed roots
 - managed fences
 - the main authority surfaces by concern
+- the current boundary review that separates package-owned state, repo-owned state, and the smallest explicit repo hook
 
 When the question is already narrow, prefer the compact selector path:
 
@@ -80,6 +81,17 @@ Those forms return the compact contract answer profile from [`docs/compact-contr
 - Keep package-local behavior package-local.
 - Keep the workspace layer queryable and thin; it should expose ownership, not absorb domain ownership from planning or memory.
 - Treat generated-surface trust as related but separate: ownership says who owns a surface, not whether a mirror is fresh.
+- Use the full `agentic-workspace ownership --target ./repo --format json` surface to inventory package-owned, repo-owned, and middle-ground surfaces before changing install or uninstall behavior.
+
+## Boundary Review
+
+The full ownership payload includes a `boundary_review` section that groups the current surface set into:
+
+- package-owned module roots and managed surfaces under `.agentic-workspace/`
+- repo-owned authority surfaces such as `AGENTS.md`, `TODO.md`, and `ROADMAP.md`
+- middle-ground managed fences inside repo-owned files, with the workflow pointer fence in `AGENTS.md` as the smallest explicit repo hook for startup
+
+Use that review when the task is boundary work, low-residue install/uninstall work, or any change that needs a current surface inventory before implementation.
 
 ## Relationship To Other Docs
 

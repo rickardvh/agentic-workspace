@@ -4700,6 +4700,81 @@ def _ownership_answer_for_path(payload: dict[str, Any], *, repo_path: str) -> tu
     return ({"path": normalized}, False)
 
 
+def _ownership_boundary_review(
+    *,
+    module_roots: list[dict[str, Any]],
+    managed_surfaces: list[dict[str, Any]],
+    fences: list[dict[str, Any]],
+    authority_surfaces: list[dict[str, Any]],
+) -> dict[str, Any]:
+    def _surface_entry(*, surface: str, owner: str, ownership: str, summary: str | None = None, source: str | None = None) -> dict[str, Any]:
+        entry: dict[str, Any] = {
+            "surface": surface,
+            "owner": owner,
+            "ownership": ownership,
+        }
+        if summary:
+            entry["summary"] = summary
+        if source:
+            entry["source"] = source
+        return entry
+
+    package_owned = {
+        "module_roots": [
+            _surface_entry(
+                surface=str(entry.get("path", "")),
+                owner=str(entry.get("module", "")),
+                ownership=str(entry.get("ownership", "")),
+                summary=str(entry.get("uninstall_policy", "")) or None,
+                source="module_root",
+            )
+            for entry in module_roots
+        ],
+        "managed_surfaces": [
+            _surface_entry(
+                surface=str(entry.get("path", "")),
+                owner=str(entry.get("module", "")),
+                ownership=str(entry.get("ownership", "")),
+                summary=str(entry.get("kind", "")) or None,
+                source="managed_surface",
+            )
+            for entry in managed_surfaces
+        ],
+    }
+    repo_owned = {
+        "authority_surfaces": [
+            _surface_entry(
+                surface=str(entry.get("surface", "")),
+                owner=str(entry.get("owner", "")),
+                ownership=str(entry.get("ownership", "")),
+                summary=str(entry.get("concern", "")) or None,
+                source="authority_surface",
+            )
+            for entry in authority_surfaces
+            if str(entry.get("ownership", "")) == "repo_owned"
+        ],
+    }
+    middle_ground = {
+        "managed_fences": [
+            _surface_entry(
+                surface=f"{str(entry.get('file', '')).strip()}#agentic-workspace:workflow",
+                owner=str(entry.get("module", "")),
+                ownership=str(entry.get("ownership", "")),
+                summary=str(entry.get("name", "")) or None,
+                source="managed_fence",
+            )
+            for entry in fences
+        ],
+    }
+    smallest_explicit_repo_hook = middle_ground["managed_fences"][0] if middle_ground["managed_fences"] else None
+    return {
+        "package_owned": package_owned,
+        "repo_owned": repo_owned,
+        "middle_ground": middle_ground,
+        "smallest_explicit_repo_hook": smallest_explicit_repo_hook,
+    }
+
+
 def _select_ownership_payload(
     payload: dict[str, Any],
     *,
@@ -4755,6 +4830,18 @@ def _emit_ownership(
     print("Authority surfaces:")
     for entry in payload["authority_surfaces"]:
         print(f"- {entry['concern']}: {entry['surface']} ({entry['owner']}, {entry['ownership']}, authority={entry['authority']})")
+    print("Boundary review:")
+    for entry in payload["boundary_review"]["repo_owned"]["authority_surfaces"]:
+        print(f"- repo-owned: {entry['surface']} ({entry['owner']}, {entry['ownership']})")
+    for entry in payload["boundary_review"]["package_owned"]["module_roots"]:
+        print(f"- package-owned: {entry['surface']} ({entry['owner']}, {entry['ownership']})")
+    for entry in payload["boundary_review"]["package_owned"]["managed_surfaces"]:
+        print(f"- package-owned: {entry['surface']} ({entry['owner']}, {entry['ownership']})")
+    for entry in payload["boundary_review"]["middle_ground"]["managed_fences"]:
+        print(f"- middle-ground: {entry['surface']} ({entry['owner']}, {entry['ownership']})")
+    hook = payload["boundary_review"]["smallest_explicit_repo_hook"]
+    if hook is not None:
+        print(f"Smallest explicit repo hook: {hook['surface']} ({hook['owner']}, {hook['ownership']})")
     if payload["warnings"]:
         print("Warnings:")
         for warning in payload["warnings"]:
@@ -4798,6 +4885,12 @@ def _ownership_payload(*, target_root: Path, descriptors: dict[str, ModuleDescri
         "managed_surfaces": managed_surfaces,
         "fences": fences,
         "authority_surfaces": authority_surfaces,
+        "boundary_review": _ownership_boundary_review(
+            module_roots=module_roots,
+            managed_surfaces=managed_surfaces,
+            fences=fences,
+            authority_surfaces=authority_surfaces,
+        ),
         "warnings": warnings,
     }
 

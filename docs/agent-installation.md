@@ -38,6 +38,7 @@ Compact routing docs when present:
 Rules:
 - Prefer conservative review over replacing repo-owned workflow surfaces in ambiguous repos.
 - Keep planning and memory ownership boundaries explicit.
+- Use `agentic-workspace ownership --target ./repo --format json` before changing startup or uninstall behavior when you need the current package-owned versus repo-owned surface split.
 - Workflow artifact profile: repo-owned.
 - TODO.md and docs/execplans stay authoritative; no extra runtime artifact should carry durable state.
 - If bootstrap writes .agentic-workspace/bootstrap-handoff.md, treat that file as the immediate next-action brief before normal work resumes.

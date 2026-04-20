@@ -26,12 +26,12 @@
 
 ## Iterative Follow-Through
 
-- What this slice enabled: a concrete lane for separating package-owned state from repo-owned surfaces.
+- What this slice enabled: a concrete ownership review surface that now classifies package-owned, repo-owned, and middle-ground surfaces directly in the `ownership` command.
 - Intentionally deferred: actual installer and uninstall implementation.
 - Discovered implications: the boundary review needs to stay explicit enough that future storage backends can move without changing ownership semantics.
-- Proof achieved now: roadmap promotion and active-planning capture.
-- Validation still needed: current surface inventory and a minimally explicit repo hook decision.
-- Next likely slice: classify package-owned, repo-owned, and ambiguous surfaces, then identify the smallest explicit repo hook that still preserves startup.
+- Proof achieved now: the ownership command returns a current surface inventory and points to the smallest explicit repo hook.
+- Validation still needed: dogfood the review against a repo with more ambiguous middle-ground surfaces before widening the lane.
+- Next likely slice: use the review to tighten the install/uninstall hook and then implement the smallest residue-reducing change.
 
 ## Delegated Judgment
 
@@ -50,7 +50,7 @@
 
 ## Immediate Next Action
 
-- Inventory the current surface set before changing implementation.
+- Use the boundary review to confirm the smallest stable repo hook before changing install or uninstall behavior.
 
 ## Blockers
 
@@ -72,6 +72,7 @@
 
 - uv run python scripts/check/check_planning_surfaces.py
 - uv run agentic-workspace summary --format json
+- uv run pytest tests/test_workspace_cli.py -q -k ownership_command_reports_authority_map
 
 ## Completion Criteria
 
@@ -81,11 +82,11 @@
 
 ## Execution Summary
 
-- Outcome delivered:
-- Validation confirmed:
-- Follow-on routed to:
-- Knowledge promoted (Memory/Docs/Config):
-- Resume from:
+- Outcome delivered: added a queryable ownership boundary review to `agentic-workspace ownership` so the repo can see package-owned, repo-owned, and middle-ground surfaces without inferring them from prose.
+- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`.
+- Follow-on routed to: the next install/uninstall residue-reduction slice on this lane.
+- Knowledge promoted (Memory/Docs/Config): docs/ownership-authority-contract.md, docs/agent-installation.md, docs/memory-metadata-contract.md
+- Resume from: the boundary review payload when the next slice starts.
 
 ## Drift Log
 

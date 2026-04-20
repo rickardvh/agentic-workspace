@@ -1003,6 +1003,11 @@ def test_ownership_command_reports_authority_map(tmp_path: Path, monkeypatch, ca
     assert payload["ledger_path"] == ".agentic-workspace/OWNERSHIP.toml"
     assert payload["authority_surfaces"][0]["concern"] == "active-execution-state"
     assert payload["authority_surfaces"][0]["surface"] == "TODO.md"
+    assert any(entry["surface"] == ".agentic-workspace/planning/" for entry in payload["boundary_review"]["package_owned"]["module_roots"])
+    assert any(entry["surface"] == ".agentic-workspace/OWNERSHIP.toml" for entry in payload["boundary_review"]["package_owned"]["managed_surfaces"])
+    assert payload["boundary_review"]["repo_owned"]["authority_surfaces"][0]["surface"] == "TODO.md"
+    assert payload["boundary_review"]["middle_ground"]["managed_fences"][0]["surface"] == "AGENTS.md#agentic-workspace:workflow"
+    assert payload["boundary_review"]["smallest_explicit_repo_hook"]["surface"] == "AGENTS.md#agentic-workspace:workflow"
     assert payload["warnings"] == []
 
 
