@@ -9,7 +9,6 @@ Choose this package when you want active work in a repository to stay bounded, r
 Use it for:
 
 - keeping active queue and candidate-lane state in `.agentic-workspace/planning/state.toml`
-- exposing optional generated thin views under `.agentic-workspace/planning/` when raw queue or roadmap inspection is useful
 - attaching bounded execution contracts to active work in `docs/execplans/`
 - capturing analysis-derived future-work findings in `docs/reviews/` before promotion
 - helping agents restart from checked-in execution state instead of chat-only context
@@ -34,7 +33,7 @@ Adoption shape:
 Collaboration shape:
 
 - Works best when active work is split into feature-scoped execplans instead of broad shared status files.
-- Keeps branch-local execution state in TODO plus the active execplan, while durable technical guidance stays elsewhere.
+- Keeps branch-local execution state in `.agentic-workspace/planning/state.toml` plus the active execplan, while durable technical guidance stays elsewhere.
 - Expects completed plans to archive quickly so active surfaces stay small and merge-friendly.
 
 Bundled skills:
@@ -143,7 +142,7 @@ It also defines the bounded-initiative rule: improve means locally, but do not s
 `docs/resumable-execution-contract.md` defines the smaller machine-readable restart contract as a view over the same canonical `planning_record`.
 `docs/environment-recovery-contract.md` defines both how task-local environment assumptions and recovery paths should be expressed without growing a second plan schema, and the ordered recovery path when lifecycle work, repo-state inspection, or validation restart becomes ambiguous.
 `docs/execution-summary-contract.md` defines the compact completion summary that archived slices should leave behind.
-`docs/planning-routing-contract.md` defines the hierarchy and routing rules between `.agentic-workspace/planning/state.toml`, generated compatibility views, execplans, and reviews.
+`docs/planning-routing-contract.md` defines the hierarchy and routing rules between `.agentic-workspace/planning/state.toml`, execplans, and reviews.
 
 For active planning, `agentic-planning-bootstrap summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. `active_contract`, `resumable_contract`, `follow_through_contract`, `hierarchy_contract`, and `handoff_contract` remain thinner views over that record.
 For delegated execution, `agentic-planning-bootstrap handoff --format json` is the compact worker handoff derived from that same active planning state.
@@ -438,8 +437,6 @@ The package installs the checked-in planning contract and its supporting surface
 
 - `AGENTS.md`
 - `.agentic-workspace/planning/state.toml`
-- `.agentic-workspace/planning/TODO.md`
-- `.agentic-workspace/planning/ROADMAP.md`
 - `docs/execplans/README.md`
 - `docs/execplans/TEMPLATE.md`
 - `docs/execplans/archive/README.md`
@@ -477,8 +474,6 @@ In this monorepo checkout, the active operational planning install lives at the 
 
 ```text
 .agentic-workspace/planning/state.toml  # active queue + candidate lanes
-.agentic-workspace/planning/TODO.md     # generated thin active-queue view
-.agentic-workspace/planning/ROADMAP.md  # generated thin roadmap view
 docs/execplans/            # execution contracts
 docs/execplans/archive/    # completed plans
 scripts/check/             # validation tooling
@@ -604,7 +599,7 @@ This system is most useful when:
 
 `archive-plan --apply-cleanup` is intentionally narrow. It may remove completed active-queue items that still point at the archived plan and compress stale roadmap residue tied to that same thread, but it does not invent hidden state or perform broad automatic rewrites.
 
-`upgrade` is intentionally conservative: it refreshes package-managed helper surfaces, re-renders generated planning docs, and refreshes generated compatibility views under `.agentic-workspace/planning/`, while leaving repo-owned surfaces like `AGENTS.md` unchanged when they already exist.
+`upgrade` is intentionally conservative: it refreshes package-managed helper surfaces, re-renders generated planning docs, removes stale generated queue views from older installs, and leaves repo-owned surfaces like `AGENTS.md` unchanged when they already exist.
 When older active execplans were written against a previous template, the upgrade path is to reconcile those plans to the current contract shape, not to expect `upgrade` to rewrite them automatically.
 
 `uninstall` is intentionally safe: it removes managed files only when they still match package content and leaves locally modified files in place for manual review.

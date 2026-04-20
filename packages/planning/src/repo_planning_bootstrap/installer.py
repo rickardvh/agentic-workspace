@@ -23,8 +23,6 @@ PLANNING_MANAGED_ROOT = module_root("planning")
 PLANNING_SKILLS_MANAGED_ROOT = PLANNING_MANAGED_ROOT / "skills"
 PLANNING_MANIFEST_PATH = PLANNING_MANAGED_ROOT / "agent-manifest.json"
 PLANNING_STATE_PATH = PLANNING_MANAGED_ROOT / "state.toml"
-PLANNING_TODO_VIEW_PATH = PLANNING_MANAGED_ROOT / "TODO.md"
-PLANNING_ROADMAP_VIEW_PATH = PLANNING_MANAGED_ROOT / "ROADMAP.md"
 PLANNING_RENDER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "render_agent_docs.py"
 PLANNING_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
 PLANNING_MAINTAINER_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_maintainer_surfaces.py"
@@ -101,11 +99,6 @@ GENERATED_PAYLOAD_FILES = (
     Path("tools/AGENT_ROUTING.md"),
 )
 
-GENERATED_COMPATIBILITY_VIEW_FILES = (
-    PLANNING_TODO_VIEW_PATH,
-    PLANNING_ROADMAP_VIEW_PATH,
-)
-
 PAYLOAD_GUIDANCE_FRAGMENTS = {
     Path("docs/execplans/TEMPLATE.md"): (
         "concurrent edits merge cleanly",
@@ -119,6 +112,7 @@ PAYLOAD_GUIDANCE_FRAGMENTS = {
 }
 
 TODO_EMPTY_STATE_LINE = "- No active work right now."
+_COMPATIBILITY_VIEW_NOTICE = "<!-- GENERATED COMPATIBILITY VIEW: authoritative source is .agentic-workspace/planning/state.toml -->"
 
 PACKAGE_MANAGED_FILES = tuple(
     relative for relative in REQUIRED_PAYLOAD_FILES if relative not in ROOT_SURFACE_FILES and relative not in GENERATED_PAYLOAD_FILES
@@ -283,7 +277,7 @@ PLANNING_BUNDLED_SKILL_FILES = tuple(PLANNING_SKILLS_MANAGED_ROOT / relative for
 
 
 def _installed_surface_files() -> tuple[Path, ...]:
-    return REQUIRED_PAYLOAD_FILES + GENERATED_COMPATIBILITY_VIEW_FILES + PLANNING_BUNDLED_SKILL_FILES
+    return REQUIRED_PAYLOAD_FILES + PLANNING_BUNDLED_SKILL_FILES
 
 
 def resolve_target_root(target: str | Path | None, *, local_only: bool = False) -> Path:
@@ -316,7 +310,7 @@ def install_bootstrap(
     if not dry_run:
         _migrate_legacy_planning_surfaces(target_root, force=force)
         _ensure_state_toml_exists(target_root, overwrite=force)
-        _sync_compatibility_views(target_root)
+        _remove_generated_planning_views(target_root)
     if local_only and not dry_run:
         _ensure_local_ignored(target or Path.cwd())
     return result
@@ -341,7 +335,7 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) 
     if not dry_run:
         _migrate_legacy_planning_surfaces(target_root)
         _ensure_state_toml_exists(target_root)
-        _sync_compatibility_views(target_root)
+        _remove_generated_planning_views(target_root)
     return result
 
 
@@ -361,7 +355,7 @@ def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False
     if not dry_run:
         _migrate_legacy_planning_surfaces(target_root)
         _ensure_state_toml_exists(target_root)
-        _sync_compatibility_views(target_root)
+        _remove_generated_planning_views(target_root)
     return result
 
 
@@ -379,9 +373,7 @@ def uninstall_bootstrap(*, target: str | Path | None = None, dry_run: bool = Fal
         if not destination.exists():
             result.add("skipped", destination, "already absent")
             continue
-        if relative in GENERATED_COMPATIBILITY_VIEW_FILES:
-            removable_check = _can_remove_generated_compatibility_view(relative=relative, target_root=target_root)
-        elif relative in PLANNING_BUNDLED_SKILL_FILES:
+        if relative in PLANNING_BUNDLED_SKILL_FILES:
             removable_check = _remove_bundled_skill_file(relative=relative, target_root=target_root)
         else:
             removable_check = _can_remove_payload_file(relative=relative, target_root=target_root)
@@ -454,7 +446,7 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
 
     _add_contract_surface_summary(result, target_root)
 
-    for relative in (Path("AGENTS.md"), PLANNING_STATE_PATH, PLANNING_ROADMAP_VIEW_PATH):
+    for relative in (Path("AGENTS.md"), PLANNING_STATE_PATH):
         path = target_root / relative
         if path.exists():
             text = path.read_text(encoding="utf-8")
@@ -705,7 +697,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
         next_action = f"Continue active TODO item {first_item.get('id', '')}: {first_item.get('surface', '')}".strip(": ")
     elif summary["roadmap"]["candidate_count"]:
         next_action = "Promote the highest-priority roadmap candidate when the next bounded slice is ready."
-        commands.append(f"Read {PLANNING_ROADMAP_VIEW_PATH.as_posix()}")
+        commands.append("Inspect roadmap lanes in .agentic-workspace/planning/state.toml")
 
     health = "healthy"
     if summary["warning_count"]:
@@ -1365,7 +1357,7 @@ def _active_hierarchy_contract(
     minimal_refs = _dedupe(
         [
             *follow_through_contract.get("minimal_refs", []),
-            *([PLANNING_ROADMAP_VIEW_PATH.as_posix()] if parent_lane.get("id") or roadmap_lanes else []),
+            *([".agentic-workspace/planning/state.toml"] if parent_lane.get("id") or roadmap_lanes else []),
         ]
     )
     return {
@@ -1824,29 +1816,41 @@ def archive_execplan(
         result.add("manual review", destination, "archive destination already exists")
         return result
 
-    roadmap_cleanup_path = _preferred_compatibility_view_path(
-        target_root=target_root,
-        managed_relative=PLANNING_ROADMAP_VIEW_PATH,
-        legacy_relative=Path("ROADMAP.md"),
-    )
-    cleanup_roadmap = _cleanup_roadmap_archive_followup(roadmap_cleanup_path, plan_path)
-    if cleanup_roadmap["changed"] and apply_cleanup:
+    cleanup_roadmap_state = _cleanup_state_roadmap_followup(target_root, plan_path)
+    if cleanup_roadmap_state["changed"] and apply_cleanup:
         action_kind = "would update" if dry_run else "updated"
-        for detail in cleanup_roadmap["details"]:
-            result.add(action_kind, roadmap_cleanup_path, detail)
-    elif cleanup_roadmap["changed"] or cleanup_roadmap["note"]:
+        for detail in cleanup_roadmap_state["details"]:
+            result.add(action_kind, target_root / PLANNING_STATE_PATH, detail)
+    elif cleanup_roadmap_state["changed"] or cleanup_roadmap_state["note"]:
         note = (
-            cleanup_roadmap["note"]
-            or f"{roadmap_cleanup_path.relative_to(target_root).as_posix()} has cleanup-ready residue tied to the archived plan."
+            cleanup_roadmap_state["note"]
+            or ".agentic-workspace/planning/state.toml has cleanup-ready roadmap residue tied to the archived plan."
         )
         result.warnings.append(
             {
                 "warning_class": "roadmap_archive_followup",
-                "path": roadmap_cleanup_path.relative_to(target_root).as_posix(),
+                "path": PLANNING_STATE_PATH.as_posix(),
                 "message": note,
             }
         )
-        result.add("suggested fix", roadmap_cleanup_path, note)
+        result.add("suggested fix", target_root / PLANNING_STATE_PATH, note)
+
+    legacy_roadmap_path = target_root / "ROADMAP.md"
+    cleanup_legacy_roadmap = _cleanup_roadmap_archive_followup(legacy_roadmap_path, plan_path)
+    if cleanup_legacy_roadmap["changed"] and apply_cleanup:
+        action_kind = "would update" if dry_run else "updated"
+        for detail in cleanup_legacy_roadmap["details"]:
+            result.add(action_kind, legacy_roadmap_path, detail)
+    elif cleanup_legacy_roadmap["changed"] or cleanup_legacy_roadmap["note"]:
+        note = cleanup_legacy_roadmap["note"] or "ROADMAP.md has cleanup-ready residue tied to the archived plan."
+        result.warnings.append(
+            {
+                "warning_class": "roadmap_archive_followup",
+                "path": "ROADMAP.md",
+                "message": note,
+            }
+        )
+        result.add("suggested fix", legacy_roadmap_path, note)
 
     if dry_run:
         result.add("would move", destination, f"archive {plan_path.relative_to(target_root).as_posix()}")
@@ -1856,8 +1860,10 @@ def archive_execplan(
     shutil.move(str(plan_path), str(destination))
     if cleanup_todo_lines is not None:
         (target_root / ".agentic-workspace/planning/state.toml").write_text("\n".join(cleanup_todo_lines).rstrip() + "\n", encoding="utf-8")
-    if cleanup_roadmap["changed"] and apply_cleanup:
-        roadmap_cleanup_path.write_text(cleanup_roadmap["text"], encoding="utf-8")
+    if cleanup_roadmap_state["changed"] and apply_cleanup:
+        _write_state_to_toml(target_root, cleanup_roadmap_state["state"])
+    if cleanup_legacy_roadmap["changed"] and apply_cleanup and cleanup_legacy_roadmap["text"] is not None:
+        legacy_roadmap_path.write_text(cleanup_legacy_roadmap["text"], encoding="utf-8")
     result.add("moved", destination, f"archived {plan_path.relative_to(target_root).as_posix()}")
     return result
 
@@ -2702,6 +2708,70 @@ def _cleanup_roadmap_archive_followup(roadmap_path: Path, plan_path: Path) -> di
     }
 
 
+def _cleanup_state_roadmap_followup(target_root: Path, plan_path: Path) -> dict[str, Any]:
+    state = _read_state_from_toml(target_root)
+    if not state:
+        return {"changed": False, "state": None, "details": [], "note": None}
+
+    roadmap = state.get("roadmap")
+    if not isinstance(roadmap, dict):
+        return {"changed": False, "state": None, "details": [], "note": None}
+
+    tokens = _plan_stem_tokens(plan_path)
+    continuation_label = _roadmap_continuation_label(plan_path)
+    preserved_tokens = set(_label_tokens(continuation_label))
+    changed = False
+    details: list[str] = []
+
+    lanes = roadmap.get("lanes", [])
+    if isinstance(lanes, list):
+        kept_lanes: list[dict[str, Any]] = []
+        lane_removed = False
+        for lane in lanes:
+            if not isinstance(lane, dict):
+                kept_lanes.append(lane)
+                continue
+            lane_identity = " ".join(
+                str(value).strip().lower() for value in (lane.get("title", ""), lane.get("id", "")) if str(value).strip()
+            )
+            if preserved_tokens and all(token in lane_identity for token in preserved_tokens):
+                kept_lanes.append(lane)
+                continue
+            if tokens and any(token in lane_identity for token in tokens):
+                lane_removed = True
+                continue
+            kept_lanes.append(lane)
+        if lane_removed:
+            roadmap["lanes"] = kept_lanes
+            changed = True
+            details.append("remove archived-plan candidate residue from roadmap lanes")
+
+    candidates = roadmap.get("candidates", [])
+    if isinstance(candidates, list):
+        kept_candidates: list[dict[str, Any]] = []
+        candidate_removed = False
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                kept_candidates.append(candidate)
+                continue
+            summary = str(candidate.get("summary", "")).strip().lower()
+            if preserved_tokens and all(token in summary for token in preserved_tokens):
+                kept_candidates.append(candidate)
+                continue
+            if tokens and any(token in summary for token in tokens):
+                candidate_removed = True
+                continue
+            kept_candidates.append(candidate)
+        if candidate_removed:
+            roadmap["candidates"] = kept_candidates
+            changed = True
+            details.append("remove archived-plan candidate residue from roadmap summaries")
+
+    if not changed:
+        return {"changed": False, "state": None, "details": [], "note": None}
+    return {"changed": True, "state": state, "details": details, "note": None}
+
+
 def _cleanup_roadmap_section(
     lines: list[str],
     heading: str,
@@ -2786,20 +2856,6 @@ def _read_state_from_toml(target_root: Path) -> dict[str, Any] | None:
         return None
 
 
-def _is_generated_compatibility_view(path: Path) -> bool:
-    return path.exists() and _COMPATIBILITY_VIEW_NOTICE in path.read_text(encoding="utf-8")
-
-
-def _preferred_compatibility_view_path(*, target_root: Path, managed_relative: Path, legacy_relative: Path) -> Path:
-    managed_path = target_root / managed_relative
-    legacy_path = target_root / legacy_relative
-    if legacy_path.exists() and not _is_generated_compatibility_view(legacy_path):
-        return legacy_path
-    if managed_path.exists():
-        return managed_path
-    return legacy_path
-
-
 def _write_state_to_toml(target_root: Path, state: dict[str, Any]) -> None:
     state_path = target_root / PLANNING_STATE_PATH
     state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -2838,145 +2894,6 @@ def _write_state_to_toml(target_root: Path, state: dict[str, Any]) -> None:
     state_path.write_text("\n".join(lines), encoding="utf-8")
 
 
-_COMPATIBILITY_VIEW_NOTICE = "<!-- GENERATED COMPATIBILITY VIEW: authoritative source is .agentic-workspace/planning/state.toml -->"
-
-
-def _render_todo_compatibility_view(state: dict[str, Any]) -> str:
-    todo_data = state.get("todo", {}) if isinstance(state, dict) else {}
-    active_items = todo_data.get("active_items", []) if isinstance(todo_data, dict) else []
-    queued_items = todo_data.get("queued_items", []) if isinstance(todo_data, dict) else []
-
-    def _render_item(item: dict[str, Any], *, default_status: str) -> list[str]:
-        status = str(item.get("status", "")).strip() or default_status
-        lines = [f"- ID: {str(item.get('id', '')).strip()}", f"  Status: {status}"]
-        surface = str(item.get("surface", "")).strip()
-        why_now = str(item.get("why_now", "")).strip()
-        if surface:
-            lines.append(f"  Surface: {surface}")
-        if why_now:
-            lines.append(f"  Why now: {why_now}")
-        return lines
-
-    lines: list[str] = [
-        "# TODO",
-        "",
-        _COMPATIBILITY_VIEW_NOTICE,
-        "",
-        "This file is a compatibility projection of `.agentic-workspace/planning/state.toml`.",
-        "",
-        "## Now",
-    ]
-
-    if active_items:
-        for item in active_items:
-            lines.extend(_render_item(item, default_status="in-progress"))
-            lines.append("")
-        if lines[-1] == "":
-            lines.pop()
-    else:
-        lines.append("- No active work right now.")
-
-    lines.extend(["", "## Next"])
-    if queued_items:
-        for item in queued_items:
-            lines.extend(_render_item(item, default_status="queued"))
-            lines.append("")
-        if lines[-1] == "":
-            lines.pop()
-    else:
-        lines.append("- No queued items right now.")
-
-    return "\n".join(lines).rstrip() + "\n"
-
-
-def _render_roadmap_compatibility_view(state: dict[str, Any]) -> str:
-    roadmap_data = state.get("roadmap", {}) if isinstance(state, dict) else {}
-    lanes = roadmap_data.get("lanes", []) if isinstance(roadmap_data, dict) else []
-    candidates = roadmap_data.get("candidates", []) if isinstance(roadmap_data, dict) else []
-
-    lines: list[str] = [
-        "# ROADMAP",
-        "",
-        _COMPATIBILITY_VIEW_NOTICE,
-        "",
-        "This file is a compatibility projection of `.agentic-workspace/planning/state.toml`.",
-        "",
-        "## Candidate Lanes",
-    ]
-
-    lane_rows: list[dict[str, Any]] = []
-    if lanes:
-        lane_rows = [lane for lane in lanes if isinstance(lane, dict)]
-    elif candidates:
-        for candidate in candidates:
-            summary = str(candidate.get("summary", "")).strip()
-            if not summary:
-                continue
-            lane_rows.append(
-                {
-                    "id": "",
-                    "title": summary,
-                    "priority": str(candidate.get("priority", "")).strip(),
-                    "issues": [],
-                    "outcome": "",
-                    "reason": "",
-                    "promotion_signal": "",
-                    "suggested_first_slice": "",
-                }
-            )
-
-    if lane_rows:
-        for lane in lane_rows:
-            title = str(lane.get("title", "")).strip()
-            if not title:
-                continue
-            lines.append(f"- Lane: {title}")
-            lane_id = str(lane.get("id", "")).strip()
-            priority = str(lane.get("priority", "")).strip()
-            issues = lane.get("issues", [])
-            outcome = str(lane.get("outcome", "")).strip()
-            reason = str(lane.get("reason", "")).strip()
-            signal = str(lane.get("promotion_signal", "")).strip()
-            first_slice = str(lane.get("suggested_first_slice", "")).strip()
-            if lane_id:
-                lines.append(f"  ID: {lane_id}")
-            if priority:
-                lines.append(f"  Priority: {priority}")
-            if isinstance(issues, list) and issues:
-                rendered_issues = ", ".join(str(issue).strip() for issue in issues if str(issue).strip())
-                if rendered_issues:
-                    lines.append(f"  Issues: {rendered_issues}")
-            if outcome:
-                lines.append(f"  Outcome: {outcome}")
-            if reason:
-                lines.append(f"  Why now: {reason}")
-            if signal:
-                lines.append(f"  Promotion signal: {signal}")
-            if first_slice:
-                lines.append(f"  Suggested first slice: {first_slice}")
-            lines.append("")
-        if lines[-1] == "":
-            lines.pop()
-    else:
-        lines.append("No candidate lanes right now.")
-
-    lines.extend(["", "## Reopen Conditions", "", "- Reopen when a queue or report signals new work."])
-
-    return "\n".join(lines).rstrip() + "\n"
-
-
-def _sync_compatibility_views(target_root: Path) -> None:
-    state = _read_state_from_toml(target_root)
-    if not state:
-        return
-    todo_view_path = target_root / PLANNING_TODO_VIEW_PATH
-    roadmap_view_path = target_root / PLANNING_ROADMAP_VIEW_PATH
-    todo_view_path.parent.mkdir(parents=True, exist_ok=True)
-    todo_view_path.write_text(_render_todo_compatibility_view(state), encoding="utf-8")
-    roadmap_view_path.write_text(_render_roadmap_compatibility_view(state), encoding="utf-8")
-    _remove_legacy_root_compatibility_views(target_root)
-
-
 def _ensure_state_toml_exists(target_root: Path, *, overwrite: bool = False) -> None:
     """Ensure a baseline state.toml exists in the managed planning root."""
     state_path = target_root / PLANNING_STATE_PATH
@@ -2996,22 +2913,19 @@ def _ensure_state_toml_exists(target_root: Path, *, overwrite: bool = False) -> 
     _write_state_to_toml(target_root, state)
 
 
-def _remove_legacy_root_compatibility_views(target_root: Path) -> None:
-    for relative in (Path("TODO.md"), Path("ROADMAP.md")):
+def _remove_generated_planning_views(target_root: Path) -> None:
+    for relative in (
+        Path("TODO.md"),
+        Path("ROADMAP.md"),
+        Path(".agentic-workspace/planning/TODO.md"),
+        Path(".agentic-workspace/planning/ROADMAP.md"),
+    ):
         path = target_root / relative
-        if path.exists() and _COMPATIBILITY_VIEW_NOTICE in path.read_text(encoding="utf-8"):
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if "GENERATED COMPATIBILITY VIEW" in text:
             path.unlink()
-
-
-def _can_remove_generated_compatibility_view(*, relative: Path, target_root: Path) -> bool:
-    destination = target_root / relative
-    if not destination.exists():
-        return True
-    try:
-        text = destination.read_text(encoding="utf-8")
-    except OSError:
-        return False
-    return _COMPATIBILITY_VIEW_NOTICE in text
 
 
 def _migrate_legacy_planning_surfaces(target_root: Path, *, force: bool = False) -> bool:

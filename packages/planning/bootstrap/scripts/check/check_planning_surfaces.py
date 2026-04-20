@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Advisory planning-surface health check.
 
-Warn when TODO, active execplans, and ROADMAP drift away from the intended
-three-layer planning split. This check is advisory and exits with 0.
+Warn when package-owned planning state, active execplans, and any lingering
+legacy planning views drift away from the intended split. This check is
+advisory and exits with 0.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ import argparse
 import importlib.util
 import json
 import re
+import tomllib
 from pathlib import Path
 from typing import NamedTuple
 
@@ -33,12 +35,9 @@ def _find_repo_root() -> Path:
 
 REPO_ROOT = _find_repo_root()
 STATE_TOML_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "state.toml"
-MANAGED_TODO_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "TODO.md"
-MANAGED_ROADMAP_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "ROADMAP.md"
 LEGACY_TODO_PATH = REPO_ROOT / "TODO.md"
 LEGACY_ROADMAP_PATH = REPO_ROOT / "ROADMAP.md"
 EXECPLAN_DIR = REPO_ROOT / "docs" / "execplans"
-GENERATED_COMPATIBILITY_NOTICE = "generated compatibility view"
 
 TODO_MAX_LINES = 150
 TODO_MAX_NOW_ITEMS = 3
@@ -222,12 +221,64 @@ def _read_lines(path: Path) -> list[str]:
     return path.read_text(encoding="utf-8").splitlines()
 
 
-def _compatibility_view_path(*, managed: Path, legacy: Path) -> Path:
-    if legacy.exists() and GENERATED_COMPATIBILITY_NOTICE not in legacy.read_text(encoding="utf-8").lower():
-        return legacy
-    if managed.exists():
-        return managed
-    return legacy
+def _read_state_toml(path: Path = STATE_TOML_PATH) -> dict[str, object] | None:
+    if not path.exists():
+        return None
+    try:
+        payload = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (tomllib.TOMLDecodeError, OSError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _todo_items_from_state(state: dict[str, object] | None) -> list[dict[str, str]]:
+    if not isinstance(state, dict):
+        return []
+    todo = state.get("todo")
+    if not isinstance(todo, dict):
+        return []
+    items: list[dict[str, str]] = []
+
+    for raw in todo.get("active_items", []):
+        if not isinstance(raw, dict):
+            continue
+        items.append(
+            {
+                "id": str(raw.get("id", "")),
+                "surface": str(raw.get("surface", "")),
+                "why_now": str(raw.get("why_now", "")),
+                "status": "in-progress",
+            }
+        )
+
+    for raw in todo.get("queued_items", []):
+        if not isinstance(raw, dict):
+            continue
+        items.append(
+            {
+                "id": str(raw.get("id", "")),
+                "surface": str(raw.get("surface", "")),
+                "why_now": str(raw.get("why_now", "")),
+                "status": str(raw.get("status", "")),
+            }
+        )
+
+    return items
+
+
+def _roadmap_counts_from_state(state: dict[str, object] | None) -> tuple[int, int]:
+    if not isinstance(state, dict):
+        return 0, 0
+    roadmap = state.get("roadmap")
+    if not isinstance(roadmap, dict):
+        return 0, 0
+    lanes = roadmap.get("lanes", [])
+    candidates = roadmap.get("candidates", [])
+    lane_count = len(lanes) if isinstance(lanes, list) else 0
+    candidate_count = len(candidates) if isinstance(candidates, list) else 0
+    if candidate_count == 0 and lane_count:
+        candidate_count = lane_count
+    return lane_count, candidate_count
 
 
 def _section_content(lines: list[str], section_name: str) -> list[str]:
@@ -1755,20 +1806,30 @@ def _check_execplan_active_set(execplan_dir: Path) -> list[PlanningWarning]:
 
 
 def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWarning]:
-    todo_path = _compatibility_view_path(
-        managed=repo_root / ".agentic-workspace" / "planning" / "TODO.md",
-        legacy=repo_root / "TODO.md",
-    )
-    roadmap_path = _compatibility_view_path(
-        managed=repo_root / ".agentic-workspace" / "planning" / "ROADMAP.md",
-        legacy=repo_root / "ROADMAP.md",
-    )
+    state = _read_state_toml(repo_root / ".agentic-workspace" / "planning" / "state.toml")
+    todo_path = repo_root / "TODO.md"
+    roadmap_path = repo_root / "ROADMAP.md"
     execplan_dir = repo_root / "docs" / "execplans"
 
     warnings: list[PlanningWarning] = []
 
-    todo_warnings, todo_active_ids, todo_active_items = _check_todo(todo_path, repo_root=repo_root)
-    warnings.extend(todo_warnings)
+    if todo_path.exists():
+        todo_warnings, todo_active_ids, todo_active_items = _check_todo(todo_path, repo_root=repo_root)
+        warnings.extend(todo_warnings)
+    else:
+        todo_active_items = []
+        todo_active_ids = set()
+        for item in _todo_items_from_state(state):
+            status = item.get("status", "").lower()
+            if "in-progress" in status or "active" in status or "ongoing" in status:
+                todo_active_ids.add(item.get("id", ""))
+                todo_active_items.append(
+                    {
+                        "id": item.get("id", ""),
+                        "surface": item.get("surface", ""),
+                        "why_now": item.get("why_now", ""),
+                    }
+                )
 
     execplan_active_ids: set[str] = set()
     for plan_path in _active_execplans(execplan_dir):
@@ -1777,8 +1838,9 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
         execplan_active_ids.update(plan_active_ids)
 
     warnings.extend(_check_execplan_active_set(execplan_dir))
-    warnings.extend(_check_roadmap(roadmap_path, todo_active_ids | execplan_active_ids))
-    warnings.extend(_check_promotion_linkage(roadmap_path=roadmap_path, active_items=todo_active_items))
+    if roadmap_path.exists():
+        warnings.extend(_check_roadmap(roadmap_path, todo_active_ids | execplan_active_ids))
+        warnings.extend(_check_promotion_linkage(roadmap_path=roadmap_path, active_items=todo_active_items))
     warnings.extend(_check_startup_policy(repo_root))
     warnings.extend(_check_docs_surface_roles(repo_root))
     warnings.extend(_check_active_surface_hygiene(repo_root))
@@ -1787,29 +1849,39 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
 
 
 def gather_planning_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
-    todo_path = _compatibility_view_path(
-        managed=repo_root / ".agentic-workspace" / "planning" / "TODO.md",
-        legacy=repo_root / "TODO.md",
-    )
-    roadmap_path = _compatibility_view_path(
-        managed=repo_root / ".agentic-workspace" / "planning" / "ROADMAP.md",
-        legacy=repo_root / "ROADMAP.md",
-    )
+    state = _read_state_toml(repo_root / ".agentic-workspace" / "planning" / "state.toml")
+    todo_path = repo_root / "TODO.md"
+    roadmap_path = repo_root / "ROADMAP.md"
     execplan_dir = repo_root / "docs" / "execplans"
 
-    todo_lines = _read_lines(todo_path)
-    todo_items = _todo_item_blocks(todo_lines)
-    active_items = []
-    for block in todo_items:
-        status = block.get("status", "").lower()
-        if "in-progress" in status or "active" in status or "ongoing" in status:
-            active_items.append(
-                {
-                    "id": block.get("id", ""),
-                    "surface": block.get("surface", ""),
-                    "why_now": block.get("why now", ""),
-                }
-            )
+    if todo_path.exists():
+        todo_lines = _read_lines(todo_path)
+        todo_items = _todo_item_blocks(todo_lines)
+        active_items = []
+        for block in todo_items:
+            status = block.get("status", "").lower()
+            if "in-progress" in status or "active" in status or "ongoing" in status:
+                active_items.append(
+                    {
+                        "id": block.get("id", ""),
+                        "surface": block.get("surface", ""),
+                        "why_now": block.get("why now", ""),
+                    }
+                )
+    else:
+        todo_lines = []
+        todo_items = _todo_items_from_state(state)
+        active_items = [
+            {
+                "id": item.get("id", ""),
+                "surface": item.get("surface", ""),
+                "why_now": item.get("why_now", ""),
+            }
+            for item in todo_items
+            if "in-progress" in item.get("status", "").lower()
+            or "active" in item.get("status", "").lower()
+            or "ongoing" in item.get("status", "").lower()
+        ]
 
     active_execplans = []
     for plan_path in _active_execplans(execplan_dir):
@@ -1817,8 +1889,16 @@ def gather_planning_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
         if status and status not in {"completed", "done", "closed", "planned", "pending", "not-started"}:
             active_execplans.append({"path": _render_path(plan_path), "status": status})
 
-    candidate_section = _section_content(_read_lines(roadmap_path), "Next Candidate Queue")
-    lane_blocks = _candidate_lane_blocks(_read_lines(roadmap_path))
+    if roadmap_path.exists():
+        roadmap_lines = _read_lines(roadmap_path)
+        candidate_section = _section_content(roadmap_lines, "Next Candidate Queue")
+        lane_blocks = _candidate_lane_blocks(roadmap_lines)
+        lane_count = len(lane_blocks)
+        candidate_count = len(lane_blocks) if lane_blocks else sum(1 for line in candidate_section if re.match(r"^\s*-\s+", line))
+    else:
+        candidate_section = []
+        lane_blocks = []
+        lane_count, candidate_count = _roadmap_counts_from_state(state)
     warnings = gather_planning_warnings(repo_root=repo_root)
 
     return {
@@ -1838,8 +1918,8 @@ def gather_planning_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
             else 0,
         },
         "roadmap": {
-            "lane_count": len(lane_blocks),
-            "candidate_count": len(lane_blocks) if lane_blocks else sum(1 for line in candidate_section if re.match(r"^\s*-\s+", line)),
+            "lane_count": lane_count,
+            "candidate_count": candidate_count,
         },
     }
 

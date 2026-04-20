@@ -1,5 +1,7 @@
 [todo]
-active_items = []
+active_items = [
+  { id = "OWNERSHIP-BOUNDARY-AND-LOCAL-ONLY-MODE", surface = "docs/execplans/local-only-residue-via-git-exclude.md", why_now = "Issue #231 is only partially satisfied: planning authority moved into the package-owned home, but the broader ownership-boundary and low-residue intent still needs explicit verification or further tightening." },
+]
 queued_items = []
 
 [roadmap]

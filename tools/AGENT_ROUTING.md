@@ -31,11 +31,10 @@ Focused routing reference derived from `.agentic-workspace/planning/agent-manife
 ### `planning_surface_change`
 
 - Use when: Editing planning-for-execution surfaces, plan templates, or planning-surface checks.
-- Prefer when: the change affects TODO, ROADMAP, execplans, or the planning bootstrap itself.
+- Prefer when: the change affects planning state, execplans, generated agent docs, or the planning bootstrap itself.
 - Touches:
   - `AGENTS.md`
-  - `TODO.md`
-  - `ROADMAP.md`
+  - `.agentic-workspace/planning/state.toml`
   - `docs/upstream-task-intake.md`
   - `docs/lifecycle-and-config-contract.md`
   - `docs/routing-contract.md`

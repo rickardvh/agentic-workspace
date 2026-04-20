@@ -20,9 +20,9 @@ Resolve instruction conflicts in this order:
 1. Read `AGENTS.md`.
 2. Read `agentic-workspace summary --format json` for the compact planning state.
 3. Read `agentic-workspace config --target . --format json` when the current posture or startup entrypoint matters.
-4. Read `.agentic-workspace/planning/TODO.md` only when the compact summary shows active work that still needs raw queue detail.
+4. Inspect `.agentic-workspace/planning/state.toml` only when the compact summary is insufficient and raw queue detail is still needed.
 5. Read the active feature plan in `docs/execplans/` when the summary points there.
-6. Read `.agentic-workspace/planning/ROADMAP.md` only when promoting work.
+6. Inspect the roadmap data in `.agentic-workspace/planning/state.toml` only when promoting work.
 7. Load package-local docs only for the package being edited.
 8. Before touching a shipped package, refresh it to the latest checked-in version through that package's canonical update workflow so local work starts from the current package contract.
 9. When a change crosses package source, package payload, and root install boundaries, read `docs/extraction-and-discovery-contract.md` before editing.

@@ -22,11 +22,9 @@
 ```yaml
 slice:
  id: OWNERSHIP-BOUNDARY-AND-LOCAL-ONLY-MODE
- status: completed
+ status: in-progress
  state_source: .agentic-workspace/planning/state.toml
- compatibility_views:
-  - TODO.md
-  - ROADMAP.md
+ compatibility_views: []
 ```
 
 ## Intent Continuity
@@ -40,38 +38,38 @@ slice:
 
 - Required follow-on for the larger intended outcome: yes
 - Owner surface: docs/execplans/local-only-residue-via-git-exclude.md
-- Activation trigger: validation that the root TODO/ROADMAP surfaces are still carrying active planning authority instead of acting as package-owned projections
+- Activation trigger: validation that no installed compatibility queue views remain necessary and the remaining repo-facing surfaces are genuinely repo-owned
 
 ## Iterative Follow-Through
 
-- What this slice should enable: the active queue and roadmap should live in `.agentic-workspace/planning/state.toml`, with root `TODO.md` and `ROADMAP.md` downgraded to compatibility views.
+- What this slice should enable: the active queue and roadmap should live in `.agentic-workspace/planning/state.toml` without any installed compatibility queue views.
 - Intentionally deferred: any broader repo-root startup simplification beyond the package-owned planning boundary.
 - Discovered implications: the repo-owned startup hook should remain small while the package-owned home carries the active planning state explicitly.
 - Navigation difficulty discovered during interruption recovery: package source, package payload, and operational install are still too easy to confuse during active maintainer work, especially when an interrupted session left only a partial migration in place.
 - Orientation difficulty discovered during interruption recovery: re-establishing which open issues were follow-on product gaps versus direct blockers for this lane took extra issue and planning-surface rereading, which is a sign the current product shape still exposes too much planner-internal structure up front.
 - Deferred planning-trust follow-ons surfaced from the premature closeout: #236 separate slice completion from lane completion, #237 require an explicit gap check before archive or close, and #238 make closure depend on evidence, not confidence.
 - Proof needed now: package-owned planning state can be consolidated without forcing the repo to keep active authority in tracked root surfaces.
-- Validation still needed: dogfood the state migration on a real repo clone and confirm the root views are projections rather than the source of truth.
-- Next likely slice: finish wiring the state file into the planning summary, root view rendering, and install/upgrade flows.
+- Validation still needed: verify which remaining repo-facing surfaces are genuinely repo-owned versus package residue, and confirm uninstall/local-only behavior stays low-residue under that stricter boundary.
+- Next likely slice: review the remaining repo-facing ownership set after the planning-view move, then either tighten the boundary further or explicitly narrow the lane.
 
 ## Delegated Judgment
 
 - Requested outcome: issue `#231` and the ownership-boundary lane it represents.
 - Hard constraints: preserve repo-owned contracts, keep local-only compatible, and avoid broad installer rewrites.
 - Agent may decide locally: the exact git-local metadata path, the minimal block format, and the cleanup order.
-- Escalate when: the ignore residue cannot be moved without breaking local-only install or uninstall symmetry.
+- Escalate when: the remaining boundary question now requires a broader repo-owned versus package-owned review across Memory, startup hooks, or uninstall semantics rather than another bounded planning-only move.
 
 ## Active Milestone
 
-- Status: completed
-- Scope: Move package-owned planning state into one clear package-owned home and keep only a minimal repo-owned hook.
+- Status: in-progress
+- Scope: Verify whether the ownership-boundary lane is actually complete after the planning-view move, and either tighten the remaining repo-facing surfaces or narrow the lane honestly.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- None; this implementation slice is complete.
+- Compare the live issue intent for `#231` against the current ownership report and surface set, then reopen any still-ambiguous repo-facing product surfaces as explicit remaining scope.
 
 ## Blockers
 
@@ -79,10 +77,14 @@ slice:
 
 ## Touched Paths
 
-- TODO.md
-- ROADMAP.md
+- .agentic-workspace/planning/state.toml
 - docs/execplans/local-only-residue-via-git-exclude.md
+- README.md
+- packages/planning/AGENTS.md
+- packages/planning/README.md
 - packages/planning/src/repo_planning_bootstrap/installer.py
+- scripts/check/check_planning_surfaces.py
+- AGENTS.md
 
 ## Invariants
 
@@ -105,27 +107,28 @@ slice:
 - Package-owned state has a single clear home inside the package-owned domain.
 - Repo-owned surfaces remain only where they are genuinely repo-owned and the repo hook is minimal.
 - Local-only install/uninstall continue to work as consequences of that boundary, not as the only proof of completion.
+- The lane can explain why the remaining repo-facing surfaces are justified, or it tightens them further before closeout.
 
 ## Execution Summary
 
-- Outcome delivered: install/adopt/upgrade now treat `.agentic-workspace/planning/state.toml` as the authoritative planning state and regenerate root `TODO.md` and `ROADMAP.md` as compatibility views.
-- Validation confirmed: `make check`; `cd packages/planning && uv run pytest -q`; `uv run agentic-workspace summary --format json`.
-- Follow-on routed to: continue the ownership-boundary lane only if future slices require broader authority-surface simplification beyond compatibility views.
+- Outcome delivered: planning authority stays in `.agentic-workspace/planning/state.toml`, generated queue/roadmap views are no longer installed under `.agentic-workspace/planning/`, and summary/checker surfaces now derive directly from state when no legacy root views exist.
+- Validation confirmed: `uv run pytest packages/planning/tests/test_planning_lifecycle.py -q`; `uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`; `uv run pytest tests/test_source_payload_operational_install.py -q`.
+- Follow-on routed to: continue the same ownership-boundary lane until the broader issue `#231` intent is either satisfied or explicitly narrowed.
 - Knowledge promoted (Memory/Docs/Config): docs/installer-behavior.md, packages/planning/bootstrap/docs/installer-behavior.md
-- Resume from: verify lane-level follow-ons only when product-shape decisions require additional boundary tightening.
+- Resume from: compare the live `#231` issue intent against the remaining repo-facing surfaces and reclassify the lane honestly before closing it.
 
 ## Proof Report
 
-- Validation proof: `cd packages/planning && uv run pytest -q`; `make check`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-workspace summary --format json`; `rg "TODO.md|ROADMAP.md|state.toml" docs packages/planning/src/repo_planning_bootstrap scripts`
-- Proof achieved now: planning summary/install flows are state-first, and root queue surfaces are generated compatibility projections from package-owned state.
-- Evidence for "Proof achieved" state: planning package lifecycle/installer tests and full repository checks pass with state-first behavior and compatibility views in place.
+- Validation proof: `uv run pytest packages/planning/tests/test_planning_lifecycle.py -q`; `uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`; `uv run pytest tests/test_source_payload_operational_install.py -q`; `rg "TODO.md|ROADMAP.md|state.toml" docs packages/planning/src/repo_planning_bootstrap scripts`
+- Proof achieved now: planning summary/install flows are state-first, installed planning no longer writes compatibility queue views, and legacy root views are treated only as migration or cleanup inputs.
+- Evidence for "Proof achieved" state: package lifecycle, installer, and planning-surface checks pass; upgrade leaves `.agentic-workspace/planning/state.toml` as the only planning state file; and the workspace summary/checker still report the active lane correctly without installed TODO/ROADMAP projections.
 
 ## Intent Satisfaction
 
 - Original intent: separate package-owned state cleanly from repo-owned surfaces so install and uninstall become low-residue operations even for local-only mode.
-- Was original intent fully satisfied?: yes
-- Evidence of intent satisfaction: the package-owned planning home is explicit (`.agentic-workspace/planning/state.toml`), and root `TODO.md`/`ROADMAP.md` are compatibility views rather than authorities.
-- Unsolved intent passed to: none
+- Was original intent fully satisfied?: no
+- Evidence of intent satisfaction: the planning-state boundary is materially cleaner, but the broader issue still asks whether the remaining repo-facing surfaces are truly repo-owned and whether uninstall/local-only residue is now low enough across the whole package boundary.
+- Unsolved intent passed to: this active lane and issue `#231`
 
 ## Drift Log
 
@@ -133,3 +136,5 @@ slice:
 - 2026-04-20: Interrupted while beginning the package-owned planning-state migration; only the `PLANNING_STATE_PATH` constant had been added when work stopped.
 - 2026-04-20: Completed state-first migration in installer/summary flows and added root compatibility view generation from `.agentic-workspace/planning/state.toml`.
 - 2026-04-20: Recovery from the interrupted migration exposed two separate usability gaps worth preserving for the next simplification lane: package-layer navigation is still too opaque during maintainer work, and issue-orientation still costs too much after a crash or context reset.
+- 2026-04-20: Reopened the lane again after checking the live issue body and finding that the planning-view move satisfied only the narrow planning-state part of `#231`, not the full ownership-boundary intent.
+- 2026-04-20: Removed the installed compatibility queue views entirely; summary/checker fall back to `.agentic-workspace/planning/state.toml` directly, while legacy root views remain migration-only inputs for cleanup and archive compatibility.

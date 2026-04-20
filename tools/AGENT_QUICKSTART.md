@@ -20,7 +20,7 @@ Fast path for autonomous agents working on this repo.
 ## Surface roles
 
 - `AGENTS.md` is the canonical ordinary repo startup entrypoint.
-- `TODO.md` is the repo-owned active queue after the compact summary has shown there is active work to inspect.
+- `.agentic-workspace/planning/state.toml` is the package-owned active queue and candidate-lane state after the compact summary has shown raw detail is needed.
 - `docs/routing-contract.md` is the authoritative routing home.
 - `llms.txt` is the agent entrypoint router.
 - `tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md` are generated helpers, not doctrine owners.
@@ -29,9 +29,9 @@ Fast path for autonomous agents working on this repo.
 ## Conditional reads
 
 - Read `agentic-workspace summary --format json` first when planning recovery or ownership boundary review is the question.
-- Read `TODO.md` only when the compact summary shows active work that still needs raw queue detail.
+- Read `.agentic-workspace/planning/state.toml` only when the compact summary shows active work that still needs raw queue detail.
 - Read the active feature plan in `docs/execplans/` when the task belongs to one.
-- Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.
+- Read the roadmap data in `.agentic-workspace/planning/state.toml` only when promoting work, reprioritising, or reviewing candidate epics.
 - Read `docs/routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.
 - Do not bulk-read all planning surfaces for ordinary execution work; start from `agentic-workspace summary --format json` and then the one relevant active plan.
 - Read only the repo docs explicitly referenced by that route.
@@ -40,7 +40,7 @@ Fast path for autonomous agents working on this repo.
 ## Small-task mode
 
 - For very local changes, skip plans unless this manifest, the active plan, or the nearest descendant `AGENTS.md` says they are needed.
-- Keep direct tasks in `TODO.md` only when one coherent pass can finish them and the row can stay compact: `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`.
+- Keep direct tasks in `.agentic-workspace/planning/state.toml` only when one coherent pass can finish them and the row can stay compact: `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`.
 - Use `docs/capability-aware-execution.md` when deciding whether the cheap direct path is still safe or whether medium reasoning is a better fit; prefer silent task shaping over repeated executor-selection prompts.
 - Do not create a checked-in plan just because a stronger model could write one; escalate only when the artifact should save more rediscovery, restart cost, or coordination risk than it costs to produce.
 
@@ -54,10 +54,10 @@ Fast path for autonomous agents working on this repo.
 
 ## Source of truth
 
-- Active queue and lightweight direct tasks: `TODO.md`
+- Active queue and lightweight direct tasks: `.agentic-workspace/planning/state.toml`
 - Active feature plans: `docs/execplans/`
 - Archived plans: `docs/execplans/archive/`
-- Long-horizon planning: `ROADMAP.md`
+- Long-horizon planning: `.agentic-workspace/planning/state.toml`
 - Machine-readable routing: `.agentic-workspace/planning/agent-manifest.json`
 
 ## Validation flow
@@ -68,9 +68,9 @@ Fast path for autonomous agents working on this repo.
 
 ## Completion reminders
 
-- Do not leave completed task detail in `TODO.md` once it no longer changes execution.
-- If the completed slice came from `TODO.md` or `ROADMAP.md`, clear the matched queue residue in the same pass.
-- When direct execution changes durable knowledge or leaves meaningful follow-up, record only that minimal residue in memory, canonical docs, `ROADMAP.md`, or a promoted execplan.
+- Do not leave completed task detail in `.agentic-workspace/planning/state.toml` once it no longer changes execution.
+- If the completed slice came from the active queue or roadmap state, clear the matched queue residue in the same pass.
+- When direct execution changes durable knowledge or leaves meaningful follow-up, record only that minimal residue in memory, canonical docs, the roadmap state in `.agentic-workspace/planning/state.toml`, or a promoted execplan.
 
 ## Generated surfaces
 
@@ -87,8 +87,8 @@ Fast path for autonomous agents working on this repo.
   Validate: `uv run agentic-workspace skills --target ./repo --task "<task>" --format json`; `make maintainer-surfaces`
 - `planning_surface_change`
   Use when: Editing planning-for-execution surfaces, plan templates, or planning-surface checks.
-  Prefer this route when: the change affects TODO, ROADMAP, execplans, or the planning bootstrap itself.
-  Touches: `AGENTS.md`, `TODO.md`, `ROADMAP.md`, `docs/upstream-task-intake.md`, `docs/lifecycle-and-config-contract.md`, `docs/routing-contract.md`, `docs/execution-flow-contract.md`, `docs/execplans/`, `scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`, `.agentic-workspace/planning/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`
+  Prefer this route when: the change affects planning state, execplans, generated agent docs, or the planning bootstrap itself.
+  Touches: `AGENTS.md`, `.agentic-workspace/planning/state.toml`, `docs/upstream-task-intake.md`, `docs/lifecycle-and-config-contract.md`, `docs/routing-contract.md`, `docs/execution-flow-contract.md`, `docs/execplans/`, `scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`, `.agentic-workspace/planning/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`
   Validate: `make maintainer-surfaces`; `make render-agent-docs`
 
 ## Skills
@@ -99,9 +99,9 @@ Fast path for autonomous agents working on this repo.
 
 ## Core invariants
 
-- TODO.md is a repo-owned view of active queue state and lightweight direct tasks.
+- .agentic-workspace/planning/state.toml owns active queue state and lightweight direct tasks.
 - Active execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work.
-- ROADMAP.md is a repo-owned view of inactive long-horizon candidate epics and promotion signals.
+- .agentic-workspace/planning/state.toml also owns inactive long-horizon candidate lanes and promotion signals.
 - Package-owned planning state belongs under `.agentic-workspace/planning/` and should be summarized before root queue files are read.
 - Checked-in memory, when installed, owns durable routed knowledge rather than active planning state.
 - Planning should remain useful without memory being installed.

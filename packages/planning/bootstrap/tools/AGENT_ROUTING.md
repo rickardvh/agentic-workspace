@@ -34,8 +34,7 @@ Focused routing reference derived from `.agentic-workspace/planning/agent-manife
 - Prefer when: the change affects TODO, ROADMAP, execplans, or the planning bootstrap itself.
 - Touches:
   - `AGENTS.md`
-  - `TODO.md`
-  - `ROADMAP.md`
+  - `.agentic-workspace/planning/state.toml`
   - `docs/upstream-task-intake.md`
   - `docs/lifecycle-and-config-contract.md`
   - `docs/routing-contract.md`

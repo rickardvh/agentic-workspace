@@ -39,8 +39,6 @@ Planning state now lives in:
 - `.agentic-workspace/planning/state.toml`
 - `docs/execplans/`
 
-Generated thin views may exist under `.agentic-workspace/planning/`, but they are derived from `state.toml`. They are not repo-root authority surfaces.
-
 For agent maintainers, the primary operating path is `AGENTS.md`, the active execplan, and `docs/contributor-playbook.md`.
 
 Memory state lives under:
