@@ -34,8 +34,7 @@ For durable rationale, load the matching note under `memory/decisions/` instead 
 
 ## Verify
 
-- TODO.md
-- ROADMAP.md
+- .agentic-workspace/planning/state.toml
 - README.md
 - memory/decisions/installed-system-consolidation-2026-04-05.md
 - memory/decisions/workspace-orchestrator-ownership-ledger-2026-04-05.md

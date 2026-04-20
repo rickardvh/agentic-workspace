@@ -38,7 +38,7 @@ Promote only the findings that justify future work; do not treat this file as an
 - Suggested action:
 - Confidence: low | medium | high
 - Source: static-analysis | friction-confirmed | mixed
-- Promotion target: none | `ROADMAP.md` | `TODO.md` | canonical docs | memory
+- Promotion target: none | `.agentic-workspace/planning/state.toml (roadmap)` | `.agentic-workspace/planning/state.toml (todo.active_items)` | canonical docs | memory
 - Promotion trigger:
 - Post-remediation note shape: retain | shrink | stub | delete | not-applicable
 

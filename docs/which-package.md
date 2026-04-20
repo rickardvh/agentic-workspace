@@ -22,7 +22,7 @@ Ask the smallest useful question first:
 | If you need to know... | Ask this first | Then, only if needed |
 | --- | --- | --- |
 | how to start or which lifecycle path applies | `AGENTS.md`, then `agentic-workspace config --target ./repo --format json` | [`docs/default-path-contract.md`](default-path-contract.md) |
-| what is active right now | `agentic-workspace summary --format json` | `TODO.md`, then one active execplan |
+| what is active right now | `agentic-workspace summary --format json` | `.agentic-workspace/planning/state.toml`, then one active execplan |
 | what the combined workspace state looks like | `agentic-workspace report --target ./repo --format json` | raw module files or maintainer docs |
 | which proof or ownership answer is enough | `agentic-workspace defaults --section proof_selection --format json`, `agentic-workspace proof --target ./repo --format json`, or `agentic-workspace ownership --target ./repo --format json` | [`docs/default-path-contract.md`](default-path-contract.md) and the referenced contract doc |
 | where handoff or setup work lives | `llms.txt` or `agentic-workspace setup --target ./repo --format json` | `.agentic-workspace/bootstrap-handoff.md` or `.json` when bootstrap says review is still needed |
@@ -65,7 +65,7 @@ Use them when you explicitly need module-level control, not for normal adoption.
 | Combination | Supported | Primary writable surfaces |
 | --- | --- | --- |
 | Memory only | Yes | `memory/` plus optional weak-authority `memory/current/` |
-| Planning only | Yes | `TODO.md`, `ROADMAP.md`, `docs/execplans/` |
+| Planning only | Yes | `.agentic-workspace/planning/state.toml`, `docs/execplans/` |
 | Memory + Planning | Yes | Planning for active-now state, memory for durable knowledge |
 | Workspace lifecycle entrypoint | Yes | Same module-owned surfaces, with thin root orchestration |
 

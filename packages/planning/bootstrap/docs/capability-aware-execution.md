@@ -32,8 +32,8 @@ If the surrounding tool already chooses execution capability automatically, keep
 
 Planning already distinguishes:
 
-- inactive future candidates in `ROADMAP.md`
-- active direct tasks in `TODO.md`
+- inactive future candidates in `.agentic-workspace/planning/state.toml` (`roadmap`)
+- active direct tasks in `.agentic-workspace/planning/state.toml` (`todo.active_items`)
 - active planned work in `docs/execplans/`
 
 What this document adds is capability fit:
@@ -73,7 +73,7 @@ Use this when:
 
 Recommended shape:
 
-- keep the task in `TODO.md`
+- keep the task in `.agentic-workspace/planning/state.toml` as an active item
 - use the cheapest safe execution path
 - let the environment auto-select execution capability when it already does that well
 - do not add a plan just because a stronger agent exists
@@ -209,7 +209,7 @@ The practical boundary is simple:
 
 Capability fit sharpens the existing planning boundary; it does not replace it.
 
-- Keep work direct when one coherent pass can finish it and the task remains self-sufficient in `TODO.md`.
+- Keep work direct when one coherent pass can finish it and the task remains self-sufficient in `.agentic-workspace/planning/state.toml`.
 - Promote into an execplan when safe continuation depends on more than the TODO row can carry.
 - Use stronger planning first when that checked-in artifact is likely to reduce rediscovery, restart cost, or coordination risk more than it costs to write.
 
@@ -255,9 +255,9 @@ Common complexity-reduction targets include:
 Route the signal to the narrowest durable surface that fits:
 
 - active execplan when the refinement belongs to work already in progress
-- `TODO.md` only when the immediate active task can absorb the improvement directly
+- `todo.active_items` in `.agentic-workspace/planning/state.toml` only when the immediate active task can absorb the improvement directly
 - `docs/reviews/` when the right remediation still needs bounded analysis
-- `ROADMAP.md` when the improvement is plausible future work but not active now
+- `roadmap` in `.agentic-workspace/planning/state.toml` when the improvement is plausible future work but not active now
 - memory or canonical docs only when the signal has stabilized into durable guidance rather than future-work tracking
 
 The long-term goal is not only to pick the right capability for today's task.

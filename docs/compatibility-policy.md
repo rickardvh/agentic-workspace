@@ -6,7 +6,7 @@ Use it when you need to decide whether a change is a normal refresh, an intentio
 
 ## Stable Today
 
-- Repo-owned guidance and planning surfaces: `AGENTS.md`, `TODO.md`, `ROADMAP.md`, `docs/execplans/`, `docs/design-principles.md`, `docs/boundary-and-extraction.md`, `docs/maturity-model.md`, `docs/which-package.md`, and this policy.
+- Repo-owned guidance and planning surfaces: `AGENTS.md`, `.agentic-workspace/planning/state.toml`, `docs/execplans/`, `docs/design-principles.md`, `docs/boundary-and-extraction.md`, `docs/maturity-model.md`, `docs/which-package.md`, and this policy.
 - Maintainer-facing root docs that describe commands, routing, review bars, or package selection.
 - Public CLI entrypoints and module names that are already part of the checked-in contract.
 - Package READMEs and packaging metadata that define the current installable entrypoints.
@@ -14,7 +14,7 @@ Use it when you need to decide whether a change is a normal refresh, an intentio
 ## Mutable Today
 
 - Active milestone fields inside execplans.
-- The `TODO.md` now-row and the roadmap candidate queue.
+- The `todo.active_items` queue and the `roadmap` candidate queue in `.agentic-workspace/planning/state.toml`.
 - Current-state notes such as `memory/current/` and other weak-authority reorientation surfaces.
 - Implementation details inside package source trees while the surrounding contract is still settling.
 
@@ -33,7 +33,7 @@ Use it when you need to decide whether a change is a normal refresh, an intentio
 
 ## What Does Not Count As Breaking
 
-- Pruning completed work from `TODO.md` or `ROADMAP.md`.
+- Pruning completed work from `todo.active_items` or `roadmap`.
 - Rewording an active execplan while the milestone is still in progress.
 - Refreshing generated docs after the source manifest or renderer changes.
 - Tightening maintainer guidance without changing the owned surface contract.

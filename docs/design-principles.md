@@ -442,7 +442,7 @@ The one-word summary of the product goal is `efficiency`: maximum quality at min
 
 Dogfooding is a primary development mode here, not just background context.
 When normal work in this repo reveals friction, ambiguity, noisy maintenance, or repeated agent missteps in the shipped planning or memory systems, treat that as a product signal that should enter the checked-in feedback loop.
-Route that signal into the active execplan, `TODO.md`, `ROADMAP.md`, memory, or canonical docs as appropriate instead of treating chat or ad hoc direct package edits as the default feedback path.
+Route that signal into the active execplan, `.agentic-workspace/planning/state.toml` (`todo.active_items` or `roadmap`), memory, or canonical docs as appropriate instead of treating chat or ad hoc direct package edits as the default feedback path.
 
 Work in this repo should steer toward these goals:
 

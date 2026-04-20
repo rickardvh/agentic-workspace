@@ -38,7 +38,7 @@ When the question is already narrow, prefer the compact selector path:
 
 ```bash
 agentic-workspace ownership --target ./repo --concern active-execution-state --format json
-agentic-workspace ownership --target ./repo --path TODO.md --format json
+agentic-workspace ownership --target ./repo --path .agentic-workspace/planning/state.toml --format json
 ```
 
 When the question is who should own a vague prompt after one repo-context clarification, use:
@@ -54,8 +54,8 @@ Those forms return the compact contract answer profile from [`docs/compact-contr
 | Concern | Primary surface | Owner | Ownership class |
 | --- | --- | --- | --- |
 | Repo startup instructions | `AGENTS.md` | repo | `repo_owned` |
-| Active execution state | `TODO.md` | repo | `repo_owned` |
-| Long-horizon candidate queue | `ROADMAP.md` | repo | `repo_owned` |
+| Active execution state | `.agentic-workspace/planning/state.toml` (`todo.active_items`) | repo | `repo_owned` |
+| Long-horizon candidate queue | `.agentic-workspace/planning/state.toml` (`roadmap`) | repo | `repo_owned` |
 | Design constraints for product-shape changes | `docs/design-principles.md` | repo | `repo_owned` |
 | Repo-owned workspace lifecycle defaults | `agentic-workspace.toml` | repo | `repo_owned` |
 | Shared workflow contract | `.agentic-workspace/WORKFLOW.md` | workspace | `module_managed` |
@@ -89,7 +89,7 @@ The full ownership payload includes a `boundary_review` section that groups the 
 
 - package-owned module roots and managed surfaces under `.agentic-workspace/`
 - explicit package-owned local-only state inside `.gemini/agentic-workspace/`
-- repo-owned authority surfaces such as `AGENTS.md`, `TODO.md`, and `ROADMAP.md`
+- repo-owned authority surfaces such as `AGENTS.md` and `.agentic-workspace/planning/state.toml`
 - middle-ground managed fences inside repo-owned files, with the workflow pointer fence in `AGENTS.md` as the smallest explicit repo hook for startup
 
 Use that review when the task is boundary work, low-residue install/uninstall work, or any change that needs a current surface inventory before implementation.

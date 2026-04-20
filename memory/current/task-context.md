@@ -10,12 +10,11 @@ Active
 
 ## Active goal
 
-- Complete the repeated ordinary-use synergy proof slice, archive it, then continue through the highest-priority roadmap queue in order.
+- Complete the repeated ordinary-use synergy proof slice, archive it, then continue through the highest-priority candidate lanes in planning state order.
 
 ## Touched surfaces
 
-- `TODO.md`
-- `ROADMAP.md`
+- `.agentic-workspace/planning/state.toml`
 - `docs/execplans/repeated-ordinary-use-synergy-proof-2026-04-13.md`
 - `packages/memory/src/repo_memory_bootstrap/`
 - `packages/memory/bootstrap/`

@@ -15,7 +15,7 @@ This dual-mode behavior allows the installer to work during development inside t
 
 ## Payload Mirroring (Maintenance Responsibility)
 
-In the monorepo, many payload files (such as `AGENTS.md`, `TODO.md`, and core contracts in `docs/`) are authored in the workspace root but must be mirrored into the respective bootstrap directories to be included in the shipped package.
+In the monorepo, many payload files (such as `AGENTS.md`, `.agentic-workspace/planning/state.toml`, and core contracts in `docs/`) are authored in the workspace root but must be mirrored into the respective bootstrap directories to be included in the shipped package.
 
 Maintainers are responsible for ensuring that:
 - Any change to a root-level contract is mirrored to its bootstrap counterpart.
@@ -37,7 +37,7 @@ If drift is detected:
 ## Managed vs. Local Files
 
 The installer distinguishes between three classes of files:
-1. **Root Surfaces**: `AGENTS.md`, `TODO.md`, `ROADMAP.md`. These are seeded once and then owned by the repository.
+1. **Root Surfaces**: `AGENTS.md` and `.agentic-workspace/planning/state.toml`. These are seeded once and then owned by the repository.
 2. **Package Managed**: Contracts and scripts in `docs/` or `scripts/`. These are updated by the installer during upgrades.
 3. **Generated**: Artifacts like `AGENT_QUICKSTART.md` that are derived from canonical manifests.
 

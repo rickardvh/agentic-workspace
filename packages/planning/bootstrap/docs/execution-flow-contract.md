@@ -74,7 +74,7 @@ Active work often leaves "residue" (follow-up tasks, cleanup, minor drift).
 ### Required Continuation
 Before archiving a completed slice that belongs to an unfinished larger outcome:
 - **Required Follow-on**: Explicitly state "yes" if more work is needed for the larger goal.
-- **Next Owner**: Name the surface (e.g. `ROADMAP.md` or a new plan) that owns the continuation.
+- **Next Owner**: Name the surface (e.g. `roadmap` in `.agentic-workspace/planning/state.toml` or a new plan) that owns the continuation.
 - **Activation Trigger**: State what signal (e.g. "human review", "CI success") triggers the next slice.
 
 ### Execution Summary

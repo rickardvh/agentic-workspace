@@ -1,6 +1,6 @@
 # Candidate Lanes Contract
 
-`ROADMAP.md` stays the single repo-owned surface for inactive future work.
+The `roadmap` section in `.agentic-workspace/planning/state.toml` stays the single repo-owned surface for inactive future work.
 When a flat candidate bullet is too weak, use a native candidate lane inside that same file instead of inventing ad hoc queue prose or a second backlog file.
 
 ## Purpose
@@ -24,7 +24,7 @@ Do not use a lane for:
 
 ## Shape
 
-Keep candidate lanes under `## Candidate Lanes` in `ROADMAP.md`.
+Keep candidate lanes under `roadmap.lanes` in `.agentic-workspace/planning/state.toml`.
 
 Each lane should be one top-level bullet with compact indented fields:
 
@@ -62,7 +62,7 @@ Use either `Why now` or `Why later` as the compact reason field.
 
 - Keep order meaningful; earlier lanes are higher priority unless stated otherwise.
 - Keep each field compact and promotion-shaped.
-- Keep active execution detail and near-term same-thread queue items in `TODO.md` and execplans, not here.
+- Keep active execution detail and near-term same-thread queue items in `todo.active_items` and execplans, not here.
 - Keep durable background knowledge in canonical docs or memory, not here.
 - Prefer one lane per broader intended outcome rather than many tiny backlog bullets.
 

@@ -11,7 +11,7 @@ It is the durable home for the capability structure of an agent-oriented checked
 This document is not a bounded roadmap, backlog, or implementation plan.
 
 Long-horizon direction can change as the product evolves.
-When a capability description, promotion stance, or architectural emphasis no longer matches current dogfooding reality, update this document directly and route any newly-bounded follow-on into `ROADMAP.md` instead of leaving stale intent embedded here.
+When a capability description, promotion stance, or architectural emphasis no longer matches current dogfooding reality, update this document directly and route any newly-bounded follow-on into `roadmap` in `.agentic-workspace/planning/state.toml` instead of leaving stale intent embedded here.
 
 ## How To Read This
 
@@ -31,7 +31,7 @@ Treat this page as durable doctrine, not frozen doctrine.
 
 - Refresh it when major shipped contracts land, when dogfooding changes what matters most, or when a capability's current category no longer matches real usage.
 - Prefer changing or deleting stale long-horizon statements over preserving historical wording that no longer drives the product.
-- When a doctrinal change reveals concrete next work, record that work in `ROADMAP.md` as a bounded candidate instead of letting this document become a shadow queue.
+- When a doctrinal change reveals concrete next work, record that work in `roadmap` in `.agentic-workspace/planning/state.toml` as a bounded candidate instead of letting this document become a shadow queue.
 - Treat a doctrine-refresh review as the normal audit lane for revisiting this page rather than relying on ad hoc memory or chat residue.
 
 ## Role Boundary
@@ -46,7 +46,7 @@ It does not own:
 
 Route those concerns to:
 
-- `ROADMAP.md` for bounded future candidates
+- `roadmap` in `.agentic-workspace/planning/state.toml` for bounded future candidates
 - `docs/ecosystem-roadmap.md` for ecosystem stance and extraction discipline
 - `docs/maturity-model.md` for maturity labels and the rationale behind them
 
@@ -243,9 +243,9 @@ The default stance is internal capability first.
 
 Extraction is evidence-driven, not taxonomy-driven. A capability appearing in this document does not mean it should become its own package.
 
-## Relationship To ROADMAP.md
+## Relationship To planning.state roadmap
 
-`ROADMAP.md` should stay the short bounded sequencing queue.
+`roadmap` in `.agentic-workspace/planning/state.toml` should stay the short bounded sequencing queue.
 
 It should hold only bounded future candidates, promotion triggers, and sequencing guidance derived from this broader capability model. It should not become the home for the full long-horizon capability taxonomy.
 

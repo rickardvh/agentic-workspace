@@ -5,7 +5,7 @@ description: Report active planning state, proof expectations, and next-action g
 
 # Planning Reporting
 
-Use this skill when you need a compact, comparable picture of what is active and what should happen next, without rereading `TODO.md` or execplan prose first.
+Use this skill when you need a compact, comparable picture of what is active and what should happen next, without rereading `.agentic-workspace/planning/state.toml` or execplan prose first.
 Use `agentic-workspace report --target <repo> --format json` first when the question is broader than planning state alone.
 
 ## Canonical Reporting Surface

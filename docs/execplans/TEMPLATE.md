@@ -126,7 +126,7 @@ Omit the section for straightforward implementation-only slices.
 -
 
 Use this section when unresolved contract questions still block safe implementation.
-List only the questions this slice must answer; move optional future ideas to `ROADMAP.md` or canonical docs instead.
+List only the questions this slice must answer; move optional future ideas to `roadmap` in `.agentic-workspace/planning/state.toml` or canonical docs instead.
 Omit the section when no implementation-blocking questions remain.
 
 ## Validation Commands

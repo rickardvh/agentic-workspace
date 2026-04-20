@@ -21,11 +21,11 @@ Use `docs/ownership-authority-contract.md` when the missing judgment is who owns
 Default startup path for an agent maintainer:
 
 1. Read `AGENTS.md`.
-2. Read `TODO.md`.
+2. Read `.agentic-workspace/planning/state.toml`.
 3. If the question is startup order or first-contact routing, ask `agentic-workspace defaults --section startup --format json` before broader prose.
 4. If you need the current planning state, ask `agentic-workspace summary --format json` before opening raw planning files.
 5. If you need the combined workspace state, ask `agentic-workspace report --target ./repo --format json` before reading raw module files.
-6. If `TODO.md` points at an active execplan and the compact surfaces are insufficient, read that plan before editing code.
+6. If `.agentic-workspace/planning/state.toml` points at an active execplan and the compact surfaces are insufficient, read that plan before editing code.
 7. If you are handing the active slice to another executor, derive the worker contract from `agentic-workspace summary --format json` rather than drafting a fresh ad hoc prompt.
 8. Use `agentic-workspace config --target ./repo --format json` to inspect the effective mixed-agent posture, including the optional local capability/cost override in `agentic-workspace.local.toml`.
 9. Read package-local `AGENTS.md` only for the package you will touch.
@@ -75,7 +75,7 @@ Design guardrails:
 
 For execution scaling specifically:
 
-- keep work direct in `TODO.md` when one coherent pass can finish it and the row can stay at `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`
+- keep work direct in `todo.active_items` when one coherent pass can finish it and the row can stay at `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`
 - promote to an execplan when the work gains milestone sequencing, blocker handling, non-obvious validation scope, rollback or migration detail, enough ambiguity that restart would require more than the TODO row, or enough context pressure that a smaller or less capable agent would otherwise have to rediscover the task
 - use `docs/capability-aware-execution.md` when the missing judgment is capability fit rather than ownership: cheap direct path, medium reasoning direct path, stronger planning first, silent shaping into a cheaper slice, delegation-friendly, or stop-and-escalate
 - when capability-aware execution suggests a cleaner but broader solution, treat that as a promotion or escalation decision instead of silently replacing the requested outcome; improve local means, not requested ends
@@ -115,7 +115,7 @@ Final repo sync after package work:
 - Lifecycle orchestration or root CLI: start at `src/agentic_workspace/` and `README.md`.
 - Memory bootstrap behavior: start at `packages/memory/AGENTS.md`, then `packages/memory/README.md` and `packages/memory/src/`.
 - Planning bootstrap behavior: start at `packages/planning/AGENTS.md`, then `packages/planning/README.md` and `packages/planning/src/`.
-- Planning contract or archive behavior: start at `TODO.md`, the active execplan, and `docs/execution-flow-contract.md`.
+- Planning contract or archive behavior: start at `.agentic-workspace/planning/state.toml`, the active execplan, and `docs/execution-flow-contract.md`.
 
 Generated guidance lives under `tools/`, but the source of truth for that guidance is `.agentic-workspace/planning/agent-manifest.json`. When routing docs drift, update the managed manifest and rerender instead of editing generated files directly.
 
@@ -138,4 +138,4 @@ Use `docs/installed-contract-design-checklist.md` when a package change adds or 
 
 - Preserve package boundaries and independent CLI entrypoints.
 - Prefer explicit adapters, manifests, and generated artifacts over private cross-package assumptions.
-- Capture meaningful follow-up work in `ROADMAP.md`, `TODO.md`, or an execplan instead of leaving it in chat-only residue.
+- Capture meaningful follow-up work in `.agentic-workspace/planning/state.toml` (`roadmap` or `todo.active_items`) or an execplan instead of leaving it in chat-only residue.

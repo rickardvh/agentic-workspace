@@ -18,7 +18,7 @@ Route those concerns to:
 
 - `docs/agent-os-capabilities.md` for capability taxonomy and architectural role
 - `docs/ecosystem-roadmap.md` for ecosystem stance and extraction discipline
-- `ROADMAP.md` for bounded follow-on work revealed by maturity review
+- `roadmap` in `.agentic-workspace/planning/state.toml` for bounded follow-on work revealed by maturity review
 
 ## Refresh Triggers
 

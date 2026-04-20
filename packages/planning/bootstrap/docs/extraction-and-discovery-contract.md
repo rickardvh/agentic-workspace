@@ -8,7 +8,7 @@ This contract defines the policy for identifying new capabilities, extracting th
 - **Purpose**: Captures advisory findings during `init`, `setup`, or `doctor` passes.
 - **Triage**: Findings should be triaged into:
   - **Dismiss**: Duplicate or out of scope.
-  - **Planning Candidate**: Promotion to `TODO.md` or `ROADMAP.md`.
+  - **Planning Candidate**: Promotion to `todo.active_items` or `roadmap` in `.agentic-workspace/planning/state.toml`.
   - **Durable Residue**: Capture in Memory or canonical docs.
 - **Storage**: Optional findings live in `tools/setup-findings.json`. This file is transient and should be removed once findings are promoted or dismissed.
 
@@ -53,7 +53,7 @@ This monorepo maintains four distinct layers to separate the shipped product fro
 | --- | --- | --- | --- |
 | **Source Code** | Procedural Python logic, CLI commands, and installer logic. | `packages/*/src/` | Authority for tool behavior. |
 | **Shipped Product** | Authoritative contracts, templates, and default skills (the "Bootstrap"). | `packages/*/bootstrap/` | **Primary Source of Truth** for shipped content. Edit here first. |
-| **Installed Product** | The operational installation of the shipped product into this repo. | `docs/`, `AGENTS.md`, `TODO.md`, etc. | **Dogfooding layer.** Update via `upgrade` command after editing the Payload. |
+| **Installed Product** | The operational installation of the shipped product into this repo. | `docs/`, `AGENTS.md`, `.agentic-workspace/planning/state.toml`, etc. | **Dogfooding layer.** Update via `upgrade` command after editing the Payload. |
 | **Repo-Specific Files**| Metadata unique to this monorepo's identity, build, and environment. | `pyproject.toml`, `README.md`, `Makefile` | **Local configuration.** Entirely separate from shipped logic. |
 
 ### Operational Hygiene

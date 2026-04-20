@@ -48,7 +48,7 @@ slice:
 
 - What this slice enabled: High-signal cold-start orientation and machine-readable startup protocol.
 - Intentionally deferred: Extraction of broader lifecycle logic (beyond startup) into the manifest.
-- Discovered implications: Need for stricter `TODO.md` and `execplan` parsing to ensure high-quality structured output.
+- Discovered implications: Need for stricter `.agentic-workspace/planning/state.toml` and `execplan` parsing to ensure high-quality structured output.
 - Proof achieved now: `agentic-workspace report --startup` returns a valid block.
 - Validation still needed: Verified integration with a simulated fresh agent.
 - Next likely slice: Aligning `summary` fields and extracting more lifecycle truth.

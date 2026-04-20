@@ -9,14 +9,14 @@ Use this skill when a repo change might affect whether the monorepo still behave
 
 ## Check
 
-1. Confirm `TODO.md`, `ROADMAP.md`, and root memory remain the live operational surfaces.
+1. Confirm `.agentic-workspace/planning/state.toml`, `docs/execplans/`, and root memory remain the live operational surfaces.
 2. Confirm package-local fixtures or payload copies are not acting as operational state.
 3. Confirm the relevant root validation lanes still pass.
 
 ## Typical surfaces
 
-- `TODO.md`
-- `ROADMAP.md`
+- `.agentic-workspace/planning/state.toml`
+- `docs/execplans/`
 - `AGENTS.md`
 - `Makefile`
 - package READMEs

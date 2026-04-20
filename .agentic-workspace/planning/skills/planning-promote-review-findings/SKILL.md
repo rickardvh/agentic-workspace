@@ -9,10 +9,10 @@ Planning Promote Review Findings turns selected review findings into planned wor
 
 ## Operating Rules
 
-1. Read the relevant review artifact, `TODO.md`, and `ROADMAP.md` before editing.
+1. Read the relevant review artifact and `.agentic-workspace/planning/state.toml` before editing.
 2. Promote only findings with explicit evidence, confidence, and a concrete promotion trigger.
-3. Prefer `ROADMAP.md` for plausible future work that is not active now.
-4. Use `TODO.md` plus an execplan only when urgency, repeated friction, or explicit maintainer direction justifies activation.
+3. Prefer `roadmap` in `.agentic-workspace/planning/state.toml` for plausible future work that is not active now.
+4. Use `todo.active_items` plus an execplan only when urgency, repeated friction, or explicit maintainer direction justifies activation.
 5. Preserve the original source classification when summarising the promoted item.
 6. Do not promote every finding from a review artifact.
 7. If the real value is durable guidance rather than future work, promote to canonical docs or memory instead of planning.
@@ -37,4 +37,4 @@ End each run with:
 - findings promoted
 - target surfaces updated
 - findings deferred or dismissed
-- rationale for any activation into `TODO.md`
+- rationale for any activation into `todo.active_items`

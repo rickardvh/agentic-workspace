@@ -52,8 +52,8 @@ Classify each signal into exactly one primary bucket first:
 
 - If the signal is about ordinary daily use, feature choice, or repeated surface pull, record it in `memory/runbooks/dogfooding-usage-ledger.md` first and then route any repeated pattern onward.
 - If the signal suggests a fresh external or cheaper agent would struggle, record that as an outsider-legibility or self-hosting-bias note in the same pass.
-- If the signal changes active execution, route it into `TODO.md` or an execplan.
-- If it is a future candidate, record it in `ROADMAP.md` with a promotion signal.
+- If the signal changes active execution, route it into `.agentic-workspace/planning/state.toml` and/or an active execplan.
+- If it is a future candidate, record it in planning state candidate lanes with a promotion signal.
 - If it is durable operating knowledge, capture it in memory or canonical docs.
 - If it is the post-completion reflection for a finished execplan, record one compact `Product improvement signal` in that plan's `Execution Summary` and route any required follow-on separately.
 - If the same class of human steering repeats across sessions, treat that as an improvement signal too. Capture the repeated correction class explicitly so the repo can improve defaults, contracts, proof, ownership, or handoff instead of asking the human to restate the same steering forever.

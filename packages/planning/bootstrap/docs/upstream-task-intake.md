@@ -8,7 +8,7 @@ Use this when work begins in GitHub Issues, Linear, Jira, Notion, internal task 
 
 - keep external trackers as intake sources rather than execution authorities
 - preserve enough upstream metadata for restart and auditability
-- route accepted work into `ROADMAP.md`, `TODO.md`, and `docs/execplans/` cleanly
+- route accepted work into `.agentic-workspace/planning/state.toml` and `docs/execplans/` cleanly
 - stay neutral across trackers instead of baking GitHub-specific behavior into the planning contract
 
 ## Non-Goals
@@ -25,9 +25,9 @@ Use this when work begins in GitHub Issues, Linear, Jira, Notion, internal task 
 3. Decide the next state:
    - dismiss
    - bounded review artifact in `docs/reviews/`
-   - inactive candidate in `ROADMAP.md`
-   - direct active task in `TODO.md` when truly tiny
-   - active work in `TODO.md` plus `docs/execplans/`
+   - inactive candidate in `.agentic-workspace/planning/state.toml` (`roadmap`)
+   - direct active task in `.agentic-workspace/planning/state.toml` (`todo.active_items`) when truly tiny
+   - active work in `todo.active_items` plus `docs/execplans/`
 4. Preserve the upstream source reference in the promoted planning surface.
 5. Execute from checked-in planning, not from the upstream tracker thread.
 
@@ -35,11 +35,11 @@ Use this when work begins in GitHub Issues, Linear, Jira, Notion, internal task 
 
 - `docs/upstream-task-intake.md` owns the intake rules.
 - `docs/reviews/` owns bounded review capture when the upstream signal needs analysis before planning.
-- `ROADMAP.md` owns inactive accepted candidates.
-- `TODO.md` owns the active queue plus the smallest near-term same-thread follow-on that should not be lost.
+- `roadmap` in `.agentic-workspace/planning/state.toml` owns inactive accepted candidates.
+- `todo.active_items` in `.agentic-workspace/planning/state.toml` owns the active queue plus the smallest near-term same-thread follow-on that should not be lost.
 - `docs/execplans/` own active execution contracts and the detailed upstream intake record for active promoted work.
 
-Do not use `TODO.md` as the place to store upstream issue transcripts or detailed intake metadata.
+Do not use `todo.active_items` as the place to store upstream issue transcripts or detailed intake metadata.
 
 ## Minimum Metadata To Preserve
 
@@ -63,7 +63,7 @@ Optional when it materially changes execution:
 
 ### Inactive accepted work
 
-Use `ROADMAP.md` for future candidates.
+Use `roadmap` in `.agentic-workspace/planning/state.toml` for future candidates.
 
 Keep the roadmap entry compact. Preserve the upstream source as one short clause instead of copying the whole issue body.
 
@@ -73,8 +73,8 @@ Example shape:
 
 ### Active work
 
-When an upstream task becomes active planned work, keep the queue small in `TODO.md` and preserve the source metadata in the execplan.
-Use a near-term queued TODO item only when the next chunk is concrete enough to follow the active work soon; otherwise leave it inactive in `ROADMAP.md`.
+When an upstream task becomes active planned work, keep the queue small in `todo.active_items` and preserve the source metadata in the execplan.
+Use a near-term queued active item only when the next chunk is concrete enough to follow the active work soon; otherwise leave it inactive in `roadmap`.
 
 Use an `## Intake Source` section in the execplan with compact fields such as:
 
@@ -87,7 +87,7 @@ The execplan may also include a short normalized summary when the upstream wordi
 
 ### Tiny direct tasks
 
-Only keep upstream-sourced work as a direct `TODO.md` task when one coherent pass can finish it and the source reference fits cleanly inside the TODO row.
+Only keep upstream-sourced work as a direct `todo.active_items` task when one coherent pass can finish it and the source reference fits cleanly inside the active-item row.
 
 If the upstream context needs more than a short source cue, promote to an execplan and store the intake details there instead.
 
@@ -95,8 +95,8 @@ If the upstream context needs more than a short source cue, promote to an execpl
 
 - Dismiss when the upstream item is duplicate, weak, or out of scope.
 - Use a review artifact when the signal is real but still needs bounded analysis before planning.
-- Use `ROADMAP.md` when the work is accepted but inactive.
-- Use `TODO.md` plus an execplan when the work is accepted and active.
+- Use `roadmap` in `.agentic-workspace/planning/state.toml` when the work is accepted but inactive.
+- Use `todo.active_items` plus an execplan when the work is accepted and active.
 - Prefer direct TODO execution only for truly small local work.
 
 Promotion into active work should happen only through explicit maintainer choice, clear urgency, or a strong enough planning signal that the task is ready to execute from checked-in surfaces.

@@ -9,11 +9,11 @@ Planning Autopilot is a bounded execution skill for the planning contract. It ex
 
 ## Operating Rules
 
-1. Read `AGENTS.md`, `TODO.md`, and the active execplan before making changes.
+1. Read `AGENTS.md`, `.agentic-workspace/planning/state.toml`, and the active execplan before making changes.
 2. Treat the checked-in planning surfaces as the execution contract. Do not invent new scope from chat context alone.
 3. Execute only one active milestone at a time unless the prompt explicitly says otherwise.
 4. Run the narrowest validation that proves the milestone.
-5. Update `TODO.md` and the active execplan when the milestone completes or blocks.
+5. Update `.agentic-workspace/planning/state.toml` and the active execplan when the milestone completes or blocks.
 6. Capture improvement signals that matter to future execution, but do not expand scope just because an adjacent issue is visible.
 7. Stop on blockers, ambiguity, or plan/code drift instead of trying to power through.
 

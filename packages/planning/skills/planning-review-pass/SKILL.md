@@ -10,14 +10,14 @@ It exists to capture compact, evidence-backed findings without turning review ou
 
 ## Operating Rules
 
-1. Read `AGENTS.md`, `TODO.md`, and any explicitly referenced review scope before starting.
+1. Read `AGENTS.md`, `.agentic-workspace/planning/state.toml`, and any explicitly referenced review scope before starting.
 2. Treat the task as analysis, not implementation, unless the prompt explicitly asks for fixes too.
 3. Choose one primary review mode from `docs/reviews/README.md` before inspecting deeply.
 4. Keep the review bounded to one subsystem, one question, or one risk area. If the user asks for a matrix or portfolio pass, split it into one compact artifact per mode instead of widening one file.
 5. Write findings into `docs/reviews/` using the local template.
 6. Label each finding with confidence, source class, promotion target, and promotion trigger.
 7. Keep friction-confirmed findings distinct from pure analysis findings.
-8. Do not add findings directly to `TODO.md` or create an execplan unless the prompt explicitly asks for promotion.
+8. Do not add findings directly to `todo.active_items` or create an execplan unless the prompt explicitly asks for promotion.
 9. If a bounded review is clean, say so explicitly in the artifact instead of padding it with weak findings.
 
 ## Suitable Inputs

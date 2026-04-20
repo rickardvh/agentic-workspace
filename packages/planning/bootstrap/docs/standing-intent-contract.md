@@ -63,7 +63,7 @@ Use for bounded active direction that should steer current work but should not b
 
 Default owners:
 
-- `TODO.md`
+- `.agentic-workspace/planning/state.toml` (`todo.active_items`)
 - `docs/execplans/`
 
 Typical examples:

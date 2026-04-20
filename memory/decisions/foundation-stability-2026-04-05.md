@@ -34,11 +34,11 @@ The monorepo host is the normal source of truth for ongoing work, package mainta
 
 ## Ongoing stance
 
-Keep archived execplans lightweight, keep new TODO entries bounded and roadmap-driven, and treat future work as product evolution rather than repository stabilization. Use [foundation-stability-check](../../tools/skills/foundation-stability-check/SKILL.md) for the repeatable recheck workflow.
+Keep archived execplans lightweight, keep new active work bounded in planning state, and treat future work as product evolution rather than repository stabilization. Use [foundation-stability-check](../../tools/skills/foundation-stability-check/SKILL.md) for the repeatable recheck workflow.
 
 ## Verify
 
-Confirm that `TODO.md` and `ROADMAP.md` remain bounded, the relevant root validation lanes still pass, and package docs still describe the current `.agentic-workspace/`-based operating model.
+Confirm that `.agentic-workspace/planning/state.toml` remains bounded, the relevant root validation lanes still pass, and package docs still describe the current `.agentic-workspace/`-based operating model.
 
 ## Last confirmed
 

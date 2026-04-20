@@ -7,7 +7,7 @@ description: Turn an externally tracked task into checked-in planning without ma
 
 Planning Intake Upstream Task converts an upstream issue, ticket, or task into the repo's checked-in planning surfaces.
 
-It exists to keep external trackers as intake sources while preserving execution authority inside `ROADMAP.md`, `TODO.md`, and `docs/execplans/`.
+It exists to keep external trackers as intake sources while preserving execution authority inside `.agentic-workspace/planning/state.toml` and `docs/execplans/`.
 
 ## Use When
 
@@ -17,13 +17,13 @@ It exists to keep external trackers as intake sources while preserving execution
 
 ## Do Not Use When
 
-- the task is already active and fully routed through `TODO.md` plus an execplan
+- the task is already active and fully routed through `todo.active_items` plus an execplan
 - the work is a bounded review pass rather than an accepted planning item
 - the real need is durable subsystem knowledge rather than active or candidate planning
 
 ## Workflow
 
-1. Read `AGENTS.md`, `TODO.md`, and `docs/upstream-task-intake.md`.
+1. Read `AGENTS.md`, `.agentic-workspace/planning/state.toml`, and `docs/upstream-task-intake.md`.
 2. Read the upstream task or issue that is being ingested.
 3. Normalize it into a compact summary:
    - source system
@@ -34,9 +34,9 @@ It exists to keep external trackers as intake sources while preserving execution
 4. Decide the smallest correct routing target:
    - dismiss
    - `docs/reviews/`
-   - `ROADMAP.md`
-   - `TODO.md`
-   - `TODO.md` plus `docs/execplans/`
+   - `roadmap` in `.agentic-workspace/planning/state.toml`
+   - `todo.active_items` in `.agentic-workspace/planning/state.toml`
+   - `todo.active_items` plus `docs/execplans/`
 5. Preserve the upstream source reference in the chosen planning surface.
 6. Keep execution detail in checked-in planning, not in the upstream tracker.
 
@@ -55,5 +55,5 @@ If the task becomes active planned work, ensure the execplan includes an `## Int
 
 - Keep the contract tracker-agnostic even when the current intake source is GitHub.
 - Do not treat the upstream tracker as the source of truth after promotion.
-- Do not paste full issue bodies into `ROADMAP.md`, `TODO.md`, or execplans.
+- Do not paste full issue bodies into `roadmap`, `todo.active_items`, or execplans.
 - Prefer one-paragraph normalized summaries over copied tracker prose.

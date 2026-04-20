@@ -74,7 +74,7 @@ Local dogfooding evaluation procedure for recording which surfaces are actually 
 ## Verification
 
 - The ledger shows repeated choice patterns that can be reviewed later.
-- A repeated pattern can be routed to `ROADMAP.md`, `TODO.md`, or canonical docs without reconstructing the reasoning from chat.
+- A repeated pattern can be routed to planning state candidate lanes, active execplans, or canonical docs without reconstructing the reasoning from chat.
 
 ## Boundary reminder
 

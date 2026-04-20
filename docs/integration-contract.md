@@ -26,15 +26,15 @@ The shortest operating model is:
 
 In combined installs, the interaction should be stronger than simple compatibility:
 
-5. Planning borrows durable context from Memory instead of re-explaining it.
-6. Completed Planning work promotes durable residue into Memory or canonical docs instead of leaving it in chat or archived plan prose.
-7. Repeated restart friction or repeated plan re-explanation is a product signal that the combined install still needs clearer docs, memory, validation, or decomposition.
+1. Planning borrows durable context from Memory instead of re-explaining it.
+2. Completed Planning work promotes durable residue into Memory or canonical docs instead of leaving it in chat or archived plan prose.
+3. Repeated restart friction or repeated plan re-explanation is a product signal that the combined install still needs clearer docs, memory, validation, or decomposition.
 
 ## Canonical-Source Precedence
 
 When multiple surfaces mention the same concern, prefer the narrowest canonical owner in this order:
 
-1. Repo-owned active execution surfaces for active-now state: `TODO.md`, `ROADMAP.md`, and active execplans.
+1. Repo-owned active execution surfaces for active-now state: `.agentic-workspace/planning/state.toml` and active execplans.
 2. Repo-owned durable memory or canonical docs for facts that outlive the current thread.
 3. Product-managed module surfaces under `.agentic-workspace/memory/` or `.agentic-workspace/planning/` for shared workflow support, upgrade source, and generated support assets.
 4. Generated mirrors such as `tools/` docs only as rendered outputs, never as editable source.
@@ -169,7 +169,7 @@ Not allowed:
 
 | Surface | Primary owner | Edit directly? | Notes |
 | --- | --- | --- | --- |
-| `TODO.md`, `ROADMAP.md`, `docs/execplans/` | Repo planning contract | Yes | Active execution state; keep compact and archive completed residue quickly. |
+| `.agentic-workspace/planning/state.toml`, `docs/execplans/` | Repo planning contract | Yes | Active execution state; keep compact and archive completed residue quickly. |
 | `memory/decisions/`, `memory/domains/`, `memory/invariants/`, `memory/runbooks/`, `memory/mistakes/` | Repo memory contract | Yes | Durable repo knowledge; one fact should have one primary home. |
 | `memory/current/` | Repo memory contract | Yes, but weak-authority only | Use for concise re-orientation and calibration, not as canonical durable truth. |
 | `.agentic-workspace/memory/`, `.agentic-workspace/planning/` | Product-managed module layer | Only through the owning package or explicit managed source | Treat as upgrade-replaceable shared support surfaces. |

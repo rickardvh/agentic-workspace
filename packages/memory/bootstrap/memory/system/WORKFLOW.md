@@ -172,8 +172,8 @@ Keep it concise, repo-agnostic, and non-procedural.
   - keep it in memory with explicit remediation metadata when the target is obvious and no broader analysis is needed yet
   - create a review artifact when the right upstream target or scope still needs bounded analysis
   - raise or update an issue when the signal should enter the upstream intake layer
-  - promote to `ROADMAP.md` when the improvement is plausible future work but not active now
-  - promote to `TODO.md` plus an execplan when the remediation is explicitly selected for active execution
+  - promote to `roadmap` in `.agentic-workspace/planning/state.toml` when the improvement is plausible future work but not active now
+  - promote to `todo.active_items` plus an execplan when the remediation is explicitly selected for active execution
 - record the intended post-remediation note shape before closing the signal: retain, shrink, stub, or delete.
 - After remediation lands, revisit the note in the same change or the next maintenance pass and either keep it with a short retention justification or shrink, stub, or delete it.
 - If the signal keeps surviving several maintenance cycles without a chosen target, treat that as workflow failure and escalate it into review, roadmap, or explicit maintainer triage instead of letting memory remain a silent workaround bucket.

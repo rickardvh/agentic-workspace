@@ -100,7 +100,7 @@ slice:
 - uv run python scripts/check/check_planning_surfaces.py
 - uv run agentic-planning-bootstrap upgrade --target .
 - uv run agentic-memory-bootstrap upgrade --target .
-- rg "TODO.md|ROADMAP.md|state.toml" docs packages/planning/src/repo_planning_bootstrap scripts
+- rg "state.toml" docs packages/planning/src/repo_planning_bootstrap scripts
 
 ## Completion Criteria
 
@@ -119,7 +119,7 @@ slice:
 
 ## Proof Report
 
-- Validation proof: `uv run pytest packages/planning/tests/test_planning_lifecycle.py -q`; `uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`; `uv run pytest tests/test_source_payload_operational_install.py -q`; `rg "TODO.md|ROADMAP.md|state.toml" docs packages/planning/src/repo_planning_bootstrap scripts`
+- Validation proof: `uv run pytest packages/planning/tests/test_planning_lifecycle.py -q`; `uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`; `uv run pytest tests/test_source_payload_operational_install.py -q`; `rg "state.toml" docs packages/planning/src/repo_planning_bootstrap scripts`
 - Proof achieved now: planning summary/install flows are state-first, installed planning no longer writes compatibility queue views, and legacy root views are treated only as migration or cleanup inputs.
 - Evidence for "Proof achieved" state: package lifecycle, installer, and planning-surface checks pass; upgrade leaves `.agentic-workspace/planning/state.toml` as the only planning state file; and the workspace summary/checker still report the active lane correctly without installed TODO/ROADMAP projections.
 

@@ -10,9 +10,9 @@ Capture durable context for the planning bootstrap package and its package-local
 
 ## Durable boundaries
 
-- Planning owns active execution state through TODO.md, ROADMAP.md, and docs/execplans.
+- Planning owns active execution state through `.agentic-workspace/planning/state.toml` and `docs/execplans/`.
 - Memory remains an optional companion for durable technical context and should not own active queue state.
-- Package planning contract includes review artifacts, upstream-task intake, and generated routing surfaces in addition to TODO/ROADMAP/execplans.
+- Package planning contract includes review artifacts, upstream-task intake, generated routing surfaces, and compatibility views.
 - Package planning source of truth lives under `packages/planning/src/`, `packages/planning/bootstrap/`, and `packages/planning/tests/`; the repo root is only the operational install used for dogfooding.
 
 ## Companion skill

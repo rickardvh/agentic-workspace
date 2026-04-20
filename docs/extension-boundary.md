@@ -24,7 +24,7 @@ Route those concerns to:
 
 - `docs/module-capability-contract.md` for the current first-party module contract
 - `docs/ecosystem-roadmap.md` for ecosystem stance and extraction discipline
-- `ROADMAP.md` for bounded follow-on work when readiness conditions materially change
+- `roadmap` in `.agentic-workspace/planning/state.toml` for bounded follow-on work when readiness conditions materially change
 
 ## Current Boundary
 
@@ -120,7 +120,7 @@ Refresh this page directly when any of the following happens:
 - repeated external-use pressure appears in issues, reviews, or dogfooding
 - a module-contract change materially moves one of the readiness gates
 
-If that review reveals bounded follow-on work, record it in `ROADMAP.md` instead of turning this page into a latent queue.
+If that review reveals bounded follow-on work, record it in `roadmap` in `.agentic-workspace/planning/state.toml` instead of turning this page into a latent queue.
 
 ## Relationship To Other Docs
 

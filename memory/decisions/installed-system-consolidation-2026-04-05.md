@@ -45,7 +45,7 @@ Use a single root-owned installed memory system and a single root-owned installe
 
 ## Verify
 
-- TODO.md
+- .agentic-workspace/planning/state.toml
 - Makefile
 - .github/workflows/ci.yml
 
