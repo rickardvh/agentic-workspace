@@ -1781,48 +1781,96 @@ def _write_generated_text(*, destination: Path, text: str, dry_run: bool) -> Non
     destination.write_text(text, encoding="utf-8")
 
 
-def _append_local_only_gitignore(*, repo_root: Path, dry_run: bool) -> dict[str, str]:
-    gitignore_path = repo_root / ".gitignore"
-    existing_text = gitignore_path.read_text(encoding="utf-8") if gitignore_path.exists() else ""
-    if ".gemini/" in existing_text:
+LOCAL_ONLY_IGNORE_BLOCK = "# Agentic Workspace local-only storage\n.gemini/\n"
+
+
+def _repo_git_dir(repo_root: Path) -> Path:
+    git_path = repo_root / ".git"
+    if git_path.is_dir():
+        return git_path
+    if git_path.is_file():
+        gitdir_text = git_path.read_text(encoding="utf-8").strip()
+        if gitdir_text.lower().startswith("gitdir:"):
+            gitdir_value = gitdir_text.split(":", 1)[1].strip()
+            gitdir_path = Path(gitdir_value)
+            return gitdir_path if gitdir_path.is_absolute() else (repo_root / gitdir_path).resolve()
+    raise WorkspaceUsageError("Could not resolve the repository git directory for local-only residue management.")
+
+
+def _local_only_exclude_path(*, repo_root: Path) -> Path:
+    return _repo_git_dir(repo_root) / "info" / "exclude"
+
+
+def _append_local_only_git_exclude(*, repo_root: Path, dry_run: bool) -> dict[str, str]:
+    exclude_path = _local_only_exclude_path(repo_root=repo_root)
+    existing_text = exclude_path.read_text(encoding="utf-8") if exclude_path.exists() else ""
+    if LOCAL_ONLY_IGNORE_BLOCK in existing_text:
         return {
             "kind": "current",
-            "path": ".gitignore",
+            "path": ".git/info/exclude",
             "detail": "local-only workspace storage already ignored",
         }
 
     updated_text = existing_text.rstrip()
-    addition = "\n# Agentic Workspace local-only storage\n.gemini/\n"
+    addition = "\n" + LOCAL_ONLY_IGNORE_BLOCK
     rendered_text = (updated_text + addition) if updated_text else addition.lstrip("\n")
     if not dry_run:
-        gitignore_path.parent.mkdir(parents=True, exist_ok=True)
-        gitignore_path.write_text(rendered_text, encoding="utf-8")
+        exclude_path.parent.mkdir(parents=True, exist_ok=True)
+        exclude_path.write_text(rendered_text, encoding="utf-8")
     return {
-        "kind": "would create" if dry_run and not gitignore_path.exists() else "would update" if dry_run else "created",
-        "path": ".gitignore",
-        "detail": "record .gemini/ in the repo root for local-only workspace storage",
+        "kind": "would create" if dry_run and not exclude_path.exists() else "would update" if dry_run else "created",
+        "path": ".git/info/exclude",
+        "detail": "record .gemini/ in git-local exclude metadata for local-only workspace storage",
     }
 
 
-def _remove_local_only_gitignore(*, repo_root: Path, dry_run: bool) -> dict[str, str]:
-    gitignore_path = repo_root / ".gitignore"
-    existing_text = gitignore_path.read_text(encoding="utf-8") if gitignore_path.exists() else ""
-    local_only_block = "# Agentic Workspace local-only storage\n.gemini/\n"
-    if local_only_block not in existing_text:
+def _remove_local_only_git_exclude(*, repo_root: Path, dry_run: bool) -> dict[str, str]:
+    exclude_path = _local_only_exclude_path(repo_root=repo_root)
+    existing_text = exclude_path.read_text(encoding="utf-8") if exclude_path.exists() else ""
+    if LOCAL_ONLY_IGNORE_BLOCK not in existing_text:
         return {
             "kind": "skipped",
-            "path": ".gitignore",
+            "path": ".git/info/exclude",
             "detail": "no local-only workspace ignore block to remove",
         }
 
-    rendered_text = existing_text.replace(local_only_block, "")
+    rendered_text = existing_text.replace(LOCAL_ONLY_IGNORE_BLOCK, "")
+    if not rendered_text.strip():
+        if not dry_run:
+            exclude_path.write_text("", encoding="utf-8")
+        return {
+            "kind": "would remove" if dry_run else "removed",
+            "path": ".git/info/exclude",
+            "detail": "remove the local-only workspace ignore block and leave the git-local exclude file empty",
+        }
+
+    if not dry_run:
+        exclude_path.write_text(rendered_text, encoding="utf-8")
+    return {
+        "kind": "would update" if dry_run else "updated",
+        "path": ".git/info/exclude",
+        "detail": "remove the local-only workspace ignore block",
+    }
+
+
+def _remove_legacy_local_only_gitignore(*, repo_root: Path, dry_run: bool) -> dict[str, str]:
+    gitignore_path = repo_root / ".gitignore"
+    existing_text = gitignore_path.read_text(encoding="utf-8") if gitignore_path.exists() else ""
+    if LOCAL_ONLY_IGNORE_BLOCK not in existing_text:
+        return {
+            "kind": "skipped",
+            "path": ".gitignore",
+            "detail": "no legacy local-only workspace ignore block to remove",
+        }
+
+    rendered_text = existing_text.replace(LOCAL_ONLY_IGNORE_BLOCK, "")
     if not rendered_text.strip():
         if not dry_run and gitignore_path.exists():
             gitignore_path.unlink()
         return {
             "kind": "would remove" if dry_run else "removed",
             "path": ".gitignore",
-            "detail": "remove the local-only workspace ignore block and the empty .gitignore file",
+            "detail": "remove the legacy local-only workspace ignore block and the empty .gitignore file",
         }
 
     if not dry_run:
@@ -1830,7 +1878,7 @@ def _remove_local_only_gitignore(*, repo_root: Path, dry_run: bool) -> dict[str,
     return {
         "kind": "would update" if dry_run else "updated",
         "path": ".gitignore",
-        "detail": "remove the local-only workspace ignore block",
+        "detail": "remove the legacy local-only workspace ignore block",
     }
 
 
@@ -2016,7 +2064,8 @@ def _workspace_init_or_upgrade_report(
     warnings.extend(policy_warnings)
 
     if local_only_repo_root is not None:
-        actions.append(_append_local_only_gitignore(repo_root=local_only_repo_root, dry_run=dry_run))
+        actions.append(_remove_legacy_local_only_gitignore(repo_root=local_only_repo_root, dry_run=dry_run))
+        actions.append(_append_local_only_git_exclude(repo_root=local_only_repo_root, dry_run=dry_run))
 
     return _workspace_report(
         target_root=target_root,
@@ -2078,7 +2127,8 @@ def _workspace_uninstall_report(*, target_root: Path, dry_run: bool, local_only_
                     "detail": "remove the entire local-only workspace install tree",
                 }
             )
-        actions.append(_remove_local_only_gitignore(repo_root=local_only_repo_root, dry_run=dry_run))
+        actions.append(_remove_local_only_git_exclude(repo_root=local_only_repo_root, dry_run=dry_run))
+        actions.append(_remove_legacy_local_only_gitignore(repo_root=local_only_repo_root, dry_run=dry_run))
 
     return _workspace_report(
         target_root=target_root,

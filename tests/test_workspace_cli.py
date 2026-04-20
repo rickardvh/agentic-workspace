@@ -1614,7 +1614,7 @@ def test_init_uses_explicit_modules_csv(monkeypatch, tmp_path: Path, capsys) -> 
     assert calls == [("memory", "install", {"target": str(tmp_path), "dry_run": False, "force": False})]
 
 
-def test_install_local_only_uses_gemini_workspace_root_and_updates_gitignore(tmp_path: Path, capsys) -> None:
+def test_install_local_only_uses_gemini_workspace_root_and_updates_git_exclude(tmp_path: Path, capsys) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     _init_git_repo(repo_root)
@@ -1628,11 +1628,28 @@ def test_install_local_only_uses_gemini_workspace_root_and_updates_gitignore(tmp
     assert (install_root / "AGENTS.md").exists()
     assert (install_root / "TODO.md").exists()
     assert (install_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
-    gitignore_text = (repo_root / ".gitignore").read_text(encoding="utf-8")
-    assert ".gemini/" in gitignore_text
+    git_exclude_text = (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+    assert ".gemini/" in git_exclude_text
+    assert not (repo_root / ".gitignore").exists()
 
 
-def test_uninstall_local_only_removes_gemini_workspace_root_and_gitignore(tmp_path: Path, capsys) -> None:
+def test_install_local_only_migrates_legacy_gitignore_residue(tmp_path: Path, capsys) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+    (repo_root / ".gitignore").write_text("# Agentic Workspace local-only storage\n.gemini/\n", encoding="utf-8")
+
+    assert cli.main(["install", "--modules", "planning", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    install_root = repo_root / ".gemini" / "agentic-workspace"
+    assert payload["command"] == "install"
+    assert payload["target"] == install_root.as_posix()
+    assert not (repo_root / ".gitignore").exists()
+    assert ".gemini/" in (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+
+
+def test_uninstall_local_only_removes_gemini_workspace_root_and_git_exclude(tmp_path: Path, capsys) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     _init_git_repo(repo_root)
@@ -1648,7 +1665,7 @@ def test_uninstall_local_only_removes_gemini_workspace_root_and_gitignore(tmp_pa
     assert payload["target"] == install_root.as_posix()
     assert not install_root.exists()
     assert not (repo_root / ".gemini").exists()
-    assert not (repo_root / ".gitignore").exists()
+    assert ".gemini/" not in (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
 
 
 def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_path: Path, capsys) -> None:
