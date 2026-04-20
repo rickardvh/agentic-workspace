@@ -46,6 +46,7 @@ The installer distinguishes between three classes of files:
 The workspace-level `agentic-workspace install --local-only` command installs the shared workspace surfaces into `.gemini/agentic-workspace/` instead of the repository root.
 
 In local-only mode:
+- local package-owned state is recorded in `.gemini/agentic-workspace/LOCAL-ONLY.toml`
 - repo-local `.git/info/exclude` is updated to ignore `.gemini/`
 - the installed workspace continues to use the same managed planning and memory payloads
 - the regular repository root surfaces remain untouched

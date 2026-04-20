@@ -22,11 +22,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Active Handoff
 
-- Lane: Ownership boundary and low-residue installs
-  ID: ownership-boundary-and-local-only-mode
-  Surface: docs/execplans/local-only-residue-via-git-exclude.md
-  Why now: The lane is really about consolidating package-owned state into one unambiguous home; residue cleanup is the downstream consequence that makes the boundary feel unobtrusive.
-- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, repo-directed improvement evidence-threshold, validation-friction repo-friction, config-driven execution posture, config-driven autonomy and agnostic improvements, startup front door clarity and agent-agnostic first contact, Memory trust/usefulness/routing/capture, Memory trust/habitual-pull, routine recovery compression/convergence, compression-and-convergence-of-operating-model, rotating-agent-economics, portable-declarative-contracts-beyond-python-cli, signal-hygiene-and-evidence-based-improvement, intent-satisfaction-validation, and the earlier `#220`-`#231` tranche are complete.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, repo-directed improvement evidence-threshold, validation-friction repo-friction, config-driven execution posture, config-driven autonomy and agnostic improvements, startup front door clarity and agent-agnostic first contact, Memory trust/usefulness/routing/capture, Memory trust/habitual-pull, routine recovery compression/convergence, compression-and-convergence-of-operating-model, rotating-agent-economics, portable-declarative-contracts-beyond-python-cli, signal-hygiene-and-evidence-based-improvement, intent-satisfaction-validation, the earlier `#220`-`#231` tranche, and the ownership-boundary-and-local-only-mode lane are complete.
 
 ## Candidate Lanes
 

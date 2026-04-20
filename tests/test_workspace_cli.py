@@ -1628,6 +1628,7 @@ def test_install_local_only_uses_gemini_workspace_root_and_updates_git_exclude(t
     assert (install_root / "AGENTS.md").exists()
     assert (install_root / "TODO.md").exists()
     assert (install_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+    assert (install_root / "LOCAL-ONLY.toml").read_text(encoding="utf-8").startswith('schema_version = 1\nmode = "local-only"')
     git_exclude_text = (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
     assert ".gemini/" in git_exclude_text
     assert not (repo_root / ".gitignore").exists()
@@ -1646,6 +1647,7 @@ def test_install_local_only_migrates_legacy_gitignore_residue(tmp_path: Path, ca
     assert payload["command"] == "install"
     assert payload["target"] == install_root.as_posix()
     assert not (repo_root / ".gitignore").exists()
+    assert (install_root / "LOCAL-ONLY.toml").exists()
     assert ".gemini/" in (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
 
 
@@ -1665,6 +1667,7 @@ def test_uninstall_local_only_removes_gemini_workspace_root_and_git_exclude(tmp_
     assert payload["target"] == install_root.as_posix()
     assert not install_root.exists()
     assert not (repo_root / ".gemini").exists()
+    assert not (install_root / "LOCAL-ONLY.toml").exists()
     assert ".gemini/" not in (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
 
 

@@ -1782,6 +1782,7 @@ def _write_generated_text(*, destination: Path, text: str, dry_run: bool) -> Non
 
 
 LOCAL_ONLY_IGNORE_BLOCK = "# Agentic Workspace local-only storage\n.gemini/\n"
+LOCAL_ONLY_STATE_FILE = Path("LOCAL-ONLY.toml")
 
 
 def _repo_git_dir(repo_root: Path) -> Path:
@@ -1799,6 +1800,58 @@ def _repo_git_dir(repo_root: Path) -> Path:
 
 def _local_only_exclude_path(*, repo_root: Path) -> Path:
     return _repo_git_dir(repo_root) / "info" / "exclude"
+
+
+def _local_only_state_text() -> str:
+    return "\n".join(
+        (
+            "schema_version = 1",
+            'mode = "local-only"',
+            'repo_hook = ".git/info/exclude"',
+            "",
+        )
+    )
+
+
+def _local_only_state_path(*, target_root: Path) -> Path:
+    return target_root / LOCAL_ONLY_STATE_FILE
+
+
+def _write_local_only_state(*, target_root: Path, dry_run: bool) -> dict[str, str]:
+    state_path = _local_only_state_path(target_root=target_root)
+    rendered_text = _local_only_state_text()
+    existing_text = state_path.read_text(encoding="utf-8") if state_path.exists() else None
+    if existing_text == rendered_text:
+        return {
+            "kind": "current",
+            "path": LOCAL_ONLY_STATE_FILE.as_posix(),
+            "detail": "local-only package-owned state already current",
+        }
+    if not dry_run:
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        state_path.write_text(rendered_text, encoding="utf-8")
+    return {
+        "kind": "would create" if dry_run and existing_text is None else "would update" if dry_run else "created",
+        "path": LOCAL_ONLY_STATE_FILE.as_posix(),
+        "detail": "record local-only package-owned state inside the package install tree",
+    }
+
+
+def _remove_local_only_state(*, target_root: Path, dry_run: bool) -> dict[str, str]:
+    state_path = _local_only_state_path(target_root=target_root)
+    if not state_path.exists():
+        return {
+            "kind": "skipped",
+            "path": LOCAL_ONLY_STATE_FILE.as_posix(),
+            "detail": "no local-only package-owned state to remove",
+        }
+    if not dry_run:
+        state_path.unlink()
+    return {
+        "kind": "would remove" if dry_run else "removed",
+        "path": LOCAL_ONLY_STATE_FILE.as_posix(),
+        "detail": "remove the local-only package-owned state file",
+    }
 
 
 def _append_local_only_git_exclude(*, repo_root: Path, dry_run: bool) -> dict[str, str]:
@@ -2064,6 +2117,7 @@ def _workspace_init_or_upgrade_report(
     warnings.extend(policy_warnings)
 
     if local_only_repo_root is not None:
+        actions.append(_write_local_only_state(target_root=target_root, dry_run=dry_run))
         actions.append(_remove_legacy_local_only_gitignore(repo_root=local_only_repo_root, dry_run=dry_run))
         actions.append(_append_local_only_git_exclude(repo_root=local_only_repo_root, dry_run=dry_run))
 
@@ -2111,6 +2165,7 @@ def _workspace_uninstall_report(*, target_root: Path, dry_run: bool, local_only_
                 destination.unlink()
         _prune_empty_parent_dirs(target_root=target_root, relatives=removable)
         if local_only_repo_root is not None and target_root.exists():
+            actions.append(_remove_local_only_state(target_root=target_root, dry_run=dry_run))
             shutil.rmtree(target_root)
             gemini_dir = local_only_repo_root / ".gemini"
             if gemini_dir.exists():
