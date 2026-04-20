@@ -9,4 +9,7 @@ Completed work belongs in archived execplans and roadmap history, not in the act
 
 ## Now
 
-- No active items.
+- ID: OWNERSHIP-BOUNDARY-AND-LOCAL-ONLY-MODE
+  Status: in-progress
+  Surface: docs/execplans/ownership-boundary-and-low-residue-installs.md
+  Why now: Local-only use and cleaner uninstall both depend on a sharper package/repo boundary.

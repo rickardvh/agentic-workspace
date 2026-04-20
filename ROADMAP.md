@@ -15,7 +15,10 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## Active Handoff
 
-- No active handoff right now.
+- Lane: Ownership boundary and low-residue installs
+  ID: ownership-boundary-and-local-only-mode
+  Surface: docs/execplans/ownership-boundary-and-low-residue-installs.md
+  Why now: Promoted into active work so the boundary review can start from checked-in planning rather than chat residue.
 
 ## GitHub Issue Intake
 
@@ -26,15 +29,6 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, repo-directed improvement evidence-threshold, validation-friction repo-friction, config-driven execution posture, config-driven autonomy and agnostic improvements, startup front door clarity and agent-agnostic first contact, Memory trust/usefulness/routing/capture, Memory trust/habitual-pull, routine recovery compression/convergence, compression-and-convergence-of-operating-model, rotating-agent-economics, portable-declarative-contracts-beyond-python-cli, signal-hygiene-and-evidence-based-improvement, intent-satisfaction-validation, and the earlier `#220`-`#231` tranche are complete.
 
 ## Candidate Lanes
-
-- Lane: Ownership boundary and low-residue installs
-  ID: ownership-boundary-and-local-only-mode
-  Priority: first
-  Issues: #231
-  Outcome: Separate package-owned state cleanly from repo-owned surfaces so install and uninstall become low-residue operations even for local-only mode.
-  Why now: Local-only use and cleaner uninstall both depend on a sharper package/repo boundary.
-  Promotion signal: Promote when a cleaner package-owned home can reduce repo-visible residue without losing repo-owned contracts.
-  Suggested first slice: Classify package-owned, repo-owned, and ambiguous middle-ground surfaces, then identify the smallest explicit repo hook that still preserves startup.
 
 - Lane: Product compression and gradual discovery
   ID: product-compression-and-gradual-discovery
