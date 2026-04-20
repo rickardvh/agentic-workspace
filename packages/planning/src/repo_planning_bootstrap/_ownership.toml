@@ -78,20 +78,13 @@ authority = "primary"
 summary = "Repo-level startup instructions and local operating constraints."
 
 [[authority_surfaces]]
-concern = "active-execution-state"
-surface = "TODO.md"
-owner = "repo"
-ownership = "repo_owned"
+concern = "compact-planning-state"
+surface = ".agentic-workspace/planning/state.toml"
+owner = "planning"
+ownership = "module_managed"
 authority = "primary"
-summary = "Active queue and next-action state for current work."
+summary = "Consolidated active queue and roadmap state owned by the planning package."
 
-[[authority_surfaces]]
-concern = "long-horizon-candidates"
-surface = "ROADMAP.md"
-owner = "repo"
-ownership = "repo_owned"
-authority = "primary"
-summary = "Bounded inactive candidate queue for future promotion."
 
 [[authority_surfaces]]
 concern = "design-constraints"

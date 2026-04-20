@@ -1,0 +1,15 @@
+[todo]
+active_items = [
+  { id = "OWNERSHIP-BOUNDARY-AND-LOCAL-ONLY-MODE", surface = "docs/execplans/local-only-residue-via-git-exclude.md", why_now = "Package-owned planning state still needs one explicit home inside `.agentic-workspace/planning/`, and root TODO/ROADMAP should become compatibility views instead of the source of truth." },
+]
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "product-compression-and-gradual-discovery", title = "Product compression and gradual discovery", priority = "second", issues = ["#230", "#227", "#228", "#223", "#224", "#225", "#226"], outcome = "Make the visible product shape smaller and more progressively discoverable while preserving real leverage.", reason = "Onboarding and restart cost are now dominated by visible product shape rather than missing capability.", promotion_signal = "Promote when a visible surface no longer earns its cognitive cost or a deeper concept can stay hidden until a task boundary actually needs it.", suggested_first_slice = "Define the tiny safe startup model, the boundary-triggered escalation cues, and the compact module-capability advertisement pattern." },
+  { id = "system-intent-and-planning-trust", title = "System intent and planning trust", priority = "third", issues = ["#236", "#237", "#238", "#232", "#229", "#220", "#222", "#221"], outcome = "Preserve higher-level product intent and make durable planning/closure semantics more trustworthy across tasks, issues, and sessions.", reason = "The repo already validates local slices well; the remaining gap is durable intent and honest follow-through.", promotion_signal = "Promote when local success is not enough to preserve later proof, closure truthfulness, or cross-session alignment.", suggested_first_slice = "Define the minimum durable system-intent layer and the honest closure/reopen semantics for slice-complete but intent-partial work." },
+]
+candidates = [
+  { priority = "second", summary = "Product compression and gradual discovery" },
+  { priority = "third", summary = "System intent and planning trust" },
+]

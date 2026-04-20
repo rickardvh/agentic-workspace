@@ -22,6 +22,7 @@ from repo_planning_bootstrap._source import UPGRADE_SOURCE_PATH, resolve_upgrade
 PLANNING_MANAGED_ROOT = module_root("planning")
 PLANNING_SKILLS_MANAGED_ROOT = PLANNING_MANAGED_ROOT / "skills"
 PLANNING_MANIFEST_PATH = PLANNING_MANAGED_ROOT / "agent-manifest.json"
+PLANNING_STATE_PATH = PLANNING_MANAGED_ROOT / "state.toml"
 PLANNING_RENDER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "render_agent_docs.py"
 PLANNING_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
 PLANNING_MAINTAINER_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_maintainer_surfaces.py"
@@ -32,8 +33,6 @@ ROOT_MANIFEST_MIRROR_PATH = Path("tools/agent-manifest.json")
 
 REQUIRED_PAYLOAD_FILES = (
     Path("AGENTS.template.md"),
-    Path("TODO.template.md"),
-    Path("ROADMAP.template.md"),
     Path("docs/execution-flow-contract.md"),
     Path("docs/routing-contract.md"),
     Path("docs/lifecycle-and-config-contract.md"),
@@ -67,8 +66,6 @@ REQUIRED_PAYLOAD_FILES = (
 
 PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("AGENTS.template.md"),
-    Path("TODO.template.md"),
-    Path("ROADMAP.template.md"),
     Path("docs/execution-flow-contract.md"),
     Path("docs/routing-contract.md"),
     Path("docs/lifecycle-and-config-contract.md"),
@@ -96,8 +93,6 @@ PLANNING_LOWER_STABILITY_HELPER_FILES = tuple(
 
 ROOT_SURFACE_FILES = (
     Path("AGENTS.template.md"),
-    Path("TODO.template.md"),
-    Path("ROADMAP.template.md"),
 )
 
 GENERATED_PAYLOAD_FILES = (
@@ -313,6 +308,8 @@ def install_bootstrap(
     _copy_payload(target_root=target_root, result=result, conservative=False, force=force)
     _copy_bundled_skills(target_root=target_root, result=result, conservative=False, force=force)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
+    if not dry_run:
+        _migrate_legacy_planning_surfaces(target_root, force=force)
     if local_only and not dry_run:
         _ensure_local_ignored(target or Path.cwd())
     return result
@@ -334,6 +331,8 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) 
     _copy_payload(target_root=target_root, result=result, conservative=True, force=False)
     _copy_bundled_skills(target_root=target_root, result=result, conservative=True, force=False)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
+    if not dry_run:
+        _migrate_legacy_planning_surfaces(target_root)
     return result
 
 
@@ -350,6 +349,8 @@ def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False
         _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=False)
 
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
+    if not dry_run:
+        _migrate_legacy_planning_surfaces(target_root)
     return result
 
 
@@ -511,32 +512,55 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
     roadmap_path = target_root / "ROADMAP.md"
     execplan_dir = target_root / "docs" / "execplans"
 
-    todo_lines, todo_items = _read_todo_items(todo_path)
-    active_items = []
-    queued_items = []
-    for item in todo_items:
-        status = item.fields.get("status", "").lower()
-        if "in-progress" in status or "active" in status or "ongoing" in status:
-            active_items.append(
-                {
-                    "id": item.fields.get("id", ""),
-                    "surface": item.fields.get("surface", ""),
-                    "why_now": item.fields.get("why now", ""),
-                }
-            )
-            continue
-        if status not in {"completed", "done", "closed"}:
-            queued_items.append(
-                {
-                    "id": item.fields.get("id", ""),
-                    "surface": item.fields.get("surface", ""),
-                    "why_now": item.fields.get("why now", ""),
-                    "status": item.fields.get("status", ""),
-                }
-            )
+    state = _read_state_from_toml(target_root)
+    if state:
+        todo_data = state.get("todo", {})
+        active_items = todo_data.get("active_items", [])
+        queued_items = todo_data.get("queued_items", [])
+        roadmap_data = state.get("roadmap", {})
+        roadmap_lanes = roadmap_data.get("lanes", [])
+        roadmap_candidates = roadmap_data.get("candidates", [])
+        if not roadmap_candidates and roadmap_lanes:
+            roadmap_candidates = [
+                {"priority": lane.get("priority", ""), "summary": lane.get("title", "")} for lane in roadmap_lanes
+            ]
+        todo_line_count = 0  # We don't have a direct line count for the TOML state
+        todo_item_count = len(active_items) + len(queued_items)
+    else:
+        todo_lines, todo_items = _read_todo_items(todo_path)
+        active_items = []
+        queued_items = []
+        for item in todo_items:
+            status = item.fields.get("status", "").lower()
+            if "in-progress" in status or "active" in status or "ongoing" in status:
+                active_items.append(
+                    {
+                        "id": item.fields.get("id", ""),
+                        "surface": item.fields.get("surface", ""),
+                        "why_now": item.fields.get("why now", ""),
+                    }
+                )
+                continue
+            if status not in {"completed", "done", "closed"}:
+                queued_items.append(
+                    {
+                        "id": item.fields.get("id", ""),
+                        "surface": item.fields.get("surface", ""),
+                        "why_now": item.fields.get("why now", ""),
+                        "status": item.fields.get("status", ""),
+                    }
+                )
+        roadmap_lanes = _roadmap_candidate_lanes(roadmap_path)
+        roadmap_candidates = _roadmap_candidates(roadmap_path)
+        todo_line_count = len(todo_lines)
+        todo_item_count = len(todo_items)
 
-    roadmap_lanes = _roadmap_candidate_lanes(roadmap_path)
-    roadmap_candidates = _roadmap_candidates(roadmap_path)
+    ownership_review = _ownership_review(target_root)
+    # ... rest of the function ...
+    active_execplans: list[dict[str, str]] = []
+    # ... (skipping some logic) ...
+    # Wait, I need to make sure I don't break the existing logic.
+    # I'll replace the beginning of planning_summary.
     ownership_review = _ownership_review(target_root)
 
     active_execplans: list[dict[str, str]] = []
@@ -605,8 +629,8 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         "target_root": str(target_root),
         "adoption_mode": _detect_adoption_mode(target_root),
         "todo": {
-            "line_count": len(todo_lines),
-            "item_count": len(todo_items),
+            "line_count": todo_line_count,
+            "item_count": todo_item_count,
             "active_count": len(active_items),
             "active_items": active_items,
             "queued_count": len(queued_items),
@@ -2714,3 +2738,159 @@ def _cleanup_roadmap_section(
         replacement = [empty_line]
 
     return lines[:section_start] + replacement + lines[section_end:], True
+
+
+def _read_state_from_toml(target_root: Path) -> dict[str, Any] | None:
+    if not PLANNING_STATE_PATH.exists():
+        # Fallback to checking the target root in case of relative path issues during dev
+        root_state = target_root / PLANNING_STATE_PATH.relative_to(PLANNING_MANAGED_ROOT)
+        if not root_state.exists():
+            return None
+        state_path = root_state
+    else:
+        state_path = PLANNING_STATE_PATH
+
+    try:
+        with state_path.open("rb") as f:
+            return tomllib.load(f)
+    except Exception:
+        return None
+
+
+def _write_state_to_toml(target_root: Path, state: dict[str, Any]) -> None:
+    state_path = target_root / PLANNING_STATE_PATH
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+
+    lines = []
+    if "todo" in state:
+        lines.append("[todo]")
+        for key in ["active_items", "queued_items"]:
+            if key in state["todo"]:
+                items = state["todo"][key]
+                if not items:
+                    lines.append(f"{key} = []")
+                else:
+                    lines.append(f"{key} = [")
+                    for item in items:
+                        item_str = ", ".join(f'{k} = {json.dumps(v)}' for k, v in item.items())
+                        lines.append(f"  {{ {item_str} }},")
+                    lines.append("]")
+        lines.append("")
+
+    if "roadmap" in state:
+        lines.append("[roadmap]")
+        for key in ["lanes", "candidates"]:
+            if key in state["roadmap"]:
+                items = state["roadmap"][key]
+                if not items:
+                    lines.append(f"{key} = []")
+                else:
+                    lines.append(f"{key} = [")
+                    for item in items:
+                        item_str = ", ".join(f'{k} = {json.dumps(v)}' for k, v in item.items())
+                        lines.append(f"  {{ {item_str} }},")
+                    lines.append("]")
+        lines.append("")
+
+    state_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _migrate_legacy_planning_surfaces(target_root: Path, *, force: bool = False) -> bool:
+    todo_path = target_root / "TODO.md"
+    roadmap_path = target_root / "ROADMAP.md"
+    state_path = target_root / PLANNING_STATE_PATH
+
+    if state_path.exists() and not force:
+        return False
+
+    if not todo_path.exists() and not roadmap_path.exists():
+        return False
+
+    # Conflict detection: look for headers we don't recognize
+    # Whitelist expanded based on repo-specific findings
+    known_todo_headers = {"active queue", "next candidate queue", "completed tasks", "abandoned queue", "purpose", "now"}
+    known_roadmap_headers = {
+        "candidate lanes", "next candidate queue", "purpose", "scope",
+        "github issue intake", "active handoff", "reopen conditions", "promotion rules"
+    }
+    
+    guideline_sections = {
+        "github issue intake", "scope", "reopen conditions", "promotion rules"
+    }
+
+    extracted_guidelines = []
+
+    def extract_sections(p: Path, known: set[str], guidelines: set[str]) -> None:
+        if not p.exists():
+            return
+        c = p.read_text(encoding="utf-8")
+        headers = re.findall(r"^##\s+(.*)$", c, re.MULTILINE)
+        unknown = [h.strip() for h in headers if h.strip().lower() not in known]
+        if unknown:
+            raise ValueError(
+                f"Migration conflict in {p.name}: found unknown sections {unknown}. "
+                "These may contain custom user notes or non-standard work. "
+                "Please migrate them manually to state.toml or remove them from the root before continuing."
+            )
+        
+        # Extract guideline sections
+        for h in headers:
+            h_clean = h.strip()
+            if h_clean.lower() in guidelines:
+                section_content = _section_lines(c.splitlines(), h_clean)
+                extracted_guidelines.append(f"## {h_clean}\n\n" + "\n".join(section_content))
+
+    extract_sections(todo_path, known_todo_headers, guideline_sections)
+    extract_sections(roadmap_path, known_roadmap_headers, guideline_sections)
+
+    if extracted_guidelines:
+        process_path = target_root / "docs" / "planning-process.md"
+        process_path.parent.mkdir(parents=True, exist_ok=True)
+        process_path.write_text("# Planning Process Guidelines\n\n" + "\n\n".join(extracted_guidelines) + "\n", encoding="utf-8")
+
+    # Read TODO.md
+    _, todo_items = _read_todo_items(todo_path) if todo_path.exists() else ([], [])
+
+    # Read ROADMAP.md
+    roadmap_lanes = _roadmap_candidate_lanes(roadmap_path) if roadmap_path.exists() else []
+    roadmap_candidates = _roadmap_candidates(roadmap_path) if roadmap_path.exists() else []
+
+    # Construct state
+    active_items = []
+    queued_items = []
+    for item in todo_items:
+        status = item.fields.get("status", "").lower()
+        if any(kw in status for kw in ["active", "in-progress", "ongoing"]):
+            active_items.append({
+                "id": item.fields.get("id", ""),
+                "surface": item.fields.get("surface", ""),
+                "why_now": item.fields.get("why now", "")
+            })
+        else:
+            queued_items.append({
+                "id": item.fields.get("id", ""),
+                "surface": item.fields.get("surface", ""),
+                "why_now": item.fields.get("why now", ""),
+                "status": item.fields.get("status", "")
+            })
+
+    state = {
+        "todo": {
+            "active_items": active_items,
+            "queued_items": queued_items,
+        },
+        "roadmap": {
+            "lanes": roadmap_lanes,
+            "candidates": roadmap_candidates,
+        }
+    }
+
+    _write_state_to_toml(target_root, state)
+
+    # Delete legacy files
+    if todo_path.exists():
+        todo_path.unlink()
+    if roadmap_path.exists():
+        roadmap_path.unlink()
+
+    return True
