@@ -195,8 +195,9 @@ def _baseline_roadmap() -> str:
 def _baseline_manifest() -> dict[str, object]:
     return {
         "bootstrap": {
-            "first_reads": ["AGENTS.md", "TODO.md"],
+            "first_reads": ["AGENTS.md"],
             "first_queries": [
+                "Use `agentic-workspace summary --format json` first when active planning recovery or compact ownership state is the question.",
                 "Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
             ],
             "surface_roles": [
@@ -204,6 +205,8 @@ def _baseline_manifest() -> dict[str, object]:
                 "`llms.txt` is the agent entrypoint router.",
             ],
             "conditional_reads": [
+                "Read `agentic-workspace summary --format json` first when planning recovery or ownership boundary review is the question.",
+                "Read `TODO.md` only when the compact summary shows active work that still needs raw queue detail.",
                 "Read `ROADMAP.md` only when promoting work.",
                 "Treat `docs/agent-installation.md` as the external install/adopt handoff only; after bootstrap, return to the configured startup entrypoint for normal repo work.",
                 "Do not bulk-read all planning surfaces.",

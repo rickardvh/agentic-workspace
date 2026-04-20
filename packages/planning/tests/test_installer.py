@@ -494,8 +494,24 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "record the required next owner and activation trigger explicitly before archive" in bootstrap_agents_text
     assert "agentic-workspace summary --format json" in bootstrap_agents_text
     assert "agentic-workspace defaults --section startup --format json" in bootstrap_agents_text
+    assert "Read `TODO.md` only when the compact summary shows active work that still needs raw queue detail." in bootstrap_agents_text
     assert "remove or archive the matched queue residue in the same pass" in execplans_readme_text
     assert "Iterative carry-forward belongs under `## Iterative Follow-Through`" in execplans_readme_text
+    assert any(
+        "Use `agentic-workspace summary --format json` first when active planning recovery or compact ownership state is the question."
+        in item
+        for item in manifest_payload["bootstrap"]["first_queries"]
+    )
+    assert any(
+        "Read `agentic-workspace summary --format json` first when planning recovery or ownership boundary review is the question."
+        in item
+        for item in manifest_payload["bootstrap"]["conditional_reads"]
+    )
+    assert any(
+        "Read `TODO.md` only when the compact summary shows active work that still needs raw queue detail."
+        in item
+        for item in manifest_payload["bootstrap"]["conditional_reads"]
+    )
     assert any(
         "prefer `agentic-workspace defaults --section startup --format json` and `agentic-workspace config --target ./repo --format json` before broader prose"
         in item
@@ -1229,7 +1245,8 @@ def test_archive_execplan_apply_cleanup_updates_compact_now_todo_shape(tmp_path:
 
 ## Purpose
 
-Active queue for repository work.
+Repo-owned active queue for repository work.
+Use `agentic-workspace summary --format json` first; keep this file as the repo-owned view of the active queue.
 
 ## Now
 - front-door-defaults-tranche: Active - compress front-door docs and land the defaults contract.

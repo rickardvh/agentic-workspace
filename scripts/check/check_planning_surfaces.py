@@ -711,12 +711,21 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     surface_roles_lower = [str(item).lower() for item in surface_roles]
     conditional_reads_lower = [str(item).lower() for item in conditional_reads]
 
-    if "todo.md" not in first_reads_lower or "roadmap.md" in first_reads_lower or "docs/execplans/readme.md" in first_reads_lower:
+    if not any("summary --format json" in row for row in first_queries_lower):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
-                "Manifest first_reads must stay lightweight: include TODO.md, exclude ROADMAP.md, and keep execplan conventions conditional.",
+                "Manifest first_queries must include a summary-first planning recovery query.",
+            )
+        )
+
+    if "todo.md" in first_reads_lower or "roadmap.md" in first_reads_lower or "docs/execplans/readme.md" in first_reads_lower:
+        warnings.append(
+            PlanningWarning(
+                WARNING_STARTUP_POLICY_DRIFT,
+                _render_path(manifest_path),
+                "Manifest first_reads must stay lightweight: start from AGENTS.md and keep TODO.md/ROADMAP.md conditional.",
             )
         )
 
@@ -725,7 +734,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
-                "Manifest first_queries must point agents at the compact startup selector first.",
+                "Manifest first_queries must still mention the startup defaults query.",
             )
         )
 
@@ -744,6 +753,15 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
                 "Manifest surface_roles must keep llms.txt as the agent entrypoint router.",
+            )
+        )
+
+    if not any("todo.md" in row and "compact summary shows active work" in row for row in conditional_reads_lower):
+        warnings.append(
+            PlanningWarning(
+                WARNING_STARTUP_POLICY_DRIFT,
+                _render_path(manifest_path),
+                "Manifest conditional_reads must mention TODO.md as the active-queue follow-up after summary.",
             )
         )
 

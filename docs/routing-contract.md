@@ -8,16 +8,16 @@ Use the following order for a fresh entry:
 
 1. **High-Efficiency Entry**: Use the [Cold-Start Protocol](cold-start-protocol.md) for a <3 turn activation.
 2. **Configured Startup File**: Check `agentic-workspace config --target ./repo --format json` for the entrypoint (default `AGENTS.md`).
-3. **Active Queue**: Read `TODO.md` to see what is currently active.
-4. **Compact Queries**: Before reading broad prose, use:
+3. **Compact State**: Read `agentic-workspace summary --format json` first to see the compact planning and ownership state.
+4. **Active Queue**: Read `TODO.md` only when the summary shows active work that still needs raw queue detail.
+5. **Compact Queries**: Before reading broad prose, use:
    - `agentic-workspace defaults --section startup --format json`: For startup order and surface roles.
-   - `agentic-workspace summary --format json`: For active planning state.
    - `agentic-workspace report --target ./repo --format json`: For combined workspace/module status.
 
 ### Surface Roles
 - `AGENTS.md`: Canonical repo startup and operating rules.
-- `TODO.md`: Active task queue and smallest near-term follow-ons.
-- `ROADMAP.md`: Inactive long-horizon candidate work and promotion signals.
+- `TODO.md`: Repo-owned active task queue and smallest near-term follow-ons.
+- `ROADMAP.md`: Repo-owned inactive long-horizon candidate work and promotion signals.
 - `docs/execplans/`: Active, sequencing-heavy execution contracts.
 - `llms.txt`: Agent entrypoint router for external handoff and first-contact.
 - `agent-installation.md`: Detailed external install/adopt handoff instructions.

@@ -4,7 +4,8 @@ Last reviewed: 2026-04-20
 
 ## Purpose
 
-Inactive long-horizon candidate work.
+Repo-owned inactive long-horizon candidate work.
+Use `agentic-workspace summary --format json` first; keep this file as the repo-owned view of inactive candidate lanes.
 
 ## Scope
 

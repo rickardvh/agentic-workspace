@@ -4,8 +4,8 @@ Last pruned: [LAST_PRUNED_DATE]
 
 ## Purpose
 
-This file is the active queue and activation surface.
-Use it to show what is active now, what owns execution, and which small direct tasks still need doing.
+This file is the repo-owned active queue and activation surface.
+Use `agentic-workspace summary --format json` first, then use this file as the repo-owned view of what is active now, what owns execution, and which small direct tasks still need doing.
 Historical rationale, completed tranche detail, and long-form execution context belong in active execplans, archived execplans, docs, memory, and git history.
 Long-horizon planning belongs in `ROADMAP.md`.
 When there is no active task, keep this file minimal.

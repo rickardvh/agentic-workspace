@@ -4,7 +4,8 @@ Last reviewed: [LAST_REVIEWED_DATE]
 
 ## Purpose
 
-This file holds inactive long-horizon candidate lanes and planning residue that should not live in `TODO.md` or an active execplan.
+This file holds the repo-owned view of inactive long-horizon candidate lanes and planning residue that should not live in `TODO.md` or an active execplan.
+Use `agentic-workspace summary --format json` first, then use this file only when the compact summary says a candidate lane or promotion decision needs raw detail.
 
 Use it to:
 

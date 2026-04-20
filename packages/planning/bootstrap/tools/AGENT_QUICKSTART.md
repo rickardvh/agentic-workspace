@@ -9,19 +9,18 @@ Fast path for autonomous agents working on this repo.
 ## First reads
 
 - `AGENTS.md`
-- `TODO.md`
 
 ## First queries
 
+- Use `agentic-workspace summary --format json` first when active planning recovery or compact ownership state is the question.
 - Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.
 - Use `agentic-workspace config --target ./repo --format json` to find the configured startup entrypoint and effective repo posture.
-- Use `agentic-workspace summary --format json` when the question is active planning recovery rather than startup order.
 - Use `agentic-workspace report --target ./repo --format json` when the question is combined workspace state.
 
 ## Surface roles
 
 - `AGENTS.md` is the canonical ordinary repo startup entrypoint.
-- `TODO.md` is the canonical active queue after startup.
+- `TODO.md` is the repo-owned active queue after the compact summary has shown there is active work to inspect.
 - `docs/routing-contract.md` is the authoritative routing home.
 - `llms.txt` is the agent entrypoint router.
 - `tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md` are generated helpers, not doctrine owners.
@@ -29,10 +28,12 @@ Fast path for autonomous agents working on this repo.
 
 ## Conditional reads
 
+- Read `agentic-workspace summary --format json` first when planning recovery or ownership boundary review is the question.
+- Read `TODO.md` only when the compact summary shows active work that still needs raw queue detail.
 - Read the active feature plan in `docs/execplans/` when the task belongs to one.
 - Read `ROADMAP.md` only when promoting work, reprioritising, or reviewing candidate epics.
 - Read `docs/routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.
-- Do not bulk-read all planning surfaces for ordinary execution work; start from `TODO.md` and then the one relevant active plan.
+- Do not bulk-read all planning surfaces for ordinary execution work; start from `agentic-workspace summary --format json` and then the one relevant active plan.
 - Read only the repo docs explicitly referenced by that route.
 - When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json`. For configuration and routing, prefer `agentic-workspace defaults --section startup --format json` and `agentic-workspace config --target ./repo --format json` before broader prose.
 
@@ -98,9 +99,10 @@ Fast path for autonomous agents working on this repo.
 
 ## Core invariants
 
-- TODO.md owns active queue state and lightweight direct tasks.
+- TODO.md is a repo-owned view of active queue state and lightweight direct tasks.
 - Active execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work.
-- ROADMAP.md owns inactive long-horizon candidate epics and promotion signals.
+- ROADMAP.md is a repo-owned view of inactive long-horizon candidate epics and promotion signals.
+- Package-owned planning state belongs under `.agentic-workspace/planning/` and should be summarized before root queue files are read.
 - Checked-in memory, when installed, owns durable routed knowledge rather than active planning state.
 - Planning should remain useful without memory being installed.
 - Direct execution is a valid success mode for small local work.

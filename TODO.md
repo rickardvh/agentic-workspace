@@ -4,7 +4,8 @@ Last pruned: 2026-04-20
 
 ## Purpose
 
-Active queue for repository work.
+Repo-owned active queue for repository work.
+Use `agentic-workspace summary --format json` first; keep this file as the repo-owned view of the active queue.
 Completed work belongs in archived execplans and roadmap history, not in the active queue.
 
 ## Now

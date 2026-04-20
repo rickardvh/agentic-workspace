@@ -18,13 +18,15 @@ Resolve instruction conflicts in this order:
 ## Startup Path
 
 1. Read `AGENTS.md`.
-2. Read `TODO.md`.
-3. Read the active feature plan in `docs/execplans/` when the TODO surface points there.
-4. Read `ROADMAP.md` only when promoting work.
-5. Load package-local docs only for the package being edited.
-6. Before touching a shipped package, refresh it to the latest checked-in version through that package's canonical update workflow so local work starts from the current package contract.
-7. When a change crosses package source, package payload, and root install boundaries, read `docs/extraction-and-discovery-contract.md` before editing.
-8. When making claims about GitHub issue state, verify the live issue set with `gh` instead of relying only on checked-in intake notes.
+2. Read `agentic-workspace summary --format json` for the compact planning and ownership state.
+3. Read `agentic-workspace config --target . --format json` when the current posture or startup entrypoint matters.
+4. Read `TODO.md` only when the compact summary shows active work that still needs raw queue detail.
+5. Read the active feature plan in `docs/execplans/` when the summary points there.
+6. Read `ROADMAP.md` only when promoting work.
+7. Load package-local docs only for the package being edited.
+8. Before touching a shipped package, refresh it to the latest checked-in version through that package's canonical update workflow so local work starts from the current package contract.
+9. When a change crosses package source, package payload, and root install boundaries, read `docs/extraction-and-discovery-contract.md` before editing.
+10. When making claims about GitHub issue state, verify the live issue set with `gh` instead of relying only on checked-in intake notes.
 
 Do not start coding from chat context alone when the same information exists in checked-in files.
 Do not bulk-read all planning surfaces.
