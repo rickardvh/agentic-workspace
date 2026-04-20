@@ -310,7 +310,7 @@ def install_bootstrap(
     if not dry_run:
         _migrate_legacy_planning_surfaces(target_root, force=force)
         _ensure_state_toml_exists(target_root, overwrite=force)
-        _remove_generated_planning_views(target_root)
+        _remove_generated_planning_views(target_root, result=result)
     if local_only and not dry_run:
         _ensure_local_ignored(target or Path.cwd())
     return result
@@ -335,7 +335,7 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) 
     if not dry_run:
         _migrate_legacy_planning_surfaces(target_root)
         _ensure_state_toml_exists(target_root)
-        _remove_generated_planning_views(target_root)
+        _remove_generated_planning_views(target_root, result=result)
     return result
 
 
@@ -355,7 +355,7 @@ def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False
     if not dry_run:
         _migrate_legacy_planning_surfaces(target_root)
         _ensure_state_toml_exists(target_root)
-        _remove_generated_planning_views(target_root)
+        _remove_generated_planning_views(target_root, result=result)
     return result
 
 
@@ -2913,7 +2913,13 @@ def _ensure_state_toml_exists(target_root: Path, *, overwrite: bool = False) -> 
     _write_state_to_toml(target_root, state)
 
 
-def _remove_generated_planning_views(target_root: Path) -> None:
+def _is_managed_compatibility_view(path: Path) -> bool:
+    if not path.exists():
+        return False
+    return _COMPATIBILITY_VIEW_NOTICE in path.read_text(encoding="utf-8")
+
+
+def _remove_generated_planning_views(target_root: Path, *, result: InstallResult | None = None) -> None:
     for relative in (
         Path("TODO.md"),
         Path("ROADMAP.md"),
@@ -2921,11 +2927,13 @@ def _remove_generated_planning_views(target_root: Path) -> None:
         Path(".agentic-workspace/planning/ROADMAP.md"),
     ):
         path = target_root / relative
-        if not path.exists():
-            continue
-        text = path.read_text(encoding="utf-8")
-        if "GENERATED COMPATIBILITY VIEW" in text:
-            path.unlink()
+        if _is_managed_compatibility_view(path):
+            if result is not None:
+                result.add(
+                    "manual review",
+                    path,
+                    "managed compatibility view detected; delete manually if no longer needed",
+                )
 
 
 def _migrate_legacy_planning_surfaces(target_root: Path, *, force: bool = False) -> bool:
@@ -2937,6 +2945,16 @@ def _migrate_legacy_planning_surfaces(target_root: Path, *, force: bool = False)
         return False
 
     if not todo_path.exists() and not roadmap_path.exists():
+        return False
+
+    is_todo_compat_view = _is_managed_compatibility_view(todo_path)
+    is_roadmap_compat_view = _is_managed_compatibility_view(roadmap_path)
+    todo_owned = is_todo_compat_view
+    roadmap_owned = is_roadmap_compat_view
+
+    # These filenames are common in repositories. Only auto-migrate/delete files that
+    # carry the managed compatibility marker.
+    if not todo_owned and not roadmap_owned:
         return False
 
     # Conflict detection: look for headers we don't recognize
@@ -2979,23 +2997,22 @@ def _migrate_legacy_planning_surfaces(target_root: Path, *, force: bool = False)
                 section_content = _section_lines(c.splitlines(), h_clean)
                 extracted_guidelines.append(f"## {h_clean}\n\n" + "\n".join(section_content))
 
-    extract_sections(todo_path, known_todo_headers, guideline_sections)
-    extract_sections(roadmap_path, known_roadmap_headers, guideline_sections)
+    if todo_owned:
+        extract_sections(todo_path, known_todo_headers, guideline_sections)
+    if roadmap_owned:
+        extract_sections(roadmap_path, known_roadmap_headers, guideline_sections)
 
     if extracted_guidelines:
         process_path = target_root / "docs" / "planning-process.md"
         process_path.parent.mkdir(parents=True, exist_ok=True)
         process_path.write_text("# Planning Process Guidelines\n\n" + "\n\n".join(extracted_guidelines) + "\n", encoding="utf-8")
 
-    is_todo_compat_view = todo_path.exists() and _COMPATIBILITY_VIEW_NOTICE in todo_path.read_text(encoding="utf-8")
-    is_roadmap_compat_view = roadmap_path.exists() and _COMPATIBILITY_VIEW_NOTICE in roadmap_path.read_text(encoding="utf-8")
-
     # Read TODO.md
-    _, todo_items = _read_todo_items(todo_path) if todo_path.exists() and not is_todo_compat_view else ([], [])
+    _, todo_items = _read_todo_items(todo_path) if todo_owned and todo_path.exists() and not is_todo_compat_view else ([], [])
 
     # Read ROADMAP.md
-    roadmap_lanes = _roadmap_candidate_lanes(roadmap_path) if roadmap_path.exists() and not is_roadmap_compat_view else []
-    roadmap_candidates = _roadmap_candidates(roadmap_path) if roadmap_path.exists() and not is_roadmap_compat_view else []
+    roadmap_lanes = _roadmap_candidate_lanes(roadmap_path) if roadmap_owned and roadmap_path.exists() and not is_roadmap_compat_view else []
+    roadmap_candidates = _roadmap_candidates(roadmap_path) if roadmap_owned and roadmap_path.exists() and not is_roadmap_compat_view else []
 
     # Construct state
     active_items = []
@@ -3029,10 +3046,7 @@ def _migrate_legacy_planning_surfaces(target_root: Path, *, force: bool = False)
 
     _write_state_to_toml(target_root, state)
 
-    # Delete legacy files
-    if todo_path.exists():
-        todo_path.unlink()
-    if roadmap_path.exists():
-        roadmap_path.unlink()
+    # Keep root files until a human confirms deletion. Filenames like TODO.md and
+    # ROADMAP.md are common and should never be removed implicitly during upgrade.
 
     return True

@@ -860,6 +860,47 @@ def test_upgrade_bootstrap_recovers_partial_managed_state_without_overwriting_ro
     assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
 
 
+def test_upgrade_bootstrap_preserves_unowned_root_todo_and_roadmap_files(tmp_path: Path) -> None:
+    todo_path = tmp_path / "TODO.md"
+    roadmap_path = tmp_path / "ROADMAP.md"
+    todo_text = "# TODO\n\n## Personal Notes\n\n- Keep this user-owned file.\n"
+    roadmap_text = "# ROADMAP\n\n## My Product Plan\n\n- Keep this user-owned file.\n"
+
+    _write(todo_path, todo_text)
+    _write(roadmap_path, roadmap_text)
+
+    upgrade_bootstrap(target=tmp_path)
+
+    assert todo_path.exists()
+    assert roadmap_path.exists()
+    assert todo_path.read_text(encoding="utf-8") == todo_text
+    assert roadmap_path.read_text(encoding="utf-8") == roadmap_text
+    assert (tmp_path / ".agentic-workspace/planning/state.toml").exists()
+
+
+def test_upgrade_bootstrap_flags_managed_compatibility_views_for_manual_review(tmp_path: Path) -> None:
+    todo_path = tmp_path / "TODO.md"
+    roadmap_path = tmp_path / "ROADMAP.md"
+    compat_notice = installer_mod._COMPATIBILITY_VIEW_NOTICE
+
+    _write(todo_path, f"{compat_notice}\n# TODO\n")
+    _write(roadmap_path, f"{compat_notice}\n# ROADMAP\n")
+
+    result = upgrade_bootstrap(target=tmp_path)
+
+    assert todo_path.exists()
+    assert roadmap_path.exists()
+    assert (tmp_path / ".agentic-workspace/planning/state.toml").exists()
+    assert any(
+        action.kind == "manual review" and action.path == todo_path and "delete manually if no longer needed" in action.detail
+        for action in result.actions
+    )
+    assert any(
+        action.kind == "manual review" and action.path == roadmap_path and "delete manually if no longer needed" in action.detail
+        for action in result.actions
+    )
+
+
 def test_doctor_reports_stale_generated_routing_residue_for_partial_managed_state(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     routing_path = tmp_path / "tools" / "AGENT_ROUTING.md"
