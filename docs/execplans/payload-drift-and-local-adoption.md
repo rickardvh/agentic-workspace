@@ -10,31 +10,6 @@
 - Redesigning the entire packaging model.
 - Broadly rewriting installer internals for both packages in one pass (beyond what's needed for drift/local-only).
 
-## Machine-Readable Contract
-
-```yaml
-intent:
-  outcome: "Early payload-drift detection in report and functional local-only mode for both packages."
-  constraints: "Must not break existing installation or upgrade workflows. Must maintain monorepo mirroring invariants."
-  latitude: "Agent may decide the exact format of the drift report finding."
-  escalation: "Escalate if payload-root resolution logic needs breaking changes."
-execution:
-  milestone: "Lane 1 & 2 Implementation"
-  status: "not-started"
-  next_step: "Implement refined drift detection in planning/installer.py"
-  proof: "agentic-workspace report surfaces drift; local-only install creates files in .gemini/"
-scope:
-  touched:
-    - packages/planning/src/repo_planning_bootstrap/installer.py
-    - packages/memory/src/repo_memory_bootstrap/installer.py
-    - packages/memory/src/repo_memory_bootstrap/_installer_paths.py
-    - src/agentic_workspace/cli.py
-    - docs/installer-behavior.md
-  invariants:
-    - payload_root() must resolve correctly in packaged and dev modes.
-    - Mirroring must be verified against REQUIRED_PAYLOAD_FILES.
-```
-
 ## Intent Continuity
 
 - Larger intended outcome: Formalizing Agentic Workspace Memory and Hygiene
@@ -43,8 +18,10 @@ scope:
 - Parent lane: payload-drift-and-installer-knowledge, local-only-adoption-and-external-agent-ergonomics
 
 ## Delegated Judgment
-- The agent may choose the most efficient way to detect drift (e.g., hash-based vs. full content).
-- The agent may decide on the specific wording of warning messages.
+- Requested outcome: Restore trust in payload integrity and enable local-only adoption without breaking existing install or upgrade workflows.
+- Hard constraints: Preserve monorepo mirroring invariants and avoid broad installer rewrites beyond what this slice needs.
+- Agent may decide locally: The exact drift-report wording and the narrowest implementation approach that proves drift and local-only behavior.
+- Escalate when: Payload-root resolution or installer flow changes would require a breaking contract change.
 
 ## Execution Summary
 - **Lane 1 (Payload Drift Detection)**: COMPLETED.
@@ -55,30 +32,30 @@ scope:
 - **Lane 2 (Local-only Adoption)**: PLANNED.
 
 ## Required Continuation
-- **Required follow-on for the larger intended outcome**: yes
-- **Trigger**: Implementation of Lane 2 (Local-only Adoption).
-- **Next Owner**: implementer
-- **Context**: Payload drift detection is stable. Next step is enabling guest-mode via `--local-only` flag.
+- Required follow-on for the larger intended outcome: yes
+- Owner surface: docs/execplans/payload-drift-and-local-adoption.md
+- Activation trigger: Lane 2 (Local-only Adoption) is ready to start.
 
 ## Iterative Follow-Through
 
-- What this slice enabled: Earlier detection of hygiene errors and guest-mode workflows.
-- Intentionally deferred: Full automation of mirroring.
-- Discovered implications: none
-- Proof achieved now: none
-- Validation still needed: drift detection verification, local-only install verification.
-- Next likely slice: none (this plan covers both lanes)
+- What this slice enabled: Drift detection now fails fast on payload mismatch, so local-only work can build on a stable trust signal.
+- Intentionally deferred: Guest-mode wiring and installer/docs cleanup for `--local-only`.
+- Discovered implications: The remaining follow-on is a distinct adoption slice, not a refinement of the drift check.
+- Proof achieved now: Lane 1 is implemented and checked by the planning/report surfaces.
+- Validation still needed: drift detection verification and local-only install verification.
+- Next likely slice: Lane 2, local-only adoption.
 
 ## Active Milestone
 
-- Status: not-started
-- Scope: Lane 1 (Drift) and Lane 2 (Local-only)
-- Ready: yes
+- Status: in-progress
+- Scope: Lane 2 (Local-only Adoption)
+- Ready: ready
 - Blocked: no
+- optional_deps: none
 
 ## Immediate Next Action
 
-- Implement refined drift detection in `packages/planning/src/repo_planning_bootstrap/installer.py`.
+- Implement `--local-only` installer support and the matching CLI path for guest-mode adoption.
 
 ## Blockers
 
