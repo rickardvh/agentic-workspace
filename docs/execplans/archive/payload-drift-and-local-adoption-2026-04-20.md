@@ -13,8 +13,8 @@
 ## Intent Continuity
 
 - Larger intended outcome: Formalizing Agentic Workspace Memory and Hygiene
-- This slice completes the larger intended outcome: no
-- Continuation surface: docs/execplans/payload-drift-and-local-adoption.md
+- This slice completes the larger intended outcome: yes
+- Continuation surface: none
 - Parent lane: payload-drift-and-installer-knowledge, local-only-adoption-and-external-agent-ergonomics
 
 ## Delegated Judgment
@@ -24,38 +24,36 @@
 - Escalate when: Payload-root resolution or installer flow changes would require a breaking contract change.
 
 ## Execution Summary
-- **Lane 1 (Payload Drift Detection)**: COMPLETED.
-  - Implemented `_detect_payload_drift` in both `planning` and `memory` installers.
-  - Integrated drift detection into `agentic-workspace report` and `memory_report`.
-  - Verified that missing, differing, or extra payload files are correctly reported.
-  - Resolved false positives in tests and non-dev targets by passing `target_root`.
-- **Lane 2 (Local-only Adoption)**: PLANNED.
+- Outcome delivered: enabled explicit local-only install support through `agentic-workspace install --local-only`, wrote the workspace into `.gemini/agentic-workspace/`, and updated the surrounding docs and tests so the guest-mode path is explicit rather than inferred.
+- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`.
+- Follow-on routed to: none.
+- Resume from: none.
 
 ## Required Continuation
-- Required follow-on for the larger intended outcome: yes
-- Owner surface: docs/execplans/payload-drift-and-local-adoption.md
-- Activation trigger: Lane 2 (Local-only Adoption) is ready to start.
+- Required follow-on for the larger intended outcome: no
+- Owner surface: none
+- Activation trigger: none
 
 ## Iterative Follow-Through
 
 - What this slice enabled: Drift detection now fails fast on payload mismatch, so local-only work can build on a stable trust signal.
-- Intentionally deferred: Guest-mode wiring and installer/docs cleanup for `--local-only`.
-- Discovered implications: The remaining follow-on is a distinct adoption slice, not a refinement of the drift check.
-- Proof achieved now: Lane 1 is implemented and checked by the planning/report surfaces.
-- Validation still needed: drift detection verification and local-only install verification.
-- Next likely slice: Lane 2, local-only adoption.
+- Intentionally deferred: none for this lane.
+- Discovered implications: Local-only adoption is now a first-class install path rather than a hidden inference path.
+- Proof achieved now: Lane 1 and Lane 2 are implemented and checked by the planning/report surfaces.
+- Validation still needed: none for this execplan slice.
+- Next likely slice: none.
 
 ## Active Milestone
 
-- Status: in-progress
+- Status: completed
 - Scope: Lane 2 (Local-only Adoption)
-- Ready: ready
+- Ready: no
 - Blocked: no
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Implement `--local-only` installer support and the matching CLI path for guest-mode adoption.
+- No further action required for this execplan slice.
 
 ## Blockers
 
@@ -82,10 +80,10 @@
 
 ## Completion Criteria
 
-- [ ] `agentic-workspace report` surfaces drift when a mirror file is missing or differs from root.
-- [ ] `agentic-workspace install --local-only` creates a functional installation in `.gemini/agentic-workspace/`.
-- [ ] `docs/installer-behavior.md` accurately describes payload resolution for both packages.
-- [ ] All tests pass.
+- [x] `agentic-workspace report` surfaces drift when a mirror file is missing or differs from root.
+- [x] `agentic-workspace install --local-only` creates a functional installation in `.gemini/agentic-workspace/`.
+- [x] `docs/installer-behavior.md` accurately describes payload resolution for both packages.
+- [x] All tests pass.
 
 ## Drift Log
 

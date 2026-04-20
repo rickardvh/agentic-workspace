@@ -311,16 +311,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Return the high-signal orientation block for fresh agents.",
     )
 
+    install_parser = subparsers.add_parser("install", help="Bootstrap selected modules into a target repository.")
+    _add_init_arguments(install_parser)
     init_parser = subparsers.add_parser("init", help="Bootstrap selected modules into a target repository.")
-    _add_selection_arguments(init_parser)
-    init_parser.add_argument(
-        "--agent-instructions-file",
-        help="Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md).",
-    )
-    init_parser.add_argument("--adopt", action="store_true", help="Force conservative adopt behavior.")
-    init_parser.add_argument("--dry-run", action="store_true", help="Show planned changes without mutating files.")
-    init_parser.add_argument("--print-prompt", action="store_true", help="Print the generated handoff prompt.")
-    init_parser.add_argument("--write-prompt", help="Write the generated handoff prompt to a file.")
+    _add_init_arguments(init_parser)
 
     prompt_parser = subparsers.add_parser("prompt", help="Print a ready-to-paste workspace lifecycle handoff prompt.")
     prompt_subparsers = prompt_parser.add_subparsers(dest="prompt_command", required=True)
@@ -363,6 +357,23 @@ def _add_selection_arguments(parser: argparse.ArgumentParser) -> None:
         help="Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
     )
     _add_format_argument(parser)
+
+
+def _add_init_arguments(parser: argparse.ArgumentParser) -> None:
+    _add_selection_arguments(parser)
+    parser.add_argument(
+        "--local-only",
+        action="store_true",
+        help="Install into `.gemini/agentic-workspace/` instead of the repository root.",
+    )
+    parser.add_argument(
+        "--agent-instructions-file",
+        help="Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md).",
+    )
+    parser.add_argument("--adopt", action="store_true", help="Force conservative adopt behavior.")
+    parser.add_argument("--dry-run", action="store_true", help="Show planned changes without mutating files.")
+    parser.add_argument("--print-prompt", action="store_true", help="Print the generated handoff prompt.")
+    parser.add_argument("--write-prompt", help="Write the generated handoff prompt to a file.")
 
 
 def _add_format_argument(parser: argparse.ArgumentParser) -> None:
@@ -1022,6 +1033,48 @@ def main(argv: list[str] | None = None) -> int:
         _emit_skills(format_name=args.format, target_root=target_root, task_text=args.task)
         return 0
 
+    if args.command in {"install", "init"}:
+        try:
+            repo_root = _resolve_target_root(args.target)
+            _validate_target_root(command_name=args.command, target_root=repo_root, local_only=bool(args.local_only))
+            target_root = repo_root / ".gemini" / "agentic-workspace" if args.local_only else repo_root
+            config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
+            explicit_agent_instructions_file = getattr(args, "agent_instructions_file", None)
+            if explicit_agent_instructions_file:
+                config = _with_agent_instructions_file(
+                    config,
+                    filename=config_lib.validate_agent_instructions_filename(explicit_agent_instructions_file),
+                    source="explicit-argument",
+                )
+            selected_modules, resolved_preset = _selected_modules(
+                command_name=args.command,
+                preset_name=args.preset,
+                module_arg=args.modules,
+                target_root=target_root,
+                descriptors=descriptors,
+                config=config,
+            )
+            _validate_selected_module_contract(selected_modules=selected_modules, descriptors=descriptors)
+        except (ModuleSelectionError, WorkspaceUsageError) as exc:
+            parser.error(str(exc))
+
+        payload = _run_init(
+            target_root=target_root,
+            local_only_repo_root=repo_root if args.local_only else None,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            descriptors=descriptors,
+            dry_run=args.dry_run,
+            force_adopt=args.adopt,
+            non_interactive=args.non_interactive,
+            print_prompt=args.print_prompt,
+            write_prompt=args.write_prompt,
+            config=config,
+        )
+        payload["command"] = args.command
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
+
     try:
         target_root = _resolve_target_root(args.target)
         _validate_target_root(command_name=args.command, target_root=target_root)
@@ -1063,22 +1116,6 @@ def main(argv: list[str] | None = None) -> int:
             import sys
 
             print(f"DEBUG findings: {payload.get('findings')}", file=sys.stderr)
-        _emit_payload(payload=payload, format_name=args.format)
-        return 0
-
-    if args.command == "init":
-        payload = _run_init(
-            target_root=target_root,
-            selected_modules=selected_modules,
-            resolved_preset=resolved_preset,
-            descriptors=descriptors,
-            dry_run=args.dry_run,
-            force_adopt=args.adopt,
-            non_interactive=args.non_interactive,
-            print_prompt=args.print_prompt,
-            write_prompt=args.write_prompt,
-            config=config,
-        )
         _emit_payload(payload=payload, format_name=args.format)
         return 0
 
@@ -1678,11 +1715,11 @@ def _external_agent_handoff_text(
         "Preferred install or adopt intent:",
     ]
     if selected_modules == ["planning"]:
-        lines.append("- agentic-workspace init --target ./repo --preset planning")
+        lines.append("- agentic-workspace install --target ./repo --preset planning")
     elif selected_modules == ["memory"]:
-        lines.append("- agentic-workspace init --target ./repo --preset memory")
+        lines.append("- agentic-workspace install --target ./repo --preset memory")
     else:
-        lines.append("- agentic-workspace init --target ./repo --preset full")
+        lines.append("- agentic-workspace install --target ./repo --preset full")
     lines.extend(
         [
             "",
@@ -1731,9 +1768,33 @@ def _write_generated_text(*, destination: Path, text: str, dry_run: bool) -> Non
     destination.write_text(text, encoding="utf-8")
 
 
+def _append_local_only_gitignore(*, repo_root: Path, dry_run: bool) -> dict[str, str]:
+    gitignore_path = repo_root / ".gitignore"
+    existing_text = gitignore_path.read_text(encoding="utf-8") if gitignore_path.exists() else ""
+    if ".gemini/" in existing_text:
+        return {
+            "kind": "current",
+            "path": ".gitignore",
+            "detail": "local-only workspace storage already ignored",
+        }
+
+    updated_text = existing_text.rstrip()
+    addition = "\n# Agentic Workspace local-only storage\n.gemini/\n"
+    rendered_text = (updated_text + addition) if updated_text else addition.lstrip("\n")
+    if not dry_run:
+        gitignore_path.parent.mkdir(parents=True, exist_ok=True)
+        gitignore_path.write_text(rendered_text, encoding="utf-8")
+    return {
+        "kind": "would create" if dry_run and not gitignore_path.exists() else "would update" if dry_run else "created",
+        "path": ".gitignore",
+        "detail": "record .gemini/ in the repo root for local-only workspace storage",
+    }
+
+
 def _workspace_init_or_upgrade_report(
     *,
     target_root: Path,
+    local_only_repo_root: Path | None,
     selected_modules: list[str],
     descriptors: dict[str, ModuleDescriptor],
     dry_run: bool,
@@ -1911,6 +1972,9 @@ def _workspace_init_or_upgrade_report(
     actions.extend(policy_actions)
     warnings.extend(policy_warnings)
 
+    if local_only_repo_root is not None:
+        actions.append(_append_local_only_gitignore(repo_root=local_only_repo_root, dry_run=dry_run))
+
     return _workspace_report(
         target_root=target_root,
         message=f"{command_name.title()} report",
@@ -2049,12 +2113,12 @@ def _resolve_target_root(target: str | None) -> Path:
     return Path(target).resolve() if target else Path.cwd().resolve()
 
 
-def _validate_target_root(*, command_name: str, target_root: Path) -> None:
+def _validate_target_root(*, command_name: str, target_root: Path, local_only: bool = False) -> None:
     if not target_root.exists():
         raise WorkspaceUsageError(f"Target path does not exist: {target_root}")
     if not target_root.is_dir():
         raise WorkspaceUsageError(f"Target path is not a directory: {target_root}")
-    if command_name in {"init", "status", "doctor", "upgrade", "uninstall"} and not _is_git_repo_root(target_root):
+    if command_name in {"init", "install", "status", "doctor", "upgrade", "uninstall"} and not local_only and not _is_git_repo_root(target_root):
         raise WorkspaceUsageError("Target must be a git repository root with a .git directory or file.")
 
 
@@ -2065,6 +2129,7 @@ def _is_git_repo_root(target_root: Path) -> bool:
 def _run_init(
     *,
     target_root: Path,
+    local_only_repo_root: Path | None,
     selected_modules: list[str],
     resolved_preset: str | None,
     descriptors: dict[str, ModuleDescriptor],
@@ -2100,6 +2165,7 @@ def _run_init(
     reports.append(
         _workspace_init_or_upgrade_report(
             target_root=target_root,
+            local_only_repo_root=local_only_repo_root,
             selected_modules=selected_modules,
             descriptors=descriptors,
             dry_run=dry_run,
@@ -2391,6 +2457,7 @@ def _run_lifecycle_command(
         reports.append(
             _workspace_init_or_upgrade_report(
                 target_root=target_root,
+                local_only_repo_root=None,
                 selected_modules=selected_modules,
                 descriptors=descriptors,
                 dry_run=dry_run,
@@ -2983,6 +3050,7 @@ def _run_prompt_command(
     if prompt_command == "init":
         payload = _run_init(
             target_root=target_root,
+            local_only_repo_root=None,
             selected_modules=selected_modules,
             resolved_preset=resolved_preset,
             descriptors=descriptors,
@@ -3680,7 +3748,7 @@ def _defaults_payload() -> dict[str, Any]:
         },
         "lifecycle": {
             "primary_entrypoint": "agentic-workspace",
-            "default_install_command": "agentic-workspace init --target ./repo --preset <memory|planning|full>",
+            "default_install_command": "agentic-workspace install --target ./repo --preset <memory|planning|full>",
             "supported_intents": [
                 "set up this repo for Agentic Memory",
                 "set up this repo for Agentic Planning",
@@ -4007,7 +4075,7 @@ def _defaults_payload() -> dict[str, Any]:
             ],
         },
         "combined_install": {
-            "primary": "agentic-workspace init --target ./repo --preset full",
+            "primary": "agentic-workspace install --target ./repo --preset full",
             "operating_model": [
                 "Planning owns active-now state.",
                 "Memory owns durable anti-rediscovery knowledge.",

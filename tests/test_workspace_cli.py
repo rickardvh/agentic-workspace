@@ -114,7 +114,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     )
     assert payload["compact_contract_profile"]["selectors"]["defaults"] == ("agentic-workspace defaults --section <section> --format json")
     assert payload["lifecycle"]["primary_entrypoint"] == "agentic-workspace"
-    assert "agentic-workspace init --target ./repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
+    assert "agentic-workspace install --target ./repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
     assert payload["lifecycle"]["canonical_external_agent_handoff"] == "llms.txt"
     assert payload["lifecycle"]["canonical_bootstrap_next_action"] == ".agentic-workspace/bootstrap-handoff.md"
     assert payload["lifecycle"]["canonical_bootstrap_handoff_record"] == ".agentic-workspace/bootstrap-handoff.json"
@@ -208,7 +208,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["ownership_mapping"]["canonical_doc"] == "docs/ownership-authority-contract.md"
     assert payload["ownership_mapping"]["command"] == "agentic-workspace ownership --target ./repo --format json"
     assert payload["ownership_mapping"]["ledger"] == ".agentic-workspace/OWNERSHIP.toml"
-    assert payload["combined_install"]["primary"] == "agentic-workspace init --target ./repo --preset full"
+    assert payload["combined_install"]["primary"] == "agentic-workspace install --target ./repo --preset full"
     assert payload["recovery"]["canonical_doc"] == "docs/environment-recovery-contract.md"
     assert payload["recovery"]["rule"] == "Inspect state first, refresh contract second, re-run the narrowest proving lane third."
     assert payload["recovery"]["ordered_path"][:2] == [
@@ -1609,6 +1609,24 @@ def test_init_uses_explicit_modules_csv(monkeypatch, tmp_path: Path, capsys) -> 
     assert calls == [("memory", "install", {"target": str(tmp_path), "dry_run": False, "force": False})]
 
 
+def test_install_local_only_uses_gemini_workspace_root_and_updates_gitignore(tmp_path: Path, capsys) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+
+    assert cli.main(["install", "--modules", "planning", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    install_root = repo_root / ".gemini" / "agentic-workspace"
+    assert payload["command"] == "install"
+    assert payload["target"] == install_root.as_posix()
+    assert (install_root / "AGENTS.md").exists()
+    assert (install_root / "TODO.md").exists()
+    assert (install_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+    gitignore_text = (repo_root / ".gitignore").read_text(encoding="utf-8")
+    assert ".gemini/" in gitignore_text
+
+
 def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
@@ -1669,10 +1687,12 @@ def test_init_can_write_prompt_file(monkeypatch, tmp_path: Path, capsys) -> None
 def test_selection_commands_accept_non_interactive_flag() -> None:
     parser = cli.build_parser()
 
+    install_args = parser.parse_args(["install", "--target", ".", "--local-only", "--non-interactive"])
     init_args = parser.parse_args(["init", "--target", ".", "--non-interactive"])
     status_args = parser.parse_args(["status", "--target", ".", "--non-interactive"])
     prompt_args = parser.parse_args(["prompt", "upgrade", "--modules", "planning", "--target", ".", "--non-interactive"])
 
+    assert install_args.local_only is True
     assert init_args.non_interactive is True
     assert status_args.non_interactive is True
     assert prompt_args.non_interactive is True

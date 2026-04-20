@@ -15,7 +15,8 @@ Required steps:
 - When the question is active planning recovery rather than bootstrap, prefer `agentic-workspace summary --format json` before broad planning prose.
 
 Preferred install or adopt intent:
-- agentic-workspace init --target ./repo --preset full
+- agentic-workspace install --target ./repo --preset full
+- agentic-workspace install --target ./repo --preset full --local-only
 
 Preferred follow-up commands:
 - agentic-workspace status --target ./repo
