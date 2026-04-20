@@ -12,4 +12,4 @@ Completed work belongs in archived execplans and roadmap history, not in the act
 - ID: OWNERSHIP-BOUNDARY-AND-LOCAL-ONLY-MODE
   Status: in-progress
   Surface: docs/execplans/local-only-residue-via-git-exclude.md
-  Why now: Local-only installs still leave tracked residue in the repo root, and the next slice should move that residue into untracked git metadata.
+  Why now: Package-owned state still leaks across the repo boundary, and local-only residue cleanup only matters as a consequence of consolidating it into one unambiguous home.
