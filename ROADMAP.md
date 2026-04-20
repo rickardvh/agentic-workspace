@@ -22,7 +22,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## GitHub Issue Intake
 
-- Latest open planning tranche: GitHub issues `#206` and `#220`-`#231`.
+- Latest open planning tranche: GitHub issues `#206` and `#220`-`#232`.
 - The active TODO/execplan already owns `#206`; the remaining open issues are grouped below as inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
@@ -42,7 +42,7 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 - Lane: System intent and planning trust
   ID: system-intent-and-planning-trust
   Priority: third
-  Issues: #229, #220, #222, #221
+  Issues: #232, #229, #220, #222, #221
   Outcome: Preserve higher-level product intent and make durable planning/closure semantics more trustworthy across tasks, issues, and sessions.
   Why now: The repo already validates local slices well; the remaining gap is durable intent and honest follow-through.
   Promotion signal: Promote when local success is not enough to preserve later proof, closure truthfulness, or cross-session alignment.

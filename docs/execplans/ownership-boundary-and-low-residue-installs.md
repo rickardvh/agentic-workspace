@@ -27,11 +27,11 @@
 ## Iterative Follow-Through
 
 - What this slice enabled: a concrete ownership review surface that now classifies package-owned, repo-owned, and middle-ground surfaces directly in the `ownership` command.
-- Intentionally deferred: actual installer and uninstall implementation.
+- Intentionally deferred: broader installer architecture changes and any storage-backend redesign.
 - Discovered implications: the boundary review needs to stay explicit enough that future storage backends can move without changing ownership semantics.
 - Proof achieved now: the ownership command returns a current surface inventory and points to the smallest explicit repo hook.
-- Validation still needed: dogfood the review against a repo with more ambiguous middle-ground surfaces before widening the lane.
-- Next likely slice: use the review to tighten the install/uninstall hook and then implement the smallest residue-reducing change.
+- Validation still needed: dogfood the review and local-only uninstall cleanup against a repo with more ambiguous middle-ground surfaces before widening the lane.
+- Next likely slice: keep pressure on any remaining residue path and verify whether another small hook needs narrowing.
 
 ## Delegated Judgment
 
@@ -71,8 +71,9 @@
 ## Validation Commands
 
 - uv run python scripts/check/check_planning_surfaces.py
-- uv run agentic-workspace summary --format json
-- uv run pytest tests/test_workspace_cli.py -q -k ownership_command_reports_authority_map
+- uv run pytest tests/test_workspace_cli.py -q -k "local_only or ownership_command_reports_authority_map"
+- uv run agentic-planning-bootstrap upgrade --target .
+- uv run agentic-memory-bootstrap upgrade --target .
 
 ## Completion Criteria
 
@@ -84,7 +85,7 @@
 
 - Outcome delivered: added a queryable ownership boundary review to `agentic-workspace ownership` so the repo can see package-owned, repo-owned, and middle-ground surfaces without inferring them from prose.
 - Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`.
-- Follow-on routed to: the next install/uninstall residue-reduction slice on this lane.
+- Follow-on routed to: local-only residue cleanup and any remaining narrow install/uninstall follow-on.
 - Knowledge promoted (Memory/Docs/Config): docs/ownership-authority-contract.md, docs/agent-installation.md, docs/memory-metadata-contract.md
 - Resume from: the boundary review payload when the next slice starts.
 

@@ -4,6 +4,7 @@ import argparse
 import fnmatch
 import json
 import re
+import shutil
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import date
@@ -343,6 +344,11 @@ def build_parser() -> argparse.ArgumentParser:
     uninstall_parser = subparsers.add_parser("uninstall", help="Remove managed surfaces conservatively for selected installed modules.")
     _add_selection_arguments(uninstall_parser)
     uninstall_parser.add_argument("--dry-run", action="store_true", help="Show planned changes without mutating files.")
+    uninstall_parser.add_argument(
+        "--local-only",
+        action="store_true",
+        help="Remove the local-only workspace install from `.gemini/agentic-workspace/` instead of the repository root.",
+    )
 
     return parser
 
@@ -1075,9 +1081,15 @@ def main(argv: list[str] | None = None) -> int:
         _emit_payload(payload=payload, format_name=args.format)
         return 0
 
+    local_only_repo_root: Path | None = None
     try:
-        target_root = _resolve_target_root(args.target)
-        _validate_target_root(command_name=args.command, target_root=target_root)
+        if args.command == "uninstall" and bool(getattr(args, "local_only", False)):
+            local_only_repo_root = _resolve_target_root(args.target)
+            _validate_target_root(command_name=args.command, target_root=local_only_repo_root, local_only=True)
+            target_root = local_only_repo_root / ".gemini" / "agentic-workspace"
+        else:
+            target_root = _resolve_target_root(args.target)
+            _validate_target_root(command_name=args.command, target_root=target_root)
         config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
         explicit_agent_instructions_file = getattr(args, "agent_instructions_file", None)
         if explicit_agent_instructions_file:
@@ -1136,6 +1148,7 @@ def main(argv: list[str] | None = None) -> int:
     payload = _run_lifecycle_command(
         command_name=args.command,
         target_root=target_root,
+        local_only_repo_root=local_only_repo_root,
         selected_modules=selected_modules,
         resolved_preset=resolved_preset,
         descriptors=descriptors,
@@ -1791,6 +1804,36 @@ def _append_local_only_gitignore(*, repo_root: Path, dry_run: bool) -> dict[str,
     }
 
 
+def _remove_local_only_gitignore(*, repo_root: Path, dry_run: bool) -> dict[str, str]:
+    gitignore_path = repo_root / ".gitignore"
+    existing_text = gitignore_path.read_text(encoding="utf-8") if gitignore_path.exists() else ""
+    local_only_block = "# Agentic Workspace local-only storage\n.gemini/\n"
+    if local_only_block not in existing_text:
+        return {
+            "kind": "skipped",
+            "path": ".gitignore",
+            "detail": "no local-only workspace ignore block to remove",
+        }
+
+    rendered_text = existing_text.replace(local_only_block, "")
+    if not rendered_text.strip():
+        if not dry_run and gitignore_path.exists():
+            gitignore_path.unlink()
+        return {
+            "kind": "would remove" if dry_run else "removed",
+            "path": ".gitignore",
+            "detail": "remove the local-only workspace ignore block and the empty .gitignore file",
+        }
+
+    if not dry_run:
+        gitignore_path.write_text(rendered_text, encoding="utf-8")
+    return {
+        "kind": "would update" if dry_run else "updated",
+        "path": ".gitignore",
+        "detail": "remove the local-only workspace ignore block",
+    }
+
+
 def _workspace_init_or_upgrade_report(
     *,
     target_root: Path,
@@ -1984,7 +2027,7 @@ def _workspace_init_or_upgrade_report(
     )
 
 
-def _workspace_uninstall_report(*, target_root: Path, dry_run: bool) -> dict[str, Any]:
+def _workspace_uninstall_report(*, target_root: Path, dry_run: bool, local_only_repo_root: Path | None = None) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     removable: list[Path] = []
@@ -2018,6 +2061,24 @@ def _workspace_uninstall_report(*, target_root: Path, dry_run: bool) -> dict[str
             if destination.exists():
                 destination.unlink()
         _prune_empty_parent_dirs(target_root=target_root, relatives=removable)
+        if local_only_repo_root is not None and target_root.exists():
+            shutil.rmtree(target_root)
+            gemini_dir = local_only_repo_root / ".gemini"
+            if gemini_dir.exists():
+                try:
+                    gemini_dir.rmdir()
+                except OSError:
+                    pass
+    if local_only_repo_root is not None:
+        if dry_run and target_root.exists():
+            actions.append(
+                {
+                    "kind": "would remove",
+                    "path": target_root.as_posix(),
+                    "detail": "remove the entire local-only workspace install tree",
+                }
+            )
+        actions.append(_remove_local_only_gitignore(repo_root=local_only_repo_root, dry_run=dry_run))
 
     return _workspace_report(
         target_root=target_root,
@@ -2421,6 +2482,7 @@ def _run_lifecycle_command(
     *,
     command_name: str,
     target_root: Path,
+    local_only_repo_root: Path | None,
     selected_modules: list[str],
     resolved_preset: str | None,
     descriptors: dict[str, ModuleDescriptor],
@@ -2467,7 +2529,13 @@ def _run_lifecycle_command(
             )
         )
     elif command_name == "uninstall":
-        reports.append(_workspace_uninstall_report(target_root=target_root, dry_run=dry_run))
+        reports.append(
+            _workspace_uninstall_report(
+                target_root=target_root,
+                dry_run=dry_run,
+                local_only_repo_root=local_only_repo_root,
+            )
+        )
     summary = _summarise_reports(target_root=target_root, reports=reports, descriptors=descriptors)
     warnings: list[str] = []
     placeholders: list[str] = []
@@ -2534,6 +2602,7 @@ def _run_report_command(
     status_payload = _run_lifecycle_command(
         command_name="status",
         target_root=target_root,
+        local_only_repo_root=None,
         selected_modules=selected_modules,
         resolved_preset=resolved_preset,
         descriptors=descriptors,
@@ -3070,6 +3139,7 @@ def _run_prompt_command(
     payload = _run_lifecycle_command(
         command_name=prompt_command,
         target_root=target_root,
+        local_only_repo_root=None,
         selected_modules=selected_modules,
         resolved_preset=resolved_preset,
         descriptors=descriptors,
@@ -4380,6 +4450,7 @@ def _setup_payload(
     status_payload = _run_lifecycle_command(
         command_name="status",
         target_root=target_root,
+        local_only_repo_root=None,
         selected_modules=selected_modules,
         resolved_preset=resolved_preset,
         descriptors=descriptors,
@@ -4596,6 +4667,7 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
         status_payload = _run_lifecycle_command(
             command_name="status",
             target_root=target_root,
+            local_only_repo_root=None,
             selected_modules=installed_modules,
             resolved_preset=None,
             descriptors=descriptors,
@@ -4606,6 +4678,7 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
         doctor_payload = _run_lifecycle_command(
             command_name="doctor",
             target_root=target_root,
+            local_only_repo_root=None,
             selected_modules=installed_modules,
             resolved_preset=None,
             descriptors=descriptors,

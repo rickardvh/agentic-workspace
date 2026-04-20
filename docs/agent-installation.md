@@ -21,6 +21,7 @@ Preferred install or adopt intent:
 Preferred follow-up commands:
 - agentic-workspace status --target ./repo
 - agentic-workspace doctor --target ./repo
+- agentic-workspace uninstall --target ./repo --local-only
 - agentic-workspace skills --target ./repo --task "<task>" --format json
 - agentic-workspace upgrade --target ./repo
 

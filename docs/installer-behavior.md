@@ -49,5 +49,6 @@ In local-only mode:
 - repo-root `.gitignore` is updated to ignore `.gemini/`
 - the installed workspace continues to use the same managed planning and memory payloads
 - the regular repository root surfaces remain untouched
+- `agentic-workspace uninstall --local-only` removes the entire `.gemini/agentic-workspace/` tree and deletes the local-only ignore block when it was the only residue
 
 For more on lifecycle management, see [`docs/lifecycle-and-config-contract.md`](lifecycle-and-config-contract.md).

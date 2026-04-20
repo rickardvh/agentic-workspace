@@ -1632,6 +1632,25 @@ def test_install_local_only_uses_gemini_workspace_root_and_updates_gitignore(tmp
     assert ".gemini/" in gitignore_text
 
 
+def test_uninstall_local_only_removes_gemini_workspace_root_and_gitignore(tmp_path: Path, capsys) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+
+    assert cli.main(["install", "--modules", "planning", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["uninstall", "--modules", "planning", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    install_root = repo_root / ".gemini" / "agentic-workspace"
+    assert payload["command"] == "uninstall"
+    assert payload["target"] == install_root.as_posix()
+    assert not install_root.exists()
+    assert not (repo_root / ".gemini").exists()
+    assert not (repo_root / ".gitignore").exists()
+
+
 def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
@@ -1694,11 +1713,13 @@ def test_selection_commands_accept_non_interactive_flag() -> None:
 
     install_args = parser.parse_args(["install", "--target", ".", "--local-only", "--non-interactive"])
     init_args = parser.parse_args(["init", "--target", ".", "--non-interactive"])
+    uninstall_args = parser.parse_args(["uninstall", "--target", ".", "--local-only", "--non-interactive"])
     status_args = parser.parse_args(["status", "--target", ".", "--non-interactive"])
     prompt_args = parser.parse_args(["prompt", "upgrade", "--modules", "planning", "--target", ".", "--non-interactive"])
 
     assert install_args.local_only is True
     assert init_args.non_interactive is True
+    assert uninstall_args.local_only is True
     assert status_args.non_interactive is True
     assert prompt_args.non_interactive is True
 
