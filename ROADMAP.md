@@ -1,6 +1,6 @@
 # Roadmap
 
-Last reviewed: 2026-04-19
+Last reviewed: 2026-04-20
 
 ## Purpose
 
@@ -19,49 +19,40 @@ Keep the broader long-horizon capability map in `docs/agent-os-capabilities.md`.
 
 ## GitHub Issue Intake
 
-- Latest open planning tranche: GitHub issues `#161`-`#217`, grouped below into ordered inactive candidate lanes.
+- Latest open planning tranche: GitHub issues `#206` and `#220`-`#231`.
+- The active TODO/execplan already owns `#206`; the remaining open issues are grouped below as inactive candidate lanes.
 - Keep issue bodies as compact intake sources only; execute from checked-in planning after promotion.
 - Keep detailed closure history in archived execplans and issue comments, not here.
-- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, repo-directed improvement evidence-threshold, validation-friction repo-friction, config-driven execution posture, config-driven autonomy and agnostic improvements, startup front door clarity and agent-agnostic first contact, Memory trust/usefulness/routing/capture, Memory trust/habitual-pull, routine recovery compression/convergence, compression-and-convergence-of-operating-model, rotating-agent-economics, portable-declarative-contracts-beyond-python-cli, signal-hygiene-and-evidence-based-improvement, and intent-satisfaction-validation tranches are complete.
+- The simplification, improvement-latitude, iterative follow-through, optimization-bias, setup-findings, standing-intent, planning-surface-clarity, planner-worker orchestrator workflow, declarative contract-tooling, canonical module-reporting, bounded workspace CLI hotspot, native candidate-lane, workspace-self-adaptation/friction-order, repo-directed improvement evidence-threshold, validation-friction repo-friction, config-driven execution posture, config-driven autonomy and agnostic improvements, startup front door clarity and agent-agnostic first contact, Memory trust/usefulness/routing/capture, Memory trust/habitual-pull, routine recovery compression/convergence, compression-and-convergence-of-operating-model, rotating-agent-economics, portable-declarative-contracts-beyond-python-cli, signal-hygiene-and-evidence-based-improvement, intent-satisfaction-validation, and the earlier `#220`-`#231` tranche are complete.
 
 ## Candidate Lanes
 
-
-- Lane: Payload drift and installer knowledge
-  ID: payload-drift-and-installer-knowledge
+- Lane: Ownership boundary and low-residue installs
+  ID: ownership-boundary-and-local-only-mode
   Priority: first
-  Issues: #214, #215
-  Outcome: Add early payload-drift detection to reports and promote installer behavior into durable operator guidance.
-  Why now: Reduces manual payload mirroring friction and prevents agents from rediscovering installer logic.
-  Promotion signal: Promote when friction with payload syncing occurs again.
-  Suggested first slice: Add payload-drift detection to agentic-workspace report.
+  Issues: #231
+  Outcome: Separate package-owned state cleanly from repo-owned surfaces so install and uninstall become low-residue operations even for local-only mode.
+  Why now: Local-only use and cleaner uninstall both depend on a sharper package/repo boundary.
+  Promotion signal: Promote when a cleaner package-owned home can reduce repo-visible residue without losing repo-owned contracts.
+  Suggested first slice: Classify package-owned, repo-owned, and ambiguous middle-ground surfaces, then identify the smallest explicit repo hook that still preserves startup.
 
-- Lane: Local-only adoption and external-agent ergonomics
-  ID: local-only-adoption-and-external-agent-ergonomics
+- Lane: Product compression and gradual discovery
+  ID: product-compression-and-gradual-discovery
   Priority: second
-  Issues: #206
-  Outcome: Enable agents to use Agentic Workspace in repositories they do not own (or where checked-in adoption is not desired) through a local-only installation mode.
-  Why now: This is a common "read-only" or "guest" agent use case that currently lacks a first-class supported path.
-  Promotion signal: Promote when a guest-agent workflow needs to persist local planning/memory without polluting the target repository's tracked files.
-  Suggested first slice: Define the local-only storage and configuration shim for unowned repositories.
+  Issues: #230, #227, #228, #223, #224, #225, #226
+  Outcome: Make the visible product shape smaller and more progressively discoverable while preserving real leverage.
+  Why now: Onboarding and restart cost are now dominated by visible product shape rather than missing capability.
+  Promotion signal: Promote when a visible surface no longer earns its cognitive cost or a deeper concept can stay hidden until a task boundary actually needs it.
+  Suggested first slice: Define the tiny safe startup model, the boundary-triggered escalation cues, and the compact module-capability advertisement pattern.
 
-- Lane: Agent-native memory and habitual-pull ergonomics
-  ID: agent-native-memory-habitual-pull
+- Lane: System intent and planning trust
+  ID: system-intent-and-planning-trust
   Priority: third
-  Issues: #218
-  Outcome: Add an agent-native memory retrieval surface so agents can pull relevant knowledge tranches for a task without manual exploratory scans.
-  Why now: Reduces token cost and reasoning depth by narrowing the context-discovery window.
-  Promotion signal: Promote when task context discovery becomes a significant part of the startup cost.
-  Suggested first slice: Define the metadata/search contract for task-specific knowledge retrieval.
-
-- Lane: Signal hygiene and validation hardening
-  ID: signal-hygiene-validation-hardening
-  Priority: fourth
-  Issues: #219
-  Outcome: Fix persistent type-check and validation noise in the root workspace to restore high trust in the primary check lanes.
-  Why now: Noise in 'make check' leads to missed real regressions and increases developer cognitive load.
-  Promotion signal: Promote immediately to clear the master branch.
-  Suggested first slice: Fix the type diagnostics in _schema.py.
+  Issues: #229, #220, #222, #221
+  Outcome: Preserve higher-level product intent and make durable planning/closure semantics more trustworthy across tasks, issues, and sessions.
+  Why now: The repo already validates local slices well; the remaining gap is durable intent and honest follow-through.
+  Promotion signal: Promote when local success is not enough to preserve later proof, closure truthfulness, or cross-session alignment.
+  Suggested first slice: Define the minimum durable system-intent layer and the honest closure/reopen semantics for slice-complete but intent-partial work.
 
 ## Reopen Conditions
 
