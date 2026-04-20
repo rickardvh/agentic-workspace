@@ -32,9 +32,13 @@ def _find_repo_root() -> Path:
 
 
 REPO_ROOT = _find_repo_root()
-TODO_PATH = REPO_ROOT / "TODO.md"
 STATE_TOML_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "state.toml"
+MANAGED_TODO_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "TODO.md"
+MANAGED_ROADMAP_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "ROADMAP.md"
+LEGACY_TODO_PATH = REPO_ROOT / "TODO.md"
+LEGACY_ROADMAP_PATH = REPO_ROOT / "ROADMAP.md"
 EXECPLAN_DIR = REPO_ROOT / "docs" / "execplans"
+GENERATED_COMPATIBILITY_NOTICE = "generated compatibility view"
 
 TODO_MAX_LINES = 150
 TODO_MAX_NOW_ITEMS = 3
@@ -216,6 +220,14 @@ def _read_lines(path: Path) -> list[str]:
     if not path.exists():
         return []
     return path.read_text(encoding="utf-8").splitlines()
+
+
+def _compatibility_view_path(*, managed: Path, legacy: Path) -> Path:
+    if legacy.exists() and GENERATED_COMPATIBILITY_NOTICE not in legacy.read_text(encoding="utf-8").lower():
+        return legacy
+    if managed.exists():
+        return managed
+    return legacy
 
 
 def _section_content(lines: list[str], section_name: str) -> list[str]:
@@ -1743,8 +1755,14 @@ def _check_execplan_active_set(execplan_dir: Path) -> list[PlanningWarning]:
 
 
 def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWarning]:
-    todo_path = repo_root / "TODO.md"
-    roadmap_path = repo_root / "ROADMAP.md"
+    todo_path = _compatibility_view_path(
+        managed=repo_root / ".agentic-workspace" / "planning" / "TODO.md",
+        legacy=repo_root / "TODO.md",
+    )
+    roadmap_path = _compatibility_view_path(
+        managed=repo_root / ".agentic-workspace" / "planning" / "ROADMAP.md",
+        legacy=repo_root / "ROADMAP.md",
+    )
     execplan_dir = repo_root / "docs" / "execplans"
 
     warnings: list[PlanningWarning] = []
@@ -1769,8 +1787,14 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
 
 
 def gather_planning_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
-    todo_path = repo_root / "TODO.md"
-    roadmap_path = repo_root / "ROADMAP.md"
+    todo_path = _compatibility_view_path(
+        managed=repo_root / ".agentic-workspace" / "planning" / "TODO.md",
+        legacy=repo_root / "TODO.md",
+    )
+    roadmap_path = _compatibility_view_path(
+        managed=repo_root / ".agentic-workspace" / "planning" / "ROADMAP.md",
+        legacy=repo_root / "ROADMAP.md",
+    )
     execplan_dir = repo_root / "docs" / "execplans"
 
     todo_lines = _read_lines(todo_path)

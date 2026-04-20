@@ -196,8 +196,10 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
 
     assert (tmp_path / "AGENTS.md").exists()
     assert (tmp_path / ".agentic-workspace/planning/state.toml").exists()
-    assert (tmp_path / "TODO.md").exists()
-    assert (tmp_path / "ROADMAP.md").exists()
+    assert (tmp_path / ".agentic-workspace/planning/TODO.md").exists()
+    assert (tmp_path / ".agentic-workspace/planning/ROADMAP.md").exists()
+    assert not (tmp_path / "TODO.md").exists()
+    assert not (tmp_path / "ROADMAP.md").exists()
     assert capability_fit_doc_path.exists()
     assert routing_doc_path.exists()
     assert execution_flow_doc_path.exists()

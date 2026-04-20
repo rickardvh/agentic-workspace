@@ -5,7 +5,6 @@
 This file is a compatibility projection of `.agentic-workspace/planning/state.toml`.
 
 ## Candidate Lanes
-
 - Lane: Product compression and gradual discovery
   ID: product-compression-and-gradual-discovery
   Priority: second

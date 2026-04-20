@@ -23,8 +23,10 @@ def test_planning_clean_install() -> None:
 
         # Verify required files exist
         assert (target / ".agentic-workspace/planning/state.toml").exists(), "state.toml not found after install"
-        assert (target / "TODO.md").exists(), "TODO.md compatibility view not found after install"
-        assert (target / "ROADMAP.md").exists(), "ROADMAP.md compatibility view not found after install"
+        assert (target / ".agentic-workspace/planning/TODO.md").exists(), "TODO.md compatibility view not found after install"
+        assert (target / ".agentic-workspace/planning/ROADMAP.md").exists(), "ROADMAP.md compatibility view not found after install"
+        assert not (target / "TODO.md").exists(), "root TODO.md should not be created after install"
+        assert not (target / "ROADMAP.md").exists(), "root ROADMAP.md should not be created after install"
         assert (target / "AGENTS.md").exists(), "AGENTS.md not found after install"
 
 
@@ -46,7 +48,7 @@ def test_planning_install_dry_run() -> None:
 
         # Verify no files created
         assert not (target / ".agentic-workspace/planning/state.toml").exists(), "state.toml created during dry-run"
-        assert not (target / "ROADMAP.md").exists(), "ROADMAP.md created during dry-run"
+        assert not (target / ".agentic-workspace/planning/ROADMAP.md").exists(), "ROADMAP.md created during dry-run"
 
 
 def test_planning_install_idempotent() -> None:

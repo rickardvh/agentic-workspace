@@ -8,8 +8,8 @@ Choose this package when you want active work in a repository to stay bounded, r
 
 Use it for:
 
-- keeping a small active queue in `TODO.md`
-- storing inactive future candidates in `ROADMAP.md`
+- keeping active queue and candidate-lane state in `.agentic-workspace/planning/state.toml`
+- exposing optional generated thin views under `.agentic-workspace/planning/` when raw queue or roadmap inspection is useful
 - attaching bounded execution contracts to active work in `docs/execplans/`
 - capturing analysis-derived future-work findings in `docs/reviews/` before promotion
 - helping agents restart from checked-in execution state instead of chat-only context
@@ -118,8 +118,7 @@ The installed planning payload is not one flat compatibility promise.
 Treat these files as the current planning compatibility contract surfaces that should not change shape casually:
 
 - `AGENTS.md`
-- `TODO.md`
-- `ROADMAP.md`
+- `.agentic-workspace/planning/state.toml`
 - `docs/execplans/README.md`
 - `docs/execplans/TEMPLATE.md`
 - `docs/execplans/archive/README.md`
@@ -144,14 +143,14 @@ It also defines the bounded-initiative rule: improve means locally, but do not s
 `docs/resumable-execution-contract.md` defines the smaller machine-readable restart contract as a view over the same canonical `planning_record`.
 `docs/environment-recovery-contract.md` defines both how task-local environment assumptions and recovery paths should be expressed without growing a second plan schema, and the ordered recovery path when lifecycle work, repo-state inspection, or validation restart becomes ambiguous.
 `docs/execution-summary-contract.md` defines the compact completion summary that archived slices should leave behind.
-`docs/planning-routing-contract.md` defines the hierarchy and routing rules between `ROADMAP.md`, `TODO.md`, execplans, and reviews.
+`docs/planning-routing-contract.md` defines the hierarchy and routing rules between `.agentic-workspace/planning/state.toml`, generated compatibility views, execplans, and reviews.
 
 For active planning, `agentic-planning-bootstrap summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. `active_contract`, `resumable_contract`, `follow_through_contract`, `hierarchy_contract`, and `handoff_contract` remain thinner views over that record.
 For delegated execution, `agentic-planning-bootstrap handoff --format json` is the compact worker handoff derived from that same active planning state.
 For compact module-state reporting without opening raw planning files first, use `agentic-planning-bootstrap report --format json`. It stays derived from the same canonical planning state and does not create a second state store.
 Use `hierarchy_contract` when you need the larger-picture restart answer cheaply: active chunk, parent lane, next likely chunk, continuation owner, and proof state.
 
-Use a direct task in `TODO.md` when the work is small enough to finish in one coherent pass and does not need milestone sequencing, blocker tracking, or a wider validation story.
+Use a direct task in `.agentic-workspace/planning/state.toml` when the work is small enough to finish in one coherent pass and does not need milestone sequencing, blocker tracking, or a wider validation story.
 
 Treat the direct-task shape as compact by default:
 
@@ -183,8 +182,8 @@ If stronger capability keeps seeming necessary for the same class of work, treat
 
 When a repo also installs Agentic Memory, Planning should borrow durable context from routed memory notes instead of re-explaining the same subsystem background inside each execplan. Completed planning residue should promote durable lessons into memory or canonical docs when they remain expensive to rediscover.
 
-When a direct task completes, remove it from `TODO.md` promptly. If the task changed durable repo knowledge or left important follow-up work, record that residue in memory, canonical docs, `ROADMAP.md`, or a newly promoted execplan rather than leaving chat-only context behind.
-If the completed slice came from `TODO.md` or `ROADMAP.md`, clear the matched queue residue in the same pass instead of leaving stale completed entries behind.
+When a direct task completes, remove it from `.agentic-workspace/planning/state.toml` promptly. If the task changed durable repo knowledge or left important follow-up work, record that residue in memory, canonical docs, the roadmap state in `.agentic-workspace/planning/state.toml`, or a newly promoted execplan rather than leaving chat-only context behind.
+If the completed slice came from the active queue or roadmap state, clear the matched queue residue in the same pass instead of leaving stale completed entries behind.
 When a bounded slice completes only part of a larger intended outcome, do not close it with required continuation only in prose.
 Execplans now treat four fields as first-class:
 
@@ -214,7 +213,7 @@ Promote into an execplan when any of these cases appears:
 - a handoff between sessions, contributors, or models would require more than one TODO row
 - partial failure or retry handling needs to be spelled out
 - concurrent branch work creates merge, ownership, or sequencing risk
-- stale residue would otherwise be left in `TODO.md` because the task can no longer close in one pass
+- stale residue would otherwise be left in `.agentic-workspace/planning/state.toml` because the task can no longer close in one pass
 - a compact checked-in plan would let a smaller or less capable agent implement safely without re-deriving the whole task
 
 The practical test is simple: if safe continuation depends on more than `Why now`, `Next action`, and `Done when`, the work is no longer a direct task.
@@ -234,9 +233,9 @@ Bad fits:
 ## Example Scenarios
 
 - Before: each session restarts by rediscovering what mattered last time.
-  After: `TODO.md` and one active execplan hold the live execution contract.
+  After: `.agentic-workspace/planning/state.toml` and one active execplan hold the live execution contract.
 - Before: follow-on work derails the current thread because there is no compact place to capture it safely.
-  After: future work goes to `ROADMAP.md` while the current thread stays bounded.
+  After: future work stays in the roadmap section of `.agentic-workspace/planning/state.toml` while the current thread stays bounded.
 
 ## Overview
 
@@ -271,8 +270,7 @@ Development is organised across three horizons:
 
 | Horizon | Surface | Role |
 | ------ | ------- | ---- |
-| Direction | `ROADMAP.md` | What might matter next through compact candidate lanes |
-| Activation | `TODO.md` | What matters now |
+| Direction + Activation | `.agentic-workspace/planning/state.toml` | What matters now and what might matter next through compact candidate lanes |
 | Execution | `docs/execplans/` | How the active work is completed |
 
 Each layer has a single responsibility and should not duplicate the others.
@@ -301,7 +299,7 @@ Every meaningful piece of active work can be backed by a structured execution co
 
 In the normal startup path, agents should be able to restart work by reading:
 
-`AGENTS.md -> TODO.md -> one execplan -> begin execution`
+`AGENTS.md -> agentic-workspace summary --format json -> one execplan -> begin execution`
 
 No large context load should be required.
 
@@ -322,7 +320,7 @@ Required continuation for an unfinished larger intended outcome must be routed i
 ### 7. Keeps active surfaces clean
 
 Completed work should leave active surfaces rather than accumulate there.
-`TODO.md` should stay a live activation surface, not a running list of what was finished in the current pass.
+The active queue in `.agentic-workspace/planning/state.toml` should stay live, not become a running list of what was finished in the current pass.
 
 ## Key Properties
 
@@ -384,8 +382,8 @@ Planning does not own:
 Planning includes a bounded review lane for deliberate future-work discovery:
 
 - `docs/reviews/` captures review artifacts
-- `ROADMAP.md` receives promoted future candidates
-- `TODO.md` plus `docs/execplans/` receive only the findings that are explicitly activated
+- the roadmap section of `.agentic-workspace/planning/state.toml` receives promoted future candidates
+- the active queue in `.agentic-workspace/planning/state.toml` plus `docs/execplans/` receive only the findings that are explicitly activated
 
 The review lane exists so analysis-derived findings do not masquerade as friction-confirmed work.
 Its rules are:
@@ -407,8 +405,7 @@ Do not use them as a substitute for durable docs, memory notes, or active execpl
 Planning also includes a tracker-agnostic intake contract for work that starts in an external tracker but should execute from checked-in planning.
 
 - `docs/upstream-task-intake.md` owns the intake rules
-- `ROADMAP.md` owns inactive accepted upstream candidates
-- `TODO.md` owns only the active queue
+- `.agentic-workspace/planning/state.toml` owns both inactive accepted upstream candidates and the active queue
 - `docs/execplans/` own detailed intake metadata for active promoted work
 
 The contract is intentionally neutral across GitHub Issues, Linear, Jira, Notion, and other upstream systems.
@@ -440,8 +437,9 @@ It is not meant to become a Jira replacement, even though a repo may use it for 
 The package installs the checked-in planning contract and its supporting surfaces:
 
 - `AGENTS.md`
-- `TODO.md`
-- `ROADMAP.md`
+- `.agentic-workspace/planning/state.toml`
+- `.agentic-workspace/planning/TODO.md`
+- `.agentic-workspace/planning/ROADMAP.md`
 - `docs/execplans/README.md`
 - `docs/execplans/TEMPLATE.md`
 - `docs/execplans/archive/README.md`
@@ -478,8 +476,9 @@ In this monorepo checkout, the active operational planning install lives at the 
 ## Repository Structure
 
 ```text
-TODO.md                    # activation surface
-ROADMAP.md                 # long-horizon direction
+.agentic-workspace/planning/state.toml  # active queue + candidate lanes
+.agentic-workspace/planning/TODO.md     # generated thin active-queue view
+.agentic-workspace/planning/ROADMAP.md  # generated thin roadmap view
 docs/execplans/            # execution contracts
 docs/execplans/archive/    # completed plans
 scripts/check/             # validation tooling
@@ -489,7 +488,7 @@ scripts/check/             # validation tooling
 
 ### 1. Start from the startup surface
 
-Read `AGENTS.md`, then `TODO.md`, and select one active item.
+Read `AGENTS.md`, then `agentic-workspace summary --format json`, and select one active item.
 
 ### 2. Load the execution contract
 
@@ -519,7 +518,7 @@ Do not expand beyond:
 
 Once done:
 
-- remove the item from `TODO.md`
+- remove the item from `.agentic-workspace/planning/state.toml`
 - mark the active milestone completed
 - archive the execplan when it no longer affects future execution
 
@@ -527,9 +526,8 @@ Once done:
 
 ### One surface per concern
 
-- `TODO.md` -> activation only
+- `.agentic-workspace/planning/state.toml` -> activation and candidate lanes
 - `docs/execplans/` -> execution only
-- `ROADMAP.md` -> direction only
 
 ### No duplication of intent
 
@@ -604,9 +602,9 @@ This system is most useful when:
 - `make planning-surfaces-strict`
 - `make render-agent-docs`
 
-`archive-plan --apply-cleanup` is intentionally narrow. It may remove completed TODO items that still point at the archived plan and compress stale `ROADMAP.md` Active Handoff residue tied to that same thread, but it does not invent hidden state or perform broad automatic rewrites.
+`archive-plan --apply-cleanup` is intentionally narrow. It may remove completed active-queue items that still point at the archived plan and compress stale roadmap residue tied to that same thread, but it does not invent hidden state or perform broad automatic rewrites.
 
-`upgrade` is intentionally conservative: it refreshes package-managed helper surfaces and re-renders generated planning docs, but leaves repo-owned planning surfaces like `AGENTS.md`, `TODO.md`, and `ROADMAP.md` unchanged when they already exist.
+`upgrade` is intentionally conservative: it refreshes package-managed helper surfaces, re-renders generated planning docs, and refreshes generated compatibility views under `.agentic-workspace/planning/`, while leaving repo-owned surfaces like `AGENTS.md` unchanged when they already exist.
 When older active execplans were written against a previous template, the upgrade path is to reconcile those plans to the current contract shape, not to expect `upgrade` to rewrite them automatically.
 
 `uninstall` is intentionally safe: it removes managed files only when they still match package content and leaves locally modified files in place for manual review.
