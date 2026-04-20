@@ -58,7 +58,7 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert planning_module["workflow_surfaces"] == [
         "AGENTS.md",
         "TODO.md",
-        "ROADMAP.md",
+        ".agentic-workspace/planning/state.toml",
         "docs/execplans",
         "docs/contributor-playbook.md",
         "docs/maintainer-commands.md",
@@ -105,7 +105,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["startup"]["first_queries"][1]["field"] == "workspace.agent_instructions_file"
     assert payload["startup"]["first_queries"][2]["field"] == "planning_record"
     assert payload["startup"]["surface_roles"][0]["surface"] == "AGENTS.md"
-    assert payload["startup"]["surface_roles"][2]["role"] == "external install/adopt handoff only"
+    assert any(
+        role.get("surface") == "llms.txt" and role.get("role") == "external install/adopt handoff only"
+        for role in payload["startup"]["surface_roles"]
+    )
     assert payload["startup"]["surface_roles"][3]["kind"] == "generated-helper"
     assert any("current agent does not natively look for `AGENTS.md`" in step for step in payload["startup"]["fallbacks"])
     assert payload["compact_contract_profile"]["canonical_doc"] == "docs/compact-contract-profile.md"
@@ -220,11 +223,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["recovery"]["effective_output_posture"]["command"] == "agentic-workspace config --target ./repo --format json"
     assert payload["recovery"]["effective_output_posture"]["field"] == "workspace.optimization_bias"
     assert payload["completion"]["rule"] == (
-        "When a completed slice came from TODO.md or ROADMAP.md, clear the matched queue residue in the same pass."
+        "When a completed slice came from state.toml, clear the matched queue residue in the same pass."
     )
     assert payload["completion"]["prefer_surfaces"] == [
-        "TODO.md",
-        "ROADMAP.md",
+        ".agentic-workspace/planning/state.toml",
         "docs/execplans/README.md",
     ]
     assert payload["delegated_judgment"]["canonical_doc"] == "docs/delegated-judgment-contract.md"
@@ -357,8 +359,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         profile for profile in payload["workflow_artifact_adapters"]["supported_profiles"] if profile["profile"] == "gemini"
     )
     assert gemini_profile["native_artifacts"] == ["implementation_plan.md", "task.md", "walkthrough.md"]
-    assert gemini_profile["canonical_surfaces"] == ["TODO.md", "docs/execplans/"]
-    assert any("ROADMAP.md" in step for step in payload["startup"]["secondary"])
+    assert gemini_profile["canonical_surfaces"] == [".agentic-workspace/planning/state.toml", "docs/execplans/"]
+    assert any("state.toml" in step for step in payload["startup"]["secondary"])
     assert payload["startup"]["workflow_recovery"] == [
         (
             "When startup, first-contact routing, or recovery is unclear, prefer "
@@ -452,7 +454,7 @@ def test_external_agent_handoff_text_reports_workflow_artifact_profile() -> None
     )
 
     assert "Workflow artifact profile: gemini." in text
-    assert "mirror the durable execution state into TODO.md and the active execplan" in text
+    assert "mirror the durable execution state into .agentic-workspace/planning/state.toml and the active execplan" in text
 
 
 def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: Path, capsys) -> None:
@@ -471,7 +473,10 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["workspace"]["improvement_latitude_source"] == "product-default"
     assert payload["workspace"]["optimization_bias"] == "balanced"
     assert payload["workspace"]["optimization_bias_source"] == "product-default"
-    assert payload["workspace"]["workflow_artifact_adapter"]["canonical_surfaces"] == ["TODO.md", "docs/execplans/"]
+    assert payload["workspace"]["workflow_artifact_adapter"]["canonical_surfaces"] == [
+        ".agentic-workspace/planning/state.toml",
+        "docs/execplans/",
+    ]
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
     assert payload["mixed_agent"]["status"] == "reporting-only"
@@ -817,7 +822,7 @@ def test_setup_command_loads_promotable_findings_artifact(tmp_path: Path, capsys
                         "class": "planning_candidate",
                         "summary": "Promote one bounded module-reporting follow-on.",
                         "confidence": 0.83,
-                        "next_action": "Promote the next module-reporting slice into TODO.md after setup review.",
+                        "next_action": "Promote the next module-reporting slice into .agentic-workspace/planning/state.toml after setup review.",
                     },
                     {
                         "class": "planning_candidate",
@@ -987,7 +992,7 @@ def test_ownership_command_reports_authority_map(tmp_path: Path, monkeypatch, ca
         'uninstall_policy = "remove-fence-only"\n\n'
         "[[authority_surfaces]]\n"
         'concern = "active-execution-state"\n'
-        'surface = "TODO.md"\n'
+        'surface = ".agentic-workspace/planning/state.toml"\n'
         'owner = "repo"\n'
         'ownership = "repo_owned"\n'
         'authority = "primary"\n'
@@ -1002,10 +1007,12 @@ def test_ownership_command_reports_authority_map(tmp_path: Path, monkeypatch, ca
     assert payload["canonical_doc"] == "docs/ownership-authority-contract.md"
     assert payload["ledger_path"] == ".agentic-workspace/OWNERSHIP.toml"
     assert payload["authority_surfaces"][0]["concern"] == "active-execution-state"
-    assert payload["authority_surfaces"][0]["surface"] == "TODO.md"
+    assert payload["authority_surfaces"][0]["surface"] == ".agentic-workspace/planning/state.toml"
     assert any(entry["surface"] == ".agentic-workspace/planning/" for entry in payload["boundary_review"]["package_owned"]["module_roots"])
-    assert any(entry["surface"] == ".agentic-workspace/OWNERSHIP.toml" for entry in payload["boundary_review"]["package_owned"]["managed_surfaces"])
-    assert payload["boundary_review"]["repo_owned"]["authority_surfaces"][0]["surface"] == "TODO.md"
+    assert any(
+        entry["surface"] == ".agentic-workspace/OWNERSHIP.toml" for entry in payload["boundary_review"]["package_owned"]["managed_surfaces"]
+    )
+    assert len(payload["boundary_review"]["repo_owned"]["authority_surfaces"]) == 1
     assert payload["boundary_review"]["middle_ground"]["managed_fences"][0]["surface"] == "AGENTS.md#agentic-workspace:workflow"
     assert payload["boundary_review"]["smallest_explicit_repo_hook"]["surface"] == "AGENTS.md#agentic-workspace:workflow"
     assert payload["warnings"] == []
@@ -1018,7 +1025,7 @@ def test_ownership_concern_selector_returns_compact_contract_answer(tmp_path: Pa
         "schema_version = 1\n\n"
         "[[authority_surfaces]]\n"
         'concern = "active-execution-state"\n'
-        'surface = "TODO.md"\n'
+        'surface = ".agentic-workspace/planning/state.toml"\n'
         'owner = "repo"\n'
         'ownership = "repo_owned"\n'
         'authority = "primary"\n'
@@ -1034,7 +1041,7 @@ def test_ownership_concern_selector_returns_compact_contract_answer(tmp_path: Pa
     assert payload["surface"] == "ownership"
     assert payload["selector"] == {"concern": "active-execution-state"}
     assert payload["matched"] is True
-    assert payload["answer"]["surface"] == "TODO.md"
+    assert payload["answer"]["surface"] == ".agentic-workspace/planning/state.toml"
     assert payload["answer"]["owner"] == "repo"
 
 
@@ -1626,7 +1633,7 @@ def test_install_local_only_uses_gemini_workspace_root_and_updates_git_exclude(t
     assert payload["command"] == "install"
     assert payload["target"] == install_root.as_posix()
     assert (install_root / "AGENTS.md").exists()
-    assert (install_root / "TODO.md").exists()
+    assert (install_root / ".agentic-workspace" / "planning" / "state.toml").exists()
     assert (install_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert (install_root / "LOCAL-ONLY.toml").read_text(encoding="utf-8").startswith('schema_version = 1\nmode = "local-only"')
     git_exclude_text = (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
@@ -1944,7 +1951,8 @@ def test_init_reports_docs_heavy_repo_as_high_ambiguity(monkeypatch, tmp_path: P
     _init_git_repo(tmp_path)
     (tmp_path / "AGENTS.md").write_text("# Existing\n", encoding="utf-8")
     (tmp_path / "TODO.md").write_text("# Existing TODO\n", encoding="utf-8")
-    (tmp_path / "ROADMAP.md").write_text("# Existing Roadmap\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace" / "planning").mkdir(parents=True)
+    (tmp_path / ".agentic-workspace" / "planning" / "state.toml").write_text("# Existing Roadmap\n", encoding="utf-8")
     (tmp_path / "docs" / "contributor-playbook.md").parent.mkdir(parents=True)
     (tmp_path / "docs" / "contributor-playbook.md").write_text("# Contributor Playbook\n", encoding="utf-8")
     (tmp_path / "docs" / "maintainer-commands.md").write_text("# Maintainer Commands\n", encoding="utf-8")
@@ -1958,8 +1966,9 @@ def test_init_reports_docs_heavy_repo_as_high_ambiguity(monkeypatch, tmp_path: P
     assert payload["mode"] == "adopt_high_ambiguity"
     assert payload["prompt_requirement"] == "required"
     assert sorted(payload["detected_surfaces"]) == [
+        ".agentic-workspace/planning",
+        ".agentic-workspace/planning/state.toml",
         "AGENTS.md",
-        "ROADMAP.md",
         "TODO.md",
         "docs/contributor-playbook.md",
         "docs/maintainer-commands.md",
@@ -2111,7 +2120,7 @@ def test_install_real_init_creates_combined_memory_and_planning_surfaces(tmp_pat
     assert (target / ".agentic-workspace" / "OWNERSHIP.toml").exists()
     assert (target / "memory" / "index.md").exists()
     assert (target / ".agentic-workspace" / "memory" / "WORKFLOW.md").exists()
-    assert (target / "TODO.md").exists()
+    assert (target / ".agentic-workspace" / "planning" / "state.toml").exists()
     assert (target / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     agents_text = (target / "AGENTS.md").read_text(encoding="utf-8")
     assert "<!-- agentic-workspace:workflow:start -->" in agents_text
@@ -2197,8 +2206,8 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
         }
         for item in payload["discovery"]["memory_candidates"]
     )
-    assert any(item["surface"] == "TODO.md" for item in payload["discovery"]["planning_candidates"])
-    assert any(item["surface"] == "ROADMAP.md" for item in payload["discovery"]["ambiguous"])
+    assert any(item["surface"] == ".agentic-workspace/planning/state.toml" for item in payload["discovery"]["planning_candidates"])
+    assert payload["discovery"]["ambiguous"] == []
     assert payload["standing_intent"]["canonical_doc"] == "docs/standing-intent-contract.md"
     assert payload["standing_intent"]["precedence_order"][0]["source"] == "explicit_current_human_instruction"
     assert payload["standing_intent"]["precedence_order"][1]["source"] == "active_directional_intent"
@@ -2229,7 +2238,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["repo_friction"]["initiative_posture"] == "local-touched-scope-only"
     assert payload["repo_friction"]["reporting_destinations"] == [
         "agentic-workspace report --target ./repo --format json",
-        "TODO.md or the active execplan when repeated friction deserves promotion",
+        ".agentic-workspace/planning/state.toml or the active execplan when repeated friction deserves promotion",
     ]
     assert payload["repo_friction"]["evidence_classes"] == [
         "large_file_hotspots",
@@ -2260,11 +2269,15 @@ def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path,
     _init_git_repo(target)
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
-    (target / "TODO.md").write_text(
-        "# TODO\n\n## Next\n\n- ID: standing-intent-slice\n"
-        "  Status: in-progress\n"
-        "  Surface: docs/execplans/standing-intent-slice.md\n"
-        "  Why now: standing intent needs a durable owner.\n",
+    (target / ".agentic-workspace" / "planning" / "state.toml").write_text(
+        "[todo]\n"
+        "active_items = [\n"
+        "    { id = 'standing-intent-slice', status = 'in-progress', surface = 'docs/execplans/standing-intent-slice.md', why_now = 'standing intent needs a durable owner.' }\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\n"
+        "lanes = []\n"
+        "candidates = []\n",
         encoding="utf-8",
     )
     (target / "docs" / "execplans" / "standing-intent-slice.md").write_text(
@@ -2276,10 +2289,10 @@ def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path,
         "## Intent Continuity\n\n"
         "- Larger intended outcome: make durable repo guidance recoverable.\n"
         "- This slice completes the larger intended outcome: no\n"
-        "- Continuation surface: ROADMAP.md candidate lane `standing-intent-durability`\n\n"
+        "- Continuation surface: state.toml candidate lane `standing-intent-durability`\n\n"
         "## Required Continuation\n\n"
         "- Required follow-on for the larger intended outcome: yes\n"
-        "- Owner surface: ROADMAP.md\n"
+        "- Owner surface: .agentic-workspace/planning/state.toml\n"
         "- Activation trigger: precedence rules still need to land.\n\n"
         "## Iterative Follow-Through\n\n"
         "- What this slice enabled: standing intent is classifiable.\n"
@@ -2346,11 +2359,15 @@ def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_
         "prefer_internal_delegation_when_available = true\n",
         encoding="utf-8",
     )
-    (target / "TODO.md").write_text(
-        "# TODO\n\n## Next\n\n- ID: execution-shape-slice\n"
-        "  Status: in-progress\n"
-        "  Surface: docs/execplans/execution-shape-slice.md\n"
-        "  Why now: make default execution shape visible.\n",
+    (target / ".agentic-workspace" / "planning" / "state.toml").write_text(
+        "[todo]\n"
+        "active_items = [\n"
+        "    { id = 'execution-shape-slice', status = 'in-progress', surface = 'docs/execplans/execution-shape-slice.md', why_now = 'make default execution shape visible.' }\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\n"
+        "lanes = []\n"
+        "candidates = []\n",
         encoding="utf-8",
     )
     (target / "docs" / "execplans" / "execution-shape-slice.md").write_text(
@@ -2600,7 +2617,7 @@ def test_report_surfaces_reporting_only_repo_friction_posture(tmp_path: Path, ca
     assert payload["repo_friction"]["reporting_destinations"] == [
         "agentic-workspace report --target ./repo --format json",
         "review outputs",
-        "TODO.md or the active execplan when the current slice already owns planning residue",
+        ".agentic-workspace/planning/state.toml or the active execplan when the current slice already owns planning residue",
     ]
 
 
@@ -2766,11 +2783,7 @@ def test_doctor_real_init_reports_stale_planning_generated_residue(tmp_path: Pat
     payload = json.loads(capsys.readouterr().out)
     assert payload["health"] == "attention-needed"
     assert any(
-        item
-        == (
-            "tools/AGENT_ROUTING.md: routing guide is out of sync with "
-            ".agentic-workspace/planning/agent-manifest.json; run python scripts/render_agent_docs.py"
-        )
+        item == ("tools/AGENT_ROUTING.md: Generated routing guide is out of date; rerender agent docs from the source manifest.")
         for item in payload["needs_review"]
     )
 
@@ -3091,7 +3104,7 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
                 (
                     Path("AGENTS.md"),
                     Path("TODO.md"),
-                    Path("ROADMAP.md"),
+                    Path(".agentic-workspace/planning/state.toml"),
                     Path("docs/execplans"),
                     Path("docs/contributor-playbook.md"),
                     Path("docs/maintainer-commands.md"),

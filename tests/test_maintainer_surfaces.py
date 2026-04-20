@@ -32,16 +32,17 @@ def _write(path: Path, text: str) -> None:
 def _baseline_manifest() -> dict[str, object]:
     return {
         "bootstrap": {
-            "first_reads": ["AGENTS.md", "TODO.md"],
+            "first_reads": ["AGENTS.md"],
             "first_queries": [
-                "Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
+                "Use `agentic-workspace summary --format json` to recover planning state; use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
             ],
             "surface_roles": [
                 "`docs/routing-contract.md` is the authoritative routing home.",
                 "`llms.txt` is the agent entrypoint router.",
             ],
             "conditional_reads": [
-                "Read `ROADMAP.md` only when promoting work.",
+                "Read the roadmap in `state.toml` (authoritative) only when promoting work.",
+                "Read `agentic-workspace summary --format json` only when recovering planning state.",
                 "Read `docs/routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.",
                 "Do not bulk-read all planning surfaces.",
             ],
@@ -67,10 +68,11 @@ def _write_planning_surfaces(tmp_path: Path) -> None:
         """
 # Agent Instructions
 
-1. Read `AGENTS.md`.
-2. Read `TODO.md`.
-3. Read the active feature plan in `docs/execplans/` when the TODO surface points there.
-4. Read `ROADMAP.md` only when promoting work.
+1. Read `agents.md`.
+2. Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary --format json`.
+3. Read the active feature plan in `docs/execplans/` when the planning state surface points there.
+4. Check the roadmap in `state.toml` (authoritative) only when promoting work.
+Read `agentic-workspace config --target . --format json` when the current posture or startup entrypoint matters.
 
 Do not bulk-read all planning surfaces.
 When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
@@ -97,14 +99,14 @@ This contract defines how to enter the repository, orient quickly, and pick the 
 Use the following order for a fresh entry:
 1. [Cold-Start Protocol](cold-start-protocol.md)
 2. AGENTS.md
-3. TODO.md
+3. .agentic-workspace/planning/state.toml
 4. Compact queries:
    - agentic-workspace summary --format json
    - agentic-workspace report --target ./repo --format json
 """,
     )
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -117,7 +119,7 @@ Use the following order for a fresh entry:
 """,
     )
     _write(
-        tmp_path / "ROADMAP.md",
+        tmp_path / "docs/planning-process.md",
         """
 # Roadmap
 
@@ -204,7 +206,7 @@ For maintainers:
 - `memory/runbooks/dogfooding-feedback-routing.md` - classify internal friction before routing it onward.
 - `docs/workflow-contract-changes.md` - compact record of recent workflow-surface changes.
 
-For agent maintainers, the primary operating path is `AGENTS.md`, `TODO.md`, the active execplan, and `docs/contributor-playbook.md`.
+for agent maintainers, the primary operating path is `agents.md`, active execplan, and `docs/contributor-playbook.md`.
 """
     if drift_readme:
         readme = "# agentic-workspace\n\n## Docs Map\n\nFor maintainers:\n\n- `docs/contributor-playbook.md`\n"
@@ -223,12 +225,11 @@ ownership, or validation guidance.
 
 Default startup path for an agent maintainer:
 
-1. Read `AGENTS.md`.
-2. Read `TODO.md`.
+1. Read `agents.md`.
+2. Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary --format json`.
 3. If the question is startup order or first-contact routing, ask `agentic-workspace defaults --section startup --format json` before broader prose.
-4. If you need the current planning state, ask `agentic-workspace summary --format json` before opening raw planning files.
-5. Read one active execplan only when `TODO.md` points to it.
-6. Read package-local `AGENTS.md` only for the package you will edit.
+4. Read one active execplan only when the planning state surface points to it.
+6. Read package-local `agents.md` only for the package you will edit.
 """,
     )
     _write(

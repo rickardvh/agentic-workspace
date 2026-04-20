@@ -721,12 +721,12 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             )
         )
 
-    if "todo.md" in first_reads_lower or "roadmap.md" in first_reads_lower or "docs/execplans/readme.md" in first_reads_lower:
+    if "TODO.md" in first_reads_lower or ".agentic-workspace/planning/state.toml" in first_reads_lower or "roadmap.md" in first_reads_lower or "docs/execplans/readme.md" in first_reads_lower:
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
-                "Manifest first_reads must stay lightweight: start from AGENTS.md and keep TODO.md/ROADMAP.md conditional.",
+                "Manifest first_reads must stay lightweight: start from AGENTS.md and keep .agentic-workspace/planning/state.toml conditional.",
             )
         )
 

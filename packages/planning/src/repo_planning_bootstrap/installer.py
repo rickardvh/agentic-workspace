@@ -91,9 +91,7 @@ PLANNING_LOWER_STABILITY_HELPER_FILES = tuple(
     relative for relative in REQUIRED_PAYLOAD_FILES if relative not in PLANNING_COMPATIBILITY_CONTRACT_FILES
 )
 
-ROOT_SURFACE_FILES = (
-    Path("AGENTS.template.md"),
-)
+ROOT_SURFACE_FILES = (Path("AGENTS.template.md"),)
 
 GENERATED_PAYLOAD_FILES = (
     ROOT_MANIFEST_MIRROR_PATH,
@@ -310,6 +308,7 @@ def install_bootstrap(
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
         _migrate_legacy_planning_surfaces(target_root, force=force)
+        _ensure_state_toml_exists(target_root)
     if local_only and not dry_run:
         _ensure_local_ignored(target or Path.cwd())
     return result
@@ -333,6 +332,7 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) 
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
         _migrate_legacy_planning_surfaces(target_root)
+        _ensure_state_toml_exists(target_root)
     return result
 
 
@@ -351,6 +351,7 @@ def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
         _migrate_legacy_planning_surfaces(target_root)
+        _ensure_state_toml_exists(target_root)
     return result
 
 
@@ -441,7 +442,7 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
 
     _add_contract_surface_summary(result, target_root)
 
-    for relative in (Path("AGENTS.md"), Path("TODO.md"), Path("ROADMAP.md")):
+    for relative in (Path("AGENTS.md"), Path(".agentic-workspace/planning/state.toml"), Path("ROADMAP.md")):
         path = target_root / relative
         if path.exists():
             text = path.read_text(encoding="utf-8")
@@ -508,7 +509,7 @@ def verify_payload() -> InstallResult:
 
 def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
     target_root = resolve_target_root(target)
-    todo_path = target_root / "TODO.md"
+    todo_path = target_root / ".agentic-workspace/planning/state.toml"
     roadmap_path = target_root / "ROADMAP.md"
     execplan_dir = target_root / "docs" / "execplans"
 
@@ -521,9 +522,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         roadmap_lanes = roadmap_data.get("lanes", [])
         roadmap_candidates = roadmap_data.get("candidates", [])
         if not roadmap_candidates and roadmap_lanes:
-            roadmap_candidates = [
-                {"priority": lane.get("priority", ""), "summary": lane.get("title", "")} for lane in roadmap_lanes
-            ]
+            roadmap_candidates = [{"priority": lane.get("priority", ""), "summary": lane.get("title", "")} for lane in roadmap_lanes]
         todo_line_count = 0  # We don't have a direct line count for the TOML state
         todo_item_count = len(active_items) + len(queued_items)
     else:
@@ -951,8 +950,12 @@ def _ownership_review(target_root: Path) -> dict[str, Any]:
         if isinstance(entry, dict)
     ]
     package_owned_roots = [entry["path"] for entry in module_roots if entry.get("ownership") == "module_managed" and entry.get("path")]
-    repo_owned_surfaces = [entry["surface"] for entry in authority_surfaces if entry.get("ownership") == "repo_owned" and entry.get("surface")]
-    module_managed_surfaces = [entry["surface"] for entry in authority_surfaces if entry.get("ownership") == "module_managed" and entry.get("surface")]
+    repo_owned_surfaces = [
+        entry["surface"] for entry in authority_surfaces if entry.get("ownership") == "repo_owned" and entry.get("surface")
+    ]
+    module_managed_surfaces = [
+        entry["surface"] for entry in authority_surfaces if entry.get("ownership") == "module_managed" and entry.get("surface")
+    ]
     minimal_repo_hook = next((f"{entry['file']}#agentic-workspace:workflow" for entry in fences if entry.get("file")), "")
     return {
         "status": "present",
@@ -1103,7 +1106,7 @@ def _active_intent_contract(
     required_tools = [tool for tool in _extract_section_bullets(plan_path, "Required Tools") if tool.lower() not in {"none", "none."}]
     minimal_refs = _dedupe(
         [
-            "TODO.md",
+            ".agentic-workspace/planning/state.toml",
             plan_path.relative_to(target_root).as_posix(),
             *([surface] if surface else []),
         ]
@@ -1444,7 +1447,7 @@ def _active_handoff_contract(
 
 
 def summary_todo_queue(*, target_root: Path) -> list[dict[str, str]]:
-    todo_lines, todo_items = _read_todo_items(target_root / "TODO.md")
+    todo_lines, todo_items = _read_todo_items(target_root / ".agentic-workspace/planning/state.toml")
     del todo_lines
     queue: list[dict[str, str]] = []
     for item in todo_items:
@@ -1511,7 +1514,7 @@ def promote_todo_item_to_execplan(
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message=f"Promote TODO item '{item_id}' to execplan", dry_run=dry_run)
-    todo_path = target_root / "TODO.md"
+    todo_path = target_root / ".agentic-workspace/planning/state.toml"
     todo_lines, todo_items = _read_todo_items(todo_path)
     item = next((candidate for candidate in todo_items if candidate.item_id == item_id), None)
     if item is None:
@@ -1762,21 +1765,23 @@ def archive_execplan(
         )
         return result
     cleanup_todo_lines: list[str] | None = None
-    todo_ref_items = _todo_referencing_items(target_root / "TODO.md", plan_path, target_root)
+    todo_ref_items = _todo_referencing_items(target_root / ".agentic-workspace/planning/state.toml", plan_path, target_root)
     if apply_cleanup and todo_ref_items:
-        cleanup_todo_lines = _remove_todo_items(target_root / "TODO.md", todo_ref_items)
+        cleanup_todo_lines = _remove_todo_items(target_root / ".agentic-workspace/planning/state.toml", todo_ref_items)
         for item in todo_ref_items:
             result.add(
                 "would update" if dry_run else "updated",
-                target_root / "TODO.md",
+                target_root / ".agentic-workspace/planning/state.toml",
                 (f"remove TODO item '{item.item_id}' while archiving its plan"),
             )
     elif apply_cleanup:
-        compact_cleanup = _cleanup_compact_todo_archive_followup(target_root / "TODO.md", plan_path, target_root)
+        compact_cleanup = _cleanup_compact_todo_archive_followup(
+            target_root / ".agentic-workspace/planning/state.toml", plan_path, target_root
+        )
         if compact_cleanup["changed"]:
             cleanup_todo_lines = compact_cleanup["text"].splitlines()
             for detail in compact_cleanup["details"]:
-                result.add("would update" if dry_run else "updated", target_root / "TODO.md", detail)
+                result.add("would update" if dry_run else "updated", target_root / ".agentic-workspace/planning/state.toml", detail)
 
     remaining_todo_refs = [] if cleanup_todo_lines is not None else todo_ref_items
     blocking_todo_refs = [item for item in remaining_todo_refs if _normalize_status(item.fields.get("status", "")) != "completed"]
@@ -1786,11 +1791,15 @@ def archive_execplan(
             result.warnings.append(
                 {
                     "warning_class": "archive_blocked_by_todo_reference",
-                    "path": "TODO.md",
+                    "path": ".agentic-workspace/planning/state.toml",
                     "message": f"TODO item '{item_id}' still references this execplan; remove or redirect it before archiving.",
                 }
             )
-            result.add("manual review", target_root / "TODO.md", f"TODO item '{item_id}' still references this execplan")
+            result.add(
+                "manual review",
+                target_root / ".agentic-workspace/planning/state.toml",
+                f"TODO item '{item_id}' still references this execplan",
+            )
         return result
 
     destination = archive_dir / plan_path.name
@@ -1821,7 +1830,7 @@ def archive_execplan(
     archive_dir.mkdir(parents=True, exist_ok=True)
     shutil.move(str(plan_path), str(destination))
     if cleanup_todo_lines is not None:
-        (target_root / "TODO.md").write_text("\n".join(cleanup_todo_lines).rstrip() + "\n", encoding="utf-8")
+        (target_root / ".agentic-workspace/planning/state.toml").write_text("\n".join(cleanup_todo_lines).rstrip() + "\n", encoding="utf-8")
     if cleanup_roadmap["changed"] and apply_cleanup:
         (target_root / "ROADMAP.md").write_text(cleanup_roadmap["text"], encoding="utf-8")
     result.add("moved", destination, f"archived {plan_path.relative_to(target_root).as_posix()}")
@@ -2741,14 +2750,9 @@ def _cleanup_roadmap_section(
 
 
 def _read_state_from_toml(target_root: Path) -> dict[str, Any] | None:
-    if not PLANNING_STATE_PATH.exists():
-        # Fallback to checking the target root in case of relative path issues during dev
-        root_state = target_root / PLANNING_STATE_PATH.relative_to(PLANNING_MANAGED_ROOT)
-        if not root_state.exists():
-            return None
-        state_path = root_state
-    else:
-        state_path = PLANNING_STATE_PATH
+    state_path = target_root / PLANNING_STATE_PATH
+    if not state_path.exists():
+        return None
 
     try:
         with state_path.open("rb") as f:
@@ -2772,7 +2776,7 @@ def _write_state_to_toml(target_root: Path, state: dict[str, Any]) -> None:
                 else:
                     lines.append(f"{key} = [")
                     for item in items:
-                        item_str = ", ".join(f'{k} = {json.dumps(v)}' for k, v in item.items())
+                        item_str = ", ".join(f"{k} = {json.dumps(v)}" for k, v in item.items())
                         lines.append(f"  {{ {item_str} }},")
                     lines.append("]")
         lines.append("")
@@ -2787,7 +2791,7 @@ def _write_state_to_toml(target_root: Path, state: dict[str, Any]) -> None:
                 else:
                     lines.append(f"{key} = [")
                     for item in items:
-                        item_str = ", ".join(f'{k} = {json.dumps(v)}' for k, v in item.items())
+                        item_str = ", ".join(f"{k} = {json.dumps(v)}" for k, v in item.items())
                         lines.append(f"  {{ {item_str} }},")
                     lines.append("]")
         lines.append("")
@@ -2795,8 +2799,27 @@ def _write_state_to_toml(target_root: Path, state: dict[str, Any]) -> None:
     state_path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def _ensure_state_toml_exists(target_root: Path) -> None:
+    """Ensure a baseline state.toml exists in the managed planning root."""
+    state_path = target_root / PLANNING_STATE_PATH
+    if state_path.exists():
+        return
+
+    state = {
+        "todo": {
+            "active_items": [],
+            "queued_items": [],
+        },
+        "roadmap": {
+            "lanes": [],
+            "candidates": [],
+        },
+    }
+    _write_state_to_toml(target_root, state)
+
+
 def _migrate_legacy_planning_surfaces(target_root: Path, *, force: bool = False) -> bool:
-    todo_path = target_root / "TODO.md"
+    todo_path = target_root / ".agentic-workspace/planning/state.toml"
     roadmap_path = target_root / "ROADMAP.md"
     state_path = target_root / PLANNING_STATE_PATH
 
@@ -2810,13 +2833,17 @@ def _migrate_legacy_planning_surfaces(target_root: Path, *, force: bool = False)
     # Whitelist expanded based on repo-specific findings
     known_todo_headers = {"active queue", "next candidate queue", "completed tasks", "abandoned queue", "purpose", "now"}
     known_roadmap_headers = {
-        "candidate lanes", "next candidate queue", "purpose", "scope",
-        "github issue intake", "active handoff", "reopen conditions", "promotion rules"
+        "candidate lanes",
+        "next candidate queue",
+        "purpose",
+        "scope",
+        "github issue intake",
+        "active handoff",
+        "reopen conditions",
+        "promotion rules",
     }
-    
-    guideline_sections = {
-        "github issue intake", "scope", "reopen conditions", "promotion rules"
-    }
+
+    guideline_sections = {"github issue intake", "scope", "reopen conditions", "promotion rules"}
 
     extracted_guidelines = []
 
@@ -2832,7 +2859,7 @@ def _migrate_legacy_planning_surfaces(target_root: Path, *, force: bool = False)
                 "These may contain custom user notes or non-standard work. "
                 "Please migrate them manually to state.toml or remove them from the root before continuing."
             )
-        
+
         # Extract guideline sections
         for h in headers:
             h_clean = h.strip()
@@ -2861,18 +2888,18 @@ def _migrate_legacy_planning_surfaces(target_root: Path, *, force: bool = False)
     for item in todo_items:
         status = item.fields.get("status", "").lower()
         if any(kw in status for kw in ["active", "in-progress", "ongoing"]):
-            active_items.append({
-                "id": item.fields.get("id", ""),
-                "surface": item.fields.get("surface", ""),
-                "why_now": item.fields.get("why now", "")
-            })
+            active_items.append(
+                {"id": item.fields.get("id", ""), "surface": item.fields.get("surface", ""), "why_now": item.fields.get("why now", "")}
+            )
         else:
-            queued_items.append({
-                "id": item.fields.get("id", ""),
-                "surface": item.fields.get("surface", ""),
-                "why_now": item.fields.get("why now", ""),
-                "status": item.fields.get("status", "")
-            })
+            queued_items.append(
+                {
+                    "id": item.fields.get("id", ""),
+                    "surface": item.fields.get("surface", ""),
+                    "why_now": item.fields.get("why now", ""),
+                    "status": item.fields.get("status", ""),
+                }
+            )
 
     state = {
         "todo": {
@@ -2882,7 +2909,7 @@ def _migrate_legacy_planning_surfaces(target_root: Path, *, force: bool = False)
         "roadmap": {
             "lanes": roadmap_lanes,
             "candidates": roadmap_candidates,
-        }
+        },
     }
 
     _write_state_to_toml(target_root, state)

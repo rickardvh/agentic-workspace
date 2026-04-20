@@ -253,7 +253,7 @@ def _print_summary(summary: dict) -> None:
         if proof_report:
             proof_evidence = proof_report.get('evidence for "proof achieved" state', "")
             print(f"- Proof achieved now: {proof_report.get('proof achieved now', '')}")
-            print(f"- Evidence for \"Proof achieved\" state: {proof_evidence}")
+            print(f'- Evidence for "Proof achieved" state: {proof_evidence}')
         intent_satisfaction = planning_record.get("intent_satisfaction", {})
         if intent_satisfaction:
             print(f"- Was original intent fully satisfied?: {intent_satisfaction.get('was original intent fully satisfied?', '')}")

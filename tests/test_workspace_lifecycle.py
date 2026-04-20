@@ -45,8 +45,7 @@ def test_workspace_init_clean() -> None:
         assert result.returncode == 0, f"Workspace init failed: {result.stderr}"
 
         # Verify planning bootstrap files exist
-        assert (target / "TODO.md").exists(), "TODO.md not found after workspace init"
-        assert (target / "ROADMAP.md").exists(), "ROADMAP.md not found after workspace init"
+        assert (target / ".agentic-workspace/planning/state.toml").exists(), "state.toml not found after workspace init"
 
         # Verify memory bootstrap files exist
         assert (target / "memory").exists(), "memory directory not found after workspace init"
@@ -79,7 +78,7 @@ def test_workspace_init_dry_run() -> None:
         )
 
         # Verify no files created
-        assert not (target / "TODO.md").exists(), "TODO.md created during dry-run"
+        assert not (target / ".agentic-workspace/planning/state.toml").exists(), "TODO.md created during dry-run"
         assert not (target / "memory").exists(), "memory directory created during dry-run"
 
 

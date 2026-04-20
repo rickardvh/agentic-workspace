@@ -181,7 +181,7 @@ def _build_cases(target_root: Path) -> list[MeasurementCase]:
                 kind="file_bundle",
                 label="startup prose bundle",
                 detail="Broad file-first startup and routing read path.",
-                paths=("AGENTS.md", "TODO.md", "tools/AGENT_QUICKSTART.md", "tools/AGENT_ROUTING.md"),
+                paths=("AGENTS.md", ".agentic-workspace/planning/state.toml", "tools/AGENT_QUICKSTART.md", "tools/AGENT_ROUTING.md"),
             ),
         ),
         MeasurementCase(
@@ -198,7 +198,7 @@ def _build_cases(target_root: Path) -> list[MeasurementCase]:
                 kind="file_bundle",
                 label="planning prose bundle",
                 detail="TODO plus planning prose used as a broad restart path.",
-                paths=("TODO.md", "ROADMAP.md", "docs/execplans/README.md", "docs/environment-recovery-contract.md"),
+                paths=(".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/state.toml", "docs/execplans/README.md", "docs/environment-recovery-contract.md"),
             ),
         ),
         MeasurementCase(

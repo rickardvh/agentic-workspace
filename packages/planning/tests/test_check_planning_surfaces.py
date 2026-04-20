@@ -51,7 +51,7 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
     proof_report = (
         "\n## Proof Report\n\n"
         "- Validation proof: uv run pytest tests/test_check_planning_surfaces.py\n"
-        '- Proof achieved now: validation and closure checks passed for the bounded slice.\n'
+        "- Proof achieved now: validation and closure checks passed for the bounded slice.\n"
         '- Evidence for "Proof achieved" state: archive gate and planning checks were satisfied.\n'
         if status in {"completed", "done", "closed"}
         else ""
@@ -211,7 +211,7 @@ def _baseline_manifest() -> dict[str, object]:
                 "Treat `docs/agent-installation.md` as the external install/adopt handoff only; after bootstrap, return to the configured startup entrypoint for normal repo work.",
                 "Do not bulk-read all planning surfaces.",
             ],
-            "task_source_of_truth": "TODO.md",
+            "task_source_of_truth": ".agentic-workspace/planning/state.toml",
             "active_plan_dir": "docs/execplans/",
             "archived_plan_dir": "docs/execplans/archive/",
             "roadmap_source_of_truth": "ROADMAP.md",
@@ -219,7 +219,7 @@ def _baseline_manifest() -> dict[str, object]:
         "routing": {
             "planning-surfaces": {
                 "when": "Changing TODO, ROADMAP, or execplans.",
-                "touches": ["TODO.md", "ROADMAP.md", "docs/execplans/"],
+                "touches": [".agentic-workspace/planning/state.toml", "ROADMAP.md", "docs/execplans/"],
                 "commands": ["uv run pytest packages/planning/tests/test_check_planning_surfaces.py"],
             }
         },
@@ -411,7 +411,7 @@ def _has_warning_path_suffix(warnings, suffix: str) -> bool:
 
 def test_valid_compact_planning_shape_passes(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_valid")
-    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
     assert mod.gather_planning_warnings(repo_root=tmp_path) == []
@@ -470,7 +470,7 @@ def test_todo_shape_drift_for_finished_work_section(tmp_path: Path) -> None:
 def test_default_path_contract_without_meaning_boundary_warns(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_default_path_recovery")
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         _baseline_todo(),
     )
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
@@ -512,7 +512,7 @@ The minimum questions are:
 
 def test_default_path_contract_with_meaning_boundary_passes(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_default_path_boundary")
-    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(tmp_path / "docs" / "default-path-contract.md", _baseline_default_path_contract())
     _write(tmp_path / "docs" / "intent-contract.md", _baseline_intent_contract())
@@ -527,7 +527,7 @@ def test_default_path_contract_with_meaning_boundary_passes(tmp_path: Path) -> N
 def test_execplan_readiness_missing_warning(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_readiness")
     plan = _minimal_execplan().replace("- Ready: ready\n", "")
-    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
@@ -648,7 +648,7 @@ Long narrative status update line eleven.
 - 2026-04-05: Decision five.
 - 2026-04-06: Decision six.
 """
-    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", under_specified_plan)
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
@@ -669,7 +669,7 @@ def test_execplan_intent_continuity_requires_continuation_surface_when_parent_in
             "- This slice completes the larger intended outcome: no",
         )
     )
-    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
 
@@ -690,7 +690,7 @@ def test_execplan_requires_structured_required_follow_on_when_parent_intent_is_u
             "- Continuation surface: ROADMAP.md candidate next-slice",
         )
     )
-    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
 
@@ -708,7 +708,7 @@ def test_execplan_requires_delegated_judgment_when_active(tmp_path: Path) -> Non
         "- Escalate when: The requested outcome, owned surface, or time horizon would change.\n\n",
         "",
     )
-    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
 
@@ -721,7 +721,7 @@ def test_execplan_requires_delegated_judgment_when_active(tmp_path: Path) -> Non
 
 def test_completed_execplan_left_active_warns_archive_drift(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_completed_active")
-    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan(status="completed"))
 
@@ -731,7 +731,7 @@ def test_completed_execplan_left_active_warns_archive_drift(tmp_path: Path) -> N
 
 def test_completed_execplan_without_execution_summary_warns_under_specified(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_completed_summary")
-    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(
         tmp_path / "docs" / "execplans" / "plan-alpha.md",
@@ -747,7 +747,7 @@ def test_completed_execplan_without_execution_summary_warns_under_specified(tmp_
 
 def test_active_execplan_set_pressure_warns(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_active_set")
-    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     for name in ("plan-alpha", "plan-beta", "plan-gamma", "plan-delta"):
         _write(tmp_path / "docs" / "execplans" / f"{name}.md", _minimal_execplan())
@@ -876,7 +876,7 @@ def test_contract_shaping_execplan_with_decision_sections_passes(tmp_path: Path)
 
 def test_completed_rename_like_execplan_without_reference_sweep_warns(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_closure_drift")
-    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _rename_like_execplan())
 
@@ -886,7 +886,7 @@ def test_completed_rename_like_execplan_without_reference_sweep_warns(tmp_path: 
 
 def test_completed_rename_like_execplan_with_reference_sweep_passes(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_closure_clean")
-    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _rename_like_execplan(with_reference_sweep=True))
 
@@ -948,7 +948,7 @@ def test_generated_docs_warn_for_drift_and_missing_marker(tmp_path: Path) -> Non
 
 def test_active_execplan_space_warns_for_review_artifact(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_active_surface_hygiene")
-    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write_startup_surfaces(tmp_path)
     _write_hierarchy_docs(tmp_path)
@@ -961,7 +961,7 @@ def test_active_execplan_space_warns_for_review_artifact(tmp_path: Path) -> None
 
 def test_docs_surface_role_drift_warns_when_summary_first_hierarchy_is_missing(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_docs_surface_roles")
-    _write(tmp_path / "TODO.md", _baseline_todo())
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
     _write_startup_surfaces(tmp_path)

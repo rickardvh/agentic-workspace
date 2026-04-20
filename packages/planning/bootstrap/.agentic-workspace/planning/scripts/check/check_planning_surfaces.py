@@ -588,11 +588,10 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     contributor_text = "\n".join(_read_lines(contributor_path)).lower() if contributor_path.exists() else ""
 
     required_agents_fragments = (
-        "read `todo.md`",
-        "read the active feature plan in `docs/execplans/`",
-        "read `roadmap.md` only when promoting work",
-        "do not bulk-read all planning surfaces",
         "agentic-workspace summary --format json",
+        "agentic-workspace config --target . --format json",
+        "read the active feature plan in `docs/execplans/`",
+        "do not bulk-read all planning surfaces",
         "agentic-workspace defaults --section startup --format json",
     )
     if not all(fragment in agents_text for fragment in required_agents_fragments):
@@ -605,7 +604,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         )
 
     if (
-        "read `roadmap.md` only when promoting work" not in quickstart_text
+        "agentic-workspace summary --format json" not in quickstart_text
         or "do not bulk-read all planning surfaces" not in quickstart_text
         or "## first queries" not in quickstart_text
         or "## surface roles" not in quickstart_text
@@ -655,7 +654,6 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     required_readme_fragments = (
         "for agent maintainers, the primary operating path is",
         "`agents.md`",
-        "`todo.md`",
         "active execplan",
         "`docs/contributor-playbook.md`",
     )
@@ -675,7 +673,6 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     required_contributor_fragments = (
         "default startup path for an agent maintainer",
         "read `agents.md`",
-        "read `todo.md`",
         "active execplan",
         "package-local `agents.md`",
     )
@@ -711,12 +708,26 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     surface_roles_lower = [str(item).lower() for item in surface_roles]
     conditional_reads_lower = [str(item).lower() for item in conditional_reads]
 
-    if "todo.md" not in first_reads_lower or "roadmap.md" in first_reads_lower or "docs/execplans/readme.md" in first_reads_lower:
+    if (
+        "todo.md" in first_reads_lower
+        or ".agentic-workspace/planning/state.toml" in first_reads_lower
+        or "roadmap.md" in first_reads_lower
+        or "docs/execplans/readme.md" in first_reads_lower
+    ):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
-                "Manifest first_reads must stay lightweight: include TODO.md, exclude ROADMAP.md, and keep execplan conventions conditional.",
+                "Manifest first_reads must stay lightweight: start from AGENTS.md and keep .agentic-workspace/planning/state.toml conditional.",
+            )
+        )
+
+    if not any("summary --format json" in row for row in first_queries_lower):
+        warnings.append(
+            PlanningWarning(
+                WARNING_STARTUP_POLICY_DRIFT,
+                _render_path(manifest_path),
+                "Manifest first_queries must include a summary-first planning recovery query.",
             )
         )
 
@@ -725,7 +736,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
-                "Manifest first_queries must point agents at the compact startup selector first.",
+                "Manifest first_queries must still mention the startup defaults query.",
             )
         )
 
@@ -747,14 +758,12 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             )
         )
 
-    if not any(
-        "roadmap.md` only when promoting work" in row or "roadmap.md only when promoting work" in row for row in conditional_reads_lower
-    ):
+    if not any("agentic-workspace summary --format json" in row for row in conditional_reads_lower):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
-                "Manifest conditional_reads must scope ROADMAP.md to planning/reprioritisation contexts.",
+                "Manifest conditional_reads must mention the summary-first planning recovery query.",
             )
         )
 

@@ -33,7 +33,7 @@ def _find_repo_root() -> Path:
 
 REPO_ROOT = _find_repo_root()
 TODO_PATH = REPO_ROOT / "TODO.md"
-ROADMAP_PATH = REPO_ROOT / "ROADMAP.md"
+STATE_TOML_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "state.toml"
 EXECPLAN_DIR = REPO_ROOT / "docs" / "execplans"
 
 TODO_MAX_LINES = 150
@@ -58,6 +58,8 @@ WARNING_EXECPLAN_NOTEBOOK_DRIFT = "execplan_notebook_drift"
 WARNING_EXECPLAN_UNDER_SPECIFIED = "execplan_under_specified"
 WARNING_EXECPLAN_CLOSURE_DRIFT = "execplan_closure_drift"
 WARNING_EXECPLAN_ACTIVE_SET_PRESSURE = "execplan_active_set_pressure"
+WARNING_EXECPLAN_PROOF_DRIFT = "execplan_proof_drift"
+WARNING_EXECPLAN_INTENT_SATISFACTION_DRIFT = "execplan_intent_satisfaction_drift"
 WARNING_ROADMAP_EXECUTION_DRIFT = "roadmap_execution_drift"
 WARNING_ROADMAP_MISSING_PROMOTION_SIGNAL = "roadmap_missing_promotion_signal"
 WARNING_ROADMAP_MISSING_REOPEN_SIGNAL = "roadmap_missing_reopen_signal"
@@ -72,7 +74,6 @@ WARNING_PLANNING_MEMORY_BOUNDARY_BLUR = "planning_memory_boundary_blur"
 EXPECTED_EXECPLAN_SECTIONS = [
     "Goal",
     "Non-Goals",
-    "Machine-Readable Contract",
     "Intent Continuity",
     "Required Continuation",
     "Iterative Follow-Through",
@@ -345,14 +346,16 @@ def _check_todo(path: Path, *, repo_root: Path = REPO_ROOT) -> tuple[list[Planni
     lines = _read_lines(path)
     text = "\n".join(lines)
 
-    if not lines:
+    if not lines and not STATE_TOML_PATH.exists():
         warnings.append(
             PlanningWarning(
                 WARNING_TODO_SHAPE_DRIFT,
                 _render_path(path),
-                "TODO.md is missing or empty; keep an explicit activation surface.",
+                "TODO.md is missing or empty; keep an explicit activation surface or use consolidated package state.",
             )
         )
+        return warnings, active_ids, active_items
+    elif not lines:
         return warnings, active_ids, active_items
 
     if len(lines) > TODO_MAX_LINES:
@@ -542,7 +545,9 @@ def _surface_basename_tokens(surface_value: str) -> set[str]:
 def _check_promotion_linkage(*, roadmap_path: Path, active_items: list[dict[str, str]]) -> list[PlanningWarning]:
     warnings: list[PlanningWarning] = []
     roadmap_text = "\n".join(_read_lines(roadmap_path)).lower()
-    if not roadmap_text:
+    if not roadmap_text and not STATE_TOML_PATH.exists():
+        return warnings
+    elif not roadmap_text:
         return warnings
 
     signal_hints = ("signal", "trigger", "queue", "report", "when", "if")
@@ -588,11 +593,10 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     contributor_text = "\n".join(_read_lines(contributor_path)).lower() if contributor_path.exists() else ""
 
     required_agents_fragments = (
-        "read `todo.md`",
-        "read the active feature plan in `docs/execplans/`",
-        "read `roadmap.md` only when promoting work",
-        "do not bulk-read all planning surfaces",
         "agentic-workspace summary --format json",
+        "agentic-workspace config --target . --format json",
+        "read the active feature plan in `docs/execplans/`",
+        "do not bulk-read all planning surfaces",
         "agentic-workspace defaults --section startup --format json",
     )
     if not all(fragment in agents_text for fragment in required_agents_fragments):
@@ -605,7 +609,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         )
 
     if (
-        "read `roadmap.md` only when promoting work" not in quickstart_text
+        "agentic-workspace summary --format json" not in quickstart_text
         or "do not bulk-read all planning surfaces" not in quickstart_text
         or "## first queries" not in quickstart_text
         or "## surface roles" not in quickstart_text
@@ -639,7 +643,6 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         for fragment in (
             "authoritative routing home",
             "startup and first contact",
-            "cold-start protocol",
             "agentic-workspace summary --format json",
             "agentic-workspace report --target ./repo --format json",
         )
@@ -655,7 +658,6 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     required_readme_fragments = (
         "for agent maintainers, the primary operating path is",
         "`agents.md`",
-        "`todo.md`",
         "active execplan",
         "`docs/contributor-playbook.md`",
     )
@@ -675,7 +677,6 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     required_contributor_fragments = (
         "default startup path for an agent maintainer",
         "read `agents.md`",
-        "read `todo.md`",
         "active execplan",
         "package-local `agents.md`",
     )
@@ -720,12 +721,17 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             )
         )
 
-    if "todo.md" in first_reads_lower or "roadmap.md" in first_reads_lower or "docs/execplans/readme.md" in first_reads_lower:
+    if (
+        "TODO.md" in first_reads_lower
+        or ".agentic-workspace/planning/state.toml" in first_reads_lower
+        or "roadmap.md" in first_reads_lower
+        or "docs/execplans/readme.md" in first_reads_lower
+    ):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
-                "Manifest first_reads must stay lightweight: start from AGENTS.md and keep TODO.md/ROADMAP.md conditional.",
+                "Manifest first_reads must stay lightweight: start from AGENTS.md and keep .agentic-workspace/planning/state.toml conditional.",
             )
         )
 
@@ -756,23 +762,12 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             )
         )
 
-    if not any("todo.md" in row and "compact summary shows active work" in row for row in conditional_reads_lower):
+    if not any("agentic-workspace summary --format json" in row for row in conditional_reads_lower):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
-                "Manifest conditional_reads must mention TODO.md as the active-queue follow-up after summary.",
-            )
-        )
-
-    if not any(
-        "roadmap.md` only when promoting work" in row or "roadmap.md only when promoting work" in row for row in conditional_reads_lower
-    ):
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(manifest_path),
-                "Manifest conditional_reads must scope ROADMAP.md to planning/reprioritisation contexts.",
+                "Manifest conditional_reads must mention the summary-first planning recovery query.",
             )
         )
 
@@ -1403,13 +1398,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 )
             )
         else:
-            for field_name in (
-                "outcome delivered",
-                "validation confirmed",
-                "follow-on routed to",
-                "knowledge promoted (memory/docs/config)",
-                "resume from",
-            ):
+            for field_name in ("outcome delivered", "validation confirmed", "follow-on routed to", "resume from"):
                 value = execution_summary_fields.get(field_name, "").strip().lower()
                 if not value or value in {"pending", "tbd", "todo", "not completed yet", "none yet", "current milestone"}:
                     warnings.append(
@@ -1417,6 +1406,57 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                             WARNING_EXECPLAN_UNDER_SPECIFIED,
                             _render_path(path),
                             f"Completed execplan has an incomplete Execution Summary field: {field_name}.",
+                        )
+                    )
+                    break
+
+        proof_report, proof_report_bullets = _extract_section_stats(lines, "Proof Report")
+        proof_report_fields = _extract_kv_fields(proof_report)
+        if proof_report_bullets == 0 or not [line for line in proof_report if line.strip()]:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_PROOF_DRIFT,
+                    _render_path(path),
+                    "Completed execplan is missing a Proof Report.",
+                )
+            )
+        else:
+            for field_name in ("validation proof", "proof achieved now", 'evidence for "proof achieved" state'):
+                value = proof_report_fields.get(field_name, "").strip()
+                if not value or value.lower() in {"pending", "tbd", "todo", "not completed yet", "none yet"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_PROOF_DRIFT,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Proof Report field: {field_name}.",
+                        )
+                    )
+                    break
+
+        intent_satisfaction, intent_satisfaction_bullets = _extract_section_stats(lines, "Intent Satisfaction")
+        intent_satisfaction_fields = _extract_kv_fields(intent_satisfaction)
+        if intent_satisfaction_bullets == 0 or not [line for line in intent_satisfaction if line.strip()]:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_INTENT_SATISFACTION_DRIFT,
+                    _render_path(path),
+                    "Completed execplan is missing an Intent Satisfaction section.",
+                )
+            )
+        else:
+            for field_name in (
+                "original intent",
+                "was original intent fully satisfied?",
+                "evidence of intent satisfaction",
+                "unsolved intent passed to",
+            ):
+                value = intent_satisfaction_fields.get(field_name, "").strip()
+                if not value or value.lower() in {"pending", "tbd", "todo", "not completed yet", "none yet"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_INTENT_SATISFACTION_DRIFT,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Intent Satisfaction field: {field_name}.",
                         )
                     )
                     break
@@ -1438,63 +1478,6 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 "Completed rename/refactor-like work is missing a stale-reference sweep in Validation Commands.",
             )
         )
-
-    proof_report, proof_report_bullets = _extract_section_stats(lines, "Proof Report")
-    proof_report_fields = _extract_kv_fields(proof_report)
-    if has_only_completed_status:
-        if proof_report_bullets == 0:
-            warnings.append(
-                PlanningWarning(
-                    WARNING_EXECPLAN_UNDER_SPECIFIED,
-                    _render_path(path),
-                    "Completed execplan is missing a Proof Report.",
-                )
-            )
-        else:
-            for field_name in (
-                "validation proof (logs, command output, or screenshots)",
-                "proof achieved now",
-                'evidence for "proof achieved" state',
-            ):
-                value = proof_report_fields.get(field_name, "").strip().lower()
-                if not value or value in {"pending", "tbd", "todo", "none yet", "current milestone"}:
-                    warnings.append(
-                        PlanningWarning(
-                            WARNING_EXECPLAN_UNDER_SPECIFIED,
-                            _render_path(path),
-                            f"Completed execplan has an incomplete Proof Report field: {field_name}.",
-                        )
-                    )
-                    break
-
-    intent_satisfaction, intent_satisfaction_bullets = _extract_section_stats(lines, "Intent Satisfaction")
-    intent_satisfaction_fields = _extract_kv_fields(intent_satisfaction)
-    if has_only_completed_status:
-        if intent_satisfaction_bullets == 0:
-            warnings.append(
-                PlanningWarning(
-                    WARNING_EXECPLAN_UNDER_SPECIFIED,
-                    _render_path(path),
-                    "Completed execplan is missing an Intent Satisfaction section.",
-                )
-            )
-        else:
-            for field_name in (
-                "original intent",
-                "was original intent fully satisfied?",
-                "evidence of intent satisfaction",
-                "unsolved intent passed to",
-            ):
-                value = intent_satisfaction_fields.get(field_name, "").strip().lower()
-                if not value or value in {"pending", "tbd", "todo", "none yet", "current milestone"}:
-                    warnings.append(
-                        PlanningWarning(
-                            WARNING_EXECPLAN_UNDER_SPECIFIED,
-                            _render_path(path),
-                            f"Completed execplan has an incomplete Intent Satisfaction field: {field_name}.",
-                        )
-                    )
-                    break
 
     drift_log = _section_content(lines, "Drift Log")
     drift_entries = [line for line in drift_log if re.match(r"^\s*[-*]\s+\d{4}-\d{2}-\d{2}:", line)]

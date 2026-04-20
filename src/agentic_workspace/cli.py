@@ -392,8 +392,8 @@ def _workflow_artifact_profile_payload(profile: str) -> dict[str, Any]:
             "profile": "repo-owned",
             "summary": "Use only the repo-owned planning surfaces; do not rely on native runtime artifacts.",
             "native_artifacts": [],
-            "canonical_surfaces": ["TODO.md", "docs/execplans/"],
-            "sync_rule": "TODO.md and docs/execplans stay authoritative; no extra runtime artifact should carry durable state.",
+            "canonical_surfaces": [".agentic-workspace/planning/state.toml", "docs/execplans/"],
+            "sync_rule": ".agentic-workspace/planning/state.toml and docs/execplans stay authoritative; no extra runtime artifact should carry durable state.",
             "handoff_rule": "Use repo-owned planning surfaces directly for restart, review, and cross-agent continuation.",
         },
         "gemini": {
@@ -403,13 +403,13 @@ def _workflow_artifact_profile_payload(profile: str) -> dict[str, Any]:
                 "project durable state back into repo-owned planning before handoff or review."
             ),
             "native_artifacts": ["implementation_plan.md", "task.md", "walkthrough.md"],
-            "canonical_surfaces": ["TODO.md", "docs/execplans/"],
+            "canonical_surfaces": [".agentic-workspace/planning/state.toml", "docs/execplans/"],
             "sync_rule": (
                 "Before review, handoff, or session end, mirror the durable execution state into "
-                "TODO.md and the active execplan instead of leaving it only in native artifacts."
+                ".agentic-workspace/planning/state.toml and the active execplan instead of leaving it only in native artifacts."
             ),
             "handoff_rule": (
-                "Treat native artifacts as local execution aids; treat TODO.md and docs/execplans as the only cross-agent source of truth."
+                "Treat native artifacts as local execution aids; treat .agentic-workspace/planning/state.toml and docs/execplans as the only cross-agent source of truth."
             ),
         },
     }
@@ -451,7 +451,7 @@ def _improvement_latitude_payload(mode: str) -> dict[str, Any]:
             "reporting_destinations": [
                 "agentic-workspace report --target ./repo --format json",
                 "review outputs",
-                "TODO.md or the active execplan when the current slice already owns planning residue",
+                ".agentic-workspace/planning/state.toml or the active execplan when the current slice already owns planning residue",
             ],
             "reporting_rule": (
                 "Surface notable friction through bounded reporting or residue; do not act on it without explicit direction."
@@ -475,7 +475,7 @@ def _improvement_latitude_payload(mode: str) -> dict[str, Any]:
             ],
             "reporting_destinations": [
                 "agentic-workspace report --target ./repo --format json",
-                "TODO.md or the active execplan when repeated friction deserves promotion",
+                ".agentic-workspace/planning/state.toml or the active execplan when repeated friction deserves promotion",
             ],
             "reporting_rule": (
                 "Use reporting to justify or defer bounded follow-on; do not treat one hotspot as permission for standalone cleanup."
@@ -500,7 +500,7 @@ def _improvement_latitude_payload(mode: str) -> dict[str, Any]:
             ],
             "reporting_destinations": [
                 "agentic-workspace report --target ./repo --format json",
-                "TODO.md or the active execplan when friction should become bounded follow-on work",
+                ".agentic-workspace/planning/state.toml or the active execplan when friction should become bounded follow-on work",
             ],
             "reporting_rule": (
                 "Use reporting to preserve evidence and deferred cleanup residue whenever the current slice intentionally stops short."
@@ -525,7 +525,7 @@ def _improvement_latitude_payload(mode: str) -> dict[str, Any]:
             ],
             "reporting_destinations": [
                 "agentic-workspace report --target ./repo --format json",
-                "TODO.md or the active execplan when proactive cleanup stops before the larger opportunity is complete",
+                ".agentic-workspace/planning/state.toml or the active execplan when proactive cleanup stops before the larger opportunity is complete",
             ],
             "reporting_rule": "Use reporting to preserve evidence and unfinished bounded cleanup residue, not to justify hidden widening.",
         },
@@ -785,7 +785,7 @@ def _setup_finding_class_payload(finding_class: str) -> dict[str, Any]:
         "planning_candidate": {
             "class": "planning_candidate",
             "summary": "A bounded follow-on or handoff candidate worth preserving as explicit planning promotion guidance.",
-            "promote_to": "TODO.md or docs/execplans/ after bounded planning review",
+            "promote_to": ".agentic-workspace/planning/state.toml or docs/execplans/ after bounded planning review",
             "preserve_when": [
                 "confidence is at least 0.75",
                 "the finding includes a bounded next_action",
@@ -1231,21 +1231,19 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             selection_rank=10,
             include_in_full_preset=True,
             detector=lambda target_root: (
-                (target_root / "TODO.md").exists() and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+                (target_root / ".agentic-workspace" / "planning" / "state.toml").exists()
+                and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
             ),
             install_signals=(
-                Path("TODO.md"),
+                Path(".agentic-workspace/planning/state.toml"),
                 Path("docs/execplans"),
-                Path(".agentic-workspace/planning"),
             ),
             workflow_surfaces=(
                 Path("AGENTS.md"),
-                Path("TODO.md"),
-                Path("ROADMAP.md"),
+                Path(".agentic-workspace/planning/state.toml"),
                 Path("docs/execplans"),
                 Path("docs/contributor-playbook.md"),
                 Path("docs/maintainer-commands.md"),
-                Path(".agentic-workspace/planning"),
                 Path("tools/AGENT_QUICKSTART.md"),
                 Path("tools/AGENT_ROUTING.md"),
             ),
@@ -1255,13 +1253,13 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 Path("tools/AGENT_ROUTING.md"),
             ),
             startup_steps=(
-                "Read `TODO.md`.",
+                "Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary`.",
                 "Read the active feature plan in `docs/execplans/` when the TODO surface points there.",
-                "Read `ROADMAP.md` only when promoting work.",
+                "Check the roadmap in `state.toml` (authoritative) only when promoting work.",
             ),
             sources_of_truth=(
-                "Active queue: `TODO.md`",
-                "Long-horizon candidate work: `ROADMAP.md`",
+                "Active queue: `.agentic-workspace/planning/state.toml` (authoritative)",
+                "Roadmap: `.agentic-workspace/planning/state.toml` (authoritative)",
             ),
             root_agents_cleanup_blocks=(),
             capabilities=(
@@ -1721,7 +1719,7 @@ def _external_agent_handoff_text(
         "",
         "Required steps:",
         f"- Read {agent_instructions_file} first.",
-        "- For normal work, continue through TODO.md and the active execplan only when TODO points to one.",
+        "- For normal work, continue through .agentic-workspace/planning/state.toml and the active execplan only when TODO points to one.",
         "- Do not assume agentic-workspace is already installed; follow the checked-in lifecycle instructions in this repository.",
         "- For lifecycle work, use agentic-workspace rather than package-specific CLIs unless package-local debugging is required.",
         "",
@@ -2284,7 +2282,11 @@ def _validate_target_root(*, command_name: str, target_root: Path, local_only: b
         raise WorkspaceUsageError(f"Target path does not exist: {target_root}")
     if not target_root.is_dir():
         raise WorkspaceUsageError(f"Target path is not a directory: {target_root}")
-    if command_name in {"init", "install", "status", "doctor", "upgrade", "uninstall"} and not local_only and not _is_git_repo_root(target_root):
+    if (
+        command_name in {"init", "install", "status", "doctor", "upgrade", "uninstall"}
+        and not local_only
+        and not _is_git_repo_root(target_root)
+    ):
         raise WorkspaceUsageError("Target must be a git repository root with a .git directory or file.")
 
 
@@ -2840,7 +2842,7 @@ def _effective_active_direction_payload(*, module_reports: list[dict[str, Any]])
     if isinstance(task, dict):
         owner_surface = str(task.get("surface") or "")
     return {
-        "owner_surface": owner_surface or "TODO.md",
+        "owner_surface": owner_surface or ".agentic-workspace/planning/state.toml",
         "summary": str(planning_record.get("next_action") or "Active planning carries the current bounded direction."),
         "requested_outcome": str(planning_record.get("requested_outcome") or ""),
         "refs": refs if isinstance(refs, list) else [],
@@ -2983,7 +2985,7 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
 
 
 def _active_todo_surface(*, target_root: Path) -> str | None:
-    todo_path = target_root / "TODO.md"
+    todo_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
     if not todo_path.exists():
         return None
     surface_pattern = re.compile(r"Surface:\s*`?([^`;]+?)`?(?:;|$)")
@@ -3065,7 +3067,7 @@ def _clarification_contract_payload() -> dict[str, Any]:
         "rule": "When a prompt is vague, ask the smallest repo-context question that removes the ambiguity.",
         "mode": "minimal-interruption",
         "repo_context": [
-            "Use TODO.md or the active execplan when the prompt seems planning-shaped.",
+            "Use .agentic-workspace/planning/state.toml or the active execplan when the prompt seems planning-shaped.",
             "Use report before broad file reads when the prompt may touch several workspace surfaces.",
             "Use ownership when the target surface or owner is unclear.",
         ],
@@ -3100,7 +3102,7 @@ def _prompt_routing_contract_payload() -> dict[str, Any]:
             {
                 "class": "planning state or contract change",
                 "proof_lane": "planning_surfaces",
-                "owner_surface": "docs/execplans/ or TODO.md",
+                "owner_surface": "docs/execplans/ or .agentic-workspace/planning/state.toml",
             },
             {
                 "class": "durable repo knowledge change",
@@ -3116,11 +3118,11 @@ def _prompt_routing_contract_payload() -> dict[str, Any]:
         ],
         "proof_inference": [
             "Use workspace_cli when the prompt changes the front-door workspace surface.",
-            "Use planning_surfaces when the prompt changes TODO.md, ROADMAP.md, or execplans.",
+            "Use planning_surfaces when the prompt changes .agentic-workspace/planning/state.toml or execplans.",
             "Use memory_payload when the prompt changes durable repo knowledge or routing notes.",
         ],
         "owner_inference": [
-            "TODO.md or an active execplan implies planning ownership.",
+            ".agentic-workspace/planning/state.toml or an active execplan implies planning ownership.",
             "memory/index.md or a runbook implies memory ownership.",
             "workspace lifecycle defaults or routing docs imply workspace ownership.",
         ],
@@ -3558,7 +3560,7 @@ def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
         ],
         "refs": [
             agent_instructions_file,
-            "TODO.md",
+            ".agentic-workspace/planning/state.toml",
             "llms.txt",
             "docs/delegated-judgment-contract.md",
             "docs/init-lifecycle.md",
@@ -3787,7 +3789,7 @@ def _defaults_payload() -> dict[str, Any]:
         {
             "id": "planning_surfaces",
             "when": [
-                "TODO.md, ROADMAP.md, or execplans change without broader code changes",
+                ".agentic-workspace/planning/state.toml or execplans change without broader code changes",
                 "the trust question is planning-surface shape or drift only",
             ],
             "enough_proof": [
@@ -3821,8 +3823,8 @@ def _defaults_payload() -> dict[str, Any]:
         "startup": {
             "primary": [
                 "Read the configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`).",
-                "Read `TODO.md`.",
-                "Read the active execplan only when `TODO.md` points to one.",
+                "Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary`.",
+                "Read the active execplan only when `state.toml` points to one.",
             ],
             "default_canonical_agent_instructions_file": DEFAULT_AGENT_INSTRUCTIONS_FILE,
             "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
@@ -3854,7 +3856,7 @@ def _defaults_payload() -> dict[str, Any]:
                     "edit_rule": "edit directly when repo startup policy changes",
                 },
                 {
-                    "surface": "TODO.md",
+                    "surface": ".agentic-workspace/planning/state.toml",
                     "role": "canonical active queue after startup",
                     "owner": "repo",
                     "kind": "canonical",
@@ -3888,7 +3890,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "rule": "Use `llms.txt` only to bootstrap or adopt the workspace, then return to the configured startup entrypoint for ordinary repo work.",
             },
             "secondary": [
-                "Read `ROADMAP.md` only when promoting work.",
+                "Check the roadmap in `state.toml` (authoritative) only when promoting work.",
                 "Read package-local `AGENTS.md` only for the package being edited.",
                 "Read memory only when installed and the task needs durable context.",
             ],
@@ -3902,7 +3904,7 @@ def _defaults_payload() -> dict[str, Any]:
                 (
                     "If the question is active planning recovery rather than startup order, "
                     "prefer `agentic-planning-bootstrap summary --format json` before raw "
-                    "`TODO.md` or execplan prose."
+                    "planning state or execplan prose."
                 ),
             ],
             "workflow_recovery": [
@@ -4074,7 +4076,7 @@ def _defaults_payload() -> dict[str, Any]:
             "command": "agentic-workspace defaults --section workflow_artifact_adapters --format json",
             "rule": (
                 "Runtime-native planning artifacts may exist, but durable cross-agent state "
-                "must project back into TODO.md and docs/execplans before handoff or review."
+                "must project back into .agentic-workspace/planning/state.toml and docs/execplans before handoff or review."
             ),
             "default_profile": DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
             "supported_profiles": [_workflow_artifact_profile_payload(profile) for profile in SUPPORTED_WORKFLOW_ARTIFACT_PROFILES],
@@ -4288,10 +4290,9 @@ def _defaults_payload() -> dict[str, Any]:
             },
         },
         "completion": {
-            "rule": "When a completed slice came from TODO.md or ROADMAP.md, clear the matched queue residue in the same pass.",
+            "rule": "When a completed slice came from state.toml, clear the matched queue residue in the same pass.",
             "prefer_surfaces": [
-                "TODO.md",
-                "ROADMAP.md",
+                ".agentic-workspace/planning/state.toml",
                 "docs/execplans/README.md",
             ],
         },
@@ -4533,7 +4534,7 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
 def _setup_orientation_surfaces(*, target_root: Path) -> tuple[Path, ...]:
     return (
         target_root / "AGENTS.md",
-        target_root / "TODO.md",
+        target_root / ".agentic-workspace/planning/state.toml",
         target_root / "tools" / "AGENT_QUICKSTART.md",
         target_root / "tools" / "AGENT_ROUTING.md",
         target_root / "memory" / "index.md",
@@ -4574,7 +4575,7 @@ def _setup_payload(
         orientation: dict[str, Any] = {
             "mode": "no-new-seed-surfaces-needed",
             "summary": "No new seed surfaces are needed; the repo already has the core setup orientation surfaces.",
-            "reason": "AGENTS.md, TODO.md, tools/AGENT_QUICKSTART.md, tools/AGENT_ROUTING.md, and memory/index.md are already present.",
+            "reason": "AGENTS.md, .agentic-workspace/planning/state.toml, tools/AGENT_QUICKSTART.md, tools/AGENT_ROUTING.md, and memory/index.md are already present.",
         }
         next_action = {
             "summary": "No new seed surfaces needed",
@@ -4885,7 +4886,9 @@ def _ownership_boundary_review(
     fences: list[dict[str, Any]],
     authority_surfaces: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    def _surface_entry(*, surface: str, owner: str, ownership: str, summary: str | None = None, source: str | None = None) -> dict[str, Any]:
+    def _surface_entry(
+        *, surface: str, owner: str, ownership: str, summary: str | None = None, source: str | None = None
+    ) -> dict[str, Any]:
         entry: dict[str, Any] = {
             "surface": surface,
             "owner": owner,

@@ -16,3 +16,6 @@ agentic-workspace.delegation-outcomes.json
 
 # Coverage reports
 **/.coverage
+
+# Agent scratch files
+scratch/

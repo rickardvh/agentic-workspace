@@ -118,7 +118,7 @@ def standing_intent_payload(
         _standing_intent_class_payload(
             intent_class="active_directional_intent",
             summary="Bounded current direction that should steer work now without being mistaken for timeless doctrine.",
-            default_owner="TODO.md or docs/execplans/",
+            default_owner=".agentic-workspace/planning/state.toml or docs/execplans/",
             authoritative_kind="active-direction",
             durable_when=[
                 "the direction still matters after the immediate chat turn",
@@ -190,7 +190,7 @@ def standing_intent_payload(
                 "agentic-workspace.toml",
                 "AGENTS.md",
                 "docs/design-principles.md",
-                "TODO.md and docs/execplans/",
+                ".agentic-workspace/planning/state.toml and docs/execplans/",
                 "Memory report/install state",
                 "scripts/check/",
             ],
@@ -261,30 +261,35 @@ def setup_discovery_payload(
         if (target_root / surface).exists():
             _add_candidate(memory_candidates, surface=surface, reason=reason, confidence=confidence, refs=refs)
 
-    if (target_root / "TODO.md").exists():
+    if (target_root / ".agentic-workspace" / "planning" / "state.toml").exists():
         _add_candidate(
             planning_candidates,
-            surface="TODO.md",
+            surface=".agentic-workspace/planning/state.toml",
             reason="active queue carries the current work slice",
             confidence=0.94,
-            refs=["TODO.md"],
+            refs=[".agentic-workspace/planning/state.toml"],
         )
-    if active_todo_surface and active_todo_surface != "TODO.md" and (target_root / active_todo_surface).exists():
+    if (
+        active_todo_surface
+        and active_todo_surface != ".agentic-workspace/planning/state.toml"
+        and (target_root / active_todo_surface).exists()
+    ):
         _add_candidate(
             planning_candidates,
             surface=active_todo_surface,
             reason="active execplan carries the current bounded work slice",
             confidence=0.96,
-            refs=[active_todo_surface, "TODO.md"],
+            refs=[active_todo_surface, ".agentic-workspace/planning/state.toml"],
         )
 
-    if (target_root / "ROADMAP.md").exists():
+    pass  # ROADMAP.md is now consolidated in state.toml
+    if False:
         _add_candidate(
             ambiguous,
-            surface="ROADMAP.md",
+            surface="docs/planning-process.md",
             reason="long-horizon follow-ons should not be seeded without promotion",
             confidence=0.82,
-            refs=["ROADMAP.md"],
+            refs=["docs/planning-process.md"],
         )
 
     for warning in status_payload.get("warnings", []):
@@ -588,16 +593,16 @@ def _active_directional_intent_effective_item(*, active_planning: dict[str, Any]
             "class": "active_directional_intent",
             "status": "absent",
             "authority": "active-direction",
-            "owner_surface": "TODO.md",
+            "owner_surface": ".agentic-workspace/planning/state.toml",
             "summary": "No active planning slice is in force right now.",
-            "refs": ["TODO.md", "docs/execplans/"],
+            "refs": [".agentic-workspace/planning/state.toml", "docs/execplans/"],
         }
     refs = [ref for ref in active_planning.get("refs", []) if isinstance(ref, str) and ref]
     return {
         "class": "active_directional_intent",
         "status": "present",
         "authority": "active-direction",
-        "owner_surface": str(active_planning.get("owner_surface") or "TODO.md"),
+        "owner_surface": str(active_planning.get("owner_surface") or ".agentic-workspace/planning/state.toml"),
         "summary": str(active_planning.get("summary") or "Active planning carries the current bounded direction."),
         "requested_outcome": str(active_planning.get("requested_outcome") or ""),
         "refs": refs,
@@ -795,8 +800,8 @@ def _repo_friction_kind_for_path(path: Path) -> str:
 def _repo_friction_surface_role(relative_path: str) -> str:
     if relative_path in {
         "AGENTS.md",
-        "TODO.md",
-        "ROADMAP.md",
+        ".agentic-workspace/planning/state.toml",
+        "docs/planning-process.md",
         "llms.txt",
         "agentic-workspace.toml",
     }:

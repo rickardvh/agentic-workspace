@@ -28,7 +28,7 @@ def _write_root_surfaces(tmp_path: Path) -> None:
     _write(tmp_path / "memory" / "index.md", "# Memory index\n")
     _write(tmp_path / ".agentic-workspace" / "memory" / "WORKFLOW.md", "# Workflow\n")
     _write(tmp_path / ".agentic-workspace" / "memory" / "SKILLS.md", "# Skills\n")
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
     _write(tmp_path / "docs" / "execplans" / "README.md", "# Execplans\n")
     _write(tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json", "{}\n")

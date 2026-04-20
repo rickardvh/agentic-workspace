@@ -22,8 +22,8 @@ def test_planning_clean_install() -> None:
         )
 
         # Verify required files exist
-        assert (target / "TODO.md").exists(), "TODO.md not found after install"
-        assert (target / "ROADMAP.md").exists(), "ROADMAP.md not found after install"
+        assert (target / ".agentic-workspace/planning/state.toml").exists(), "state.toml not found after install"
+        assert not (target / "ROADMAP.md").exists(), "ROADMAP.md should not be created on clean install"
         assert (target / "AGENTS.md").exists(), "AGENTS.md not found after install"
 
 
@@ -44,7 +44,7 @@ def test_planning_install_dry_run() -> None:
         )
 
         # Verify no files created
-        assert not (target / "TODO.md").exists(), "TODO.md created during dry-run"
+        assert not (target / ".agentic-workspace/planning/state.toml").exists(), "state.toml created during dry-run"
         assert not (target / "ROADMAP.md").exists(), "ROADMAP.md created during dry-run"
 
 
@@ -65,7 +65,7 @@ def test_planning_install_idempotent() -> None:
         )
 
         # Get first state
-        todo_content_1 = (target / "TODO.md").read_text()
+        todo_content_1 = (target / ".agentic-workspace/planning/state.toml").read_text()
 
         # Second install (should fail or overwrite with --force)
         result = subprocess.run(
@@ -77,7 +77,7 @@ def test_planning_install_idempotent() -> None:
 
         # If it succeeded, verify state is unchanged
         if result.returncode == 0:
-            todo_content_2 = (target / "TODO.md").read_text()
+            todo_content_2 = (target / ".agentic-workspace/planning/state.toml").read_text()
             assert todo_content_1 == todo_content_2, "File content changed on second install"
 
 
@@ -126,7 +126,7 @@ def test_planning_install_with_force() -> None:
         )
 
         # Modify a file
-        todo_path = target / "TODO.md"
+        todo_path = target / ".agentic-workspace/planning/state.toml"
         original_content = todo_path.read_text()
         todo_path.write_text("# Modified\n")
 

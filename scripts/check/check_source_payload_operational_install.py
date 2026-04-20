@@ -56,8 +56,8 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
         repo_root / "packages" / "planning" / "tools" / "AGENT_ROUTING.md": (
             "Package-local generated planning mirrors detected under packages/planning; generated maintainer mirrors belong at repo root only."
         ),
-        repo_root / "packages" / "planning" / "bootstrap" / "TODO.md": (
-            "Active surface `TODO.md` found in bootstrap; rename to `TODO.template.md` to maintain the boundary."
+        repo_root / "packages" / "planning" / "bootstrap" / ".agentic-workspace" / "planning" / "state.toml": (
+            "Active surface `state.toml` found in bootstrap; avoid checked-in active state in the payload."
         ),
         repo_root / "packages" / "planning" / "bootstrap" / "ROADMAP.md": (
             "Active surface `ROADMAP.md` found in bootstrap; rename to `ROADMAP.template.md` to maintain the boundary."
@@ -88,8 +88,9 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
         repo_root / ".agentic-workspace" / "memory" / "SKILLS.md": (
             "Root operational memory install is missing `.agentic-workspace/memory/SKILLS.md`."
         ),
-        repo_root / "TODO.md": "Root operational planning install is missing `TODO.md`.",
-        repo_root / "ROADMAP.md": "Root operational planning install is missing `ROADMAP.md`.",
+        repo_root / ".agentic-workspace" / "planning" / "state.toml": (
+            "Root operational planning install is missing `.agentic-workspace/planning/state.toml`."
+        ),
         repo_root / "docs" / "execplans" / "README.md": ("Root operational planning install is missing `docs/execplans/README.md`."),
         repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json": (
             "Root operational planning install is missing `.agentic-workspace/planning/agent-manifest.json`."
@@ -147,8 +148,7 @@ def gather_boundary_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
         repo_root / "memory" / "index.md",
         repo_root / ".agentic-workspace" / "memory" / "WORKFLOW.md",
         repo_root / ".agentic-workspace" / "memory" / "SKILLS.md",
-        repo_root / "TODO.md",
-        repo_root / "ROADMAP.md",
+        repo_root / ".agentic-workspace" / "planning" / "state.toml",
         repo_root / "docs" / "execplans" / "README.md",
         repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json",
         repo_root / "tools" / "agent-manifest.json",

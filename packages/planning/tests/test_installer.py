@@ -56,7 +56,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
     proof_report = (
         "\n## Proof Report\n\n"
         "- Validation proof: uv run pytest tests/test_check_planning_surfaces.py\n"
-        '- Proof achieved now: validation and closure checks passed for the bounded slice.\n'
+        "- Proof achieved now: validation and closure checks passed for the bounded slice.\n"
         '- Evidence for "Proof achieved" state: archive gate and planning checks were satisfied.\n'
         if status in {"completed", "done", "closed"}
         else ""
@@ -195,8 +195,8 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     intake_doc_path = tmp_path / "docs" / "upstream-task-intake.md"
 
     assert (tmp_path / "AGENTS.md").exists()
-    assert (tmp_path / "TODO.md").exists()
-    assert (tmp_path / "ROADMAP.md").exists()
+    assert (tmp_path / ".agentic-workspace/planning/state.toml").exists()
+    assert not (tmp_path / "ROADMAP.md").exists()
     assert capability_fit_doc_path.exists()
     assert routing_doc_path.exists()
     assert execution_flow_doc_path.exists()
@@ -225,8 +225,6 @@ def test_ownership_module_root_matches_workspace_ledger() -> None:
 
 def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path("AGENTS.template.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert Path("TODO.template.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert Path("ROADMAP.template.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/capability-aware-execution.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("docs/execplans/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
@@ -249,7 +247,7 @@ def test_adopt_bootstrap_preserves_existing_agents(tmp_path: Path) -> None:
 
 def test_adopt_bootstrap_docs_heavy_repo_preserves_root_surfaces_and_installs_helpers(tmp_path: Path) -> None:
     agents_path = tmp_path / "AGENTS.md"
-    todo_path = tmp_path / "TODO.md"
+    todo_path = tmp_path / ".agentic-workspace/planning/state.toml"
     roadmap_path = tmp_path / "ROADMAP.md"
     execplan_readme_path = tmp_path / "docs" / "execplans" / "README.md"
     contributor_playbook_path = tmp_path / "docs" / "contributor-playbook.md"
@@ -298,7 +296,7 @@ def test_render_wrapper_install_keeps_backward_compatible_entrypoint_alias(tmp_p
 
 def test_adopt_bootstrap_preserves_existing_manifest_in_partial_managed_state(tmp_path: Path) -> None:
     manifest_path = tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
-    manifest_text = '{"bootstrap": {"first_reads": ["AGENTS.md", "TODO.md"]}}\n'
+    manifest_text = '{"bootstrap": {"first_reads": ["AGENTS.md", ".agentic-workspace/planning/state.toml"]}}\n'
     _write(manifest_path, manifest_text)
 
     result = adopt_bootstrap(target=tmp_path)
@@ -494,7 +492,10 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "record the required next owner and activation trigger explicitly before archive" in bootstrap_agents_text
     assert "agentic-workspace summary --format json" in bootstrap_agents_text
     assert "agentic-workspace defaults --section startup --format json" in bootstrap_agents_text
-    assert "Read `TODO.md` only when the compact summary shows active work that still needs raw queue detail." in bootstrap_agents_text
+    assert (
+        "Read `agentic-workspace config --target . --format json` when the current posture or startup entrypoint matters."
+        in bootstrap_agents_text
+    )
     assert "remove or archive the matched queue residue in the same pass" in execplans_readme_text
     assert "Iterative carry-forward belongs under `## Iterative Follow-Through`" in execplans_readme_text
     assert any(
@@ -503,13 +504,11 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
         for item in manifest_payload["bootstrap"]["first_queries"]
     )
     assert any(
-        "Read `agentic-workspace summary --format json` first when planning recovery or ownership boundary review is the question."
-        in item
+        "Read `agentic-workspace summary --format json` first when planning recovery or ownership boundary review is the question." in item
         for item in manifest_payload["bootstrap"]["conditional_reads"]
     )
     assert any(
-        "Read `TODO.md` only when the compact summary shows active work that still needs raw queue detail."
-        in item
+        "Read `agentic-workspace summary --format json` first when planning recovery or ownership boundary review is the question." in item
         for item in manifest_payload["bootstrap"]["conditional_reads"]
     )
     assert any(
@@ -634,13 +633,16 @@ def test_doctor_does_not_flag_starter_todo_for_milestone_word_in_hygiene_rules(t
 
     result = doctor_bootstrap(target=tmp_path)
 
-    assert not any(action.path == tmp_path / "TODO.md" and "milestone-level narrative" in action.detail for action in result.actions)
+    assert not any(
+        action.path == tmp_path / ".agentic-workspace/planning/state.toml" and "milestone-level narrative" in action.detail
+        for action in result.actions
+    )
 
 
 def test_doctor_guides_older_execplans_toward_current_contract_sections(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -741,7 +743,7 @@ Long narrative status update line eleven.
 def test_verify_payload_flags_missing_collaboration_safe_template_guidance(tmp_path: Path, monkeypatch) -> None:
     payload_root = tmp_path / "payload"
     _write(payload_root / "AGENTS.md", "# Agent Instructions\n")
-    _write(payload_root / "TODO.md", "# TODO\n")
+    _write(payload_root / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(payload_root / "ROADMAP.md", "# Roadmap\n")
     _write(payload_root / "docs" / "execplans" / "README.md", "# Execution Plans\n")
     _write(payload_root / "docs" / "execplans" / "TEMPLATE.md", "# Plan Title\n")
@@ -813,7 +815,7 @@ def test_upgrade_bootstrap_overwrites_managed_files_but_preserves_root_surfaces(
 
 def test_upgrade_bootstrap_legacy_standalone_install_adds_managed_helpers_without_overwriting_root_surfaces(tmp_path: Path) -> None:
     _write(tmp_path / "AGENTS.md", "legacy repo-owned agents\n")
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
     _write(tmp_path / "docs" / "execplans" / "README.md", "# Execution Plans\n")
     _write(tmp_path / "docs" / "execplans" / "TEMPLATE.md", "# Plan Title\n")
@@ -892,7 +894,7 @@ def test_uninstall_bootstrap_removes_pristine_files_and_keeps_modified_surfaces(
 
 def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path: Path) -> None:
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -912,7 +914,7 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
 
     assert plan_path.exists()
     plan_text = plan_path.read_text(encoding="utf-8")
-    todo_text = (tmp_path / "TODO.md").read_text(encoding="utf-8")
+    todo_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     assert "## Intent Continuity" in plan_text
     assert "## Required Continuation" in plan_text
     assert "## Delegated Judgment" in plan_text
@@ -928,7 +930,7 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
 
 def test_promote_todo_item_to_execplan_refuses_existing_execplan_surface(tmp_path: Path) -> None:
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -948,7 +950,7 @@ def test_promote_todo_item_to_execplan_refuses_existing_execplan_surface(tmp_pat
 
 
 def test_archive_execplan_moves_completed_plan(tmp_path: Path) -> None:
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
     plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
     _write(plan_path, _minimal_execplan(status="completed"))
@@ -962,7 +964,7 @@ def test_archive_execplan_moves_completed_plan(tmp_path: Path) -> None:
 
 
 def test_archive_execplan_blocks_unfinished_larger_intent_without_continuation_surface(tmp_path: Path) -> None:
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
     plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
     _write(
@@ -982,7 +984,7 @@ def test_archive_execplan_blocks_unfinished_larger_intent_without_continuation_s
 
 
 def test_archive_execplan_blocks_missing_required_follow_on_when_parent_intent_is_unfinished(tmp_path: Path) -> None:
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
     plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
     _write(
@@ -1003,7 +1005,7 @@ def test_archive_execplan_blocks_missing_required_follow_on_when_parent_intent_i
 
 
 def test_archive_execplan_blocks_missing_execution_summary(tmp_path: Path) -> None:
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
     plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
     _write(
@@ -1024,7 +1026,7 @@ def test_archive_execplan_blocks_missing_execution_summary(tmp_path: Path) -> No
 
 
 def test_archive_execplan_blocks_missing_proof_report(tmp_path: Path) -> None:
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
     plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
     plan = _minimal_execplan(status="completed").split("\n## Proof Report\n\n", 1)[0] + "\n"
@@ -1034,13 +1036,11 @@ def test_archive_execplan_blocks_missing_proof_report(tmp_path: Path) -> None:
 
     assert plan_path.exists()
     assert any(warning["warning_class"] == "archive_missing_proof_report" for warning in result.warnings)
-    assert any(
-        action.kind == "manual review" and action.path == plan_path and "Proof Report" in action.detail for action in result.actions
-    )
+    assert any(action.kind == "manual review" and action.path == plan_path and "Proof Report" in action.detail for action in result.actions)
 
 
 def test_archive_execplan_blocks_incomplete_intent_satisfaction(tmp_path: Path) -> None:
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
     plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
     completed = _minimal_execplan(status="completed")
@@ -1066,13 +1066,12 @@ def test_archive_execplan_blocks_incomplete_intent_satisfaction(tmp_path: Path) 
         for warning in result.warnings
     )
     assert any(
-        action.kind == "manual review" and action.path == plan_path and "Intent Satisfaction" in action.detail
-        for action in result.actions
+        action.kind == "manual review" and action.path == plan_path and "Intent Satisfaction" in action.detail for action in result.actions
     )
 
 
 def test_archive_execplan_blocks_missing_delegated_judgment(tmp_path: Path) -> None:
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
     plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
     _write(
@@ -1097,7 +1096,7 @@ def test_archive_execplan_blocks_missing_delegated_judgment(tmp_path: Path) -> N
 
 
 def test_archive_execplan_blocks_rename_like_work_without_reference_sweep(tmp_path: Path) -> None:
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
     plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
     _write(plan_path, _rename_like_execplan())
@@ -1113,7 +1112,7 @@ def test_archive_execplan_blocks_rename_like_work_without_reference_sweep(tmp_pa
 
 
 def test_archive_execplan_allows_rename_like_work_with_reference_sweep(tmp_path: Path) -> None:
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
     plan_path = tmp_path / "docs" / "execplans" / "plan-alpha.md"
     _write(plan_path, _rename_like_execplan(with_reference_sweep=True))
@@ -1128,7 +1127,7 @@ def test_archive_execplan_allows_rename_like_work_with_reference_sweep(tmp_path:
 
 def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_path: Path) -> None:
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1159,18 +1158,18 @@ def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_p
 
     result = archive_execplan("plan-alpha", target=tmp_path, apply_cleanup=True)
 
-    todo_text = (tmp_path / "TODO.md").read_text(encoding="utf-8")
+    todo_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     roadmap_text = (tmp_path / "ROADMAP.md").read_text(encoding="utf-8")
     assert "plan-alpha" not in todo_text
     assert "- No active work right now." in todo_text
     assert "- No active handoff right now." in roadmap_text
-    assert any(action.kind == "updated" and action.path == tmp_path / "TODO.md" for action in result.actions)
+    assert any(action.kind == "updated" and action.path == tmp_path / ".agentic-workspace/planning/state.toml" for action in result.actions)
     assert any(action.kind == "updated" and action.path == tmp_path / "ROADMAP.md" for action in result.actions)
 
 
 def test_archive_execplan_apply_cleanup_removes_active_todo_pointer_to_same_plan(tmp_path: Path) -> None:
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1192,7 +1191,7 @@ def test_archive_execplan_apply_cleanup_removes_active_todo_pointer_to_same_plan
 
     result = archive_execplan("bounded-delegated-judgment-contract-2026-04-09", target=tmp_path, apply_cleanup=True)
 
-    todo_text = (tmp_path / "TODO.md").read_text(encoding="utf-8")
+    todo_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     assert "Surface: docs/execplans/bounded-delegated-judgment-contract-2026-04-09.md" not in todo_text
     assert "- No active work right now." in todo_text
     assert (
@@ -1201,7 +1200,7 @@ def test_archive_execplan_apply_cleanup_removes_active_todo_pointer_to_same_plan
     )
     assert any(
         action.kind == "updated"
-        and action.path == tmp_path / "TODO.md"
+        and action.path == tmp_path / ".agentic-workspace/planning/state.toml"
         and "remove TODO item 'bounded-delegated-judgment-contract'" in action.detail
         for action in result.actions
     )
@@ -1210,7 +1209,7 @@ def test_archive_execplan_apply_cleanup_removes_active_todo_pointer_to_same_plan
 
 def test_archive_execplan_apply_cleanup_handles_active_todo_without_blank_before_action_heading(tmp_path: Path) -> None:
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1231,7 +1230,7 @@ def test_archive_execplan_apply_cleanup_handles_active_todo_without_blank_before
 
     archive_execplan("intent-continuity-across-slices-2026-04-09", target=tmp_path, apply_cleanup=True)
 
-    todo_text = (tmp_path / "TODO.md").read_text(encoding="utf-8")
+    todo_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     assert "## Action" in todo_text
     assert "- No active work right now." in todo_text
     assert "Complete `intent-continuity-across-slices`" not in todo_text
@@ -1239,7 +1238,7 @@ def test_archive_execplan_apply_cleanup_handles_active_todo_without_blank_before
 
 def test_archive_execplan_apply_cleanup_updates_compact_now_todo_shape(tmp_path: Path) -> None:
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1261,7 +1260,7 @@ Use `agentic-workspace summary --format json` first; keep this file as the repo-
 
     result = archive_execplan("front-door-defaults-tranche-2026-04-09", target=tmp_path, apply_cleanup=True)
 
-    todo_text = (tmp_path / "TODO.md").read_text(encoding="utf-8")
+    todo_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     assert "front-door-defaults-tranche: Active" not in todo_text
     assert "docs/execplans/front-door-defaults-tranche-2026-04-09.md" not in todo_text
     assert "- No active work right now." in todo_text
@@ -1269,12 +1268,12 @@ Use `agentic-workspace summary --format json` first; keep this file as the repo-
         "Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation."
         in todo_text
     )
-    assert any(action.kind == "updated" and action.path == tmp_path / "TODO.md" for action in result.actions)
+    assert any(action.kind == "updated" and action.path == tmp_path / ".agentic-workspace/planning/state.toml" for action in result.actions)
 
 
 def test_archive_execplan_apply_cleanup_removes_matching_candidate_queue_entry(tmp_path: Path) -> None:
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1318,7 +1317,7 @@ def test_archive_execplan_apply_cleanup_removes_matching_candidate_queue_entry(t
 
 def test_archive_execplan_apply_cleanup_removes_matching_candidate_lane_entry(tmp_path: Path) -> None:
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1371,7 +1370,7 @@ def test_archive_execplan_apply_cleanup_removes_matching_candidate_lane_entry(tm
 
 def test_archive_execplan_cleanup_does_not_remove_unrelated_candidate_lane_from_generic_plan_stem(tmp_path: Path) -> None:
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1410,7 +1409,7 @@ def test_archive_execplan_cleanup_does_not_remove_unrelated_candidate_lane_from_
 
 
 def test_archive_execplan_preserves_explicit_roadmap_continuation_candidate(tmp_path: Path) -> None:
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(
         tmp_path / "ROADMAP.md",
         """
@@ -1445,7 +1444,7 @@ def test_archive_execplan_preserves_explicit_roadmap_continuation_candidate(tmp_
 
 
 def test_archive_execplan_without_cleanup_only_suggests_roadmap_followup(tmp_path: Path) -> None:
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(
         tmp_path / "ROADMAP.md",
         """
@@ -1466,7 +1465,7 @@ def test_archive_execplan_without_cleanup_only_suggests_roadmap_followup(tmp_pat
 
 
 def test_archive_execplan_ignores_generic_roadmap_language(tmp_path: Path) -> None:
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(
         tmp_path / "ROADMAP.md",
         """
@@ -1493,7 +1492,7 @@ def test_archive_execplan_ignores_generic_roadmap_language(tmp_path: Path) -> No
 def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1549,7 +1548,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["active_contract"]["tool_verification"]["status"] == "unspecified"
     assert summary["active_contract"]["tool_verification"]["required_tools"] == []
     assert summary["active_contract"]["touched_scope"] == ["scripts/check/check_planning_surfaces.py"]
-    assert summary["active_contract"]["minimal_refs"] == ["TODO.md", "docs/execplans/plan-alpha.md"]
+    assert summary["active_contract"]["minimal_refs"] == [".agentic-workspace/planning/state.toml", "docs/execplans/plan-alpha.md"]
     assert summary["resumable_contract"]["status"] == "present"
     assert summary["resumable_contract"]["view_of"] == "planning_record"
     assert summary["resumable_contract"]["current_next_action"] == "Add one checker."
@@ -1572,7 +1571,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["hierarchy_contract"]["proof_state"]["proof_expectations"] == ["uv run pytest tests/test_check_planning_surfaces.py"]
     assert summary["handoff_contract"]["status"] == "present"
     assert summary["handoff_contract"]["task"]["id"] == "plan-alpha"
-    assert summary["handoff_contract"]["read_first"] == ["TODO.md", "docs/execplans/plan-alpha.md"]
+    assert summary["handoff_contract"]["read_first"] == [".agentic-workspace/planning/state.toml", "docs/execplans/plan-alpha.md"]
     assert summary["handoff_contract"]["owned_write_scope"] == ["scripts/check/check_planning_surfaces.py"]
     assert summary["handoff_contract"]["worker_contract"]["allowed_execution_methods"][1] == "external cli or api"
     assert summary["roadmap"]["candidate_count"] == 1
@@ -1589,7 +1588,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
 
 def test_planning_summary_reports_candidate_lanes(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(
         tmp_path / "ROADMAP.md",
         """
@@ -1633,7 +1632,7 @@ def test_planning_summary_reports_candidate_lanes(tmp_path: Path) -> None:
 def test_planning_summary_reports_required_tools_when_execplan_declares_them(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1659,7 +1658,7 @@ def test_planning_summary_reports_required_tools_when_execplan_declares_them(tmp
 def test_planning_report_derives_compact_module_state_from_summary(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1687,7 +1686,7 @@ def test_planning_report_derives_compact_module_state_from_summary(tmp_path: Pat
 def test_planning_summary_exposes_closure_evidence(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1716,7 +1715,7 @@ def test_planning_summary_exposes_closure_evidence(tmp_path: Path) -> None:
 def test_planning_report_prints_closure_evidence(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1742,7 +1741,7 @@ def test_planning_report_prints_closure_evidence(tmp_path: Path, capsys) -> None
 
 def test_planning_summary_can_expose_active_contract_from_execplan_without_todo_row(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
-    _write(tmp_path / "TODO.md", "# TODO\n\n## Now\n\n- Active execplan: docs/execplans/plan-alpha.md\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n\n## Now\n\n- Active execplan: docs/execplans/plan-alpha.md\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
     _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
 
@@ -1759,12 +1758,12 @@ def test_planning_summary_can_expose_active_contract_from_execplan_without_todo_
     assert summary["follow_through_contract"]["status"] == "present"
     assert summary["hierarchy_contract"]["status"] == "present"
     assert summary["active_contract"]["todo_item"]["id"] == ""
-    assert summary["active_contract"]["minimal_refs"] == ["TODO.md", "docs/execplans/plan-alpha.md"]
+    assert summary["active_contract"]["minimal_refs"] == [".agentic-workspace/planning/state.toml", "docs/execplans/plan-alpha.md"]
 
 
 def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
 
     summary = planning_summary(target=tmp_path)
@@ -1782,7 +1781,7 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
 
 def test_planning_summary_exposes_ownership_review(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
-    _write(tmp_path / "TODO.md", "# TODO\n")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
 
     summary = planning_summary(target=tmp_path)
@@ -1794,8 +1793,9 @@ def test_planning_summary_exposes_ownership_review(tmp_path: Path, capsys) -> No
     ownership_review = summary["ownership_review"]
     assert ownership_review["status"] == "present"
     assert ".agentic-workspace/planning/" in ownership_review["package_owned_roots"]
-    assert "TODO.md" in ownership_review["repo_owned_surfaces"]
-    assert "ROADMAP.md" in ownership_review["repo_owned_surfaces"]
+    assert ".agentic-workspace/planning/state.toml" not in ownership_review["repo_owned_surfaces"]
+    assert "AGENTS.md" in ownership_review["repo_owned_surfaces"]
+    assert "ROADMAP.md" not in ownership_review["repo_owned_surfaces"]
     assert ownership_review["minimal_repo_hook"] == "AGENTS.md#agentic-workspace:workflow"
     assert "ownership_review" in summary["schema"]["shared_fields"]
     assert "Ownership review:" in out
@@ -1804,7 +1804,7 @@ def test_planning_summary_exposes_ownership_review(tmp_path: Path, capsys) -> No
 def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1832,7 +1832,7 @@ def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> Non
 def test_planning_handoff_command_emits_json(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1858,7 +1858,7 @@ def test_planning_handoff_command_emits_json(tmp_path: Path, capsys) -> None:
 def test_planning_summary_human_view_starts_with_planning_record(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1890,7 +1890,7 @@ def test_planning_summary_human_view_starts_with_planning_record(tmp_path: Path,
 def test_summary_text_prints_planning_record_before_contract_views(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1920,7 +1920,7 @@ def test_summary_text_prints_planning_record_before_contract_views(tmp_path: Pat
 def test_summary_text_prints_required_tools_when_declared(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1945,7 +1945,7 @@ def test_summary_text_prints_required_tools_when_declared(tmp_path: Path, capsys
 def test_planning_report_exposes_hierarchy_projection(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 
@@ -1986,7 +1986,7 @@ def test_planning_report_exposes_hierarchy_projection(tmp_path: Path) -> None:
 def test_planning_summary_tracks_near_term_todo_queue(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
-        tmp_path / "TODO.md",
+        tmp_path / ".agentic-workspace/planning/state.toml",
         """
 # TODO
 

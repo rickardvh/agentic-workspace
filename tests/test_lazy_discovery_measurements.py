@@ -37,7 +37,8 @@ def test_capture_artifact_supports_file_bundles(tmp_path: Path) -> None:
 
 def test_measure_case_tracks_query_and_file_savings(tmp_path: Path, monkeypatch) -> None:
     (tmp_path / "AGENTS.md").write_text("# Agent Instructions\n", encoding="utf-8")
-    (tmp_path / "TODO.md").write_text("# TODO\n\n- No active work right now.\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace" / "planning").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".agentic-workspace/planning/state.toml").write_text("# TODO\n\n- No active work right now.\n", encoding="utf-8")
 
     def _fake_capture_json_command(args: list[str], *, runner) -> dict[str, object]:
         return {"command": " ".join(args), "answer": "compact"}
@@ -58,7 +59,7 @@ def test_measure_case_tracks_query_and_file_savings(tmp_path: Path, monkeypatch)
             kind="file_bundle",
             label="broad",
             detail="files",
-            paths=("AGENTS.md", "TODO.md"),
+            paths=("AGENTS.md", ".agentic-workspace/planning/state.toml"),
         ),
     )
 
