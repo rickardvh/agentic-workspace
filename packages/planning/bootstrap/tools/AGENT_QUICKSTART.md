@@ -17,6 +17,12 @@ Fast path for autonomous agents working on this repo.
 - Use `agentic-workspace config --target ./repo --format json` to find the configured startup entrypoint and effective repo posture.
 - Use `agentic-workspace report --target ./repo --format json` when the question is combined workspace state.
 
+## Tiny safe model
+
+- Start from the configured repo entrypoint (`AGENTS.md` by default), not from module internals or broad docs.
+- Ask compact startup queries first: `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --format json`, and `agentic-workspace summary --format json`.
+- Open raw planning state, execplan prose, or deeper routing docs only when those compact answers show that the small model is no longer sufficient.
+
 ## Surface roles
 
 - `AGENTS.md` is the canonical ordinary repo startup entrypoint.
@@ -25,6 +31,24 @@ Fast path for autonomous agents working on this repo.
 - `llms.txt` is the agent entrypoint router.
 - `tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md` are generated helpers, not doctrine owners.
 - `.agentic-workspace/planning/agent-manifest.json` is the canonical source for the generated helper docs.
+
+## Boundary-triggered escalation
+
+- `workspace`: The question is startup order, lifecycle behavior, config, ownership, or combined workspace state.
+  Load next: `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --format json`, `agentic-workspace report --target ./repo --format json`
+  Why: Workspace-level surfaces own routing, lifecycle orchestration, and cross-module coordination.
+- `planning`: The task needs active sequencing, blockers, proof expectations, promotion decisions, or cross-session continuation.
+  Load next: `agentic-workspace summary --format json`, `.agentic-workspace/planning/state.toml`, `.agentic-workspace/planning/execplans/`
+  Why: Planning owns active execution state and near-term follow-through.
+- `memory`: The work keeps rediscovering repo facts, prior decisions, failure modes, or domain context that should survive the current slice.
+  Load next: `.agentic-workspace/memory/repo/`, `.agentic-workspace/memory/WORKFLOW.md`
+  Why: Memory owns durable anti-rediscovery knowledge instead of active execution state.
+
+## Top-level capabilities
+
+- `workspace`: startup, lifecycle, routing, and combined workspace reporting; Escalate when: the task crosses config, install/adopt, ownership, or cross-module coordination boundaries; Unlocks: compact defaults/config/report guidance plus authoritative workspace contracts; First surface: `agentic-workspace defaults --section startup --format json`
+- `planning`: active execution state, sequencing, proof expectations, and promotion-ready follow-through; Escalate when: the task needs milestones, blockers, queue updates, or explicit continuation semantics; Unlocks: summary, active queue state, execplans, and planning validation surfaces; First surface: `agentic-workspace summary --format json`
+- `memory`: durable repo knowledge, routed decisions, failure modes, and anti-rediscovery context; Escalate when: relevant repo understanding should persist beyond the current chat or implementation slice; Unlocks: routed memory notes and memory workflow guidance; First surface: `.agentic-workspace/memory/repo/`
 
 ## Conditional reads
 

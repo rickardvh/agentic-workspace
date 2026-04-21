@@ -1,7 +1,5 @@
 [todo]
-active_items = [
-  { id = "context-budget-and-cheap-context-switching-2026-04-21", status = "in-progress", surface = ".agentic-workspace/planning/execplans/context-budget-and-cheap-context-switching-2026-04-21.md", why_now = "The startup/discovery tranche is complete; the next highest-priority open lane is the context-budget cluster around issues #250, #249, #248, #247, #246, #245, #244, #243, and #234." },
-]
+active_items = []
 queued_items = []
 
 [roadmap]

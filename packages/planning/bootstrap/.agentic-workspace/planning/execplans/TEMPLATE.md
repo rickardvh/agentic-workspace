@@ -68,6 +68,18 @@ Use this section when the slice is expected to stop before the broader goal is c
 Keep it compact and carry-forward shaped.
 Record what this slice changed about the broader line of work, not a backlog dump or a second drift log.
 
+## Context Budget
+
+- Live working set:
+- Recoverable later:
+- Externalize before shift:
+- Tiny resumability note:
+- Context-shift triggers:
+
+Keep this section tiny.
+It exists to distinguish what must stay mentally live now from what can be reloaded later and from the residue that must be externalized before a context shift.
+Do not turn it into a broad notebook or second memory surface.
+
 ## Delegated Judgment
 
 - Requested outcome:

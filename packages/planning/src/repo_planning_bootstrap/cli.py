@@ -307,6 +307,17 @@ def _print_summary(summary: dict) -> None:
             "Follow-through contract view: "
             f"{follow_through_contract.get('status')} ({follow_through_contract.get('reason', 'no follow-through contract available')})"
         )
+    context_budget_contract = summary.get("context_budget_contract", {})
+    if context_budget_contract.get("status") == "present":
+        print("Context budget contract view:")
+        print(f"- Live working set: {context_budget_contract.get('live_working_set', '')}")
+        print(f"- Recoverable later: {context_budget_contract.get('recoverable_later', '')}")
+        print(f"- Shift triggers: {context_budget_contract.get('context_shift_triggers', '')}")
+    elif context_budget_contract:
+        print(
+            "Context budget contract view: "
+            f"{context_budget_contract.get('status')} ({context_budget_contract.get('reason', 'no context-budget contract available')})"
+        )
     if summary["todo"]["active_items"]:
         print("Active items:")
         for item in summary["todo"]["active_items"]:
@@ -352,6 +363,9 @@ def _print_report(report: dict) -> None:
             active_chunk = hierarchy_contract.get("active_chunk", {})
             lane_label = parent_lane.get("id") or parent_lane.get("title") or "unspecified"
             print(f"Hierarchy: {lane_label} -> {active_chunk.get('milestone_id', '') or active_chunk.get('todo_id', '')}")
+        context_budget_contract = active.get("context_budget_contract", {})
+        if isinstance(context_budget_contract, dict) and context_budget_contract.get("status") == "present":
+            print(f"Live working set: {context_budget_contract.get('live_working_set', '')}")
         planning_record = active.get("planning_record", {})
         if isinstance(planning_record, dict) and planning_record.get("status") == "present":
             proof_report = planning_record.get("proof_report", {})
@@ -404,6 +418,10 @@ def _print_handoff(handoff: dict) -> None:
     print(f"- Read first: {', '.join(contract.get('read_first', []))}")
     print(f"- Write scope: {', '.join(contract.get('owned_write_scope', []))}")
     print(f"- Proof: {', '.join(contract.get('proof_expectations', []))}")
+    context_budget = contract.get("context_budget", {})
+    if isinstance(context_budget, dict) and context_budget.get("status") == "present":
+        print(f"- Live working set: {context_budget.get('live_working_set', '')}")
+        print(f"- Shift triggers: {context_budget.get('context_shift_triggers', '')}")
     worker_contract = contract.get("worker_contract", {})
     print(f"- Allowed methods: {', '.join(worker_contract.get('allowed_execution_methods', []))}")
     print(f"- Worker owns by default: {', '.join(worker_contract.get('worker_owns_by_default', []))}")

@@ -143,9 +143,10 @@ It also defines the bounded-initiative rule: improve means locally, but do not s
 `docs/resumable-execution-contract.md` defines the smaller machine-readable restart contract as a view over the same canonical `planning_record`.
 `docs/environment-recovery-contract.md` defines both how task-local environment assumptions and recovery paths should be expressed without growing a second plan schema, and the ordered recovery path when lifecycle work, repo-state inspection, or validation restart becomes ambiguous.
 `docs/execution-summary-contract.md` defines the compact completion summary that archived slices should leave behind.
+`.agentic-workspace/docs/context-budget-contract.md` defines the live-working-set versus recoverable-later distinction, the minimum residue that must be externalized before a context shift, the tiny resumability-note form, and the main context-switch triggers.
 `docs/planning-routing-contract.md` defines the hierarchy and routing rules between `.agentic-workspace/planning/state.toml`, execplans, and reviews.
 
-For active planning, `agentic-planning-bootstrap summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. `active_contract`, `resumable_contract`, `follow_through_contract`, `hierarchy_contract`, and `handoff_contract` remain thinner views over that record.
+For active planning, `agentic-planning-bootstrap summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. `active_contract`, `resumable_contract`, `follow_through_contract`, `context_budget_contract`, `hierarchy_contract`, and `handoff_contract` remain thinner views over that record.
 For delegated execution, `agentic-planning-bootstrap handoff --format json` is the compact worker handoff derived from that same active planning state.
 For compact module-state reporting without opening raw planning files first, use `agentic-planning-bootstrap report --format json`. It stays derived from the same canonical planning state and does not create a second state store.
 Use `hierarchy_contract` when you need the larger-picture restart answer cheaply: active chunk, parent lane, next likely chunk, continuation owner, and proof state.
@@ -600,7 +601,7 @@ This system is most useful when:
 - `make planning-surfaces-strict`
 - `make render-agent-docs`
 
-`archive-plan --apply-cleanup` is intentionally narrow. It may remove completed active-queue items that still point at the archived plan and compress stale roadmap residue tied to that same thread, but it does not invent hidden state or perform broad automatic rewrites.
+`archive-plan --apply-cleanup` is intentionally narrow. It may remove completed active-queue items that still point at the archived plan and compress stale roadmap residue tied to that same thread, but it does not invent hidden state or perform broad automatic rewrites. Archive output is compact inactive-plan residue rather than a full forever-growing copy of the active execplan.
 
 `upgrade` is intentionally conservative: it refreshes package-managed helper surfaces, re-renders generated planning docs, removes stale generated queue views from older installs, and leaves repo-owned surfaces like `AGENTS.md` unchanged when they already exist.
 When older active execplans were written against a previous template, the upgrade path is to reconcile those plans to the current contract shape, not to expect `upgrade` to rewrite them automatically.

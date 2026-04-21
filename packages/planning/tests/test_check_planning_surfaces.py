@@ -114,6 +114,14 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
 - Validation still needed: run the bounded planning checker test before archive.
 - Next likely slice: finish the current milestone and archive if no larger follow-on remains.
 
+## Context Budget
+
+- Live working set: the active checker change, proof command, and closure state for this bounded slice.
+- Recoverable later: broader planning doctrine and archived lane history can be reloaded from checked-in docs if needed.
+- Externalize before shift: the exact next action, proof expectation, blocker state, and one scoped caution if the checker semantics change.
+- Tiny resumability note: keep the warning-class boundary explicit if this slice is revisited later.
+- Context-shift triggers: shift when proof lands, when leaving planning-surface work, or when a handoff/interruption stops the slice.
+
 ## Delegated Judgment
 
 - Requested outcome: Land plan alpha end to end.

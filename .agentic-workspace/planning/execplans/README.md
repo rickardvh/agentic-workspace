@@ -48,6 +48,7 @@ Promote that task into `.agentic-workspace/planning/execplans/` once it picks up
 Direct execution is a success mode, not a planning failure.
 Use `.agentic-workspace/docs/capability-aware-execution.md` when deciding whether the task still fits cheap direct execution, should move to stronger planning first, is suitable for bounded autopilot, should be silently reshaped into a cheaper slice, or should stop and escalate.
 Use `docs/environment-recovery-contract.md` when interruption handling, environment drift, or retry state means the plan must carry a compact recovery path.
+Use `.agentic-workspace/docs/context-budget-contract.md` when deciding what must stay live now, what can be recovered later, what must be externalized before a context shift, and what cheap resumability note should survive a pause or handoff.
 Silent shaping may improve means, decomposition, and validation scope, but it must not silently widen the requested outcome, owned surface, or time horizon; broader solutions belong in an explicit promotion or escalation decision.
 
 For ordinary inspection, keep the hierarchy explicit:
@@ -73,6 +74,7 @@ Each active plan should stay compact and include:
 - non-goals
 - intent continuity
 - required continuation
+- context budget
 - delegated judgment
 - active milestone
 - immediate next action
@@ -125,6 +127,18 @@ Use this section to preserve the minimal residue a later contributor should not 
 Keep it distinct from `Required Continuation`: required continuation answers who owns mandatory follow-on and when it activates; iterative follow-through answers what this slice changed about that larger line of work.
 Keep it distinct from `Execution Summary`: follow-through carries forward deferred work and discovered implications, while execution summary records the bounded slice outcome once the slice stops.
 
+Context budget belongs under `## Context Budget` for active plans:
+
+- `Live working set`
+- `Recoverable later`
+- `Externalize before shift`
+- `Tiny resumability note`
+- `Context-shift triggers`
+
+Use this section to keep the smallest necessary live bundle explicit without turning ordinary work into bookkeeping.
+The section should stay smaller than the surrounding execplan.
+It exists so an agent can deliberately shed context after externalizing the residue that later proof, review, or continuation would otherwise have to reconstruct.
+
 Delegated judgment belongs under `## Delegated Judgment` for active plans that should preserve broad direction across sessions:
 
 - `Requested outcome`
@@ -174,6 +188,17 @@ Current-state restart belongs in the compact `resumable_contract` projection:
 
 That object should stay smaller than the full execplan and answer "how do I continue safely right now?" without broad rereading.
 Use it before opening raw plan prose when the task is ordinary restart or handoff, not deep semantic maintenance.
+
+Context-budget and cheap-resume answers belong in the compact `context_budget_contract` projection:
+
+- `live_working_set`
+- `recoverable_later`
+- `externalize_before_shift`
+- `tiny_resumability_note`
+- `context_shift_triggers`
+
+That object should stay compact enough to reduce rereads and mixed-agent restart cost rather than creating a second planning narrative.
+Use it when the question is what can be dropped now, what must be written down first, or what should trigger reloading a different bundle later.
 
 For larger-picture restart and queue questions, `hierarchy_contract` may also be present as a thin projection over the same active planning state. Use it for parent-lane, next-chunk, continuation-owner, and proof-state answers; do not treat it as a second planning authority.
 When queued TODO items exist, the same hierarchy view may also expose the near-term queue so the next same-thread chunk does not survive only in prose or chat.

@@ -80,6 +80,7 @@ EXPECTED_EXECPLAN_SECTIONS = [
     "Intent Continuity",
     "Required Continuation",
     "Iterative Follow-Through",
+    "Context Budget",
     "Delegated Judgment",
     "Active Milestone",
     "Immediate Next Action",
@@ -1052,7 +1053,7 @@ def _check_generated_agent_docs(repo_root: Path) -> list[PlanningWarning]:
 
 def _contains_durable_technical_fact_shape(lines: list[str]) -> bool:
     text = "\n".join(lines).lower()
-    if "```" in text and (text.count("```") > 2 or "## machine-readable contract" not in text):
+    if "```" in text:
         return True
 
     dense_tech_signals = sum(
@@ -1176,6 +1177,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
     active_milestone_fields = _extract_kv_fields(active_milestone_section)
     intent_continuity_fields = _extract_kv_fields(_section_content(lines, "Intent Continuity"))
     required_continuation_fields = _extract_kv_fields(_section_content(lines, "Required Continuation"))
+    context_budget_fields = _extract_kv_fields(_section_content(lines, "Context Budget"))
     delegated_judgment_fields = _extract_kv_fields(_section_content(lines, "Delegated Judgment"))
     is_active_execplan = not has_only_non_active_status
     larger_intended_outcome = intent_continuity_fields.get("larger intended outcome", "").strip()
@@ -1278,6 +1280,21 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
         )
 
     if is_active_execplan:
+        for label in (
+            "live working set",
+            "recoverable later",
+            "externalize before shift",
+            "tiny resumability note",
+            "context-shift triggers",
+        ):
+            if not context_budget_fields.get(label, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_UNDER_SPECIFIED,
+                        _render_path(path),
+                        f"Active execplan is missing `{label.title()}` in Context Budget.",
+                    )
+                )
         if not requested_outcome:
             warnings.append(
                 PlanningWarning(
@@ -1451,36 +1468,6 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
 
     execution_summary, execution_summary_bullets = _extract_section_stats(lines, "Execution Summary")
     execution_summary_fields = _extract_kv_fields(execution_summary)
-    closure_check, closure_check_bullets = _extract_section_stats(lines, "Closure Check")
-    closure_check_fields = _extract_kv_fields(closure_check)
-    required_closure_fields = (
-        "slice status",
-        "larger-intent status",
-        "closure decision",
-        "why this decision is honest",
-        "evidence carried forward",
-        "reopen trigger",
-    )
-    if closure_check_bullets == 0 or not [line for line in closure_check if line.strip()]:
-        warnings.append(
-            PlanningWarning(
-                WARNING_EXECPLAN_CLOSURE_DRIFT,
-                _render_path(path),
-                "Execplan is missing a Closure Check section.",
-            )
-        )
-    else:
-        for field_name in required_closure_fields:
-            value = closure_check_fields.get(field_name, "").strip()
-            if not value:
-                warnings.append(
-                    PlanningWarning(
-                        WARNING_EXECPLAN_CLOSURE_DRIFT,
-                        _render_path(path),
-                        f"Execplan has an incomplete Closure Check field: {field_name}.",
-                    )
-                )
-                break
     if has_only_completed_status:
         if execution_summary_bullets == 0:
             warnings.append(
@@ -1502,33 +1489,6 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                         )
                     )
                     break
-
-        closure_decision = closure_check_fields.get("closure decision", "").strip().lower()
-        larger_intent_status = closure_check_fields.get("larger-intent status", "").strip().lower()
-        if closure_decision and closure_decision not in {"archive-and-close", "archive-but-keep-lane-open"}:
-            warnings.append(
-                PlanningWarning(
-                    WARNING_EXECPLAN_CLOSURE_DRIFT,
-                    _render_path(path),
-                    f"Completed execplan uses an unsupported Closure Check decision: {closure_decision}.",
-                )
-            )
-        elif closure_decision == "archive-and-close" and larger_intent_status not in {"closed", "complete", "completed"}:
-            warnings.append(
-                PlanningWarning(
-                    WARNING_EXECPLAN_CLOSURE_DRIFT,
-                    _render_path(path),
-                    "Completed execplan claims archive-and-close without marking the larger intent closed.",
-                )
-            )
-        elif closure_decision == "archive-but-keep-lane-open" and larger_intent_status not in {"open", "partial", "unfinished"}:
-            warnings.append(
-                PlanningWarning(
-                    WARNING_EXECPLAN_CLOSURE_DRIFT,
-                    _render_path(path),
-                    "Completed execplan claims archive-but-keep-lane-open without marking the larger intent still open.",
-                )
-            )
 
         proof_report, proof_report_bullets = _extract_section_stats(lines, "Proof Report")
         proof_report_fields = _extract_kv_fields(proof_report)
@@ -1580,6 +1540,78 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                         )
                     )
                     break
+
+    closure_check, closure_check_bullets = _extract_section_stats(lines, "Closure Check")
+    closure_check_fields = _extract_kv_fields(closure_check)
+    if closure_check_bullets == 0 or not [line for line in closure_check if line.strip()]:
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_CLOSURE_DRIFT,
+                _render_path(path),
+                "Execplan is missing a Closure Check.",
+            )
+        )
+    else:
+        required_closure_fields = (
+            "slice status",
+            "larger-intent status",
+            "closure decision",
+            "why this decision is honest",
+            "evidence carried forward",
+            "reopen trigger",
+        )
+        for field_name in required_closure_fields:
+            if not closure_check_fields.get(field_name, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_CLOSURE_DRIFT,
+                        _render_path(path),
+                        f"Execplan has an incomplete Closure Check field: {field_name}.",
+                    )
+                )
+                break
+
+        if has_only_completed_status:
+            closure_decision = closure_check_fields.get("closure decision", "").strip().lower()
+            larger_intent_status = closure_check_fields.get("larger-intent status", "").strip().lower()
+            if closure_decision in {"keep-active", "stay-active", "continue-active"}:
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_CLOSURE_DRIFT,
+                        _render_path(path),
+                        "Completed execplan still says it should remain active in Closure Check.",
+                    )
+                )
+            elif closure_decision == "archive-and-close" and larger_intent_status not in {"closed", "complete", "completed"}:
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_CLOSURE_DRIFT,
+                        _render_path(path),
+                        "Archive-and-close requires a closed larger-intent status in Closure Check.",
+                    )
+                )
+            elif closure_decision == "archive-but-keep-lane-open" and larger_intent_status not in {"open", "partial", "unfinished"}:
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_CLOSURE_DRIFT,
+                        _render_path(path),
+                        "Archive-but-keep-lane-open requires an open or partial larger-intent status in Closure Check.",
+                    )
+                )
+            elif closure_decision and closure_decision not in {
+                "archive-and-close",
+                "archive-but-keep-lane-open",
+                "keep-active",
+                "stay-active",
+                "continue-active",
+            }:
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_CLOSURE_DRIFT,
+                        _render_path(path),
+                        f"Closure Check uses an unsupported closure decision: {closure_decision}.",
+                    )
+                )
 
     validation_commands, validation_bullets = _extract_section_stats(lines, "Validation Commands")
     if not [line for line in validation_commands if line.strip()] or validation_bullets == 0:

@@ -120,6 +120,14 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 - Validation still needed: run the bounded planning checker test before archive.
 - Next likely slice: finish the current milestone and archive if no larger follow-on remains.
 
+## Context Budget
+
+- Live working set: the active checker change, proof command, and closure state for this bounded slice.
+- Recoverable later: broader planning doctrine and archived lane history can be reloaded from checked-in docs if needed.
+- Externalize before shift: the exact next action, proof expectation, blocker state, and one scoped caution if the checker semantics change.
+- Tiny resumability note: keep the warning-class boundary explicit if this slice is revisited later.
+- Context-shift triggers: shift when proof lands, when leaving planning-surface work, or when a handoff/interruption stops the slice.
+
 ## Delegated Judgment
 
 - Requested outcome: Keep scope clear.
@@ -1032,6 +1040,11 @@ def test_archive_execplan_moves_completed_plan(tmp_path: Path) -> None:
     assert archived_path.exists()
     assert not plan_path.exists()
     assert any(action.kind == "moved" and action.path == archived_path for action in result.actions)
+    archived_text = archived_path.read_text(encoding="utf-8")
+    assert "Compact inactive-plan residue generated at archive time." in archived_text
+    assert "## Context Budget" in archived_text
+    assert "## Active Milestone" not in archived_text
+    assert "## Drift Log" not in archived_text
 
 
 def test_archive_execplan_blocks_unfinished_larger_intent_without_continuation_surface(tmp_path: Path) -> None:
@@ -1688,6 +1701,13 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["follow_through_contract"]["what_this_slice_enabled"] == "Added one bounded planning improvement."
     assert summary["follow_through_contract"]["validation_still_needed"] == ("run the bounded planning checker test before archive.")
     assert summary["follow_through_contract"]["larger_intended_outcome"] == "Land plan alpha end to end."
+    assert summary["context_budget_contract"]["status"] == "present"
+    assert summary["context_budget_contract"]["live_working_set"] == (
+        "the active checker change, proof command, and closure state for this bounded slice."
+    )
+    assert summary["context_budget_contract"]["tiny_resumability_note"] == (
+        "keep the warning-class boundary explicit if this slice is revisited later."
+    )
     assert summary["hierarchy_contract"]["status"] == "present"
     assert summary["hierarchy_contract"]["current_layer"] == "execution"
     assert summary["hierarchy_contract"]["parent_lane"]["id"] == "plan-alpha-lane"
@@ -1706,6 +1726,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
         ".agentic-workspace/planning/execplans/plan-alpha.md",
     ]
     assert summary["handoff_contract"]["owned_write_scope"] == ["scripts/check/check_planning_surfaces.py"]
+    assert summary["handoff_contract"]["context_budget"]["status"] == "present"
     assert summary["handoff_contract"]["worker_contract"]["allowed_execution_methods"][1] == "external cli or api"
     assert summary["roadmap"]["candidate_count"] == 1
     assert summary["roadmap"]["candidates"] == [
@@ -1897,6 +1918,7 @@ def test_planning_summary_can_expose_active_contract_from_execplan_without_todo_
     assert summary["active_contract"]["status"] == "present"
     assert summary["resumable_contract"]["status"] == "present"
     assert summary["follow_through_contract"]["status"] == "present"
+    assert summary["context_budget_contract"]["status"] == "present"
     assert summary["hierarchy_contract"]["status"] == "present"
     assert summary["active_contract"]["todo_item"]["id"] == ""
     assert summary["active_contract"]["minimal_refs"] == [
@@ -1916,8 +1938,10 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "tool_verification" in summary["schema"]["view_fields"]["planning_record"]
     assert "tool_verification" in summary["schema"]["view_fields"]["resumable_contract"]
     assert "follow_through_contract" in summary["schema"]["shared_fields"]
+    assert "context_budget_contract" in summary["schema"]["shared_fields"]
     assert "hierarchy_contract" in summary["schema"]["shared_fields"]
     assert "handoff_contract" in summary["schema"]["shared_fields"]
+    assert "live_working_set" in summary["schema"]["view_fields"]["context_budget_contract"]
     assert "parent_lane" in summary["schema"]["view_fields"]["hierarchy_contract"]
     assert "next_likely_slice" in summary["schema"]["view_fields"]["follow_through_contract"]
     assert "read_first" in summary["schema"]["view_fields"]["handoff_contract"]
@@ -1970,6 +1994,7 @@ def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> Non
     assert handoff["schema"]["canonical_doc"] == ".agentic-workspace/docs/execution-flow-contract.md"
     assert handoff["handoff_contract"]["status"] == "present"
     assert handoff["handoff_contract"]["next_action"] == "Add one checker."
+    assert handoff["handoff_contract"]["context_budget"]["status"] == "present"
     assert handoff["handoff_contract"]["worker_contract"]["worker_must_not_own_by_default"][0] == "roadmap routing"
 
 
@@ -2029,6 +2054,7 @@ def test_planning_summary_human_view_starts_with_planning_record(tmp_path: Path,
     assert "Active contract view:" in out
     assert "Resumable contract view:" in out
     assert "Follow-through contract view:" in out
+    assert "Context budget contract view:" in out
 
 
 def test_summary_text_prints_planning_record_before_contract_views(tmp_path: Path, capsys) -> None:

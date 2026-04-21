@@ -13,6 +13,15 @@ Focused routing reference derived from `.agentic-workspace/planning/agent-manife
 - `AGENTS.md`.
 - Repo docs explicitly referenced by the active route or plan.
 
+## Discovery Boundaries
+
+- `workspace`: The question is startup order, lifecycle behavior, config, ownership, or combined workspace state.
+  - Why: Workspace-level surfaces own routing, lifecycle orchestration, and cross-module coordination.
+- `planning`: The task needs active sequencing, blockers, proof expectations, promotion decisions, or cross-session continuation.
+  - Why: Planning owns active execution state and near-term follow-through.
+- `memory`: The work keeps rediscovering repo facts, prior decisions, failure modes, or domain context that should survive the current slice.
+  - Why: Memory owns durable anti-rediscovery knowledge instead of active execution state.
+
 ## Task Routes
 
 ### `review_workflow`
@@ -31,7 +40,7 @@ Focused routing reference derived from `.agentic-workspace/planning/agent-manife
 ### `planning_surface_change`
 
 - Use when: Editing planning-for-execution surfaces, plan templates, or planning-surface checks.
-- Prefer when: the change affects TODO, ROADMAP, execplans, or the planning bootstrap itself.
+- Prefer when: the change affects planning state, execplans, generated agent docs, or the planning bootstrap itself.
 - Touches:
   - `AGENTS.md`
   - `.agentic-workspace/planning/state.toml`
