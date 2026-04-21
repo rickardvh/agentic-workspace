@@ -5,7 +5,7 @@ description: Review and clean a repository's checked-in memory and workflow docs
 
 # Memory Hygiene
 
-This is a bootstrap-managed core skill shipped with the payload under `.agentic-memory/skills/`. Add repo-specific sibling skills under `memory/skills/` instead of customising this core skill unless the shared reusable procedure itself changed.
+This is a bootstrap-managed core skill shipped with the payload under `.agentic-workspace/memory/skills/`. Add repo-specific sibling skills under `memory/skills/` instead of customising this core skill unless the shared reusable procedure itself changed.
 
 Use this skill to keep checked-in memory accurate, compact, and aligned with the codebase.
 
@@ -16,9 +16,9 @@ It operates on checked-in memory files. It does not replace them.
 1. Read the repo's local contract:
    - `AGENTS.md`
    - `memory/index.md`
-   - `.agentic-memory/SKILLS.md` when deciding whether a repo-specific skill should be created
+   - `.agentic-workspace/memory/SKILLS.md` when deciding whether a repo-specific skill should be created
 2. Load only the memory notes relevant to the files, commands, or behaviours that changed.
-3. Treat `.agentic-memory/WORKFLOW.md` as reference policy only when the cleanup touches the memory contract or policy boundary.
+3. Treat `.agentic-workspace/memory/WORKFLOW.md` as reference policy only when the cleanup touches the memory contract or policy boundary.
 4. Pull in current-state notes only when they genuinely need compression or shared-orientation cleanup.
 5. Run the memory freshness audit if the repo has one.
 6. Inspect the affected notes for:

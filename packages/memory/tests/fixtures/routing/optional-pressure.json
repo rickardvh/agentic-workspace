@@ -11,8 +11,7 @@
   "unexpected_notes": [
     "memory/current/project-state.md",
     "memory/current/task-context.md",
-    "memory/current/active-decisions.md",
-    ".agentic-memory/VERSION.md"
+    ".agentic-workspace/memory/VERSION.md"
   ],
   "missing_note_candidates": [],
   "notes": "Weak high-level fallbacks should be trimmed before stable API landing pages."

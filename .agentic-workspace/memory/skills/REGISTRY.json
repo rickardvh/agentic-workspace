@@ -8,7 +8,7 @@
       "path": "memory-capture/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "capture durable technical knowledge into checked-in memory",
+      "summary": "capture durable repo knowledge into checked-in memory",
       "activation_hints": {
         "verbs": ["capture", "record", "store"],
         "nouns": ["durable knowledge", "trap", "invariant", "runbook", "decision"],

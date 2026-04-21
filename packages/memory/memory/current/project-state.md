@@ -57,7 +57,7 @@ Active
 ## Verified against
 
 - `memory/index.md`
-- `.agentic-memory/WORKFLOW.md`
+- `.agentic-workspace/memory/WORKFLOW.md`
 - repository README or equivalent orientation docs, when present
 
 ## Last confirmed

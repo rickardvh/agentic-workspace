@@ -2421,7 +2421,7 @@ def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() 
     assert "help an agent read less, not more" in text
     assert "Prefer durable consequences, constraints, exceptions, and recurring traps" in text
     assert "Treat recurring-failures as anti-trap memory" in text
-    assert "optional repo-owned `memory/current/active-decisions.md`" in text
+    assert "live decision review: the active planning slice plus `memory/decisions/README.md`" in text
     assert "combined install: planning owns active-now state" in text
     assert "start from the active planning surface and borrow only the smallest memory bundle needed" in text
     assert "do not let archived plans become the long-term memory layer by default" in text
@@ -2448,7 +2448,7 @@ def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -
     assert "improvement signal" in text
     assert "symptom captured -> remediation target chosen -> follow-up routed -> remediation lands" in text
     assert "## Improvement Paths" in text
-    assert "optional repo-owned `memory/current/active-decisions.md`" in text
+    assert "live decision review: the active planning slice plus `memory/decisions/README.md`" in text
     assert "promotion-report --mode remediation" in text
     assert "Do not assume memory volume should follow one universal trend" in text
     assert "suggest upstream repo improvements instead of treating memory as the default answer to repo complexity" in text

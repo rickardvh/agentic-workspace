@@ -2760,12 +2760,12 @@ def _run_report_command(
             for finding in findings:
                 if not isinstance(finding, dict):
                     continue
-            _add_finding(
-                severity=str(finding.get("severity", "info")),
-                module=module_name,
-                path=str(finding.get("path")) if finding.get("path") else None,
-                message=str(finding.get("message", "")),
-            )
+                _add_finding(
+                    severity=str(finding.get("severity", "info")),
+                    module=module_name,
+                    path=str(finding.get("path")) if finding.get("path") else None,
+                    message=str(finding.get("message", "")),
+                )
     next_steps = list(status_payload.get("next_steps", []))
     next_action = {
         "summary": next_steps[0] if next_steps else "No immediate action",

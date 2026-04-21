@@ -16,11 +16,11 @@ For shared memory policy, note hygiene, and ownership rules, read `.agentic-work
 
 - ordinary-work first pull: `memory/index.md` first, then at most 2 additional route-matched durable notes; load `memory/current/project-state.md` only when re-orientation is genuinely useful
 - current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` when needed
-- live decision review: `memory/current/active-decisions.md` plus `memory/decisions/README.md`
-- monorepo memory-package work: `memory/domains/memory-package-context.md` plus `memory/current/active-decisions.md`
-- monorepo planning-package work: `memory/domains/planning-package-context.md` plus `memory/current/active-decisions.md`
-- workspace ownership or package-boundary change: `memory/decisions/installed-system-consolidation-2026-04-05.md` plus `memory/current/active-decisions.md`
-- root check or CI routing change: `memory/current/active-decisions.md` plus `memory/current/project-state.md`
+- live decision review: the active planning slice plus `memory/decisions/README.md`
+- monorepo memory-package work: `memory/domains/memory-package-context.md` plus `memory/decisions/installed-system-consolidation-2026-04-05.md`
+- monorepo planning-package work: `memory/domains/planning-package-context.md` plus `memory/decisions/installed-system-consolidation-2026-04-05.md`
+- workspace ownership or package-boundary change: `memory/decisions/installed-system-consolidation-2026-04-05.md` plus `memory/decisions/workspace-orchestrator-ownership-ledger-2026-04-05.md`
+- root check or CI routing change: the active planning slice plus `memory/current/project-state.md`
 
 ## Task routing
 
@@ -28,7 +28,7 @@ Prefer the smallest bundle that still covers the task surface.
 
 - If touching `packages/memory/**`, load `memory/domains/memory-package-context.md`.
 - If touching `packages/planning/**`, load `memory/domains/planning-package-context.md`.
-- If touching root orchestration files, load `memory/current/active-decisions.md` and the most relevant decision note.
+- If touching root orchestration files, load the most relevant decision note plus the active planning slice when it exists.
 - If calibrating routing quality, load `memory/current/routing-feedback.md`.
 
 ## Loading rule

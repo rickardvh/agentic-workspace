@@ -10,8 +10,7 @@
   ],
   "unexpected_notes": [
     "memory/current/project-state.md",
-    "memory/current/task-context.md",
-    "memory/current/active-decisions.md"
+    "memory/current/task-context.md"
   ],
   "missing_note_candidates": [],
   "notes": "Architecture routing may exceed the default target, but it should stay limited to the repo's real landing pages."

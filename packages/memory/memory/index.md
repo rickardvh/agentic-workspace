@@ -21,7 +21,7 @@
 ## Common task bundles
 
 - current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` when needed
-- live decision review: optional repo-owned `memory/current/active-decisions.md` when the repo keeps one, plus `memory/decisions/README.md`
+- live decision review: the active planning slice plus `memory/decisions/README.md`
 - runtime or deployment change: start with `memory/domains/example-runtime-boundary.md` plus `memory/runbooks/example-release-check.md`, then switch to repo-specific runtime notes when they exist
 - API or interface change: start with `memory/invariants/example-response-contract.md`, then add the repo's real API or contract note when it exists
 - retrieval or search change: start with `memory/invariants/example-response-contract.md` plus `memory/mistakes/recurring-failures.md`, then switch to repo-specific retrieval notes when they exist
@@ -52,7 +52,7 @@ Replace or delete them once the repository captures real durable notes.
 - Default to `memory/index.md` plus at most 2 additional notes unless the task clearly justifies more.
 - Load `memory/current/project-state.md` or `memory/current/task-context.md` only when they will reduce re-orientation cost for the current task.
 - Load `memory/current/routing-feedback.md` only when calibrating routing against a concrete missed-note or over-routing case.
-- When a repository has bootstrap-managed shared skills, check `.agentic-memory/skills/README.md` before inventing a new shared memory-operational procedure.
+- When a repository has bootstrap-managed shared skills, check `.agentic-workspace/memory/skills/README.md` before inventing a new shared memory-operational procedure.
 - Use touched files, modules, commands, or surfaces to decide which notes to load first.
 
 ## Note type split

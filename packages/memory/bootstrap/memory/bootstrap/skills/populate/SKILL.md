@@ -12,7 +12,7 @@ Use this skill after bootstrap installation when `memory/current/project-state.m
 1. Read:
    - `AGENTS.md`
    - `memory/index.md`
-   - `.agentic-memory/WORKFLOW.md` only when the policy boundary is unclear
+   - `.agentic-workspace/memory/WORKFLOW.md` only when the policy boundary is unclear
 2. Inspect existing repo evidence:
    - top-level README or equivalent orientation docs
    - visible repo structure

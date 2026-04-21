@@ -54,7 +54,7 @@ Those forms return the compact contract answer profile from [`docs/compact-contr
 | Concern | Primary surface | Owner | Ownership class |
 | --- | --- | --- | --- |
 | Repo startup instructions | `AGENTS.md` | repo | `repo_owned` |
-| Installed memory projection | `memory/` | memory | `module_managed` |
+| Durable repo memory contract | `memory/` | repo | `repo_owned` |
 | Package-managed memory home | `.agentic-workspace/memory/` | memory | `module_managed` |
 | Active execution state | `.agentic-workspace/planning/state.toml` (`todo.active_items`) | planning | `module_managed` |
 | Long-horizon candidate queue | `.agentic-workspace/planning/state.toml` (`roadmap`) | planning | `module_managed` |
@@ -90,8 +90,8 @@ The full ownership payload includes a `boundary_review` section that groups the 
 
 - package-owned module roots and managed surfaces under `.agentic-workspace/`
 - explicit package-owned local-only state inside `.gemini/agentic-workspace/`
-- repo-owned authority surfaces such as `AGENTS.md`, `docs/design-principles.md`, and `agentic-workspace.toml`
-- module-managed memory authority such as `memory/` and `.agentic-workspace/memory/`
+- repo-owned authority surfaces such as `AGENTS.md`, `memory/`, `docs/design-principles.md`, and `agentic-workspace.toml`
+- module-managed memory support surfaces such as `.agentic-workspace/memory/`
 - module-managed planning authority such as `.agentic-workspace/planning/state.toml`
 - middle-ground managed fences inside repo-owned files, with the workflow pointer fence in `AGENTS.md` as the smallest explicit repo hook for startup
 

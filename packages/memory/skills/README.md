@@ -6,7 +6,7 @@ These skills are not part of the mandatory bootstrap payload, but they are part 
 
 `REGISTRY.json` is the explicit bundled bootstrap-skill registry for this package. Treat it as the machine-readable source of truth for bundled memory bootstrap skill discovery and task-matching hints.
 
-If the bundled skill is not already visible, prefer the installed `agentic-memory-bootstrap` command or the repo's checked-in `.agentic-memory/UPGRADE-SOURCE.toml` as the source of truth for any remote `uvx` or `pipx` runner spec.
+If the bundled skill is not already visible, prefer the installed `agentic-memory-bootstrap` command or the repo's checked-in `.agentic-workspace/memory/UPGRADE-SOURCE.toml` as the source of truth for any remote `uvx` or `pipx` runner spec.
 
 For maintainers of this repository, `skills/` is the canonical source of truth. Any bundled copy inside an installed package is only a runtime copy for explicit packaging or install-path testing and may be stale until the package is reinstalled.
 

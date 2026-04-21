@@ -30,7 +30,7 @@ It is an execution layer for applying the memory system. The installed files rem
    - preserve repo-specific scope and commands
 7. Run the memory freshness audit if the repo includes it.
 8. If adoption created fresh current-memory files, offer `bootstrap-populate` as the next conservative step so those files are populated from existing repo docs and visible repo state instead of being left as starter notes.
-9. When the CLI can help, prefer the installed `agentic-memory-bootstrap` command. Otherwise use the runner source recorded in `.agentic-memory/UPGRADE-SOURCE.toml` to print the follow-up `prompt populate` command.
+9. When the CLI can help, prefer the installed `agentic-memory-bootstrap` command. Otherwise use the runner source recorded in `.agentic-workspace/memory/UPGRADE-SOURCE.toml` to print the follow-up `prompt populate` command.
 
 ## Guardrails
 
@@ -47,4 +47,4 @@ It is an execution layer for applying the memory system. The installed files rem
 - manually aligned `AGENTS.md` and memory guidance where necessary
 - a clear note about the overview, task-context, and durable-memory surfaces
 - an offer to populate new current-memory files conservatively when adoption created them
-- the exact `prompt populate` follow-up using either the installed CLI or the runner source recorded in `.agentic-memory/UPGRADE-SOURCE.toml`, when it is relevant
+- the exact `prompt populate` follow-up using either the installed CLI or the runner source recorded in `.agentic-workspace/memory/UPGRADE-SOURCE.toml`, when it is relevant

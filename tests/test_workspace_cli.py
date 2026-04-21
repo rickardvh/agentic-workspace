@@ -1018,6 +1018,28 @@ def test_ownership_command_reports_authority_map(tmp_path: Path, monkeypatch, ca
     assert payload["warnings"] == []
 
 
+def test_ownership_real_init_classifies_repo_memory_separately_from_managed_support(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["ownership", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert any(
+        entry["surface"] == "memory/" and entry["owner"] == "repo" and entry["ownership"] == "repo_owned"
+        for entry in payload["authority_surfaces"]
+    )
+    assert any(
+        entry["surface"] == ".agentic-workspace/memory/" and entry["owner"] == "memory" and entry["ownership"] == "module_managed"
+        for entry in payload["authority_surfaces"]
+    )
+    assert any(entry["surface"] == "memory/" for entry in payload["boundary_review"]["repo_owned"]["authority_surfaces"])
+    assert payload["boundary_review"]["smallest_explicit_repo_hook"]["surface"] == "AGENTS.md#agentic-workspace:workflow"
+
+
 def test_ownership_concern_selector_returns_compact_contract_answer(tmp_path: Path, monkeypatch, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace").mkdir()
@@ -2261,6 +2283,38 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert planning_report["schema"]["command"] == "agentic-planning-bootstrap report --format json"
     assert memory_report["schema"]["command"] == "agentic-memory-bootstrap report --target ./repo --format json"
     assert payload["config"]["mixed_agent"]["status"] == "reporting-only"
+
+
+def test_report_handles_modules_with_empty_findings_lists(tmp_path: Path, monkeypatch, capsys) -> None:
+    from repo_memory_bootstrap import installer as memory_installer
+    from repo_planning_bootstrap import installer as planning_installer
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    original_planning_report = planning_installer.planning_report
+    original_memory_report = memory_installer.memory_report
+
+    def _planning_report_without_findings(*, target=None):
+        report = original_planning_report(target=target)
+        report["findings"] = []
+        return report
+
+    def _memory_report_without_findings(*, target=None):
+        report = original_memory_report(target=target)
+        report["findings"] = []
+        return report
+
+    monkeypatch.setattr(planning_installer, "planning_report", _planning_report_without_findings)
+    monkeypatch.setattr(memory_installer, "memory_report", _memory_report_without_findings)
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["findings"] == []
 
 
 def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path, capsys) -> None:

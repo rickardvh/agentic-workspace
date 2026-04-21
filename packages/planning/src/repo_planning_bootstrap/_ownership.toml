@@ -78,6 +78,14 @@ authority = "primary"
 summary = "Repo-level startup instructions and local operating constraints."
 
 [[authority_surfaces]]
+concern = "durable-repo-memory"
+surface = "memory/"
+owner = "repo"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Repo-owned durable knowledge and lightweight shared context installed through memory."
+
+[[authority_surfaces]]
 concern = "compact-planning-state"
 surface = ".agentic-workspace/planning/state.toml"
 owner = "planning"
@@ -127,12 +135,12 @@ authority = "primary"
 summary = "Planning-owned installed workflow and helper surfaces."
 
 [[authority_surfaces]]
-concern = "memory-install-tree"
+concern = "memory-shared-support"
 surface = ".agentic-workspace/memory/"
 owner = "memory"
 ownership = "module_managed"
 authority = "primary"
-summary = "Memory-owned installed workflow and helper surfaces."
+summary = "Memory-owned shared workflow, version, bootstrap, and skill support surfaces."
 
 [[authority_surfaces]]
 concern = "workspace-workflow-pointer"

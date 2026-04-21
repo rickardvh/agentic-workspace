@@ -9,7 +9,7 @@ This document defines the boundary between checked-in memory, checked-in repo sk
 Use three layers inside a repo:
 
 - checked-in files = durable shared knowledge and lightweight shared context
-- temporary bootstrap workspace under `.agentic-memory/bootstrap/` = bootstrap-managed lifecycle workspace during install or adopt
+- temporary bootstrap workspace under `.agentic-workspace/memory/bootstrap/` = bootstrap-managed lifecycle workspace during install or adopt
 - checked-in repo skills under `memory/skills/` = repo-visible repeatable procedures whose primary purpose is operating on checked-in memory or maintaining the repo's memory system
 - bundled product skills = bootstrap lifecycle help such as adoption, populate, and upgrade
 - runtime-local mirrored skill copies = disposable caches for runtimes that copy or mirror skills locally
@@ -19,7 +19,7 @@ Explicit registry surfaces:
 - bundled installed core skills: `.agentic-workspace/memory/skills/REGISTRY.json`
 - repo-specific memory skills: `memory/skills/REGISTRY.json`
 
-The bootstrap contract remains the always-on minimal file structure that keeps the system understandable even without skills. `.agentic-memory/bootstrap/` is temporary operator workspace, not a durable knowledge surface.
+The bootstrap contract remains the always-on minimal file structure that keeps the system understandable even without skills. `.agentic-workspace/memory/bootstrap/` is temporary operator workspace, not a durable knowledge surface.
 
 ## Keep in checked-in docs
 
@@ -38,7 +38,7 @@ The core operating model must remain visible and useful even when skills are una
 
 ## Checked-in core skills
 
-The payload ships these bootstrap-managed core memory skills under `.agentic-memory/skills/`:
+The payload ships these bootstrap-managed core memory skills under `.agentic-workspace/memory/skills/`:
 
 - `memory-hygiene`
 - `memory-capture`
@@ -81,7 +81,7 @@ Keep repo-specific skills small, procedural, and explicitly grounded in checked-
 
 The safe split is:
 
-- shared product-managed skills = the shipped core directories already under `.agentic-memory/skills/`
+- shared product-managed skills = the shipped core directories already under `.agentic-workspace/memory/skills/`
 - repo-managed skills = new sibling directories a repository adds under `memory/skills/` for repo-specific memory workflows
 - runtime-local caches = mirrored copies that should follow checked-in skills rather than override them
 
@@ -90,10 +90,10 @@ When both a checked-in repo skill and a runtime-local mirrored copy exist, treat
 
 ## Temporary bootstrap workspace
 
-The payload may create a temporary bootstrap workspace under `.agentic-memory/bootstrap/` during install or adopt.
+The payload may create a temporary bootstrap workspace under `.agentic-workspace/memory/bootstrap/` during install or adopt.
 
 - use it for bootstrap lifecycle completion only
-- do not store durable technical knowledge there
+- do not store durable repo knowledge there
 - do not add repo-specific day-to-day workflows there
 - remove it after bootstrap work is complete
 
@@ -123,7 +123,7 @@ Do not start with fuzzy skills that overlap heavily with built-in agent behaviou
 For now:
 
 - keep bootstrap lifecycle skills bundled with the product under `skills/`
-- ship day-to-day memory skills in the checked-in bootstrap-managed `.agentic-memory/skills/` surface
+- ship day-to-day memory skills in the checked-in bootstrap-managed `.agentic-workspace/memory/skills/` surface
 - treat repo-added sibling skills under `memory/skills/` as the source of truth for repo-local extensions to those shared workflows
 - treat any runtime-local mirrored copies as disposable caches
 - keep the mandatory bootstrap payload understandable and useful without any skill runtime support

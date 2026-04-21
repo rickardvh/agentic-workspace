@@ -134,18 +134,6 @@ surfaces = ["architecture"]
 routes_from = ["memory/index.md", "bootstrap/**/*.md"]
 stale_when = ["memory/index.md", "bootstrap/**/*.md"]
 
-[notes."memory/current/active-decisions.md"]
-note_type = "current-decisions"
-canonical_home = "memory/current/active-decisions.md"
-authority = "advisory"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["orchestration", "validation"]
-surfaces = ["decision", "architecture"]
-routes_from = ["AGENTS.md", "Makefile", ".github/workflows/**/*.yml", ".agentic-workspace/**/*.md"]
-stale_when = ["AGENTS.md", "Makefile", ".github/workflows/**/*.yml", ".agentic-workspace/**/*.md"]
-
 [notes."memory/domains/memory-package-context.md"]
 note_type = "domain"
 canonical_home = "memory/domains/memory-package-context.md"

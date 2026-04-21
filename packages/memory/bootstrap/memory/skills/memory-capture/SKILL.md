@@ -5,7 +5,7 @@ description: Capture durable lessons into checked-in repository memory. Use when
 
 # Memory Capture
 
-This is a bootstrap-managed core skill shipped with the payload under `.agentic-memory/skills/`. Add repo-specific sibling skills under `memory/skills/` instead of customising this core skill unless the shared reusable procedure itself changed.
+This is a bootstrap-managed core skill shipped with the payload under `.agentic-workspace/memory/skills/`. Add repo-specific sibling skills under `memory/skills/` instead of customising this core skill unless the shared reusable procedure itself changed.
 
 Use this skill to turn a solved issue or discovered rule into the smallest correct checked-in memory update.
 
@@ -16,7 +16,7 @@ It operates on durable memory files. It does not create a separate storage layer
 1. Read the repo's local contract:
    - `AGENTS.md`
    - `memory/index.md`
-   - `.agentic-memory/SKILLS.md` when deciding whether a repo-specific skill should be created
+   - `.agentic-workspace/memory/SKILLS.md` when deciding whether a repo-specific skill should be created
 2. Identify the durable lesson:
    - what fact should survive this task
    - why it is likely to matter again
@@ -41,7 +41,7 @@ It operates on durable memory files. It does not create a separate storage layer
    - `memory/manifest.toml` when used
 7. If the note set changed materially, update `memory/index.md`.
 8. If the repeated procedure is repo-specific rather than a durable fact, create a new repo-specific checked-in skill under `memory/skills/` instead of growing this core skill.
-9. Treat `.agentic-memory/WORKFLOW.md` as reference policy only when the capture touches the memory contract or policy boundary.
+9. Treat `.agentic-workspace/memory/WORKFLOW.md` as reference policy only when the capture touches the memory contract or policy boundary.
 10. Update `memory/current/project-state.md` or `memory/current/task-context.md` only when the new memory changes current shared orientation.
 11. If the lesson is better understood as friction than durable truth, record that with manifest metadata and prefer an upstream remediation target over training contributors to depend on an ever-growing note.
 

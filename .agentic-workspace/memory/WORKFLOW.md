@@ -21,7 +21,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 
 ## Interoperability contract
 
-- Memory owns durable technical knowledge: invariants, authority boundaries, recurring failure modes, routing hints, and operator runbooks.
+- Memory owns durable repo knowledge: invariants, authority boundaries, recurring failure modes, routing hints, and operator runbooks.
 - The repository's active planning/status surface owns active intent and sequencing: current goal, next action, done criteria, milestone status, and backlog state.
 - `memory/mistakes/recurring-failures.md` is anti-trap memory for repeated or high-likelihood mistakes, not issue tracking or bug triage.
 - Memory may keep a small continuation note for interrupted multi-session work, but that note is only re-orientation support for the next session.
@@ -107,21 +107,21 @@ Keep it concise, repo-agnostic, and non-procedural.
 
 ## Ownership boundary
 
-- bootstrap-managed surface in a repo = the workflow pointer block in `AGENTS.md`, `.agentic-memory/`, and other files the installer classifies as shared replaceable
+- bootstrap-managed surface in a repo = the workflow pointer block in `AGENTS.md`, `.agentic-workspace/memory/`, and other files the installer classifies as shared replaceable
 - repo-owned surface in a repo = customised `AGENTS.md` content outside the workflow pointer block, repo-added sibling skills under `memory/skills/`, and ordinary notes outside product-managed shared directories
-- `.agentic-memory/` is product-managed shared guidance and workflow support; treat it as upgrade-replaceable unless the repository is intentionally changing the shared bootstrap contract itself.
-- The shipped core skills under `.agentic-memory/skills/` are also product-managed and may be replaced on upgrade.
+- `.agentic-workspace/memory/` is product-managed shared guidance and workflow support; treat it as upgrade-replaceable unless the repository is intentionally changing the shared bootstrap contract itself.
+- The shipped core skills under `.agentic-workspace/memory/skills/` are also product-managed and may be replaced on upgrade.
 - Other checked-in `/memory` notes are repo-owned working knowledge and are expected to diverge from the starter payload over time.
 - Runtime-local or user-local mirrored skill copies are cache-only convenience copies, not a durable source of truth.
 - When a repo needs local procedure changes, add a new sibling skill under `memory/skills/` instead of customising the shipped core skills in place.
-- If a local note or skill is meant to survive upgrades unchanged, do not place that repo-specific content in `.agentic-memory/`.
+- If a local note or skill is meant to survive upgrades unchanged, do not place that repo-specific content in `.agentic-workspace/memory/`.
 - Shared guidance about how to use memory skills belongs in product-managed memory files, not in repo-specific `AGENTS.md` prose outside the managed workflow pointer block.
 
 ## Skills boundary
 
 - Skills operate on memory; they do not replace it.
 - `memory/skills/` is reserved for skills whose primary purpose is operating on checked-in memory or maintaining the memory system, not for general repo workflows.
-- When a repository has shipped shared memory skills, treat `.agentic-memory/skills/README.md` as the discovery surface for those skills instead of expanding `AGENTS.md` with more shared trigger prose.
+- When a repository has shipped shared memory skills, treat `.agentic-workspace/memory/skills/README.md` as the discovery surface for those skills instead of expanding `AGENTS.md` with more shared trigger prose.
 - If prose starts describing a repeatable maintenance, routing, refresh, capture, hygiene, or upgrade workflow, that is usually a skill candidate.
 - If a domain or decision note starts accumulating command-heavy repeatable steps, split the procedure into a runbook or checked-in skill before broadening the note further.
 - Checked-in repo-local skills should take precedence over runtime-local mirrors or cached user copies when both exist.

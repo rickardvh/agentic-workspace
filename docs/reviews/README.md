@@ -18,7 +18,7 @@ This review lane exists to keep analysis-derived findings explicit, bounded, and
 - `docs/reviews/` owns bounded review artifacts.
 - `roadmap` in `.agentic-workspace/planning/state.toml` owns inactive future candidates once a finding is promoted.
 - `todo.active_items` in `.agentic-workspace/planning/state.toml` plus `docs/execplans/` own active planned work once promotion becomes immediate execution.
-- Memory owns durable repo knowledge that remains valuable after the review artifact has done its job.
+- Memory owns durable technical knowledge that remains valuable after the review artifact has done its job.
 
 Do not use review artifacts as a substitute for execplans, memory notes, or canonical docs.
 
