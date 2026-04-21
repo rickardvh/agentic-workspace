@@ -26,11 +26,11 @@
 ## Iterative Follow-Through
 
 - What this slice enabled: the next roadmap lane is now active, bounded, and recoverable from repo-owned planning surfaces.
-- Intentionally deferred: issue-by-issue implementation ordering inside the lane beyond the first startup/discovery tranche.
+- Intentionally deferred: README tightening, doctrine compression, and broader query-surface cleanup until the startup/discovery contract is frozen.
 - Discovered implications: the inactive roadmap queue should now begin with system-intent-and-planning-trust once this lane is active.
 - Proof achieved now: promotion state will be visible through `agentic-workspace summary --format json` once planning surfaces validate cleanly.
 - Validation still needed: run the planning-surface checker and confirm summary reflects one active item plus the reduced roadmap.
-- Next likely slice: define the tiny safe startup model, escalation cues, and compact module-capability advertisement pattern.
+- Next likely slice: implement the minimum startup operating model from `#223` plus the gradual-discovery and capability-advertisement tranche from `#227` and `#228`.
 
 ## Delegated Judgment
 
@@ -50,7 +50,7 @@
 
 ## Immediate Next Action
 
-- Define the first implementation tranche for the tiny safe startup model, boundary-triggered escalation cues, and compact module-capability advertisement pattern.
+- Define the first implementation tranche explicitly as `#223` + `#227` + `#228`: freeze the tiny safe startup model, boundary-triggered escalation cues, and compact top-level capability advertisement before README or doctrine compression.
 
 ## Blockers
 
@@ -60,6 +60,7 @@
 
 - `.agentic-workspace/planning/state.toml`
 - `.agentic-workspace/planning/execplans/product-compression-and-gradual-discovery-2026-04-21.md`
+- `.agentic-workspace/planning/reviews/product-compression-context-cost-review-2026-04-21.md`
 
 ## Invariants
 
@@ -78,6 +79,7 @@
 - Which current startup surfaces are genuinely required for the tiny safe model versus legacy or secondary discovery aids?
 - What escalation cues should make deeper concepts discoverable without forcing upfront ontology load?
 - How should top-level module capability advertisement stay compact while still signaling when deeper concepts become relevant?
+- Which README and doctrine content should be treated as follow-on compression targets only after the startup/discovery contract is frozen?
 
 ## Validation Commands
 
