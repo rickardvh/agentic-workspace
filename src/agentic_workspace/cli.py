@@ -3992,6 +3992,69 @@ def _defaults_payload() -> dict[str, Any]:
             "answer_shape": list(compact_manifest["answer_shape"]),
             "selectors": {key: value["command"] for key, value in compact_manifest["selectors"].items()},
         },
+        "operating_questions": {
+            "canonical_doc": "docs/which-package.md",
+            "command": "agentic-workspace defaults --section operating_questions --format json",
+            "rule": "For routine operational lookup, ask the smallest question first and stop at the first compact surface that answers it.",
+            "questions": [
+                {
+                    "id": "startup_or_lifecycle_path",
+                    "question": "How do I start, or which lifecycle path applies?",
+                    "ask_first": "agentic-workspace defaults --section startup --format json",
+                    "then_if_needed": [
+                        "agentic-workspace config --target ./repo --format json",
+                        ".agentic-workspace/docs/lifecycle-and-config-contract.md",
+                    ],
+                },
+                {
+                    "id": "active_state",
+                    "question": "What is active right now?",
+                    "ask_first": "agentic-workspace summary --format json",
+                    "then_if_needed": [
+                        ".agentic-workspace/planning/state.toml",
+                        ".agentic-workspace/planning/execplans/",
+                    ],
+                },
+                {
+                    "id": "combined_workspace_state",
+                    "question": "What does the combined workspace state look like?",
+                    "ask_first": "agentic-workspace report --target ./repo --format json",
+                    "then_if_needed": [
+                        ".agentic-workspace/docs/reporting-contract.md",
+                        "raw module files only when the report is insufficient",
+                    ],
+                },
+                {
+                    "id": "proof_or_ownership_answer",
+                    "question": "Which proof or ownership answer is enough?",
+                    "ask_first": "agentic-workspace defaults --section proof_selection --format json",
+                    "then_if_needed": [
+                        "agentic-workspace proof --target ./repo --format json",
+                        "agentic-workspace ownership --target ./repo --format json",
+                        ".agentic-workspace/docs/compact-contract-profile.md",
+                    ],
+                },
+                {
+                    "id": "setup_or_handoff_home",
+                    "question": "Where does setup or external handoff work live?",
+                    "ask_first": "agentic-workspace setup --target ./repo --format json",
+                    "then_if_needed": [
+                        "llms.txt",
+                        ".agentic-workspace/bootstrap-handoff.md",
+                        ".agentic-workspace/bootstrap-handoff.json",
+                    ],
+                },
+                {
+                    "id": "mixed_agent_posture",
+                    "question": "What mixed-agent posture is in effect here?",
+                    "ask_first": "agentic-workspace config --target ./repo --format json",
+                    "then_if_needed": [
+                        ".agentic-workspace/docs/delegation-posture-contract.md",
+                    ],
+                },
+            ],
+            "stop_rule": "Do not reopen broader docs once one compact surface has answered the routine question.",
+        },
         "lifecycle": {
             "primary_entrypoint": "agentic-workspace",
             "default_install_command": "agentic-workspace install --target ./repo --preset <memory|planning|full>",

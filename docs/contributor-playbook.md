@@ -9,6 +9,7 @@ Use `docs/maintainer-commands.md` when you need the literal command to run; use 
 This playbook is primarily for maintainers operating as coding agents. Human contributors can use it too, but it is intentionally optimized for explicit routing, bounded reads, and narrow validation.
 
 Use `docs/design-principles.md` when a change affects product shape, ownership, lifecycle behavior, or the amount of ceremony the repo imposes on normal work.
+Use `docs/dogfooding-feedback.md` when the missing judgment is whether repo friction should become product work, how to classify it, or whether it has earned queue entry.
 Use `.agentic-workspace/docs/compatibility-policy.md` when you need to judge whether a surface is stable, mutable, or generated before making the change.
 Use `.agentic-workspace/docs/lifecycle-and-config-contract.md` when you need the canonical root `init` mode matrix, configuration rules, or prompt semantics.
 Use `.agentic-workspace/docs/execution-flow-contract.md` when you are delegating a bounded slice, handling intent continuity, or managing resumable milestones.
@@ -129,6 +130,7 @@ When internal use reveals friction, classify it before routing it onward.
 - Docs or routing issue
 - Monorepo-only friction
 
+Use `docs/dogfooding-feedback.md` for the durable admission and routing policy.
 Use `.agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md` for the capture convention and preferred destinations.
 Use `.agentic-workspace/planning/reviews/README.md` `context-cost` mode when the question is which startup or handoff surfaces are actually used, skipped, or too insider-shaped for normal work.
 

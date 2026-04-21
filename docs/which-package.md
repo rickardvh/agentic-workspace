@@ -17,19 +17,11 @@ Default answer: use `agentic-workspace` and choose the preset that matches the r
 
 ## Compact Operating Map
 
-Ask the smallest useful question first:
+Use `agentic-workspace defaults --section operating_questions --format json` for the compact question-to-surface map.
 
-| If you need to know... | Ask this first | Then, only if needed |
-| --- | --- | --- |
-| how to start or which lifecycle path applies | `AGENTS.md`, then `agentic-workspace config --target ./repo --format json` | [`.agentic-workspace/docs/lifecycle-and-config-contract.md`](../.agentic-workspace/docs/lifecycle-and-config-contract.md) |
-| what is active right now | `agentic-workspace summary --format json` | `.agentic-workspace/planning/state.toml`, then one active execplan |
-| what the combined workspace state looks like | `agentic-workspace report --target ./repo --format json` | raw module files or maintainer docs |
-| which proof or ownership answer is enough | `agentic-workspace defaults --section proof_selection --format json`, `agentic-workspace proof --target ./repo --format json`, or `agentic-workspace ownership --target ./repo --format json` | [`.agentic-workspace/docs/compact-contract-profile.md`](../.agentic-workspace/docs/compact-contract-profile.md) and the referenced proof or ownership contract |
-| where handoff or setup work lives | `llms.txt` or `agentic-workspace setup --target ./repo --format json` | `.agentic-workspace/bootstrap-handoff.md` or `.json` when bootstrap says review is still needed |
-| what mixed-agent posture is in effect | `agentic-workspace config --target ./repo --format json` | [`.agentic-workspace/docs/delegation-posture-contract.md`](../.agentic-workspace/docs/delegation-posture-contract.md) |
+That query surface now owns the first-line answers for routine questions such as startup path, active state, combined workspace state, proof or ownership lookup, setup or handoff home, and mixed-agent posture.
 
-Stop at the first compact surface that answers the question.
-Use broader docs or raw files only when the compact surface is insufficient.
+Use broader docs or raw files only when that compact surface says you still need them.
 
 ## What Stays Secondary
 

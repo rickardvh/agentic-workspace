@@ -1,14 +1,6 @@
 # agentic-workspace
 
-Agentic Workspace gives a repository a durable, checked-in operating layer for agents.
-
-It is intentionally repo-native and quiet:
-
-- `agentic-workspace` is the normal lifecycle entrypoint
-- Agentic Planning owns active execution state
-- Agentic Memory owns durable anti-rediscovery knowledge
-
-The public shape should stay smaller than the internal machinery behind it.
+Agentic Workspace gives a repo a durable operating layer for agents without making the repo feel like a workflow product first.
 
 ## Default path
 
@@ -26,64 +18,43 @@ uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-wor
 
 If you use `pipx` instead of `uvx`, keep the same command shape.
 
-## What changes in a repo
+## Ordinary work
 
-The normal startup path is:
+The ordinary startup path in a repo using Agentic Workspace is:
 
-1. Read `AGENTS.md`
-2. Query `agentic-workspace summary --format json`
-3. Read the active execplan only when the summary points there
+1. Read `AGENTS.md`.
+2. Ask `agentic-workspace summary --format json`.
+3. Read the active execplan only when the summary points there.
 
-Planning state now lives in:
+The compact planning home is:
 
 - `.agentic-workspace/planning/state.toml`
 - `.agentic-workspace/planning/execplans/`
 
-For agent maintainers, the primary operating path is `AGENTS.md`, the active execplan, and `docs/contributor-playbook.md`.
+## Module ownership
 
-Memory state lives under:
+- `workspace`: startup, lifecycle, routing, and combined workspace reporting
+- `planning`: active execution state, sequencing, proof expectations, and continuation
+- `memory`: durable anti-rediscovery repo knowledge
 
-- `.agentic-workspace/memory/`
-- `.agentic-workspace/memory/repo/`
+Use `memory` when durable repo knowledge is the main problem. Add `planning` when active work needs checked-in continuity.
 
-## When to use it
+## Maintainers
 
-Use Agentic Workspace when repo work should become:
+For agent maintainers, the primary operating path is:
 
-- easier to restart
-- cheaper to continue across sessions
-- less dependent on one model or tool
-- more resistant to rediscovery and partial-work drift
+1. Read `AGENTS.md`.
+2. Read `agentic-workspace summary --format json`.
+3. Read the active execplan only when the summary points there.
+4. Read `docs/contributor-playbook.md` before widening into broader maintainer surfaces.
 
-Use `memory` when durable repo knowledge is the main problem.
-Add `planning` when active work needs checked-in continuity.
+Use `docs/maintainer-commands.md` for operational commands, `docs/design-principles.md` for must-internalize doctrine, and `docs/dogfooding-feedback.md` when repo friction might need to become product work.
 
-## External-agent handoff
+## External handoff
 
-For another agent bootstrapping a repo, start from:
+For install or adopt first contact from another agent, use:
 
-- [`.agentic-workspace/docs/routing-contract.md`](.agentic-workspace/docs/routing-contract.md)
 - [`llms.txt`](llms.txt)
-
-After install or adopt, compact first-contact queries are:
-
-- `agentic-workspace defaults --section startup --format json`
-- `agentic-workspace config --target ./repo --format json`
-- `agentic-workspace summary --format json`
-
-## Normal commands
-
-```bash
-agentic-workspace status --target ./repo
-agentic-workspace doctor --target ./repo
-agentic-workspace upgrade --target ./repo
-agentic-workspace skills --target ./repo --task "implement the current active milestone" --format json
-```
-
-## Read next
-
-- [`docs/which-package.md`](docs/which-package.md)
 - [`.agentic-workspace/docs/routing-contract.md`](.agentic-workspace/docs/routing-contract.md)
-- [`.agentic-workspace/docs/lifecycle-and-config-contract.md`](.agentic-workspace/docs/lifecycle-and-config-contract.md)
-- [`tools/AGENT_QUICKSTART.md`](tools/AGENT_QUICKSTART.md)
-- [`tools/AGENT_ROUTING.md`](tools/AGENT_ROUTING.md)
+
+After bootstrap, return to the ordinary startup path above.

@@ -133,6 +133,11 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "When one bounded answer is enough, prefer a narrow selector over a whole-surface dump."
     )
     assert payload["compact_contract_profile"]["selectors"]["defaults"] == ("agentic-workspace defaults --section <section> --format json")
+    assert payload["operating_questions"]["canonical_doc"] == "docs/which-package.md"
+    assert payload["operating_questions"]["command"] == "agentic-workspace defaults --section operating_questions --format json"
+    assert payload["operating_questions"]["questions"][0]["id"] == "startup_or_lifecycle_path"
+    assert payload["operating_questions"]["questions"][1]["ask_first"] == "agentic-workspace summary --format json"
+    assert payload["operating_questions"]["questions"][2]["ask_first"] == "agentic-workspace report --target ./repo --format json"
     assert payload["lifecycle"]["primary_entrypoint"] == "agentic-workspace"
     assert "agentic-workspace install --target ./repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
     assert payload["lifecycle"]["canonical_external_agent_handoff"] == "llms.txt"
@@ -789,6 +794,22 @@ def test_defaults_setup_findings_promotion_section_selector_returns_compact_cont
     assert payload["answer"]["accepted_classes"][0]["class"] == "repo_friction_evidence"
     assert "docs/setup-findings-contract.md" in payload["refs"]
     assert "agentic-workspace setup --target ./repo --format json" in payload["refs"]
+
+
+def test_defaults_operating_questions_section_selector_returns_compact_contract_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "operating_questions", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "operating_questions"}
+    assert payload["matched"] is True
+    assert payload["answer"]["canonical_doc"] == "docs/which-package.md"
+    assert payload["answer"]["questions"][0]["id"] == "startup_or_lifecycle_path"
+    assert payload["answer"]["questions"][3]["id"] == "proof_or_ownership_answer"
+    assert payload["answer"]["questions"][4]["then_if_needed"][0] == "llms.txt"
+    assert payload["answer"]["stop_rule"] == ("Do not reopen broader docs once one compact surface has answered the routine question.")
+    assert "docs/which-package.md" in payload["refs"]
 
 
 def test_setup_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Path, capsys) -> None:
