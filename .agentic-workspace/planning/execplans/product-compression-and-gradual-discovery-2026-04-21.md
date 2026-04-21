@@ -25,12 +25,12 @@
 
 ## Iterative Follow-Through
 
-- What this slice enabled: the next roadmap lane is now active, bounded, and recoverable from repo-owned planning surfaces.
-- Intentionally deferred: README tightening, doctrine compression, and broader query-surface cleanup until the startup/discovery contract is frozen.
+- What this slice enabled: the repo now has one explicit tiny safe startup model, explicit boundary-triggered escalation cues, and one compact top-level capability-advertisement pattern shipped through defaults, routing, generated helpers, and startup reporting.
+- Intentionally deferred: README tightening, doctrine compression, and broader query-surface cleanup now that the startup/discovery contract is frozen.
 - Discovered implications: the inactive roadmap queue should now begin with system-intent-and-planning-trust once this lane is active.
-- Proof achieved now: promotion state will be visible through `agentic-workspace summary --format json` once planning surfaces validate cleanly.
-- Validation still needed: run the planning-surface checker and confirm summary reflects one active item plus the reduced roadmap.
-- Next likely slice: implement the minimum startup operating model from `#223` plus the gradual-discovery and capability-advertisement tranche from `#227` and `#228`.
+- Proof achieved now: the first bounded tranche from `#223`, `#227`, and `#228` is now encoded in canonical docs, compact query surfaces, generated helper surfaces, and planning-surface checks.
+- Validation still needed: none for the first tranche beyond the targeted proof already captured; broaden only when starting the next compression slice.
+- Next likely slice: use the frozen startup/discovery contract to tighten README, doctrine, and query-surface visibility without re-expanding the startup model.
 
 ## Delegated Judgment
 
@@ -43,14 +43,14 @@
 
 - ID: product-compression-and-gradual-discovery-2026-04-21
 - Status: in-progress
-- Scope: activate the lane and define the first bounded tranche around the tiny safe startup model and gradual discovery cues.
+- Scope: implement and prove the first bounded tranche around the tiny safe startup model, gradual discovery cues, and compact capability advertisement.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Define the first implementation tranche explicitly as `#223` + `#227` + `#228`: freeze the tiny safe startup model, boundary-triggered escalation cues, and compact top-level capability advertisement before README or doctrine compression.
+- Narrow the next slice against the now-frozen startup/discovery contract: tighten README, doctrine, and broader query surfaces without widening the startup model again.
 
 ## Blockers
 
@@ -61,6 +61,16 @@
 - `.agentic-workspace/planning/state.toml`
 - `.agentic-workspace/planning/execplans/product-compression-and-gradual-discovery-2026-04-21.md`
 - `.agentic-workspace/planning/reviews/product-compression-context-cost-review-2026-04-21.md`
+- `src/agentic_workspace/cli.py`
+- `packages/planning/bootstrap/.agentic-workspace/docs/minimum-operating-model.md`
+- `packages/planning/bootstrap/.agentic-workspace/docs/routing-contract.md`
+- `packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json`
+- `packages/planning/bootstrap/.agentic-workspace/planning/scripts/render_agent_docs.py`
+- `packages/planning/bootstrap/.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`
+- `packages/planning/src/repo_planning_bootstrap/_render.py`
+- `packages/planning/src/repo_planning_bootstrap/installer.py`
+- `tools/AGENT_QUICKSTART.md`
+- `tools/AGENT_ROUTING.md`
 
 ## Invariants
 
@@ -76,13 +86,14 @@
 
 ## Open Questions To Close
 
-- Which current startup surfaces are genuinely required for the tiny safe model versus legacy or secondary discovery aids?
-- What escalation cues should make deeper concepts discoverable without forcing upfront ontology load?
-- How should top-level module capability advertisement stay compact while still signaling when deeper concepts become relevant?
 - Which README and doctrine content should be treated as follow-on compression targets only after the startup/discovery contract is frozen?
 
 ## Validation Commands
 
+- `uv run pytest tests/test_workspace_cli.py -k "defaults_command_reports_machine_readable_default_routes_as_json" -q`
+- `uv run pytest packages/planning/tests/test_installer.py -k "compatibility_view_categories_are_exhaustive_and_disjoint or planning_readme_and_bootstrap_agents_describe_required_follow_on_routing" -q`
+- `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`
+- `uv run pytest tests/test_maintainer_surfaces.py -q`
 - `uv run python scripts/check/check_planning_surfaces.py`
 - `uv run agentic-workspace summary --format json`
 
@@ -100,25 +111,26 @@
 
 ## Proof Report
 
-- Validation proof (logs, command output, or screenshots): pending
-- Proof achieved now: pending
-- Evidence for "Proof achieved" state: pending
+- Validation proof (logs, command output, or screenshots): targeted CLI defaults test, planning installer/checker tests, maintainer-surface tests, planning-surface check, `agentic-workspace defaults --section startup --format json`, `agentic-workspace summary --format json`, and final `agentic-planning-bootstrap` / `agentic-memory-bootstrap` refresh passes all succeeded.
+- Proof achieved now: the tiny safe startup model and discovery-boundary contract are now shipped through defaults, routing, startup reporting, generated helpers, and planning-surface enforcement.
+- Evidence for "Proof achieved" state: `agentic-workspace defaults --section startup --format json` now exposes `tiny_safe_model`, `escalation_cues`, and `top_level_capabilities`; the planning upgrade renders the new helper sections and installs `.agentic-workspace/docs/minimum-operating-model.md`.
 
 ## Intent Satisfaction
 
 - Original intent: Promote the next lane.
-- Was original intent fully satisfied?: not yet
-- Evidence of intent satisfaction: pending
+- Was original intent fully satisfied?: yes for the first bounded startup/discovery tranche; no for the larger lane
+- Evidence of intent satisfaction: `#223`, `#227`, and `#228` now have concrete shipped contract surfaces and enforcement paths instead of remaining review-only direction.
 - Unsolved intent passed to: none
 
 ## Execution Summary
 
-- Outcome delivered: not completed yet
-- Validation confirmed: pending
-- Follow-on routed to: none yet
-- Knowledge promoted (Memory/Docs/Config): none
-- Resume from: define and execute the first bounded startup/discovery tranche
+- Outcome delivered: implemented the first bounded startup/discovery tranche and froze the minimum operating model for later compression work.
+- Validation confirmed: targeted defaults, installer, checker, maintainer-surface, planning-surface, startup-selector, summary, and final repo-level package-refresh validation all passed.
+- Follow-on routed to: the same active execplan
+- Knowledge promoted (Memory/Docs/Config): canonical docs and startup defaults/report contracts
+- Resume from: narrow the next README/doctrine/query-surface cleanup slice against the frozen startup/discovery contract
 
 ## Drift Log
 
 - 2026-04-21: Promoted the `product-compression-and-gradual-discovery` roadmap lane into active planning after the ownership-boundary lane closed.
+- 2026-04-21: Implemented the first bounded tranche from `#223`, `#227`, and `#228` by shipping the tiny safe startup model, boundary-triggered discovery cues, and compact top-level capability advertisement.

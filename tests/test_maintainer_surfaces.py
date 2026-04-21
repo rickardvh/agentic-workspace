@@ -36,9 +36,57 @@ def _baseline_manifest() -> dict[str, object]:
             "first_queries": [
                 "Use `agentic-workspace summary --format json` to recover planning state; use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
             ],
+            "tiny_safe_model": [
+                "Start from `AGENTS.md`.",
+                "Ask compact startup queries first.",
+                "Open deeper surfaces only when the small model stops being sufficient.",
+            ],
             "surface_roles": [
                 "`.agentic-workspace/docs/routing-contract.md` is the authoritative routing home.",
                 "`llms.txt` is the agent entrypoint router.",
+            ],
+            "boundary_triggered_escalation": [
+                {
+                    "boundary": "workspace",
+                    "cue": "routing question",
+                    "load_next": ["agentic-workspace defaults --section startup --format json"],
+                    "why": "workspace owns routing",
+                },
+                {
+                    "boundary": "planning",
+                    "cue": "sequencing question",
+                    "load_next": ["agentic-workspace summary --format json"],
+                    "why": "planning owns active work",
+                },
+                {
+                    "boundary": "memory",
+                    "cue": "durable context question",
+                    "load_next": [".agentic-workspace/memory/repo/"],
+                    "why": "memory owns durable knowledge",
+                },
+            ],
+            "top_level_capabilities": [
+                {
+                    "module": "workspace",
+                    "owns": "routing",
+                    "escalate_when": "routing boundary",
+                    "capability_unlocked": "defaults",
+                    "first_surface": "agentic-workspace defaults --section startup --format json",
+                },
+                {
+                    "module": "planning",
+                    "owns": "active work",
+                    "escalate_when": "planning boundary",
+                    "capability_unlocked": "summary",
+                    "first_surface": "agentic-workspace summary --format json",
+                },
+                {
+                    "module": "memory",
+                    "owns": "durable context",
+                    "escalate_when": "memory boundary",
+                    "capability_unlocked": "memory",
+                    "first_surface": ".agentic-workspace/memory/repo/",
+                },
             ],
             "conditional_reads": [
                 "Read the roadmap in `state.toml` (authoritative) only when promoting work.",
@@ -103,6 +151,11 @@ Use the following order for a fresh entry:
 4. Compact queries:
    - agentic-workspace summary --format json
    - agentic-workspace report --target ./repo --format json
+
+### Tiny Safe Model
+
+- start from AGENTS.md
+- use compact queries before broader prose
 """,
     )
     _write(

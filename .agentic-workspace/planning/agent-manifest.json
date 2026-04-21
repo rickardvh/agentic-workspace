@@ -14,6 +14,11 @@
       "Use `agentic-workspace config --target ./repo --format json` to find the configured startup entrypoint and effective repo posture.",
       "Use `agentic-workspace report --target ./repo --format json` when the question is combined workspace state."
     ],
+    "tiny_safe_model": [
+      "Start from the configured repo entrypoint (`AGENTS.md` by default), not from module internals or broad docs.",
+      "Ask compact startup queries first: `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --format json`, and `agentic-workspace summary --format json`.",
+      "Open raw planning state, execplan prose, or deeper routing docs only when those compact answers show that the small model is no longer sufficient."
+    ],
     "surface_roles": [
       "`AGENTS.md` is the canonical ordinary repo startup entrypoint.",
       "`.agentic-workspace/planning/state.toml` is the package-owned active queue and candidate-lane state after the compact summary has shown raw detail is needed.",
@@ -21,6 +26,60 @@
       "`llms.txt` is the agent entrypoint router.",
       "`tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md` are generated helpers, not doctrine owners.",
       "`.agentic-workspace/planning/agent-manifest.json` is the canonical source for the generated helper docs."
+    ],
+    "boundary_triggered_escalation": [
+      {
+        "boundary": "workspace",
+        "cue": "The question is startup order, lifecycle behavior, config, ownership, or combined workspace state.",
+        "load_next": [
+          "agentic-workspace defaults --section startup --format json",
+          "agentic-workspace config --target ./repo --format json",
+          "agentic-workspace report --target ./repo --format json"
+        ],
+        "why": "Workspace-level surfaces own routing, lifecycle orchestration, and cross-module coordination."
+      },
+      {
+        "boundary": "planning",
+        "cue": "The task needs active sequencing, blockers, proof expectations, promotion decisions, or cross-session continuation.",
+        "load_next": [
+          "agentic-workspace summary --format json",
+          ".agentic-workspace/planning/state.toml",
+          ".agentic-workspace/planning/execplans/"
+        ],
+        "why": "Planning owns active execution state and near-term follow-through."
+      },
+      {
+        "boundary": "memory",
+        "cue": "The work keeps rediscovering repo facts, prior decisions, failure modes, or domain context that should survive the current slice.",
+        "load_next": [
+          ".agentic-workspace/memory/repo/",
+          ".agentic-workspace/memory/WORKFLOW.md"
+        ],
+        "why": "Memory owns durable anti-rediscovery knowledge instead of active execution state."
+      }
+    ],
+    "top_level_capabilities": [
+      {
+        "module": "workspace",
+        "owns": "startup, lifecycle, routing, and combined workspace reporting",
+        "escalate_when": "the task crosses config, install/adopt, ownership, or cross-module coordination boundaries",
+        "capability_unlocked": "compact defaults/config/report guidance plus authoritative workspace contracts",
+        "first_surface": "agentic-workspace defaults --section startup --format json"
+      },
+      {
+        "module": "planning",
+        "owns": "active execution state, sequencing, proof expectations, and promotion-ready follow-through",
+        "escalate_when": "the task needs milestones, blockers, queue updates, or explicit continuation semantics",
+        "capability_unlocked": "summary, active queue state, execplans, and planning validation surfaces",
+        "first_surface": "agentic-workspace summary --format json"
+      },
+      {
+        "module": "memory",
+        "owns": "durable repo knowledge, routed decisions, failure modes, and anti-rediscovery context",
+        "escalate_when": "relevant repo understanding should persist beyond the current chat or implementation slice",
+        "capability_unlocked": "routed memory notes and memory workflow guidance",
+        "first_surface": ".agentic-workspace/memory/repo/"
+      }
     ],
     "conditional_reads": [
       "Read `agentic-workspace summary --format json` first when planning recovery or ownership boundary review is the question.",

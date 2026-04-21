@@ -3599,6 +3599,8 @@ def _emit_startup_report(
         "kind": "startup-report/v1",
         "active_intent": active_record.get("requested_outcome") or "No active intent",
         "immediate_next_action": active_record.get("next_action") or "No next action",
+        "tiny_safe_model": _defaults_payload()["startup"]["tiny_safe_model"],
+        "module_boundaries": _defaults_payload()["startup"]["top_level_capabilities"],
         "critical_invariants": manifest.get("invariants") or [],
         "escalation_boundaries": active_record.get("escalate_when") or [],
         "relevant_handoff_context": plan_report.get("active", {}).get("handoff_contract") or {},
@@ -3822,11 +3824,26 @@ def _defaults_payload() -> dict[str, Any]:
     ]
     return {
         "startup": {
+            "canonical_doc": ".agentic-workspace/docs/minimum-operating-model.md",
             "primary": [
                 "Read the configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`).",
                 "Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary`.",
                 "Read the active execplan only when `state.toml` points to one.",
             ],
+            "tiny_safe_model": {
+                "summary": "Start from one repo entrypoint, one compact state query path, and conditional deeper reads.",
+                "entrypoint": "AGENTS.md",
+                "first_compact_queries": [
+                    "agentic-workspace defaults --section startup --format json",
+                    "agentic-workspace config --target ./repo --format json",
+                    "agentic-workspace summary --format json",
+                ],
+                "deeper_reads_become_valid_when": [
+                    "the active summary points at an execplan or raw planning detail is still needed",
+                    "startup or routing ambiguity survives the compact startup answer",
+                    "the task crosses a planning, memory, or lifecycle boundary that the small model cannot settle safely",
+                ],
+            },
             "default_canonical_agent_instructions_file": DEFAULT_AGENT_INSTRUCTIONS_FILE,
             "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
             "first_queries": [
@@ -3894,6 +3911,57 @@ def _defaults_payload() -> dict[str, Any]:
                 "Check the roadmap in `state.toml` (authoritative) only when promoting work.",
                 "Read package-local `AGENTS.md` only for the package being edited.",
                 "Read memory only when installed and the task needs durable context.",
+            ],
+            "escalation_cues": [
+                {
+                    "boundary": "workspace",
+                    "cue": "The question is startup order, lifecycle behavior, config, ownership, or combined workspace state.",
+                    "load_next": [
+                        "agentic-workspace defaults --section startup --format json",
+                        "agentic-workspace config --target ./repo --format json",
+                        "agentic-workspace report --target ./repo --format json",
+                    ],
+                    "why": "Workspace-level surfaces own routing, lifecycle orchestration, and cross-module coordination.",
+                },
+                {
+                    "boundary": "planning",
+                    "cue": "The task needs active sequencing, blockers, proof expectations, promotion decisions, or cross-session continuation.",
+                    "load_next": [
+                        "agentic-workspace summary --format json",
+                        ".agentic-workspace/planning/state.toml",
+                        ".agentic-workspace/planning/execplans/",
+                    ],
+                    "why": "Planning owns active execution state and near-term follow-through.",
+                },
+                {
+                    "boundary": "memory",
+                    "cue": "The work keeps rediscovering repo facts, prior decisions, failure modes, or domain context that should survive the current slice.",
+                    "load_next": [
+                        ".agentic-workspace/memory/repo/",
+                        ".agentic-workspace/memory/WORKFLOW.md",
+                    ],
+                    "why": "Memory owns durable anti-rediscovery knowledge instead of active execution state.",
+                },
+            ],
+            "top_level_capabilities": [
+                {
+                    "module": "workspace",
+                    "owns": "startup, lifecycle, routing, and combined workspace reporting",
+                    "escalate_when": "the task crosses config, install/adopt, ownership, or cross-module coordination boundaries",
+                    "capability_unlocked": "compact defaults/config/report guidance plus authoritative workspace contracts",
+                },
+                {
+                    "module": "planning",
+                    "owns": "active execution state, sequencing, proof expectations, and promotion-ready follow-through",
+                    "escalate_when": "the task needs milestones, blockers, queue updates, or explicit continuation semantics",
+                    "capability_unlocked": "summary, active queue state, execplans, and planning validation surfaces",
+                },
+                {
+                    "module": "memory",
+                    "owns": "durable repo knowledge, routed decisions, failure modes, and anti-rediscovery context",
+                    "escalate_when": "relevant repo understanding should persist beyond the current chat or implementation slice",
+                    "capability_unlocked": "routed memory notes and memory workflow guidance",
+                },
             ],
             "fallbacks": [
                 (

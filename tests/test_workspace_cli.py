@@ -109,8 +109,12 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert cli.main(["defaults", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["startup"]["canonical_doc"] == ".agentic-workspace/docs/minimum-operating-model.md"
     assert payload["startup"]["default_canonical_agent_instructions_file"] == "AGENTS.md"
     assert payload["startup"]["supported_agent_instructions_files"] == ["AGENTS.md", "GEMINI.md"]
+    assert payload["startup"]["tiny_safe_model"]["entrypoint"] == "AGENTS.md"
+    assert payload["startup"]["tiny_safe_model"]["first_compact_queries"][0] == "agentic-workspace defaults --section startup --format json"
+    assert payload["startup"]["tiny_safe_model"]["deeper_reads_become_valid_when"][0].startswith("the active summary points")
     assert payload["startup"]["first_queries"][0]["command"] == "agentic-workspace defaults --section startup --format json"
     assert payload["startup"]["first_queries"][1]["field"] == "workspace.agent_instructions_file"
     assert payload["startup"]["first_queries"][2]["field"] == "planning_record"
@@ -120,6 +124,9 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         for role in payload["startup"]["surface_roles"]
     )
     assert payload["startup"]["surface_roles"][3]["kind"] == "generated-helper"
+    assert payload["startup"]["escalation_cues"][0]["boundary"] == "workspace"
+    assert payload["startup"]["escalation_cues"][1]["boundary"] == "planning"
+    assert payload["startup"]["top_level_capabilities"][2]["module"] == "memory"
     assert any("current agent does not natively look for `AGENTS.md`" in step for step in payload["startup"]["fallbacks"])
     assert payload["compact_contract_profile"]["canonical_doc"] == ".agentic-workspace/docs/compact-contract-profile.md"
     assert payload["compact_contract_profile"]["rule"] == (

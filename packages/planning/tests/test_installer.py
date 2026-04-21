@@ -230,6 +230,7 @@ def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path("AGENTS.template.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/docs/capability-aware-execution.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path(".agentic-workspace/docs/minimum-operating-model.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/execplans/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/reviews/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/upstream-task-intake.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
@@ -521,8 +522,14 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
         in item
         for item in manifest_payload["bootstrap"]["conditional_reads"]
     )
+    assert any("Ask compact startup queries first" in item for item in manifest_payload["bootstrap"]["tiny_safe_model"])
+    assert manifest_payload["bootstrap"]["boundary_triggered_escalation"][0]["boundary"] == "workspace"
+    assert manifest_payload["bootstrap"]["top_level_capabilities"][1]["module"] == "planning"
     assert any("clear the matched queue residue in the same pass" in item for item in manifest_payload["bootstrap"]["completion_reminders"])
     assert "agentic-workspace defaults --section startup --format json" in quickstart_text
+    assert "## Tiny safe model" in quickstart_text
+    assert "## Boundary-triggered escalation" in quickstart_text
+    assert "## Top-level capabilities" in quickstart_text
     assert "## Surface roles" in quickstart_text
     assert "clear the matched queue residue in the same pass" in quickstart_text
 

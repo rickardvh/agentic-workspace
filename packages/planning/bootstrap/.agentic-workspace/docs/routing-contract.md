@@ -14,6 +14,16 @@ Use the following order for a fresh entry:
    - `agentic-workspace defaults --section startup --format json`: For startup order and surface roles.
    - `agentic-workspace report --target ./repo --format json`: For combined workspace/module status.
 
+### Tiny Safe Model
+
+Ordinary work should begin from one small operating model:
+
+- one startup entrypoint: `AGENTS.md` by default
+- one compact query path: `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --format json`, and `agentic-workspace summary --format json`
+- one rule for deeper reads: load broader prose or module-specific surfaces only when the task crosses a real boundary
+
+Use [minimum-operating-model.md](minimum-operating-model.md) for the compact module-boundary and escalation-cue contract.
+
 ### Surface Roles
 - `AGENTS.md`: Canonical repo startup and operating rules.
 - `.agentic-workspace/planning/state.toml` (`todo.active_items`): Repo-owned active task queue and smallest near-term follow-ons.
@@ -52,6 +62,11 @@ After initial installation or when adopting an existing repository:
 ---
 
 ## 4. Advanced Routing Rules
+
+### Boundary-Triggered Discovery
+- Escalate into workspace surfaces when startup order, lifecycle behavior, config, ownership, or combined workspace state is the real question.
+- Escalate into planning when the task needs active sequencing, blockers, proof expectations, queue updates, or explicit continuation semantics.
+- Escalate into memory when repo understanding should persist beyond the current slice instead of being rediscovered.
 
 ### Standing Intent
 - **Precedence**: Intent from `agentic-workspace summary` or `config` supersedes broad prose.

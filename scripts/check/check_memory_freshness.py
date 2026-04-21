@@ -475,7 +475,9 @@ def main() -> int:
     current_durable_truth_drift = sorted(
         note_path
         for note_path, raw in manifest_notes.items()
-        if isinstance(raw, dict) and note_path.startswith(".agentic-workspace/memory/repo/current/") and str(raw.get("memory_role", "")).strip()
+        if isinstance(raw, dict)
+        and note_path.startswith(".agentic-workspace/memory/repo/current/")
+        and str(raw.get("memory_role", "")).strip()
     )
     current_note_overlap_pressure = _current_note_overlap_pressure(scans)
     incomplete_improvement_signals = sorted(
@@ -609,7 +611,8 @@ def _always_read_creep_items(manifest_notes: dict[str, dict[str, Any]], manifest
         if not isinstance(raw, dict):
             continue
         if (
-            note_path in {".agentic-workspace/memory/repo/current/project-state.md", ".agentic-workspace/memory/repo/current/task-context.md"}
+            note_path
+            in {".agentic-workspace/memory/repo/current/project-state.md", ".agentic-workspace/memory/repo/current/task-context.md"}
             and str(raw.get("task_relevance", "")).strip() == "required"
         ):
             items.append(f"{note_path} should remain optional, not required")

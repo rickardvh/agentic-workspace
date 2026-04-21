@@ -608,12 +608,15 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         or "do not bulk-read all planning surfaces" not in quickstart_text
         or "## first queries" not in quickstart_text
         or "## surface roles" not in quickstart_text
+        or "## tiny safe model" not in quickstart_text
+        or "## boundary-triggered escalation" not in quickstart_text
+        or "## top-level capabilities" not in quickstart_text
     ):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(quickstart_path),
-                "Quickstart must keep startup query order, surface roles, and roadmap/bulk-read constraints explicit.",
+                "Quickstart must keep the tiny safe model, escalation cues, startup query order, and roadmap/bulk-read constraints explicit.",
             )
         )
 
@@ -639,6 +642,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             "authoritative routing home",
             "startup and first contact",
             "cold-start protocol",
+            "tiny safe model",
             "agentic-workspace summary --format json",
             "agentic-workspace report --target ./repo --format json",
         )
@@ -700,7 +704,10 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     bootstrap = manifest.get("bootstrap", {}) if isinstance(manifest, dict) else {}
     first_reads = bootstrap.get("first_reads", []) if isinstance(bootstrap, dict) else []
     first_queries = bootstrap.get("first_queries", []) if isinstance(bootstrap, dict) else []
+    tiny_safe_model = bootstrap.get("tiny_safe_model", []) if isinstance(bootstrap, dict) else []
     surface_roles = bootstrap.get("surface_roles", []) if isinstance(bootstrap, dict) else []
+    boundary_triggered_escalation = bootstrap.get("boundary_triggered_escalation", []) if isinstance(bootstrap, dict) else []
+    top_level_capabilities = bootstrap.get("top_level_capabilities", []) if isinstance(bootstrap, dict) else []
     conditional_reads = bootstrap.get("conditional_reads", []) if isinstance(bootstrap, dict) else []
 
     first_reads_lower = [str(item).lower() for item in first_reads]
@@ -740,6 +747,15 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             )
         )
 
+    if not isinstance(tiny_safe_model, list) or len(tiny_safe_model) < 3:
+        warnings.append(
+            PlanningWarning(
+                WARNING_STARTUP_POLICY_DRIFT,
+                _render_path(manifest_path),
+                "Manifest tiny_safe_model must keep the compact minimum operating model explicit.",
+            )
+        )
+
     if not any(".agentic-workspace/docs/routing-contract.md" in row and "authoritative routing home" in row for row in surface_roles_lower):
         warnings.append(
             PlanningWarning(
@@ -755,6 +771,24 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
                 "Manifest surface_roles must keep llms.txt as the agent entrypoint router.",
+            )
+        )
+
+    if not isinstance(boundary_triggered_escalation, list) or len(boundary_triggered_escalation) < 3:
+        warnings.append(
+            PlanningWarning(
+                WARNING_STARTUP_POLICY_DRIFT,
+                _render_path(manifest_path),
+                "Manifest boundary_triggered_escalation must advertise the main discovery boundaries.",
+            )
+        )
+
+    if not isinstance(top_level_capabilities, list) or len(top_level_capabilities) < 3:
+        warnings.append(
+            PlanningWarning(
+                WARNING_STARTUP_POLICY_DRIFT,
+                _render_path(manifest_path),
+                "Manifest top_level_capabilities must keep compact capability advertisement for the main modules.",
             )
         )
 

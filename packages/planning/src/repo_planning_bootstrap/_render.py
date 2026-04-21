@@ -36,12 +36,66 @@ def render_quickstart(manifest: dict[str, Any]) -> str:
             lines.append(f"- {item}")
         lines.append("")
 
+    tiny_safe_model = bootstrap.get("tiny_safe_model", [])
+    if isinstance(tiny_safe_model, list) and tiny_safe_model:
+        lines.append("## Tiny safe model")
+        lines.append("")
+        for item in tiny_safe_model:
+            lines.append(f"- {item}")
+        lines.append("")
+
     surface_roles = bootstrap.get("surface_roles", [])
     if isinstance(surface_roles, list) and surface_roles:
         lines.append("## Surface roles")
         lines.append("")
         for item in surface_roles:
             lines.append(f"- {item}")
+        lines.append("")
+
+    boundary_triggered_escalation = bootstrap.get("boundary_triggered_escalation", [])
+    if isinstance(boundary_triggered_escalation, list) and boundary_triggered_escalation:
+        lines.append("## Boundary-triggered escalation")
+        lines.append("")
+        for item in boundary_triggered_escalation:
+            if not isinstance(item, dict):
+                continue
+            boundary = str(item.get("boundary", "")).strip()
+            cue = str(item.get("cue", "")).strip()
+            why = str(item.get("why", "")).strip()
+            load_next = item.get("load_next", [])
+            label = f"`{boundary}`" if boundary else "boundary"
+            if cue:
+                lines.append(f"- {label}: {cue}")
+            if isinstance(load_next, list) and load_next:
+                lines.append("  Load next: " + ", ".join(f"`{path}`" for path in load_next))
+            if why:
+                lines.append(f"  Why: {why}")
+        lines.append("")
+
+    top_level_capabilities = bootstrap.get("top_level_capabilities", [])
+    if isinstance(top_level_capabilities, list) and top_level_capabilities:
+        lines.append("## Top-level capabilities")
+        lines.append("")
+        for item in top_level_capabilities:
+            if not isinstance(item, dict):
+                continue
+            module = str(item.get("module", "")).strip()
+            owns = str(item.get("owns", "")).strip()
+            escalate_when = str(item.get("escalate_when", "")).strip()
+            capability_unlocked = str(item.get("capability_unlocked", "")).strip()
+            first_surface = str(item.get("first_surface", "")).strip()
+            label = f"`{module}`" if module else "module"
+            parts = [
+                part
+                for part in (
+                    owns,
+                    f"Escalate when: {escalate_when}" if escalate_when else "",
+                    f"Unlocks: {capability_unlocked}" if capability_unlocked else "",
+                    f"First surface: `{first_surface}`" if first_surface else "",
+                )
+                if part
+            ]
+            lines.append(f"- {label}: " + "; ".join(parts))
         lines.append("")
 
     conditional_reads = bootstrap.get("conditional_reads", [])
@@ -155,6 +209,22 @@ def render_routing(manifest: dict[str, Any]) -> str:
         lines.append("")
         for item in doc_precedence:
             lines.append(f"- {item}")
+        lines.append("")
+
+    boundary_triggered_escalation = bootstrap.get("boundary_triggered_escalation", [])
+    if isinstance(boundary_triggered_escalation, list) and boundary_triggered_escalation:
+        lines.append("## Discovery Boundaries")
+        lines.append("")
+        for item in boundary_triggered_escalation:
+            if not isinstance(item, dict):
+                continue
+            boundary = str(item.get("boundary", "")).strip()
+            cue = str(item.get("cue", "")).strip()
+            why = str(item.get("why", "")).strip()
+            if boundary and cue:
+                lines.append(f"- `{boundary}`: {cue}")
+            if why:
+                lines.append(f"  - Why: {why}")
         lines.append("")
 
     lines.append("## Task Routes")

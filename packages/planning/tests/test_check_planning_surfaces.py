@@ -200,9 +200,57 @@ def _baseline_manifest() -> dict[str, object]:
                 "Use `agentic-workspace summary --format json` first when active planning recovery or compact ownership state is the question.",
                 "Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
             ],
+            "tiny_safe_model": [
+                "Start from `AGENTS.md`.",
+                "Ask compact startup queries first.",
+                "Open deeper surfaces only when the small model stops being sufficient.",
+            ],
             "surface_roles": [
                 "`.agentic-workspace/docs/agent-installation.md` is only the external install/adopt handoff surface.",
                 "`llms.txt` is the agent entrypoint router.",
+            ],
+            "boundary_triggered_escalation": [
+                {
+                    "boundary": "workspace",
+                    "cue": "routing question",
+                    "load_next": ["agentic-workspace defaults --section startup --format json"],
+                    "why": "workspace owns routing",
+                },
+                {
+                    "boundary": "planning",
+                    "cue": "sequencing question",
+                    "load_next": ["agentic-workspace summary --format json"],
+                    "why": "planning owns active work",
+                },
+                {
+                    "boundary": "memory",
+                    "cue": "durable context question",
+                    "load_next": [".agentic-workspace/memory/repo/"],
+                    "why": "memory owns durable knowledge",
+                },
+            ],
+            "top_level_capabilities": [
+                {
+                    "module": "workspace",
+                    "owns": "routing",
+                    "escalate_when": "routing boundary",
+                    "capability_unlocked": "defaults",
+                    "first_surface": "agentic-workspace defaults --section startup --format json",
+                },
+                {
+                    "module": "planning",
+                    "owns": "active work",
+                    "escalate_when": "planning boundary",
+                    "capability_unlocked": "summary",
+                    "first_surface": "agentic-workspace summary --format json",
+                },
+                {
+                    "module": "memory",
+                    "owns": "durable context",
+                    "escalate_when": "memory boundary",
+                    "capability_unlocked": "memory",
+                    "first_surface": ".agentic-workspace/memory/repo/",
+                },
             ],
             "conditional_reads": [
                 "Read `agentic-workspace summary --format json` first when planning recovery or ownership boundary review is the question.",
