@@ -6,7 +6,7 @@
 
 ## Encoded Intent
 
-- Issue intent: consolidate this package's data into one clear, unobtrusive package-owned home, leaving repo-owned surfaces only where they are genuinely repo-owned.
+- Issue intent: consolidate this package's data into one clear, unobtrusive package-owned home under `.agentic-workspace/`, leaving repo-facing surfaces only where they are genuinely repo-owned.
 - Implementation intent: make local-only state explicit inside the package-owned home and treat residue cleanup as a downstream proof of that boundary.
 
 ## Non-Goals
@@ -19,17 +19,14 @@
 
 ## Machine-Readable Contract
 
-```yaml
-slice:
- id: OWNERSHIP-BOUNDARY-AND-LOCAL-ONLY-MODE
- status: in-progress
- state_source: .agentic-workspace/planning/state.toml
- compatibility_views: []
-```
+- Slice ID: OWNERSHIP-BOUNDARY-AND-LOCAL-ONLY-MODE
+- Slice state: in-progress
+- State source: `.agentic-workspace/planning/state.toml`
+- Compatibility views: none
 
 ## Intent Continuity
 
-- Larger intended outcome: Cleaner package/repo separation with one unambiguous package-owned home for planning state and lower install/uninstall residue.
+- Larger intended outcome: Cleaner package/repo separation with one unambiguous package-owned home for planning and memory state and lower install/uninstall residue.
 - This slice completes the larger intended outcome: no
 - Continuation surface: docs/execplans/local-only-residue-via-git-exclude.md
 - Parent lane: ownership-boundary-and-local-only-mode
@@ -42,7 +39,7 @@ slice:
 
 ## Iterative Follow-Through
 
-- What this slice should enable: the active queue and roadmap should live in `.agentic-workspace/planning/state.toml` without any installed compatibility queue views.
+- What this slice should enable: the active queue, roadmap, and package-managed memory home should live in `.agentic-workspace/` without installed compatibility queue views or memory ownership confusion.
 - Intentionally deferred: any broader repo-root startup simplification beyond the package-owned planning boundary.
 - Discovered implications: the repo-owned startup hook should remain small while the package-owned home carries the active planning state explicitly.
 - Navigation difficulty discovered during interruption recovery: package source, package payload, and operational install are still too easy to confuse during active maintainer work, especially when an interrupted session left only a partial migration in place.
@@ -77,14 +74,11 @@ slice:
 
 ## Touched Paths
 
-- .agentic-workspace/planning/state.toml
-- docs/execplans/local-only-residue-via-git-exclude.md
-- README.md
-- packages/planning/AGENTS.md
-- packages/planning/README.md
-- packages/planning/src/repo_planning_bootstrap/installer.py
-- scripts/check/check_planning_surfaces.py
-- AGENTS.md
+- Core boundary docs: `docs/ownership-authority-contract.md`, `docs/compatibility-policy.md`, `docs/collaboration-safety.md`, `docs/integration-contract.md`, `docs/contributor-playbook.md`, `docs/architecture.md`
+- Memory decision surfaces: `memory/current/active-decisions.md`, `memory/decisions/installed-system-consolidation-2026-04-05.md`
+- Memory package contract: `packages/memory/AGENTS.md`, `packages/memory/README.md`, `packages/memory/bootstrap/README.md`, `packages/memory/bootstrap/AGENTS.template.md`, `packages/memory/src/repo_memory_bootstrap/cli.py`, `packages/memory/tests/test_installer.py`
+- Memory payload surfaces: `packages/memory/bootstrap/memory/index.md`, `packages/memory/bootstrap/memory/system/WORKFLOW.md`, `packages/memory/bootstrap/memory/system/SKILLS.md`, `packages/memory/bootstrap/memory/bootstrap/README.md`, `packages/memory/bootstrap/memory/bootstrap/skills/install/SKILL.md`, `packages/memory/bootstrap/memory/skills/REGISTRY.json`, `packages/memory/memory/index.md`, `packages/memory/tests/fixtures/routing/memory-index-template.md`
+- Planning mirrors: `packages/planning/bootstrap/docs/upstream-task-intake.md`, `packages/planning/bootstrap/docs/candidate-lanes-contract.md`
 
 ## Invariants
 
@@ -111,10 +105,10 @@ slice:
 
 ## Execution Summary
 
-- Outcome delivered: planning authority stays in `.agentic-workspace/planning/state.toml`, generated queue/roadmap views are no longer installed under `.agentic-workspace/planning/`, and summary/checker surfaces now derive directly from state when no legacy root views exist.
-- Validation confirmed: `uv run pytest packages/planning/tests/test_planning_lifecycle.py -q`; `uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`; `uv run pytest tests/test_source_payload_operational_install.py -q`.
+- Outcome delivered: planning authority stays in `.agentic-workspace/planning/state.toml`, generated queue/roadmap views are no longer installed under `.agentic-workspace/planning/`, and the boundary story now names the package-managed memory home, the installed memory projection, the module-managed planning state, and the minimal repo hook explicitly in the checked-in docs.
+- Validation confirmed: `uv run pytest packages/planning/tests/test_planning_lifecycle.py -q`; `uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`; `uv run pytest tests/test_source_payload_operational_install.py -q`.
 - Follow-on routed to: continue the same ownership-boundary lane until the broader issue `#231` intent is either satisfied or explicitly narrowed.
-- Knowledge promoted (Memory/Docs/Config): docs/installer-behavior.md, packages/planning/bootstrap/docs/installer-behavior.md
+- Knowledge promoted (Memory/Docs/Config): docs/installer-behavior.md, packages/planning/bootstrap/docs/installer-behavior.md, docs/ownership-authority-contract.md, docs/compatibility-policy.md, docs/collaboration-safety.md, docs/integration-contract.md, docs/upstream-task-intake.md, packages/memory/AGENTS.md, packages/memory/README.md
 - Resume from: compare the live `#231` issue intent against the remaining repo-facing surfaces and reclassify the lane honestly before closing it.
 
 ## Proof Report
@@ -132,9 +126,8 @@ slice:
 
 ## Drift Log
 
-- 2026-04-20: Reopened issue `#231` after the lane was only partially completed and restored the active planning surfaces.
-- 2026-04-20: Interrupted while beginning the package-owned planning-state migration; only the `PLANNING_STATE_PATH` constant had been added when work stopped.
-- 2026-04-20: Completed state-first migration in installer/summary flows and added root compatibility view generation from `.agentic-workspace/planning/state.toml`.
-- 2026-04-20: Recovery from the interrupted migration exposed two separate usability gaps worth preserving for the next simplification lane: package-layer navigation is still too opaque during maintainer work, and issue-orientation still costs too much after a crash or context reset.
-- 2026-04-20: Reopened the lane again after checking the live issue body and finding that the planning-view move satisfied only the narrow planning-state part of `#231`, not the full ownership-boundary intent.
-- 2026-04-20: Removed the installed compatibility queue views entirely; summary/checker fall back to `.agentic-workspace/planning/state.toml` directly, while legacy root views remain migration-only inputs for cleanup and archive compatibility.
+- 2026-04-21: Synced the planning package mirror of upstream-task-intake with the checked-in planning wording so intake guidance no longer implies planning is root-owned.
+- 2026-04-21: Normalized the upstream-task-intake and integration-contract docs to describe checked-in planning without implying planning state is root-owned.
+- 2026-04-21: Tightened collaboration-safety guidance so it matches the clarified split between root-owned memory and module-managed planning state.
+- 2026-04-21: Aligned ownership docs, compatibility policy, and memory decisions so the package-managed memory home, installed memory projection, and module-managed planning state are named explicitly in the checked-in boundary story.
+- 2026-04-20: Completed the state-first planning migration and removed installed compatibility queue views so summaries and checkers fall back to `.agentic-workspace/planning/state.toml` directly.

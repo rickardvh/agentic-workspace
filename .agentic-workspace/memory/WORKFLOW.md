@@ -21,7 +21,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 
 ## Interoperability contract
 
-- Memory owns durable repo knowledge: invariants, authority boundaries, recurring failure modes, routing hints, and operator runbooks.
+- Memory owns durable technical knowledge: invariants, authority boundaries, recurring failure modes, routing hints, and operator runbooks.
 - The repository's active planning/status surface owns active intent and sequencing: current goal, next action, done criteria, milestone status, and backlog state.
 - `memory/mistakes/recurring-failures.md` is anti-trap memory for repeated or high-likelihood mistakes, not issue tracking or bug triage.
 - Memory may keep a small continuation note for interrupted multi-session work, but that note is only re-orientation support for the next session.

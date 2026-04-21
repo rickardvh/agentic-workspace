@@ -764,7 +764,7 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
             f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out "
-            f"that `{target_root}/.agentic-workspace/memory/` is the bootstrap-managed surface while repo-owned "
+            f"that `{target_root}/.agentic-workspace/memory/` is the bootstrap-managed surface while repo-specific "
             "memory notes stay under `memory/`."
         )
     if command == "adopt":
@@ -774,7 +774,7 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             f"Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. "
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
             f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out "
-            f"that `{target_root}/.agentic-workspace/memory/` is the bootstrap-managed surface while repo-owned "
+            f"that `{target_root}/.agentic-workspace/memory/` is the bootstrap-managed surface while repo-specific "
             "memory notes stay under `memory/`."
         )
     if command == "populate":

@@ -2,7 +2,7 @@
 
 Canonical planning contract for turning externally tracked work into checked-in planning.
 
-Use this when work begins in GitHub Issues, Linear, Jira, Notion, internal task docs, or another upstream tracker, but execution should happen from repo-owned planning surfaces.
+Use this when work begins in GitHub Issues, Linear, Jira, Notion, internal task docs, or another upstream tracker, but execution should happen from checked-in planning surfaces.
 
 ## Purpose
 

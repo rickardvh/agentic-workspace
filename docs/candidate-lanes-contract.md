@@ -1,6 +1,6 @@
 # Candidate Lanes Contract
 
-The `roadmap` section in `.agentic-workspace/planning/state.toml` stays the single repo-owned surface for inactive future work.
+The `roadmap` section in `.agentic-workspace/planning/state.toml` stays the single module-managed surface for inactive future work.
 When a flat candidate bullet is too weak, use a native candidate lane inside that same file instead of inventing ad hoc queue prose or a second backlog file.
 
 ## Purpose

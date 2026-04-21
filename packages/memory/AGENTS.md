@@ -10,7 +10,7 @@ Package-local contract for work under `packages/memory/`.
 
 - This package contains the reusable `agentic-memory-bootstrap` source, shipped payload, package-local skills, and tests.
 - Treat `bootstrap/` as packaged payload content for target repositories, not as the active memory system of this monorepo.
-- Treat the root `memory/` tree and root planning surfaces as the operational authority for this repository.
+- Treat the package-managed memory home under `.agentic-workspace/memory/` and the installed memory projection under `memory/` as the operational authority surfaces for this repository.
 - When a task crosses package source, shipped payload, and root install boundaries, use `docs/source-payload-operational-install.md` to keep the layers separate.
 
 ## Architecture Context
@@ -18,7 +18,7 @@ Package-local contract for work under `packages/memory/`.
 - Workspace layer: `agentic-workspace` is the thin composition layer and normal lifecycle front door for installs that include memory.
 - Package layer: `packages/memory/` owns memory-specific source, shipped payload, package skills, and regression coverage.
 - Installed layer: the target repo's `memory/` tree and `.agentic-workspace/memory/` surfaces are the live memory contract after bootstrap.
-- In this monorepo, the root `memory/` tree plus the root installed workspace surfaces are the live operational copy; this package directory is not a second active memory install.
+- In this monorepo, the package-managed memory home under `.agentic-workspace/` is the active design space for shared memory machinery, while the repo-facing `memory/` tree is the installed contract; this package directory is not a second active memory install.
 
 ## Start Here
 
@@ -41,7 +41,7 @@ Package-local contract for work under `packages/memory/`.
 
 - Keep a clear distinction between package source, shipped payload, and target-repository installed surfaces.
 - Do not treat files under `bootstrap/` as repo-owned monorepo workflow surfaces; they are package output.
-- Do not recreate package-local operational installs in this monorepo; root memory/planning installs remain authoritative here.
+- Do not recreate package-local operational installs in this monorepo; keep the package-managed `.agentic-workspace/` home authoritative and treat the repo-facing `memory/` tree as the installed contract.
 - Preserve CLI behavior and upgrade semantics unless the active task explicitly changes them.
 - Prefer updating tests when installer paths, ownership rules, or payload contracts change.
 

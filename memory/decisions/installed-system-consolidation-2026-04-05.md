@@ -24,19 +24,19 @@ Accepted
 
 ## Decision
 
-Use a single root-owned installed memory system and a single root-owned installed planning system for the monorepo, then remove package-local installed systems from packages/memory and packages/planning.
+Use a single package-owned installed memory system and a module-managed planning system for the monorepo, with the package-managed home under `.agentic-workspace/`, then remove duplicate package-local installed systems from packages/memory and packages/planning.
 
 ## Why
 
 - Duplicate installed systems create conflicting ownership for routing, workflow entrypoints, and current-state notes.
 - uv workspace resolution remains workspace-wide from member directories, so cwd alone does not provide robust system isolation.
-- Root orchestration and CI are easier to reason about when operational systems are owned once at root.
+- Root orchestration and CI are easier to reason about when operational systems are owned once in the package-managed install home and projected into the repo-facing contract only when needed.
 
 ## Consequences
 
 - Package knowledge and planning context must be intentionally preserved in root-owned notes before package-local operational copies are removed.
 - Package-level validation still runs through package-scoped sync/check lanes.
-- Package-local installed-system files are no longer authoritative for monorepo operations.
+- Package-local installed-system files are no longer authoritative for monorepo operations, and planning state now lives in `.agentic-workspace/planning/state.toml` as module-managed state.
 
 ## Follow-through
 

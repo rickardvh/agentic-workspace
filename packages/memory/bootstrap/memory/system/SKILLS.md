@@ -17,7 +17,7 @@ Use three layers inside a repo:
 Explicit registry surfaces:
 
 - bundled installed core skills: `.agentic-workspace/memory/skills/REGISTRY.json`
-- repo-owned memory skills: `memory/skills/REGISTRY.json`
+- repo-specific memory skills: `memory/skills/REGISTRY.json`
 
 The bootstrap contract remains the always-on minimal file structure that keeps the system understandable even without skills. `.agentic-memory/bootstrap/` is temporary operator workspace, not a durable knowledge surface.
 

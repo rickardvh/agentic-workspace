@@ -40,7 +40,7 @@ It operates on checked-in memory files. It does not replace them.
 - Keep the core operating model in checked-in docs; do not move repo purpose, invariants, or task state into a skill.
 - Keep durable knowledge in checked-in files so the result stays visible and reviewable in git.
 - Preserve useful current guidance; remove only what no longer helps the next contributor.
-- Do not move durable technical knowledge into task tooling.
+- Do not move durable repo knowledge into task tooling.
 - Mark uncertain notes `Needs verification` instead of guessing.
 - If memory keeps compensating for the same awkward subsystem or workflow, suggest the upstream improvement instead of only expanding the note.
 - Do not assume good hygiene means fewer notes in every repo; it means clearer, cheaper, better-justified notes and less dependence on memory for avoidable complexity.

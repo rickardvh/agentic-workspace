@@ -11,7 +11,7 @@ flowchart TD
     W[agentic-workspace\nthin workspace layer] --> M[Agentic Memory\nagentic-memory-bootstrap]
     W --> P[Agentic Planning\nagentic-planning-bootstrap]
     P --> R[Target-repo planning install\n.agentic-workspace/planning/state.toml • docs/execplans/\n.agentic-workspace/planning/]
-    M --> N[Target-repo memory install\nmemory/ • .agentic-workspace/memory/]
+    M --> N[Target-repo memory contract\nmemory/ and .agentic-workspace/memory/]
     P --> G[Generated maintainer docs\ntools/agent-manifest.json\nAGENT_QUICKSTART.md\nAGENT_ROUTING.md]
     G --> C[Maintainer liveness path\nmake maintainer-surfaces\nscripts/check/check_maintainer_surfaces.py]
 ```
@@ -29,7 +29,7 @@ flowchart TD
 
 In this monorepo:
 
-- Root planning and memory installs are authoritative for live monorepo operation.
+- Installed planning and memory surfaces are authoritative for live monorepo operation, but the package-managed home stays concentrated under `.agentic-workspace/` and the repo-facing projection stays minimal.
 - `packages/memory/` and `packages/planning/` are package workspaces for source, payloads, tests, and fixtures.
 - Package directories should not grow new package-local operational installs.
 - `docs/source-payload-operational-install.md` names the maintainer boundary between package source, payload, and the root install, and `make maintainer-surfaces` now checks that boundary directly.

@@ -34,8 +34,8 @@ In combined installs, the interaction should be stronger than simple compatibili
 
 When multiple surfaces mention the same concern, prefer the narrowest canonical owner in this order:
 
-1. Repo-owned active execution surfaces for active-now state: `.agentic-workspace/planning/state.toml` and active execplans.
-2. Repo-owned durable memory or canonical docs for facts that outlive the current thread.
+1. Module-managed active execution state for active-now work: `.agentic-workspace/planning/state.toml` plus active execplans.
+2. Package-managed durable memory or canonical docs for facts that outlive the current thread, with the package home kept compact under `.agentic-workspace/`.
 3. Product-managed module surfaces under `.agentic-workspace/memory/` or `.agentic-workspace/planning/` for shared workflow support, upgrade source, and generated support assets.
 4. Generated mirrors such as `tools/` docs only as rendered outputs, never as editable source.
 
@@ -130,7 +130,7 @@ The goal is to let planning say what matters now while memory supplies only the 
 
 ### Managed -> Repo-Owned Surfaces
 
-Product-managed `.agentic-workspace/` surfaces may support repo execution, but they should stay upgrade-replaceable and subordinate to repo-owned planning and memory content.
+Product-managed `.agentic-workspace/` surfaces may support repo execution, but they should stay upgrade-replaceable and subordinate to package-managed memory content and module-managed planning state, not spread new authority into the wider repo.
 
 Allowed:
 
@@ -161,7 +161,7 @@ Not allowed:
 ## Branch-Vs-Trunk State
 
 - Branch-local, low-half-life state belongs in active planning or `memory/current/` and should stay easy to compress, replace, or archive.
-- Durable facts that should survive merges belong in canonical memory notes or normal checked-in docs.
+- Durable facts that should survive merges belong in memory notes or normal checked-in docs.
 - Product-managed support files under `.agentic-workspace/` should change through their owning package or managed source, not by ad hoc edits in downstream mirrors.
 - Generated mirrors should change by rerendering from their canonical source.
 

@@ -38,14 +38,14 @@ The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`,
 
 ## Ownership Map
 
-- Root workspace: shared lifecycle orchestration, root planning surfaces, shared memory notes, root validation entrypoints, and the thin `agentic-workspace` CLI.
+- Root workspace: shared lifecycle orchestration, root planning surfaces, memory notes, root validation entrypoints, and the thin `agentic-workspace` CLI.
 - `packages/memory/`: reusable `agentic-memory-bootstrap` source, packaged payload, package skills, and memory-specific tests.
 - `packages/planning/`: reusable `agentic-planning-bootstrap` source, packaged payload, planning helpers, and planning-specific tests.
 
 ## Pick The Right Surface
 
 - Use root planning surfaces for active work, roadmap candidates, and execplans.
-- Use root memory notes for durable repo knowledge, decisions, and recurring failure modes.
+- Use memory notes for durable repo knowledge, decisions, and recurring failure modes.
 - Treat `memory/current/` as weak-authority current context: concise re-orientation only, not the durable home for facts.
 - Use `docs/extraction-and-discovery-contract.md` when one change spans package source, packaged payload, and the root installed surfaces.
 - Leave touched surfaces cleaner than you found them, and route broader cleanup as follow-up instead of treating it as invisible task residue.

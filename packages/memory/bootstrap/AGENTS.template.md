@@ -21,11 +21,11 @@ Do not rely on transient chat context when the same knowledge should exist in ch
 
 `memory/index.md` is the routing layer for task-relevant durable knowledge.
 `.agentic-workspace/memory/WORKFLOW.md` is a compact policy shim for the shared operating model.
-`.agentic-workspace/memory/SKILLS.md` defines how repo-owned `memory/skills/` and bundled bootstrap-managed skills should coexist.
+`.agentic-workspace/memory/SKILLS.md` defines how repo-specific `memory/skills/` and bundled bootstrap-managed skills should coexist.
 
 Keep durable repo knowledge in checked-in files. Prefer skills for repeatable procedures that operate on that knowledge.
-`memory/skills/` is only for repo-owned skills whose primary purpose is operating on checked-in memory or maintaining the repo's memory system; general non-memory skills do not belong there.
-Treat `.agentic-workspace/memory/` as the bootstrap-managed surface that may be replaced on upgrade. Put repo-specific durable knowledge in other `/memory` notes and repo-specific memory procedures in repo-owned sibling skills under `memory/skills/`.
+`memory/skills/` is only for repo-specific skills whose primary purpose is operating on checked-in memory or maintaining the repo's memory system; general non-memory skills do not belong there.
+Treat `.agentic-workspace/memory/` as the bootstrap-managed surface that may be replaced on upgrade. Put repo-specific durable knowledge in other `/memory` notes and repo-specific memory procedures in sibling skills under `memory/skills/`.
 
 ## Repo scope
 

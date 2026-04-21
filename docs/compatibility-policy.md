@@ -6,7 +6,9 @@ Use it when you need to decide whether a change is a normal refresh, an intentio
 
 ## Stable Today
 
-- Repo-owned guidance and planning surfaces: `AGENTS.md`, `.agentic-workspace/planning/state.toml`, `docs/execplans/`, `docs/design-principles.md`, `docs/boundary-and-extraction.md`, `docs/maturity-model.md`, `docs/which-package.md`, and this policy.
+- Repo-owned guidance and policy surfaces: `AGENTS.md`, `docs/execplans/`, `docs/design-principles.md`, `docs/boundary-and-extraction.md`, `docs/maturity-model.md`, `docs/which-package.md`, and this policy.
+- Module-managed memory contract surfaces: `memory/` and `.agentic-workspace/memory/`.
+- Module-managed planning state: `.agentic-workspace/planning/state.toml`.
 - Maintainer-facing root docs that describe commands, routing, review bars, or package selection.
 - Public CLI entrypoints and module names that are already part of the checked-in contract.
 - Package READMEs and packaging metadata that define the current installable entrypoints.

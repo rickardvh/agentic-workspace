@@ -25,7 +25,7 @@ Current high-impact decisions that still affect active implementation choices.
 
 ## Current decisions
 
-- Root owns the operational memory and planning installs for this repo; package-local copies are fixtures or payload sources.
+- The package-managed memory install for this repo is the operational authority; planning state is module-managed under `.agentic-workspace/planning/state.toml`, and package-local copies are fixtures or payload sources.
 - The root `agentic-workspace` CLI is the shared lifecycle entrypoint for common workspace verbs, while package CLIs remain authoritative for module-specific behavior.
 - Keep collaboration-safe installed-contract hardening ahead of new top-level concepts when dogfooding exposes merge or ownership ambiguity.
 - Use ownership tests and explicit manifests before introducing new shared managed surfaces.

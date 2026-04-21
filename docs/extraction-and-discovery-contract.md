@@ -5,7 +5,6 @@ This contract defines the policy for identifying new capabilities, extracting th
 ## 1. Discovery and Findings
 
 ### Setup Findings
-
 - **Purpose**: Captures advisory findings during `init`, `setup`, or `doctor` passes.
 - **Triage**: Findings should be triaged into:
   - **Dismiss**: Duplicate or out of scope.
@@ -14,7 +13,6 @@ This contract defines the policy for identifying new capabilities, extracting th
 - **Storage**: Optional findings live in `tools/setup-findings.json`. This file is transient and should be removed once findings are promoted or dismissed.
 
 ### Skill Discovery
-
 - Use for identifying reusable agent skills and registry-backed workflows.
 - Skills should be discovered and registered rather than remaining ad hoc script snippets.
 
@@ -23,14 +21,12 @@ This contract defines the policy for identifying new capabilities, extracting th
 ## 2. Extraction Policy
 
 Extract a new package only when:
-
 - **Stable Boundary**: The ownership is clear and doesn't overlap with existing modules.
 - **Explicit Seams**: The capability exposes manifests, schemas, or generated artifacts.
 - **Independent Utility**: The package is useful on its own in selective-adoption repos.
 - **Maintenance Friction**: Dogfooding shows that staying in the root or a module is causing friction.
 
 ### Workspace Thinness
-
 - New module-specific logic belongs in the package CLI first.
 - The root workspace layer only centralizes composition, reporting, and shared lifecycle orchestration.
 
@@ -39,12 +35,10 @@ Extract a new package only when:
 ## 3. Declarative Contract Boundary
 
 ### Purpose
-
 - Keep stable metadata (selectors, schemas, route IDs) inspectable without reading Python code.
 - Avoid turning the workspace into a heavy workflow engine.
 
 ### Classification Rule
-
 - **Declarative**: Data is stable, versioned, and inspectable (e.g. selector metadata, proof route IDs).
 - **Procedural**: Logic depends on live repo state, dynamic branching, or complex reconciliation.
 - **Derived**: Payload is assembled from stable manifests plus live state (e.g. `agentic-workspace report`).
@@ -63,8 +57,7 @@ This monorepo maintains four distinct layers to separate the shipped product fro
 | **Repo-Specific Files**| Metadata unique to this monorepo's identity, build, and environment. | `pyproject.toml`, `README.md`, `Makefile` | **Local configuration.** Entirely separate from shipped logic. |
 
 ### Operational Hygiene
-
-- **Edit Payload First**: Changes to distributed contracts (e.g., `docs/*-contract.md`) must be made in the `packages/*/bootstrap/` payload.
+- **Edit Payload First**: Changes to distributed contracts (e.g., `docs/*-contract.md`) must be made in the `packages/*/bootstrap/` payload. 
 - **Upgrade to Dogfood**: After editing the payload, run the package's `upgrade` command (e.g., `uv run agentic-planning-bootstrap upgrade`) to apply the changes to the monorepo root.
 - **Template Separation**: To prevent confusion, generic tracking files in the payload are named with a `.template.md` suffix (e.g., `TODO.template.md`). The installer strips this suffix during deployment to ensure the target repo receives standard operational filenames.
 - **Do not patch root alone**: Do not patch the root operational install alone if a package upgrade would overwrite it or if the change is intended for distribution.

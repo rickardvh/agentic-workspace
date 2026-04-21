@@ -15,7 +15,6 @@ Use the following order for a fresh entry:
    - `agentic-workspace report --target ./repo --format json`: For combined workspace/module status.
 
 ### Surface Roles
-
 - `AGENTS.md`: Canonical repo startup and operating rules.
 - `.agentic-workspace/planning/state.toml` (`todo.active_items`): Repo-owned active task queue and smallest near-term follow-ons.
 - `.agentic-workspace/planning/state.toml` (`roadmap`): Repo-owned inactive long-horizon candidate work and promotion signals.
@@ -24,9 +23,7 @@ Use the following order for a fresh entry:
 - `agent-installation.md`: Detailed external install/adopt handoff instructions.
 
 ### External Install/Adopt Handoff
-
 When an external agent is installing or adopting this repo:
-
 - **Primary Command**: `agentic-workspace init --target ./repo --preset full`.
 - **Guest-Mode Command**: `agentic-workspace install --target ./repo --preset full --local-only`.
 - **Handoff Artifacts**: Check for `.agentic-workspace/bootstrap-handoff.md` after bootstrap.
@@ -57,12 +54,10 @@ After initial installation or when adopting an existing repository:
 ## 4. Advanced Routing Rules
 
 ### Standing Intent
-
 - **Precedence**: Intent from `agentic-workspace summary` or `config` supersedes broad prose.
 - **Supersession**: Newer checked-in intent (e.g. in a plan) supersedes older roadmap candidates.
 
 ### Promotion and Escalation
-
 - **Promotion**: Move work from `roadmap` to `todo.active_items` in `.agentic-workspace/planning/state.toml` when scope and dependencies are clear.
 - **Escalation**: If the task exceeds local latitude or the current model's capability, use `docs/capability-aware-execution.md` to select a stronger lane.
 

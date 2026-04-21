@@ -4,7 +4,7 @@ Agentic Memory is a checked-in repo-memory contract for anti-rediscovery knowled
 
 ## At A Glance
 
-Choose this package when you want a repository to keep durable, shared technical knowledge that survives across sessions, contributors, branches, and agent tools.
+Choose this package when you want a repository to keep durable, shared repo knowledge that survives across sessions, contributors, branches, and agent tools.
 
 Use it for:
 
@@ -205,7 +205,7 @@ Running `install` or `adopt` adds the following to your repository:
 | `memory/current/` | Lightweight project overview and optional task-continuation compression |
 | `memory/templates/` | Starter note templates for the first repo-specific memory notes you replace or add |
 | `.agentic-workspace/memory/skills/` | Bootstrap-managed shared memory skills, upgrade-replaceable |
-| `memory/skills/` | Optional repo-owned memory skills |
+| `memory/skills/` | Optional repo-specific memory skills |
 | `scripts/check/` | Advisory freshness audit script |
 
 Install and adopt flows may create a temporary `.agentic-workspace/memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace. Upgrade should normally route through the checked-in `memory-upgrade` skill and no longer depends on that workspace as part of the primary model.
