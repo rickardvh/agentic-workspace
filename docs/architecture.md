@@ -32,7 +32,7 @@ In this monorepo:
 - Installed planning and memory surfaces are authoritative for live monorepo operation, but the package-managed home stays concentrated under `.agentic-workspace/` and the repo-facing projection stays minimal.
 - `packages/memory/` and `packages/planning/` are package workspaces for source, payloads, tests, and fixtures.
 - Package directories should not grow new package-local operational installs.
-- `docs/source-payload-operational-install.md` names the maintainer boundary between package source, payload, and the root install, and `make maintainer-surfaces` now checks that boundary directly.
+- [`.agentic-workspace/docs/extraction-and-discovery-contract.md`](../.agentic-workspace/docs/extraction-and-discovery-contract.md) names the maintainer boundary between package source, payload, and the root install, and `make maintainer-surfaces` now checks that boundary directly.
 
 ## Why The Workspace Layer Stays Thin
 

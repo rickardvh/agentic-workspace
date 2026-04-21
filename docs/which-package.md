@@ -21,12 +21,12 @@ Ask the smallest useful question first:
 
 | If you need to know... | Ask this first | Then, only if needed |
 | --- | --- | --- |
-| how to start or which lifecycle path applies | `AGENTS.md`, then `agentic-workspace config --target ./repo --format json` | [`docs/default-path-contract.md`](default-path-contract.md) |
+| how to start or which lifecycle path applies | `AGENTS.md`, then `agentic-workspace config --target ./repo --format json` | [`.agentic-workspace/docs/lifecycle-and-config-contract.md`](../.agentic-workspace/docs/lifecycle-and-config-contract.md) |
 | what is active right now | `agentic-workspace summary --format json` | `.agentic-workspace/planning/state.toml`, then one active execplan |
 | what the combined workspace state looks like | `agentic-workspace report --target ./repo --format json` | raw module files or maintainer docs |
-| which proof or ownership answer is enough | `agentic-workspace defaults --section proof_selection --format json`, `agentic-workspace proof --target ./repo --format json`, or `agentic-workspace ownership --target ./repo --format json` | [`docs/default-path-contract.md`](default-path-contract.md) and the referenced contract doc |
+| which proof or ownership answer is enough | `agentic-workspace defaults --section proof_selection --format json`, `agentic-workspace proof --target ./repo --format json`, or `agentic-workspace ownership --target ./repo --format json` | [`.agentic-workspace/docs/compact-contract-profile.md`](../.agentic-workspace/docs/compact-contract-profile.md) and the referenced proof or ownership contract |
 | where handoff or setup work lives | `llms.txt` or `agentic-workspace setup --target ./repo --format json` | `.agentic-workspace/bootstrap-handoff.md` or `.json` when bootstrap says review is still needed |
-| what mixed-agent posture is in effect | `agentic-workspace config --target ./repo --format json` | [`docs/workspace-config-contract.md`](workspace-config-contract.md) |
+| what mixed-agent posture is in effect | `agentic-workspace config --target ./repo --format json` | [`.agentic-workspace/docs/delegation-posture-contract.md`](../.agentic-workspace/docs/delegation-posture-contract.md) |
 
 Stop at the first compact surface that answers the question.
 Use broader docs or raw files only when the compact surface is insufficient.
@@ -77,7 +77,7 @@ That profile is for repos that need durable knowledge and compact routing but do
 
 ## Read Next
 
-- Compact operating map and first question: [`docs/default-path-contract.md`](default-path-contract.md)
+- Compact operating map and first question: [`.agentic-workspace/docs/compact-contract-profile.md`](../.agentic-workspace/docs/compact-contract-profile.md)
 - Memory path: [`packages/memory/README.md`](../packages/memory/README.md)
 - Planning path: [`packages/planning/README.md`](../packages/planning/README.md)
 - Architecture: [`docs/architecture.md`](architecture.md)

@@ -61,7 +61,7 @@ Current covered questions:
 ## Relationship To Other Docs
 
 - Use [`.agentic-workspace/docs/compact-contract-profile.md`](.agentic-workspace/docs/compact-contract-profile.md) for the selector and compact-answer contract itself.
-- Use [`.agentic-workspace/docs/reporting-contract.md`](.agentic-workspace/docs/reporting-contract.md) and [`docs/default-path-contract.md`](docs/default-path-contract.md) when choosing the preferred compact route for a workflow question.
+- Use [`.agentic-workspace/docs/reporting-contract.md`](../.agentic-workspace/docs/reporting-contract.md) and [`.agentic-workspace/docs/compact-contract-profile.md`](../.agentic-workspace/docs/compact-contract-profile.md) when choosing the preferred compact route for a workflow question.
 - Use [`.agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md`](.agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md) when you want to classify internal friction, repeated surface pull, or outsider-legibility concerns during ordinary work.
 - Use [`.agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md`](.agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md) when you want to record whether the measured route was actually chosen during ordinary work.
 - Use `.agentic-workspace/planning/reviews/README.md` ordinary-use-pull mode when the ledger shows repeated low-pull patterns and you need to decide whether to merge, demote, or retire a surface.

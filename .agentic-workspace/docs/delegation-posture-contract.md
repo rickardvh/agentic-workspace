@@ -64,6 +64,6 @@ The text form should stay short and stable:
 ## Relationship To Other Docs
 
 - Use [`docs/delegated-judgment-contract.md`](docs/delegated-judgment-contract.md) for the boundary between human-set outcomes and agent-local means.
-- Use [`docs/workspace-config-contract.md`](docs/workspace-config-contract.md) for the repo-owned config and local override posture that influence delegation preference.
+- Use [`.agentic-workspace/docs/lifecycle-and-config-contract.md`](lifecycle-and-config-contract.md) for the repo-owned config and local override posture that influence delegation preference.
 - Use [`.agentic-workspace/docs/capability-aware-execution.md`](.agentic-workspace/docs/capability-aware-execution.md) for the broader capability-fit decision tree.
 - Use [`docs/orchestrator-workflow-contract.md`](docs/orchestrator-workflow-contract.md) for the delegated planner-to-worker workflow and the active handoff surface.

@@ -202,7 +202,7 @@ Not allowed:
 - If a cross-module or shared maintainer behavior needs implementation logic, give it one canonical managed source before exposing thin root or package wrappers.
 - Root wrappers, package mirrors, and bootstrap copies may forward to that managed source, but they should not become parallel logic owners.
 - When this rule is violated, the duplicated wrapper logic is a composition-contract bug, not only a maintenance nuisance.
-- If duplication pressure persists after that step and affects more than one owning module, re-evaluate under `docs/boundary-and-extraction.md` before extracting broader shared tooling.
+- If duplication pressure persists after that step and affects more than one owning module, re-evaluate under `.agentic-workspace/docs/extraction-and-discovery-contract.md` before extracting broader shared tooling.
 
 ## Checks And Liveness
 

@@ -126,5 +126,5 @@ If that review reveals bounded follow-on work, record it in `roadmap` in `.agent
 
 - Use [`docs/integration-contract.md`](docs/integration-contract.md) for how memory, planning, managed surfaces, and generated docs interact today.
 - Use [`docs/module-capability-contract.md`](docs/module-capability-contract.md) for the current first-party capability/dependency/result contract that prepares the registry for later extension without opening it yet.
-- Use [`docs/boundary-and-extraction.md`](docs/boundary-and-extraction.md) for extraction criteria and ownership rules.
+- Use [`.agentic-workspace/docs/extraction-and-discovery-contract.md`](../.agentic-workspace/docs/extraction-and-discovery-contract.md) for extraction criteria and ownership rules.
 - Use [`docs/ecosystem-roadmap.md`](docs/ecosystem-roadmap.md) for long-horizon stance without treating it as a promise of immediate extension support.

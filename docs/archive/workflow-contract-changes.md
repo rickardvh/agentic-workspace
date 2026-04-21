@@ -12,7 +12,7 @@ Keep this page short and decision-shaped; it is not the full changelog, release 
 
 ## 2026-04-08
 
-- Restored the missing canonical source/payload/root-install boundary guide at `docs/source-payload-operational-install.md`.
+- Restored the missing canonical source/payload/root-install boundary guide at `.agentic-workspace/docs/extraction-and-discovery-contract.md`.
 - Hardened `scripts/check/check_maintainer_surfaces.py` so the direct wrapper now aggregates planning-surface checks with the boundary checker when that checker exists in the repo.
 
 ## 2026-04-07
