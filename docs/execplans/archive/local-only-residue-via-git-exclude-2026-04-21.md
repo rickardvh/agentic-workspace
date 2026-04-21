@@ -2,7 +2,7 @@
 
 ## Goal
 
-- Re-establish issue `#231` as a broader ownership-boundary lane: keep package-owned state inside `.agentic-workspace/`, justify every remaining repo-facing surface as genuinely repo-owned, and keep local-only or uninstall residue low as a consequence of that boundary.
+- Re-establish issue `#231` as a broader ownership-boundary lane: root-level artefacts are the smell, package-owned state should collapse inward under `.agentic-workspace/`, and outward promotion should happen only when ownership genuinely changes.
 
 ## Intake Source
 
@@ -21,7 +21,7 @@
 ## Non-Goals
 
 - Treat the planning-state move as sufficient closure for the whole lane.
-- Delete every repo-facing surface by default.
+- Interrupt the current migration tranche or use this lane as permission to derail already-active migration work.
 - Remove the root startup hook or the ownership boundary review without first proving they are not genuine repo contracts.
 - Introduce a new storage backend.
 - Rewrite installer architecture outside the residue path.
@@ -38,27 +38,27 @@
 ## Intent Continuity
 
 - Larger intended outcome: Cleaner package/repo separation with one unambiguous package-owned home for package-maintained state, a minimal repo hook, and repo-root surfaces that remain only when they are durable repo contracts.
-- This slice completes the larger intended outcome: yes
-- Continuation surface: none
+- This slice completes the larger intended outcome: no
+- Continuation surface: `.agentic-workspace/planning/state.toml` (`roadmap` lane `ownership-boundary-and-root-footprint-reduction`)
 - Parent lane: ownership-boundary-and-local-only-mode
 
 ## Required Continuation
 
-- Required follow-on for the larger intended outcome: no
-- Owner surface: none
-- Activation trigger: none
+- Required follow-on for the larger intended outcome: yes
+- Owner surface: `.agentic-workspace/planning/state.toml` (`roadmap` lane `ownership-boundary-and-root-footprint-reduction`)
+- Activation trigger: current migration work reaches the next boundary-cleanup tranche, at which point root `memory/`, leaked config, and hybrid package-owned `docs/` material should be collapsed back into package-owned homes unless they are strongly justified as true repo contracts.
 
 ## Iterative Follow-Through
 
-- What this slice enabled: the ownership ledger, docs, payload mirrors, and live memory contract now agree on the package-owned versus repo-owned boundary that issue `#231` asked to make explicit.
+- What this slice enabled: the incorrect closeout exposed exactly where the product and planning still default to justifying root-visible surfaces instead of treating them as boundary debt.
 - Intentionally deferred: any broad installer redesign or backend/storage work beyond what the ownership review proves necessary.
-- Discovered implications: the root `memory/` tree is a deliberate repo-owned durable-knowledge contract, while `.agentic-workspace/memory/` is the package-owned support home; the previous `memory/current/active-decisions.md` note was boundary debt rather than a justified contract.
+- Discovered implications: repo-specific does not equal repo-owned; root `memory/`, root config, and hybrid `docs/` surfaces remain suspicious until the migration tranche explicitly proves otherwise or moves them inward.
 - Navigation difficulty discovered during interruption recovery: package source, package payload, and operational install are still too easy to confuse during active maintainer work, especially when an interrupted session left only a partial migration in place.
 - Orientation difficulty discovered during interruption recovery: re-establishing which open issues were follow-on product gaps versus direct blockers for this lane took extra issue and planning-surface rereading, which is a sign the current product shape still exposes too much planner-internal structure up front.
 - Deferred planning-trust follow-ons surfaced from the premature closeout: #236 separate slice completion from lane completion, #237 require an explicit gap check before archive or close, and #238 make closure depend on evidence, not confidence.
-- Proof achieved now: `agentic-workspace report` no longer crashes on empty findings, fresh `init` installs inherit the corrected ownership ledger, and the checked-in boundary explicitly classifies repo-owned `memory/` separately from package-managed `.agentic-workspace/memory/`.
-- Validation still needed: none for `#231`; broader product-shape follow-ons remain tracked separately in `#236`, `#237`, and `#238`.
-- Next likely slice: none for this lane.
+- Proof achieved now: `agentic-workspace report` no longer crashes on empty findings, and the previous `memory/current/active-decisions.md` note was removed from the live memory contract.
+- Validation still needed: the next boundary tranche still needs to minimize repo-root footprint, move package-owned state under `.agentic-workspace/`, and split package/system-owned versus repo-specific-but-still-package-owned artefacts inside that domain.
+- Next likely slice: reopen `#231` as inward boundary cleanup after the current migration tranche finishes, starting with explicit relocation targets for root `memory/`, leaked config, and package-owned planning/memory/install/routing material in `docs/`.
 
 ## Contract Decisions To Freeze
 
@@ -83,14 +83,14 @@
 ## Active Milestone
 
 - Status: completed
-- Scope: Reingest the updated `#231` framing, classify the remaining repo-facing ownership boundary, and implement the boundary corrections needed to make that classification hold in live installs and reports.
+- Scope: Reingest the updated `#231` framing, then make a first pass at ownership classification and supporting fixes. This archived slice is a premature closeout record, not evidence that the larger lane is done.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Archive this completed plan and remove the matched active-item residue from `.agentic-workspace/planning/state.toml`.
+- Keep this as an archived premature-closeout record and carry the remaining lane forward in roadmap planning instead of treating `#231` as satisfied.
 
 ## Blockers
 
@@ -116,7 +116,7 @@
 
 ## Validation Commands
 
-- uv run pytest tests/test_workspace_cli.py -q -k "ownership_command_reports_authority_map or ownership_real_init_classifies_repo_memory_separately_from_managed_support or report_real_init_summarizes_combined_workspace_state or report_handles_modules_with_empty_findings_lists"
+- uv run pytest tests/test_workspace_cli.py -q -k "ownership_command_reports_authority_map or ownership_real_init_does_not_settle_repo_root_memory_as_repo_owned_contract or report_real_init_summarizes_combined_workspace_state or report_handles_modules_with_empty_findings_lists"
 - uv run pytest packages/memory/tests/test_installer.py -q
 - uv run pytest packages/memory/tests/test_check_memory_freshness.py -q
 - uv run python scripts/check/check_source_payload_operational_install.py
@@ -135,28 +135,28 @@
 
 ## Execution Summary
 
-- Outcome delivered: the repo now treats `memory/` as a deliberate repo-owned durable-memory contract, `.agentic-workspace/memory/` as package-managed support, removes `memory/current/active-decisions.md` from the live contract, fixes the empty-findings crash in `agentic-workspace report`, and updates fresh-install ownership payloads to match the checked-in ledger.
-- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q -k "ownership_command_reports_authority_map or ownership_real_init_classifies_repo_memory_separately_from_managed_support or report_real_init_summarizes_combined_workspace_state or report_handles_modules_with_empty_findings_lists"`; `uv run pytest packages/memory/tests/test_installer.py -q`; `uv run pytest packages/memory/tests/test_check_memory_freshness.py -q`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace ownership --target . --format json`; `uv run agentic-workspace report --target . --format json`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`.
-- Follow-on routed to: none for `#231`; broader planning-trust follow-ons remain on issues `#236`, `#237`, and `#238`.
-- Knowledge promoted (Memory/Docs/Config): `.agentic-workspace/OWNERSHIP.toml`, `docs/ownership-authority-contract.md`, `docs/architecture.md`, `memory/index.md`, `memory/manifest.toml`, `memory/decisions/README.md`, `packages/memory/bootstrap/README.md`, `packages/memory/memory/index.md`, `src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml`
-- Resume from: none; lane completed.
+- Outcome delivered: fixed the empty-findings crash in `agentic-workspace report`, removed `memory/current/active-decisions.md` from the live memory contract, and exposed that the broader `#231` lane was closed on the wrong default.
+- Validation confirmed: `uv run pytest tests/test_workspace_cli.py -q -k "ownership_command_reports_authority_map or ownership_real_init_does_not_settle_repo_root_memory_as_repo_owned_contract or report_real_init_summarizes_combined_workspace_state or report_handles_modules_with_empty_findings_lists"`; `uv run pytest packages/memory/tests/test_installer.py -q`; `uv run pytest packages/memory/tests/test_check_memory_freshness.py -q`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace ownership --target . --format json`; `uv run agentic-workspace report --target . --format json`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`.
+- Follow-on routed to: `.agentic-workspace/planning/state.toml` roadmap lane `ownership-boundary-and-root-footprint-reduction`; related planning-trust follow-ons remain on issues `#236`, `#237`, and `#238`.
+- Knowledge promoted (Memory/Docs/Config): `memory/index.md`, `memory/manifest.toml`, `memory/decisions/README.md`, `src/agentic_workspace/cli.py`
+- Resume from: the next migration-backed boundary cleanup tranche should start from the corrected default that root artefacts are presumptively boundary debt, not presumptively justified contracts.
 
 ## Proof Report
 
-- Validation proof: `uv run pytest tests/test_workspace_cli.py -q -k "ownership_command_reports_authority_map or ownership_real_init_classifies_repo_memory_separately_from_managed_support or report_real_init_summarizes_combined_workspace_state or report_handles_modules_with_empty_findings_lists"`; `uv run pytest packages/memory/tests/test_installer.py -q`; `uv run pytest packages/memory/tests/test_check_memory_freshness.py -q`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace ownership --target . --format json`; `uv run agentic-workspace report --target . --format json`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`
-- Proof achieved now: the broader ownership rule from `#231` now explains the live repo-facing surface set without falling back to historical layout convenience, and both fresh installs and current reports honor that classification.
-- Evidence for "Proof achieved" state: ownership output now reports repo-owned `memory/` separately from package-managed `.agentic-workspace/memory/`; fresh `init` installs emit the corrected ownership ledger; the live memory contract no longer routes through `memory/current/active-decisions.md`; `agentic-workspace report` succeeds even when module findings are empty; and source/payload/root-install plus planning-surface checks report no drift.
+- Validation proof: `uv run pytest tests/test_workspace_cli.py -q -k "ownership_command_reports_authority_map or ownership_real_init_does_not_settle_repo_root_memory_as_repo_owned_contract or report_real_init_summarizes_combined_workspace_state or report_handles_modules_with_empty_findings_lists"`; `uv run pytest packages/memory/tests/test_installer.py -q`; `uv run pytest packages/memory/tests/test_check_memory_freshness.py -q`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace ownership --target . --format json`; `uv run agentic-workspace report --target . --format json`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`
+- Proof achieved now: the bounded fixes in this slice are real, but they do not prove that root `memory/`, leaked config, or hybrid package-owned `docs/` material are justified repo-owned contracts.
+- Evidence for "Proof achieved" state: the validation above proves the report fix and the memory-contract cleanup; it does not prove the larger boundary-cleanup intent, which remains open and was prematurely declared complete.
 
 ## Intent Satisfaction
 
 - Original intent: separate package-owned state cleanly from repo-owned surfaces so install and uninstall become low-residue operations even for local-only mode.
-- Was original intent fully satisfied?: yes
-- Evidence of intent satisfaction: the remaining ambiguous ownership boundary was classified and implemented end-to-end: repo-root `memory/` stays only as durable repo knowledge, package-managed support moved or remained under `.agentic-workspace/`, stale package-owned decision state was removed from the root memory contract, fresh-install ownership payloads now match the checked-in ledger, and the resulting install/report/check flows validate without boundary drift.
-- Unsolved intent passed to: none
+- Was original intent fully satisfied?: no
+- Evidence of intent satisfaction: this slice improved part of the contract surface, but it used the wrong default by treating some root-visible artefacts as justified once they were classifiable; the corrected interpretation is that root artefacts are the smell and should move inward unless ownership has truly changed.
+- Unsolved intent passed to: `.agentic-workspace/planning/state.toml` roadmap lane `ownership-boundary-and-root-footprint-reduction` and issue `#231`
 
 ## Drift Log
 
 - 2026-04-21: Reingested the updated issue `#231` and widened the active lane from the planning-state move to the broader ownership review across memory, docs, config, startup hooks, and uninstall residue.
 - 2026-04-21: Preserved the earlier planning-state proof as already-achieved evidence instead of letting it masquerade as full lane closure.
-- 2026-04-21: Classified root `memory/` as a deliberate repo-owned durable-memory contract, removed `memory/current/active-decisions.md` from the live contract, fixed `agentic-workspace report` for empty findings, and synchronized the fresh-install ownership payload with the checked-in ownership ledger.
+- 2026-04-21: Prematurely closed the broader lane by treating root `memory/` and root config as justified repo-owned contracts; this archive now records that mistake and routes the larger intent back into roadmap planning with the corrected inward-default interpretation.
 - 2026-04-20: The prior slice finished the state-first planning migration and removed installed compatibility queue views, which now serves as input proof for the broader boundary review.

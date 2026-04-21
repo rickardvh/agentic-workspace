@@ -1018,7 +1018,7 @@ def test_ownership_command_reports_authority_map(tmp_path: Path, monkeypatch, ca
     assert payload["warnings"] == []
 
 
-def test_ownership_real_init_classifies_repo_memory_separately_from_managed_support(tmp_path: Path, capsys) -> None:
+def test_ownership_real_init_does_not_settle_repo_root_memory_as_repo_owned_contract(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -1029,14 +1029,11 @@ def test_ownership_real_init_classifies_repo_memory_separately_from_managed_supp
 
     payload = json.loads(capsys.readouterr().out)
     assert any(
-        entry["surface"] == "memory/" and entry["owner"] == "repo" and entry["ownership"] == "repo_owned"
-        for entry in payload["authority_surfaces"]
-    )
-    assert any(
         entry["surface"] == ".agentic-workspace/memory/" and entry["owner"] == "memory" and entry["ownership"] == "module_managed"
         for entry in payload["authority_surfaces"]
     )
-    assert any(entry["surface"] == "memory/" for entry in payload["boundary_review"]["repo_owned"]["authority_surfaces"])
+    assert not any(entry["surface"] == "memory/" for entry in payload["authority_surfaces"])
+    assert not any(entry["surface"] == "memory/" for entry in payload["boundary_review"]["repo_owned"]["authority_surfaces"])
     assert payload["boundary_review"]["smallest_explicit_repo_hook"]["surface"] == "AGENTS.md#agentic-workspace:workflow"
 
 

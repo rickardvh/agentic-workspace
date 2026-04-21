@@ -11,7 +11,7 @@ flowchart TD
     W[agentic-workspace\nthin workspace layer] --> M[Agentic Memory\nagentic-memory-bootstrap]
     W --> P[Agentic Planning\nagentic-planning-bootstrap]
     P --> R[Target-repo planning install\n.agentic-workspace/planning/state.toml • docs/execplans/\n.agentic-workspace/planning/]
-    M --> N[Target-repo memory contract\nrepo-owned memory/ plus package-managed .agentic-workspace/memory/]
+    M --> N[Target-repo memory boundary\npackage-owned memory should collapse into .agentic-workspace/\nuntil ownership is deliberately promoted outward]
     P --> G[Generated maintainer docs\ntools/agent-manifest.json\nAGENT_QUICKSTART.md\nAGENT_ROUTING.md]
     G --> C[Maintainer liveness path\nmake maintainer-surfaces\nscripts/check/check_maintainer_surfaces.py]
 ```

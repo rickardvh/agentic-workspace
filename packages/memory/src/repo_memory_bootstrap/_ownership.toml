@@ -78,14 +78,6 @@ authority = "primary"
 summary = "Repo-level startup instructions and local operating constraints."
 
 [[authority_surfaces]]
-concern = "durable-repo-memory"
-surface = "memory/"
-owner = "repo"
-ownership = "repo_owned"
-authority = "primary"
-summary = "Repo-owned durable knowledge and lightweight shared context installed through memory."
-
-[[authority_surfaces]]
 concern = "active-execution-state"
 surface = "TODO.md"
 owner = "repo"
@@ -108,14 +100,6 @@ owner = "repo"
 ownership = "repo_owned"
 authority = "primary"
 summary = "Design tests for product-shape, ownership, and lifecycle changes."
-
-[[authority_surfaces]]
-concern = "workspace-config"
-surface = "agentic-workspace.toml"
-owner = "repo"
-ownership = "repo_owned"
-authority = "primary"
-summary = "Repo-owned lifecycle defaults and module update intent."
 
 [[authority_surfaces]]
 concern = "shared-workflow-contract"

@@ -54,16 +54,17 @@ Those forms return the compact contract answer profile from [`docs/compact-contr
 | Concern | Primary surface | Owner | Ownership class |
 | --- | --- | --- | --- |
 | Repo startup instructions | `AGENTS.md` | repo | `repo_owned` |
-| Durable repo memory contract | `memory/` | repo | `repo_owned` |
 | Package-managed memory home | `.agentic-workspace/memory/` | memory | `module_managed` |
 | Active execution state | `.agentic-workspace/planning/state.toml` (`todo.active_items`) | planning | `module_managed` |
 | Long-horizon candidate queue | `.agentic-workspace/planning/state.toml` (`roadmap`) | planning | `module_managed` |
 | Design constraints for product-shape changes | `docs/design-principles.md` | repo | `repo_owned` |
-| Repo-owned workspace lifecycle defaults | `agentic-workspace.toml` | repo | `repo_owned` |
 | Shared workflow contract | `.agentic-workspace/WORKFLOW.md` | workspace | `module_managed` |
 | Ownership ledger | `.agentic-workspace/OWNERSHIP.toml` | workspace | `module_managed` |
 | Product-managed planning install tree | `.agentic-workspace/planning/` | planning | `module_managed` |
 | Workflow pointer block inside `AGENTS.md` | fenced block in `AGENTS.md` | workspace | `managed_fence` |
+
+Root `memory/`, root config, and hybrid `docs/` surfaces remain boundary-review targets under issue `#231`.
+Do not treat them as settled repo-owned authority surfaces merely because they are repo-specific or currently root-visible.
 
 ## Ownership Classes
 
@@ -90,7 +91,7 @@ The full ownership payload includes a `boundary_review` section that groups the 
 
 - package-owned module roots and managed surfaces under `.agentic-workspace/`
 - explicit package-owned local-only state inside `.gemini/agentic-workspace/`
-- repo-owned authority surfaces such as `AGENTS.md`, `memory/`, `docs/design-principles.md`, and `agentic-workspace.toml`
+- repo-owned authority surfaces such as `AGENTS.md` and `docs/design-principles.md`
 - module-managed memory support surfaces such as `.agentic-workspace/memory/`
 - module-managed planning authority such as `.agentic-workspace/planning/state.toml`
 - middle-ground managed fences inside repo-owned files, with the workflow pointer fence in `AGENTS.md` as the smallest explicit repo hook for startup
