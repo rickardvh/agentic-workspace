@@ -3,13 +3,13 @@
 Use `agentic-workspace` as the public entrypoint.
 Pick the preset that matches the repo problem.
 
-Agentic Workspace is primarily a quiet repo-native capability layer. The lightweight operational profile is memory-first: useful when the repo needs durable knowledge and a small visible surface rather than checked-in active execution.
+Agentic Workspace is primarily a quiet repo-native capability layer. If you want the smallest useful core, start by checking whether the `memory` profile is enough.
 
 ## Fast Chooser
 
 Use `agentic-workspace defaults --section install_profiles --format json` for the compact preset chooser.
 
-That query surface now owns the first-line answer for which preset fits the repo problem, what each profile is for, and which partial-adoption combinations are supported.
+That query surface now owns the first-line answer for which preset fits the repo problem, what each profile is for, which partial-adoption combinations are supported, and why `memory` is the lightweight starting point.
 
 ## Compact Operating Map
 
@@ -21,21 +21,7 @@ Use broader docs or raw files only when that compact surface says you still need
 
 ## What Stays Secondary
 
-These are real but secondary:
-
-- direct package CLIs
-- package-local maintainer workflows
-- debugging-oriented lifecycle paths
-
-Use them when you explicitly need module-level control, not for normal adoption.
-
-## Partial Adoption
-
-Supported partial-adoption combinations are also listed in `agentic-workspace defaults --section install_profiles --format json`.
-
-## Lightweight Operational Profile
-
-If you want the smallest useful core, choose `memory`; the compact rationale now lives in `agentic-workspace defaults --section install_profiles --format json`.
+Direct package CLIs, package-local maintainer workflows, and debugging-oriented lifecycle paths are real but secondary. Use them only when you explicitly need module-level control, not for normal adoption.
 
 ## Read Next
 

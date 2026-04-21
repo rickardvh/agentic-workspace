@@ -20,17 +20,17 @@
 ## Required Continuation
 
 - Required follow-on for the larger intended outcome: yes
-- Owner surface: `.agentic-workspace/planning/execplans/product-compression-and-gradual-discovery-2026-04-21.md`
-- Activation trigger: complete the first bounded startup/discovery tranche and reassess the next compression slice from the same lane.
+- Owner surface: `.agentic-workspace/planning/state.toml`
+- Activation trigger: repeated dogfooding shows another visible surface still acting like a first-line handbook or forcing prose-first rereads after the current compressed startup/front-door/query split.
 
 ## Iterative Follow-Through
 
 - What this slice enabled: the repo now has one explicit tiny safe startup model, explicit boundary-triggered escalation cues, and one compact top-level capability-advertisement pattern shipped through defaults, routing, generated helpers, and startup reporting.
-- Intentionally deferred: broader query-surface cleanup now that the startup/discovery contract is frozen and the front-door/doctrine slice has landed.
-- Discovered implications: the inactive roadmap queue should now begin with system-intent-and-planning-trust once this lane is active.
-- Proof achieved now: the startup/discovery tranche is frozen, and the next compression slice now has a stricter README front door plus a smaller must-internalize doctrine surface with tactical dogfooding policy routed elsewhere.
-- Validation still needed: prove the preset chooser can move from prose-first taxonomy into a compact defaults surface without turning install guidance into a broader handbook again.
-- Next likely slice: if the install-profile selector lands cleanly, reassess whether any remaining routine lookup still justifies another compact promotion under `#226`.
+- Intentionally deferred: broader product-shape subtraction beyond the current startup/front-door/doctrine/query compression proof.
+- Discovered implications: the remaining open epic pressure from `#230` is better represented as a lower-priority candidate lane than as a stale active item.
+- Proof achieved now: the startup/discovery tranche is frozen, the README and doctrine surfaces are smaller, and `docs/which-package.md` no longer carries first-line operating-map or preset-chooser authority.
+- Validation still needed: none for this bounded tranche.
+- Next likely slice: reopen only if repeated future evidence shows another visible surface still deserves demotion, merger, or compact query promotion.
 
 ## Delegated Judgment
 
@@ -42,15 +42,15 @@
 ## Active Milestone
 
 - ID: product-compression-and-gradual-discovery-2026-04-21
-- Status: in-progress
-- Scope: promote the install-profile chooser from prose into a compact defaults surface now that the operating-question map has landed and `docs/which-package.md` can shrink further.
-- Ready: ready
+- Status: completed
+- Scope: complete the bounded product-compression tranche by freezing the tiny startup model, tightening the front door and doctrine surfaces, promoting two routine lookup maps into defaults, and leaving `docs/which-package.md` as a secondary pointer page.
+- Ready: completed
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Move the preset chooser out of `docs/which-package.md` and into a compact defaults surface, then shrink the remaining install taxonomy so it becomes secondary.
+- None. Reopen only on repeated future residue pressure that still justifies another bounded subtraction slice.
 
 ## Blockers
 
@@ -90,7 +90,7 @@
 
 ## Open Questions To Close
 
-- After the operating-question map and preset chooser move into defaults, is there any remaining lookup in `docs/which-package.md` that still forces enough rereading to justify another compact promotion?
+- After `docs/which-package.md` becomes a secondary pointer page, is there any remaining repeated prose-first lookup elsewhere that honestly justifies another `#226` promotion?
 
 ## Validation Commands
 
@@ -116,30 +116,33 @@
 - one routine operating-map lookup is answered by a compact defaults surface instead of a prose table.
 - corresponding prose now clearly points back to the queryable surface instead of competing with it.
 - one routine preset-selection lookup is answered by a compact defaults surface instead of a prose taxonomy.
+- `docs/which-package.md` reads as a small pointer page rather than a second compact handbook.
+- the active tranche leaves the queue instead of lingering as a stale in-progress item once no immediate bounded slice remains.
 
 ## Proof Report
 
 - Validation proof (logs, command output, or screenshots): `uv run pytest tests/test_workspace_cli.py -k "defaults_command_reports_machine_readable_default_routes_as_json or operating_questions or install_profiles" -q`; `uv run pytest tests/test_maintainer_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace defaults --section operating_questions --format json`; `uv run agentic-workspace defaults --section install_profiles --format json`; `uv run agentic-workspace summary --format json`.
-- Proof achieved now: the active lane now has a stricter public front door, a smaller must-internalize doctrine surface, and two ordinary lookups from `docs/which-package.md` promoted into compact defaults surfaces without changing the already-frozen startup/discovery model.
-- Evidence for "Proof achieved" state: `README.md` now points ordinary work at the compact startup path and narrower maintainer docs; `docs/design-principles.md` now holds doctrine rather than mixed tactical policy; `docs/dogfooding-feedback.md` owns dogfooding/admission policy explicitly; `docs/which-package.md` now points both its operating map and preset chooser at queryable defaults answers.
+- Proof achieved now: the active lane now has a stricter public front door, a smaller must-internalize doctrine surface, and two ordinary lookups from `docs/which-package.md` promoted into compact defaults surfaces, leaving the remaining prose genuinely secondary.
+- Evidence for "Proof achieved" state: `README.md` now points ordinary work at the compact startup path and narrower maintainer docs; `docs/design-principles.md` now holds doctrine rather than mixed tactical policy; `docs/dogfooding-feedback.md` owns dogfooding/admission policy explicitly; `docs/which-package.md` now acts as a small pointer page instead of duplicating the operating map and preset chooser.
 
 ## Intent Satisfaction
 
 - Original intent: Promote the next lane.
-- Was original intent fully satisfied?: yes for the first bounded startup/discovery tranche; no for the larger lane
-- Evidence of intent satisfaction: `#223`, `#227`, and `#228` landed first; `#224` and the doctrine half of `#225` now follow from that frozen model instead of widening it; `#226` now moves both the operating-question map and preset chooser into compact defaults surfaces.
-- Unsolved intent passed to: none
+- Was original intent fully satisfied?: yes for the bounded compression tranche; no for the broader subtraction epic in `#230`
+- Evidence of intent satisfaction: `#223`, `#227`, and `#228` landed first; `#224` and the doctrine half of `#225` then compressed the front door and doctrine surfaces; `#226` moved both the operating-question map and preset chooser into compact defaults surfaces and left `docs/which-package.md` secondary.
+- Unsolved intent passed to: `.agentic-workspace/planning/state.toml` (`roadmap.lanes` candidate `further-product-compression-on-repeated-pressure`)
 
 ## Execution Summary
 
-- Outcome delivered: tightened the README into a stricter front door, compressed `docs/design-principles.md` into enduring doctrine, moved tactical dogfooding/admission policy into `docs/dogfooding-feedback.md`, and promoted both the ordinary operating-question map and the preset chooser into compact defaults surfaces.
+- Outcome delivered: tightened the README into a stricter front door, compressed `docs/design-principles.md` into enduring doctrine, moved tactical dogfooding/admission policy into `docs/dogfooding-feedback.md`, promoted both the ordinary operating-question map and the preset chooser into compact defaults surfaces, and reduced `docs/which-package.md` to a genuinely secondary pointer page.
 - Validation confirmed: workspace CLI defaults tests, maintainer-surface tests, planning-surface checks, the compact operating-question answer, the compact install-profile answer, and the compact planning summary all passed after the compression changes.
-- Follow-on routed to: the same active execplan
+- Follow-on routed to: `.agentic-workspace/planning/state.toml`
 - Knowledge promoted (Memory/Docs/Config): canonical docs and startup defaults/report contracts
-- Resume from: decide whether any routine lookup beyond the operating-question map and preset chooser still forces enough prose rereading to justify another compact promotion under `#226`
+- Resume from: reopen product-compression follow-through only if repeated dogfooding shows another visible residue class still forcing first-line rereads or default-mental-model bloat
 
 ## Drift Log
 
 - 2026-04-21: Promoted the `product-compression-and-gradual-discovery` roadmap lane into active planning after the ownership-boundary lane closed.
 - 2026-04-21: Implemented the first bounded tranche from `#223`, `#227`, and `#228` by shipping the tiny safe startup model, boundary-triggered discovery cues, and compact top-level capability advertisement.
 - 2026-04-21: Used the startup review plus live issue bodies for `#224`, `#225`, and `#226` to narrow the second slice: README/front-door compression and doctrine compression now land before any broader query-surface expansion.
+- 2026-04-21: Completed the bounded compression tranche after moving the operating-question map and preset chooser into compact defaults surfaces and reducing `docs/which-package.md` to a secondary pointer page.
