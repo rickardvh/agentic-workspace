@@ -139,6 +139,7 @@ It also defines the bounded-initiative rule: improve means locally, but do not s
 `docs/intent-contract.md` defines the compact machine-readable active intent contract exposed through `agentic-planning-bootstrap summary --format json` as a view over the canonical `planning_record`.
 `docs/orchestrator-workflow-contract.md` defines the delegated planner-to-worker workflow and `agentic-planning-bootstrap handoff --format json` surface for agent-agnostic bounded handoff.
 `.agentic-workspace/docs/standing-intent-contract.md` defines the standing-intent classification and promotion contract used by the workspace report to route durable repo-wide guidance into the right owner surface.
+`.agentic-workspace/docs/system-intent-contract.md` defines how a bounded slice preserves the larger intended outcome and how closure decisions stay honest when the slice completes before the broader lane or issue does.
 `docs/resumable-execution-contract.md` defines the smaller machine-readable restart contract as a view over the same canonical `planning_record`.
 `docs/environment-recovery-contract.md` defines both how task-local environment assumptions and recovery paths should be expressed without growing a second plan schema, and the ordered recovery path when lifecycle work, repo-state inspection, or validation restart becomes ambiguous.
 `docs/execution-summary-contract.md` defines the compact completion summary that archived slices should leave behind.
@@ -190,6 +191,7 @@ Execplans now treat four fields as first-class:
 - `Required Continuation`: whether follow-on is mandatory for that larger outcome, plus the owner surface and activation trigger
 - `Iterative Follow-Through`: what the slice enabled, what it intentionally deferred, what new implications were discovered, and what proof or validation still carries forward
 - `Execution Summary`: what the slice delivered, how validation was confirmed, where follow-on was routed, and how later work should resume
+Execplans also leave an explicit `Closure Check`: whether the bounded slice is complete, whether the larger intended outcome is actually closed, which archive path is honest, what evidence carries forward, and what should trigger reopening.
 When an execplan is carrying broad direction across sessions, it should also record a compact `Delegated Judgment` section:
 
 - `Requested outcome`
@@ -199,6 +201,7 @@ When an execplan is carrying broad direction across sessions, it should also rec
 
 If required follow-on remains, archive should happen only after those fields point at a checked-in next owner.
 Completed plans should also leave an explicit execution summary before archive so later contributors do not have to reconstruct the outcome from drift prose or chat.
+Completed plans should also leave an explicit closure check before archive so later contributors can tell the difference between slice completion and larger-intent closure without reopening issue prose.
 If the slice stopped intentionally rather than finishing the broader goal, keep `Iterative Follow-Through` current so the next bounded slice inherits the right residue without rereading the full plan.
 Optional nice-to-have follow-up can still stay out of the archive gate.
 

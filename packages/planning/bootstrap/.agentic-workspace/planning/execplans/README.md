@@ -10,6 +10,7 @@ Use `docs/planning-routing-contract.md` when deciding whether newly discovered w
 Use `python scripts/check/check_planning_surfaces.py` for advisory shape and drift warnings across `todo.active_items`, active execplans, and `roadmap`.
 Use `promote-to-plan` and `archive-plan` as thin file-native helpers around the same checked-in contract.
 Use `docs/environment-recovery-contract.md` for task-local recovery and environment assumptions.
+Use `.agentic-workspace/docs/system-intent-contract.md` for the durable larger-intent and honest-reinterpretation rule.
 Use `docs/intent-contract.md` and `docs/resumable-execution-contract.md` for the compact planning summary contracts.
 Use `docs/execution-summary-contract.md` for the compact outcome shape that completed slices should leave behind before archive.
 Use `archive-plan --apply-cleanup` only when you want the helper to also remove completed active-item references and compress matching roadmap residue for the same archived thread.
@@ -22,7 +23,7 @@ This planning system is for execution. It is not intended to become a generic tr
 - Keep only active plans plus `README.md` and `TEMPLATE.md` at the top level.
 - Move completed plans into `.agentic-workspace/planning/execplans/archive/`.
 - Mark the active milestone `Status` as `completed` before archiving a finished plan.
-- Before archive, fill `## Proof Report` and `## Intent Satisfaction` so the lane-level closure evidence is explicit.
+- Before archive, fill `## Proof Report`, `## Intent Satisfaction`, and `## Closure Check` so the lane-level closure evidence is explicit.
 - Keep exactly one active milestone and one immediate next action by default.
 - Prefer feature-scoped plan files over growing broad shared hot files.
 - Skip `archive/` during normal startup unless the task explicitly needs historical plan context.
@@ -83,6 +84,7 @@ Each active plan should stay compact and include:
 - required tools when the task depends on a capability that may be absent in some runtimes
 - completion criteria
 - execution summary
+- closure check
 - drift log
 
 Readiness fields belong under `## Active Milestone` for active plans:
@@ -135,6 +137,20 @@ It exists to preserve the intended end state, the allowed local latitude, and th
 Use `none` only when the slice is so local that delegated-judgment framing would add no value beyond the surrounding plan.
 `agentic-workspace summary --format json` exposes a typed `planning-summary/v1` payload. Inside that payload, `planning_record` is the canonical active planning record when planning has one active TODO item and one active execplan. `active_contract` is the narrower intent projection over that record.
 Treat `planning_record` as canonical active state when it is available; raw `.agentic-workspace/planning/state.toml` and execplan prose remain the thin human maintenance layer and semantic fallback.
+
+Closure checks belong under `## Closure Check` for completed or nearly-complete plans:
+
+- `Slice status`
+- `Larger-intent status`
+- `Closure decision`
+- `Why this decision is honest`
+- `Evidence carried forward`
+- `Reopen trigger`
+
+Use this section to distinguish bounded slice success from larger-intent closure.
+`archive-and-close` is only honest when the larger intent is actually satisfied.
+`archive-but-keep-lane-open` is the honest path when the slice is complete but required continuation remains elsewhere.
+Do not force later contributors to infer this decision from drift prose, issue bodies, or chat residue.
 
 ## Meaning Boundary
 

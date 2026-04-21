@@ -65,6 +65,23 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
         if status in {"completed", "done", "closed"}
         else ""
     )
+    closure_check = (
+        "\n## Closure Check\n\n"
+        "- Slice status: bounded slice complete\n"
+        "- Larger-intent status: closed\n"
+        "- Closure decision: archive-and-close\n"
+        "- Why this decision is honest: the bounded slice and larger intent are both complete.\n"
+        "- Evidence carried forward: proof and intent satisfaction both show the lane is closed.\n"
+        "- Reopen trigger: none\n"
+        if status in {"completed", "done", "closed"}
+        else "\n## Closure Check\n\n"
+        "- Slice status: in progress\n"
+        "- Larger-intent status: open\n"
+        "- Closure decision: keep-active\n"
+        "- Why this decision is honest: the active milestone has not closed yet.\n"
+        "- Evidence carried forward: validation and completion criteria are still pending.\n"
+        "- Reopen trigger: finish the current milestone and reassess closure.\n"
+    )
     return """
 # Plan Alpha
 
@@ -143,11 +160,18 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
 
 {proof_report}
 {intent_satisfaction}
+{closure_check}
 
 ## Drift Log
 
 - 2026-04-04: Initial plan created.
-""".format(status=status, execution_summary=execution_summary, proof_report=proof_report, intent_satisfaction=intent_satisfaction)
+""".format(
+        status=status,
+        execution_summary=execution_summary,
+        proof_report=proof_report,
+        intent_satisfaction=intent_satisfaction,
+        closure_check=closure_check,
+    )
 
 
 def _rename_like_execplan(*, with_reference_sweep: bool = False) -> str:
@@ -940,6 +964,32 @@ def test_completed_rename_like_execplan_with_reference_sweep_passes(tmp_path: Pa
 
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     assert not [warning for warning in warnings if warning.warning_class == "execplan_closure_drift"]
+
+
+def test_execplan_missing_closure_check_warns_early(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_missing_closure_check")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    plan = _minimal_execplan().split("\n## Closure Check\n\n", 1)[0] + "\n"
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", plan)
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    assert any(warning.warning_class == "execplan_closure_drift" for warning in warnings)
+
+
+def test_completed_execplan_with_partial_archive_decision_requires_open_larger_intent(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_partial_closure_mismatch")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    plan = (
+        _minimal_execplan(status="completed")
+        .replace("- Larger-intent status: closed", "- Larger-intent status: closed")
+        .replace("- Closure decision: archive-and-close", "- Closure decision: archive-but-keep-lane-open")
+    )
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", plan)
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    assert any(warning.warning_class == "execplan_closure_drift" for warning in warnings)
 
 
 def test_main_json_format_outputs_payload(tmp_path: Path, capsys) -> None:

@@ -3061,6 +3061,58 @@ def _intent_contract_payload() -> dict[str, Any]:
     }
 
 
+def _system_intent_payload() -> dict[str, Any]:
+    return {
+        "canonical_doc": ".agentic-workspace/docs/system-intent-contract.md",
+        "command": "agentic-workspace defaults --section system_intent --format json",
+        "rule": (
+            "Keep the larger requested outcome explicit even when the active slice is narrower, and make closure decisions name that difference honestly."
+        ),
+        "authority_ladder": [
+            {
+                "layer": "confirmed request or live issue cluster",
+                "owns": "the larger user or product outcome",
+            },
+            {
+                "layer": "delegated judgment and intent continuity",
+                "owns": "the bounded slice and its mapping back to the larger outcome",
+            },
+            {
+                "layer": "closure check and required continuation",
+                "owns": "whether the slice archives, whether the larger outcome is still open, and where continuation now lives",
+            },
+        ],
+        "reinterpretation_boundary": {
+            "allowed": [
+                "tighten means and validation",
+                "choose a smaller first slice",
+                "route required continuation into one checked-in owner",
+            ],
+            "must_not": [
+                "treat a bounded slice as if it closed the larger outcome without explicit evidence",
+                "leave required continuation only in drift prose or chat",
+                "replace the confirmed outcome with a cheaper substitute silently",
+            ],
+        },
+        "recoverability": {
+            "ask_first": [
+                "agentic-workspace defaults --section system_intent --format json",
+                "agentic-workspace summary --format json",
+                "agentic-workspace report --target ./repo --format json",
+            ],
+            "must_answer": [
+                "what larger outcome the active slice serves",
+                "whether the larger outcome is actually closed",
+                "where required continuation lives now",
+                "what evidence justified the closure decision",
+            ],
+        },
+        "checked_in_execplan_rule": (
+            "Use a checked-in execplan whenever later proof, intent validation, or follow-through would be expensive or ambiguous to reconstruct from chat alone."
+        ),
+    }
+
+
 def _clarification_contract_payload() -> dict[str, Any]:
     return {
         "canonical_doc": ".agentic-workspace/docs/compact-contract-profile.md",
@@ -4179,6 +4231,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "Do not preserve findings that have no durable owner or bounded next action.",
             ],
         },
+        "system_intent": _system_intent_payload(),
         "intent": _intent_contract_payload(),
         "clarification": _clarification_contract_payload(),
         "prompt_routing": _prompt_routing_contract_payload(),

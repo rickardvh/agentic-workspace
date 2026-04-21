@@ -173,6 +173,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["intent"]["rule"] == "Confirmed intent stays human-owned; interpreted intent must remain visibly inferred."
     assert payload["intent"]["confirmed_intent"]["summary"] == "the human-owned request before workspace normalization"
     assert payload["intent"]["interpreted_intent"]["summary"] == "the workspace-normalized request carried forward by lifecycle commands"
+    assert payload["system_intent"]["canonical_doc"] == ".agentic-workspace/docs/system-intent-contract.md"
+    assert payload["system_intent"]["command"] == "agentic-workspace defaults --section system_intent --format json"
+    assert payload["system_intent"]["authority_ladder"][0]["layer"] == "confirmed request or live issue cluster"
+    assert "larger outcome is actually closed" in payload["system_intent"]["recoverability"]["must_answer"][1]
     assert payload["clarification"]["canonical_doc"] == ".agentic-workspace/docs/compact-contract-profile.md"
     assert payload["clarification"]["command"] == "agentic-workspace defaults --section clarification --format json"
     assert payload["clarification"]["rule"] == "When a prompt is vague, ask the smallest repo-context question that removes the ambiguity."
@@ -832,6 +836,20 @@ def test_defaults_install_profiles_section_selector_returns_compact_contract_ans
     assert payload["answer"]["partial_adoption"][1]["combination"] == "planning only"
     assert payload["answer"]["lightweight_profile"]["preset"] == "memory"
     assert "docs/which-package.md" in payload["refs"]
+
+
+def test_defaults_system_intent_section_selector_returns_compact_contract_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "system_intent", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "system_intent"}
+    assert payload["matched"] is True
+    assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/system-intent-contract.md"
+    assert payload["answer"]["authority_ladder"][1]["layer"] == "delegated judgment and intent continuity"
+    assert "agentic-workspace summary --format json" in payload["answer"]["recoverability"]["ask_first"]
+    assert ".agentic-workspace/docs/system-intent-contract.md" in payload["refs"]
 
 
 def test_setup_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Path, capsys) -> None:

@@ -34,6 +34,7 @@ ROOT_MANIFEST_MIRROR_PATH = Path("tools/agent-manifest.json")
 REQUIRED_PAYLOAD_FILES = (
     Path("AGENTS.template.md"),
     Path(".agentic-workspace/docs/execution-flow-contract.md"),
+    Path(".agentic-workspace/docs/system-intent-contract.md"),
     Path(".agentic-workspace/docs/routing-contract.md"),
     Path(".agentic-workspace/docs/minimum-operating-model.md"),
     Path(".agentic-workspace/docs/lifecycle-and-config-contract.md"),
@@ -68,6 +69,7 @@ REQUIRED_PAYLOAD_FILES = (
 PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("AGENTS.template.md"),
     Path(".agentic-workspace/docs/execution-flow-contract.md"),
+    Path(".agentic-workspace/docs/system-intent-contract.md"),
     Path(".agentic-workspace/docs/routing-contract.md"),
     Path(".agentic-workspace/docs/minimum-operating-model.md"),
     Path(".agentic-workspace/docs/lifecycle-and-config-contract.md"),
@@ -590,6 +592,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
                         "status": status,
                         "proof_report": _execplan_proof_report(path),
                         "intent_satisfaction": _execplan_intent_satisfaction(path),
+                        "closure_check": _execplan_closure_check(path),
                     }
                 )
         archive_dir = execplan_dir / "archive"
@@ -659,6 +662,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         "follow_through_contract": _contract_projection(follow_through_contract, view_name="follow_through_contract"),
         "hierarchy_contract": _contract_projection(hierarchy_contract, view_name="hierarchy_contract"),
         "handoff_contract": _contract_projection(handoff_contract, view_name="handoff_contract"),
+        "system_intent": _system_intent_contract_payload(),
         "roadmap": {
             "lane_count": len(roadmap_lanes),
             "candidate_lanes": roadmap_lanes,
@@ -715,6 +719,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "command": "agentic-planning-bootstrap report --format json",
             "canonical_docs": [
                 ".agentic-workspace/docs/reporting-contract.md",
+                ".agentic-workspace/docs/system-intent-contract.md",
                 "packages/planning/README.md",
             ],
             "shared_fields": [
@@ -727,6 +732,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
                 "completed_execplans",
                 "ownership_review",
                 "active",
+                "system_intent",
                 "findings",
                 "next_action",
             ],
@@ -755,6 +761,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "hierarchy_contract": hierarchy_contract,
             "handoff_contract": handoff_contract,
         },
+        "system_intent": summary.get("system_intent", {}),
         "findings": findings,
         "next_action": {
             "summary": next_action,
@@ -780,6 +787,7 @@ def _planning_summary_schema() -> dict[str, Any]:
         "schema_version": "planning-summary-schema/v1",
         "canonical_docs": [
             ".agentic-workspace/docs/execution-flow-contract.md",
+            ".agentic-workspace/docs/system-intent-contract.md",
             ".agentic-workspace/docs/routing-contract.md",
             ".agentic-workspace/docs/lifecycle-and-config-contract.md",
             ".agentic-workspace/docs/extraction-and-discovery-contract.md",
@@ -801,6 +809,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "follow_through_contract",
             "hierarchy_contract",
             "handoff_contract",
+            "system_intent",
             "roadmap",
             "warnings",
             "warning_count",
@@ -815,6 +824,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "proof_expectations",
                 "proof_report",
                 "intent_satisfaction",
+                "closure_check",
                 "tool_verification",
                 "escalate_when",
                 "continuation_owner",
@@ -860,6 +870,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "next_likely_chunk",
                 "proof_state",
                 "required_continuation",
+                "closure_check",
                 "routing",
                 "minimal_refs",
             ],
@@ -891,6 +902,8 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "active_contract, resumable_contract, follow_through_contract, and "
                 "hierarchy_contract remain thinner projections over that state"
             ),
+            "system intent remains durable and queryable even when the active slice is narrower than the parent issue or lane",
+            "closure decisions must distinguish bounded slice completion from larger-intent satisfaction",
             "handoff_contract remains a thinner delegated-worker view over the same active planning state",
             "prefer the summary schema over raw TODO or execplan parsing when one structured answer is enough",
         ],
@@ -1227,9 +1240,11 @@ def _canonical_planning_record(
     plan_path = _resolve_execplan_path(target_root, str(todo_item.get("surface", "")).strip() or active_milestone.get("id", ""))
     proof_report: dict[str, str] = {}
     intent_satisfaction: dict[str, str] = {}
+    closure_check: dict[str, str] = {}
     if plan_path is not None:
         proof_report = _execplan_proof_report(plan_path)
         intent_satisfaction = _execplan_intent_satisfaction(plan_path)
+        closure_check = _execplan_closure_check(plan_path)
     continuation_owner = str(todo_item.get("surface", "")).strip()
     if not continuation_owner and minimal_refs:
         continuation_owner = minimal_refs[-1]
@@ -1247,6 +1262,7 @@ def _canonical_planning_record(
         "proof_expectations": list(resumable_contract.get("proof_expectations", [])),
         "proof_report": proof_report,
         "intent_satisfaction": intent_satisfaction,
+        "closure_check": closure_check,
         "tool_verification": dict(resumable_contract.get("tool_verification", {})),
         "escalate_when": str(resumable_contract.get("escalate_when", "")).strip(),
         "continuation_owner": continuation_owner,
@@ -1400,6 +1416,7 @@ def _active_hierarchy_contract(
             "owner_surface": required_owner_surface,
             "activation_trigger": required_continuation.get("activation trigger", "").strip(),
         },
+        "closure_check": _execplan_closure_check(plan_path),
         "routing": {
             "current_owner": str(planning_record.get("continuation_owner", "")).strip(),
             "follow_on_owner": str(owner_surface).strip(),
@@ -1464,6 +1481,58 @@ def _active_handoff_contract(
                 "the chosen delegation method cannot preserve the checked-in handoff contract",
             ],
         },
+    }
+
+
+def _system_intent_contract_payload() -> dict[str, Any]:
+    return {
+        "status": "present",
+        "canonical_doc": ".agentic-workspace/docs/system-intent-contract.md",
+        "rule": (
+            "Preserve the larger user or product outcome separately from the bounded slice so later archive, review, and continuation decisions stay honest."
+        ),
+        "authority_ladder": [
+            {
+                "layer": "confirmed request or live issue cluster",
+                "owns": "the higher-level outcome the repo is actually trying to satisfy",
+            },
+            {
+                "layer": "active execplan delegated judgment and intent continuity",
+                "owns": "the bounded slice, hard constraints, and the mapping back to the larger intended outcome",
+            },
+            {
+                "layer": "closure check and required continuation",
+                "owns": "whether the slice can archive, whether the larger intent is still open, and where follow-through now lives",
+            },
+        ],
+        "reinterpretation_boundary": {
+            "allowed": [
+                "tighten means, decomposition, and validation",
+                "narrow a first slice when the larger requested outcome remains explicit",
+                "route required continuation into one checked-in owner",
+            ],
+            "must_not": [
+                "treat a bounded slice as if it closed the larger intent without explicit evidence",
+                "leave required continuation only in drift prose or chat",
+                "replace the confirmed outcome with a cheaper substitute silently",
+            ],
+        },
+        "recoverability": {
+            "ask_first": [
+                "agentic-workspace defaults --section system_intent --format json",
+                "agentic-workspace summary --format json",
+                "agentic-planning-bootstrap report --format json",
+            ],
+            "must_answer": [
+                "what larger outcome this slice serves",
+                "whether the larger outcome is actually closed",
+                "where required continuation lives now",
+                "what evidence justified the closure decision",
+            ],
+        },
+        "checked_in_execplan_rule": (
+            "Keep a checked-in execplan whenever later proof, intent validation, or required continuation would be expensive or ambiguous to reconstruct from chat alone."
+        ),
     }
 
 
@@ -1636,6 +1705,13 @@ def archive_execplan(
     fully_satisfied = intent_satisfaction.get("was original intent fully satisfied?", "").strip().lower()
     satisfaction_evidence = intent_satisfaction.get("evidence of intent satisfaction", "").strip()
     unsolved_intent = intent_satisfaction.get("unsolved intent passed to", "").strip()
+    closure_check = _execplan_closure_check(plan_path)
+    slice_status = closure_check.get("slice status", "").strip().lower()
+    larger_intent_status = closure_check.get("larger-intent status", "").strip().lower()
+    closure_decision = closure_check.get("closure decision", "").strip().lower()
+    closure_reason = closure_check.get("why this decision is honest", "").strip()
+    closure_evidence = closure_check.get("evidence carried forward", "").strip()
+    reopen_trigger = closure_check.get("reopen trigger", "").strip()
     validation_commands = _execplan_validation_commands(plan_path)
     if completes_larger_outcome == "no" and (not continuation_surface or continuation_surface.lower() in {"none", "n/a"}):
         result.warnings.append(
@@ -1751,7 +1827,7 @@ def archive_execplan(
         )
         result.add("manual review", plan_path, "fill `Proof Report` with validation proof and evidence before archiving")
         return result
-    if not original_intent or fully_satisfied not in {"yes", "true"} or not satisfaction_evidence:
+    if not original_intent or fully_satisfied not in {"yes", "true", "no", "false"} or not satisfaction_evidence:
         result.warnings.append(
             {
                 "warning_class": "archive_missing_intent_satisfaction",
@@ -1761,15 +1837,94 @@ def archive_execplan(
         )
         result.add("manual review", plan_path, "fill `Intent Satisfaction` with satisfied intent evidence before archiving")
         return result
-    if unsolved_intent and unsolved_intent.lower() not in {"none", "n/a", "none yet"}:
+    if (
+        not slice_status
+        or not larger_intent_status
+        or not closure_decision
+        or not closure_reason
+        or not closure_evidence
+        or not reopen_trigger
+    ):
         result.warnings.append(
             {
-                "warning_class": "archive_intent_not_fully_satisfied",
+                "warning_class": "archive_missing_closure_check",
                 "path": plan_path.relative_to(target_root).as_posix(),
-                "message": "Completed execplan still routes unsolved intent to a follow-on owner.",
+                "message": "Completed execplan is missing a complete Closure Check.",
             }
         )
-        result.add("manual review", plan_path, "keep the lane open until the original intent is fully satisfied")
+        result.add("manual review", plan_path, "fill `Closure Check` before archiving")
+        return result
+    if slice_status not in {"complete", "completed", "bounded slice complete"}:
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_closure_check",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Closure Check does not mark the bounded slice as complete.",
+            }
+        )
+        result.add("manual review", plan_path, "mark the bounded slice complete in `Closure Check` before archiving")
+        return result
+    if closure_decision in {"keep-active", "stay-active", "continue-active"}:
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_closure_check",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": "Closure Check still says this plan should remain active.",
+            }
+        )
+        result.add("manual review", plan_path, "keep the plan active until `Closure Check` allows archive")
+        return result
+    if closure_decision == "archive-and-close":
+        if fully_satisfied not in {"yes", "true"} or larger_intent_status not in {"closed", "complete", "completed"}:
+            result.warnings.append(
+                {
+                    "warning_class": "archive_intent_not_fully_satisfied",
+                    "path": plan_path.relative_to(target_root).as_posix(),
+                    "message": "Archive-and-close requires explicit larger-intent closure evidence.",
+                }
+            )
+            result.add("manual review", plan_path, "record larger-intent closure honestly before using `archive-and-close`")
+            return result
+        if unsolved_intent and unsolved_intent.lower() not in {"none", "n/a", "none yet"}:
+            result.warnings.append(
+                {
+                    "warning_class": "archive_intent_not_fully_satisfied",
+                    "path": plan_path.relative_to(target_root).as_posix(),
+                    "message": "Archive-and-close cannot leave unsolved intent routed elsewhere.",
+                }
+            )
+            result.add("manual review", plan_path, "remove unsolved intent routing or switch to `archive-but-keep-lane-open`")
+            return result
+    elif closure_decision == "archive-but-keep-lane-open":
+        if fully_satisfied not in {"no", "false"} or larger_intent_status not in {"open", "partial", "unfinished"}:
+            result.warnings.append(
+                {
+                    "warning_class": "archive_intent_not_fully_satisfied",
+                    "path": plan_path.relative_to(target_root).as_posix(),
+                    "message": "Archive-but-keep-lane-open requires explicit evidence that the larger intent remains open.",
+                }
+            )
+            result.add("manual review", plan_path, "align `Intent Satisfaction` and `Closure Check` with the partial-intent decision")
+            return result
+        if not unsolved_intent or unsolved_intent.lower() in {"none", "n/a", "none yet"}:
+            result.warnings.append(
+                {
+                    "warning_class": "archive_missing_required_follow_on",
+                    "path": plan_path.relative_to(target_root).as_posix(),
+                    "message": "Partial-intent archive must name the checked-in owner that now carries the unsolved intent.",
+                }
+            )
+            result.add("manual review", plan_path, "record the routed unsolved intent before archiving a partial slice")
+            return result
+    else:
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_closure_check",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": f"Closure Check uses an unsupported closure decision: {closure_decision}.",
+            }
+        )
+        result.add("manual review", plan_path, "use `archive-and-close` or `archive-but-keep-lane-open` in `Closure Check`")
         return result
     if _execplan_needs_reference_sweep(plan_path) and not _validation_has_reference_sweep(validation_commands):
         result.warnings.append(
@@ -2471,6 +2626,11 @@ def _execplan_proof_report(path: Path) -> dict[str, str]:
 def _execplan_intent_satisfaction(path: Path) -> dict[str, str]:
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Intent Satisfaction"))
+
+
+def _execplan_closure_check(path: Path) -> dict[str, str]:
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Closure Check"))
 
 
 def _execplan_validation_commands(path: Path) -> list[str]:

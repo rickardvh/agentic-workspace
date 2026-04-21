@@ -2,7 +2,7 @@
 
 Use this template for an active plan in `.agentic-workspace/planning/execplans/`. Move the file into
 `.agentic-workspace/planning/execplans/archive/` once it is completed and no longer affects future execution.
-Before archiving, set `## Active Milestone` `Status` to `completed` and fill the `## Proof Report` and `## Intent Satisfaction` sections with the closure evidence.
+Before archiving, set `## Active Milestone` `Status` to `completed` and fill the `## Proof Report`, `## Intent Satisfaction`, and `## Closure Check` sections with the closure evidence.
 Prefer a feature-scoped file over expanding a shared hot plan, and keep headings stable so concurrent edits merge cleanly.
 Prefer replacing resolved status lines instead of appending pass-by-pass history, and do not add retrospective sections such as `Added In This Pass`.
 This file is a thin human view over the canonical `planning_record` surfaced by `agentic-workspace summary --format json`; use the summary first when you need the compact active state.
@@ -160,6 +160,19 @@ Keep the first slice advisory: if a required tool is unavailable, stop or escala
 - Was original intent fully satisfied?:
 - Evidence of intent satisfaction:
 - Unsolved intent passed to:
+
+## Closure Check
+
+- Slice status:
+- Larger-intent status:
+- Closure decision:
+- Why this decision is honest:
+- Evidence carried forward:
+- Reopen trigger:
+
+Use `archive-and-close` only when the larger intended outcome is actually satisfied.
+Use `archive-but-keep-lane-open` when the slice is complete but required continuation remains in another checked-in owner.
+Make the closure decision explicit enough that later contributors do not have to infer it from chat or issue prose.
 
 ## Execution Summary
 

@@ -70,6 +70,23 @@ def _minimal_execplan(status: str = "in-progress") -> str:
         if status in {"completed", "done", "closed"}
         else ""
     )
+    closure_check = (
+        "\n## Closure Check\n\n"
+        "- Slice status: bounded slice complete\n"
+        "- Larger-intent status: closed\n"
+        "- Closure decision: archive-and-close\n"
+        "- Why this decision is honest: the bounded slice and larger intent are both complete.\n"
+        "- Evidence carried forward: proof and intent satisfaction both show the lane is closed.\n"
+        "- Reopen trigger: none\n"
+        if status in {"completed", "done", "closed"}
+        else "\n## Closure Check\n\n"
+        "- Slice status: in progress\n"
+        "- Larger-intent status: open\n"
+        "- Closure decision: keep-active\n"
+        "- Why this decision is honest: the active milestone has not closed yet.\n"
+        "- Evidence carried forward: validation and completion criteria are still pending.\n"
+        "- Reopen trigger: finish the current milestone and reassess closure.\n"
+    )
     return f"""
 # Plan Alpha
 
@@ -153,6 +170,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 
 {proof_report}
 {intent_satisfaction}
+{closure_check}
 
 ## Drift Log
 
@@ -1107,6 +1125,13 @@ def test_archive_execplan_blocks_incomplete_intent_satisfaction(tmp_path: Path) 
         + "- Was original intent fully satisfied?: no\n"
         + "- Evidence of intent satisfaction: the lane still has open follow-on work.\n"
         + "- Unsolved intent passed to: .agentic-workspace/planning/execplans/local-only-residue-via-git-exclude.md\n"
+        + "\n## Closure Check\n\n"
+        + "- Slice status: bounded slice complete\n"
+        + "- Larger-intent status: closed\n"
+        + "- Closure decision: archive-and-close\n"
+        + "- Why this decision is honest: placeholder contradiction for test coverage.\n"
+        + "- Evidence carried forward: intent and proof sections remain present.\n"
+        + "- Reopen trigger: none\n"
         + "\n"
     )
     _write(plan_path, plan)
@@ -1119,8 +1144,53 @@ def test_archive_execplan_blocks_incomplete_intent_satisfaction(tmp_path: Path) 
         for warning in result.warnings
     )
     assert any(
-        action.kind == "manual review" and action.path == plan_path and "Intent Satisfaction" in action.detail for action in result.actions
+        action.kind == "manual review"
+        and action.path == plan_path
+        and ("Intent Satisfaction" in action.detail or "archive-and-close" in action.detail or "larger-intent closure" in action.detail)
+        for action in result.actions
     )
+
+
+def test_archive_execplan_allows_partial_intent_when_continuation_is_explicit(tmp_path: Path) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
+    _write(
+        plan_path,
+        _minimal_execplan(status="completed")
+        .replace("- This slice completes the larger intended outcome: yes", "- This slice completes the larger intended outcome: no")
+        .replace("- Continuation surface: none", "- Continuation surface: .agentic-workspace/planning/state.toml")
+        .replace("- Required follow-on for the larger intended outcome: no", "- Required follow-on for the larger intended outcome: yes")
+        .replace("- Owner surface: none", "- Owner surface: .agentic-workspace/planning/state.toml")
+        .replace("- Activation trigger: none", "- Activation trigger: when the next bounded slice for the lane is activated")
+        .replace("- Was original intent fully satisfied?: yes", "- Was original intent fully satisfied?: no")
+        .replace(
+            "- Evidence of intent satisfaction: the bounded slice landed and the lane-level evidence was recorded.",
+            "- Evidence of intent satisfaction: the bounded slice landed, but the larger lane still has required continuation.",
+        )
+        .replace("- Unsolved intent passed to: none", "- Unsolved intent passed to: .agentic-workspace/planning/state.toml")
+        .replace("- Larger-intent status: closed", "- Larger-intent status: partial")
+        .replace("- Closure decision: archive-and-close", "- Closure decision: archive-but-keep-lane-open")
+        .replace(
+            "- Why this decision is honest: the bounded slice and larger intent are both complete.",
+            "- Why this decision is honest: the bounded slice is complete, but the larger lane remains open in checked-in planning.",
+        )
+        .replace(
+            "- Evidence carried forward: proof and intent satisfaction both show the lane is closed.",
+            "- Evidence carried forward: proof shows the slice is complete and the continuation owner is explicit.",
+        )
+        .replace(
+            "- Reopen trigger: none",
+            "- Reopen trigger: reopen when the next bounded lane slice is activated from .agentic-workspace/planning/state.toml",
+        ),
+    )
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+    archived_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.md"
+
+    assert archived_path.exists()
+    assert not plan_path.exists()
+    assert not result.warnings
 
 
 def test_archive_execplan_blocks_missing_delegated_judgment(tmp_path: Path) -> None:
@@ -1588,6 +1658,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["planning_record"]["task"]["surface"] == ".agentic-workspace/planning/execplans/plan-alpha.md"
     assert summary["planning_record"]["next_action"] == "Add one checker."
     assert summary["planning_record"]["proof_expectations"] == ["uv run pytest tests/test_check_planning_surfaces.py"]
+    assert summary["planning_record"]["closure_check"]["closure decision"] == "keep-active"
     assert summary["planning_record"]["agent_may_decide"] == (
         "Bounded decomposition, validation tightening, and plan-local residue routing."
     )
@@ -1627,6 +1698,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
         "finish the current milestone and archive if no larger follow-on remains."
     )
     assert summary["hierarchy_contract"]["proof_state"]["proof_expectations"] == ["uv run pytest tests/test_check_planning_surfaces.py"]
+    assert summary["hierarchy_contract"]["closure_check"]["closure decision"] == "keep-active"
     assert summary["handoff_contract"]["status"] == "present"
     assert summary["handoff_contract"]["task"]["id"] == "plan-alpha"
     assert summary["handoff_contract"]["read_first"] == [
@@ -1642,6 +1714,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
             "summary": "Candidate alpha; promote when maintained report signal appears.",
         }
     ]
+    assert summary["system_intent"]["canonical_doc"] == ".agentic-workspace/docs/system-intent-contract.md"
     if summary["warning_count"] != 0:
         print(f"DEBUG: warnings found: {summary['warnings']}")
     assert summary["warning_count"] == 0
@@ -1742,6 +1815,7 @@ def test_planning_report_derives_compact_module_state_from_summary(tmp_path: Pat
     assert report["status"]["active_execplan_count"] == 1
     assert report["status"]["roadmap_lane_count"] == 0
     assert report["next_action"]["summary"] == "Add one checker."
+    assert report["system_intent"]["canonical_doc"] == ".agentic-workspace/docs/system-intent-contract.md"
 
 
 def test_planning_summary_exposes_closure_evidence(tmp_path: Path) -> None:
@@ -1769,8 +1843,10 @@ def test_planning_summary_exposes_closure_evidence(tmp_path: Path) -> None:
     assert len(completed_execplans) == 1
     assert completed_execplans[0]["proof_report"]["proof achieved now"] == "validation and closure checks passed for the bounded slice."
     assert completed_execplans[0]["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
+    assert completed_execplans[0]["closure_check"]["closure decision"] == "archive-and-close"
     assert "proof_report" in summary["schema"]["view_fields"]["planning_record"]
     assert "intent_satisfaction" in summary["schema"]["view_fields"]["planning_record"]
+    assert "closure_check" in summary["schema"]["view_fields"]["planning_record"]
 
 
 def test_planning_report_prints_closure_evidence(tmp_path: Path, capsys) -> None:
@@ -1798,6 +1874,7 @@ def test_planning_report_prints_closure_evidence(tmp_path: Path, capsys) -> None
     assert "Completed execplans awaiting archive: 1" in out
     assert "Proof report: validation and closure checks passed for the bounded slice." in out
     assert "Intent satisfaction: yes" in out
+    assert "Closure decision: archive-and-close" in out
 
 
 def test_planning_summary_can_expose_active_contract_from_execplan_without_todo_row(tmp_path: Path) -> None:

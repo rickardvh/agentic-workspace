@@ -258,6 +258,10 @@ def _print_summary(summary: dict) -> None:
         if intent_satisfaction:
             print(f"- Was original intent fully satisfied?: {intent_satisfaction.get('was original intent fully satisfied?', '')}")
             print(f"- Unsolved intent passed to: {intent_satisfaction.get('unsolved intent passed to', '')}")
+        closure_check = planning_record.get("closure_check", {})
+        if closure_check:
+            print(f"- Closure decision: {closure_check.get('closure decision', '')}")
+            print(f"- Larger-intent status: {closure_check.get('larger-intent status', '')}")
         tool_verification = planning_record.get("tool_verification", {})
         required_tools = tool_verification.get("required_tools", [])
         if required_tools:
@@ -275,6 +279,9 @@ def _print_summary(summary: dict) -> None:
             intent_satisfaction = item.get("intent_satisfaction", {})
             if intent_satisfaction:
                 print(f"  - Intent satisfied: {intent_satisfaction.get('was original intent fully satisfied?', '')}")
+            closure_check = item.get("closure_check", {})
+            if closure_check:
+                print(f"  - Closure decision: {closure_check.get('closure decision', '')}")
     active_contract = summary.get("active_contract", {})
     if active_contract.get("status") == "present":
         print("Active contract view:")
@@ -349,10 +356,13 @@ def _print_report(report: dict) -> None:
         if isinstance(planning_record, dict) and planning_record.get("status") == "present":
             proof_report = planning_record.get("proof_report", {})
             intent_satisfaction = planning_record.get("intent_satisfaction", {})
+            closure_check = planning_record.get("closure_check", {})
             if proof_report:
                 print(f"Proof report: {proof_report.get('proof achieved now', '')}")
             if intent_satisfaction:
                 print(f"Intent satisfaction: {intent_satisfaction.get('was original intent fully satisfied?', '')}")
+            if closure_check:
+                print(f"Closure decision: {closure_check.get('closure decision', '')}")
     completed_execplans = report.get("completed_execplans", [])
     if completed_execplans:
         print(f"Completed execplans awaiting archive: {len(completed_execplans)}")
@@ -364,6 +374,9 @@ def _print_report(report: dict) -> None:
             intent_satisfaction = item.get("intent_satisfaction", {})
             if intent_satisfaction:
                 print(f"  Intent satisfaction: {intent_satisfaction.get('was original intent fully satisfied?', '')}")
+            closure_check = item.get("closure_check", {})
+            if closure_check:
+                print(f"  Closure decision: {closure_check.get('closure decision', '')}")
     findings = report.get("findings", [])
     if findings:
         print("Findings:")

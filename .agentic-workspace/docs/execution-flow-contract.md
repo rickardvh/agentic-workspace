@@ -8,7 +8,7 @@ This contract defines how active work moves from intent to completion, including
 2. **Active Milestone**: Work happens in bounded, ready-to-execute milestones.
 3. **Immediate Next Action**: The next safe step is always explicit and small.
 4. **Validation and Proof**: Success is defined by narrow, verifiable criteria.
-5. **Closure and Continuity**: Finished work must capture any required continuation before archive.
+5. **Closure and Continuity**: Finished work must capture any required continuation and an explicit closure decision before archive.
 
 ---
 
@@ -19,6 +19,11 @@ Every execution slice must record:
 - **Larger intended outcome**: The broad goal this work contributes to.
 - **Slice completion of larger outcome**: Whether this specific slice finishes the parent goal.
 - **Continuation surface**: Where the next slice or follow-on work belongs.
+
+### System Intent
+- **Authority**: The larger intended outcome stays above the bounded slice.
+- **Bounded reinterpretation**: Agents may narrow means and first-slice scope, but not silently replace the confirmed outcome.
+- **Recoverability**: Compact report/summary paths should answer whether the larger outcome is closed and where continuation lives now.
 
 ### Resumable Execution
 Execution is resumable by default. If a task is interrupted, the checked-in state should be sufficient to restart:
@@ -76,6 +81,13 @@ Before archiving a completed slice that belongs to an unfinished larger outcome:
 - **Required Follow-on**: Explicitly state "yes" if more work is needed for the larger goal.
 - **Next Owner**: Name the surface (e.g. `roadmap` in `.agentic-workspace/planning/state.toml` or a new plan) that owns the continuation.
 - **Activation Trigger**: State what signal (e.g. "human review", "CI success") triggers the next slice.
+
+### Closure Check
+Before archiving a completed slice:
+- **Slice Status**: Record that the bounded slice itself is complete.
+- **Larger-Intent Status**: Record whether the broader goal is closed, partial, or still open.
+- **Closure Decision**: Use `archive-and-close` only when the larger intent is actually satisfied; use `archive-but-keep-lane-open` when the slice is complete but the larger intent remains open.
+- **Evidence and Reopen Trigger**: Record why the decision is honest, what evidence carries forward, and what should trigger reopening or follow-on.
 
 ### Execution Summary
 The final state before archive must include:
