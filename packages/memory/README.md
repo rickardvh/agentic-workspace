@@ -33,7 +33,7 @@ Adoption shape:
 
 Collaboration shape:
 
-- Treat `memory/current/` as weak-authority re-orientation context, not as the canonical home for durable facts.
+- Treat `.agentic-workspace/memory/repo/current/` as weak-authority re-orientation context, not as the canonical home for durable facts.
 - Keep one fact in one durable primary home; current notes should compress, point, or disappear instead of duplicating stable notes.
 - Expect current-state notes to stay compact and easy to replace under concurrent edits.
 
@@ -67,17 +67,17 @@ The installed memory payload is not one flat compatibility promise.
 Treat these files as the current memory compatibility contract surfaces that should not change shape casually:
 
 - `AGENTS.md`
-- `memory/index.md`
-- `memory/manifest.toml`
+- `.agentic-workspace/memory/repo/index.md`
+- `.agentic-workspace/memory/repo/manifest.toml`
 - `.agentic-workspace/memory/SKILLS.md`
 - `.agentic-workspace/memory/WORKFLOW.md`
-- `memory/current/project-state.md`
-- `memory/current/task-context.md`
-- `memory/domains/README.md`
-- `memory/invariants/README.md`
-- `memory/runbooks/README.md`
-- `memory/mistakes/recurring-failures.md`
-- `memory/decisions/README.md`
+- `.agentic-workspace/memory/repo/current/project-state.md`
+- `.agentic-workspace/memory/repo/current/task-context.md`
+- `.agentic-workspace/memory/repo/domains/README.md`
+- `.agentic-workspace/memory/repo/invariants/README.md`
+- `.agentic-workspace/memory/repo/runbooks/README.md`
+- `.agentic-workspace/memory/repo/mistakes/recurring-failures.md`
+- `.agentic-workspace/memory/repo/decisions/README.md`
 
 Treat upgrade metadata, audit scripts, bootstrap workspace files, and shipped shared skills as lower-stability helpers unless a stricter promise is stated later. Those helper surfaces matter operationally, but they remain easier to refine than the core installed memory contract above.
 
@@ -97,7 +97,7 @@ Bad fits:
 ## Example Scenarios
 
 - Before: agents reopen the repo and repeatedly grep for the same authority boundary or runbook steps.
-  After: those facts live in routed notes under `memory/`, so the startup path can load the small relevant subset.
+  After: those facts live in routed notes under `.agentic-workspace/memory/repo/`, so the startup path can load the small relevant subset.
 - Before: team knowledge about recurring failures stays in chat transcripts or one maintainer's head.
   After: the repo keeps reviewed, versioned failure notes and runbooks in a shared memory contract.
 
@@ -110,7 +110,7 @@ Some AI agents, such as GitHub Copilot, have their own built-in memory, but that
 - **Captures anti-rediscovery knowledge that no single session owns.** Invariants, authority boundaries, recurring traps, and operator procedures accumulate across many sessions and many contributors. No individual agent memory is the right home for team-wide lessons.
 - **Stays auditable and reviewable.** Checked-in notes go through normal code review and version history, making it visible when knowledge changes and why.
 
-`agentic-memory-bootstrap` installs a lightweight `memory/` tree that agents load selectively on each task start, giving them the smallest useful slice of durable context without bulk-reading the codebase.
+`agentic-memory-bootstrap` installs a lightweight `.agentic-workspace/memory/repo/` tree that agents load selectively on each task start, giving them the smallest useful slice of durable context without bulk-reading the codebase.
 
 For many users the simplest mental model is: planning tells an agent what matters now; memory tells an agent what is expensive to forget.
 When both modules are installed, the combined install should be cheaper than either one alone: planning borrows durable context from memory, and completed planning work promotes durable residue back into memory or canonical docs instead of re-explaining it forever.
@@ -118,14 +118,14 @@ When both modules are installed, the combined install should be cheaper than eit
 ## How it works
 
 - **Structured taxonomy.** Notes are split into `domains/` for subsystem orientation, `invariants/` for contracts and authority boundaries, `runbooks/` for operator procedures, `mistakes/` for recurring traps and verified failure lessons, `decisions/` for longer-lived rationale, and `current/` for weak-authority project overview, optional task-continuation compression, and compact routing calibration.
-- **Route-indexed, not bulk-loaded.** `memory/index.md` maps task types to minimal note bundles, and a machine-readable `manifest.toml` annotates every note with audience, authority, routing triggers (`routes_from`, `stale_when`), and task relevance so agents read only what matters for the current change. Good memory helps an agent read *less*, not more.
+- **Route-indexed, not bulk-loaded.** `.agentic-workspace/memory/repo/index.md` maps task types to minimal note bundles, and a machine-readable `manifest.toml` annotates every note with audience, authority, routing triggers (`routes_from`, `stale_when`), and task relevance so agents read only what matters for the current change. Good memory helps an agent read *less*, not more.
 - **Clear ownership boundary.** Memory owns durable repo knowledge that is expensive to reconstruct from code alone: invariants, authority boundaries, recurring failure modes, operator sequences, and routing hints. The repository's active planning surface (`.agentic-workspace/planning/state.toml`, issue trackers, and similar systems) keeps ownership of active intent and sequencing. Memory complements planning; it never competes with it.
-- **Cheap ordinary-work pull.** The compact module report exposes a `habitual_pull` view that answers the ordinary-work question directly: start from `memory/index.md`, route only into the smallest durable note bundle that matches touched files or explicit surfaces, and keep current-context notes optional unless re-orientation is genuinely needed.
+- **Cheap ordinary-work pull.** The compact module report exposes a `habitual_pull` view that answers the ordinary-work question directly: start from `.agentic-workspace/memory/repo/index.md`, route only into the smallest durable note bundle that matches touched files or explicit surfaces, and keep current-context notes optional unless re-orientation is genuinely needed.
 - **Combined-install leverage.** When planning is installed too, memory should help execplans stay smaller and restart cheaper: plans borrow durable context instead of restating it, and repeated plan prose becomes a signal that memory or canonical docs should improve.
 - **Improvement pressure without memory dependence.** Each note can declare whether it is *durable truth* or an *improvement signal* - something that exists because the repo still needs better tests, docs, validation, or design. Manifest fields like `preferred_remediation` and `elimination_target` let the `doctor` command, the freshness audit, and the sync workflow surface actionable suggestions that drive improvements into the codebase without assuming memory volume should follow one universal trend.
 - **Explicit improvement-targeting workflow.** Symptomatic notes should move through a concrete path: symptom captured -> remediation target chosen -> follow-up routed -> remediation lands -> note retained, shrunk, stubbed, or deleted. The workflow distinguishes when a signal should stay in memory, become a review artifact, enter issue intake, or promote into roadmap or active planning.
-- **Freshness and hygiene tooling.** A bundled audit script checks for missing metadata, stale confirmations, oversized notes, explicit planning-state spillover in `memory/current/*`, and manifest/note mismatches. `stale_when` globs catch semantic drift from code changes, not just calendar age, and the compact memory report now projects those existing anchors into note trust states such as `supported`, `questionable`, `stale`, and `elimination_candidate`.
-- **Skills layer.** Repeatable memory operations such as capture, hygiene, refresh, routing, and upgrade ship as upgrade-replaceable skills under `.agentic-workspace/memory/skills/`. Repos can add their own memory-specific skills under `memory/skills/` without modifying the core set.
+- **Freshness and hygiene tooling.** A bundled audit script checks for missing metadata, stale confirmations, oversized notes, explicit planning-state spillover in `.agentic-workspace/memory/repo/current/*`, and manifest/note mismatches. `stale_when` globs catch semantic drift from code changes, not just calendar age, and the compact memory report now projects those existing anchors into note trust states such as `supported`, `questionable`, `stale`, and `elimination_candidate`.
+- **Skills layer.** Repeatable memory operations such as capture, hygiene, refresh, routing, and upgrade ship as upgrade-replaceable skills under `.agentic-workspace/memory/skills/`. Repos can add their own memory-specific skills under `.agentic-workspace/memory/repo/skills/` without modifying the core set.
 - **Language-agnostic.** The installed memory system is plain Markdown and TOML. It works in any repository regardless of language or framework. Only the bootstrap CLI itself requires Python; once installed, the memory layer has no runtime dependencies.
 
 ### Bootstrap CLI requirements
@@ -195,17 +195,17 @@ Running `install` or `adopt` adds the following to your repository:
 | Path | Purpose |
 | --- | --- |
 | `AGENTS.md` | Repo-local agent contract and bootstrap entry point |
-| `memory/index.md` | Route-indexed entry point that maps tasks to minimal note bundles |
-| `memory/manifest.toml` | Machine-readable note metadata, routing triggers, and improvement-pressure fields |
-| `memory/domains/` | Subsystem orientation notes |
-| `memory/invariants/` | Contracts and authority boundaries |
-| `memory/runbooks/` | Repeatable operator procedures |
-| `memory/mistakes/` | Recurring failure modes |
-| `memory/decisions/` | Longer-lived rationale and trade-offs |
-| `memory/current/` | Lightweight project overview and optional task-continuation compression |
-| `memory/templates/` | Starter note templates for the first repo-specific memory notes you replace or add |
+| `.agentic-workspace/memory/repo/index.md` | Route-indexed entry point that maps tasks to minimal note bundles |
+| `.agentic-workspace/memory/repo/manifest.toml` | Machine-readable note metadata, routing triggers, and improvement-pressure fields |
+| `.agentic-workspace/memory/repo/domains/` | Subsystem orientation notes |
+| `.agentic-workspace/memory/repo/invariants/` | Contracts and authority boundaries |
+| `.agentic-workspace/memory/repo/runbooks/` | Repeatable operator procedures |
+| `.agentic-workspace/memory/repo/mistakes/` | Recurring failure modes |
+| `.agentic-workspace/memory/repo/decisions/` | Longer-lived rationale and trade-offs |
+| `.agentic-workspace/memory/repo/current/` | Lightweight project overview and optional task-continuation compression |
+| `.agentic-workspace/memory/repo/templates/` | Starter note templates for the first repo-specific memory notes you replace or add |
 | `.agentic-workspace/memory/skills/` | Bootstrap-managed shared memory skills, upgrade-replaceable |
-| `memory/skills/` | Optional repo-specific memory skills |
+| `.agentic-workspace/memory/repo/skills/` | Optional repo-specific memory skills |
 | `scripts/check/` | Advisory freshness audit script |
 
 Install and adopt flows may create a temporary `.agentic-workspace/memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace. Upgrade should normally route through the checked-in `memory-upgrade` skill and no longer depends on that workspace as part of the primary model.
@@ -348,7 +348,7 @@ Temporary bootstrap lifecycle skills:
 - `populate`
 - `cleanup`
 
-Add repo-specific day-to-day memory skills as siblings under `memory/skills/`.
+Add repo-specific day-to-day memory skills as siblings under `.agentic-workspace/memory/repo/skills/`.
 Do not put general non-memory skills there.
 
 ## Memory Guidance
@@ -362,13 +362,13 @@ The installed `WORKFLOW.md` under `.agentic-workspace/memory/` is the full refer
 - **Promote when stable.** If a note matures into general guidance, move it into canonical docs and leave memory as a stub.
 - **Do not make memory the default answer to repo complexity.** Durable truth may stay or grow when justified, but improvement-signal notes should push agents toward clearer docs, safer tests, stronger tooling, or simpler structure when those fixes are feasible.
 
-Starter note templates are part of that installed contract too. Use `memory/templates/memory-note-template.md`, `memory/templates/invariant-template.md`, and `memory/templates/runbook-template.md` when you replace the shipped starter examples or add the first real repo-specific notes for those classes.
+Starter note templates are part of that installed contract too. Use `.agentic-workspace/memory/repo/templates/memory-note-template.md`, `.agentic-workspace/memory/repo/templates/invariant-template.md`, and `.agentic-workspace/memory/repo/templates/runbook-template.md` when you replace the shipped starter examples or add the first real repo-specific notes for those classes.
 
 For manifest discoverability, the quickest installed guidance path is:
 
-- `memory/manifest.toml` for the machine-readable note map and optional improvement-pressure fields
+- `.agentic-workspace/memory/repo/manifest.toml` for the machine-readable note map and optional improvement-pressure fields
 - `.agentic-workspace/memory/WORKFLOW.md` for the short explanation of when fields such as `memory_role`, `preferred_remediation`, `improvement_note`, `elimination_target`, and `retention_justification` should be used
-- `memory/templates/memory-note-template.md` for the compact note-level reminder of how improvement-signal notes should point at an upstream remediation target
+- `.agentic-workspace/memory/repo/templates/memory-note-template.md` for the compact note-level reminder of how improvement-signal notes should point at an upstream remediation target
 
 ## Command Summary
 
@@ -398,7 +398,7 @@ Common arguments:
 - `--policy-profile default|strict-doc-ownership` applies installer policy presets for install, adopt, and upgrade
 - `--project-name`, `--project-purpose`, `--key-repo-docs`, `--key-subsystems`, `--primary-build-command`, `--primary-test-command`, and `--other-key-commands` fill starter placeholders explicitly
 
-`install` and `adopt` are conservative by default: missing files are copied, existing `AGENTS.md` and `memory/` files are left alone, and optional fragments are appended only when the fragment is not already present.
+`install` and `adopt` are conservative by default: missing files are copied, existing `AGENTS.md` and `.agentic-workspace/memory/repo/` files are left alone, and optional fragments are appended only when the fragment is not already present.
 
 `doctor --strict-doc-ownership` forces the doc-ownership and shadow-doc audits even if the repository manifest has not opted in yet.
 

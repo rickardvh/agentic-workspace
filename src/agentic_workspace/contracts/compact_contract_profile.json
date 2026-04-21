@@ -1,6 +1,6 @@
 {
   "schema_version": "selector-contracts-manifest/v1",
-  "canonical_doc": "docs/compact-contract-profile.md",
+  "canonical_doc": ".agentic-workspace/docs/compact-contract-profile.md",
   "profile": "compact-contract-answer/v1",
   "answer_shape": [
     "profile",

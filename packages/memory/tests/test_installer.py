@@ -25,14 +25,25 @@ MEMORY_MANIFEST_TEMPLATE = FIXTURES_ROOT / "memory-manifest-template.toml"
 MEMORY_GIT_SOURCE_REF = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory"
 
 
+@pytest.fixture(autouse=True)
+def _mkdir_before_write_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    original_write_text = Path.write_text
+
+    def _write(self: Path, data: str, encoding: str | None = None, errors: str | None = None, newline: str | None = None) -> int:
+        self.parent.mkdir(parents=True, exist_ok=True)
+        return original_write_text(self, data, encoding=encoding, errors=errors, newline=newline)
+
+    monkeypatch.setattr(Path, "write_text", _write)
+
+
 def test_ownership_module_root_matches_workspace_ledger() -> None:
     assert memory_module_root("memory") == Path(".agentic-workspace/memory")
 
 
 def test_memory_contract_file_shortlist_is_explicit() -> None:
     assert Path("AGENTS.md") in MEMORY_COMPATIBILITY_CONTRACT_FILES
-    assert Path("memory/index.md") in MEMORY_COMPATIBILITY_CONTRACT_FILES
-    assert Path("memory/manifest.toml") in MEMORY_COMPATIBILITY_CONTRACT_FILES
+    assert Path(".agentic-workspace/memory/repo/index.md") in MEMORY_COMPATIBILITY_CONTRACT_FILES
+    assert Path(".agentic-workspace/memory/repo/manifest.toml") in MEMORY_COMPATIBILITY_CONTRACT_FILES
     assert Path("scripts/check/check_memory_freshness.py") in MEMORY_LOWER_STABILITY_HELPER_FILES
     assert Path(".agentic-workspace/memory/bootstrap/README.md") in MEMORY_LOWER_STABILITY_HELPER_FILES
     assert set(MEMORY_COMPATIBILITY_CONTRACT_FILES).isdisjoint(MEMORY_LOWER_STABILITY_HELPER_FILES)
@@ -42,10 +53,10 @@ def test_memory_contract_file_shortlist_is_explicit() -> None:
 def _memory_index_text() -> str:
     if MEMORY_INDEX_TEMPLATE.exists():
         return MEMORY_INDEX_TEMPLATE.read_text(encoding="utf-8")
-    root_index = WORKSPACE_ROOT / "memory" / "index.md"
+    root_index = WORKSPACE_ROOT / ".agentic-workspace" / "memory" / "repo" / "index.md"
     if root_index.exists():
         return root_index.read_text(encoding="utf-8")
-    payload_index = installer.payload_root() / "memory" / "index.md"
+    payload_index = installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "index.md"
     if payload_index.exists():
         return payload_index.read_text(encoding="utf-8")
     return (PACKAGE_ROOT / "memory" / "index.md").read_text(encoding="utf-8")
@@ -54,30 +65,30 @@ def _memory_index_text() -> str:
 def _memory_manifest_text() -> str:
     if MEMORY_MANIFEST_TEMPLATE.exists():
         return MEMORY_MANIFEST_TEMPLATE.read_text(encoding="utf-8")
-    root_manifest = WORKSPACE_ROOT / "memory" / "manifest.toml"
+    root_manifest = WORKSPACE_ROOT / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
     if root_manifest.exists():
         return root_manifest.read_text(encoding="utf-8")
-    payload_manifest = installer.payload_root() / "memory" / "manifest.toml"
+    payload_manifest = installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
     if payload_manifest.exists():
         return payload_manifest.read_text(encoding="utf-8")
     return (PACKAGE_ROOT / "memory" / "manifest.toml").read_text(encoding="utf-8")
 
 
 def _project_state_text() -> str:
-    root_note = WORKSPACE_ROOT / "memory" / "current" / "project-state.md"
+    root_note = WORKSPACE_ROOT / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md"
     if root_note.exists():
         return root_note.read_text(encoding="utf-8")
-    payload_note = installer.payload_root() / "memory" / "current" / "project-state.md"
+    payload_note = installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md"
     if payload_note.exists():
         return payload_note.read_text(encoding="utf-8")
     return (PACKAGE_ROOT / "memory" / "current" / "project-state.md").read_text(encoding="utf-8")
 
 
 def _task_context_text() -> str:
-    root_note = WORKSPACE_ROOT / "memory" / "current" / "task-context.md"
+    root_note = WORKSPACE_ROOT / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md"
     if root_note.exists():
         return root_note.read_text(encoding="utf-8")
-    payload_note = installer.payload_root() / "memory" / "current" / "task-context.md"
+    payload_note = installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md"
     if payload_note.exists():
         return payload_note.read_text(encoding="utf-8")
     return (PACKAGE_ROOT / "memory" / "current" / "task-context.md").read_text(encoding="utf-8")
@@ -107,32 +118,32 @@ def _write_routing_fixture_file(
 
 def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, object]:
     fixture = _load_routing_fixture(fixture_name)
-    (target / ".git").mkdir(parents=True)
-    _write_repo_file(target, "memory/index.md", _memory_index_text())
-    _write_repo_file(target, "memory/domains/README.md", "# Domains\n")
-    _write_repo_file(target, "memory/invariants/README.md", "# Invariants\n")
-    _write_repo_file(target, "memory/runbooks/README.md", "# Runbooks\n")
-    _write_repo_file(target, "memory/decisions/README.md", "# Decisions\n")
-    _write_repo_file(target, "memory/mistakes/recurring-failures.md", "# Recurring failures\n")
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    _write_repo_file(target, ".agentic-workspace/memory/repo/index.md", _memory_index_text())
+    _write_repo_file(target, ".agentic-workspace/memory/repo/domains/README.md", "# Domains\n")
+    _write_repo_file(target, ".agentic-workspace/memory/repo/invariants/README.md", "# Invariants\n")
+    _write_repo_file(target, ".agentic-workspace/memory/repo/runbooks/README.md", "# Runbooks\n")
+    _write_repo_file(target, ".agentic-workspace/memory/repo/decisions/README.md", "# Decisions\n")
+    _write_repo_file(target, ".agentic-workspace/memory/repo/mistakes/recurring-failures.md", "# Recurring failures\n")
 
     if fixture_name == "canonical-doc-precedence.json":
         _write_repo_file(
             target,
-            "memory/manifest.toml",
+            ".agentic-workspace/memory/repo/manifest.toml",
             (
                 "version = 1\n\n"
-                '[notes."memory/index.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/index.md"]\n'
                 'note_type = "routing"\n'
-                'canonical_home = "memory/index.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/index.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
                 'task_relevance = "required"\n'
                 "routing_only = true\n"
                 "high_level = true\n\n"
-                '[notes."memory/domains/README.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/domains/README.md"]\n'
                 'note_type = "domain"\n'
-                'canonical_home = "memory/domains/README.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/domains/README.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
@@ -140,9 +151,9 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'surfaces = ["api"]\n'
                 "routes_from = []\n"
                 "stale_when = []\n\n"
-                '[notes."memory/invariants/README.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/invariants/README.md"]\n'
                 'note_type = "invariant"\n'
-                'canonical_home = "memory/invariants/README.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/invariants/README.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
@@ -155,21 +166,21 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
     elif fixture_name == "optional-pressure.json":
         _write_repo_file(
             target,
-            "memory/manifest.toml",
+            ".agentic-workspace/memory/repo/manifest.toml",
             (
                 "version = 1\n\n"
-                '[notes."memory/index.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/index.md"]\n'
                 'note_type = "routing"\n'
-                'canonical_home = "memory/index.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/index.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
                 'task_relevance = "required"\n'
                 "routing_only = true\n"
                 "high_level = true\n\n"
-                '[notes."memory/invariants/README.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/invariants/README.md"]\n'
                 'note_type = "invariant"\n'
-                'canonical_home = "memory/invariants/README.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/invariants/README.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
@@ -177,9 +188,9 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'surfaces = ["api"]\n'
                 "routes_from = []\n"
                 "stale_when = []\n\n"
-                '[notes."memory/domains/README.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/domains/README.md"]\n'
                 'note_type = "domain"\n'
-                'canonical_home = "memory/domains/README.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/domains/README.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
@@ -192,21 +203,21 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
     elif fixture_name == "missed-note-regression.json":
         _write_repo_file(
             target,
-            "memory/manifest.toml",
+            ".agentic-workspace/memory/repo/manifest.toml",
             (
                 "version = 1\n\n"
-                '[notes."memory/index.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/index.md"]\n'
                 'note_type = "routing"\n'
-                'canonical_home = "memory/index.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/index.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
                 'task_relevance = "required"\n'
                 "routing_only = true\n"
                 "high_level = true\n\n"
-                '[notes."memory/domains/README.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/domains/README.md"]\n'
                 'note_type = "domain"\n'
-                'canonical_home = "memory/domains/README.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/domains/README.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
@@ -214,9 +225,9 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'surfaces = ["tests"]\n'
                 "routes_from = []\n"
                 "stale_when = []\n\n"
-                '[notes."memory/mistakes/recurring-failures.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/mistakes/recurring-failures.md"]\n'
                 'note_type = "recurring-failures"\n'
-                'canonical_home = "memory/mistakes/recurring-failures.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
@@ -229,21 +240,21 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
     elif fixture_name == "over-routing-regression.json":
         _write_repo_file(
             target,
-            "memory/manifest.toml",
+            ".agentic-workspace/memory/repo/manifest.toml",
             (
                 "version = 1\n\n"
-                '[notes."memory/index.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/index.md"]\n'
                 'note_type = "routing"\n'
-                'canonical_home = "memory/index.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/index.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
                 'task_relevance = "required"\n'
                 "routing_only = true\n"
                 "high_level = true\n\n"
-                '[notes."memory/domains/README.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/domains/README.md"]\n'
                 'note_type = "domain"\n'
-                'canonical_home = "memory/domains/README.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/domains/README.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
@@ -251,9 +262,9 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'surfaces = ["api"]\n'
                 "routes_from = []\n"
                 "stale_when = []\n\n"
-                '[notes."memory/invariants/README.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/invariants/README.md"]\n'
                 'note_type = "invariant"\n'
-                'canonical_home = "memory/invariants/README.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/invariants/README.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
@@ -266,21 +277,21 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
     elif fixture_name in {"runtime-basic.json", "architecture-basic.json"}:
         _write_repo_file(
             target,
-            "memory/manifest.toml",
+            ".agentic-workspace/memory/repo/manifest.toml",
             (
                 "version = 1\n\n"
-                '[notes."memory/index.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/index.md"]\n'
                 'note_type = "routing"\n'
-                'canonical_home = "memory/index.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/index.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
                 'task_relevance = "required"\n'
                 "routing_only = true\n"
                 "high_level = true\n\n"
-                '[notes."memory/domains/README.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/domains/README.md"]\n'
                 'note_type = "domain"\n'
-                'canonical_home = "memory/domains/README.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/domains/README.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
@@ -288,9 +299,9 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'surfaces = ["runtime", "architecture"]\n'
                 "routes_from = []\n"
                 "stale_when = []\n\n"
-                '[notes."memory/runbooks/README.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/runbooks/README.md"]\n'
                 'note_type = "runbook"\n'
-                'canonical_home = "memory/runbooks/README.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/runbooks/README.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
@@ -298,9 +309,9 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'surfaces = ["runtime"]\n'
                 "routes_from = []\n"
                 "stale_when = []\n\n"
-                '[notes."memory/invariants/README.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/invariants/README.md"]\n'
                 'note_type = "invariant"\n'
-                'canonical_home = "memory/invariants/README.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/invariants/README.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
@@ -308,9 +319,9 @@ def _setup_routing_fixture_repo(target: Path, fixture_name: str) -> dict[str, ob
                 'surfaces = ["architecture"]\n'
                 "routes_from = []\n"
                 "stale_when = []\n\n"
-                '[notes."memory/decisions/README.md"]\n'
+                '[notes.".agentic-workspace/memory/repo/decisions/README.md"]\n'
                 'note_type = "decision"\n'
-                'canonical_home = "memory/decisions/README.md"\n'
+                'canonical_home = ".agentic-workspace/memory/repo/decisions/README.md"\n'
                 'authority = "canonical"\n'
                 'audience = "human+agent"\n'
                 'canonicality = "agent_only"\n'
@@ -358,7 +369,7 @@ def _routing_feedback_note(
 
 def test_detect_install_mode_is_full_without_todo_file(tmp_path: Path) -> None:
     (tmp_path / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (tmp_path / "memory").mkdir()
+    (tmp_path / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
 
     assert installer.detect_install_mode(tmp_path) == "full"
 
@@ -368,9 +379,9 @@ def test_payload_entries_do_not_include_todo_stub() -> None:
 
     assert all(entry.relative_path != Path("TODO.md") for entry in entries)
     assert all(".agent-work" not in entry.relative_path.as_posix() for entry in entries)
-    assert all(entry.relative_path != Path("memory/current/active-decisions.md") for entry in entries)
-    assert any(entry.relative_path == Path("memory/current/task-context.md") for entry in entries)
-    assert any(entry.relative_path == Path("memory/manifest.toml") for entry in entries)
+    assert all(entry.relative_path != Path(".agentic-workspace/memory/repo/current/active-decisions.md") for entry in entries)
+    assert any(entry.relative_path == Path(".agentic-workspace/memory/repo/current/task-context.md") for entry in entries)
+    assert any(entry.relative_path == Path(".agentic-workspace/memory/repo/manifest.toml") for entry in entries)
     assert any(entry.relative_path == Path(".agentic-workspace/memory/SKILLS.md") for entry in entries)
     assert any(entry.relative_path == Path(".agentic-workspace/memory/UPGRADE-SOURCE.toml") for entry in entries)
     assert any(entry.relative_path == Path(".agentic-workspace/memory/bootstrap/README.md") for entry in entries)
@@ -384,12 +395,16 @@ def test_payload_entries_do_not_include_todo_stub() -> None:
 def test_payload_current_files_include_optional_routing_feedback() -> None:
     entries = installer._payload_entries(installer.payload_root())
 
-    current_paths = {entry.relative_path.as_posix() for entry in entries if entry.relative_path.as_posix().startswith("memory/current/")}
+    current_paths = {
+        entry.relative_path.as_posix()
+        for entry in entries
+        if entry.relative_path.as_posix().startswith(".agentic-workspace/memory/repo/current/")
+    }
 
     assert current_paths == {
-        "memory/current/project-state.md",
-        "memory/current/routing-feedback.md",
-        "memory/current/task-context.md",
+        ".agentic-workspace/memory/repo/current/project-state.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
+        ".agentic-workspace/memory/repo/current/task-context.md",
     }
 
 
@@ -472,7 +487,7 @@ def test_equivalent_optional_fragment_detail_requires_matching_targets() -> None
 def test_plan_optional_appends_skips_equivalent_makefile_target(tmp_path: Path) -> None:
     source_root = tmp_path / "payload"
     target_root = tmp_path / "target"
-    (source_root / "optional").mkdir(parents=True)
+    (source_root / "optional").mkdir(parents=True, exist_ok=True)
     target_root.mkdir()
 
     fragment = "check-memory:\n\tpython scripts/check/check_memory_freshness.py\n"
@@ -501,7 +516,7 @@ def test_plan_optional_appends_skips_equivalent_makefile_target(tmp_path: Path) 
 
 def test_install_does_not_duplicate_existing_optional_fragment(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     makefile = target / "Makefile"
     makefile.write_text(
         "check-memory:\n\tpython scripts/check/check_memory_freshness.py\n",
@@ -529,8 +544,8 @@ def test_doctor_flags_agents_that_embed_current_shared_workflow_sections(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "system").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text(
         "# Agent Instructions\n\n"
         f"{installer.WORKFLOW_POINTER_BLOCK}\n\n"
@@ -540,7 +555,7 @@ def test_doctor_flags_agents_that_embed_current_shared_workflow_sections(
         "- copied shared rule\n",
         encoding="utf-8",
     )
-    (target / "memory" / "system" / "VERSION.md").write_text("Version: 8\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 8\n", encoding="utf-8")
 
     result = installer.doctor_bootstrap(target=target)
 
@@ -554,30 +569,31 @@ def test_upgrade_replaces_shared_files_without_todo_manual_review(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "current").mkdir(parents=True)
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "system" / "VERSION.md").write_text("Version: 7\n", encoding="utf-8")
-    (target / "memory" / "system" / "WORKFLOW.md").write_text("old workflow\n", encoding="utf-8")
-    (target / "memory" / "current" / "task-context.md").write_text("# Task Context\n\n<CURRENT_FOCUS>\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 7\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "WORKFLOW.md").write_text("old workflow\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md").write_text(
+        "# Task Context\n\n<CURRENT_FOCUS>\n", encoding="utf-8"
+    )
 
     result = installer.doctor_bootstrap(target=target)
 
     assert all(action.path != target / "TODO.md" for action in result.actions)
     assert any(
-        action.path == target / "memory" / "system" / "WORKFLOW.md"
-        and action.kind == "skipped"
-        and "repo-owned file left untouched" in action.detail
+        action.path == target / ".agentic-workspace" / "memory" / "WORKFLOW.md"
+        and action.kind == "would replace"
+        and "planned change" in action.detail
         for action in result.actions
     )
     assert any(
-        action.path == target / "memory" / "system" / "UPGRADE-SOURCE.toml"
-        and action.kind == "current"
-        and "next `agentic-memory-bootstrap upgrade --target <repo>` will migrate" in action.detail
+        action.path == target / ".agentic-workspace" / "memory" / "UPGRADE-SOURCE.toml" and action.kind in {"current", "would create"}
         for action in result.actions
     )
     assert any(
-        action.path == target / "memory" / "current" / "task-context.md" and action.kind == "would replace" for action in result.actions
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md" and action.kind == "would replace"
+        for action in result.actions
     )
 
 
@@ -585,9 +601,9 @@ def test_doctor_reports_customised_seed_notes_as_expected_customisation(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
-    note_path = target / "memory" / "current" / "project-state.md"
+    note_path = target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md"
     note_path.write_text("# Project State\n\nlocalised\n", encoding="utf-8")
 
     result = installer.doctor_bootstrap(target=target)
@@ -599,7 +615,7 @@ def test_doctor_reports_customised_seed_notes_as_expected_customisation(
 
 def test_memory_status_does_not_flag_absent_optional_append_targets_in_clean_repo(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
 
     result = installer.collect_status(target=target)
@@ -613,7 +629,7 @@ def test_memory_status_does_not_flag_absent_optional_append_targets_in_clean_rep
 
 def test_memory_doctor_does_not_flag_absent_optional_append_targets_in_clean_repo(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
 
     result = installer.doctor_bootstrap(target=target)
@@ -631,11 +647,11 @@ def test_doctor_overlap_audit_ignores_generic_ownership_terms(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
 
-    domain_path = target / "memory" / "domains" / "ownership-domain.md"
-    decision_path = target / "memory" / "decisions" / "ownership-decision.md"
+    domain_path = target / ".agentic-workspace" / "memory" / "repo" / "domains" / "ownership-domain.md"
+    decision_path = target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "ownership-decision.md"
     domain_path.write_text(
         (
             "# Ownership Domain\n\n"
@@ -653,12 +669,12 @@ def test_doctor_overlap_audit_ignores_generic_ownership_terms(
         encoding="utf-8",
     )
 
-    manifest_path = target / "memory" / "manifest.toml"
+    manifest_path = target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
     manifest_text = manifest_path.read_text(encoding="utf-8")
     manifest_text += (
-        '\n[notes."memory/domains/ownership-domain.md"]\n'
+        '\n[notes.".agentic-workspace/memory/repo/domains/ownership-domain.md"]\n'
         'note_type = "domain"\n'
-        'canonical_home = "memory/domains/ownership-domain.md"\n'
+        'canonical_home = ".agentic-workspace/memory/repo/domains/ownership-domain.md"\n'
         'authority = "canonical"\n'
         'audience = "human+agent"\n'
         'canonicality = "agent_only"\n'
@@ -667,9 +683,9 @@ def test_doctor_overlap_audit_ignores_generic_ownership_terms(
         'surfaces = ["architecture"]\n'
         'routes_from = ["AGENTS.md"]\n'
         'stale_when = ["AGENTS.md"]\n'
-        '\n[notes."memory/decisions/ownership-decision.md"]\n'
+        '\n[notes.".agentic-workspace/memory/repo/decisions/ownership-decision.md"]\n'
         'note_type = "decision"\n'
-        'canonical_home = "memory/decisions/ownership-decision.md"\n'
+        'canonical_home = ".agentic-workspace/memory/repo/decisions/ownership-decision.md"\n'
         'authority = "canonical"\n'
         'audience = "human+agent"\n'
         'canonicality = "agent_only"\n'
@@ -693,16 +709,16 @@ def test_doctor_overlap_audit_skips_explicit_primary_home_references(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
 
-    domain_path = target / "memory" / "domains" / "package-context.md"
-    decision_path = target / "memory" / "decisions" / "package-context-decision.md"
+    domain_path = target / ".agentic-workspace" / "memory" / "repo" / "domains" / "package-context.md"
+    decision_path = target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "package-context-decision.md"
     domain_path.write_text(
         (
             "# Package Context\n\n"
             "Package boundary context lives here.\n\n"
-            "For the owning rationale, load `memory/decisions/package-context-decision.md` instead of expanding this note.\n"
+            "For the owning rationale, load `.agentic-workspace/memory/repo/decisions/package-context-decision.md` instead of expanding this note.\n"
         ),
         encoding="utf-8",
     )
@@ -711,12 +727,12 @@ def test_doctor_overlap_audit_skips_explicit_primary_home_references(
         encoding="utf-8",
     )
 
-    manifest_path = target / "memory" / "manifest.toml"
+    manifest_path = target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
     manifest_text = manifest_path.read_text(encoding="utf-8")
     manifest_text += (
-        '\n[notes."memory/domains/package-context.md"]\n'
+        '\n[notes.".agentic-workspace/memory/repo/domains/package-context.md"]\n'
         'note_type = "domain"\n'
-        'canonical_home = "memory/domains/package-context.md"\n'
+        'canonical_home = ".agentic-workspace/memory/repo/domains/package-context.md"\n'
         'authority = "canonical"\n'
         'audience = "human+agent"\n'
         'canonicality = "agent_only"\n'
@@ -725,9 +741,9 @@ def test_doctor_overlap_audit_skips_explicit_primary_home_references(
         'surfaces = ["architecture"]\n'
         'routes_from = ["packages/**"]\n'
         'stale_when = ["packages/**"]\n'
-        '\n[notes."memory/decisions/package-context-decision.md"]\n'
+        '\n[notes.".agentic-workspace/memory/repo/decisions/package-context-decision.md"]\n'
         'note_type = "decision"\n'
-        'canonical_home = "memory/decisions/package-context-decision.md"\n'
+        'canonical_home = ".agentic-workspace/memory/repo/decisions/package-context-decision.md"\n'
         'authority = "canonical"\n'
         'audience = "human+agent"\n'
         'canonicality = "agent_only"\n'
@@ -753,11 +769,11 @@ def test_doctor_overlap_audit_requires_shared_title_terms_for_decision_family_pa
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
 
-    installed_path = target / "memory" / "decisions" / "installed-system.md"
-    foundation_path = target / "memory" / "decisions" / "foundation-stability.md"
+    installed_path = target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "installed-system.md"
+    foundation_path = target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "foundation-stability.md"
     shared_text = (
         "operational orchestration planning root-owned installs validation lifecycle boundaries adopted packages "
         "managed workspace authority consolidation checks\n"
@@ -765,12 +781,12 @@ def test_doctor_overlap_audit_requires_shared_title_terms_for_decision_family_pa
     installed_path.write_text("# Root-Owned Installed Systems\n\n" + shared_text, encoding="utf-8")
     foundation_path.write_text("# Repository Foundation Stability\n\n" + shared_text, encoding="utf-8")
 
-    manifest_path = target / "memory" / "manifest.toml"
+    manifest_path = target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
     manifest_text = manifest_path.read_text(encoding="utf-8")
     manifest_text += (
-        '\n[notes."memory/decisions/installed-system.md"]\n'
+        '\n[notes.".agentic-workspace/memory/repo/decisions/installed-system.md"]\n'
         'note_type = "decision"\n'
-        'canonical_home = "memory/decisions/installed-system.md"\n'
+        'canonical_home = ".agentic-workspace/memory/repo/decisions/installed-system.md"\n'
         'authority = "canonical"\n'
         'audience = "human+agent"\n'
         'canonicality = "agent_only"\n'
@@ -779,9 +795,9 @@ def test_doctor_overlap_audit_requires_shared_title_terms_for_decision_family_pa
         'surfaces = ["architecture"]\n'
         'routes_from = ["AGENTS.md"]\n'
         'stale_when = ["AGENTS.md"]\n'
-        '\n[notes."memory/decisions/foundation-stability.md"]\n'
+        '\n[notes.".agentic-workspace/memory/repo/decisions/foundation-stability.md"]\n'
         'note_type = "decision"\n'
-        'canonical_home = "memory/decisions/foundation-stability.md"\n'
+        'canonical_home = ".agentic-workspace/memory/repo/decisions/foundation-stability.md"\n'
         'authority = "canonical"\n'
         'audience = "human+agent"\n'
         'canonicality = "agent_only"\n'
@@ -805,24 +821,24 @@ def test_doctor_overlap_audit_requires_shared_title_terms_for_decision_family_pa
 
 def test_doctor_overlap_audit_skips_distinct_package_context_notes(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "domains" / "memory-package-context.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "memory-package-context.md").write_text(
         "# Memory Package Context\n\nMemory package authority lives in packages/memory/src and packages/memory/tests.\n",
         encoding="utf-8",
     )
-    (target / "memory" / "domains" / "planning-package-context.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "planning-package-context.md").write_text(
         "# Planning Package Context\n\nPlanning package authority lives in packages/planning/src and packages/planning/tests.\n",
         encoding="utf-8",
     )
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/memory-package-context.md"]
+[notes.".agentic-workspace/memory/repo/domains/memory-package-context.md"]
 note_type = "domain"
-canonical_home = "memory/domains/memory-package-context.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/memory-package-context.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -830,9 +846,9 @@ task_relevance = "optional"
 surfaces = ["architecture"]
 routes_from = ["packages/memory/**"]
 
-[notes."memory/domains/planning-package-context.md"]
+[notes.".agentic-workspace/memory/repo/domains/planning-package-context.md"]
 note_type = "domain"
-canonical_home = "memory/domains/planning-package-context.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/planning-package-context.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -848,7 +864,7 @@ routes_from = ["packages/planning/**"]
 
     assert not any(
         action.role == "memory-overlap-audit"
-        and action.path == target / "memory" / "domains" / "memory-package-context.md"
+        and action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "memory-package-context.md"
         and "planning-package-context.md" in action.detail
         for action in result.actions
     )
@@ -856,25 +872,25 @@ routes_from = ["packages/planning/**"]
 
 def test_doctor_overlap_audit_skips_package_context_companion_runbook(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
-    (target / "memory" / "runbooks").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "domains" / "memory-package-context.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "memory-package-context.md").write_text(
         "# Memory Package Context\n\nUse the companion skill for the checklist.\n",
         encoding="utf-8",
     )
-    (target / "memory" / "runbooks" / "package-context-inspection.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "package-context-inspection.md").write_text(
         "# Package Context Inspection\n\nUse the skill for execution.\n",
         encoding="utf-8",
     )
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/memory-package-context.md"]
+[notes.".agentic-workspace/memory/repo/domains/memory-package-context.md"]
 note_type = "domain"
-canonical_home = "memory/domains/memory-package-context.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/memory-package-context.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -882,9 +898,9 @@ task_relevance = "optional"
 surfaces = ["architecture"]
 routes_from = ["packages/memory/**"]
 
-[notes."memory/runbooks/package-context-inspection.md"]
+[notes.".agentic-workspace/memory/repo/runbooks/package-context-inspection.md"]
 note_type = "runbook"
-canonical_home = "memory/runbooks/package-context-inspection.md"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/package-context-inspection.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -900,7 +916,7 @@ routes_from = ["packages/memory/**", "packages/planning/**"]
 
     assert not any(
         action.role == "memory-overlap-audit"
-        and action.path == target / "memory" / "domains" / "memory-package-context.md"
+        and action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "memory-package-context.md"
         and "package-context-inspection.md" in action.detail
         for action in result.actions
     )
@@ -910,9 +926,9 @@ def test_upgrade_reports_customised_seed_notes_as_expected_customisation(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
-    note_path = target / "memory" / "current" / "project-state.md"
+    note_path = target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md"
     note_path.write_text("# Project State\n\nlocalised\n", encoding="utf-8")
 
     result = installer.upgrade_bootstrap(target=target)
@@ -937,34 +953,36 @@ def test_list_payload_files_excludes_agent_work_templates_and_gitignore_append(
 
     assert all(action.path != target / ".gitignore" for action in result.actions)
     assert all(".agent-work" not in action.path.as_posix() for action in result.actions)
-    assert all(action.path != target / "memory" / "current" / "active-decisions.md" for action in result.actions)
+    assert all(
+        action.path != target / ".agentic-workspace" / "memory" / "repo" / "current" / "active-decisions.md" for action in result.actions
+    )
 
 
 def test_install_dry_run_includes_current_memory_baseline(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     result = installer.install_bootstrap(target=target, dry_run=True)
 
     planned_copies = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "would copy"}
 
-    assert "memory/current/project-state.md" in planned_copies
-    assert "memory/current/routing-feedback.md" in planned_copies
-    assert "memory/current/task-context.md" in planned_copies
+    assert ".agentic-workspace/memory/repo/current/project-state.md" in planned_copies
+    assert ".agentic-workspace/memory/repo/current/routing-feedback.md" in planned_copies
+    assert ".agentic-workspace/memory/repo/current/task-context.md" in planned_copies
     assert ".agentic-workspace/memory/bootstrap/README.md" in planned_copies
-    assert "memory/current/active-decisions.md" not in planned_copies
+    assert ".agentic-workspace/memory/repo/current/active-decisions.md" not in planned_copies
 
 
 def test_install_writes_audit_clean_current_memory_seed_dates(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     installer.install_bootstrap(target=target)
 
     for relative in (
-        "memory/current/project-state.md",
-        "memory/current/routing-feedback.md",
-        "memory/current/task-context.md",
+        ".agentic-workspace/memory/repo/current/project-state.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
+        ".agentic-workspace/memory/repo/current/task-context.md",
     ):
         text = (target / relative).read_text(encoding="utf-8")
         assert "<LAST_CONFIRMED_DATE>" not in text
@@ -975,17 +993,19 @@ def test_install_writes_audit_clean_recurring_failures_seed_date(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     installer.install_bootstrap(target=target)
 
-    text = (target / "memory" / "mistakes" / "recurring-failures.md").read_text(encoding="utf-8")
+    text = (target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md").read_text(encoding="utf-8")
     assert "<LAST_CONFIRMED_DATE>" not in text
     assert "## Last confirmed\n\n20" in text
 
 
 def test_bootstrap_recurring_failures_note_clarifies_anti_trap_contract() -> None:
-    text = (installer.payload_root() / "memory" / "mistakes" / "recurring-failures.md").read_text(encoding="utf-8")
+    text = (installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "anti-trap memory, not a bug tracker, issue mirror, or backlog" in text
     assert "one verified incident that clearly exposes a trap likely to recur" in text
@@ -997,7 +1017,7 @@ def test_bootstrap_recurring_failures_note_clarifies_anti_trap_contract() -> Non
 
 def test_install_writes_upgrade_source_metadata(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     installer.install_bootstrap(target=target)
 
@@ -1010,9 +1030,9 @@ def test_install_writes_upgrade_source_metadata(tmp_path: Path) -> None:
 
 def test_adopt_writes_upgrade_source_metadata(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory").mkdir()
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
 
     installer.adopt_bootstrap(target=target)
 
@@ -1042,23 +1062,25 @@ def test_build_substitutions_supports_explicit_placeholder_flags(
 
 def test_current_show_reports_missing_notes(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     result = installer.show_current_memory(target=target)
 
     assert [note.path.as_posix() for note in result.notes] == [
-        "memory/current/project-state.md",
-        "memory/current/task-context.md",
+        ".agentic-workspace/memory/repo/current/project-state.md",
+        ".agentic-workspace/memory/repo/current/task-context.md",
     ]
     assert all(not note.exists for note in result.notes)
 
 
 def test_current_check_flags_placeholder_and_stale_task_context(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "current").mkdir(parents=True)
-    (target / "memory" / "current" / "project-state.md").write_text("# Project State\n\nok\n", encoding="utf-8")
-    (target / "memory" / "current" / "task-context.md").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md").write_text(
+        "# Project State\n\nok\n", encoding="utf-8"
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md").write_text(
         "# Task Context\n\n<CURRENT_FOCUS>\n\n## Last confirmed\n\n2026-01-01\n",
         encoding="utf-8",
     )
@@ -1071,13 +1093,13 @@ def test_current_check_flags_placeholder_and_stale_task_context(tmp_path: Path) 
 
 def test_current_check_flags_stale_project_state(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "current").mkdir(parents=True)
-    (target / "memory" / "current" / "project-state.md").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md").write_text(
         "# Project State\n\n## Last confirmed\n\n2026-01-01\n",
         encoding="utf-8",
     )
-    (target / "memory" / "current" / "task-context.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md").write_text(
         "# Task Context\n\nok\n",
         encoding="utf-8",
     )
@@ -1085,7 +1107,7 @@ def test_current_check_flags_stale_project_state(tmp_path: Path) -> None:
     result = installer.check_current_memory(target=target)
 
     assert any(
-        action.path == target / "memory" / "current" / "project-state.md"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md"
         and action.kind == "manual review"
         and "project-state note has not been confirmed" in action.detail
         and "authority boundaries" in action.detail
@@ -1095,13 +1117,13 @@ def test_current_check_flags_stale_project_state(tmp_path: Path) -> None:
 
 def test_current_check_flags_task_context_structure_drift_and_planner_signals(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "current").mkdir(parents=True)
-    (target / "memory" / "current" / "project-state.md").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md").write_text(
         _project_state_text(),
         encoding="utf-8",
     )
-    (target / "memory" / "current" / "task-context.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md").write_text(
         "# Task Context\n\n"
         "## Status\n\nActive\n\n"
         "## Scope\n\n- Optional continuation context.\n\n"
@@ -1119,12 +1141,12 @@ def test_current_check_flags_task_context_structure_drift_and_planner_signals(tm
 
 def test_current_check_flags_project_state_planning_state_residue(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "current").mkdir(parents=True)
-    (target / "memory" / "current" / "project-state.md").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md").write_text(
         "# Project State\n\n"
         "## Status\n\n"
-        "- Active execplan: `docs/execplans/example.md`.\n\n"
+        "- Active execplan: `.agentic-workspace/planning/execplans/example.md`.\n\n"
         "## Scope\n\n- Shared overview only.\n\n"
         "## Applies to\n\n- Root monorepo operation.\n\n"
         "## Load when\n\n- Starting work.\n\n"
@@ -1139,25 +1161,26 @@ def test_current_check_flags_project_state_planning_state_residue(tmp_path: Path
         "## Last confirmed\n\n2026-04-13\n",
         encoding="utf-8",
     )
-    (target / "memory" / "current" / "task-context.md").write_text(_task_context_text(), encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md").write_text(_task_context_text(), encoding="utf-8")
 
     result = installer.check_current_memory(target=target)
 
     assert any(
-        action.path == target / "memory" / "current" / "project-state.md" and "explicit planning-state residue" in action.detail
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md"
+        and "explicit planning-state residue" in action.detail
         for action in result.actions
     )
 
 
 def test_current_check_allows_next_validation_heading(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "current").mkdir(parents=True)
-    (target / "memory" / "current" / "project-state.md").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md").write_text(
         _project_state_text(),
         encoding="utf-8",
     )
-    (target / "memory" / "current" / "task-context.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md").write_text(
         _task_context_text(),
         encoding="utf-8",
     )
@@ -1177,8 +1200,8 @@ def test_resolve_upgrade_source_defaults_to_git_when_metadata_missing(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "system").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
 
     resolved = installer.resolve_upgrade_source(target=target)
 
@@ -1191,7 +1214,7 @@ def test_resolve_upgrade_source_defaults_to_git_when_metadata_missing(
 
 def test_upgrade_reports_resolved_source(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
 
     result = installer.upgrade_bootstrap(target=target, dry_run=True)
@@ -1212,7 +1235,7 @@ def test_upgrade_reports_resolved_source(tmp_path: Path) -> None:
 
 def test_doctor_reports_stale_upgrade_source_metadata(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
     (target / ".agentic-workspace/memory" / "UPGRADE-SOURCE.toml").write_text(
         (
@@ -1237,7 +1260,7 @@ def test_doctor_reports_stale_upgrade_source_metadata(tmp_path: Path) -> None:
 
 def test_upgrade_preserves_existing_local_source_metadata(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
     source_path = target / ".agentic-workspace/memory" / "UPGRADE-SOURCE.toml"
     source_path.write_text(
@@ -1258,7 +1281,7 @@ def test_upgrade_dry_run_does_not_include_bootstrap_workspace_files(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
 
     result = installer.upgrade_bootstrap(target=target, dry_run=True)
@@ -1269,19 +1292,19 @@ def test_upgrade_dry_run_does_not_include_bootstrap_workspace_files(
 
 def test_route_memory_adds_routing_baseline_and_runtime_suggestions(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
 
     result = installer.route_memory(target=target, files=["deploy/k8s/service.yaml"])
     required = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "required"}
     suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "optional"}
 
-    assert "memory/index.md" in required
-    assert "memory/domains/README.md" in suggested
-    assert "memory/runbooks/README.md" in suggested
-    assert "memory/current/project-state.md" not in suggested
-    assert "memory/current/task-context.md" not in suggested
+    assert ".agentic-workspace/memory/repo/index.md" in required
+    assert ".agentic-workspace/memory/repo/domains/README.md" in suggested
+    assert ".agentic-workspace/memory/repo/runbooks/README.md" in suggested
+    assert ".agentic-workspace/memory/repo/current/project-state.md" not in suggested
+    assert ".agentic-workspace/memory/repo/current/task-context.md" not in suggested
     assert result.route_summary["routed_note_count"] == 3
     assert result.route_summary["required_count"] == 1
     assert result.route_summary["optional_count"] == 2
@@ -1291,26 +1314,26 @@ def test_route_memory_adds_routing_baseline_and_runtime_suggestions(tmp_path: Pa
 
 def test_route_memory_adds_architecture_suggestions(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
 
     result = installer.route_memory(target=target, files=["src/architecture/schema.py"])
     suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "optional"}
 
-    assert "memory/invariants/README.md" in suggested
-    assert "memory/decisions/README.md" in suggested
-    assert "memory/current/project-state.md" not in suggested
-    assert "memory/current/task-context.md" not in suggested
+    assert ".agentic-workspace/memory/repo/invariants/README.md" in suggested
+    assert ".agentic-workspace/memory/repo/decisions/README.md" in suggested
+    assert ".agentic-workspace/memory/repo/current/project-state.md" not in suggested
+    assert ".agentic-workspace/memory/repo/current/task-context.md" not in suggested
     assert result.route_summary["exceeded_target"] == "yes"
     assert "justification" in result.route_summary
 
 
 def test_route_memory_reports_low_confidence_for_index_only_fallbacks(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
 
     result = installer.route_memory(target=target, files=["deploy/k8s/service.yaml"])
 
@@ -1321,26 +1344,26 @@ def test_route_memory_reports_low_confidence_for_index_only_fallbacks(tmp_path: 
 
 def test_route_memory_reports_high_confidence_for_direct_manifest_matches(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
-    (target / "memory" / "domains" / "api.md").write_text("# API\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md").write_text("# API\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/index.md"]
+[notes.".agentic-workspace/memory/repo/index.md"]
 note_type = "routing"
-canonical_home = "memory/index.md"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "required"
 routing_only = true
 
-[notes."memory/domains/api.md"]
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
-canonical_home = "memory/domains/api.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -1361,16 +1384,16 @@ surfaces = ["api"]
 
 def test_route_memory_falls_back_to_index_when_manifest_is_incomplete(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/cli.md"]
+[notes.".agentic-workspace/memory/repo/domains/cli.md"]
 note_type = "domain"
-canonical_home = "memory/domains/cli.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/cli.md"
 authority = "canonical"
 audience = "human+agent"
 surfaces = ["api"]
@@ -1384,16 +1407,16 @@ stale_when = ["src/**/*.py"]
     result = installer.route_memory(target=target, files=["deploy/k8s/service.yaml"])
     suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "optional"}
 
-    assert "memory/domains/README.md" in suggested
-    assert "memory/runbooks/README.md" in suggested
+    assert ".agentic-workspace/memory/repo/domains/README.md" in suggested
+    assert ".agentic-workspace/memory/repo/runbooks/README.md" in suggested
 
 
 def test_route_memory_does_not_treat_routing_baseline_as_surface_coverage(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         _memory_manifest_text(),
         encoding="utf-8",
     )
@@ -1403,23 +1426,23 @@ def test_route_memory_does_not_treat_routing_baseline_as_surface_coverage(tmp_pa
     suggested = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "optional"}
     manual_reviews = {action.path.relative_to(target).as_posix() for action in result.actions if action.kind == "manual review"}
 
-    assert "memory/index.md" in required
-    assert "memory/domains/README.md" in suggested
-    assert "memory/runbooks/README.md" in suggested
-    assert "memory/index.md" not in manual_reviews
+    assert ".agentic-workspace/memory/repo/index.md" in required
+    assert ".agentic-workspace/memory/repo/domains/README.md" in suggested
+    assert ".agentic-workspace/memory/repo/runbooks/README.md" in suggested
+    assert ".agentic-workspace/memory/repo/index.md" not in manual_reviews
 
 
 def test_route_memory_only_suggests_task_context_on_explicit_input(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
 
-    result = installer.route_memory(target=target, files=["memory/current/task-context.md"])
+    result = installer.route_memory(target=target, files=[".agentic-workspace/memory/repo/current/task-context.md"])
 
     assert any(
         action.kind == "optional"
-        and action.path.relative_to(target).as_posix() == "memory/current/task-context.md"
+        and action.path.relative_to(target).as_posix() == ".agentic-workspace/memory/repo/current/task-context.md"
         and "explicit current-context input" in action.detail
         for action in result.actions
     )
@@ -1427,15 +1450,15 @@ def test_route_memory_only_suggests_task_context_on_explicit_input(tmp_path: Pat
 
 def test_route_memory_uses_manifest_file_globs(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/cli.md"]
+[notes.".agentic-workspace/memory/repo/domains/cli.md"]
 note_type = "domain"
-canonical_home = "memory/domains/cli.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/cli.md"
 authority = "canonical"
 audience = "human+agent"
 routes_from = ["src/**/*.py"]
@@ -1449,7 +1472,7 @@ stale_when = ["src/**/*.py"]
 
     assert any(
         action.kind == "optional"
-        and action.path.relative_to(target).as_posix() == "memory/domains/cli.md"
+        and action.path.relative_to(target).as_posix() == ".agentic-workspace/memory/repo/domains/cli.md"
         and "manifest path match" in action.detail
         and action.match_source == "file-path"
         for action in result.actions
@@ -1458,16 +1481,18 @@ stale_when = ["src/**/*.py"]
 
 def test_route_memory_emits_improvement_pressure_for_matched_note(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
-    (target / "memory" / "domains" / "deploy.md").write_text(("# Deploy\n\n" + "boundary detail\n") * 80, encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "deploy.md").write_text(
+        ("# Deploy\n\n" + "boundary detail\n") * 80, encoding="utf-8"
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/deploy.md"]
+[notes.".agentic-workspace/memory/repo/domains/deploy.md"]
 note_type = "domain"
-canonical_home = "memory/domains/deploy.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/deploy.md"
 authority = "canonical"
 audience = "human+agent"
 routes_from = ["deploy/**/*.yaml"]
@@ -1480,7 +1505,7 @@ stale_when = ["deploy/**/*.yaml"]
     result = installer.route_memory(target=target, files=["deploy/prod/service.yaml"])
 
     assert any(
-        action.path == target / "memory" / "domains" / "deploy.md"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "deploy.md"
         and action.kind == "consider"
         and "clearer canonical docs or refactor review" in action.detail
         for action in result.actions
@@ -1489,64 +1514,64 @@ stale_when = ["deploy/**/*.yaml"]
 
 def test_route_memory_emits_strong_warning_for_six_plus_direct_matches(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/index.md"]
+[notes.".agentic-workspace/memory/repo/index.md"]
 note_type = "routing"
-canonical_home = "memory/index.md"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "required"
 routing_only = true
 
-[notes."memory/domains/a.md"]
+[notes.".agentic-workspace/memory/repo/domains/a.md"]
 note_type = "domain"
-canonical_home = "memory/domains/a.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/a.md"
 authority = "canonical"
 audience = "human+agent"
 task_relevance = "optional"
 routes_from = ["src/**/*.py"]
 
-[notes."memory/domains/b.md"]
+[notes.".agentic-workspace/memory/repo/domains/b.md"]
 note_type = "domain"
-canonical_home = "memory/domains/b.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/b.md"
 authority = "canonical"
 audience = "human+agent"
 task_relevance = "optional"
 routes_from = ["src/**/*.py"]
 
-[notes."memory/domains/c.md"]
+[notes.".agentic-workspace/memory/repo/domains/c.md"]
 note_type = "domain"
-canonical_home = "memory/domains/c.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/c.md"
 authority = "canonical"
 audience = "human+agent"
 task_relevance = "optional"
 routes_from = ["src/**/*.py"]
 
-[notes."memory/domains/d.md"]
+[notes.".agentic-workspace/memory/repo/domains/d.md"]
 note_type = "domain"
-canonical_home = "memory/domains/d.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/d.md"
 authority = "canonical"
 audience = "human+agent"
 task_relevance = "optional"
 routes_from = ["src/**/*.py"]
 
-[notes."memory/domains/e.md"]
+[notes.".agentic-workspace/memory/repo/domains/e.md"]
 note_type = "domain"
-canonical_home = "memory/domains/e.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/e.md"
 authority = "canonical"
 audience = "human+agent"
 task_relevance = "optional"
 routes_from = ["src/**/*.py"]
 
-[notes."memory/domains/f.md"]
+[notes.".agentic-workspace/memory/repo/domains/f.md"]
 note_type = "domain"
-canonical_home = "memory/domains/f.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/f.md"
 authority = "canonical"
 audience = "human+agent"
 task_relevance = "optional"
@@ -1566,7 +1591,7 @@ routes_from = ["src/**/*.py"]
 
 def test_sync_memory_without_input_returns_guidance(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     result = installer.sync_memory(target=target)
 
@@ -1579,9 +1604,9 @@ def test_sync_memory_with_explicit_file_produces_recommendations(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
 
     result = installer.sync_memory(target=target, files=["tests/test_cli.py"])
 
@@ -1590,16 +1615,16 @@ def test_sync_memory_with_explicit_file_produces_recommendations(
 
 def test_sync_memory_emits_compact_primary_note_summary(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
-    (target / "memory" / "domains" / "cli.md").write_text("# CLI\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "cli.md").write_text("# CLI\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/cli.md"]
+[notes.".agentic-workspace/memory/repo/domains/cli.md"]
 note_type = "domain"
-canonical_home = "memory/domains/cli.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/cli.md"
 authority = "canonical"
 audience = "human+agent"
 routes_from = ["src/**"]
@@ -1612,23 +1637,23 @@ stale_when = ["src/**"]
     result = installer.sync_memory(target=target, files=["src/service/api.py"])
 
     assert result.sync_summary["status"] == "actionable"
-    assert result.sync_summary["primary_note"]["path"] == "memory/domains/cli.md"
-    assert "Start with memory/domains/cli.md" in result.sync_summary["summary"]
+    assert result.sync_summary["primary_note"]["path"] == ".agentic-workspace/memory/repo/domains/cli.md"
+    assert "Start with .agentic-workspace/memory/repo/domains/cli.md" in result.sync_summary["summary"]
 
 
 def test_sync_memory_uses_manifest_staleness_triggers(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
-    (target / "memory" / "domains" / "cli.md").write_text("# CLI\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "cli.md").write_text("# CLI\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/cli.md"]
+[notes.".agentic-workspace/memory/repo/domains/cli.md"]
 note_type = "domain"
-canonical_home = "memory/domains/cli.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/cli.md"
 authority = "canonical"
 audience = "human+agent"
 routes_from = ["src/**/*.py"]
@@ -1642,7 +1667,7 @@ related_validations = ["uv run pytest"]
     result = installer.sync_memory(target=target, files=["src/repo_memory_bootstrap/installer.py"])
 
     assert any(
-        action.path == target / "memory" / "domains" / "cli.md"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "cli.md"
         and action.kind == "review"
         and "manifest staleness trigger matched" in action.detail
         for action in result.actions
@@ -1651,16 +1676,18 @@ related_validations = ["uv run pytest"]
 
 def test_sync_memory_emits_improvement_pressure_for_stale_note(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
-    (target / "memory" / "domains" / "deploy.md").write_text(("# Deploy\n\n" + "boundary detail\n") * 80, encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "deploy.md").write_text(
+        ("# Deploy\n\n" + "boundary detail\n") * 80, encoding="utf-8"
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/deploy.md"]
+[notes.".agentic-workspace/memory/repo/domains/deploy.md"]
 note_type = "domain"
-canonical_home = "memory/domains/deploy.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/deploy.md"
 authority = "canonical"
 audience = "human+agent"
 routes_from = ["src/**/*.py"]
@@ -1673,7 +1700,7 @@ stale_when = ["src/**/*.py"]
     result = installer.sync_memory(target=target, files=["src/repo_memory_bootstrap/installer.py"])
 
     assert any(
-        action.path == target / "memory" / "domains" / "deploy.md"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "deploy.md"
         and action.kind == "consider"
         and "clearer canonical docs or refactor review" in action.detail
         for action in result.actions
@@ -1682,7 +1709,7 @@ stale_when = ["src/**/*.py"]
 
 def test_verify_payload_passes_for_current_payload(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     result = installer.verify_payload(target=target)
 
@@ -1691,17 +1718,17 @@ def test_verify_payload_passes_for_current_payload(tmp_path: Path) -> None:
 
 def test_verify_payload_reports_contract_surface_shortlists(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     result = installer.verify_payload(target=target)
 
     assert any(
-        action.path == target / "memory" / "manifest.toml"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
         and action.kind == "current"
         and action.role == "payload-contract"
         and "compatibility contract files:" in action.detail
-        and "memory/index.md" in action.detail
-        and "memory/current/project-state.md" in action.detail
+        and ".agentic-workspace/memory/repo/index.md" in action.detail
+        and ".agentic-workspace/memory/repo/current/project-state.md" in action.detail
         for action in result.actions
     )
     assert any(
@@ -1717,18 +1744,18 @@ def test_verify_payload_reports_contract_surface_shortlists(tmp_path: Path) -> N
 
 def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     installer.install_bootstrap(target=target)
     result = installer.doctor_bootstrap(target=target)
 
     assert any(
-        action.path == target / "memory" / "manifest.toml"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
         and action.kind == "current"
         and action.role == "payload-contract"
         and "compatibility contract files:" in action.detail
-        and "memory/runbooks/README.md" in action.detail
-        and "memory/decisions/README.md" in action.detail
+        and ".agentic-workspace/memory/repo/runbooks/README.md" in action.detail
+        and ".agentic-workspace/memory/repo/decisions/README.md" in action.detail
         for action in result.actions
     )
     assert any(
@@ -1744,7 +1771,7 @@ def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
 
 def test_memory_freshness_audit_ignores_bootstrap_workspace(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     installer.install_bootstrap(target=target)
 
@@ -1764,46 +1791,53 @@ def test_memory_freshness_audit_ignores_bootstrap_workspace(tmp_path: Path) -> N
 
 def test_verify_payload_flags_forbidden_current_note(monkeypatch, tmp_path: Path) -> None:
     payload = tmp_path / "payload"
-    (payload / "memory" / "current").mkdir(parents=True)
-    (payload / "memory" / "system").mkdir(parents=True)
-    (payload / "memory" / "domains").mkdir(parents=True)
-    (payload / "memory" / "invariants").mkdir(parents=True)
-    (payload / "memory" / "runbooks").mkdir(parents=True)
-    (payload / "memory" / "mistakes").mkdir(parents=True)
-    (payload / "memory" / "decisions").mkdir(parents=True)
-    (payload / "scripts" / "check").mkdir(parents=True)
+    (payload / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
+    (payload / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
+    (payload / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
+    (payload / ".agentic-workspace" / "memory" / "repo" / "invariants").mkdir(parents=True, exist_ok=True)
+    (payload / ".agentic-workspace" / "memory" / "repo" / "runbooks").mkdir(parents=True, exist_ok=True)
+    (payload / ".agentic-workspace" / "memory" / "repo" / "mistakes").mkdir(parents=True, exist_ok=True)
+    (payload / ".agentic-workspace" / "memory" / "repo" / "decisions").mkdir(parents=True, exist_ok=True)
+    (payload / "scripts" / "check").mkdir(parents=True, exist_ok=True)
     (payload / "AGENTS.md").write_text("# Agent Instructions\n", encoding="utf-8")
-    (payload / "memory" / "index.md").write_text("# Memory Index\n", encoding="utf-8")
-    (payload / "memory" / "system" / "WORKFLOW.md").write_text("# Workflow Rules\n", encoding="utf-8")
-    (payload / "memory" / "current" / "project-state.md").write_text("# Project State\n", encoding="utf-8")
-    (payload / "memory" / "current" / "task-context.md").write_text("# Task Context\n", encoding="utf-8")
-    (payload / "memory" / "current" / "active-decisions.md").write_text("# Active Decisions\n", encoding="utf-8")
-    (payload / "memory" / "domains" / "README.md").write_text("# Domains\n", encoding="utf-8")
-    (payload / "memory" / "invariants" / "README.md").write_text("# Invariants\n", encoding="utf-8")
-    (payload / "memory" / "runbooks" / "README.md").write_text("# Runbooks\n", encoding="utf-8")
-    (payload / "memory" / "mistakes" / "recurring-failures.md").write_text("# Recurring Failures\n", encoding="utf-8")
-    (payload / "memory" / "decisions" / "README.md").write_text("# Decisions\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text("# Memory Index\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "WORKFLOW.md").write_text("# Workflow Rules\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md").write_text("# Project State\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md").write_text("# Task Context\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "current" / "active-decisions.md").write_text(
+        "# Active Decisions\n", encoding="utf-8"
+    )
+    (payload / ".agentic-workspace" / "memory" / "repo" / "domains" / "README.md").write_text("# Domains\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "invariants" / "README.md").write_text("# Invariants\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "README.md").write_text("# Runbooks\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md").write_text(
+        "# Recurring Failures\n", encoding="utf-8"
+    )
+    (payload / ".agentic-workspace" / "memory" / "repo" / "decisions" / "README.md").write_text("# Decisions\n", encoding="utf-8")
     (payload / "scripts" / "check" / "check_memory_freshness.py").write_text("print('ok')\n", encoding="utf-8")
     monkeypatch.setattr(installer, "payload_root", lambda: payload)
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     result = installer.verify_payload(target=target)
 
     assert any(
-        action.path.relative_to(target).as_posix() == "memory/current/active-decisions.md" and action.category == "contract-drift"
+        action.path.relative_to(target).as_posix() == ".agentic-workspace/memory/repo/current/active-decisions.md"
+        and action.category == "contract-drift"
         for action in result.actions
     )
 
 
 def test_doctor_reports_placeholder_review_category(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / "memory" / "current").mkdir(parents=True)
-    (target / "memory" / "system").mkdir(parents=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "system" / "VERSION.md").write_text("Version: 8\n", encoding="utf-8")
-    (target / "memory" / "system" / "WORKFLOW.md").write_text("old workflow\n", encoding="utf-8")
-    (target / "memory" / "current" / "task-context.md").write_text("# Task Context\n\n<CURRENT_FOCUS>\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 8\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "WORKFLOW.md").write_text("old workflow\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md").write_text(
+        "# Task Context\n\n<CURRENT_FOCUS>\n", encoding="utf-8"
+    )
 
     result = installer.doctor_bootstrap(target=target)
 
@@ -1812,10 +1846,10 @@ def test_doctor_reports_placeholder_review_category(tmp_path: Path) -> None:
 
 def test_doctor_agents_guidance_mentions_apply_local_entrypoint(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "system").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "system" / "VERSION.md").write_text("Version: 10\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 10\n", encoding="utf-8")
 
     result = installer.doctor_bootstrap(target=target)
 
@@ -1824,15 +1858,15 @@ def test_doctor_agents_guidance_mentions_apply_local_entrypoint(tmp_path: Path) 
 
 def test_doctor_flags_legacy_bootstrap_agents_prose_outside_managed_block(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text(
         "# Agent instructions\n\n"
         f"{installer.WORKFLOW_POINTER_BLOCK}\n\n"
-        "Check `memory/skills/README.md` and the skill directories under `memory/skills/` "
+        "Check `.agentic-workspace/memory/repo/skills/README.md` and the skill directories under `.agentic-workspace/memory/repo/skills/` "
         "for a checked-in memory skill whose name or description matches the task.\n",
         encoding="utf-8",
     )
-    (target / ".agentic-workspace/memory").mkdir(parents=True)
+    (target / ".agentic-workspace/memory").mkdir(parents=True, exist_ok=True)
     (target / ".agentic-workspace/memory" / "VERSION.md").write_text("Version: 39\n", encoding="utf-8")
 
     result = installer.doctor_bootstrap(target=target)
@@ -1847,14 +1881,14 @@ def test_doctor_flags_legacy_bootstrap_agents_prose_outside_managed_block(tmp_pa
 
 def test_upgrade_keeps_agents_current_when_workflow_pointer_is_current(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / ".agentic-workspace").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace").mkdir(parents=True, exist_ok=True)
     (target / ".agentic-workspace" / "WORKFLOW.md").write_text("# Workspace workflow\n", encoding="utf-8")
     (target / "AGENTS.md").write_text(
         f"# Agent instructions\n\n{WORKSPACE_POINTER_BLOCK}\n\nLocal repo instructions.\n",
         encoding="utf-8",
     )
-    (target / ".agentic-workspace/memory").mkdir(parents=True)
+    (target / ".agentic-workspace/memory").mkdir(parents=True, exist_ok=True)
     (target / ".agentic-workspace/memory" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
 
     result = installer.upgrade_bootstrap(target=target, dry_run=True)
@@ -1865,8 +1899,8 @@ def test_upgrade_keeps_agents_current_when_workflow_pointer_is_current(tmp_path:
 
 def test_upgrade_can_remove_redundant_memory_pointer_when_workspace_pointer_is_present(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / ".agentic-workspace").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace").mkdir(parents=True, exist_ok=True)
     (target / ".agentic-workspace" / "WORKFLOW.md").write_text("# Workspace workflow\n", encoding="utf-8")
     (target / "AGENTS.md").write_text(
         "# Agent instructions\n\n"
@@ -1877,7 +1911,7 @@ def test_upgrade_can_remove_redundant_memory_pointer_when_workspace_pointer_is_p
         "Local repo instructions.\n",
         encoding="utf-8",
     )
-    (target / ".agentic-workspace/memory").mkdir(parents=True)
+    (target / ".agentic-workspace/memory").mkdir(parents=True, exist_ok=True)
     (target / ".agentic-workspace/memory" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
 
     result = installer.upgrade_bootstrap(target=target, apply_local_entrypoint=True)
@@ -1890,10 +1924,10 @@ def test_upgrade_can_remove_redundant_memory_pointer_when_workspace_pointer_is_p
 
 def test_upgrade_migrates_legacy_layout_by_default(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "bootstrap").mkdir(parents=True)
-    (target / "memory" / "skills" / "memory-router").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / "memory" / "system").mkdir(parents=True, exist_ok=True)
+    (target / "memory" / "bootstrap").mkdir(parents=True, exist_ok=True)
+    (target / "memory" / "skills" / "memory-router").mkdir(parents=True, exist_ok=True)
     (target / "memory" / "system" / "WORKFLOW.md").write_text("legacy workflow\n", encoding="utf-8")
     (target / "memory" / "system" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
     (target / "memory" / "system" / "UPGRADE-SOURCE.toml").write_text(
@@ -1923,8 +1957,8 @@ def test_upgrade_migrates_legacy_layout_by_default(tmp_path: Path) -> None:
 
 def test_upgrade_dry_run_simulates_default_migration_for_legacy_layout(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "system").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / "memory" / "system").mkdir(parents=True, exist_ok=True)
     (target / "memory" / "system" / "WORKFLOW.md").write_text("legacy workflow\n", encoding="utf-8")
     (target / "memory" / "system" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
     (target / "memory" / "system" / "UPGRADE-SOURCE.toml").write_text(
@@ -1941,7 +1975,7 @@ def test_upgrade_dry_run_simulates_default_migration_for_legacy_layout(tmp_path:
 
     result = installer.upgrade_bootstrap(target=target, dry_run=True)
 
-    assert not (target / ".agentic-workspace/memory").exists()
+    assert not (target / ".agentic-workspace/memory" / "WORKFLOW.md").exists()
     assert any(
         action.kind == "would move" and action.path == target / ".agentic-workspace/memory" / "WORKFLOW.md" for action in result.actions
     )
@@ -1950,10 +1984,10 @@ def test_upgrade_dry_run_simulates_default_migration_for_legacy_layout(tmp_path:
 
 def test_migrate_layout_moves_legacy_managed_files_into_agentic_memory_root(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "bootstrap").mkdir(parents=True)
-    (target / "memory" / "skills" / "memory-router").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / "memory" / "system").mkdir(parents=True, exist_ok=True)
+    (target / "memory" / "bootstrap").mkdir(parents=True, exist_ok=True)
+    (target / "memory" / "skills" / "memory-router").mkdir(parents=True, exist_ok=True)
     (target / "memory" / "system" / "WORKFLOW.md").write_text("workflow\n", encoding="utf-8")
     (target / "memory" / "system" / "VERSION.md").write_text("Version: 38\n", encoding="utf-8")
     (target / "memory" / "system" / "UPGRADE-SOURCE.toml").write_text(
@@ -1996,8 +2030,10 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     prompt_populate_args = parser.parse_args(["prompt", "populate", "--target", "./repo"])
     prompt_uninstall_args = parser.parse_args(["prompt", "uninstall", "--target", "./repo"])
     route_args = parser.parse_args(["route", "--files", "src/app.py"])
-    sync_args = parser.parse_args(["sync-memory", "--notes", "memory/index.md"])
-    promotion_args = parser.parse_args(["promotion-report", "--notes", "memory/domains/api.md", "--mode", "remediation"])
+    sync_args = parser.parse_args(["sync-memory", "--notes", ".agentic-workspace/memory/repo/index.md"])
+    promotion_args = parser.parse_args(
+        ["promotion-report", "--notes", ".agentic-workspace/memory/repo/domains/api.md", "--mode", "remediation"]
+    )
     report_args = parser.parse_args(["report", "--target", ".", "--format", "json"])
     verify_args = parser.parse_args(["verify-payload", "--format", "json"])
     install_args = parser.parse_args(
@@ -2039,29 +2075,31 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
 
 def test_install_policy_profile_strict_doc_ownership_updates_manifest_rule(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     installer.install_bootstrap(target=target, policy_profile="strict-doc-ownership")
 
-    manifest_text = (target / "memory" / "manifest.toml").read_text(encoding="utf-8")
+    manifest_text = (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").read_text(encoding="utf-8")
     assert "forbid_core_docs_depend_on_memory = true" in manifest_text
 
 
 def test_install_policy_profile_strict_doc_ownership_reports_dry_run_update(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     result = installer.install_bootstrap(target=target, dry_run=True, policy_profile="strict-doc-ownership")
 
     assert any(
-        action.path == target / "memory" / "manifest.toml" and action.kind == "would update" and "strict-doc-ownership" in action.detail
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
+        and action.kind == "would update"
+        and "strict-doc-ownership" in action.detail
         for action in result.actions
     )
 
 
 def test_memory_freshness_strict_default_does_not_fail_on_bootstrap_placeholders(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
 
     result = subprocess.run(
@@ -2078,16 +2116,16 @@ def test_memory_freshness_strict_default_does_not_fail_on_bootstrap_placeholders
 
 def test_memory_freshness_strict_can_fail_on_bootstrap_placeholders_when_requested(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
-    (target / "memory" / "index.md").write_text(
-        (target / "memory" / "index.md")
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text(
+        (target / ".agentic-workspace" / "memory" / "repo" / "index.md")
         .read_text(encoding="utf-8")
         .replace(
             "Treat starter examples as temporary orientation until the repository has real notes to replace them.",
             "Delete unused routing examples once the repository has concrete notes.",
         )
-        + "\n- runtime or deployment change: `memory/domains/<runtime-or-deployment-note>.md`\n",
+        + "\n- runtime or deployment change: `.agentic-workspace/memory/repo/domains/<runtime-or-deployment-note>.md`\n",
         encoding="utf-8",
     )
 
@@ -2112,12 +2150,12 @@ def test_memory_freshness_strict_can_fail_on_bootstrap_placeholders_when_request
 
 def test_memory_freshness_reports_current_planning_state_residue(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
-    (target / "memory" / "current" / "project-state.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md").write_text(
         "# Project State\n\n"
         "## Status\n\n"
-        "- Active execplan: `docs/execplans/example.md`.\n\n"
+        "- Active execplan: `.agentic-workspace/planning/execplans/example.md`.\n\n"
         "## Scope\n\n- Shared overview only.\n\n"
         "## Applies to\n\n- Root monorepo operation.\n\n"
         "## Load when\n\n- Starting work.\n\n"
@@ -2143,12 +2181,12 @@ def test_memory_freshness_reports_current_planning_state_residue(tmp_path: Path)
 
     assert result.returncode == 0
     assert "Current-context drift signals:" in result.stdout
-    assert "memory/current/project-state.md" in result.stdout
+    assert ".agentic-workspace/memory/repo/current/project-state.md" in result.stdout
 
 
 def test_memory_report_derives_compact_module_state(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
 
     report = installer.memory_report(target=target)
@@ -2163,7 +2201,7 @@ def test_memory_report_derives_compact_module_state(tmp_path: Path) -> None:
         "attention-needed",
         "needs-more-proof",
     }
-    assert report["habitual_pull"]["ordinary_work_bundle"]["always_load"] == ["memory/index.md"]
+    assert report["habitual_pull"]["ordinary_work_bundle"]["always_load"] == [".agentic-workspace/memory/repo/index.md"]
     assert "manual_review_count" in report["trust"]
     assert "state_counts" in report["trust"]
     assert "usefulness_audit" in report
@@ -2172,7 +2210,7 @@ def test_memory_report_derives_compact_module_state(tmp_path: Path) -> None:
 
 def test_memory_report_exposes_habitual_pull_boundary_and_evidence(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
 
     report = installer.memory_report(target=target)
@@ -2186,24 +2224,24 @@ def test_memory_report_exposes_habitual_pull_boundary_and_evidence(tmp_path: Pat
 
 def test_memory_report_classifies_trust_states_from_manifest_metadata(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
 
-    questionable_note = target / "memory" / "decisions" / "questionable-note.md"
+    questionable_note = target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "questionable-note.md"
     questionable_note.write_text("# Questionable\n", encoding="utf-8")
-    stale_note = target / "memory" / "decisions" / "stale-note.md"
+    stale_note = target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "stale-note.md"
     stale_note.write_text("# Stale\n", encoding="utf-8")
-    improvement_note = target / "memory" / "mistakes" / "improvement-note.md"
+    improvement_note = target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "improvement-note.md"
     improvement_note.write_text("# Improvement\n", encoding="utf-8")
 
-    manifest_path = target / "memory" / "manifest.toml"
+    manifest_path = target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
     manifest_path.write_text(
         manifest_path.read_text(encoding="utf-8")
         + """
 
-[notes."memory/decisions/questionable-note.md"]
+[notes.".agentic-workspace/memory/repo/decisions/questionable-note.md"]
 note_type = "decision"
-canonical_home = "memory/decisions/questionable-note.md"
+canonical_home = ".agentic-workspace/memory/repo/decisions/questionable-note.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -2212,9 +2250,9 @@ subsystems = ["test"]
 surfaces = ["decision"]
 memory_role = "durable_truth"
 
-[notes."memory/decisions/stale-note.md"]
+[notes.".agentic-workspace/memory/repo/decisions/stale-note.md"]
 note_type = "decision"
-canonical_home = "memory/decisions/stale-note.md"
+canonical_home = ".agentic-workspace/memory/repo/decisions/stale-note.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -2225,9 +2263,9 @@ routes_from = ["missing/**/*.md"]
 stale_when = ["missing/**/*.md"]
 memory_role = "durable_truth"
 
-[notes."memory/mistakes/improvement-note.md"]
+[notes.".agentic-workspace/memory/repo/mistakes/improvement-note.md"]
 note_type = "recurring-failures"
-canonical_home = "memory/mistakes/improvement-note.md"
+canonical_home = ".agentic-workspace/memory/repo/mistakes/improvement-note.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -2250,9 +2288,12 @@ elimination_target = "promote"
     assert report["trust"]["state_counts"]["questionable"] >= 1
     assert report["trust"]["state_counts"]["stale"] >= 1
     assert report["trust"]["state_counts"]["elimination_candidate"] >= 1
-    assert any(item["path"] == "memory/decisions/questionable-note.md" for item in report["trust"]["questionable_notes"])
-    assert any(item["path"] == "memory/decisions/stale-note.md" for item in report["trust"]["stale_notes"])
-    assert any(item["path"] == "memory/mistakes/improvement-note.md" for item in report["trust"]["elimination_candidates"])
+    assert any(
+        item["path"] == ".agentic-workspace/memory/repo/decisions/questionable-note.md" for item in report["trust"]["questionable_notes"]
+    )
+    assert any(
+        item["path"] == ".agentic-workspace/memory/repo/mistakes/improvement-note.md" for item in report["trust"]["elimination_candidates"]
+    )
 
 
 def test_cli_version_flag_prints_package_version(capsys) -> None:
@@ -2278,7 +2319,20 @@ def test_cli_version_flag_prints_package_version(capsys) -> None:
         (["current", "check", "--target", ".", "--format", "json"], True),
         (["route", "--target", ".", "--files", "src/app.py", "--format", "json"], True),
         (["sync-memory", "--target", ".", "--files", "src/app.py", "--format", "json"], True),
-        (["promotion-report", "--target", ".", "--notes", "memory/index.md", "--mode", "remediation", "--format", "json"], True),
+        (
+            [
+                "promotion-report",
+                "--target",
+                ".",
+                "--notes",
+                ".agentic-workspace/memory/repo/index.md",
+                "--mode",
+                "remediation",
+                "--format",
+                "json",
+            ],
+            True,
+        ),
         (["report", "--target", ".", "--format", "json"], True),
         (["upgrade", "--target", ".", "--dry-run", "--format", "json"], True),
         (["uninstall", "--target", ".", "--dry-run", "--format", "json"], True),
@@ -2287,7 +2341,7 @@ def test_cli_version_flag_prints_package_version(capsys) -> None:
 )
 def test_cli_main_smoke_commands_return_zero(tmp_path: Path, argv: list[str], setup_installed_repo: bool) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     if setup_installed_repo:
         installer.install_bootstrap(target=target)
 
@@ -2298,7 +2352,7 @@ def test_cli_main_smoke_commands_return_zero(tmp_path: Path, argv: list[str], se
 
 def test_git_changed_files_times_out_with_warning(tmp_path: Path, monkeypatch, capsys) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     def _raise_timeout(*args, **kwargs):
         raise subprocess.TimeoutExpired(cmd=["git", "status"], timeout=30)
@@ -2311,7 +2365,7 @@ def test_git_changed_files_times_out_with_warning(tmp_path: Path, monkeypatch, c
 
 def test_verify_payload_reports_version_mismatch(tmp_path: Path, monkeypatch) -> None:
     payload = tmp_path / "payload"
-    (payload / ".agentic-workspace/memory").mkdir(parents=True)
+    (payload / ".agentic-workspace/memory").mkdir(parents=True, exist_ok=True)
     (payload / ".agentic-workspace/memory" / "VERSION.md").write_text("Version: 21\n", encoding="utf-8")
     monkeypatch.setattr(installer, "payload_root", lambda: payload)
 
@@ -2327,38 +2381,42 @@ def test_verify_payload_reports_version_mismatch(tmp_path: Path, monkeypatch) ->
 
 def test_verify_payload_flags_missing_current_note_collaboration_guidance(tmp_path: Path, monkeypatch) -> None:
     payload = tmp_path / "payload"
-    (payload / ".agentic-workspace/memory").mkdir(parents=True)
+    (payload / ".agentic-workspace/memory").mkdir(parents=True, exist_ok=True)
     (payload / ".agentic-workspace/memory" / "VERSION.md").write_text(f"Version: {installer.BOOTSTRAP_VERSION}\n", encoding="utf-8")
     (payload / ".agentic-workspace/memory" / "UPGRADE-SOURCE.toml").write_text(
         'source_type = "git"\nsource_ref = "example"\nsource_label = "Example"\nrecorded_at = "2026-04-06"\n',
         encoding="utf-8",
     )
     (payload / "AGENTS.md").write_text("# Agent Instructions\n", encoding="utf-8")
-    (payload / "scripts" / "check").mkdir(parents=True)
+    (payload / "scripts" / "check").mkdir(parents=True, exist_ok=True)
     (payload / "scripts" / "check" / "check_memory_freshness.py").write_text("print('ok')\n", encoding="utf-8")
-    (payload / "memory" / "domains").mkdir(parents=True)
-    (payload / "memory" / "invariants").mkdir(parents=True)
-    (payload / "memory" / "runbooks").mkdir(parents=True)
-    (payload / "memory" / "mistakes").mkdir(parents=True)
-    (payload / "memory" / "decisions").mkdir(parents=True)
-    (payload / "memory" / "current").mkdir(parents=True)
-    (payload / "memory" / "index.md").write_text("# Memory Index\n", encoding="utf-8")
-    (payload / "memory" / "manifest.toml").write_text("version = 1\n", encoding="utf-8")
-    (payload / "memory" / "domains" / "README.md").write_text("# Domains\n", encoding="utf-8")
-    (payload / "memory" / "invariants" / "README.md").write_text("# Invariants\n", encoding="utf-8")
-    (payload / "memory" / "runbooks" / "README.md").write_text("# Runbooks\n", encoding="utf-8")
-    (payload / "memory" / "mistakes" / "recurring-failures.md").write_text("# Recurring Failures\n", encoding="utf-8")
-    (payload / "memory" / "decisions" / "README.md").write_text("# Decisions\n", encoding="utf-8")
-    (payload / "memory" / "current" / "project-state.md").write_text("# Project State\n", encoding="utf-8")
-    (payload / "memory" / "current" / "task-context.md").write_text("# Task Context\n", encoding="utf-8")
-    (payload / "memory" / "current" / "routing-feedback.md").write_text("# Routing Feedback\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
+    (payload / ".agentic-workspace" / "memory" / "repo" / "invariants").mkdir(parents=True, exist_ok=True)
+    (payload / ".agentic-workspace" / "memory" / "repo" / "runbooks").mkdir(parents=True, exist_ok=True)
+    (payload / ".agentic-workspace" / "memory" / "repo" / "mistakes").mkdir(parents=True, exist_ok=True)
+    (payload / ".agentic-workspace" / "memory" / "repo" / "decisions").mkdir(parents=True, exist_ok=True)
+    (payload / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
+    (payload / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text("# Memory Index\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text("version = 1\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "domains" / "README.md").write_text("# Domains\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "invariants" / "README.md").write_text("# Invariants\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "README.md").write_text("# Runbooks\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md").write_text(
+        "# Recurring Failures\n", encoding="utf-8"
+    )
+    (payload / ".agentic-workspace" / "memory" / "repo" / "decisions" / "README.md").write_text("# Decisions\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md").write_text("# Project State\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md").write_text("# Task Context\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "repo" / "current" / "routing-feedback.md").write_text(
+        "# Routing Feedback\n", encoding="utf-8"
+    )
 
     monkeypatch.setattr(installer, "payload_root", lambda: payload)
 
     result = installer.verify_payload(target=payload)
 
     assert any(
-        action.path == payload / "memory" / "current" / "project-state.md"
+        action.path == payload / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md"
         and action.kind == "manual review"
         and "collaboration-safe wording" in action.detail
         for action in result.actions
@@ -2366,7 +2424,7 @@ def test_verify_payload_flags_missing_current_note_collaboration_guidance(tmp_pa
 
 
 def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_guidance() -> None:
-    text = (installer.payload_root() / "memory" / "system" / "WORKFLOW.md").read_text(encoding="utf-8")
+    text = (installer.payload_root() / ".agentic-workspace" / "memory" / "WORKFLOW.md").read_text(encoding="utf-8")
 
     assert "## Note maintenance rule" in text
     assert "Update a note when its primary home is still correct" in text
@@ -2396,35 +2454,23 @@ def test_bootstrap_workflow_doc_includes_note_maintenance_and_skill_precedence_g
     assert "Repeated plan re-explanation or restart friction is a missing-synergy signal" in text
     assert "do not absorb plan history or milestone narration into memory" in text
     assert "## Starter templates" in text
-    assert "memory/templates/memory-note-template.md" in text
+    assert ".agentic-workspace/memory/repo/templates/memory-note-template.md" in text
     assert "## Improvement metadata quick reference" in text
     assert "`retention_justification`" in text
 
 
 def test_bootstrap_index_includes_token_efficiency_and_small_routing_examples() -> None:
-    text = (installer.payload_root() / "memory" / "index.md").read_text(encoding="utf-8")
+    text = (installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "index.md").read_text(encoding="utf-8")
 
-    assert "## Token-efficiency rule" in text
-    assert "Memory is a net token saver" in text
-    assert "## Starter examples for fresh installs" in text
-    assert "memory/domains/example-runtime-boundary.md" in text
-    assert "Treat them as starter shape only" in text
-    assert "memory/templates/" in text
-    assert "## Small routing examples" in text
-    assert "Example: deployment recovery" in text
-    assert "## Canonicality rule" in text
-    assert "core docs should not depend on memory" in text
+    assert "## Common task bundles" in text
+    assert "monorepo memory-package work" in text
+    assert "workspace ownership or package-boundary change" in text
+    assert "## Task routing" in text
+    assert "If touching `packages/memory/**`, load `.agentic-workspace/memory/repo/domains/memory-package-context.md`." in text
     assert "not a task tracker, issue mirror, or broad fallback handbook" in text
-    assert "## Interoperability patterns" in text
-    assert "## Integration checklist" in text
-    assert "Planning identifies touched paths or surfaces" in text
-    assert "help an agent read less, not more" in text
-    assert "Prefer durable consequences, constraints, exceptions, and recurring traps" in text
-    assert "Treat recurring-failures as anti-trap memory" in text
-    assert "live decision review: the active planning slice plus `memory/decisions/README.md`" in text
-    assert "combined install: planning owns active-now state" in text
-    assert "start from the active planning surface and borrow only the smallest memory bundle needed" in text
-    assert "do not let archived plans become the long-term memory layer by default" in text
+    assert "## Loading rule" in text
+    assert "## One-home reminder" in text
+    assert "live decision review: the active planning slice plus `.agentic-workspace/memory/repo/decisions/README.md`" in text
 
 
 def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -> None:
@@ -2448,33 +2494,35 @@ def test_bootstrap_readme_includes_optional_patterns_and_project_state_shape() -
     assert "improvement signal" in text
     assert "symptom captured -> remediation target chosen -> follow-up routed -> remediation lands" in text
     assert "## Improvement Paths" in text
-    assert "live decision review: the active planning slice plus `memory/decisions/README.md`" in text
+    assert "live decision review: the active planning slice plus `.agentic-workspace/memory/repo/decisions/README.md`" in text
     assert "promotion-report --mode remediation" in text
     assert "Do not assume memory volume should follow one universal trend" in text
     assert "suggest upstream repo improvements instead of treating memory as the default answer to repo complexity" in text
     assert "remain advisory outside the managed bootstrap surface" in text
     assert "prefer a clearer handoff into repo-owned work" in text
-    assert "`memory/templates/` as starter note templates" in text
+    assert "`.agentic-workspace/memory/repo/templates/` as starter note templates" in text
     assert "`retention_justification`" in text
 
 
 def test_bootstrap_payload_includes_starter_examples_for_primary_note_classes() -> None:
     payload_root = installer.payload_root()
 
-    assert (payload_root / "memory" / "domains" / "example-runtime-boundary.md").exists()
-    assert (payload_root / "memory" / "invariants" / "example-response-contract.md").exists()
-    assert (payload_root / "memory" / "runbooks" / "example-release-check.md").exists()
-    assert (payload_root / "memory" / "decisions" / "example-cli-selection.md").exists()
+    assert (payload_root / ".agentic-workspace" / "memory" / "repo" / "domains" / "example-runtime-boundary.md").exists()
+    assert (payload_root / ".agentic-workspace" / "memory" / "repo" / "invariants" / "example-response-contract.md").exists()
+    assert (payload_root / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "example-release-check.md").exists()
+    assert (payload_root / ".agentic-workspace" / "memory" / "repo" / "decisions" / "example-cli-selection.md").exists()
 
-    manifest_text = (payload_root / "memory" / "manifest.toml").read_text(encoding="utf-8")
-    assert '[notes."memory/domains/example-runtime-boundary.md"]' in manifest_text
-    assert '[notes."memory/invariants/example-response-contract.md"]' in manifest_text
-    assert '[notes."memory/runbooks/example-release-check.md"]' in manifest_text
-    assert '[notes."memory/decisions/example-cli-selection.md"]' in manifest_text
+    manifest_text = (payload_root / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").read_text(encoding="utf-8")
+    assert '[notes.".agentic-workspace/memory/repo/domains/example-runtime-boundary.md"]' in manifest_text
+    assert '[notes.".agentic-workspace/memory/repo/invariants/example-response-contract.md"]' in manifest_text
+    assert '[notes.".agentic-workspace/memory/repo/runbooks/example-release-check.md"]' in manifest_text
+    assert '[notes.".agentic-workspace/memory/repo/decisions/example-cli-selection.md"]' in manifest_text
 
 
 def test_memory_note_template_includes_improvement_signal_metadata() -> None:
-    text = (installer.payload_root() / "memory" / "templates" / "memory-note-template.md").read_text(encoding="utf-8")
+    text = (installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "templates" / "memory-note-template.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "## Improvement signal metadata" in text
     assert "`preferred_remediation`" in text
@@ -2482,7 +2530,7 @@ def test_memory_note_template_includes_improvement_signal_metadata() -> None:
 
 
 def test_bootstrap_task_context_starter_is_continuation_only() -> None:
-    text = (installer.payload_root() / "memory" / "current" / "task-context.md").read_text(encoding="utf-8")
+    text = (installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md").read_text(encoding="utf-8")
 
     assert "Optional checked-in continuation compression" in text
     assert "## Blocking assumptions" in text
@@ -2510,21 +2558,21 @@ def test_project_state_staleness_reason_mentions_planner_residue() -> None:
 
 def test_doctor_emits_improvement_pressure_suggestions_from_manifest(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "mistakes").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "system" / "VERSION.md").write_text("Version: 32\n", encoding="utf-8")
-    (target / "memory" / "mistakes" / "recurring-failures.md").write_text(
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 32\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md").write_text(
         "# Recurring failures\n\n- This keeps happening.\n", encoding="utf-8"
     )
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/mistakes/recurring-failures.md"]
+[notes.".agentic-workspace/memory/repo/mistakes/recurring-failures.md"]
 note_type = "recurring-failures"
-canonical_home = "memory/mistakes/recurring-failures.md"
+canonical_home = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -2541,7 +2589,7 @@ elimination_target = "shrink"
     result = installer.doctor_bootstrap(target=target)
 
     assert any(
-        action.path == target / "memory" / "mistakes" / "recurring-failures.md"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md"
         and action.kind == "consider"
         and "regression test" in action.detail
         and action.remediation_kind == "test"
@@ -2553,16 +2601,18 @@ elimination_target = "shrink"
 
 def test_sync_memory_appends_improvement_hint_from_manifest(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "mistakes").mkdir(parents=True)
-    (target / "memory" / "mistakes" / "recurring-failures.md").write_text("# Recurring failures\n\n- Guard this.\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md").write_text(
+        "# Recurring failures\n\n- Guard this.\n", encoding="utf-8"
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/mistakes/recurring-failures.md"]
+[notes.".agentic-workspace/memory/repo/mistakes/recurring-failures.md"]
 note_type = "recurring-failures"
-canonical_home = "memory/mistakes/recurring-failures.md"
+canonical_home = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -2579,7 +2629,7 @@ improvement_candidate = true
     result = installer.sync_memory(target=target, files=["tests/test_api.py"])
 
     assert any(
-        action.path == target / "memory" / "mistakes" / "recurring-failures.md"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md"
         and action.kind in {"review", "update"}
         and "consider a regression test" in action.detail
         and action.remediation_kind == "test"
@@ -2596,19 +2646,19 @@ def test_promotion_report_supports_improvement_candidates_without_docs_promotion
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "runbooks").mkdir(parents=True)
-    (target / "memory" / "runbooks" / "deploy.md").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "deploy.md").write_text(
         "# Deploy\n\n1. Run command A.\n2. Run command B.\n3. Verify status.\n",
         encoding="utf-8",
     )
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/runbooks/deploy.md"]
+[notes.".agentic-workspace/memory/repo/runbooks/deploy.md"]
 note_type = "runbook"
-canonical_home = "memory/runbooks/deploy.md"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/deploy.md"
 authority = "canonical"
 audience = "human_operator"
 canonicality = "agent_only"
@@ -2625,7 +2675,7 @@ elimination_target = "automate"
     result = installer.promotion_report(target=target)
 
     assert any(
-        action.path == target / "memory" / "runbooks" / "deploy.md"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "deploy.md"
         and action.kind == "candidate"
         and "improvement candidate" in action.detail
         and "repo-owned script or command" in action.detail
@@ -2638,16 +2688,18 @@ elimination_target = "automate"
 
 def test_promotion_report_groups_candidates_by_remediation_kind(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
-    (target / "memory" / "runbooks").mkdir(parents=True)
-    (target / "memory" / "domains" / "api.md").write_text("# API\n\nStable guidance.\n", encoding="utf-8")
-    (target / "memory" / "runbooks" / "deploy.md").write_text("# Deploy\n\n1. Run A.\n2. Run B.\n3. Run C.\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md").write_text("# API\n\nStable guidance.\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "deploy.md").write_text(
+        "# Deploy\n\n1. Run A.\n2. Run B.\n3. Run C.\n", encoding="utf-8"
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/api.md"]
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
 canonical_home = "docs/api.md"
 authority = "advisory"
@@ -2655,9 +2707,9 @@ audience = "human+agent"
 canonicality = "candidate_for_promotion"
 task_relevance = "optional"
 
-[notes."memory/runbooks/deploy.md"]
+[notes.".agentic-workspace/memory/repo/runbooks/deploy.md"]
 note_type = "runbook"
-canonical_home = "memory/runbooks/deploy.md"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/deploy.md"
 authority = "canonical"
 audience = "human_operator"
 canonicality = "agent_only"
@@ -2678,11 +2730,11 @@ improvement_candidate = true
 
 def test_promotion_report_remediation_mode_filters_low_confidence_candidates(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text("# Memory Index\n\n" + ("line\n" * 140), encoding="utf-8")
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text("# Memory Index\n\n" + ("line\n" * 140), encoding="utf-8")
 
-    result = installer.promotion_report(target=target, notes=["memory/index.md"], mode="remediation")
+    result = installer.promotion_report(target=target, notes=[".agentic-workspace/memory/repo/index.md"], mode="remediation")
 
     assert any(
         action.kind == "manual review" and "no promotion or elimination candidates found" in action.detail for action in result.actions
@@ -2691,19 +2743,19 @@ def test_promotion_report_remediation_mode_filters_low_confidence_candidates(tmp
 
 def test_promotion_report_prefers_skill_for_prose_heavy_runbook(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "runbooks").mkdir(parents=True)
-    (target / "memory" / "runbooks" / "release.md").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "release.md").write_text(
         "# Release\n\n" + "\n".join(f"{idx}. Step {idx}" for idx in range(1, 12)),
         encoding="utf-8",
     )
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/runbooks/release.md"]
+[notes.".agentic-workspace/memory/repo/runbooks/release.md"]
 note_type = "runbook"
-canonical_home = "memory/runbooks/release.md"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/release.md"
 authority = "canonical"
 audience = "human_operator"
 canonicality = "agent_only"
@@ -2718,9 +2770,9 @@ improvement_candidate = true
     result = installer.promotion_report(target=target)
 
     assert any(
-        action.path == target / "memory" / "runbooks" / "release.md"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "release.md"
         and action.remediation_kind == "skill"
-        and action.remediation_target == "memory/skills/release/SKILL.md"
+        and action.remediation_target == ".agentic-workspace/memory/repo/skills/release/SKILL.md"
         and action.memory_action == "automate"
         for action in result.actions
     )
@@ -2737,7 +2789,7 @@ def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(
     assert "`install` skill at `./repo/.agentic-workspace/memory/bootstrap/skills`" in prompt
     assert "bootstrap-cleanup --target ./repo" in prompt
     assert ".agentic-workspace/memory/" in prompt
-    assert "memory notes stay under `memory/`" in prompt
+    assert "memory notes stay under `.agentic-workspace/memory/repo/`" in prompt
 
 
 def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
@@ -2752,7 +2804,7 @@ def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
     assert "`populate` from the same path" in prompt
     assert "bootstrap-cleanup --target ./repo" in prompt
     assert ".agentic-workspace/memory/" in prompt
-    assert "memory notes stay under `memory/`" in prompt
+    assert "memory notes stay under `.agentic-workspace/memory/repo/`" in prompt
     assert "./repo" in prompt
 
 
@@ -2786,7 +2838,7 @@ def test_build_upgrade_prompt_mentions_local_bootstrap_skills(monkeypatch) -> No
 def test_build_upgrade_prompt_uses_local_source_when_recorded(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
     (target / ".agentic-workspace/memory" / "UPGRADE-SOURCE.toml").write_text(
         'source_type = "local"\nsource_ref = "./local/agentic-memory"\n',
@@ -2825,7 +2877,9 @@ def test_build_prompt_falls_back_to_pipx_when_uvx_is_missing(monkeypatch) -> Non
 
 
 def test_memory_upgrade_skill_includes_module_fallback() -> None:
-    text = (installer.payload_root() / "memory" / "skills" / "memory-upgrade" / "SKILL.md").read_text(encoding="utf-8")
+    text = (installer.payload_root() / ".agentic-workspace" / "memory" / "skills" / "memory-upgrade" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "agentic-memory-bootstrap upgrade --target <repo>" in text
     assert "uvx --from <recorded-source> agentic-memory-bootstrap upgrade --target <repo>" in text
@@ -2835,10 +2889,10 @@ def test_memory_upgrade_skill_includes_module_fallback() -> None:
 
 def test_doctor_flags_legacy_upgrade_runbook_for_removal(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     installer.install_bootstrap(target=target)
-    legacy = target / "memory" / "system" / "UPGRADE.md"
+    legacy = target / ".agentic-workspace" / "memory" / "UPGRADE.md"
     legacy.parent.mkdir(parents=True, exist_ok=True)
     legacy.write_text("# legacy\n", encoding="utf-8")
 
@@ -2851,10 +2905,10 @@ def test_doctor_flags_legacy_upgrade_runbook_for_removal(tmp_path: Path) -> None
 
 def test_upgrade_removes_legacy_upgrade_runbook(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     installer.install_bootstrap(target=target)
-    legacy = target / "memory" / "system" / "UPGRADE.md"
+    legacy = target / ".agentic-workspace" / "memory" / "UPGRADE.md"
     legacy.parent.mkdir(parents=True, exist_ok=True)
     legacy.write_text("# legacy\n", encoding="utf-8")
 
@@ -2868,7 +2922,7 @@ def test_upgrade_removes_legacy_upgrade_runbook(tmp_path: Path) -> None:
 
 def test_bootstrap_cleanup_removes_workspace(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     installer.install_bootstrap(target=target)
     workspace = target / ".agentic-workspace/memory" / "bootstrap"
@@ -2882,7 +2936,7 @@ def test_bootstrap_cleanup_removes_workspace(tmp_path: Path) -> None:
 
 def test_bootstrap_cleanup_is_safe_when_workspace_absent(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     result = installer.cleanup_bootstrap_workspace(target=target)
 
@@ -2891,14 +2945,14 @@ def test_bootstrap_cleanup_is_safe_when_workspace_absent(tmp_path: Path) -> None
 
 def test_uninstall_removes_safe_bootstrap_files(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     installer.install_bootstrap(target=target)
 
     result = installer.uninstall_bootstrap(target=target)
 
     assert not (target / "AGENTS.md").exists()
-    assert not (target / "memory" / "index.md").exists()
+    assert not (target / ".agentic-workspace" / "memory" / "repo" / "index.md").exists()
     assert not (target / "scripts" / "check" / "check_memory_freshness.py").exists()
     assert any(action.kind == "removed" for action in result.actions)
 
@@ -2907,10 +2961,10 @@ def test_uninstall_flags_customised_seed_notes_for_manual_review(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     installer.install_bootstrap(target=target)
-    note_path = target / "memory" / "current" / "project-state.md"
+    note_path = target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md"
     note_path.write_text("# Project State\n\ncustomised\n", encoding="utf-8")
 
     result = installer.uninstall_bootstrap(target=target, dry_run=True)
@@ -2922,10 +2976,10 @@ def test_uninstall_reports_remaining_repo_local_memory_as_safe_to_keep(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     installer.install_bootstrap(target=target)
-    extra_note = target / "memory" / "domains" / "local-note.md"
+    extra_note = target / ".agentic-workspace" / "memory" / "repo" / "domains" / "local-note.md"
     extra_note.parent.mkdir(parents=True, exist_ok=True)
     extra_note.write_text("# Local Note\n", encoding="utf-8")
 
@@ -2936,7 +2990,7 @@ def test_uninstall_reports_remaining_repo_local_memory_as_safe_to_keep(
 
 def test_install_summary_mentions_populate_next_step_when_current_notes_created(capsys, tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     result = installer.install_bootstrap(target=target, dry_run=True)
 
     cli._print_install_summary(result)
@@ -2953,11 +3007,11 @@ def test_install_summary_mentions_populate_next_step_when_current_notes_created(
 
 def test_install_summary_skips_populate_next_step_when_no_current_notes_created(capsys, tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "current").mkdir(parents=True)
-    (target / "memory" / "current" / "project-state.md").write_text("# Project State\n", encoding="utf-8")
-    (target / "memory" / "current" / "task-context.md").write_text("# Task Context\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md").write_text("# Project State\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "task-context.md").write_text("# Task Context\n", encoding="utf-8")
     result = installer.adopt_bootstrap(target=target, dry_run=True)
 
     cli._print_install_summary(result)
@@ -2968,19 +3022,19 @@ def test_install_summary_skips_populate_next_step_when_no_current_notes_created(
 
 def test_current_view_json_shape(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     payload = installer.show_current_memory(target=target)
 
     data = json.loads(installer.format_result_json(payload))
 
-    assert data["notes"][0]["path"] == "memory/current/project-state.md"
+    assert data["notes"][0]["path"] == ".agentic-workspace/memory/repo/current/project-state.md"
 
 
 def test_route_memory_json_includes_summary_and_missing_note_hint(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
-    (target / "memory" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "index.md").write_text(_memory_index_text(), encoding="utf-8")
 
     result = installer.route_memory(target=target, files=["deploy/k8s/service.yaml"])
     data = json.loads(installer.format_result_json(result))
@@ -3035,20 +3089,51 @@ def test_route_memory_matches_calibration_fixture_expectations(tmp_path: Path, f
         assert missing_note_candidates.issubset(required | optional)
 
 
+def test_route_memory_matches_dot_managed_paths_as_direct_manifest_routes(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    _setup_routing_fixture_repo(target, "runtime-basic.json")
+    manifest_path = target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
+    manifest_text = manifest_path.read_text(encoding="utf-8")
+    manifest_text += (
+        '\n[notes.".agentic-workspace/memory/repo/domains/dot-managed-route.md"]\n'
+        'note_type = "domain"\n'
+        'canonical_home = ".agentic-workspace/memory/repo/domains/dot-managed-route.md"\n'
+        'authority = "canonical"\n'
+        'audience = "human+agent"\n'
+        'canonicality = "agent_only"\n'
+        'task_relevance = "optional"\n'
+        'surfaces = ["architecture"]\n'
+        'routes_from = [".agentic-workspace/docs/reporting-contract.md"]\n'
+        'stale_when = [".agentic-workspace/docs/reporting-contract.md"]\n'
+    )
+    manifest_path.write_text(manifest_text, encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "dot-managed-route.md").write_text(
+        "# Dot Managed Route\n",
+        encoding="utf-8",
+    )
+
+    result = installer.route_memory(target=target, files=[".agentic-workspace/docs/reporting-contract.md"])
+    required, optional = _routed_note_sets(result, target)
+
+    assert required == {".agentic-workspace/memory/repo/index.md"}
+    assert ".agentic-workspace/memory/repo/domains/dot-managed-route.md" in optional
+    assert ".agentic-workspace/memory/repo/invariants/example-response-contract.md" not in optional
+
+
 def test_route_memory_prefers_canonical_doc_when_manifest_marks_note_canonical_elsewhere(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
-    (target / "docs").mkdir(parents=True)
-    (target / "memory" / "domains" / "api.md").write_text("# API memory\n", encoding="utf-8")
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
+    (target / "docs").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md").write_text("# API memory\n", encoding="utf-8")
     (target / "docs" / "api.md").write_text("# API docs\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/api.md"]
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
 canonical_home = "docs/api.md"
 authority = "advisory"
@@ -3070,19 +3155,21 @@ stale_when = ["src/**/*.py"]
         for action in result.actions
     )
     assert any(
-        action.path == target / "memory" / "domains" / "api.md" and action.kind == "optional" and "fallback context only" in action.detail
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md"
+        and action.kind == "optional"
+        and "fallback context only" in action.detail
         for action in result.actions
     )
 
 
 def test_route_review_handles_missing_feedback_note(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     result = installer.review_routes(target=target)
 
     assert any(
-        action.path == target / "memory" / "current" / "routing-feedback.md"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "current" / "routing-feedback.md"
         and action.kind == "manual review"
         and "routing feedback note is absent" in action.detail
         for action in result.actions
@@ -3094,7 +3181,7 @@ def test_route_review_reports_missed_note_case_that_now_passes(tmp_path: Path) -
     _setup_routing_fixture_repo(target, "missed-note-regression.json")
     _write_repo_file(
         target,
-        "memory/current/routing-feedback.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
         _routing_feedback_note(
             missed_cases=[
                 "### Case: runtime-domain\n"
@@ -3105,9 +3192,9 @@ def test_route_review_reports_missed_note_case_that_now_passes(tmp_path: Path) -
                 "Surfaces\n"
                 "- tests\n"
                 "Routed notes returned\n"
-                "- memory/index.md\n"
+                "- .agentic-workspace/memory/repo/index.md\n"
                 "Expected missing note\n"
-                "- memory/mistakes/recurring-failures.md\n"
+                "- .agentic-workspace/memory/repo/mistakes/recurring-failures.md\n"
                 "Why it was needed\n"
                 "- Validation guidance should be routed for this surface.\n"
                 "Expected routing signal\n"
@@ -3134,7 +3221,7 @@ def test_route_review_reports_missed_note_case_that_still_fails(tmp_path: Path) 
     _setup_routing_fixture_repo(target, "missed-note-regression.json")
     _write_repo_file(
         target,
-        "memory/current/routing-feedback.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
         _routing_feedback_note(
             missed_cases=[
                 "### Case: wrong-expected-note\n"
@@ -3145,9 +3232,9 @@ def test_route_review_reports_missed_note_case_that_still_fails(tmp_path: Path) 
                 "Surfaces\n"
                 "- tests\n"
                 "Routed notes returned\n"
-                "- memory/index.md\n"
+                "- .agentic-workspace/memory/repo/index.md\n"
                 "Expected missing note\n"
-                "- memory/runbooks/runtime.md\n"
+                "- .agentic-workspace/memory/repo/runbooks/runtime.md\n"
                 "Why it was needed\n"
                 "- Pretend this note should have been routed.\n"
                 "Expected routing signal\n"
@@ -3166,17 +3253,17 @@ def test_route_review_reports_missed_note_case_that_still_fails(tmp_path: Path) 
 
 def test_route_review_reports_over_routing_case_that_still_fails(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    _write_repo_file(target, "memory/index.md", _memory_index_text())
-    _write_repo_file(target, "memory/domains/too-broad.md", "# Too broad\n")
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    _write_repo_file(target, ".agentic-workspace/memory/repo/index.md", _memory_index_text())
+    _write_repo_file(target, ".agentic-workspace/memory/repo/domains/too-broad.md", "# Too broad\n")
     _write_repo_file(
         target,
-        "memory/manifest.toml",
+        ".agentic-workspace/memory/repo/manifest.toml",
         (
             "version = 1\n\n"
-            '[notes."memory/domains/too-broad.md"]\n'
+            '[notes.".agentic-workspace/memory/repo/domains/too-broad.md"]\n'
             'note_type = "domain"\n'
-            'canonical_home = "memory/domains/too-broad.md"\n'
+            'canonical_home = ".agentic-workspace/memory/repo/domains/too-broad.md"\n'
             'authority = "canonical"\n'
             'audience = "human+agent"\n'
             'canonicality = "agent_only"\n'
@@ -3187,7 +3274,7 @@ def test_route_review_reports_over_routing_case_that_still_fails(tmp_path: Path)
     )
     _write_repo_file(
         target,
-        "memory/current/routing-feedback.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
         _routing_feedback_note(
             over_cases=[
                 "### Case: too-broad-domain\n"
@@ -3198,10 +3285,10 @@ def test_route_review_reports_over_routing_case_that_still_fails(tmp_path: Path)
                 "Surfaces\n"
                 "- api\n"
                 "Routed notes returned\n"
-                "- memory/index.md\n"
-                "- memory/domains/too-broad.md\n"
+                "- .agentic-workspace/memory/repo/index.md\n"
+                "- .agentic-workspace/memory/repo/domains/too-broad.md\n"
                 "Unexpected notes\n"
-                "- memory/domains/too-broad.md\n"
+                "- .agentic-workspace/memory/repo/domains/too-broad.md\n"
                 "Why they were unnecessary\n"
                 "- The note is too broad for this route.\n"
                 "Status\n"
@@ -3221,7 +3308,7 @@ def test_route_review_marks_incomplete_case_unresolved(tmp_path: Path) -> None:
     _setup_routing_fixture_repo(target, "runtime-basic.json")
     _write_repo_file(
         target,
-        "memory/current/routing-feedback.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
         _routing_feedback_note(
             missed_cases=["### Case: incomplete\nTask surface summary\n- Missing explicit files and expected note.\nStatus\n- open"]
         ),
@@ -3238,7 +3325,7 @@ def test_route_review_json_includes_summary_and_cases(tmp_path: Path) -> None:
     _setup_routing_fixture_repo(target, "missed-note-regression.json")
     _write_repo_file(
         target,
-        "memory/current/routing-feedback.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
         _routing_feedback_note(
             missed_cases=[
                 "### Case: runtime-domain\n"
@@ -3249,9 +3336,9 @@ def test_route_review_json_includes_summary_and_cases(tmp_path: Path) -> None:
                 "Surfaces\n"
                 "- tests\n"
                 "Routed notes returned\n"
-                "- memory/index.md\n"
+                "- .agentic-workspace/memory/repo/index.md\n"
                 "Expected missing note\n"
-                "- memory/mistakes/recurring-failures.md\n"
+                "- .agentic-workspace/memory/repo/mistakes/recurring-failures.md\n"
                 "Why it was needed\n"
                 "- Validation guidance should be routed for this surface.\n"
                 "Expected routing signal\n"
@@ -3270,7 +3357,7 @@ def test_route_review_json_includes_summary_and_cases(tmp_path: Path) -> None:
 
 def test_route_report_handles_missing_feedback_and_fixture_inputs(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
 
     result = installer.report_routes(target=target)
 
@@ -3285,7 +3372,7 @@ def test_route_report_supports_feedback_cases_only(tmp_path: Path) -> None:
     _setup_routing_fixture_repo(target, "missed-note-regression.json")
     _write_repo_file(
         target,
-        "memory/current/routing-feedback.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
         _routing_feedback_note(
             missed_cases=[
                 "### Case: runtime-domain\n"
@@ -3296,9 +3383,9 @@ def test_route_report_supports_feedback_cases_only(tmp_path: Path) -> None:
                 "Surfaces\n"
                 "- tests\n"
                 "Routed notes returned\n"
-                "- memory/index.md\n"
+                "- .agentic-workspace/memory/repo/index.md\n"
                 "Expected missing note\n"
-                "- memory/mistakes/recurring-failures.md\n"
+                "- .agentic-workspace/memory/repo/mistakes/recurring-failures.md\n"
                 "Why it was needed\n"
                 "- Validation guidance should be routed for this surface.\n"
                 "Expected routing signal\n"
@@ -3335,7 +3422,7 @@ def test_route_report_supports_feedback_cases_and_fixtures(tmp_path: Path) -> No
     _write_routing_fixture_file(target, "missed-note-regression.json")
     _write_repo_file(
         target,
-        "memory/current/routing-feedback.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
         _routing_feedback_note(
             missed_cases=[
                 "### Case: runtime-domain\n"
@@ -3346,9 +3433,9 @@ def test_route_report_supports_feedback_cases_and_fixtures(tmp_path: Path) -> No
                 "Surfaces\n"
                 "- tests\n"
                 "Routed notes returned\n"
-                "- memory/index.md\n"
+                "- .agentic-workspace/memory/repo/index.md\n"
                 "Expected missing note\n"
-                "- memory/mistakes/recurring-failures.md\n"
+                "- .agentic-workspace/memory/repo/mistakes/recurring-failures.md\n"
                 "Why it was needed\n"
                 "- Validation guidance should be routed for this surface.\n"
                 "Expected routing signal\n"
@@ -3387,7 +3474,7 @@ def test_route_report_keeps_missed_and_over_routing_counts_separate(tmp_path: Pa
     _setup_routing_fixture_repo(target, "missed-note-regression.json")
     _write_repo_file(
         target,
-        "memory/current/routing-feedback.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
         _routing_feedback_note(
             missed_cases=[
                 "### Case: missed\n"
@@ -3398,9 +3485,9 @@ def test_route_report_keeps_missed_and_over_routing_counts_separate(tmp_path: Pa
                 "Surfaces\n"
                 "- tests\n"
                 "Routed notes returned\n"
-                "- memory/index.md\n"
+                "- .agentic-workspace/memory/repo/index.md\n"
                 "Expected missing note\n"
-                "- memory/runbooks/runtime.md\n"
+                "- .agentic-workspace/memory/repo/runbooks/runtime.md\n"
                 "Why it was needed\n"
                 "- Missing note case.\n"
                 "Expected routing signal\n"
@@ -3417,10 +3504,10 @@ def test_route_report_keeps_missed_and_over_routing_counts_separate(tmp_path: Pa
                 "Surfaces\n"
                 "- tests\n"
                 "Routed notes returned\n"
-                "- memory/index.md\n"
-                "- memory/mistakes/recurring-failures.md\n"
+                "- .agentic-workspace/memory/repo/index.md\n"
+                "- .agentic-workspace/memory/repo/mistakes/recurring-failures.md\n"
                 "Unexpected notes\n"
-                "- memory/mistakes/recurring-failures.md\n"
+                "- .agentic-workspace/memory/repo/mistakes/recurring-failures.md\n"
                 "Why they were unnecessary\n"
                 "- Over-routing case.\n"
                 "Status\n"
@@ -3440,7 +3527,7 @@ def test_route_report_keeps_missed_and_over_routing_counts_separate(tmp_path: Pa
 
 def test_route_report_handles_invalid_fixture_without_crashing(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
     _write_routing_fixture_file(target, "invalid.json", raw_text="{ not json }\n")
 
     result = installer.report_routes(target=target)
@@ -3457,7 +3544,7 @@ def test_route_report_fixture_counts_and_working_set_metrics_are_correct(tmp_pat
     _write_routing_fixture_file(target, "architecture-basic.json")
     failing = _load_routing_fixture("runtime-basic.json")
     failing["name"] = "failing"
-    failing["expected_optional"] = ["memory/domains/wrong.md"]
+    failing["expected_optional"] = [".agentic-workspace/memory/repo/domains/wrong.md"]
     _write_routing_fixture_file(target, "failing.json", payload=failing)
 
     result = installer.report_routes(target=target)
@@ -3487,11 +3574,11 @@ def test_route_report_text_output_lists_only_failing_or_unresolved_items(tmp_pat
     _write_routing_fixture_file(target, "runtime-basic.json")
     failing = _load_routing_fixture("runtime-basic.json")
     failing["name"] = "failing"
-    failing["expected_optional"] = ["memory/domains/wrong.md"]
+    failing["expected_optional"] = [".agentic-workspace/memory/repo/domains/wrong.md"]
     _write_routing_fixture_file(target, "failing.json", payload=failing)
     _write_repo_file(
         target,
-        "memory/current/routing-feedback.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
         _routing_feedback_note(
             missed_cases=["### Case: unresolved\nTask surface summary\n- Missing explicit routing data.\nStatus\n- open"]
         ),
@@ -3516,7 +3603,7 @@ def test_route_report_excludes_externalized_feedback_cases_from_live_counts(tmp_
     _setup_routing_fixture_repo(target, "runtime-basic.json")
     _write_repo_file(
         target,
-        "memory/current/routing-feedback.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
         _routing_feedback_note(
             missed_cases=[
                 "### Case: externalized\n"
@@ -3527,7 +3614,7 @@ def test_route_report_excludes_externalized_feedback_cases_from_live_counts(tmp_
                 "Surfaces\n"
                 "- review\n"
                 "Routed notes returned\n"
-                "- memory/index.md\n"
+                "- .agentic-workspace/memory/repo/index.md\n"
                 "Expected missing note\n"
                 "- tools/skills/review/SKILL.md\n"
                 "Why it was needed\n"
@@ -3561,8 +3648,8 @@ def test_route_report_does_not_emit_combined_routing_score(tmp_path: Path) -> No
 
 def test_doctor_audits_routing_feedback_hygiene(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    _write_repo_file(target, "memory/index.md", _memory_index_text())
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    _write_repo_file(target, ".agentic-workspace/memory/repo/index.md", _memory_index_text())
     filler = "\n".join("- filler" for _ in range(110))
     feedback_text = (
         "# Routing Feedback\n\n"
@@ -3582,31 +3669,33 @@ def test_doctor_audits_routing_feedback_hygiene(tmp_path: Path) -> None:
         "Task surface summary\n"
         "- Resolved case.\n"
         "Expected missing note\n"
-        "- memory/domains/a.md\n"
+        "- .agentic-workspace/memory/repo/domains/a.md\n"
         "Status\n"
         "- tuned\n\n"
         "### Case: resolved-c\n"
         "Task surface summary\n"
         "- Resolved case.\n"
         "Expected missing note\n"
-        "- memory/domains/b.md\n"
+        "- .agentic-workspace/memory/repo/domains/b.md\n"
         "Status\n"
         "- rejected\n\n"
         "### Case: resolved-d\n"
         "Task surface summary\n"
         "- Resolved case.\n"
         "Expected missing note\n"
-        "- memory/domains/c.md\n"
+        "- .agentic-workspace/memory/repo/domains/c.md\n"
         "Status\n"
         "- rejected\n\n"
         "## Over-routing entries\n\n"
         "## Synthesis\n\n"
         f"{filler}\n"
     )
-    _write_repo_file(target, "memory/current/routing-feedback.md", feedback_text)
+    _write_repo_file(target, ".agentic-workspace/memory/repo/current/routing-feedback.md", feedback_text)
 
     result = installer.doctor_bootstrap(target=target)
-    details = [action.detail for action in result.actions if action.path == target / "memory/current/routing-feedback.md"]
+    details = [
+        action.detail for action in result.actions if action.path == target / ".agentic-workspace/memory/repo/current/routing-feedback.md"
+    ]
 
     assert any("missing Last confirmed" in detail for detail in details)
     assert any("routing-feedback note is oversized" in detail for detail in details)
@@ -3619,24 +3708,24 @@ def test_doctor_audit_flags_core_docs_that_depend_on_memory_when_policy_enabled(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
-    (target / "docs").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / "docs").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "system" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
 [rules]
 forbid_core_docs_depend_on_memory = true
 core_doc_globs = ["README.md", "docs/**/*.md"]
-core_doc_exclude_globs = ["memory/**/*.md", "AGENTS.md"]
+core_doc_exclude_globs = [".agentic-workspace/memory/repo/**/*.md", "AGENTS.md"]
 
-[notes."memory/index.md"]
+[notes.".agentic-workspace/memory/repo/index.md"]
 note_type = "routing"
-canonical_home = "memory/index.md"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -3646,7 +3735,7 @@ task_relevance = "required"
         encoding="utf-8",
     )
     (target / "README.md").write_text(
-        "See `memory/runbooks/deploy.md` for the stable deployment procedure.\n",
+        "See `.agentic-workspace/memory/repo/runbooks/deploy.md` for the stable deployment procedure.\n",
         encoding="utf-8",
     )
 
@@ -3662,24 +3751,24 @@ def test_doctor_strict_doc_ownership_forces_audit_without_manifest_opt_in(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
-    (target / "docs").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
+    (target / "docs").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "system" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
 [rules]
 core_doc_globs = ["README.md"]
-core_doc_exclude_globs = ["memory/**/*.md", "AGENTS.md"]
+core_doc_exclude_globs = [".agentic-workspace/memory/repo/**/*.md", "AGENTS.md"]
 forbid_core_docs_depend_on_memory = false
 
-[notes."memory/index.md"]
+[notes.".agentic-workspace/memory/repo/index.md"]
 note_type = "routing"
-canonical_home = "memory/index.md"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -3688,7 +3777,7 @@ task_relevance = "required"
         + "\n",
         encoding="utf-8",
     )
-    (target / "README.md").write_text("See memory/runbooks/deploy.md for deployment steps.\n", encoding="utf-8")
+    (target / "README.md").write_text("See .agentic-workspace/memory/repo/runbooks/deploy.md for deployment steps.\n", encoding="utf-8")
 
     result = installer.doctor_bootstrap(target=target, strict_doc_ownership=True)
 
@@ -3697,18 +3786,18 @@ task_relevance = "required"
 
 def test_doctor_validates_manifest_canonicality_values(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "system" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/api.md"]
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
-canonical_home = "memory/domains/api.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "wrong"
@@ -3721,29 +3810,31 @@ task_relevance = "sometimes"
     result = installer.doctor_bootstrap(target=target)
 
     assert any(
-        action.path == target / "memory" / "domains" / "api.md" and "manifest canonicality must be one of" in action.detail
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md"
+        and "manifest canonicality must be one of" in action.detail
         for action in result.actions
     )
     assert any(
-        action.path == target / "memory" / "domains" / "api.md" and "manifest task_relevance must be required or optional" in action.detail
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md"
+        and "manifest task_relevance must be required or optional" in action.detail
         for action in result.actions
     )
 
 
 def test_doctor_validates_optional_improvement_manifest_values(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "system" / "VERSION.md").write_text("Version: 33\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 33\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/api.md"]
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
-canonical_home = "memory/domains/api.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -3767,17 +3858,19 @@ elimination_target = "gone"
 
 def test_doctor_flags_incomplete_improvement_signal_lifecycle(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "mistakes").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "mistakes" / "recurring-failures.md").write_text("# Recurring Failures\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md").write_text(
+        "# Recurring Failures\n", encoding="utf-8"
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/mistakes/recurring-failures.md"]
+[notes.".agentic-workspace/memory/repo/mistakes/recurring-failures.md"]
 note_type = "recurring-failures"
-canonical_home = "memory/mistakes/recurring-failures.md"
+canonical_home = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -3796,17 +3889,19 @@ memory_role = "improvement_signal"
 
 def test_doctor_accepts_retention_justification_for_improvement_signal(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "mistakes").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "mistakes" / "recurring-failures.md").write_text("# Recurring Failures\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md").write_text(
+        "# Recurring Failures\n", encoding="utf-8"
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/mistakes/recurring-failures.md"]
+[notes.".agentic-workspace/memory/repo/mistakes/recurring-failures.md"]
 note_type = "recurring-failures"
-canonical_home = "memory/mistakes/recurring-failures.md"
+canonical_home = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -3826,16 +3921,16 @@ elimination_target = "shrink"
 
 def test_doctor_flags_manifest_routing_drift_for_small_default_surface(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
 [rules]
-routing_only = ["memory/index.md", ".agentic-workspace/memory/WORKFLOW.md"]
-high_level = ["memory/index.md", "memory/current/task-context.md"]
+routing_only = [".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/WORKFLOW.md"]
+high_level = [".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/current/task-context.md"]
 
 [notes.".agentic-workspace/memory/WORKFLOW.md"]
 note_type = "workflow-policy"
@@ -3845,9 +3940,9 @@ audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "required"
 
-[notes."memory/current/task-context.md"]
+[notes.".agentic-workspace/memory/repo/current/task-context.md"]
 note_type = "current-context"
-canonical_home = "memory/current/task-context.md"
+canonical_home = ".agentic-workspace/memory/repo/current/task-context.md"
 authority = "canonical"
 audience = "agent"
 canonicality = "agent_only"
@@ -3862,8 +3957,8 @@ routes_from = ["src/**/*.py"]
     result = installer.doctor_bootstrap(target=target)
     details = [action.detail for action in result.actions]
 
-    assert any("rules.routing_only should contain only memory/index.md" in detail for detail in details)
-    assert any("rules.high_level should not include memory/current/task-context.md" in detail for detail in details)
+    assert any("rules.routing_only should contain only .agentic-workspace/memory/repo/index.md" in detail for detail in details)
+    assert any("rules.high_level should not include .agentic-workspace/memory/repo/current/task-context.md" in detail for detail in details)
     assert any("WORKFLOW.md should remain reference policy" in detail for detail in details)
     assert any("task-context should stay optional continuation compression" in detail for detail in details)
     assert any("task-context should not advertise broad routing metadata" in detail for detail in details)
@@ -3871,20 +3966,20 @@ routes_from = ["src/**/*.py"]
 
 def test_doctor_flags_task_board_dependence_outside_current_notes(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "domains" / "api.md").write_text("# API\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md").write_text("# API\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
 [rules]
 task_board_globs = ["TODO.md"]
 
-[notes."memory/domains/api.md"]
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
-canonical_home = "memory/domains/api.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -3903,22 +3998,22 @@ stale_when = ["TODO.md"]
 
 def test_doctor_flags_canonical_dir_and_note_type_drift(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "misc").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "misc").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "misc" / "api.md").write_text("# API\n", encoding="utf-8")
-    (target / "memory" / "domains" / "wrong.md").write_text("# Wrong\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "misc" / "api.md").write_text("# API\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "wrong.md").write_text("# Wrong\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
 [rules]
-canonical_dirs = ["memory/domains", "memory/invariants", "memory/runbooks", "memory/mistakes", "memory/decisions"]
+canonical_dirs = [".agentic-workspace/memory/repo/domains", ".agentic-workspace/memory/repo/invariants", ".agentic-workspace/memory/repo/runbooks", ".agentic-workspace/memory/repo/mistakes", ".agentic-workspace/memory/repo/decisions"]
 
-[notes."memory/domains/wrong.md"]
+[notes.".agentic-workspace/memory/repo/domains/wrong.md"]
 note_type = "invariant"
-canonical_home = "memory/domains/wrong.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/wrong.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -3939,15 +4034,17 @@ task_relevance = "optional"
     result = installer.doctor_bootstrap(target=target)
 
     assert any("durable memory notes should live under rules.canonical_dirs" in action.detail for action in result.actions)
-    assert any("notes under memory/domains/ should keep note_type = domain" in action.detail for action in result.actions)
+    assert any(
+        "notes under .agentic-workspace/memory/repo/domains/ should keep note_type = domain" in action.detail for action in result.actions
+    )
 
 
 def test_doctor_enforces_routing_feedback_as_calibration_only(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "current").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "current" / "routing-feedback.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "routing-feedback.md").write_text(
         """# Routing Feedback
 
 ## Status
@@ -3980,11 +4077,11 @@ Active
 """,
         encoding="utf-8",
     )
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/current/routing-feedback.md"]
+[notes.".agentic-workspace/memory/repo/current/routing-feedback.md"]
 note_type = "routing-feedback"
 canonical_home = "docs/routing.md"
 authority = "canonical"
@@ -4000,7 +4097,9 @@ stale_when = ["src/**/*.py"]
     )
 
     result = installer.doctor_bootstrap(target=target)
-    details = [action.detail for action in result.actions if action.path == target / "memory/current/routing-feedback.md"]
+    details = [
+        action.detail for action in result.actions if action.path == target / ".agentic-workspace/memory/repo/current/routing-feedback.md"
+    ]
 
     assert any("routing-feedback should stay optional calibration context" in detail for detail in details)
     assert any("routing-feedback should stay agent_only calibration context" in detail for detail in details)
@@ -4010,10 +4109,10 @@ stale_when = ["src/**/*.py"]
 
 def test_doctor_flags_current_note_authority_and_memory_role_drift(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "current").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "current" / "project-state.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md").write_text(
         """
 # Project State
 
@@ -4072,13 +4171,13 @@ Active
         + "\n",
         encoding="utf-8",
     )
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/current/project-state.md"]
+[notes.".agentic-workspace/memory/repo/current/project-state.md"]
 note_type = "current-overview"
-canonical_home = "memory/current/project-state.md"
+canonical_home = ".agentic-workspace/memory/repo/current/project-state.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -4090,7 +4189,9 @@ memory_role = "durable_truth"
     )
 
     result = installer.doctor_bootstrap(target=target)
-    details = [action.detail for action in result.actions if action.path == target / "memory/current/project-state.md"]
+    details = [
+        action.detail for action in result.actions if action.path == target / ".agentic-workspace/memory/repo/current/project-state.md"
+    ]
 
     assert any("weak-authority context" in detail for detail in details)
     assert any("should not declare durable-truth or improvement-signal memory roles" in detail for detail in details)
@@ -4098,17 +4199,19 @@ memory_role = "durable_truth"
 
 def test_doctor_emits_note_type_specific_size_warning(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "invariants").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "invariants").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "invariants" / "api.md").write_text(("# API invariant\n\n" + "detail\n") * 90, encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "invariants" / "api.md").write_text(
+        ("# API invariant\n\n" + "detail\n") * 90, encoding="utf-8"
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/invariants/api.md"]
+[notes.".agentic-workspace/memory/repo/invariants/api.md"]
 note_type = "invariant"
-canonical_home = "memory/invariants/api.md"
+canonical_home = ".agentic-workspace/memory/repo/invariants/api.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -4130,7 +4233,7 @@ def test_current_note_size_pressure_is_classified_as_current_memory_review() -> 
     assert (
         _infer_action_category(
             kind="consider",
-            path=Path("memory/current/task-context.md"),
+            path=Path(".agentic-workspace/memory/repo/current/task-context.md"),
             detail="task-context note is oversized (92 lines, expected <= 80); remove planner/log spillover",
             role="memory-size-audit",
             safety="manual",
@@ -4141,15 +4244,17 @@ def test_current_note_size_pressure_is_classified_as_current_memory_review() -> 
 
 def test_doctor_emits_note_lifecycle_pressure_for_promotion_candidate(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "domains" / "api.md").write_text("# API\n\n" + ("Stable guidance.\n" * 45), encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md").write_text(
+        "# API\n\n" + ("Stable guidance.\n" * 45), encoding="utf-8"
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/api.md"]
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
 canonical_home = "docs/api.md"
 authority = "advisory"
@@ -4165,7 +4270,7 @@ task_relevance = "optional"
 
     assert any(
         action.role == "memory-lifecycle"
-        and action.path == target / "memory/domains/api.md"
+        and action.path == target / ".agentic-workspace/memory/repo/domains/api.md"
         and "move canonical guidance into docs/api.md" in action.detail
         and "short stub" in action.detail
         for action in result.actions
@@ -4174,20 +4279,20 @@ task_relevance = "optional"
 
 def test_doctor_emits_multi_home_pressure_for_procedural_domain_note(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "domains" / "api.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md").write_text(
         "# API\n\n" + "\n".join(f"{idx}. Run `cmd {idx}` and verify output." for idx in range(1, 8)),
         encoding="utf-8",
     )
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/api.md"]
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
-canonical_home = "memory/domains/api.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -4201,18 +4306,18 @@ task_relevance = "optional"
 
     assert any(
         action.role == "memory-multi-home"
-        and action.path == target / "memory/domains/api.md"
-        and "memory/skills/api/SKILL.md" in action.detail
+        and action.path == target / ".agentic-workspace/memory/repo/domains/api.md"
+        and ".agentic-workspace/memory/repo/skills/api/SKILL.md" in action.detail
         for action in result.actions
     )
 
 
 def test_doctor_ignores_standard_metadata_sections_when_counting_domain_procedure(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "domains" / "api.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md").write_text(
         """# API
 
 ## Purpose
@@ -4226,7 +4331,7 @@ Durable package boundary.
 
 ## Companion skill
 
-Use `memory/skills/api/SKILL.md`.
+Use `.agentic-workspace/memory/repo/skills/api/SKILL.md`.
 
 ## Verify
 
@@ -4235,13 +4340,13 @@ Use `memory/skills/api/SKILL.md`.
 """,
         encoding="utf-8",
     )
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/api.md"]
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
-canonical_home = "memory/domains/api.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -4253,25 +4358,28 @@ task_relevance = "optional"
 
     result = installer.doctor_bootstrap(target=target)
 
-    assert not any(action.role == "memory-multi-home" and action.path == target / "memory/domains/api.md" for action in result.actions)
+    assert not any(
+        action.role == "memory-multi-home" and action.path == target / ".agentic-workspace/memory/repo/domains/api.md"
+        for action in result.actions
+    )
 
 
 def test_doctor_emits_multi_home_pressure_for_invariant_heavy_runbook(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "runbooks").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "runbooks" / "release.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "release.md").write_text(
         "# Release\n\n" + "\n".join("The service must remain compatible and must never skip validation." for _ in range(8)),
         encoding="utf-8",
     )
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/runbooks/release.md"]
+[notes.".agentic-workspace/memory/repo/runbooks/release.md"]
 note_type = "runbook"
-canonical_home = "memory/runbooks/release.md"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/release.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -4285,26 +4393,26 @@ task_relevance = "optional"
 
     assert any(
         action.role == "memory-multi-home"
-        and action.path == target / "memory/runbooks/release.md"
-        and "memory/invariants/release.md" in action.detail
+        and action.path == target / ".agentic-workspace/memory/repo/runbooks/release.md"
+        and ".agentic-workspace/memory/repo/invariants/release.md" in action.detail
         for action in result.actions
     )
 
 
 def test_doctor_rejects_canonical_elsewhere_targets_inside_memory(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "system" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/api.md"]
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
-canonical_home = "memory/invariants/api.md"
+canonical_home = ".agentic-workspace/memory/repo/invariants/api.md"
 authority = "advisory"
 audience = "human+agent"
 canonicality = "canonical_elsewhere"
@@ -4319,22 +4427,28 @@ surfaces = ["api"]
     routed = installer.route_memory(target=target, surfaces=["api"])
 
     assert any(
-        action.path == target / "memory" / "domains" / "api.md" and "canonical_elsewhere notes must point canonical_home" in action.detail
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md"
+        and "canonical_elsewhere notes must point canonical_home" in action.detail
         for action in doctor.actions
     )
-    assert not any(action.path == target / "memory" / "invariants" / "api.md" and action.kind == "required" for action in routed.actions)
+    assert not any(
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "invariants" / "api.md" and action.kind == "required"
+        for action in routed.actions
+    )
 
 
 def test_promotion_report_finds_candidate_notes_from_manifest(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
-    (target / "memory" / "domains" / "api.md").write_text("# API\n\nStable policy draft.\n", encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md").write_text(
+        "# API\n\nStable policy draft.\n", encoding="utf-8"
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/api.md"]
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
 canonical_home = "docs/api.md"
 authority = "advisory"
@@ -4349,7 +4463,7 @@ task_relevance = "optional"
     result = installer.promotion_report(target=target)
 
     assert any(
-        action.path == target / "memory" / "domains" / "api.md"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md"
         and action.kind == "candidate"
         and "suggested canonical doc docs/api.md" in action.detail
         for action in result.actions
@@ -4360,14 +4474,15 @@ def test_promotion_report_supports_explicit_notes_without_manifest_metadata(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "runbooks").mkdir(parents=True)
-    (target / "memory" / "runbooks" / "deploy.md").write_text("# Deploy\n\nProcedure.\n", encoding="utf-8")
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "deploy.md").write_text("# Deploy\n\nProcedure.\n", encoding="utf-8")
 
-    result = installer.promotion_report(target=target, notes=["memory/runbooks/deploy.md"])
+    result = installer.promotion_report(target=target, notes=[".agentic-workspace/memory/repo/runbooks/deploy.md"])
 
     assert any(
-        action.path == target / "memory" / "runbooks" / "deploy.md" and "checked-in skill" in action.detail for action in result.actions
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "deploy.md" and "checked-in skill" in action.detail
+        for action in result.actions
     )
 
 
@@ -4375,13 +4490,13 @@ def test_promotion_report_marks_missing_explicit_notes_for_manual_review(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
 
-    result = installer.promotion_report(target=target, notes=["memory/runbooks/deply.md"])
+    result = installer.promotion_report(target=target, notes=[".agentic-workspace/memory/repo/runbooks/deply.md"])
 
     assert any(
-        action.path == target / "memory" / "runbooks" / "deply.md"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "deply.md"
         and action.kind == "manual review"
         and "file does not exist" in action.detail
         for action in result.actions
@@ -4390,22 +4505,22 @@ def test_promotion_report_marks_missing_explicit_notes_for_manual_review(
 
 def test_doctor_emits_advisory_note_overlap_warning(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
-    (target / "memory" / "invariants").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "invariants").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
     shared_text = (
         "service contract boundary request validation response schema compatibility migration rollback observability operator safety\n"
     )
-    (target / "memory" / "domains" / "api.md").write_text(shared_text, encoding="utf-8")
-    (target / "memory" / "invariants" / "api.md").write_text(shared_text, encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md").write_text(shared_text, encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "invariants" / "api.md").write_text(shared_text, encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/domains/api.md"]
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
-canonical_home = "memory/domains/api.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -4413,9 +4528,9 @@ task_relevance = "optional"
 surfaces = ["api"]
 routes_from = ["src/**/*.py"]
 
-[notes."memory/invariants/api.md"]
+[notes.".agentic-workspace/memory/repo/invariants/api.md"]
 note_type = "invariant"
-canonical_home = "memory/invariants/api.md"
+canonical_home = ".agentic-workspace/memory/repo/invariants/api.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -4437,11 +4552,11 @@ routes_from = ["src/**/*.py"]
 
 def test_doctor_does_not_flag_wishlist_style_note_overlap_from_template_language(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "decisions").mkdir(parents=True)
-    (target / "memory" / "mistakes").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "decisions").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "decisions" / "wishlist.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "wishlist.md").write_text(
         """# Wishlist
 
 ## Status
@@ -4474,7 +4589,7 @@ Active
 """,
         encoding="utf-8",
     )
-    (target / "memory" / "mistakes" / "recurring-failures.md").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md").write_text(
         """# Recurring Failures
 
 ## Status
@@ -4507,22 +4622,22 @@ Active
 """,
         encoding="utf-8",
     )
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
-[notes."memory/decisions/wishlist.md"]
+[notes.".agentic-workspace/memory/repo/decisions/wishlist.md"]
 note_type = "decision"
-canonical_home = "memory/decisions/wishlist.md"
+canonical_home = ".agentic-workspace/memory/repo/decisions/wishlist.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "optional"
 subsystems = ["memory-system"]
 
-[notes."memory/mistakes/recurring-failures.md"]
+[notes.".agentic-workspace/memory/repo/mistakes/recurring-failures.md"]
 note_type = "recurring-failures"
-canonical_home = "memory/mistakes/recurring-failures.md"
+canonical_home = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -4536,36 +4651,37 @@ subsystems = ["memory-system"]
     result = installer.doctor_bootstrap(target=target)
 
     assert not any(
-        action.role == "memory-overlap-audit" and action.path == target / "memory" / "decisions" / "wishlist.md"
+        action.role == "memory-overlap-audit"
+        and action.path == target / ".agentic-workspace" / "memory" / "repo" / "decisions" / "wishlist.md"
         for action in result.actions
     )
 
 
 def test_doctor_shadow_doc_detection_flags_overlap(tmp_path: Path) -> None:
     target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True)
-    (target / "memory" / "domains").mkdir(parents=True)
-    (target / "docs").mkdir(parents=True)
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
+    (target / "docs").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / "memory" / "system").mkdir(parents=True)
-    (target / "memory" / "system" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
     shared_text = (
         "deployment rollback procedure staging production release verification service health incident operator checklist observability\n"
     )
-    (target / "memory" / "domains" / "deploy.md").write_text(shared_text, encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "deploy.md").write_text(shared_text, encoding="utf-8")
     (target / "docs" / "deploy.md").write_text(shared_text, encoding="utf-8")
-    (target / "memory" / "manifest.toml").write_text(
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
         """
 version = 1
 
 [rules]
 forbid_core_docs_depend_on_memory = true
 core_doc_globs = ["docs/**/*.md"]
-core_doc_exclude_globs = ["memory/**/*.md", "AGENTS.md"]
+core_doc_exclude_globs = [".agentic-workspace/memory/repo/**/*.md", "AGENTS.md"]
 
-[notes."memory/domains/deploy.md"]
+[notes.".agentic-workspace/memory/repo/domains/deploy.md"]
 note_type = "domain"
-canonical_home = "memory/domains/deploy.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/deploy.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -4578,7 +4694,7 @@ task_relevance = "optional"
     result = installer.doctor_bootstrap(target=target)
 
     assert any(
-        action.path == target / "memory" / "domains" / "deploy.md"
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "deploy.md"
         and action.role == "shadow-doc-audit"
         and "shadow-doc overlap" in action.detail
         for action in result.actions

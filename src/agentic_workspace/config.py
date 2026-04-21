@@ -8,9 +8,12 @@ from typing import Any
 
 from agentic_workspace.result_adapter import serialise_value
 
-WORKSPACE_CONFIG_PATH = Path("agentic-workspace.toml")
-WORKSPACE_LOCAL_CONFIG_PATH = Path("agentic-workspace.local.toml")
-WORKSPACE_DELEGATION_OUTCOMES_PATH = Path("agentic-workspace.delegation-outcomes.json")
+WORKSPACE_CONFIG_PATH = Path(".agentic-workspace/config.toml")
+LEGACY_WORKSPACE_CONFIG_PATH = Path("agentic-workspace.toml")
+WORKSPACE_LOCAL_CONFIG_PATH = Path(".agentic-workspace/config.local.toml")
+LEGACY_WORKSPACE_LOCAL_CONFIG_PATH = Path("agentic-workspace.local.toml")
+WORKSPACE_DELEGATION_OUTCOMES_PATH = Path(".agentic-workspace/delegation-outcomes.json")
+LEGACY_WORKSPACE_DELEGATION_OUTCOMES_PATH = Path("agentic-workspace.delegation-outcomes.json")
 WORKSPACE_EXTERNAL_AGENT_PATH = Path("llms.txt")
 WORKSPACE_BOOTSTRAP_HANDOFF_PATH = Path(".agentic-workspace/bootstrap-handoff.md")
 WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH = Path(".agentic-workspace/bootstrap-handoff.json")
@@ -146,10 +149,10 @@ class DelegationOutcomeRecord:
 
 
 def discover_workspace_root(start_path: Path | None = None) -> Path | None:
-    """Search upwards for the workspace root containing agentic-workspace.toml."""
+    """Search upwards for the workspace root containing the checked-in workspace config."""
     current = (start_path or Path.cwd()).resolve()
     while True:
-        if (current / WORKSPACE_CONFIG_PATH).exists():
+        if (current / WORKSPACE_CONFIG_PATH).exists() or (current / LEGACY_WORKSPACE_CONFIG_PATH).exists():
             return current
         if (current / ".git").exists() or current.parent == current:
             break
@@ -348,6 +351,10 @@ def normalize_delegation_outcome_record(raw: Any, *, surface_name: str) -> Deleg
 def load_delegation_outcomes(*, target_root: Path) -> tuple[Path, dict[str, Any], tuple[DelegationOutcomeRecord, ...]]:
     path = target_root / WORKSPACE_DELEGATION_OUTCOMES_PATH
     if not path.exists():
+        legacy_path = target_root / LEGACY_WORKSPACE_DELEGATION_OUTCOMES_PATH
+        if legacy_path.exists():
+            path = legacy_path
+    if not path.exists():
         return path, {"kind": DELEGATION_OUTCOMES_KIND, "records": []}, ()
     payload = load_json_payload(path=path, surface_name=WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix())
     if payload.get("kind") != DELEGATION_OUTCOMES_KIND:
@@ -385,7 +392,11 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
     local_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
     warnings: list[str] = []
     if not local_path.exists():
-        return empty_mixed_agent_local_override(path=local_path, exists=False), warnings
+        legacy_path = target_root / LEGACY_WORKSPACE_LOCAL_CONFIG_PATH
+        if legacy_path.exists():
+            local_path = legacy_path
+        else:
+            return empty_mixed_agent_local_override(path=local_path, exists=False), warnings
 
     payload = load_toml_payload(path=local_path, surface_name=WORKSPACE_LOCAL_CONFIG_PATH.as_posix())
 
@@ -518,6 +529,10 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     effective_root = discovered_root or target_root
 
     config_path = effective_root / WORKSPACE_CONFIG_PATH
+    if not config_path.exists():
+        legacy_config_path = effective_root / LEGACY_WORKSPACE_CONFIG_PATH
+        if legacy_config_path.exists():
+            config_path = legacy_config_path
     local_override, local_warnings = load_mixed_agent_local_override(target_root=effective_root)
     warnings = list(local_warnings)
 

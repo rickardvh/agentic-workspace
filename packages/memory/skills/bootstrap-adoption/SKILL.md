@@ -13,7 +13,7 @@ It is an execution layer for applying the memory system. The installed files rem
 
 1. Inspect the target repository first:
    - read `AGENTS.md` if it exists
-   - check whether `memory/` and `scripts/check/check_memory_freshness.py` already exist
+   - check whether `.agentic-workspace/memory/repo/` and `scripts/check/check_memory_freshness.py` already exist
    - note any existing repo-local task system without trying to replace it
 2. Run `agentic-memory-bootstrap doctor --target <repo>` to see the current state.
 3. Decide which path fits:

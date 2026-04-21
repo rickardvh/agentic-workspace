@@ -78,7 +78,7 @@
       "path": "planning-review-pass/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "run a bounded review pass and capture compact findings under docs/reviews",
+      "summary": "run a bounded review pass and capture compact findings under .agentic-workspace/planning/reviews",
       "activation_hints": {
         "verbs": ["review", "audit", "inspect", "check", "perform"],
         "nouns": ["review", "review pass", "review mode", "review portfolio", "code review", "package review", "contract integrity", "regression", "change"],

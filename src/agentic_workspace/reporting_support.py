@@ -30,7 +30,7 @@ REPO_FRICTION_SKIP_DIRS = {
     "build",
 }
 
-STANDING_INTENT_CANONICAL_DOC = "docs/standing-intent-contract.md"
+STANDING_INTENT_CANONICAL_DOC = ".agentic-workspace/docs/standing-intent-contract.md"
 
 
 def output_contract_payload(
@@ -73,7 +73,7 @@ def standing_intent_payload(
         _standing_intent_class_payload(
             intent_class="config_policy",
             summary="Stable repo policy that should be queryable and preferably machine-readable.",
-            default_owner="agentic-workspace.toml",
+            default_owner=".agentic-workspace/config.toml",
             authoritative_kind="policy",
             durable_when=[
                 "the guidance should survive startup without rereading prose",
@@ -118,7 +118,7 @@ def standing_intent_payload(
         _standing_intent_class_payload(
             intent_class="active_directional_intent",
             summary="Bounded current direction that should steer work now without being mistaken for timeless doctrine.",
-            default_owner=".agentic-workspace/planning/state.toml or docs/execplans/",
+            default_owner=".agentic-workspace/planning/state.toml or .agentic-workspace/planning/execplans/",
             authoritative_kind="active-direction",
             durable_when=[
                 "the direction still matters after the immediate chat turn",
@@ -187,10 +187,10 @@ def standing_intent_payload(
                 "and enforceable workflow still outrank broader interpretive guidance."
             ),
             "sources_considered": [
-                "agentic-workspace.toml",
+                ".agentic-workspace/config.toml",
                 "AGENTS.md",
                 "docs/design-principles.md",
-                ".agentic-workspace/planning/state.toml and docs/execplans/",
+                ".agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans/",
                 "Memory report/install state",
                 "scripts/check/",
             ],
@@ -246,10 +246,10 @@ def setup_discovery_payload(
             ["docs/resumable-execution-contract.md"],
         ),
         (
-            "docs/capability-aware-execution.md",
+            ".agentic-workspace/docs/capability-aware-execution.md",
             "task-shape and capability-fit rules",
             0.89,
-            ["docs/capability-aware-execution.md"],
+            [".agentic-workspace/docs/capability-aware-execution.md"],
         ),
         (
             "docs/execution-summary-contract.md",
@@ -286,10 +286,10 @@ def setup_discovery_payload(
     if False:
         _add_candidate(
             ambiguous,
-            surface="docs/planning-process.md",
+            surface=".agentic-workspace/planning/process.md",
             reason="long-horizon follow-ons should not be seeded without promotion",
             confidence=0.82,
-            refs=["docs/planning-process.md"],
+            refs=[".agentic-workspace/planning/process.md"],
         )
 
     for warning in status_payload.get("warnings", []):
@@ -424,10 +424,10 @@ def _standing_intent_stronger_home_model(*, target_root: Path, config_policy: di
                 "concern": "repo-friction improvement posture",
                 "from_class": "repo_doctrine",
                 "to_class": "config_policy",
-                "current_owner": "agentic-workspace.toml",
+                "current_owner": ".agentic-workspace/config.toml",
                 "status": "already-promoted",
                 "why": "The repo's standing cleanup posture is now machine-readable policy instead of prose-only preference.",
-                "refs": ["agentic-workspace.toml", "docs/standing-intent-contract.md"],
+                "refs": [".agentic-workspace/config.toml", ".agentic-workspace/docs/standing-intent-contract.md"],
             }
         )
     if str(config_policy.get("optimization_bias_source")) == "repo-config":
@@ -436,20 +436,20 @@ def _standing_intent_stronger_home_model(*, target_root: Path, config_policy: di
                 "concern": "output and residue preference",
                 "from_class": "repo_doctrine",
                 "to_class": "config_policy",
-                "current_owner": "agentic-workspace.toml",
+                "current_owner": ".agentic-workspace/config.toml",
                 "status": "already-promoted",
                 "why": (
                     "The repo's reporting and residue preference is enforced through config-backed "
                     "defaults rather than reminder text alone."
                 ),
-                "refs": ["agentic-workspace.toml", "docs/reporting-contract.md"],
+                "refs": [".agentic-workspace/config.toml", ".agentic-workspace/docs/reporting-contract.md"],
             }
         )
     for concern, path, refs in (
         (
             "planning surface integrity",
             "scripts/check/check_planning_surfaces.py",
-            ["scripts/check/check_planning_surfaces.py", "docs/standing-intent-contract.md"],
+            ["scripts/check/check_planning_surfaces.py", ".agentic-workspace/docs/standing-intent-contract.md"],
         ),
         (
             "source/payload/root-install boundary drift",
@@ -543,7 +543,7 @@ def _config_policy_effective_item(*, config_policy: dict[str, Any]) -> dict[str,
         "class": "config_policy",
         "status": status,
         "authority": "authoritative-policy",
-        "owner_surface": "agentic-workspace.toml",
+        "owner_surface": ".agentic-workspace/config.toml",
         "summary": summary,
         "items": policy_items,
     }
@@ -570,7 +570,7 @@ def _durable_understanding_effective_item(*, memory_installed: bool) -> dict[str
         "class": "durable_understanding",
         "status": "present" if memory_installed else "absent",
         "authority": "interpretive-understanding",
-        "owner_surface": "memory/",
+        "owner_surface": ".agentic-workspace/memory/repo/",
         "summary": (
             "Memory remains the durable-understanding home for repo-specific interpretive knowledge."
             if memory_installed
@@ -578,7 +578,7 @@ def _durable_understanding_effective_item(*, memory_installed: bool) -> dict[str
         ),
         "refs": (
             [
-                "memory/",
+                ".agentic-workspace/memory/repo/",
                 "agentic-memory-bootstrap report --target ./repo --format json",
             ]
             if memory_installed
@@ -595,7 +595,7 @@ def _active_directional_intent_effective_item(*, active_planning: dict[str, Any]
             "authority": "active-direction",
             "owner_surface": ".agentic-workspace/planning/state.toml",
             "summary": "No active planning slice is in force right now.",
-            "refs": [".agentic-workspace/planning/state.toml", "docs/execplans/"],
+            "refs": [".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/execplans/"],
         }
     refs = [ref for ref in active_planning.get("refs", []) if isinstance(ref, str) and ref]
     return {
@@ -801,12 +801,12 @@ def _repo_friction_surface_role(relative_path: str) -> str:
     if relative_path in {
         "AGENTS.md",
         ".agentic-workspace/planning/state.toml",
-        "docs/planning-process.md",
+        ".agentic-workspace/planning/process.md",
         "llms.txt",
-        "agentic-workspace.toml",
+        ".agentic-workspace/config.toml",
     }:
         return "front-door"
-    if relative_path.startswith("docs/execplans/"):
+    if relative_path.startswith(".agentic-workspace/planning/execplans/"):
         return "planning-state"
     if relative_path.startswith("docs/"):
         return "canonical-doc"

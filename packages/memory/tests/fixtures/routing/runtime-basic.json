@@ -3,14 +3,14 @@
   "case_type": "general",
   "files": ["deploy/k8s/service.yaml"],
   "surfaces": ["runtime"],
-  "expected_required": ["memory/index.md"],
+  "expected_required": [".agentic-workspace/memory/repo/index.md"],
   "expected_optional": [
-    "memory/domains/README.md",
-    "memory/runbooks/README.md"
+    ".agentic-workspace/memory/repo/domains/README.md",
+    ".agentic-workspace/memory/repo/runbooks/README.md"
   ],
   "unexpected_notes": [
-    "memory/current/project-state.md",
-    "memory/current/task-context.md",
+    ".agentic-workspace/memory/repo/current/project-state.md",
+    ".agentic-workspace/memory/repo/current/task-context.md",
     ".agentic-workspace/memory/VERSION.md"
   ],
   "missing_note_candidates": [],

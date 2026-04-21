@@ -1,18 +1,18 @@
 version = 1
 
 [rules]
-routing_only = ["memory/index.md"]
-high_level = ["memory/index.md", "memory/current/project-state.md"]
+routing_only = [".agentic-workspace/memory/repo/index.md"]
+high_level = [".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/current/project-state.md"]
 canonical_dirs = [
-  "memory/domains",
-  "memory/invariants",
-  "memory/runbooks",
-  "memory/mistakes",
-  "memory/decisions",
+  ".agentic-workspace/memory/repo/domains",
+  ".agentic-workspace/memory/repo/invariants",
+  ".agentic-workspace/memory/repo/runbooks",
+  ".agentic-workspace/memory/repo/mistakes",
+  ".agentic-workspace/memory/repo/decisions",
 ]
 task_board_globs = ["TODO.md", "tasks/**", ".github/issues/**"]
 core_doc_globs = ["README.md", "docs/**/*.md", "CONTRIBUTING.md", ".github/**/*.md"]
-core_doc_exclude_globs = ["AGENTS.md", "memory/**/*.md", ".agentic-workspace/memory/**/*.md"]
+core_doc_exclude_globs = ["AGENTS.md", ".agentic-workspace/memory/repo/**/*.md", ".agentic-workspace/memory/**/*.md"]
 forbid_core_docs_depend_on_memory = false
 # Recommended audience conventions for planner-agnostic routing:
 # - agent_bootstrap
@@ -29,23 +29,23 @@ forbid_core_docs_depend_on_memory = false
 # - retention_justification = "short reason the note should remain despite being an improvement signal"
 # These fields are advisory only; existing manifests remain valid without them.
 
-[notes."memory/index.md"]
+[notes.".agentic-workspace/memory/repo/index.md"]
 note_type = "routing"
-canonical_home = "memory/index.md"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "required"
 subsystems = ["memory-system"]
 surfaces = ["decision", "runtime", "api", "retrieval", "tests", "architecture"]
-routes_from = ["AGENTS.md", "memory/**/*.md"]
-stale_when = ["memory/**/*.md"]
+routes_from = ["AGENTS.md", ".agentic-workspace/memory/repo/**/*.md"]
+stale_when = [".agentic-workspace/memory/repo/**/*.md"]
 routing_only = true
 high_level = true
 
-[notes."memory/current/project-state.md"]
+[notes.".agentic-workspace/memory/repo/current/project-state.md"]
 note_type = "current-overview"
-canonical_home = "memory/current/project-state.md"
+canonical_home = ".agentic-workspace/memory/repo/current/project-state.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -56,9 +56,9 @@ routes_from = ["README.md", ".agentic-workspace/memory/**/*.md", "bootstrap/**/*
 stale_when = ["README.md", ".agentic-workspace/memory/**/*.md", "bootstrap/**/*.md"]
 memory_role = "durable_truth"
 
-[notes."memory/current/task-context.md"]
+[notes.".agentic-workspace/memory/repo/current/task-context.md"]
 note_type = "current-context"
-canonical_home = "memory/current/task-context.md"
+canonical_home = ".agentic-workspace/memory/repo/current/task-context.md"
 authority = "canonical"
 audience = "agent"
 canonicality = "agent_only"
@@ -70,9 +70,9 @@ stale_when = []
 # Use this note only for optional continuation compression:
 # active goal, touched surfaces, blocking assumptions, and next validation.
 
-[notes."memory/current/routing-feedback.md"]
+[notes.".agentic-workspace/memory/repo/current/routing-feedback.md"]
 note_type = "routing-feedback"
-canonical_home = "memory/current/routing-feedback.md"
+canonical_home = ".agentic-workspace/memory/repo/current/routing-feedback.md"
 authority = "canonical"
 audience = "agent"
 canonicality = "agent_only"
@@ -84,9 +84,9 @@ stale_when = []
 # Use this note only for compact routing calibration:
 # concrete missed-note or over-routing cases worth revisiting after manifest or index changes.
 
-[notes."memory/domains/README.md"]
+[notes.".agentic-workspace/memory/repo/domains/README.md"]
 note_type = "domain"
-canonical_home = "memory/domains/README.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/README.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -97,9 +97,9 @@ routes_from = []
 stale_when = []
 memory_role = "durable_truth"
 
-[notes."memory/invariants/README.md"]
+[notes.".agentic-workspace/memory/repo/invariants/README.md"]
 note_type = "invariant"
-canonical_home = "memory/invariants/README.md"
+canonical_home = ".agentic-workspace/memory/repo/invariants/README.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -110,9 +110,9 @@ routes_from = []
 stale_when = []
 memory_role = "durable_truth"
 
-[notes."memory/runbooks/README.md"]
+[notes.".agentic-workspace/memory/repo/runbooks/README.md"]
 note_type = "runbook"
-canonical_home = "memory/runbooks/README.md"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/README.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -123,9 +123,9 @@ routes_from = []
 stale_when = []
 memory_role = "durable_truth"
 
-[notes."memory/decisions/README.md"]
+[notes.".agentic-workspace/memory/repo/decisions/README.md"]
 note_type = "decision"
-canonical_home = "memory/decisions/README.md"
+canonical_home = ".agentic-workspace/memory/repo/decisions/README.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
@@ -145,8 +145,8 @@ canonicality = "agent_only"
 task_relevance = "optional"
 subsystems = ["memory-system"]
 surfaces = []
-routes_from = ["AGENTS.md", "memory/index.md", "memory/manifest.toml", ".agentic-workspace/memory/**/*.md"]
-stale_when = ["AGENTS.md", "memory/index.md", "memory/manifest.toml", "bootstrap/AGENTS.md"]
+routes_from = ["AGENTS.md", ".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/manifest.toml", ".agentic-workspace/memory/**/*.md"]
+stale_when = ["AGENTS.md", ".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/manifest.toml", "bootstrap/AGENTS.md"]
 related_validations = ["python scripts/check/check_memory_freshness.py"]
 memory_role = "durable_truth"
 
@@ -159,12 +159,12 @@ canonicality = "agent_only"
 task_relevance = "optional"
 subsystems = ["installer", "payload"]
 surfaces = []
-routes_from = ["pyproject.toml", ".agentic-workspace/memory/VERSION.md", "memory/system/VERSION.md", "bootstrap/memory/system/VERSION.md"]
-stale_when = ["pyproject.toml", ".agentic-workspace/memory/VERSION.md", "memory/system/VERSION.md", "bootstrap/memory/system/VERSION.md"]
+routes_from = ["pyproject.toml", ".agentic-workspace/memory/VERSION.md", ".agentic-workspace/memory/VERSION.md", "bootstrap/.agentic-workspace/memory/VERSION.md"]
+stale_when = ["pyproject.toml", ".agentic-workspace/memory/VERSION.md", ".agentic-workspace/memory/VERSION.md", "bootstrap/.agentic-workspace/memory/VERSION.md"]
 
-[notes."memory/mistakes/recurring-failures.md"]
+[notes.".agentic-workspace/memory/repo/mistakes/recurring-failures.md"]
 note_type = "recurring-failures"
-canonical_home = "memory/mistakes/recurring-failures.md"
+canonical_home = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md"
 authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"

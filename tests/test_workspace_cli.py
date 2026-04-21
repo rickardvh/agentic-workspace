@@ -9,6 +9,16 @@ import pytest
 from agentic_workspace import cli
 from agentic_workspace.result_adapter import adapt_action, adapt_module_result
 
+_ORIGINAL_PATH_WRITE_TEXT = Path.write_text
+
+
+def _path_write_text_with_parents(self: Path, data: str, *args, **kwargs):
+    self.parent.mkdir(parents=True, exist_ok=True)
+    return _ORIGINAL_PATH_WRITE_TEXT(self, data, *args, **kwargs)
+
+
+Path.write_text = _path_write_text_with_parents
+
 
 @dataclass
 class FakeAction:
@@ -54,12 +64,12 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     payload = json.loads(capsys.readouterr().out)
     assert [entry["name"] for entry in payload["modules"]] == ["planning", "memory"]
     planning_module = next(entry for entry in payload["modules"] if entry["name"] == "planning")
-    assert planning_module["install_signals"] == ["TODO.md", "docs/execplans", ".agentic-workspace/planning"]
+    assert planning_module["install_signals"] == ["TODO.md", ".agentic-workspace/planning/execplans", ".agentic-workspace/planning"]
     assert planning_module["workflow_surfaces"] == [
         "AGENTS.md",
         "TODO.md",
         ".agentic-workspace/planning/state.toml",
-        "docs/execplans",
+        ".agentic-workspace/planning/execplans",
         "docs/contributor-playbook.md",
         "docs/maintainer-commands.md",
         ".agentic-workspace/planning",
@@ -111,7 +121,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     )
     assert payload["startup"]["surface_roles"][3]["kind"] == "generated-helper"
     assert any("current agent does not natively look for `AGENTS.md`" in step for step in payload["startup"]["fallbacks"])
-    assert payload["compact_contract_profile"]["canonical_doc"] == "docs/compact-contract-profile.md"
+    assert payload["compact_contract_profile"]["canonical_doc"] == ".agentic-workspace/docs/compact-contract-profile.md"
     assert payload["compact_contract_profile"]["rule"] == (
         "When one bounded answer is enough, prefer a narrow selector over a whole-surface dump."
     )
@@ -141,12 +151,12 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "Do not auto-write planning or memory state from setup input.",
         "Do not preserve findings that have no durable owner or bounded next action.",
     ]
-    assert payload["intent"]["canonical_doc"] == "docs/intent-contract.md"
+    assert payload["intent"]["canonical_doc"] == ".agentic-workspace/docs/compact-contract-profile.md"
     assert payload["intent"]["command"] == "agentic-workspace defaults --section intent --format json"
     assert payload["intent"]["rule"] == "Confirmed intent stays human-owned; interpreted intent must remain visibly inferred."
     assert payload["intent"]["confirmed_intent"]["summary"] == "the human-owned request before workspace normalization"
     assert payload["intent"]["interpreted_intent"]["summary"] == "the workspace-normalized request carried forward by lifecycle commands"
-    assert payload["clarification"]["canonical_doc"] == "docs/intent-contract.md"
+    assert payload["clarification"]["canonical_doc"] == ".agentic-workspace/docs/compact-contract-profile.md"
     assert payload["clarification"]["command"] == "agentic-workspace defaults --section clarification --format json"
     assert payload["clarification"]["rule"] == "When a prompt is vague, ask the smallest repo-context question that removes the ambiguity."
     assert payload["clarification"]["mode"] == "minimal-interruption"
@@ -155,7 +165,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "What proof would make the change safe?",
         "Does the work belong in planning, memory, or workspace-level docs?",
     ]
-    assert payload["prompt_routing"]["canonical_doc"] == "docs/intent-contract.md"
+    assert payload["prompt_routing"]["canonical_doc"] == ".agentic-workspace/docs/compact-contract-profile.md"
     assert payload["prompt_routing"]["command"] == "agentic-workspace defaults --section prompt_routing --format json"
     assert payload["prompt_routing"]["rule"] == "Map vague prompt classes to a proof lane and an owner before widening the task."
     assert payload["prompt_routing"]["route_by_class"][0]["class"] == "workspace lifecycle change"
@@ -164,7 +174,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["prompt_routing"]["route_by_class"][2]["proof_lane"] == "memory_payload"
     assert payload["prompt_routing"]["route_by_class"][3]["proof_lane"] == "workspace_cli"
     assert payload["prompt_routing"]["route_by_class"][3]["broaden_with"] == ["planning_surfaces"]
-    assert payload["relay"]["canonical_doc"] == "docs/orchestrator-workflow-contract.md"
+    assert payload["relay"]["canonical_doc"] == ".agentic-workspace/docs/delegation-posture-contract.md"
     assert payload["relay"]["command"] == "agentic-workspace defaults --section relay --format json"
     assert payload["relay"]["rule"] == (
         "Use a strong planner to normalize the vague prompt, then hand the compact contract to a bounded executor without prescribing the execution method."
@@ -196,10 +206,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["validation"]["escalation_rule"] == (
         "Broaden validation only when the narrower lane stops proving the touched contract or the change crosses boundaries."
     )
-    assert payload["proof_surfaces"]["canonical_doc"] == "docs/proof-surfaces-contract.md"
+    assert payload["proof_surfaces"]["canonical_doc"] == ".agentic-workspace/docs/proof-surfaces-contract.md"
     assert payload["proof_surfaces"]["command"] == "agentic-workspace proof --target ./repo --format json"
     assert payload["proof_surfaces"]["default_routes"]["workspace_proof"] == "agentic-workspace proof --target ./repo --format json"
-    assert payload["proof_selection"]["canonical_doc"] == "docs/proof-surfaces-contract.md"
+    assert payload["proof_selection"]["canonical_doc"] == ".agentic-workspace/docs/proof-surfaces-contract.md"
     assert payload["proof_selection"]["command"] == "agentic-workspace defaults --section proof_selection --format json"
     assert payload["proof_selection"]["rule"] == (
         "Make proof choice cheap by naming the narrowest lane that still answers the trust question."
@@ -208,7 +218,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["proof_selection"]["recommended_lanes"][0]["enough_proof"] == "agentic-workspace proof --target ./repo --format json"
     assert payload["proof_selection"]["recommended_lanes"][2]["id"] == "validation_lane"
     assert "Prefer the smallest queryable proof answer first." in payload["proof_selection"]["rule_of_thumb"]
-    assert payload["ownership_mapping"]["canonical_doc"] == "docs/ownership-authority-contract.md"
+    assert payload["ownership_mapping"]["canonical_doc"] == ".agentic-workspace/docs/ownership-authority-contract.md"
     assert payload["ownership_mapping"]["command"] == "agentic-workspace ownership --target ./repo --format json"
     assert payload["ownership_mapping"]["ledger"] == ".agentic-workspace/OWNERSHIP.toml"
     assert payload["combined_install"]["primary"] == "agentic-workspace install --target ./repo --preset full"
@@ -227,7 +237,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     )
     assert payload["completion"]["prefer_surfaces"] == [
         ".agentic-workspace/planning/state.toml",
-        "docs/execplans/README.md",
+        ".agentic-workspace/planning/execplans/README.md",
     ]
     assert payload["delegated_judgment"]["canonical_doc"] == "docs/delegated-judgment-contract.md"
     assert payload["delegated_judgment"]["rule"] == "Improve means locally; do not silently rewrite ends locally."
@@ -246,7 +256,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "optional local capability/cost override",
         "explicit prompting when still unsafe",
     ]
-    assert payload["mixed_agent"]["local_override"]["path"] == "agentic-workspace.local.toml"
+    assert payload["mixed_agent"]["local_override"]["path"] == ".agentic-workspace/config.local.toml"
     assert payload["mixed_agent"]["local_override"]["supported"] is True
     assert payload["mixed_agent"]["local_override"]["supported_fields"] == [
         "runtime.supports_internal_delegation",
@@ -263,7 +273,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["mixed_agent"]["local_override"]["supported_target_strengths"] == ["strong", "medium", "weak"]
     assert payload["mixed_agent"]["local_override"]["supported_target_execution_methods"] == ["internal", "cli", "api"]
     assert payload["mixed_agent"]["local_outcome_artifact"] == {
-        "path": "agentic-workspace.delegation-outcomes.json",
+        "path": ".agentic-workspace/delegation-outcomes.json",
         "kind": "agentic-workspace/delegation-outcomes/v1",
         "rule": "local-only delegation outcome evidence used to derive advisory tuning suggestions over time",
     }
@@ -275,7 +285,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "proof expectations",
         "immediate next action",
     ]
-    assert payload["delegation_posture"]["canonical_doc"] == "docs/delegation-posture-contract.md"
+    assert payload["delegation_posture"]["canonical_doc"] == ".agentic-workspace/docs/delegation-posture-contract.md"
     assert payload["delegation_posture"]["command"] == "agentic-workspace defaults --section delegation_posture --format json"
     assert payload["delegation_posture"]["rule"] == (
         "Use the effective mixed-agent posture to decide whether to keep work direct, "
@@ -283,19 +293,19 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     )
     assert payload["delegation_posture"]["preferred_split"] == ["planner", "implementer", "validator"]
     assert payload["delegation_posture"]["config_controls"] == [
-        "agentic-workspace.local.toml runtime.supports_internal_delegation",
-        "agentic-workspace.local.toml runtime.strong_planner_available",
-        "agentic-workspace.local.toml runtime.cheap_bounded_executor_available",
-        "agentic-workspace.local.toml handoff.prefer_internal_delegation_when_available",
-        "agentic-workspace.local.toml delegation_targets.<target>.*",
-        "agentic-workspace.delegation-outcomes.json",
+        ".agentic-workspace/config.local.toml runtime.supports_internal_delegation",
+        ".agentic-workspace/config.local.toml runtime.strong_planner_available",
+        ".agentic-workspace/config.local.toml runtime.cheap_bounded_executor_available",
+        ".agentic-workspace/config.local.toml handoff.prefer_internal_delegation_when_available",
+        ".agentic-workspace/config.local.toml delegation_targets.<target>.*",
+        ".agentic-workspace/delegation-outcomes.json",
     ]
     assert payload["delegation_posture"]["secondary"] == [
         "Do not treat config as a scheduler.",
         "Do not delegate when the task stays cheap and direct.",
         "Do not silently rewrite ends.",
     ]
-    assert payload["config"]["path"] == "agentic-workspace.toml"
+    assert payload["config"]["path"] == ".agentic-workspace/config.toml"
     assert payload["config"]["command"] == "agentic-workspace config --target ./repo --format json"
     assert "workspace.default_preset" in payload["config"]["supported_fields"]
     assert "workspace.improvement_latitude" in payload["config"]["supported_fields"]
@@ -359,7 +369,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         profile for profile in payload["workflow_artifact_adapters"]["supported_profiles"] if profile["profile"] == "gemini"
     )
     assert gemini_profile["native_artifacts"] == ["implementation_plan.md", "task.md", "walkthrough.md"]
-    assert gemini_profile["canonical_surfaces"] == [".agentic-workspace/planning/state.toml", "docs/execplans/"]
+    assert gemini_profile["canonical_surfaces"] == [".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/execplans/"]
     assert any("state.toml" in step for step in payload["startup"]["secondary"])
     assert payload["startup"]["workflow_recovery"] == [
         (
@@ -402,15 +412,15 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "default mode: balanced" in text
     assert "agent-efficiency: Prefer terse durable outputs" in text
     assert "Delegation posture:" in text
-    assert "docs/delegation-posture-contract.md" in text
+    assert ".agentic-workspace/docs/delegation-posture-contract.md" in text
     assert "Compact contract profile:" in text
-    assert "docs/compact-contract-profile.md" in text
+    assert ".agentic-workspace/docs/compact-contract-profile.md" in text
     assert "Proof surfaces:" in text
-    assert "docs/proof-surfaces-contract.md" in text
+    assert ".agentic-workspace/docs/proof-surfaces-contract.md" in text
     assert "Proof selection:" in text
     assert "defaults --section proof_selection" in text
     assert "Ownership mapping:" in text
-    assert "docs/ownership-authority-contract.md" in text
+    assert ".agentic-workspace/docs/ownership-authority-contract.md" in text
     assert "Combined install:" in text
     assert "Recovery:" in text
     assert "docs/environment-recovery-contract.md" in text
@@ -434,7 +444,7 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
     assert "Do not assume agentic-workspace is already installed" in text
     assert "agentic-workspace config --target ./repo --format json" in text
     assert "agentic-planning-bootstrap summary --format json" in text
-    assert "agentic-workspace.local.toml is present" in text
+    assert ".agentic-workspace/config.local.toml is present" in text
     assert "tools/AGENT_QUICKSTART.md" in text
     assert "tools/AGENT_ROUTING.md" in text
 
@@ -475,15 +485,15 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["workspace"]["optimization_bias_source"] == "product-default"
     assert payload["workspace"]["workflow_artifact_adapter"]["canonical_surfaces"] == [
         ".agentic-workspace/planning/state.toml",
-        "docs/execplans/",
+        ".agentic-workspace/planning/execplans/",
     ]
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
     assert payload["mixed_agent"]["status"] == "reporting-only"
     assert payload["mixed_agent"]["repo_policy"]["source"] == "product-defaults"
-    assert payload["mixed_agent"]["repo_policy"]["path"] == "agentic-workspace.toml"
+    assert payload["mixed_agent"]["repo_policy"]["path"] == ".agentic-workspace/config.toml"
     assert payload["mixed_agent"]["repo_policy"]["authoritative"] is False
-    assert payload["mixed_agent"]["local_override"]["path"] == "agentic-workspace.local.toml"
+    assert payload["mixed_agent"]["local_override"]["path"] == ".agentic-workspace/config.local.toml"
     assert payload["mixed_agent"]["local_override"]["supported"] is True
     assert payload["mixed_agent"]["local_override"]["exists"] is False
     assert payload["mixed_agent"]["local_override"]["applied"] is False
@@ -501,7 +511,8 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
 
 def test_config_command_accepts_reporting_improvement_latitude_mode(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    (tmp_path / "agentic-workspace.toml").write_text(
+    _write(
+        (tmp_path / ".agentic-workspace/config.toml"),
         'schema_version = 1\n\n[workspace]\nimprovement_latitude = "reporting"\n',
         encoding="utf-8",
     )
@@ -515,7 +526,7 @@ def test_config_command_accepts_reporting_improvement_latitude_mode(tmp_path: Pa
 
 def test_config_command_accepts_agent_efficiency_optimization_bias(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    (tmp_path / "agentic-workspace.toml").write_text(
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
         'schema_version = 1\n\n[workspace]\noptimization_bias = "agent-efficiency"\n',
         encoding="utf-8",
     )
@@ -529,7 +540,7 @@ def test_config_command_accepts_agent_efficiency_optimization_bias(tmp_path: Pat
 
 def test_config_command_autodetects_existing_supported_agent_instructions_file(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    (tmp_path / "GEMINI.md").write_text("# Gemini\n", encoding="utf-8")
+    (tmp_path / "GEMINI.md").write_text("# Gemini\n")
 
     assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
 
@@ -541,7 +552,8 @@ def test_config_command_autodetects_existing_supported_agent_instructions_file(t
 
 def test_config_command_discovers_workspace_root_from_subdirectory(tmp_path: Path, monkeypatch, capsys) -> None:
     _init_git_repo(tmp_path)
-    (tmp_path / "agentic-workspace.toml").write_text(
+    _write(
+        (tmp_path / ".agentic-workspace/config.toml"),
         'schema_version = 1\n\n[workspace]\nimprovement_latitude = "balanced"\n',
         encoding="utf-8",
     )
@@ -556,14 +568,14 @@ def test_config_command_discovers_workspace_root_from_subdirectory(tmp_path: Pat
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["target"] == tmp_path.as_posix()
-    assert payload["config_path"] == (tmp_path / "agentic-workspace.toml").as_posix()
+    assert payload["config_path"] == (tmp_path / ".agentic-workspace/config.toml").as_posix()
     assert payload["workspace"]["improvement_latitude"] == "balanced"
     assert payload["workspace"]["improvement_latitude_source"] == "repo-config"
 
 
 def test_config_command_surfaces_unknown_local_override_fields_as_warnings(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    (tmp_path / "agentic-workspace.local.toml").write_text(
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text(
         "\n".join(
             (
                 "schema_version = 1",
@@ -590,8 +602,8 @@ def test_config_command_surfaces_unknown_local_override_fields_as_warnings(tmp_p
         "source": "local-override",
     }
     assert payload["warnings"] == [
-        "agentic-workspace.local.toml [runtime] contains unsupported field(s): mystery_flag.",
-        "agentic-workspace.local.toml delegation_targets.gpt_5_4_mini contains unsupported field(s): unexpected.",
+        ".agentic-workspace/config.local.toml [runtime] contains unsupported field(s): mystery_flag.",
+        ".agentic-workspace/config.local.toml delegation_targets.gpt_5_4_mini contains unsupported field(s): unexpected.",
     ]
 
 
@@ -604,7 +616,7 @@ def test_defaults_section_selector_returns_compact_contract_answer(capsys) -> No
     assert payload["selector"] == {"section": "validation"}
     assert payload["matched"] is True
     assert payload["answer"]["rule"] == "Run the narrowest proving lane that matches the touched surface."
-    assert "docs/compact-contract-profile.md" in payload["refs"]
+    assert ".agentic-workspace/docs/compact-contract-profile.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
@@ -616,12 +628,12 @@ def test_defaults_section_selector_returns_intent_answer(capsys) -> None:
     assert payload["surface"] == "defaults"
     assert payload["selector"] == {"section": "intent"}
     assert payload["matched"] is True
-    assert payload["answer"]["canonical_doc"] == "docs/intent-contract.md"
+    assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/compact-contract-profile.md"
     assert payload["answer"]["command"] == "agentic-workspace defaults --section intent --format json"
     assert payload["answer"]["rule"] == "Confirmed intent stays human-owned; interpreted intent must remain visibly inferred."
     assert payload["answer"]["confirmed_intent"]["summary"] == "the human-owned request before workspace normalization"
     assert payload["answer"]["interpreted_intent"]["summary"] == "the workspace-normalized request carried forward by lifecycle commands"
-    assert "docs/intent-contract.md" in payload["refs"]
+    assert ".agentic-workspace/docs/compact-contract-profile.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
@@ -633,7 +645,7 @@ def test_defaults_section_selector_returns_clarification_answer(capsys) -> None:
     assert payload["surface"] == "defaults"
     assert payload["selector"] == {"section": "clarification"}
     assert payload["matched"] is True
-    assert payload["answer"]["canonical_doc"] == "docs/intent-contract.md"
+    assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/compact-contract-profile.md"
     assert payload["answer"]["command"] == "agentic-workspace defaults --section clarification --format json"
     assert payload["answer"]["mode"] == "minimal-interruption"
     assert payload["answer"]["first_questions"] == [
@@ -641,7 +653,7 @@ def test_defaults_section_selector_returns_clarification_answer(capsys) -> None:
         "What proof would make the change safe?",
         "Does the work belong in planning, memory, or workspace-level docs?",
     ]
-    assert "docs/intent-contract.md" in payload["refs"]
+    assert ".agentic-workspace/docs/compact-contract-profile.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
@@ -653,7 +665,7 @@ def test_defaults_section_selector_returns_prompt_routing_answer(capsys) -> None
     assert payload["surface"] == "defaults"
     assert payload["selector"] == {"section": "prompt_routing"}
     assert payload["matched"] is True
-    assert payload["answer"]["canonical_doc"] == "docs/intent-contract.md"
+    assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/compact-contract-profile.md"
     assert payload["answer"]["command"] == "agentic-workspace defaults --section prompt_routing --format json"
     assert payload["answer"]["route_by_class"][0]["class"] == "workspace lifecycle change"
     assert payload["answer"]["route_by_class"][0]["proof_lane"] == "workspace_cli"
@@ -661,7 +673,7 @@ def test_defaults_section_selector_returns_prompt_routing_answer(capsys) -> None
     assert payload["answer"]["route_by_class"][2]["proof_lane"] == "memory_payload"
     assert payload["answer"]["route_by_class"][3]["proof_lane"] == "workspace_cli"
     assert payload["answer"]["route_by_class"][3]["broaden_with"] == ["planning_surfaces"]
-    assert "docs/intent-contract.md" in payload["refs"]
+    assert ".agentic-workspace/docs/compact-contract-profile.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
@@ -673,7 +685,7 @@ def test_defaults_section_selector_returns_relay_answer(capsys) -> None:
     assert payload["surface"] == "defaults"
     assert payload["selector"] == {"section": "relay"}
     assert payload["matched"] is True
-    assert payload["answer"]["canonical_doc"] == "docs/orchestrator-workflow-contract.md"
+    assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/delegation-posture-contract.md"
     assert payload["answer"]["command"] == "agentic-workspace defaults --section relay --format json"
     assert payload["answer"]["planner_role"]["summary"] == (
         "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract."
@@ -684,7 +696,7 @@ def test_defaults_section_selector_returns_relay_answer(capsys) -> None:
     assert payload["answer"]["memory_bridge"]["summary"] == (
         "when routed Memory is installed, borrow durable repo understanding before freezing the compact contract."
     )
-    assert "docs/orchestrator-workflow-contract.md" in payload["refs"]
+    assert ".agentic-workspace/docs/delegation-posture-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
@@ -780,7 +792,7 @@ def test_setup_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Pa
     capsys.readouterr()
 
     (target / "memory").mkdir(exist_ok=True)
-    (target / "memory" / "index.md").write_text("# Memory index\n", encoding="utf-8")
+    (target / "memory" / "index.md").write_text("# Memory index\n")
 
     assert cli.main(["setup", "--target", str(target), "--format", "json"]) == 0
 
@@ -804,9 +816,10 @@ def test_setup_command_loads_promotable_findings_artifact(tmp_path: Path, capsys
     capsys.readouterr()
 
     (target / "memory").mkdir(exist_ok=True)
-    (target / "memory" / "index.md").write_text("# Memory index\n", encoding="utf-8")
+    _write((target / "memory" / "index.md"), "# Memory index\n")
     (target / "tools").mkdir(exist_ok=True)
-    (target / "tools" / "setup-findings.json").write_text(
+    _write(
+        (target / "tools" / "setup-findings.json"),
         json.dumps(
             {
                 "kind": "workspace-setup-findings/v1",
@@ -816,7 +829,7 @@ def test_setup_command_loads_promotable_findings_artifact(tmp_path: Path, capsys
                         "summary": "Workspace CLI remains a large shared hotspot.",
                         "confidence": 0.91,
                         "path": "src/agentic_workspace/cli.py",
-                        "refs": ["docs/reporting-contract.md"],
+                        "refs": [".agentic-workspace/docs/reporting-contract.md"],
                     },
                     {
                         "class": "planning_candidate",
@@ -859,9 +872,9 @@ def test_defaults_delegation_posture_section_selector_returns_compact_contract_a
     assert payload["surface"] == "defaults"
     assert payload["selector"] == {"section": "delegation_posture"}
     assert payload["matched"] is True
-    assert payload["answer"]["canonical_doc"] == "docs/delegation-posture-contract.md"
+    assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/delegation-posture-contract.md"
     assert payload["answer"]["preferred_split"] == ["planner", "implementer", "validator"]
-    assert "docs/delegation-posture-contract.md" in payload["refs"]
+    assert ".agentic-workspace/docs/delegation-posture-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
@@ -884,7 +897,7 @@ def test_proof_command_reports_routes_and_current_health(tmp_path: Path, monkeyp
     assert cli.main(["proof", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["canonical_doc"] == "docs/proof-surfaces-contract.md"
+    assert payload["canonical_doc"] == ".agentic-workspace/docs/proof-surfaces-contract.md"
     assert payload["command"] == "agentic-workspace proof --target ./repo --format json"
     assert payload["default_routes"]["planning_surfaces"] == "uv run python scripts/check/check_planning_surfaces.py"
     assert payload["current"]["installed_modules"] == ["planning"]
@@ -1004,7 +1017,7 @@ def test_ownership_command_reports_authority_map(tmp_path: Path, monkeypatch, ca
     assert cli.main(["ownership", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["canonical_doc"] == "docs/ownership-authority-contract.md"
+    assert payload["canonical_doc"] == ".agentic-workspace/docs/ownership-authority-contract.md"
     assert payload["ledger_path"] == ".agentic-workspace/OWNERSHIP.toml"
     assert payload["authority_surfaces"][0]["concern"] == "active-execution-state"
     assert payload["authority_surfaces"][0]["surface"] == ".agentic-workspace/planning/state.toml"
@@ -1105,7 +1118,7 @@ def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> 
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    (target / "agentic-workspace.toml").write_text(
+    (target / ".agentic-workspace/config.toml").write_text(
         "schema_version = 1\n\n"
         "[workspace]\n"
         'default_preset = "planning"\n'
@@ -1149,7 +1162,7 @@ def test_config_command_reports_reserved_local_override_presence_without_applyin
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    (target / "agentic-workspace.local.toml").write_text(
+    (target / ".agentic-workspace/config.local.toml").write_text(
         "schema_version = 1\n\n[runtime]\nsupports_internal_delegation = true\n",
         encoding="utf-8",
     )
@@ -1170,7 +1183,7 @@ def test_config_command_reports_narrow_local_override_fields_with_source_attribu
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    (target / "agentic-workspace.local.toml").write_text(
+    (target / ".agentic-workspace/config.local.toml").write_text(
         "schema_version = 1\n\n"
         "[runtime]\n"
         "supports_internal_delegation = true\n"
@@ -1204,7 +1217,7 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    (target / "agentic-workspace.local.toml").write_text(
+    (target / ".agentic-workspace/config.local.toml").write_text(
         "schema_version = 1\n\n"
         "[delegation_targets.fast_docs]\n"
         'strength = "weak"\n'
@@ -1244,7 +1257,7 @@ def test_config_command_rejects_invalid_local_delegation_target_strength(tmp_pat
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    (target / "agentic-workspace.local.toml").write_text(
+    (target / ".agentic-workspace/config.local.toml").write_text(
         'schema_version = 1\n\n[delegation_targets.bad_target]\nstrength = "expert"\nexecution_methods = ["cli"]\n',
         encoding="utf-8",
     )
@@ -1258,7 +1271,7 @@ def test_config_command_accepts_utf8_bom_local_override(tmp_path: Path, capsys) 
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    (target / "agentic-workspace.local.toml").write_text(
+    (target / ".agentic-workspace/config.local.toml").write_text(
         'schema_version = 1\n\n[delegation_targets.fast_docs]\nstrength = "weak"\nexecution_methods = ["cli"]\n',
         encoding="utf-8-sig",
     )
@@ -1298,9 +1311,9 @@ def test_note_delegation_outcome_command_writes_local_artifact(tmp_path: Path, c
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["path"] == "agentic-workspace.delegation-outcomes.json"
+    assert payload["path"] == ".agentic-workspace/delegation-outcomes.json"
     assert payload["record_count"] == 1
-    artifact = json.loads((target / "agentic-workspace.delegation-outcomes.json").read_text(encoding="utf-8"))
+    artifact = json.loads((target / ".agentic-workspace/delegation-outcomes.json").read_text(encoding="utf-8"))
     assert artifact["kind"] == "agentic-workspace/delegation-outcomes/v1"
     assert artifact["records"][0]["delegation_target"] == "gpt_5_4_mini"
 
@@ -1309,7 +1322,7 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    (target / "agentic-workspace.local.toml").write_text(
+    (target / ".agentic-workspace/config.local.toml").write_text(
         "schema_version = 1\n\n"
         "[delegation_targets.gpt_5_4_mini]\n"
         'strength = "weak"\n'
@@ -1318,7 +1331,7 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
         'execution_methods = ["cli"]\n',
         encoding="utf-8",
     )
-    (target / "agentic-workspace.delegation-outcomes.json").write_text(
+    (target / ".agentic-workspace/delegation-outcomes.json").write_text(
         json.dumps(
             {
                 "kind": "agentic-workspace/delegation-outcomes/v1",
@@ -1362,7 +1375,7 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
     payload = json.loads(capsys.readouterr().out)
     targets = payload["mixed_agent"]["delegation_targets"]
     assert targets["outcome_artifact"] == {
-        "path": "agentic-workspace.delegation-outcomes.json",
+        "path": ".agentic-workspace/delegation-outcomes.json",
         "status": "configured",
         "record_count": 3,
     }
@@ -1375,9 +1388,9 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
 def test_modules_command_reports_installation_state_for_target(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "TODO.md").write_text("# TODO\n", encoding="utf-8")
+    (tmp_path / "TODO.md").write_text("# TODO\n")
     (tmp_path / ".agentic-workspace" / "planning").mkdir(parents=True)
-    (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").write_text("{}\n", encoding="utf-8")
+    _write((tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"), "{}\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_install_signals(tmp_path, calls))
 
     assert cli.main(["modules", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -1528,7 +1541,7 @@ def test_skills_command_keeps_repo_owned_memory_and_general_skill_sources_distin
     target.mkdir()
     _init_git_repo(target)
     _write_json(
-        target / "memory" / "skills" / "REGISTRY.json",
+        target / ".agentic-workspace" / "memory" / "repo" / "skills" / "REGISTRY.json",
         {
             "schema_version": "skill-registry.v1",
             "owner": "repo-local-memory-skills",
@@ -1548,15 +1561,15 @@ def test_skills_command_keeps_repo_owned_memory_and_general_skill_sources_distin
         },
     )
     _write(
-        target / "memory" / "skills" / "README.md",
+        target / ".agentic-workspace" / "memory" / "repo" / "skills" / "README.md",
         "# Memory skills\n",
     )
     _write(
-        target / "memory" / "skills" / "package-context-inspection" / "SKILL.md",
+        target / ".agentic-workspace" / "memory" / "repo" / "skills" / "package-context-inspection" / "SKILL.md",
         "# Skill\n",
     )
     _write(
-        target / "memory" / "skills" / "memory-reporting" / "SKILL.md",
+        target / ".agentic-workspace" / "memory" / "repo" / "skills" / "memory-reporting" / "SKILL.md",
         "# Skill\n",
     )
     _write_json(
@@ -1585,9 +1598,9 @@ def test_skills_command_keeps_repo_owned_memory_and_general_skill_sources_distin
     tool_skill = next(entry for entry in payload["skills"] if entry["id"] == "foundation-stability-check")
 
     assert memory_skill["source_kind"] == "repo-owned-memory-skills"
-    assert memory_skill["path"] == "memory/skills/package-context-inspection/SKILL.md"
+    assert memory_skill["path"] == ".agentic-workspace/memory/repo/skills/package-context-inspection/SKILL.md"
     assert memory_reporting_skill["source_kind"] == "repo-owned-memory-skills"
-    assert memory_reporting_skill["path"] == "memory/skills/memory-reporting/SKILL.md"
+    assert memory_reporting_skill["path"] == ".agentic-workspace/memory/repo/skills/memory-reporting/SKILL.md"
     assert tool_skill["source_kind"] == "repo-owned-tool-skills"
     assert tool_skill["path"] == "tools/skills/foundation-stability-check/SKILL.md"
 
@@ -1612,7 +1625,8 @@ def test_init_dispatches_to_full_preset_by_default(monkeypatch, tmp_path: Path, 
 def test_init_uses_default_preset_from_repo_config(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "agentic-workspace.toml").write_text(
+    _write(
+        (tmp_path / ".agentic-workspace/config.toml"),
         'schema_version = 1\n\n[workspace]\ndefault_preset = "planning"\n',
         encoding="utf-8",
     )
@@ -1664,7 +1678,7 @@ def test_install_local_only_migrates_legacy_gitignore_residue(tmp_path: Path, ca
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     _init_git_repo(repo_root)
-    (repo_root / ".gitignore").write_text("# Agentic Workspace local-only storage\n.gemini/\n", encoding="utf-8")
+    (repo_root / ".gitignore").write_text("# Agentic Workspace local-only storage\n.gemini/\n")
 
     assert cli.main(["install", "--modules", "planning", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
 
@@ -1700,11 +1714,10 @@ def test_uninstall_local_only_removes_gemini_workspace_root_and_git_exclude(tmp_
 def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "AGENTS.md").write_text("# Existing\n", encoding="utf-8")
-    (tmp_path / "TODO.md").write_text("# Existing TODO\n", encoding="utf-8")
-    (tmp_path / "memory").mkdir()
-    (tmp_path / "memory" / "index.md").write_text("# Memory\n", encoding="utf-8")
-    (tmp_path / "docs" / "execplans").mkdir(parents=True)
+    _write((tmp_path / "AGENTS.md"), "# Existing\n")
+    _write((tmp_path / "TODO.md"), "# Existing TODO\n")
+    _write((tmp_path / ".agentic-workspace" / "memory" / "repo" / "index.md"), "# Memory\n")
+    (tmp_path / ".agentic-workspace" / "planning" / "execplans").mkdir(parents=True)
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -1714,7 +1727,14 @@ def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_p
     assert payload["inferred_policy"] == "require_explicit_handoff"
     assert payload["mode"] == "adopt_high_ambiguity"
     assert payload["prompt_requirement"] == "required"
-    assert sorted(payload["detected_surfaces"]) == ["AGENTS.md", "TODO.md", "docs/execplans", "memory/index.md"]
+    assert sorted(payload["detected_surfaces"]) == [
+        ".agentic-workspace/memory",
+        ".agentic-workspace/memory/repo/index.md",
+        ".agentic-workspace/planning",
+        ".agentic-workspace/planning/execplans",
+        "AGENTS.md",
+        "TODO.md",
+    ]
     assert payload["agent_instructions_file"] == "AGENTS.md"
     assert payload["handoff_prompt_path"] == (tmp_path / ".agentic-workspace" / "bootstrap-handoff.md").as_posix()
     assert payload["handoff_record_path"] == (tmp_path / ".agentic-workspace" / "bootstrap-handoff.json").as_posix()
@@ -1740,7 +1760,7 @@ def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_p
 def test_init_can_write_prompt_file(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "AGENTS.md").write_text("# Existing\n", encoding="utf-8")
+    _write((tmp_path / "AGENTS.md"), "# Existing\n")
     prompt_path = tmp_path / ".agentic-workspace" / "bootstrap-handoff.md"
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
@@ -1805,7 +1825,7 @@ def test_prompt_init_non_interactive_marks_prompt_free_handoff(monkeypatch, tmp_
 def test_prompt_init_returns_structured_handoff_record_for_high_ambiguity_repo(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "AGENTS.md").write_text("# Existing\n", encoding="utf-8")
+    _write((tmp_path / "AGENTS.md"), "# Existing\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["prompt", "init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -1844,7 +1864,7 @@ def test_prompt_upgrade_non_interactive_mentions_prompt_free_execution(monkeypat
 def test_init_uses_recommended_prompt_for_single_existing_surface(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "AGENTS.md").write_text("# Existing\n", encoding="utf-8")
+    _write((tmp_path / "AGENTS.md"), "# Existing\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -1864,7 +1884,7 @@ def test_init_uses_recommended_prompt_for_single_existing_surface(monkeypatch, t
 def test_init_autodetects_existing_gemini_file_as_startup_entrypoint(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "GEMINI.md").write_text("# Existing Gemini\n", encoding="utf-8")
+    _write((tmp_path / "GEMINI.md"), "# Existing Gemini\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -1879,8 +1899,8 @@ def test_init_autodetects_existing_gemini_file_as_startup_entrypoint(monkeypatch
 def test_init_treats_multiple_supported_startup_files_as_high_ambiguity(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "AGENTS.md").write_text("# Existing\n", encoding="utf-8")
-    (tmp_path / "GEMINI.md").write_text("# Existing Gemini\n", encoding="utf-8")
+    _write((tmp_path / "AGENTS.md"), "# Existing\n")
+    _write((tmp_path / "GEMINI.md"), "# Existing Gemini\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -1948,7 +1968,7 @@ def test_init_dry_run_rewrites_module_startup_actions_for_custom_agent_file(monk
 def test_init_treats_existing_llms_file_as_existing_workspace_surface(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "llms.txt").write_text("# External agent handoff\n", encoding="utf-8")
+    _write((tmp_path / "llms.txt"), "# External agent handoff\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -1968,13 +1988,13 @@ def test_init_treats_existing_llms_file_as_existing_workspace_surface(monkeypatc
 def test_init_reports_docs_heavy_repo_as_high_ambiguity(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "AGENTS.md").write_text("# Existing\n", encoding="utf-8")
-    (tmp_path / "TODO.md").write_text("# Existing TODO\n", encoding="utf-8")
+    _write((tmp_path / "AGENTS.md"), "# Existing\n")
+    _write((tmp_path / "TODO.md"), "# Existing TODO\n")
     (tmp_path / ".agentic-workspace" / "planning").mkdir(parents=True)
-    (tmp_path / ".agentic-workspace" / "planning" / "state.toml").write_text("# Existing Roadmap\n", encoding="utf-8")
+    _write((tmp_path / ".agentic-workspace" / "planning" / "state.toml"), "# Existing Roadmap\n")
     (tmp_path / "docs" / "contributor-playbook.md").parent.mkdir(parents=True)
-    (tmp_path / "docs" / "contributor-playbook.md").write_text("# Contributor Playbook\n", encoding="utf-8")
-    (tmp_path / "docs" / "maintainer-commands.md").write_text("# Maintainer Commands\n", encoding="utf-8")
+    _write((tmp_path / "docs" / "contributor-playbook.md"), "# Contributor Playbook\n")
+    _write((tmp_path / "docs" / "maintainer-commands.md"), "# Maintainer Commands\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -2003,8 +2023,8 @@ def test_init_reports_docs_heavy_repo_as_high_ambiguity(monkeypatch, tmp_path: P
 def test_init_reports_existing_handoff_plus_workflow_surface_as_high_ambiguity(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "AGENTS.md").write_text("# Existing\n", encoding="utf-8")
-    (tmp_path / "llms.txt").write_text("# External agent handoff\n", encoding="utf-8")
+    _write((tmp_path / "AGENTS.md"), "# Existing\n")
+    _write((tmp_path / "llms.txt"), "# External agent handoff\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -2026,8 +2046,7 @@ def test_init_reports_existing_handoff_plus_workflow_surface_as_high_ambiguity(m
 def test_init_marks_partial_module_state_for_review(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "memory").mkdir()
-    (tmp_path / "memory" / "index.md").write_text("# Memory\n", encoding="utf-8")
+    _write((tmp_path / ".agentic-workspace" / "memory" / "repo" / "index.md"), "# Memory\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_install_signals(tmp_path, calls))
 
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -2038,16 +2057,18 @@ def test_init_marks_partial_module_state_for_review(monkeypatch, tmp_path: Path,
     assert payload["mode"] == "adopt_high_ambiguity"
     assert payload["prompt_requirement"] == "required"
     assert payload["needs_review"] == [
-        "memory/index.md: partial module state detected",
-        "memory/index.md: reconcile existing workflow surface ownership",
+        ".agentic-workspace/memory/repo/index.md: partial module state detected",
+        ".agentic-workspace/memory: partial module state detected",
+        ".agentic-workspace/memory/repo/index.md: reconcile existing workflow surface ownership",
+        ".agentic-workspace/memory: reconcile existing workflow surface ownership",
     ]
 
 
 def test_init_marks_partial_planning_state_for_review(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "TODO.md").write_text("# Existing TODO\n", encoding="utf-8")
-    (tmp_path / "docs" / "execplans").mkdir(parents=True)
+    _write((tmp_path / "TODO.md"), "# Existing TODO\n")
+    (tmp_path / ".agentic-workspace" / "planning" / "execplans").mkdir(parents=True)
     monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_install_signals(tmp_path, calls))
 
     assert cli.main(["init", "--modules", "planning", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -2059,9 +2080,11 @@ def test_init_marks_partial_planning_state_for_review(monkeypatch, tmp_path: Pat
     assert payload["prompt_requirement"] == "required"
     assert payload["needs_review"] == [
         "TODO.md: partial module state detected",
-        "docs/execplans: partial module state detected",
+        ".agentic-workspace/planning/execplans: partial module state detected",
+        ".agentic-workspace/planning: partial module state detected",
         "TODO.md: reconcile existing workflow surface ownership",
-        "docs/execplans: reconcile existing workflow surface ownership",
+        ".agentic-workspace/planning/execplans: reconcile existing workflow surface ownership",
+        ".agentic-workspace/planning: reconcile existing workflow surface ownership",
     ]
     assert calls == [
         ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
@@ -2071,10 +2094,9 @@ def test_init_marks_partial_planning_state_for_review(monkeypatch, tmp_path: Pat
 def test_init_marks_mixed_module_partial_state_for_review(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
-    (tmp_path / "TODO.md").write_text("# Existing TODO\n", encoding="utf-8")
-    (tmp_path / "docs" / "execplans").mkdir(parents=True)
-    (tmp_path / "memory").mkdir()
-    (tmp_path / "memory" / "index.md").write_text("# Existing memory index\n", encoding="utf-8")
+    _write((tmp_path / "TODO.md"), "# Existing TODO\n")
+    (tmp_path / ".agentic-workspace" / "planning" / "execplans").mkdir(parents=True)
+    _write((tmp_path / ".agentic-workspace" / "memory" / "repo" / "index.md"), "# Existing memory index\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_install_signals(tmp_path, calls))
 
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -2086,11 +2108,15 @@ def test_init_marks_mixed_module_partial_state_for_review(monkeypatch, tmp_path:
     assert payload["prompt_requirement"] == "required"
     assert payload["needs_review"] == [
         "TODO.md: partial module state detected",
-        "docs/execplans: partial module state detected",
-        "memory/index.md: partial module state detected",
+        ".agentic-workspace/planning/execplans: partial module state detected",
+        ".agentic-workspace/planning: partial module state detected",
+        ".agentic-workspace/memory/repo/index.md: partial module state detected",
+        ".agentic-workspace/memory: partial module state detected",
         "TODO.md: reconcile existing workflow surface ownership",
-        "docs/execplans: reconcile existing workflow surface ownership",
-        "memory/index.md: reconcile existing workflow surface ownership",
+        ".agentic-workspace/planning/execplans: reconcile existing workflow surface ownership",
+        ".agentic-workspace/planning: reconcile existing workflow surface ownership",
+        ".agentic-workspace/memory/repo/index.md: reconcile existing workflow surface ownership",
+        ".agentic-workspace/memory: reconcile existing workflow surface ownership",
     ]
     assert calls == [
         ("planning", "adopt", {"target": str(tmp_path), "dry_run": False}),
@@ -2103,9 +2129,9 @@ def test_status_detects_installed_modules_by_default(monkeypatch, tmp_path: Path
     _init_git_repo(tmp_path)
     descriptors = _fake_descriptors(tmp_path, calls)
     (tmp_path / "planning").mkdir()
-    (tmp_path / "TODO.md").write_text("# TODO\n", encoding="utf-8")
+    _write((tmp_path / "TODO.md"), "# TODO\n")
     (tmp_path / ".agentic-workspace" / "planning").mkdir(parents=True)
-    (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").write_text("{}\n", encoding="utf-8")
+    _write((tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"), "{}\n")
     monkeypatch.setattr(cli, "_module_operations", lambda: descriptors)
 
     assert cli.main(["status", "--target", str(tmp_path)]) == 0
@@ -2137,7 +2163,7 @@ def test_install_real_init_creates_combined_memory_and_planning_surfaces(tmp_pat
 
     assert (target / ".agentic-workspace" / "WORKFLOW.md").exists()
     assert (target / ".agentic-workspace" / "OWNERSHIP.toml").exists()
-    assert (target / "memory" / "index.md").exists()
+    assert (target / ".agentic-workspace" / "memory" / "repo" / "index.md").exists()
     assert (target / ".agentic-workspace" / "memory" / "WORKFLOW.md").exists()
     assert (target / ".agentic-workspace" / "planning" / "state.toml").exists()
     assert (target / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
@@ -2220,14 +2246,14 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
         in {
             "docs/delegated-judgment-contract.md",
             "docs/resumable-execution-contract.md",
-            "docs/capability-aware-execution.md",
+            ".agentic-workspace/docs/capability-aware-execution.md",
             "docs/execution-summary-contract.md",
         }
         for item in payload["discovery"]["memory_candidates"]
     )
     assert any(item["surface"] == ".agentic-workspace/planning/state.toml" for item in payload["discovery"]["planning_candidates"])
     assert payload["discovery"]["ambiguous"] == []
-    assert payload["standing_intent"]["canonical_doc"] == "docs/standing-intent-contract.md"
+    assert payload["standing_intent"]["canonical_doc"] == ".agentic-workspace/docs/standing-intent-contract.md"
     assert payload["standing_intent"]["precedence_order"][0]["source"] == "explicit_current_human_instruction"
     assert payload["standing_intent"]["precedence_order"][1]["source"] == "active_directional_intent"
     assert payload["standing_intent"]["precedence_order"][2]["source"] == "config_policy"
@@ -2320,10 +2346,11 @@ def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path,
     _init_git_repo(target)
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
-    (target / ".agentic-workspace" / "planning" / "state.toml").write_text(
+    _write(
+        (target / ".agentic-workspace" / "planning" / "state.toml"),
         "[todo]\n"
         "active_items = [\n"
-        "    { id = 'standing-intent-slice', status = 'in-progress', surface = 'docs/execplans/standing-intent-slice.md', why_now = 'standing intent needs a durable owner.' }\n"
+        "    { id = 'standing-intent-slice', status = 'in-progress', surface = '.agentic-workspace/planning/execplans/standing-intent-slice.md', why_now = 'standing intent needs a durable owner.' }\n"
         "]\n"
         "queued_items = []\n\n"
         "[roadmap]\n"
@@ -2331,7 +2358,8 @@ def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path,
         "candidates = []\n",
         encoding="utf-8",
     )
-    (target / "docs" / "execplans" / "standing-intent-slice.md").write_text(
+    (target / ".agentic-workspace" / "planning" / "execplans").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "planning" / "execplans" / "standing-intent-slice.md").write_text(
         "# Standing Intent Slice\n\n"
         "## Goal\n\n"
         "- Give standing intent a durable owner.\n\n"
@@ -2368,7 +2396,7 @@ def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path,
         "## Blockers\n\n"
         "- None.\n\n"
         "## Touched Paths\n\n"
-        "- docs/standing-intent-contract.md\n\n"
+        "- .agentic-workspace/docs/standing-intent-contract.md\n\n"
         "## Invariants\n\n"
         "- Standing intent stays subordinate to owner surfaces.\n\n"
         "## Validation Commands\n\n"
@@ -2384,7 +2412,7 @@ def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path,
     standing_classes = {item["class"]: item for item in payload["standing_intent"]["effective_view"]["items"]}
     active_direction = standing_classes["active_directional_intent"]
     assert active_direction["status"] == "present"
-    assert active_direction["owner_surface"] == "docs/execplans/standing-intent-slice.md"
+    assert active_direction["owner_surface"] == ".agentic-workspace/planning/execplans/standing-intent-slice.md"
     assert active_direction["summary"] == "Add the standing-intent report view."
     assert active_direction["requested_outcome"] == "Give standing intent a durable owner."
     assert payload["standing_intent"]["precedence_order"][1]["rule"] == (
@@ -2400,7 +2428,7 @@ def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_
     _init_git_repo(target)
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
-    (target / "agentic-workspace.local.toml").write_text(
+    (target / ".agentic-workspace/config.local.toml").write_text(
         "schema_version = 1\n\n"
         "[runtime]\n"
         "supports_internal_delegation = true\n"
@@ -2413,7 +2441,7 @@ def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_
     (target / ".agentic-workspace" / "planning" / "state.toml").write_text(
         "[todo]\n"
         "active_items = [\n"
-        "    { id = 'execution-shape-slice', status = 'in-progress', surface = 'docs/execplans/execution-shape-slice.md', why_now = 'make default execution shape visible.' }\n"
+        "    { id = 'execution-shape-slice', status = 'in-progress', surface = '.agentic-workspace/planning/execplans/execution-shape-slice.md', why_now = 'make default execution shape visible.' }\n"
         "]\n"
         "queued_items = []\n\n"
         "[roadmap]\n"
@@ -2421,7 +2449,8 @@ def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_
         "candidates = []\n",
         encoding="utf-8",
     )
-    (target / "docs" / "execplans" / "execution-shape-slice.md").write_text(
+    (target / ".agentic-workspace" / "planning" / "execplans").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "planning" / "execplans" / "execution-shape-slice.md").write_text(
         "# Execution Shape Slice\n\n"
         "## Goal\n\n"
         "- Make default execution shape visible.\n\n"
@@ -2487,7 +2516,7 @@ def test_report_surfaces_agent_efficiency_output_contract_from_repo_config(tmp_p
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    (target / "agentic-workspace.toml").write_text(
+    (target / ".agentic-workspace/config.toml").write_text(
         'schema_version = 1\n\n[workspace]\noptimization_bias = "agent-efficiency"\n',
         encoding="utf-8",
     )
@@ -2505,7 +2534,7 @@ def test_report_text_mentions_agent_efficiency_bias(tmp_path: Path, capsys) -> N
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    (target / "agentic-workspace.toml").write_text(
+    (target / ".agentic-workspace/config.toml").write_text(
         'schema_version = 1\n\n[workspace]\noptimization_bias = "agent-efficiency"\n',
         encoding="utf-8",
     )
@@ -2521,12 +2550,12 @@ def test_report_surfaces_large_file_hotspots_as_repo_friction_evidence(tmp_path:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    (target / "agentic-workspace.toml").write_text(
+    (target / ".agentic-workspace/config.toml").write_text(
         'schema_version = 1\n\n[workspace]\nimprovement_latitude = "balanced"\n',
         encoding="utf-8",
     )
     (target / "src").mkdir()
-    (target / "src" / "big_module.py").write_text("\n".join(f"line_{index}" for index in range(450)) + "\n", encoding="utf-8")
+    (target / "src" / "big_module.py").write_text("\n".join(f"line_{index}" for index in range(450)) + "\n")
 
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
 
@@ -2544,7 +2573,8 @@ def test_report_surfaces_concept_hotspots_as_repo_friction_evidence(tmp_path: Pa
     target.mkdir()
     _init_git_repo(target)
     (target / "docs").mkdir()
-    (target / "docs" / "routing-contract.md").write_text(
+    _write(
+        (target / "docs" / "routing-contract.md"),
         "\n".join(f"line_{index}" for index in range(220)) + "\n",
         encoding="utf-8",
     )
@@ -2613,7 +2643,7 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
                         "summary": "Workspace CLI remains a shared hotspot.",
                         "confidence": 0.9,
                         "path": "src/agentic_workspace/cli.py",
-                        "refs": ["docs/reporting-contract.md"],
+                        "refs": [".agentic-workspace/docs/reporting-contract.md"],
                     },
                     {
                         "class": "repo_friction_evidence",
@@ -2648,12 +2678,12 @@ def test_report_surfaces_reporting_only_repo_friction_posture(tmp_path: Path, ca
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    (target / "agentic-workspace.toml").write_text(
+    (target / ".agentic-workspace/config.toml").write_text(
         'schema_version = 1\n\n[workspace]\nimprovement_latitude = "reporting"\n',
         encoding="utf-8",
     )
     (target / "docs").mkdir()
-    (target / "docs" / "big_note.md").write_text("\n".join(f"line_{index}" for index in range(450)) + "\n", encoding="utf-8")
+    (target / "docs" / "big_note.md").write_text("\n".join(f"line_{index}" for index in range(450)) + "\n")
 
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
 
@@ -2725,9 +2755,10 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace").mkdir(parents=True)
-    (tmp_path / ".agentic-workspace" / "WORKFLOW.md").write_text("# Workflow\n", encoding="utf-8")
-    (tmp_path / ".agentic-workspace" / "OWNERSHIP.toml").write_text("schema_version = 1\n", encoding="utf-8")
-    (tmp_path / "AGENTS.md").write_text(
+    _write((tmp_path / ".agentic-workspace" / "WORKFLOW.md"), "# Workflow\n")
+    _write((tmp_path / ".agentic-workspace" / "OWNERSHIP.toml"), "schema_version = 1\n")
+    _write(
+        (tmp_path / "AGENTS.md"),
         "# Agent Instructions\n\n"
         "<!-- agentic-workspace:workflow:start -->\n"
         "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules.\n"
@@ -2735,7 +2766,7 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
         "Local repo instructions.\n",
         encoding="utf-8",
     )
-    (tmp_path / "llms.txt").write_text(cli._external_agent_handoff_text(selected_modules=["planning", "memory"]), encoding="utf-8")
+    (tmp_path / "llms.txt").write_text(cli._external_agent_handoff_text(selected_modules=["planning", "memory"]))
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["doctor", "--modules", "planning,memory", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -2756,7 +2787,8 @@ def test_status_warns_when_redundant_memory_pointer_block_remains(tmp_path: Path
     _init_git_repo(target)
     assert cli.main(["init", "--target", str(target)]) == 0
     agents_path = target / "AGENTS.md"
-    agents_path.write_text(
+    _write(
+        agents_path,
         agents_path.read_text(encoding="utf-8").replace(
             "<!-- agentic-workspace:workflow:end -->\n",
             "<!-- agentic-workspace:workflow:end -->\n\n"
@@ -2826,7 +2858,7 @@ def test_doctor_real_init_reports_stale_planning_generated_residue(tmp_path: Pat
     _init_git_repo(target)
 
     assert cli.main(["init", "--target", str(target)]) == 0
-    (target / "tools" / "AGENT_ROUTING.md").write_text("stale generated routing\n", encoding="utf-8")
+    (target / "tools" / "AGENT_ROUTING.md").write_text("stale generated routing\n")
     capsys.readouterr()
 
     assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
@@ -2888,7 +2920,7 @@ def test_upgrade_dry_run_syncs_module_update_source_metadata_from_repo_config(tm
     _init_git_repo(target)
     assert cli.main(["init", "--modules", "planning", "--target", str(target)]) == 0
     capsys.readouterr()
-    (target / "agentic-workspace.toml").write_text(
+    (target / ".agentic-workspace/config.toml").write_text(
         "schema_version = 1\n\n"
         "[workspace]\n"
         'default_preset = "planning"\n\n'
@@ -2917,7 +2949,7 @@ def test_status_warns_when_module_update_source_metadata_drifts_from_repo_config
     _init_git_repo(target)
     assert cli.main(["init", "--modules", "planning", "--target", str(target)]) == 0
     capsys.readouterr()
-    (target / "agentic-workspace.toml").write_text(
+    (target / ".agentic-workspace/config.toml").write_text(
         "schema_version = 1\n\n"
         "[workspace]\n"
         'default_preset = "planning"\n\n'
@@ -3147,16 +3179,16 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
             selection_rank=10 if module_name == "planning" else 20,
             include_in_full_preset=True,
             install_signals=(
-                (Path("TODO.md"), Path("docs/execplans"), Path(".agentic-workspace/planning"))
+                (Path("TODO.md"), Path(".agentic-workspace/planning/execplans"), Path(".agentic-workspace/planning"))
                 if module_name == "planning"
-                else (Path("memory/index.md"), Path("memory/current"), Path(".agentic-workspace/memory"))
+                else (Path(".agentic-workspace/memory/repo/index.md"), Path("memory/current"), Path(".agentic-workspace/memory"))
             ),
             workflow_surfaces=(
                 (
                     Path("AGENTS.md"),
                     Path("TODO.md"),
                     Path(".agentic-workspace/planning/state.toml"),
-                    Path("docs/execplans"),
+                    Path(".agentic-workspace/planning/execplans"),
                     Path("docs/contributor-playbook.md"),
                     Path("docs/maintainer-commands.md"),
                     Path(".agentic-workspace/planning"),
@@ -3166,7 +3198,7 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
                 if module_name == "planning"
                 else (
                     Path("AGENTS.md"),
-                    Path("memory/index.md"),
+                    Path(".agentic-workspace/memory/repo/index.md"),
                     Path("memory/current"),
                     Path(".agentic-workspace/memory"),
                 )
@@ -3249,7 +3281,7 @@ def _descriptors_with_mixed_actions(target_root: Path) -> dict[str, cli.ModuleDe
             detector=lambda detected_root: True,
             selection_rank=10,
             include_in_full_preset=True,
-            install_signals=(Path("TODO.md"), Path("docs/execplans"), Path(".agentic-workspace/planning")),
+            install_signals=(Path("TODO.md"), Path(".agentic-workspace/planning/execplans"), Path(".agentic-workspace/planning")),
             workflow_surfaces=(Path("AGENTS.md"), Path("tools/AGENT_QUICKSTART.md")),
             generated_artifacts=(Path("tools/AGENT_QUICKSTART.md"),),
             command_args={
@@ -3291,7 +3323,7 @@ def _descriptors_with_install_signals(
             ),
             selection_rank=descriptors["planning"].selection_rank,
             include_in_full_preset=descriptors["planning"].include_in_full_preset,
-            install_signals=(Path("TODO.md"), Path("docs/execplans"), Path(".agentic-workspace/planning")),
+            install_signals=(Path("TODO.md"), Path(".agentic-workspace/planning/execplans"), Path(".agentic-workspace/planning")),
             workflow_surfaces=descriptors["planning"].workflow_surfaces,
             generated_artifacts=descriptors["planning"].generated_artifacts,
             command_args=descriptors["planning"].command_args,
@@ -3312,7 +3344,7 @@ def _descriptors_with_install_signals(
             ),
             selection_rank=descriptors["memory"].selection_rank,
             include_in_full_preset=descriptors["memory"].include_in_full_preset,
-            install_signals=(Path("memory/index.md"), Path("memory/current"), Path(".agentic-workspace/memory")),
+            install_signals=(Path(".agentic-workspace/memory/repo/index.md"), Path("memory/current"), Path(".agentic-workspace/memory")),
             workflow_surfaces=descriptors["memory"].workflow_surfaces,
             generated_artifacts=descriptors["memory"].generated_artifacts,
             command_args=descriptors["memory"].command_args,
@@ -3331,9 +3363,9 @@ def _init_git_repo(target: Path) -> None:
     (target / ".git").mkdir(exist_ok=True)
 
 
-def _write(path: Path, content: str) -> None:
+def _write(path: Path, content: str, encoding: str = "utf-8") -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    path.write_text(content, encoding=encoding)
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:

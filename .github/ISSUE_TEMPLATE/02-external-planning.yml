@@ -53,7 +53,7 @@ body:
     attributes:
       label: Context and evidence
       description: Include reproduction steps, links, logs, review artifacts, or notes that make the signal actionable.
-      placeholder: Relevant commands, files, docs/reviews entries, or examples.
+      placeholder: Relevant commands, files, .agentic-workspace/planning/reviews entries, or examples.
     validations:
       required: true
 
@@ -109,7 +109,7 @@ body:
       options:
         - TODO.md candidate
         - ROADMAP.md candidate
-        - docs/reviews follow-up
+        - .agentic-workspace/planning/reviews follow-up
         - package backlog item
         - documentation-only follow-up
         - not sure yet

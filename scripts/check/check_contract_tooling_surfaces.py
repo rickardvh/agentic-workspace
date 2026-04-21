@@ -32,7 +32,7 @@ def _sample_compact_answer() -> dict[str, object]:
         surface="defaults",
         selector={"section": "proof_selection"},
         answer={"id": "workspace_proof"},
-        refs=["docs/compact-contract-profile.md", "agentic-workspace defaults --format json"],
+        refs=[".agentic-workspace/docs/compact-contract-profile.md", "agentic-workspace defaults --format json"],
     )
 
 
@@ -141,7 +141,7 @@ def _sample_setup_findings_payload() -> dict[str, object]:
                 "summary": "Large shared workspace CLI surface is still a hotspot.",
                 "confidence": 0.91,
                 "path": "src/agentic_workspace/cli.py",
-                "refs": ["docs/reporting-contract.md"],
+                "refs": [".agentic-workspace/docs/reporting-contract.md"],
                 "why": "Would reduce rediscovery during later repo work.",
             },
             {

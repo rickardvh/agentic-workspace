@@ -25,12 +25,11 @@ def _write(path: Path, text: str) -> None:
 
 
 def _write_root_surfaces(tmp_path: Path) -> None:
-    _write(tmp_path / "memory" / "index.md", "# Memory index\n")
+    _write(tmp_path / ".agentic-workspace" / "memory" / "repo" / "index.md", "# Memory index\n")
     _write(tmp_path / ".agentic-workspace" / "memory" / "WORKFLOW.md", "# Workflow\n")
     _write(tmp_path / ".agentic-workspace" / "memory" / "SKILLS.md", "# Skills\n")
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
-    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
-    _write(tmp_path / "docs" / "execplans" / "README.md", "# Execplans\n")
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "README.md", "# Execplans\n")
     _write(tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json", "{}\n")
     _write(tmp_path / "tools" / "agent-manifest.json", "{}\n")
     _write(tmp_path / "tools" / "AGENT_QUICKSTART.md", "# Quickstart\n")

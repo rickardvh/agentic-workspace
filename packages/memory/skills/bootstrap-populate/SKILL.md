@@ -1,6 +1,6 @@
 ---
 name: bootstrap-populate
-description: Populate newly installed current-memory files conservatively after bootstrap adoption. Use when a repository has just gained `memory/current/project-state.md` or `memory/current/task-context.md` and the agent should fill them from existing repo docs and visible repo state without inventing deeper memory notes.
+description: Populate newly installed current-memory files conservatively after bootstrap adoption. Use when a repository has just gained `.agentic-workspace/memory/repo/current/project-state.md` or `.agentic-workspace/memory/repo/current/task-context.md` and the agent should fill them from existing repo docs and visible repo state without inventing deeper memory notes.
 ---
 
 # Bootstrap Populate
@@ -13,18 +13,18 @@ It populates checked-in overview/context notes from existing repo evidence. It d
 
 1. Read the target repo's local contract:
    - `AGENTS.md`
-   - `memory/index.md`
+   - `.agentic-workspace/memory/repo/index.md`
    - `.agentic-workspace/memory/WORKFLOW.md` only when the policy boundary is unclear
 2. Inspect existing repo evidence:
    - top-level README or equivalent orientation docs
    - visible repo structure
    - recent active files or obvious current work, if any
-3. Populate `memory/current/project-state.md` conservatively:
+3. Populate `.agentic-workspace/memory/repo/current/project-state.md` conservatively:
    - current focus
    - recent meaningful progress
    - blockers
    - a few high-level notes
-4. Populate `memory/current/task-context.md` only if there is active work worth preserving across sessions.
+4. Populate `.agentic-workspace/memory/repo/current/task-context.md` only if there is active work worth preserving across sessions.
    - yes: the repo shows a clearly active change, investigation, or ongoing implementation that another session would need to resume quickly
    - no: there is no obvious active work, or the current context would just repeat the overview note
 5. Keep both notes short and factual.
@@ -42,6 +42,6 @@ It populates checked-in overview/context notes from existing repo evidence. It d
 
 ## Typical outputs
 
-- a populated `memory/current/project-state.md`
-- an optional populated `memory/current/task-context.md`
+- a populated `.agentic-workspace/memory/repo/current/project-state.md`
+- an optional populated `.agentic-workspace/memory/repo/current/task-context.md`
 - a short note about possible future memory candidates, if any

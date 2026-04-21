@@ -221,15 +221,15 @@ __all__ = [
 ]
 
 PAYLOAD_GUIDANCE_FRAGMENTS: dict[Path, tuple[str, ...]] = {
-    Path("memory/current/project-state.md"): (
+    Path(".agentic-workspace/memory/repo/current/project-state.md"): (
         "Keep this note concise and weak-authority",
         "Prefer replacing stale bullets instead of appending timeline-style progress logs",
     ),
-    Path("memory/current/task-context.md"): (
+    Path(".agentic-workspace/memory/repo/current/task-context.md"): (
         "Do not turn it into a task list, backlog, execution log, roadmap, or sequencing surface.",
         "Prefer replacing resolved resume bullets instead of accumulating pass-by-pass checkpoints",
     ),
-    Path("memory/current/routing-feedback.md"): (
+    Path(".agentic-workspace/memory/repo/current/routing-feedback.md"): (
         "Keep only concrete cases that materially improve routing.",
         "Prefer one live case per routing issue and prune resolved entries quickly",
     ),
@@ -714,7 +714,7 @@ def doctor_bootstrap(
         force_enforcement=strict_doc_ownership,
     )
     _audit_routing_feedback_note(target_root=target_root, result=result)
-    routing_feedback_path = target_root / "memory/current/routing-feedback.md"
+    routing_feedback_path = target_root / ".agentic-workspace/memory/repo/current/routing-feedback.md"
     if routing_feedback_path.exists():
         routing_feedback_text = routing_feedback_path.read_text(encoding="utf-8")
         for finding in _routing_feedback_structure_findings(routing_feedback_text):
@@ -859,9 +859,9 @@ def check_current_memory(target: str | Path | None = None) -> InstallResult:
         )
         stale_reason = (
             _current_task_staleness_reason(text)
-            if relative_path == Path("memory/current/task-context.md")
+            if relative_path == Path(".agentic-workspace/memory/repo/current/task-context.md")
             else _project_state_staleness_reason(text)
-            if relative_path == Path("memory/current/project-state.md")
+            if relative_path == Path(".agentic-workspace/memory/repo/current/project-state.md")
             else None
         )
         if stale_reason is not None:
@@ -876,9 +876,9 @@ def check_current_memory(target: str | Path | None = None) -> InstallResult:
             )
         structure_findings = (
             _current_task_structure_findings(text)
-            if relative_path == Path("memory/current/task-context.md")
+            if relative_path == Path(".agentic-workspace/memory/repo/current/task-context.md")
             else _project_state_structure_findings(text)
-            if relative_path == Path("memory/current/project-state.md")
+            if relative_path == Path(".agentic-workspace/memory/repo/current/project-state.md")
             else []
         )
         for finding in structure_findings:
@@ -905,11 +905,11 @@ def route_memory(
     if not files and not surfaces:
         result.add(
             "manual review",
-            target_root / Path("memory/index.md"),
+            target_root / Path(".agentic-workspace/memory/repo/index.md"),
             "provide --files and/or --surface to request routing suggestions",
             role="memory-route",
             safety="manual",
-            source="memory/index.md",
+            source=".agentic-workspace/memory/repo/index.md",
             category="manual-review",
         )
         return result
@@ -939,19 +939,25 @@ def route_memory(
         for recommendation, note, reason, match_source in manifest_suggestions
     )
     covered_surfaces = _covered_manifest_surfaces(manifest, manifest_suggestions, selected_surfaces)
-    for section_surface, notes in _parse_route_sections(target_root / "memory" / "index.md"):
+    for section_surface, notes in _parse_route_sections(target_root / ".agentic-workspace" / "memory" / "repo" / "index.md"):
         if section_surface in selected_surfaces and section_surface not in covered_surfaces:
             for note in notes:
                 suggestions.append(
-                    ("optional", note, f"matched route surface '{section_surface}' from memory/index.md", "index-fallback", 2)
+                    (
+                        "optional",
+                        note,
+                        f"matched route surface '{section_surface}' from .agentic-workspace/memory/repo/index.md",
+                        "index-fallback",
+                        2,
+                    )
                 )
-    if Path("memory/current/project-state.md") in high_level_paths and _should_suggest_project_state(
+    if Path(".agentic-workspace/memory/repo/current/project-state.md") in high_level_paths and _should_suggest_project_state(
         files=files or [], surfaces=selected_surfaces, manifest_suggestions=manifest_suggestions
     ):
         suggestions.append(
             (
                 "optional",
-                "memory/current/project-state.md",
+                ".agentic-workspace/memory/repo/current/project-state.md",
                 "high-level repo re-orientation is likely useful for this task",
                 "high-level-fallback",
                 4,
@@ -961,7 +967,7 @@ def route_memory(
         suggestions.append(
             (
                 "optional",
-                "memory/current/task-context.md",
+                ".agentic-workspace/memory/repo/current/task-context.md",
                 "explicit current-context input suggests checking continuation state",
                 "explicit-current-context",
                 4,
@@ -985,22 +991,22 @@ def route_memory(
     if result.route_summary.get("warning"):
         result.add(
             "warning",
-            target_root / Path("memory/index.md"),
+            target_root / Path(".agentic-workspace/memory/repo/index.md"),
             str(result.route_summary["warning"]),
             role="memory-route",
             safety="advisory",
-            source="memory/index.md",
+            source=".agentic-workspace/memory/repo/index.md",
             category="manual-review",
         )
 
     if justification := result.route_summary.get("justification"):
         result.add(
             "current",
-            target_root / Path("memory/index.md"),
+            target_root / Path(".agentic-workspace/memory/repo/index.md"),
             str(justification),
             role="memory-route",
             safety="safe",
-            source="memory/index.md",
+            source=".agentic-workspace/memory/repo/index.md",
             category="safe-update",
             match_source="routing-summary",
         )
@@ -1038,25 +1044,27 @@ def route_memory(
             )
 
     if files and not any(
-        action.role == "memory-route" and action.kind in {"optional", "required"} and action.source != "memory/index.md"
+        action.role == "memory-route"
+        and action.kind in {"optional", "required"}
+        and action.source != ".agentic-workspace/memory/repo/index.md"
         for action in result.actions
     ):
         result.add(
             "manual review",
-            target_root / Path("memory/index.md"),
-            "no route-specific notes matched; review memory/index.md and related notes manually",
+            target_root / Path(".agentic-workspace/memory/repo/index.md"),
+            "no route-specific notes matched; review .agentic-workspace/memory/repo/index.md and related notes manually",
             role="memory-route",
             safety="manual",
-            source="memory/index.md",
+            source=".agentic-workspace/memory/repo/index.md",
             category="manual-review",
         )
     result.add(
         "current",
-        target_root / Path("memory/index.md"),
+        target_root / Path(".agentic-workspace/memory/repo/index.md"),
         result.missing_note_hint,
         role="memory-route",
         safety="advisory",
-        source="memory/index.md",
+        source=".agentic-workspace/memory/repo/index.md",
         category="safe-update",
         match_source="missing-note-prompt",
     )
@@ -1066,14 +1074,14 @@ def route_memory(
 def review_routes(*, target: str | Path | None = None) -> InstallResult:
     target_root = resolve_target_root(target)
     result = _new_result(target_root, dry_run=True, message="Routing review")
-    feedback_path = target_root / "memory/current/routing-feedback.md"
+    feedback_path = target_root / ".agentic-workspace/memory/repo/current/routing-feedback.md"
     if not feedback_path.exists():
         result.add(
             "manual review",
             feedback_path,
             (
                 "routing feedback note is absent; create "
-                "memory/current/routing-feedback.md when you have concrete "
+                ".agentic-workspace/memory/repo/current/routing-feedback.md when you have concrete "
                 "missed-note or over-routing cases to calibrate"
             ),
             role="route-review",
@@ -1203,7 +1211,7 @@ def report_routes(*, target: str | Path | None = None) -> InstallResult:
     result = _new_result(target_root, dry_run=True, message="Routing report")
     _record_repo_context_warnings(target_root, result)
 
-    feedback_path = target_root / "memory/current/routing-feedback.md"
+    feedback_path = target_root / ".agentic-workspace/memory/repo/current/routing-feedback.md"
     feedback_cases = _load_routing_feedback_cases(feedback_path)
     routed_results: dict[str, InstallResult] = {}
     for case in feedback_cases:
@@ -1368,11 +1376,11 @@ def sync_memory(
     if not changed_files and not notes:
         result.add(
             "manual review",
-            target_root / Path("memory/index.md"),
+            target_root / Path(".agentic-workspace/memory/repo/index.md"),
             "provide --files/--notes or run inside a git repo with changed files",
             role="memory-sync",
             safety="manual",
-            source="memory/index.md",
+            source=".agentic-workspace/memory/repo/index.md",
             category="manual-review",
         )
         return result
@@ -1537,11 +1545,11 @@ def search_memory(
     if not found_any:
         result.add(
             "not found",
-            target_root / Path("memory/index.md"),
+            target_root / Path(".agentic-workspace/memory/repo/index.md"),
             f"no matches found for '{query}' in memory notes",
             role="memory-search",
             safety="safe",
-            source="memory/index.md",
+            source=".agentic-workspace/memory/repo/index.md",
             category="search-result",
         )
 
@@ -1617,13 +1625,13 @@ def _build_sync_summary(*, result: InstallResult) -> dict[str, object]:
     def _rank(action) -> tuple[int, int, int, str]:
         relative_path = action.source or action.path.as_posix()
         is_index = Path(relative_path).name == "index.md"
-        if relative_path.startswith("memory/domains/"):
+        if relative_path.startswith(".agentic-workspace/memory/repo/domains/"):
             path_rank = 0
-        elif relative_path.startswith("memory/runbooks/"):
+        elif relative_path.startswith(".agentic-workspace/memory/repo/runbooks/"):
             path_rank = 1
-        elif relative_path.startswith("memory/mistakes/"):
+        elif relative_path.startswith(".agentic-workspace/memory/repo/mistakes/"):
             path_rank = 2
-        elif relative_path.startswith("memory/decisions/"):
+        elif relative_path.startswith(".agentic-workspace/memory/repo/decisions/"):
             path_rank = 3
         else:
             path_rank = 4
@@ -1661,9 +1669,9 @@ def _should_suggest_project_state(
     surfaces: set[str],
     manifest_suggestions: list[tuple[str, str, str, str]],
 ) -> bool:
-    if any(Path(note) == Path("memory/current/project-state.md") for _, note, _, _ in manifest_suggestions):
+    if any(Path(note) == Path(".agentic-workspace/memory/repo/current/project-state.md") for _, note, _, _ in manifest_suggestions):
         return True
-    if any(Path(path).as_posix() == "memory/current/project-state.md" for path in files):
+    if any(Path(path).as_posix() == ".agentic-workspace/memory/repo/current/project-state.md" for path in files):
         return True
     if surfaces.intersection({"decision", "architecture"}):
         return True
@@ -1675,7 +1683,7 @@ def _should_suggest_project_state(
 
 
 def _should_suggest_task_context(*, files: list[str]) -> bool:
-    return any(Path(path).as_posix() == "memory/current/task-context.md" for path in files)
+    return any(Path(path).as_posix() == ".agentic-workspace/memory/repo/current/task-context.md" for path in files)
 
 
 def promotion_report(
@@ -1886,7 +1894,9 @@ def _memory_habitual_pull_view(
     usefulness_status = str(usefulness_audit.get("status", "needs-more-proof"))
 
     status = "needs-more-proof"
-    summary_text = "Ordinary-work pull still needs proof; start from memory/index.md and validate the route in real work."
+    summary_text = (
+        "Ordinary-work pull still needs proof; start from .agentic-workspace/memory/repo/index.md and validate the route in real work."
+    )
     if usefulness_status == "attention-needed" or unresolved_feedback or low_confidence or over_target:
         status = "attention-needed"
         summary_text = (
@@ -1896,7 +1906,7 @@ def _memory_habitual_pull_view(
     elif usefulness_status in {"measured", "actionable"}:
         status = "ready-for-ordinary-work"
         summary_text = (
-            "Start with memory/index.md, then load only the route-matched durable notes; keep current-context notes "
+            "Start with .agentic-workspace/memory/repo/index.md, then load only the route-matched durable notes; keep current-context notes "
             "optional and treat Memory as the cheap first pull for durable understanding."
         )
 
@@ -2165,7 +2175,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
             "module": "memory",
             "command": "agentic-memory-bootstrap report --target ./repo --format json",
             "canonical_docs": [
-                "docs/reporting-contract.md",
+                ".agentic-workspace/docs/reporting-contract.md",
                 "packages/memory/README.md",
             ],
             "shared_fields": [
@@ -2281,7 +2291,7 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
 
     _add_contract_surface_summary(result, target_root)
 
-    current_payload = {path for path in payload_paths if path.as_posix().startswith("memory/current/")}
+    current_payload = {path for path in payload_paths if path.as_posix().startswith(".agentic-workspace/memory/repo/current/")}
     required_current = set(CURRENT_MEMORY_BASELINE)
     allowed_current = required_current | set(OPTIONAL_CURRENT_MEMORY_FILES)
     for extra in sorted(current_payload - allowed_current):

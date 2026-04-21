@@ -161,42 +161,53 @@ def _routes_to_canonical_doc(note: MemoryNoteRecord) -> bool:
 def _is_non_memory_canonical_home(canonical_home: Path, note_path: Path) -> bool:
     if canonical_home == note_path:
         return False
-    return canonical_home.parts[:1] != ("memory",)
+    canonical_str = canonical_home.as_posix()
+    return not (canonical_str.startswith(".agentic-workspace/memory/") or canonical_str.startswith("memory/"))
 
 
 def _manifest_note_path_family_warning(note: MemoryNoteRecord) -> str:
     path_str = note.path.as_posix()
-    if path_str == "memory/index.md" and note.note_type != "routing":
-        return "memory/index.md should keep note_type = routing"
-    if path_str == "memory/current/project-state.md" and note.note_type != "current-overview":
-        return "memory/current/project-state.md should keep note_type = current-overview"
-    if path_str == "memory/current/task-context.md" and note.note_type != "current-context":
-        return "memory/current/task-context.md should keep note_type = current-context"
-    if path_str == "memory/current/routing-feedback.md" and note.note_type != "routing-feedback":
-        return "memory/current/routing-feedback.md should keep note_type = routing-feedback"
-    if path_str.startswith("memory/domains/") and note.note_type != "domain":
-        return "notes under memory/domains/ should keep note_type = domain"
-    if path_str.startswith("memory/invariants/") and note.note_type != "invariant":
-        return "notes under memory/invariants/ should keep note_type = invariant"
-    if path_str.startswith("memory/runbooks/") and note.note_type != "runbook":
-        return "notes under memory/runbooks/ should keep note_type = runbook"
-    if path_str == "memory/mistakes/recurring-failures.md" and note.note_type != "recurring-failures":
-        return "memory/mistakes/recurring-failures.md should keep note_type = recurring-failures"
-    if path_str.startswith("memory/decisions/") and note.note_type != "decision":
-        return "notes under memory/decisions/ should keep note_type = decision"
+    if path_str == ".agentic-workspace/memory/repo/index.md" and note.note_type != "routing":
+        return ".agentic-workspace/memory/repo/index.md should keep note_type = routing"
+    if path_str == ".agentic-workspace/memory/repo/current/project-state.md" and note.note_type != "current-overview":
+        return ".agentic-workspace/memory/repo/current/project-state.md should keep note_type = current-overview"
+    if path_str == ".agentic-workspace/memory/repo/current/task-context.md" and note.note_type != "current-context":
+        return ".agentic-workspace/memory/repo/current/task-context.md should keep note_type = current-context"
+    if path_str == ".agentic-workspace/memory/repo/current/routing-feedback.md" and note.note_type != "routing-feedback":
+        return ".agentic-workspace/memory/repo/current/routing-feedback.md should keep note_type = routing-feedback"
+    if path_str.startswith(".agentic-workspace/memory/repo/domains/") and note.note_type != "domain":
+        return "notes under .agentic-workspace/memory/repo/domains/ should keep note_type = domain"
+    if path_str.startswith(".agentic-workspace/memory/repo/invariants/") and note.note_type != "invariant":
+        return "notes under .agentic-workspace/memory/repo/invariants/ should keep note_type = invariant"
+    if path_str.startswith(".agentic-workspace/memory/repo/runbooks/") and note.note_type != "runbook":
+        return "notes under .agentic-workspace/memory/repo/runbooks/ should keep note_type = runbook"
+    if path_str == ".agentic-workspace/memory/repo/mistakes/recurring-failures.md" and note.note_type != "recurring-failures":
+        return ".agentic-workspace/memory/repo/mistakes/recurring-failures.md should keep note_type = recurring-failures"
+    if path_str.startswith(".agentic-workspace/memory/repo/decisions/") and note.note_type != "decision":
+        return "notes under .agentic-workspace/memory/repo/decisions/ should keep note_type = decision"
     return ""
 
 
 def _canonical_dir_warning(*, note: MemoryNoteRecord, manifest: MemoryManifest) -> str:
     if not manifest.canonical_dirs:
         return ""
-    if note.path.parts[:1] != ("memory",):
+    path_str = note.path.as_posix()
+    if not (path_str.startswith(".agentic-workspace/memory/repo/") or path_str.startswith("memory/")):
         return ""
-    if note.path == Path("memory/index.md") or "current" in note.path.parts or note.path.parts[:2] == ("memory", "templates"):
+    if (
+        note.path in {Path(".agentic-workspace/memory/repo/index.md"), Path("memory/index.md")}
+        or path_str.startswith(".agentic-workspace/memory/repo/current/")
+        or path_str.startswith("memory/current/")
+        or path_str.startswith(".agentic-workspace/memory/repo/templates/")
+        or path_str.startswith("memory/templates/")
+    ):
         return ""
     if not _is_note_under_declared_canonical_dir(note.path, manifest.canonical_dirs):
         return "durable memory notes should live under rules.canonical_dirs or move out of memory/"
-    if note.canonical_home.parts[:1] == ("memory",) and note.canonical_home != note.path:
+    canonical_str = note.canonical_home.as_posix()
+    if (
+        canonical_str.startswith(".agentic-workspace/memory/repo/") or canonical_str.startswith("memory/")
+    ) and note.canonical_home != note.path:
         if not _is_note_under_declared_canonical_dir(note.canonical_home, manifest.canonical_dirs):
             return "memory canonical_home should also remain inside rules.canonical_dirs"
     return ""
@@ -205,11 +216,11 @@ def _canonical_dir_warning(*, note: MemoryNoteRecord, manifest: MemoryManifest) 
 def _task_board_dependency_warning(*, note: MemoryNoteRecord, manifest: MemoryManifest) -> str:
     if not manifest.task_board_globs:
         return ""
-    if note.path.parts[:2] == ("memory", "current"):
+    if note.path.as_posix().startswith(".agentic-workspace/memory/repo/current/"):
         return ""
     route_patterns = set(note.routes_from) | set(note.stale_when)
     if route_patterns & set(manifest.task_board_globs):
-        return "task-board globs should not drive durable memory routing or staleness outside memory/current/"
+        return "task-board globs should not drive durable memory routing or staleness outside .agentic-workspace/memory/repo/current/"
     return ""
 
 
@@ -225,17 +236,17 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
         result.add(
             "manual review",
             target_root / MANIFEST_PATH,
-            "rules.routing_only should contain only memory/index.md so the always-read surface stays small",
+            "rules.routing_only should contain only .agentic-workspace/memory/repo/index.md so the always-read surface stays small",
             role="memory-manifest",
             safety="manual",
             source=MANIFEST_PATH.as_posix(),
             category="contract-drift",
         )
-    if Path("memory/current/task-context.md") in high_level:
+    if Path(".agentic-workspace/memory/repo/current/task-context.md") in high_level:
         result.add(
             "manual review",
             target_root / MANIFEST_PATH,
-            "rules.high_level should not include memory/current/task-context.md; keep continuation notes opt-in",
+            "rules.high_level should not include .agentic-workspace/memory/repo/current/task-context.md; keep continuation notes opt-in",
             role="memory-manifest",
             safety="manual",
             source=MANIFEST_PATH.as_posix(),
@@ -247,7 +258,7 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
             target_root / MANIFEST_PATH,
             (
                 "rules.high_level is expanding beyond the intended compact always-read "
-                "surface; keep only memory/index.md and optional project-state-level "
+                "surface; keep only .agentic-workspace/memory/repo/index.md and optional project-state-level "
                 "context there"
             ),
             role="memory-manifest",
@@ -372,7 +383,7 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 source=note.path.as_posix(),
                 category="contract-drift",
             )
-        if note.path == Path("memory/current/project-state.md") and note.task_relevance != "optional":
+        if note.path == Path(".agentic-workspace/memory/repo/current/project-state.md") and note.task_relevance != "optional":
             result.add(
                 "manual review",
                 target_root / note.path,
@@ -382,7 +393,7 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 source=note.path.as_posix(),
                 category="contract-drift",
             )
-        if note.path.parts[:2] == ("memory", "current") and note.authority not in {"advisory", "supporting"}:
+        if note.path.as_posix().startswith(".agentic-workspace/memory/repo/current/") and note.authority not in {"advisory", "supporting"}:
             result.add(
                 "manual review",
                 target_root / note.path,
@@ -392,7 +403,7 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 source=note.path.as_posix(),
                 category="contract-drift",
             )
-        if note.path.parts[:2] == ("memory", "current") and note.memory_role:
+        if note.path.as_posix().startswith(".agentic-workspace/memory/repo/current/") and note.memory_role:
             result.add(
                 "manual review",
                 target_root / note.path,
@@ -406,7 +417,7 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 source=note.path.as_posix(),
                 category="contract-drift",
             )
-        if note.path == Path("memory/current/task-context.md"):
+        if note.path == Path(".agentic-workspace/memory/repo/current/task-context.md"):
             if note.task_relevance != "optional":
                 result.add(
                     "manual review",
@@ -440,7 +451,7 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                     source=note.path.as_posix(),
                     category="contract-drift",
                 )
-        if note.path == Path("memory/current/routing-feedback.md"):
+        if note.path == Path(".agentic-workspace/memory/repo/current/routing-feedback.md"):
             if note.task_relevance != "optional":
                 result.add(
                     "manual review",
@@ -484,7 +495,7 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                     source=note.path.as_posix(),
                     category="contract-drift",
                 )
-        if note.path == Path("memory/current/project-state.md") and note.canonicality != "agent_only":
+        if note.path == Path(".agentic-workspace/memory/repo/current/project-state.md") and note.canonicality != "agent_only":
             result.add(
                 "manual review",
                 target_root / note.path,
@@ -627,7 +638,7 @@ def _iter_core_docs(*, target_root: Path, include_globs: tuple[str, ...], exclud
 
 
 def _audit_index_compactness(*, target_root: Path, manifest: MemoryManifest, result) -> None:
-    index_path = target_root / "memory/index.md"
+    index_path = target_root / ".agentic-workspace/memory/repo/index.md"
     if not index_path.exists():
         return
     lines = index_path.read_text(encoding="utf-8").splitlines()
@@ -635,7 +646,7 @@ def _audit_index_compactness(*, target_root: Path, manifest: MemoryManifest, res
         result.add(
             "manual review",
             index_path,
-            "memory/index.md is getting summary-heavy; keep it short, routing-shaped, and focused on the smallest useful note bundles",
+            ".agentic-workspace/memory/repo/index.md is getting summary-heavy; keep it short, routing-shaped, and focused on the smallest useful note bundles",
             role="memory-index-audit",
             safety="manual",
             source=index_path.relative_to(target_root).as_posix(),
@@ -652,8 +663,8 @@ def _audit_note_overlap(*, target_root: Path, manifest: MemoryManifest, result) 
     comparable_notes = [
         note
         for note in manifest.notes
-        if note.path.parts[:1] == ("memory",)
-        and "current" not in note.path.parts
+        if note.path.as_posix().startswith(".agentic-workspace/memory/repo/")
+        and not note.path.as_posix().startswith(".agentic-workspace/memory/repo/current/")
         and note.path.name != "index.md"
         and note.path.name != "README.md"
         and (target_root / note.path).exists()
@@ -714,11 +725,11 @@ def _extract_memory_references(text: str) -> list[str]:
 
 
 def _is_package_context_note(path: Path) -> bool:
-    return path.parts[:2] == ("memory", "domains") and path.stem.endswith("package-context")
+    return path.as_posix().startswith(".agentic-workspace/memory/repo/domains/") and path.stem.endswith("package-context")
 
 
 def _is_package_context_companion_pair(left_path: Path, right_path: Path) -> bool:
-    package_context_runbook = Path("memory/runbooks/package-context-inspection.md")
+    package_context_runbook = Path(".agentic-workspace/memory/repo/runbooks/package-context-inspection.md")
     return (left_path == package_context_runbook and _is_package_context_note(right_path)) or (
         right_path == package_context_runbook and _is_package_context_note(left_path)
     )
@@ -854,19 +865,19 @@ def _line_limit_for_note(note: MemoryNoteRecord | None, note_path: Path) -> tupl
     if note is not None and note.note_type in NOTE_TYPE_LINE_LIMITS:
         return note.note_type, NOTE_TYPE_LINE_LIMITS[note.note_type]
     relative_str = note_path.as_posix()
-    if "memory/invariants/" in relative_str:
+    if ".agentic-workspace/memory/repo/invariants/" in relative_str:
         return "invariant", NOTE_TYPE_LINE_LIMITS["invariant"]
-    if "memory/domains/" in relative_str:
+    if ".agentic-workspace/memory/repo/domains/" in relative_str:
         return "domain", NOTE_TYPE_LINE_LIMITS["domain"]
-    if "memory/runbooks/" in relative_str:
+    if ".agentic-workspace/memory/repo/runbooks/" in relative_str:
         return "runbook", NOTE_TYPE_LINE_LIMITS["runbook"]
-    if relative_str.endswith("memory/mistakes/recurring-failures.md"):
+    if relative_str.endswith(".agentic-workspace/memory/repo/mistakes/recurring-failures.md"):
         return "recurring-failures", NOTE_TYPE_LINE_LIMITS["recurring-failures"]
-    if "memory/decisions/" in relative_str:
+    if ".agentic-workspace/memory/repo/decisions/" in relative_str:
         return "decision", NOTE_TYPE_LINE_LIMITS["decision"]
-    if relative_str.endswith("memory/current/project-state.md"):
+    if relative_str.endswith(".agentic-workspace/memory/repo/current/project-state.md"):
         return "current-overview", NOTE_TYPE_LINE_LIMITS["current-overview"]
-    if relative_str.endswith("memory/current/task-context.md"):
+    if relative_str.endswith(".agentic-workspace/memory/repo/current/task-context.md"):
         return "current-context", NOTE_TYPE_LINE_LIMITS["current-context"]
     return "memory-note", 200
 
@@ -1009,11 +1020,11 @@ def _note_multi_home_findings(
             )
         )
     if note.note_type in {"domain", "decision", "runbook"} and invariant_lines >= 5 and line_count >= 8:
-        invariant_target = f"memory/invariants/{note_path.stem}.md"
+        invariant_target = f".agentic-workspace/memory/repo/invariants/{note_path.stem}.md"
         findings.append(
             (
                 (
-                    "must-stay-true rules are accumulating outside memory/invariants/; "
+                    "must-stay-true rules are accumulating outside .agentic-workspace/memory/repo/invariants/; "
                     f"extract the invariant content into {invariant_target} and leave the remaining note in one primary home"
                 ),
                 "docs",
@@ -1023,7 +1034,7 @@ def _note_multi_home_findings(
             )
         )
     if note.note_type == "runbook" and rationale_lines >= 4 and line_count >= 30:
-        decision_target = f"memory/decisions/{note_path.stem}.md"
+        decision_target = f".agentic-workspace/memory/repo/decisions/{note_path.stem}.md"
         findings.append(
             (
                 (
@@ -1049,28 +1060,28 @@ def _note_multi_home_findings(
 
 def _explicit_note_review_detail(requested_note: Path) -> str:
     requested_str = requested_note.as_posix()
-    if requested_str.startswith("memory/runbooks/"):
+    if requested_str.startswith(".agentic-workspace/memory/repo/runbooks/"):
         return (
             "explicit note supplied; review whether the durable facts should stay in memory, "
             "the repeated workflow should become a checked-in skill, or the mechanics now "
             "justify a repo-owned script or command."
         )
-    if requested_str.startswith("memory/mistakes/"):
+    if requested_str.startswith(".agentic-workspace/memory/repo/mistakes/"):
         return (
             "explicit note supplied; review whether the recurring failure should stay documented "
             "in memory or now justify a regression test, validation, or lint rule."
         )
-    if requested_str.startswith("memory/domains/"):
+    if requested_str.startswith(".agentic-workspace/memory/repo/domains/"):
         return (
             "explicit note supplied; review whether the stable parts belong in canonical docs "
             "or whether the note is signalling a refactor or clearer boundary need."
         )
-    if requested_str.startswith("memory/invariants/"):
+    if requested_str.startswith(".agentic-workspace/memory/repo/invariants/"):
         return (
             "explicit note supplied; review whether the invariant should stay in memory, move "
             "into canonical docs, or be enforced more directly in code or validation."
         )
-    if requested_str.startswith("memory/decisions/"):
+    if requested_str.startswith(".agentic-workspace/memory/repo/decisions/"):
         return (
             "explicit note supplied; review whether the durable rationale should stay in memory, "
             "move into canonical docs, or be reduced after the underlying boundary becomes clearer."
@@ -1125,7 +1136,7 @@ def _build_remediation_recommendation(
         if explicit is not None:
             return explicit
 
-    if "memory/mistakes/" in relative_str and has_failure_entries:
+    if ".agentic-workspace/memory/repo/mistakes/" in relative_str and has_failure_entries:
         return RemediationRecommendation(
             kind="test",
             target_path_hint=_infer_test_target(note, note_path),
@@ -1134,7 +1145,7 @@ def _build_remediation_recommendation(
             memory_action="shrink",
         )
 
-    if "memory/runbooks/" in relative_str and line_count >= 12 and imperative_lines >= 6:
+    if ".agentic-workspace/memory/repo/runbooks/" in relative_str and line_count >= 12 and imperative_lines >= 6:
         if command_lines >= 6 and line_count <= 90:
             return RemediationRecommendation(
                 kind="script",
@@ -1154,7 +1165,7 @@ def _build_remediation_recommendation(
             memory_action="automate",
         )
 
-    if "memory/domains/" in relative_str and line_count >= 140:
+    if ".agentic-workspace/memory/repo/domains/" in relative_str and line_count >= 140:
         remediation_kind = "refactor"
         target = _infer_code_target(note, note_path)
         reason = "This domain note is compensating for a high-discovery-cost subsystem and likely needs clearer ownership or structure."
@@ -1170,7 +1181,7 @@ def _build_remediation_recommendation(
             memory_action="refactor_away" if remediation_kind == "refactor" else "promote",
         )
 
-    if relative_str.endswith("memory/index.md") and line_count >= 120:
+    if relative_str.endswith(".agentic-workspace/memory/repo/index.md") and line_count >= 120:
         return RemediationRecommendation(
             kind="refactor",
             target_path_hint="memory/ plus the awkward routed subsystem surface",
@@ -1182,7 +1193,7 @@ def _build_remediation_recommendation(
             memory_action="shrink",
         )
 
-    if "memory/current/" in relative_str and line_count >= 80 and not for_report:
+    if ".agentic-workspace/memory/repo/current/" in relative_str and line_count >= 80 and not for_report:
         return RemediationRecommendation(
             kind="docs",
             target_path_hint="the repo planning/status surface",
@@ -1260,7 +1271,7 @@ def _explicit_remediation_recommendation(
         "refactor": "The manifest marks refactor or ownership cleanup as the preferred way to remove this recurring friction.",
         "code": "The manifest marks direct implementation enforcement as the preferred way to remove this recurring friction.",
     }
-    if kind == "test" and "memory/mistakes/" in relative_str and not has_failure_entries:
+    if kind == "test" and ".agentic-workspace/memory/repo/mistakes/" in relative_str and not has_failure_entries:
         return None
     return RemediationRecommendation(
         kind=kind,
@@ -1291,15 +1302,15 @@ def _collect_improvement_hints(
         if manifest_hint:
             hints.append(manifest_hint)
 
-    if "memory/mistakes/" in relative_str and has_failure_entries:
+    if ".agentic-workspace/memory/repo/mistakes/" in relative_str and has_failure_entries:
         hints.append("a regression test, validation, or lint rule if the recurring failure remains active")
-    if "memory/runbooks/" in relative_str and line_count >= 35 and imperative_lines >= 6:
+    if ".agentic-workspace/memory/repo/runbooks/" in relative_str and line_count >= 35 and imperative_lines >= 6:
         hints.append("a checked-in skill first, then a repo-owned script or command if the workflow stays mechanical")
-    if "memory/domains/" in relative_str and line_count >= 140:
+    if ".agentic-workspace/memory/repo/domains/" in relative_str and line_count >= 140:
         hints.append(("clearer canonical docs or refactor review if this note keeps compensating for a high-discovery-cost subsystem"))
-    if relative_str.endswith("memory/index.md") and line_count >= 120:
+    if relative_str.endswith(".agentic-workspace/memory/repo/index.md") and line_count >= 120:
         hints.append(("clearer repo boundaries or note consolidation if routing keeps expanding to explain one awkward area"))
-    if "memory/current/" in relative_str and line_count >= 80 and not for_report:
+    if ".agentic-workspace/memory/repo/current/" in relative_str and line_count >= 80 and not for_report:
         hints.append(("shrinking planning/status spillover or unresolved structure friction before growing current-memory notes further"))
 
     deduped: list[str] = []
@@ -1334,7 +1345,7 @@ def _manifest_improvement_hint(
     }
 
     parts: list[str] = []
-    if "memory/mistakes/" in note.path.as_posix() and not has_failure_entries:
+    if ".agentic-workspace/memory/repo/mistakes/" in note.path.as_posix() and not has_failure_entries:
         return ""
 
     if note.preferred_remediation:
@@ -1425,11 +1436,11 @@ def _emit_memory_shape_pressure(
     result,
 ) -> None:
     note_records = {note.path: note for note in manifest.notes} if manifest is not None else {}
-    for note_path in sorted(target_root.glob("memory/**/*.md")):
+    for note_path in sorted((target_root / ".agentic-workspace" / "memory" / "repo").glob("**/*.md")):
         relative = note_path.relative_to(target_root)
-        if relative.as_posix().startswith("memory/templates/"):
+        if relative.as_posix().startswith(".agentic-workspace/memory/repo/templates/"):
             continue
-        if relative == Path("memory/index.md"):
+        if relative == Path(".agentic-workspace/memory/repo/index.md"):
             continue
         if relative.name == "README.md" and relative.parts[1] in {"domains", "invariants", "runbooks", "decisions"}:
             continue
@@ -1438,7 +1449,7 @@ def _emit_memory_shape_pressure(
         if not warning:
             continue
         result.add(
-            "consider" if relative.as_posix().startswith("memory/current/") else "manual review",
+            "consider" if relative.as_posix().startswith(".agentic-workspace/memory/repo/current/") else "manual review",
             note_path,
             warning,
             role="memory-size-audit",
@@ -1560,7 +1571,7 @@ def _load_routing_feedback_cases(path: Path) -> list[RoutingFeedbackCase]:
 
 
 def _audit_routing_feedback_note(*, target_root: Path, result) -> None:
-    note_path = target_root / "memory/current/routing-feedback.md"
+    note_path = target_root / ".agentic-workspace/memory/repo/current/routing-feedback.md"
     if not note_path.exists():
         return
     text = note_path.read_text(encoding="utf-8")
@@ -2040,7 +2051,7 @@ def _infer_docs_target(note: MemoryNoteRecord | None, note_path: Path) -> str:
 
 def _infer_skill_target(note: MemoryNoteRecord | None, note_path: Path) -> str:
     stem = (note.path if note is not None else note_path).stem.replace("_", "-")
-    return f"memory/skills/{stem}/SKILL.md"
+    return f".agentic-workspace/memory/repo/skills/{stem}/SKILL.md"
 
 
 def _infer_script_target(note: MemoryNoteRecord | None, note_path: Path) -> str:
@@ -2419,7 +2430,7 @@ def _build_route_summary(
 
 def _path_matches_pattern(raw_path: str, pattern: str) -> bool:
     normalised_path = raw_path.replace("\\", "/").strip("./")
-    normalised_pattern = pattern.replace("\\", "/").strip()
+    normalised_pattern = pattern.replace("\\", "/").strip().strip("./")
     if not normalised_path or not normalised_pattern:
         return False
     path = Path(normalised_path)

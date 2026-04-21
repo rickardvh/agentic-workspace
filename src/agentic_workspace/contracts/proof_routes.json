@@ -1,6 +1,6 @@
 {
   "schema_version": "proof-routes-manifest/v1",
-  "canonical_doc": "docs/proof-surfaces-contract.md",
+  "canonical_doc": ".agentic-workspace/docs/proof-surfaces-contract.md",
   "command": "agentic-workspace proof --target ./repo --format json",
   "default_routes": {
     "workspace_proof": "agentic-workspace proof --target ./repo --format json",

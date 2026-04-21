@@ -1,6 +1,6 @@
 ---
 name: planning-review-pass
-description: Run one bounded review pass, capture evidence-backed findings in docs/reviews, and stop short of activating future work automatically.
+description: Run one bounded review pass, capture evidence-backed findings in .agentic-workspace/planning/reviews, and stop short of activating future work automatically.
 ---
 
 # Planning Review Pass
@@ -12,9 +12,9 @@ It exists to capture compact, evidence-backed findings without turning review ou
 
 1. Read `AGENTS.md`, `.agentic-workspace/planning/state.toml`, and any explicitly referenced review scope before starting.
 2. Treat the task as analysis, not implementation, unless the prompt explicitly asks for fixes too.
-3. Choose one primary review mode from `docs/reviews/README.md` before inspecting deeply.
+3. Choose one primary review mode from `.agentic-workspace/planning/reviews/README.md` before inspecting deeply.
 4. Keep the review bounded to one subsystem, one question, or one risk area. If the user asks for a matrix or portfolio pass, split it into one compact artifact per mode instead of widening one file.
-5. Write findings into `docs/reviews/` using the local template.
+5. Write findings into `.agentic-workspace/planning/reviews/` using the local template.
 6. Label each finding with confidence, source class, promotion target, and promotion trigger.
 7. Keep friction-confirmed findings distinct from pure analysis findings.
 8. Do not add findings directly to `todo.active_items` or create an execplan unless the prompt explicitly asks for promotion.

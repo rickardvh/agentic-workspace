@@ -9,8 +9,8 @@ Choose this package when you want active work in a repository to stay bounded, r
 Use it for:
 
 - keeping active queue and candidate-lane state in `.agentic-workspace/planning/state.toml`
-- attaching bounded execution contracts to active work in `docs/execplans/`
-- capturing analysis-derived future-work findings in `docs/reviews/` before promotion
+- attaching bounded execution contracts to active work in `.agentic-workspace/planning/execplans/`
+- capturing analysis-derived future-work findings in `.agentic-workspace/planning/reviews/` before promotion
 - helping agents restart from checked-in execution state instead of chat-only context
 
 Do not use it for:
@@ -118,12 +118,12 @@ Treat these files as the current planning compatibility contract surfaces that s
 
 - `AGENTS.md`
 - `.agentic-workspace/planning/state.toml`
-- `docs/execplans/README.md`
-- `docs/execplans/TEMPLATE.md`
-- `docs/execplans/archive/README.md`
-- `docs/reviews/README.md`
-- `docs/reviews/TEMPLATE.md`
-- `docs/upstream-task-intake.md`
+- `.agentic-workspace/planning/execplans/README.md`
+- `.agentic-workspace/planning/execplans/TEMPLATE.md`
+- `.agentic-workspace/planning/execplans/archive/README.md`
+- `.agentic-workspace/planning/reviews/README.md`
+- `.agentic-workspace/planning/reviews/TEMPLATE.md`
+- `.agentic-workspace/planning/upstream-task-intake.md`
 - `docs/environment-recovery-contract.md`
 - `.agentic-workspace/planning/agent-manifest.json`
 
@@ -133,12 +133,12 @@ Generated mirrors inherit stability from their canonical source relationships, n
 
 ## Direct Execution Or Execplan
 
-`docs/capability-aware-execution.md` is the canonical contract for capability fit: when cheap direct execution is still safe, when medium reasoning is enough, when stronger planning should come first, when bounded autopilot is appropriate, when delegation may save cost, when silent shaping should replace noisy executor-prompting, and when the agent should stop and escalate.
+`.agentic-workspace/docs/capability-aware-execution.md` is the canonical contract for capability fit: when cheap direct execution is still safe, when medium reasoning is enough, when stronger planning should come first, when bounded autopilot is appropriate, when delegation may save cost, when silent shaping should replace noisy executor-prompting, and when the agent should stop and escalate.
 It also defines the bounded-initiative rule: improve means locally, but do not silently widen the requested outcome, owned surface, or time horizon.
 `docs/delegated-judgment-contract.md` is the front-door companion: what the human should specify, what the agent may decide locally, and what should become an explicit promotion or escalation decision.
 `docs/intent-contract.md` defines the compact machine-readable active intent contract exposed through `agentic-planning-bootstrap summary --format json` as a view over the canonical `planning_record`.
 `docs/orchestrator-workflow-contract.md` defines the delegated planner-to-worker workflow and `agentic-planning-bootstrap handoff --format json` surface for agent-agnostic bounded handoff.
-`docs/standing-intent-contract.md` defines the standing-intent classification and promotion contract used by the workspace report to route durable repo-wide guidance into the right owner surface.
+`.agentic-workspace/docs/standing-intent-contract.md` defines the standing-intent classification and promotion contract used by the workspace report to route durable repo-wide guidance into the right owner surface.
 `docs/resumable-execution-contract.md` defines the smaller machine-readable restart contract as a view over the same canonical `planning_record`.
 `docs/environment-recovery-contract.md` defines both how task-local environment assumptions and recovery paths should be expressed without growing a second plan schema, and the ordered recovery path when lifecycle work, repo-state inspection, or validation restart becomes ambiguous.
 `docs/execution-summary-contract.md` defines the compact completion summary that archived slices should leave behind.
@@ -162,7 +162,7 @@ Treat the direct-task shape as compact by default:
 
 Do not promote work into an execplan just because a more capable model or agent is available. Advanced agents already have session-local planning; checked-in planning should appear only when it reduces rediscovery, restart cost, or coordination risk more than it costs to write.
 
-Promote the task into `docs/execplans/` when any of the following becomes true:
+Promote the task into `.agentic-workspace/planning/execplans/` when any of the following becomes true:
 
 - the work now spans more than one milestone or session-sized checkpoint
 - the next contributor would need explicit blocker or dependency handling
@@ -270,7 +270,7 @@ Development is organised across three horizons:
 | Horizon | Surface | Role |
 | ------ | ------- | ---- |
 | Direction + Activation | `.agentic-workspace/planning/state.toml` | What matters now and what might matter next through compact candidate lanes |
-| Execution | `docs/execplans/` | How the active work is completed |
+| Execution | `.agentic-workspace/planning/execplans/` | How the active work is completed |
 
 Each layer has a single responsibility and should not duplicate the others.
 
@@ -380,9 +380,9 @@ Planning does not own:
 
 Planning includes a bounded review lane for deliberate future-work discovery:
 
-- `docs/reviews/` captures review artifacts
+- `.agentic-workspace/planning/reviews/` captures review artifacts
 - the roadmap section of `.agentic-workspace/planning/state.toml` receives promoted future candidates
-- the active queue in `.agentic-workspace/planning/state.toml` plus `docs/execplans/` receive only the findings that are explicitly activated
+- the active queue in `.agentic-workspace/planning/state.toml` plus `.agentic-workspace/planning/execplans/` receive only the findings that are explicitly activated
 
 The review lane exists so analysis-derived findings do not masquerade as friction-confirmed work.
 Its rules are:
@@ -403,9 +403,9 @@ Do not use them as a substitute for durable docs, memory notes, or active execpl
 
 Planning also includes a tracker-agnostic intake contract for work that starts in an external tracker but should execute from checked-in planning.
 
-- `docs/upstream-task-intake.md` owns the intake rules
+- `.agentic-workspace/planning/upstream-task-intake.md` owns the intake rules
 - `.agentic-workspace/planning/state.toml` owns both inactive accepted upstream candidates and the active queue
-- `docs/execplans/` own detailed intake metadata for active promoted work
+- `.agentic-workspace/planning/execplans/` own detailed intake metadata for active promoted work
 
 The contract is intentionally neutral across GitHub Issues, Linear, Jira, Notion, and other upstream systems.
 The external tracker may supply the signal, but once the work is promoted, checked-in planning remains the execution authority.
@@ -437,10 +437,10 @@ The package installs the checked-in planning contract and its supporting surface
 
 - `AGENTS.md`
 - `.agentic-workspace/planning/state.toml`
-- `docs/execplans/README.md`
-- `docs/execplans/TEMPLATE.md`
-- `docs/execplans/archive/README.md`
-- `docs/upstream-task-intake.md`
+- `.agentic-workspace/planning/execplans/README.md`
+- `.agentic-workspace/planning/execplans/TEMPLATE.md`
+- `.agentic-workspace/planning/execplans/archive/README.md`
+- `.agentic-workspace/planning/upstream-task-intake.md`
 - `docs/environment-recovery-contract.md`
 - `.agentic-workspace/planning/UPGRADE-SOURCE.toml`
 - `.agentic-workspace/planning/agent-manifest.json`
@@ -459,8 +459,8 @@ It packages:
 - the planning contract
 - the module-managed planning manifest and helper scripts
 - generated mirrors and thin root wrappers for repo ergonomics
-- review-artifact contract surfaces under `docs/reviews/`
-- upstream-task intake contract surfaces under `docs/upstream-task-intake.md`
+- review-artifact contract surfaces under `.agentic-workspace/planning/reviews/`
+- upstream-task intake contract surfaces under `.agentic-workspace/planning/upstream-task-intake.md`
 - environment and recovery contract surfaces under `docs/environment-recovery-contract.md`
 - file-native helper commands for promotion, archiving, and summary
 - starter surfaces
@@ -474,8 +474,8 @@ In this monorepo checkout, the active operational planning install lives at the 
 
 ```text
 .agentic-workspace/planning/state.toml  # active queue + candidate lanes
-docs/execplans/            # execution contracts
-docs/execplans/archive/    # completed plans
+.agentic-workspace/planning/execplans/            # execution contracts
+.agentic-workspace/planning/execplans/archive/    # completed plans
 scripts/check/             # validation tooling
 ```
 
@@ -522,7 +522,7 @@ Once done:
 ### One surface per concern
 
 - `.agentic-workspace/planning/state.toml` -> activation and candidate lanes
-- `docs/execplans/` -> execution only
+- `.agentic-workspace/planning/execplans/` -> execution only
 
 ### No duplication of intent
 

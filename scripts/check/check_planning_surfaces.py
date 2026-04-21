@@ -37,7 +37,7 @@ REPO_ROOT = _find_repo_root()
 STATE_TOML_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "state.toml"
 LEGACY_TODO_PATH = REPO_ROOT / "TODO.md"
 LEGACY_ROADMAP_PATH = REPO_ROOT / "ROADMAP.md"
-EXECPLAN_DIR = REPO_ROOT / "docs" / "execplans"
+EXECPLAN_DIR = REPO_ROOT / ".agentic-workspace" / "planning" / "execplans"
 
 TODO_MAX_LINES = 150
 TODO_MAX_NOW_ITEMS = 3
@@ -181,17 +181,17 @@ def _readme_claims_maintainer_startup_guidance(text: str) -> bool:
 
 
 def _surface_execplan_reference(surface_value: str) -> str | None:
-    """Extract a docs/execplans path from TODO Surface text if present."""
+    """Extract a .agentic-workspace/planning/execplans path from TODO Surface text if present."""
 
     # Markdown links often keep the relative surface in link text.
-    inline_path_match = re.search(r"docs/execplans/[A-Za-z0-9._/\-]+\.md", surface_value)
+    inline_path_match = re.search(r".agentic-workspace/planning/execplans/[A-Za-z0-9._/\-]+\.md", surface_value)
     if inline_path_match:
         return inline_path_match.group(0)
 
     markdown_target = re.search(r"\]\(([^)]+)\)", surface_value)
     if markdown_target:
         target = markdown_target.group(1)
-        target_match = re.search(r"docs/execplans/[A-Za-z0-9._/\-]+\.md", target)
+        target_match = re.search(r".agentic-workspace/planning/execplans/[A-Za-z0-9._/\-]+\.md", target)
         if target_match:
             return target_match.group(0)
 
@@ -506,7 +506,7 @@ def _check_todo(path: Path, *, repo_root: Path = REPO_ROOT) -> tuple[list[Planni
 
         if "in-progress" in status and execplan_ref:
             ref_path = repo_root / execplan_ref
-            if "docs/execplans/archive/" in execplan_ref:
+            if ".agentic-workspace/planning/execplans/archive/" in execplan_ref:
                 warnings.append(
                     PlanningWarning(
                         WARNING_TODO_BROKEN_SURFACE_REFERENCE,
@@ -541,7 +541,7 @@ def _check_todo(path: Path, *, repo_root: Path = REPO_ROOT) -> tuple[list[Planni
                     _render_path(path),
                     (
                         f"TODO item '{item_id or '?'}' still uses direct-task fields but already "
-                        "looks execplan-sized; promote it to docs/execplans/."
+                        "looks execplan-sized; promote it to .agentic-workspace/planning/execplans/."
                     ),
                 )
             )
@@ -658,7 +658,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     required_agents_fragments = (
         "agentic-workspace summary --format json",
         "agentic-workspace config --target . --format json",
-        "read the active feature plan in `docs/execplans/`",
+        "read the active feature plan in `.agentic-workspace/planning/execplans/`",
         "do not bulk-read all planning surfaces",
         "agentic-workspace defaults --section startup --format json",
     )
@@ -690,7 +690,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         for fragment in (
             "agent entrypoint router",
             "read `agents.md`",
-            "read `docs/routing-contract.md`",
+            "read `.agentic-workspace/docs/routing-contract.md`",
         )
     ):
         warnings.append(
@@ -788,7 +788,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         "TODO.md" in first_reads_lower
         or ".agentic-workspace/planning/state.toml" in first_reads_lower
         or "roadmap.md" in first_reads_lower
-        or "docs/execplans/readme.md" in first_reads_lower
+        or ".agentic-workspace/planning/execplans/readme.md" in first_reads_lower
     ):
         warnings.append(
             PlanningWarning(
@@ -807,7 +807,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             )
         )
 
-    if not any("docs/routing-contract.md" in row and "authoritative routing home" in row for row in surface_roles_lower):
+    if not any(".agentic-workspace/docs/routing-contract.md" in row and "authoritative routing home" in row for row in surface_roles_lower):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
@@ -848,7 +848,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
 
 def _check_active_surface_hygiene(repo_root: Path) -> list[PlanningWarning]:
     warnings: list[PlanningWarning] = []
-    execplan_dir = repo_root / "docs" / "execplans"
+    execplan_dir = repo_root / ".agentic-workspace" / "planning" / "execplans"
     if not execplan_dir.exists():
         return warnings
 
@@ -861,7 +861,7 @@ def _check_active_surface_hygiene(repo_root: Path) -> list[PlanningWarning]:
                 PlanningWarning(
                     WARNING_DOCS_SURFACE_ROLE_DRIFT,
                     _render_path(path),
-                    "Non-execplan review/audit artifacts should not live in active execplan space; move them to docs/reviews/ or archive.",
+                    "Non-execplan review/audit artifacts should not live in active execplan space; move them to .agentic-workspace/planning/reviews/ or archive.",
                 )
             )
     return warnings
@@ -904,7 +904,7 @@ def _check_docs_surface_roles(repo_root: Path) -> list[PlanningWarning]:
                 "resumable_contract",
                 "hierarchy_contract",
                 "follow_through_contract",
-                "docs/execplans/README.md",
+                ".agentic-workspace/planning/execplans/README.md",
                 "meaning boundary",
                 "machine-readable state",
                 "compact prose",
@@ -939,7 +939,7 @@ def _check_docs_surface_roles(repo_root: Path) -> list[PlanningWarning]:
             "Resumable contract must describe planning_record as canonical and raw prose as fallback.",
         ),
         (
-            repo_root / "docs" / "execplans" / "README.md",
+            repo_root / ".agentic-workspace" / "planning" / "execplans" / "README.md",
             (
                 "agentic-workspace summary --format json` first",
                 "raw `todo.md` and execplan prose after that only when the compact summary is insufficient",
@@ -1809,7 +1809,7 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
     state = _read_state_toml(repo_root / ".agentic-workspace" / "planning" / "state.toml")
     todo_path = repo_root / "TODO.md"
     roadmap_path = repo_root / "ROADMAP.md"
-    execplan_dir = repo_root / "docs" / "execplans"
+    execplan_dir = repo_root / ".agentic-workspace" / "planning" / "execplans"
 
     warnings: list[PlanningWarning] = []
 
@@ -1852,7 +1852,7 @@ def gather_planning_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
     state = _read_state_toml(repo_root / ".agentic-workspace" / "planning" / "state.toml")
     todo_path = repo_root / "TODO.md"
     roadmap_path = repo_root / "ROADMAP.md"
-    execplan_dir = repo_root / "docs" / "execplans"
+    execplan_dir = repo_root / ".agentic-workspace" / "planning" / "execplans"
 
     if todo_path.exists():
         todo_lines = _read_lines(todo_path)

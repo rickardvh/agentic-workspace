@@ -9,7 +9,7 @@ Focused routing reference derived from `.agentic-workspace/planning/agent-manife
 ## Precedence
 
 - Explicit user request.
-- Active feature plan in `docs/execplans/`, when the task belongs to that plan.
+- Active feature plan in `.agentic-workspace/planning/execplans/`, when the task belongs to that plan.
 - `AGENTS.md`.
 - Repo docs explicitly referenced by the active route or plan.
 
@@ -20,8 +20,8 @@ Focused routing reference derived from `.agentic-workspace/planning/agent-manife
 - Use when: Handling a bounded review, audit, or review-shaped request that should capture findings without activating work automatically.
 - Prefer when: the request asks for a review, audit, or compact finding capture over one repo area or change.
 - Touches:
-  - `docs/reviews/`
-  - `docs/extraction-and-discovery-contract.md`
+  - `.agentic-workspace/planning/reviews/`
+  - `.agentic-workspace/docs/extraction-and-discovery-contract.md`
   - `.agentic-workspace/planning/skills/planning-review-pass/SKILL.md`
   - `.agentic-workspace/planning/skills/REGISTRY.json`
 - Validation:
@@ -35,11 +35,11 @@ Focused routing reference derived from `.agentic-workspace/planning/agent-manife
 - Touches:
   - `AGENTS.md`
   - `.agentic-workspace/planning/state.toml`
-  - `docs/upstream-task-intake.md`
-  - `docs/lifecycle-and-config-contract.md`
-  - `docs/routing-contract.md`
-  - `docs/execution-flow-contract.md`
-  - `docs/execplans/`
+  - `.agentic-workspace/planning/upstream-task-intake.md`
+  - `.agentic-workspace/docs/lifecycle-and-config-contract.md`
+  - `.agentic-workspace/docs/routing-contract.md`
+  - `.agentic-workspace/docs/execution-flow-contract.md`
+  - `.agentic-workspace/planning/execplans/`
   - `scripts/check/check_maintainer_surfaces.py`
   - `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`
   - `.agentic-workspace/planning/agent-manifest.json`

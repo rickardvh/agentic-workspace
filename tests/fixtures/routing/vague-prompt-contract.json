@@ -1,12 +1,12 @@
 {
   "name": "vague prompt contract",
   "case_type": "general",
-  "files": ["docs/intent-contract.md"],
+  "files": [".agentic-workspace/docs/reporting-contract.md"],
   "surfaces": [],
-  "expected_required": ["memory/index.md"],
+  "expected_required": [".agentic-workspace/memory/repo/index.md"],
   "expected_optional": [
-    "memory/domains/vague-prompt-domain-understanding.md",
-    "memory/runbooks/vague-instruction-failure-capture.md"
+    ".agentic-workspace/memory/repo/domains/vague-prompt-domain-understanding.md",
+    ".agentic-workspace/memory/repo/runbooks/vague-instruction-failure-capture.md"
   ],
   "unexpected_notes": [],
   "missing_note_candidates": []

@@ -9,12 +9,12 @@ Use `docs/maintainer-commands.md` when you need the literal command to run; use 
 This playbook is primarily for maintainers operating as coding agents. Human contributors can use it too, but it is intentionally optimized for explicit routing, bounded reads, and narrow validation.
 
 Use `docs/design-principles.md` when a change affects product shape, ownership, lifecycle behavior, or the amount of ceremony the repo imposes on normal work.
-Use `docs/compatibility-policy.md` when you need to judge whether a surface is stable, mutable, or generated before making the change.
-Use `docs/lifecycle-and-config-contract.md` when you need the canonical root `init` mode matrix, configuration rules, or prompt semantics.
-Use `docs/execution-flow-contract.md` when you are delegating a bounded slice, handling intent continuity, or managing resumable milestones.
-Use `docs/generated-surface-trust.md` when a change touches generated docs, mirrors, or rerender expectations.
-Use `docs/proof-surfaces-contract.md` when the missing judgment is which proof lane actually answers the current trust question.
-Use `docs/ownership-authority-contract.md` when the missing judgment is who owns a concern or which checked-in surface is authoritative.
+Use `.agentic-workspace/docs/compatibility-policy.md` when you need to judge whether a surface is stable, mutable, or generated before making the change.
+Use `.agentic-workspace/docs/lifecycle-and-config-contract.md` when you need the canonical root `init` mode matrix, configuration rules, or prompt semantics.
+Use `.agentic-workspace/docs/execution-flow-contract.md` when you are delegating a bounded slice, handling intent continuity, or managing resumable milestones.
+Use `.agentic-workspace/docs/generated-surface-trust.md` when a change touches generated docs, mirrors, or rerender expectations.
+Use `.agentic-workspace/docs/proof-surfaces-contract.md` when the missing judgment is which proof lane actually answers the current trust question.
+Use `.agentic-workspace/docs/ownership-authority-contract.md` when the missing judgment is who owns a concern or which checked-in surface is authoritative.
 
 ## Start Here
 
@@ -27,7 +27,7 @@ Default startup path for an agent maintainer:
 5. If you need the combined workspace state, ask `agentic-workspace report --target ./repo --format json` before reading raw module files.
 6. If `.agentic-workspace/planning/state.toml` points at an active execplan and the compact surfaces are insufficient, read that plan before editing code.
 7. If you are handing the active slice to another executor, derive the worker contract from `agentic-workspace summary --format json` rather than drafting a fresh ad hoc prompt.
-8. Use `agentic-workspace config --target ./repo --format json` to inspect the effective mixed-agent posture, including the optional local capability/cost override in `agentic-workspace.local.toml`.
+8. Use `agentic-workspace config --target ./repo --format json` to inspect the effective mixed-agent posture, including the optional local capability/cost override in `.agentic-workspace/config.local.toml`.
 9. Read package-local `AGENTS.md` only for the package you will touch.
 10. Use this playbook to pick the right ownership surface and narrow validation lane.
 
@@ -46,12 +46,12 @@ The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`,
 
 - Use root planning surfaces for active work, roadmap candidates, and execplans.
 - Use memory notes for durable repo knowledge, decisions, and recurring failure modes.
-- Treat `memory/current/` as weak-authority current context: concise re-orientation only, not the durable home for facts.
-- Use `docs/extraction-and-discovery-contract.md` when one change spans package source, packaged payload, and the root installed surfaces.
+- Treat `.agentic-workspace/memory/repo/current/` as weak-authority current context: concise re-orientation only, not the durable home for facts.
+- Use `.agentic-workspace/docs/extraction-and-discovery-contract.md` when one change spans package source, packaged payload, and the root installed surfaces.
 - Leave touched surfaces cleaner than you found them, and route broader cleanup as follow-up instead of treating it as invisible task residue.
-- Use `docs/compatibility-policy.md` for surface-stability questions before deciding whether a doc, manifest, or managed mirror is safe to change directly.
-- Use `docs/lifecycle-and-config-contract.md` before changing or explaining root lifecycle behavior or configuration so the semantics stay canonical.
-- Use `docs/generated-surface-trust.md` for canonical-source and freshness questions before editing mirrors or routing docs.
+- Use `.agentic-workspace/docs/compatibility-policy.md` for surface-stability questions before deciding whether a doc, manifest, or managed mirror is safe to change directly.
+- Use `.agentic-workspace/docs/lifecycle-and-config-contract.md` before changing or explaining root lifecycle behavior or configuration so the semantics stay canonical.
+- Use `.agentic-workspace/docs/generated-surface-trust.md` for canonical-source and freshness questions before editing mirrors or routing docs.
 - Edit package code only when the change belongs to that package's shipped behavior or tests.
 - Keep the root `agentic-workspace` CLI thin; push module-specific lifecycle logic back into the module packages.
 - Treat `.agentic-workspace/` module trees as product-managed surfaces; change them through the owning package or managed source rather than as freehand repo docs.
@@ -77,7 +77,7 @@ For execution scaling specifically:
 
 - keep work direct in `todo.active_items` when one coherent pass can finish it and the row can stay at `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`
 - promote to an execplan when the work gains milestone sequencing, blocker handling, non-obvious validation scope, rollback or migration detail, enough ambiguity that restart would require more than the TODO row, or enough context pressure that a smaller or less capable agent would otherwise have to rediscover the task
-- use `docs/capability-aware-execution.md` when the missing judgment is capability fit rather than ownership: cheap direct path, medium reasoning direct path, stronger planning first, silent shaping into a cheaper slice, delegation-friendly, or stop-and-escalate
+- use `.agentic-workspace/docs/capability-aware-execution.md` when the missing judgment is capability fit rather than ownership: cheap direct path, medium reasoning direct path, stronger planning first, silent shaping into a cheaper slice, delegation-friendly, or stop-and-escalate
 - when capability-aware execution suggests a cleaner but broader solution, treat that as a promotion or escalation decision instead of silently replacing the requested outcome; improve local means, not requested ends
 - when an execplan completes only part of a larger intended outcome, record both `Intent Continuity` and `Required Continuation` before archive; required follow-on must name a checked-in owner surface and activation trigger instead of surviving only in prose or chat
 - do not create an execplan just because a stronger agent is available; use one when the checked-in artifact is likely to save tokens or reduce coordination risk overall
@@ -115,7 +115,7 @@ Final repo sync after package work:
 - Lifecycle orchestration or root CLI: start at `src/agentic_workspace/` and `README.md`.
 - Memory bootstrap behavior: start at `packages/memory/AGENTS.md`, then `packages/memory/README.md` and `packages/memory/src/`.
 - Planning bootstrap behavior: start at `packages/planning/AGENTS.md`, then `packages/planning/README.md` and `packages/planning/src/`.
-- Planning contract or archive behavior: start at `.agentic-workspace/planning/state.toml`, the active execplan, and `docs/execution-flow-contract.md`.
+- Planning contract or archive behavior: start at `.agentic-workspace/planning/state.toml`, the active execplan, and `.agentic-workspace/docs/execution-flow-contract.md`.
 
 Generated guidance lives under `tools/`, but the source of truth for that guidance is `.agentic-workspace/planning/agent-manifest.json`. When routing docs drift, update the managed manifest and rerender instead of editing generated files directly.
 
@@ -129,8 +129,8 @@ When internal use reveals friction, classify it before routing it onward.
 - Docs or routing issue
 - Monorepo-only friction
 
-Use `memory/runbooks/dogfooding-feedback-routing.md` for the capture convention and preferred destinations.
-Use `docs/reviews/README.md` `context-cost` mode when the question is which startup or handoff surfaces are actually used, skipped, or too insider-shaped for normal work.
+Use `.agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md` for the capture convention and preferred destinations.
+Use `.agentic-workspace/planning/reviews/README.md` `context-cost` mode when the question is which startup or handoff surfaces are actually used, skipped, or too insider-shaped for normal work.
 
 Use `docs/installed-contract-design-checklist.md` when a package change adds or materially reshapes an installed file, generated mirror, or other collaboration-sensitive contract surface.
 

@@ -1,6 +1,6 @@
 ---
 name: planning-promote-review-findings
-description: Promote selected findings from docs/reviews into roadmap or active planning only when the trigger and target are explicit.
+description: Promote selected findings from .agentic-workspace/planning/reviews into roadmap or active planning only when the trigger and target are explicit.
 ---
 
 # Planning Promote Review Findings

@@ -1,0 +1,58 @@
+{
+  "schema_version": "skill-registry.v1",
+  "owner": "repo-local-memory-skills",
+  "source_kind": "repo-owned-memory-skills",
+  "skills": [
+    {
+      "id": "package-context-inspection",
+      "path": "package-context-inspection/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "recheck a package context note without turning it into a workflow dump",
+      "activation_hints": {
+        "verbs": ["recheck", "tighten", "inspect"],
+        "nouns": ["package context", "context note", "note shape"],
+        "phrases": ["recheck package context note", "tighten package context note", "package context note shape"],
+        "when": ["package context drift", "note-shape cleanup"]
+      }
+    },
+    {
+      "id": "memory-reporting",
+      "path": "memory-reporting/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "use canonical memory reporting commands (status/doctor/freshness/routing/promotion) instead of reading raw memory files",
+      "activation_hints": {
+        "verbs": ["report", "inspect", "summarize", "audit", "check"],
+        "nouns": ["memory", "freshness", "staleness", "routing", "cleanup", "promotion"],
+        "phrases": [
+          "memory report",
+          "memory freshness",
+          "memory staleness",
+          "memory routing health",
+          "memory cleanup signals",
+          "promotion report"
+        ],
+        "when": ["need memory status without reading notes", "handoff memory state", "memory hygiene pass", "post-change memory check"]
+      }
+    },
+    {
+      "id": "vague-prompt-domain-understanding",
+      "path": "vague-prompt-domain-understanding/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "use the compact vague-prompt workflow without turning the domain note into repeatable procedure",
+      "activation_hints": {
+        "verbs": ["clarify", "route", "interpret", "tighten"],
+        "nouns": ["vague prompt", "prompt class", "owner inference", "proof lane"],
+        "phrases": [
+          "vague prompt workflow",
+          "vague prompt interpretation",
+          "prompt routing ambiguity",
+          "owner inference for vague prompt"
+        ],
+        "when": ["repeated vague prompt class", "proof-lane uncertainty", "owner-inference uncertainty"]
+      }
+    }
+  ]
+}

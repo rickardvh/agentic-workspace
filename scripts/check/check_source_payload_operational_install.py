@@ -81,7 +81,9 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
             )
 
     required_root_surfaces = {
-        repo_root / "memory" / "index.md": "Root operational memory install is missing `memory/index.md`.",
+        repo_root / ".agentic-workspace" / "memory" / "repo" / "index.md": (
+            "Root operational memory install is missing `.agentic-workspace/memory/repo/index.md`."
+        ),
         repo_root / ".agentic-workspace" / "memory" / "WORKFLOW.md": (
             "Root operational memory install is missing `.agentic-workspace/memory/WORKFLOW.md`."
         ),
@@ -91,7 +93,9 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
         repo_root / ".agentic-workspace" / "planning" / "state.toml": (
             "Root operational planning install is missing `.agentic-workspace/planning/state.toml`."
         ),
-        repo_root / "docs" / "execplans" / "README.md": ("Root operational planning install is missing `docs/execplans/README.md`."),
+        repo_root / ".agentic-workspace" / "planning" / "execplans" / "README.md": (
+            "Root operational planning install is missing `.agentic-workspace/planning/execplans/README.md`."
+        ),
         repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json": (
             "Root operational planning install is missing `.agentic-workspace/planning/agent-manifest.json`."
         ),
@@ -145,11 +149,11 @@ def gather_boundary_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
         repo_root / "packages" / "planning" / "tools" / "AGENT_ROUTING.md",
     ]
     required_root_surfaces = [
-        repo_root / "memory" / "index.md",
+        repo_root / ".agentic-workspace" / "memory" / "repo" / "index.md",
         repo_root / ".agentic-workspace" / "memory" / "WORKFLOW.md",
         repo_root / ".agentic-workspace" / "memory" / "SKILLS.md",
         repo_root / ".agentic-workspace" / "planning" / "state.toml",
-        repo_root / "docs" / "execplans" / "README.md",
+        repo_root / ".agentic-workspace" / "planning" / "execplans" / "README.md",
         repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json",
         repo_root / "tools" / "agent-manifest.json",
         repo_root / "tools" / "AGENT_QUICKSTART.md",

@@ -198,7 +198,7 @@ def _build_cases(target_root: Path) -> list[MeasurementCase]:
                 kind="file_bundle",
                 label="planning prose bundle",
                 detail="TODO plus planning prose used as a broad restart path.",
-                paths=(".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/state.toml", "docs/execplans/README.md", "docs/environment-recovery-contract.md"),
+                paths=(".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/execplans/README.md", "docs/environment-recovery-contract.md"),
             ),
         ),
         MeasurementCase(
@@ -215,7 +215,7 @@ def _build_cases(target_root: Path) -> list[MeasurementCase]:
                 kind="file_bundle",
                 label="proof contract prose bundle",
                 detail="Broad prose-first proof guidance read path.",
-                paths=("docs/default-path-contract.md", "docs/proof-surfaces-contract.md"),
+                paths=("docs/default-path-contract.md", ".agentic-workspace/docs/proof-surfaces-contract.md"),
             ),
         ),
         MeasurementCase(
@@ -232,7 +232,7 @@ def _build_cases(target_root: Path) -> list[MeasurementCase]:
                 kind="file_bundle",
                 label="ownership prose bundle",
                 detail="Broad ownership contract read path.",
-                paths=("AGENTS.md", "docs/ownership-authority-contract.md", ".agentic-workspace/OWNERSHIP.toml"),
+                paths=("AGENTS.md", ".agentic-workspace/docs/ownership-authority-contract.md", ".agentic-workspace/OWNERSHIP.toml"),
             ),
         ),
         MeasurementCase(

@@ -160,7 +160,7 @@ Not allowed:
 
 ## Branch-Vs-Trunk State
 
-- Branch-local, low-half-life state belongs in active planning or `memory/current/` and should stay easy to compress, replace, or archive.
+- Branch-local, low-half-life state belongs in active planning or `.agentic-workspace/memory/repo/current/` and should stay easy to compress, replace, or archive.
 - Durable facts that should survive merges belong in memory notes or normal checked-in docs.
 - Product-managed support files under `.agentic-workspace/` should change through their owning package or managed source, not by ad hoc edits in downstream mirrors.
 - Generated mirrors should change by rerendering from their canonical source.
@@ -169,9 +169,9 @@ Not allowed:
 
 | Surface | Primary owner | Edit directly? | Notes |
 | --- | --- | --- | --- |
-| `.agentic-workspace/planning/state.toml`, `docs/execplans/` | Repo planning contract | Yes | Active execution state; keep compact and archive completed residue quickly. |
-| `memory/decisions/`, `memory/domains/`, `memory/invariants/`, `memory/runbooks/`, `memory/mistakes/` | Repo memory contract | Yes | Durable repo knowledge; one fact should have one primary home. |
-| `memory/current/` | Repo memory contract | Yes, but weak-authority only | Use for concise re-orientation and calibration, not as canonical durable truth. |
+| `.agentic-workspace/planning/state.toml`, `.agentic-workspace/planning/execplans/` | Repo planning contract | Yes | Active execution state; keep compact and archive completed residue quickly. |
+| `.agentic-workspace/memory/repo/decisions/`, `.agentic-workspace/memory/repo/domains/`, `.agentic-workspace/memory/repo/invariants/`, `.agentic-workspace/memory/repo/runbooks/`, `.agentic-workspace/memory/repo/mistakes/` | Repo memory contract | Yes | Durable repo knowledge; one fact should have one primary home. |
+| `.agentic-workspace/memory/repo/current/` | Repo memory contract | Yes, but weak-authority only | Use for concise re-orientation and calibration, not as canonical durable truth. |
 | `.agentic-workspace/memory/`, `.agentic-workspace/planning/` | Product-managed module layer | Only through the owning package or explicit managed source | Treat as upgrade-replaceable shared support surfaces. |
 | `tools/AGENT_*.md`, `tools/agent-manifest.json` | Generated planning outputs | No | Update `.agentic-workspace/planning/agent-manifest.json` and rerender. |
 | Root `agentic-workspace` CLI and shared Make targets | Workspace composition layer | Yes, when the behavior is truly cross-module | Keep thin; push module-specific logic back into the module packages. |
@@ -234,7 +234,7 @@ They are product signals for better decomposition, tighter memory routing, stron
 
 - Memory owns durable repo knowledge.
 - Planning owns active execution state.
-- `memory/current/` owns only weak-authority current context.
+- `.agentic-workspace/memory/repo/current/` owns only weak-authority current context.
 - Generated maintainer docs must derive from canonical sources.
 - Package payload checks must stay on the maintainer path when installed contract drift could affect adopters.
 - Cross-module convenience belongs at the workspace layer only when the reason is truly cross-module.

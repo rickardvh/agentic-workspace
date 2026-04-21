@@ -25,8 +25,8 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
   - finish bootstrap removal conservatively after the CLI removes safe bootstrap-managed files
 
 These bundled skills are for bootstrap lifecycle work only, not for general repo workflows.
-Day-to-day memory skills are shipped as checked-in repo skills under `memory/skills/` in the bootstrap payload.
-General non-memory skills do not belong under `memory/skills/`.
+Day-to-day memory skills are shipped as checked-in repo skills under `.agentic-workspace/memory/repo/skills/` in the bootstrap payload.
+General non-memory skills do not belong under `.agentic-workspace/memory/repo/skills/`.
 When both a checked-in repo skill and a runtime-local mirrored copy exist, treat the checked-in copy as authoritative.
 
 ## Fallback installation
@@ -55,6 +55,6 @@ After manual installation, refresh or restart your runtime so the new skills are
 
 When developing skills in this repository:
 
-- edit and validate the repo copies under `skills/` for bundled bootstrap skills and `memory/skills/` for checked-in core memory skills
+- edit and validate the repo copies under `skills/` for bundled bootstrap skills and `.agentic-workspace/memory/repo/skills/` for checked-in core memory skills
 - treat packaged copies and runtime-local mirrors as disposable test installs
 - reinstall the package only when you want to test the packaging path or the runtime-visible copy

@@ -23,9 +23,10 @@ RE_LAST_CONFIRMED_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2})\b")
 RE_STATUS_VALUE = re.compile(r"^(Stable|Active|Needs verification|Deprecated)\s*$", re.IGNORECASE)
 RE_SECTION = re.compile(r"^\s{0,3}##\s+(.+?)\s*$")
 RE_CHRONOLOGY = re.compile(r"^\s*(?:-|\*|\d+\.)\s+20\d{2}-\d{2}-\d{2}\b")
+RE_PLANNING_RESIDUE = re.compile(r"^\s*(?:-|\*)?\s*Active (?:execplan|plan|milestone)\s*:", re.IGNORECASE | re.MULTILINE)
 
-MEMORY_ROOT = Path("memory")
-MANIFEST_PATH = MEMORY_ROOT / "manifest.toml"
+PRIMARY_MEMORY_ROOT = Path(".agentic-workspace/memory/repo")
+LEGACY_MEMORY_ROOT = Path("memory")
 MAX_LINES = 200
 STALE_DAYS = 180
 TYPE_LIMITS = {
@@ -85,21 +86,6 @@ SUSPICIOUS_CURRENT_HEADINGS = {
     "sprint",
     "action items",
     "next steps",
-}
-
-SKIP_FILES = {
-    MEMORY_ROOT / "index.md",
-    MANIFEST_PATH,
-    MEMORY_ROOT / "domains" / "README.md",
-    MEMORY_ROOT / "invariants" / "README.md",
-    MEMORY_ROOT / "runbooks" / "README.md",
-    MEMORY_ROOT / "decisions" / "README.md",
-}
-SKIP_DIRS = {
-    MEMORY_ROOT / "bootstrap",
-    MEMORY_ROOT / "skills",
-    MEMORY_ROOT / "templates",
-    MEMORY_ROOT / "system",
 }
 
 DEFAULT_STRICT_CATEGORIES = {
@@ -177,14 +163,46 @@ def _label_match(line: str, target: str) -> bool:
 
 
 def _iter_notes(root: Path) -> list[Path]:
+    skip_files = _skip_files(root)
+    skip_dirs = _skip_dirs(root)
     notes: list[Path] = []
     for path in sorted(root.rglob("*.md")):
-        if path in SKIP_FILES:
+        if path in skip_files:
             continue
-        if any(parent in SKIP_DIRS for parent in path.parents):
+        if any(parent in skip_dirs for parent in path.parents):
             continue
         notes.append(path)
     return notes
+
+
+def _resolve_memory_root() -> Path:
+    if PRIMARY_MEMORY_ROOT.exists():
+        return PRIMARY_MEMORY_ROOT
+    return LEGACY_MEMORY_ROOT
+
+
+def _manifest_path(root: Path) -> Path:
+    return root / "manifest.toml"
+
+
+def _skip_files(root: Path) -> set[Path]:
+    return {
+        root / "index.md",
+        _manifest_path(root),
+        root / "domains" / "README.md",
+        root / "invariants" / "README.md",
+        root / "runbooks" / "README.md",
+        root / "decisions" / "README.md",
+    }
+
+
+def _skip_dirs(root: Path) -> set[Path]:
+    return {
+        root / "bootstrap",
+        root / "skills",
+        root / "templates",
+        root / "system",
+    }
 
 
 def _scan_note(path: Path) -> NoteScan:
@@ -289,58 +307,62 @@ def _load_manifest_data(path: Path) -> dict[str, Any]:
 
 def _note_type_for_path(path: Path) -> str:
     path_str = path.as_posix()
-    if path_str.startswith("memory/invariants/"):
+    if path_str.startswith(".agentic-workspace/memory/repo/invariants/"):
         return "invariant"
-    if path_str.startswith("memory/domains/"):
+    if path_str.startswith(".agentic-workspace/memory/repo/domains/"):
         return "domain"
-    if path_str.startswith("memory/runbooks/"):
+    if path_str.startswith(".agentic-workspace/memory/repo/runbooks/"):
         return "runbook"
-    if path_str == "memory/mistakes/recurring-failures.md":
+    if path_str == ".agentic-workspace/memory/repo/mistakes/recurring-failures.md":
         return "recurring-failures"
-    if path_str.startswith("memory/decisions/"):
+    if path_str.startswith(".agentic-workspace/memory/repo/decisions/"):
         return "decision"
-    if path_str == "memory/current/project-state.md":
+    if path_str == ".agentic-workspace/memory/repo/current/project-state.md":
         return "project-state"
-    if path_str == "memory/current/task-context.md":
+    if path_str == ".agentic-workspace/memory/repo/current/task-context.md":
         return "task-context"
-    if path_str == "memory/current/routing-feedback.md":
+    if path_str == ".agentic-workspace/memory/repo/current/routing-feedback.md":
         return "routing-feedback"
     return "memory-note"
 
 
 def _manifest_note_type_expected(path_str: str) -> str | None:
-    if path_str == "memory/index.md":
+    if path_str == ".agentic-workspace/memory/repo/index.md":
         return "routing"
-    if path_str == "memory/current/project-state.md":
+    if path_str == ".agentic-workspace/memory/repo/current/project-state.md":
         return "current-overview"
-    if path_str == "memory/current/task-context.md":
+    if path_str == ".agentic-workspace/memory/repo/current/task-context.md":
         return "current-context"
-    if path_str == "memory/current/routing-feedback.md":
+    if path_str == ".agentic-workspace/memory/repo/current/routing-feedback.md":
         return "routing-feedback"
-    if path_str.startswith("memory/domains/"):
+    if path_str.startswith(".agentic-workspace/memory/repo/domains/"):
         return "domain"
-    if path_str.startswith("memory/invariants/"):
+    if path_str.startswith(".agentic-workspace/memory/repo/invariants/"):
         return "invariant"
-    if path_str.startswith("memory/runbooks/"):
+    if path_str.startswith(".agentic-workspace/memory/repo/runbooks/"):
         return "runbook"
-    if path_str == "memory/mistakes/recurring-failures.md":
+    if path_str == ".agentic-workspace/memory/repo/mistakes/recurring-failures.md":
         return "recurring-failures"
-    if path_str.startswith("memory/decisions/"):
+    if path_str.startswith(".agentic-workspace/memory/repo/decisions/"):
         return "decision"
     return None
 
 
 def _suspicious_current_context(path: Path, lines: list[str], sections: set[str]) -> bool:
     if path.as_posix() not in {
-        "memory/current/project-state.md",
-        "memory/current/task-context.md",
-        "memory/current/routing-feedback.md",
+        ".agentic-workspace/memory/repo/current/project-state.md",
+        ".agentic-workspace/memory/repo/current/task-context.md",
+        ".agentic-workspace/memory/repo/current/routing-feedback.md",
     }:
         return False
     lowered_sections = {section.lower() for section in sections}
     if lowered_sections & SUSPICIOUS_CURRENT_HEADINGS:
         return True
-    return sum(1 for line in lines if RE_CHRONOLOGY.match(line)) >= 3
+    if sum(1 for line in lines if RE_CHRONOLOGY.match(line)) >= 3:
+        return True
+    if path.as_posix() != ".agentic-workspace/memory/repo/current/routing-feedback.md" and RE_PLANNING_RESIDUE.search("\n".join(lines)):
+        return True
+    return False
 
 
 def _print_section(title: str, items: list[str]) -> None:
@@ -370,13 +392,15 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = _parse_args()
-    if not MEMORY_ROOT.exists():
+    memory_root = _resolve_memory_root()
+    manifest_path = _manifest_path(memory_root)
+    if not memory_root.exists():
         print("Memory freshness report\n")
-        print("Memory root not found: memory/")
+        print(f"Memory root not found: {PRIMARY_MEMORY_ROOT.as_posix()} or {LEGACY_MEMORY_ROOT.as_posix()}")
         return 1 if args.strict else 0
 
-    scans = [_scan_note(path) for path in _iter_notes(MEMORY_ROOT)]
-    manifest_data = _load_manifest_data(MANIFEST_PATH)
+    scans = [_scan_note(path) for path in _iter_notes(memory_root)]
+    manifest_data = _load_manifest_data(manifest_path)
     raw_manifest_notes = manifest_data.get("notes", {})
     manifest_notes: dict[str, dict[str, Any]] = (
         {str(k): v for k, v in raw_manifest_notes.items() if isinstance(v, dict)} if isinstance(raw_manifest_notes, dict) else {}
@@ -445,13 +469,15 @@ def main() -> int:
         note_path
         for note_path, raw in manifest_notes.items()
         if isinstance(raw, dict)
-        and note_path.startswith("memory/current/")
+        and note_path.startswith(".agentic-workspace/memory/repo/current/")
         and str(raw.get("authority", "")).strip() not in CURRENT_NOTE_AUTHORITY_VALUES
     )
     current_durable_truth_drift = sorted(
         note_path
         for note_path, raw in manifest_notes.items()
-        if isinstance(raw, dict) and note_path.startswith("memory/current/") and str(raw.get("memory_role", "")).strip()
+        if isinstance(raw, dict)
+        and note_path.startswith(".agentic-workspace/memory/repo/current/")
+        and str(raw.get("memory_role", "")).strip()
     )
     current_note_overlap_pressure = _current_note_overlap_pressure(scans)
     incomplete_improvement_signals = sorted(
@@ -464,7 +490,7 @@ def main() -> int:
             or str(raw.get("retention_justification", "")).strip()
         )
     )
-    always_read_creep = _always_read_creep_items(manifest_notes, MANIFEST_PATH)
+    always_read_creep = _always_read_creep_items(manifest_notes, manifest_path)
     manifest_note_type_drift = sorted(
         f"{note_path} should keep note_type = {expected}"
         for note_path, raw in manifest_notes.items()
@@ -476,10 +502,10 @@ def main() -> int:
     canonical_dir_drift = sorted(
         note_path
         for note_path in manifest_notes
-        if note_path.startswith("memory/")
-        and note_path not in {"memory/index.md"}
-        and not note_path.startswith("memory/current/")
-        and not note_path.startswith("memory/templates/")
+        if note_path.startswith(".agentic-workspace/memory/repo/")
+        and note_path not in {".agentic-workspace/memory/repo/index.md"}
+        and not note_path.startswith(".agentic-workspace/memory/repo/current/")
+        and not note_path.startswith(".agentic-workspace/memory/repo/templates/")
         and canonical_dirs
         and not any(Path(note_path) == directory or directory in Path(note_path).parents for directory in canonical_dirs)
     )
@@ -488,10 +514,10 @@ def main() -> int:
         note_path
         for note_path, raw in manifest_notes.items()
         if isinstance(raw, dict)
-        and not note_path.startswith("memory/current/")
+        and not note_path.startswith(".agentic-workspace/memory/repo/current/")
         and task_board_globs.intersection(set(raw.get("routes_from", [])) | set(raw.get("stale_when", [])))
     )
-    uncustomised_index_placeholders = _index_placeholder_findings(MEMORY_ROOT / "index.md")
+    uncustomised_index_placeholders = _index_placeholder_findings(memory_root / "index.md")
 
     print("Memory freshness report")
     _print_section("Needs verification", needs_verification)
@@ -577,15 +603,16 @@ def _always_read_creep_items(manifest_notes: dict[str, dict[str, Any]], manifest
     items: list[str] = []
     routing_only = rules.get("routing_only", [])
     high_level = rules.get("high_level", [])
-    if routing_only and routing_only != ["memory/index.md"]:
-        items.append("rules.routing_only should stay limited to memory/index.md")
+    if routing_only and routing_only != [".agentic-workspace/memory/repo/index.md"]:
+        items.append("rules.routing_only should stay limited to .agentic-workspace/memory/repo/index.md")
     if len(high_level) > 2:
         items.append("rules.high_level is expanding beyond the intended compact always-read surface")
     for note_path, raw in manifest_notes.items():
         if not isinstance(raw, dict):
             continue
         if (
-            note_path in {"memory/current/project-state.md", "memory/current/task-context.md"}
+            note_path
+            in {".agentic-workspace/memory/repo/current/project-state.md", ".agentic-workspace/memory/repo/current/task-context.md"}
             and str(raw.get("task_relevance", "")).strip() == "required"
         ):
             items.append(f"{note_path} should remain optional, not required")
@@ -598,19 +625,19 @@ def _index_placeholder_findings(index_path: Path) -> list[str]:
     text = index_path.read_text(encoding="utf-8")
     findings: list[str] = []
     if "Delete unused routing examples once the repository has concrete notes." in text:
-        findings.append("memory/index.md still includes the starter placeholder cleanup instruction")
+        findings.append(".agentic-workspace/memory/repo/index.md still includes the starter placeholder cleanup instruction")
     if "<runtime-or-deployment-note>.md" in text or "<api-or-interface-note>.md" in text:
-        findings.append("memory/index.md still contains starter placeholder route examples")
+        findings.append(".agentic-workspace/memory/repo/index.md still contains starter placeholder route examples")
     return findings
 
 
 def _current_note_overlap_pressure(scans: list[NoteScan]) -> list[str]:
-    current_scans = [scan for scan in scans if scan.path.as_posix().startswith("memory/current/")]
+    current_scans = [scan for scan in scans if scan.path.as_posix().startswith(".agentic-workspace/memory/repo/current/")]
     durable_scans = [
         scan
         for scan in scans
-        if scan.path.as_posix().startswith("memory/")
-        and not scan.path.as_posix().startswith("memory/current/")
+        if scan.path.as_posix().startswith(".agentic-workspace/memory/repo/")
+        and not scan.path.as_posix().startswith(".agentic-workspace/memory/repo/current/")
         and scan.path.name not in {"README.md", "index.md"}
     ]
     findings: list[str] = []

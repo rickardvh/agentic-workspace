@@ -1,6 +1,6 @@
 {
   "schema_version": "workspace-reporting-schema/v1",
-  "canonical_doc": "docs/reporting-contract.md",
+  "canonical_doc": ".agentic-workspace/docs/reporting-contract.md",
   "command": "agentic-workspace report --target ./repo --format json",
   "shared_fields": [
     "kind",

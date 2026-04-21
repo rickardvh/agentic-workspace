@@ -22,9 +22,13 @@ def test_memory_clean_install() -> None:
         )
 
         # Verify required files exist
-        assert (target / "memory").exists(), "memory directory not found after install"
-        assert (target / "memory" / "index.md").exists(), "memory/index.md not found after install"
-        assert (target / "memory" / "manifest.toml").exists(), "memory/manifest.toml not found after install"
+        assert (target / ".agentic-workspace" / "memory" / "repo").exists(), "repo memory directory not found after install"
+        assert (target / ".agentic-workspace" / "memory" / "repo" / "index.md").exists(), (
+            ".agentic-workspace/memory/repo/index.md not found after install"
+        )
+        assert (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").exists(), (
+            ".agentic-workspace/memory/repo/manifest.toml not found after install"
+        )
         assert (target / "AGENTS.md").exists(), "AGENTS.md not found after install"
 
 
@@ -45,7 +49,7 @@ def test_memory_install_dry_run() -> None:
         )
 
         # Verify no files created
-        assert not (target / "memory").exists(), "memory directory created during dry-run"
+        assert not (target / ".agentic-workspace" / "memory" / "repo").exists(), "repo memory directory created during dry-run"
         assert not (target / "AGENTS.md").exists(), "AGENTS.md created during dry-run"
 
 
@@ -66,7 +70,7 @@ def test_memory_install_idempotent() -> None:
         )
 
         # Get first state
-        index_content_1 = (target / "memory" / "index.md").read_text()
+        index_content_1 = (target / ".agentic-workspace" / "memory" / "repo" / "index.md").read_text()
 
         # Second install (should fail or overwrite with --force)
         result = subprocess.run(
@@ -78,7 +82,7 @@ def test_memory_install_idempotent() -> None:
 
         # If it succeeded, verify state is unchanged
         if result.returncode == 0:
-            index_content_2 = (target / "memory" / "index.md").read_text()
+            index_content_2 = (target / ".agentic-workspace" / "memory" / "repo" / "index.md").read_text()
             assert index_content_1 == index_content_2, "File content changed on second install"
 
 
@@ -127,7 +131,7 @@ def test_memory_install_with_force() -> None:
         )
 
         # Modify a file
-        index_path = target / "memory" / "index.md"
+        index_path = target / ".agentic-workspace" / "memory" / "repo" / "index.md"
         original_content = index_path.read_text()
         index_path.write_text("# Modified\n")
 

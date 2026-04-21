@@ -6,45 +6,45 @@
 - Checked-in repo docs remain the canonical documentation layer.
 - Read this file after identifying the work from the repository's active planning/status surface or the user's request.
 - Load only the notes relevant to the task at hand.
-- If `memory/manifest.toml` exists, use it as the machine-readable routing and freshness companion to this file.
+- If `.agentic-workspace/memory/repo/manifest.toml` exists, use it as the machine-readable routing and freshness companion to this file.
 - Routing quality matters more than memory volume: good memory systems should help an agent read less, not more.
 
 ## Task routing
 
 ### If touching runtime or deployment
 
-- `memory/domains/README.md`
-- `memory/runbooks/README.md`
+- `.agentic-workspace/memory/repo/domains/README.md`
+- `.agentic-workspace/memory/repo/runbooks/README.md`
 
 ### If touching API contracts or tool behaviour
 
-- `memory/domains/README.md`
-- `memory/invariants/README.md`
+- `.agentic-workspace/memory/repo/domains/README.md`
+- `.agentic-workspace/memory/repo/invariants/README.md`
 
 ### If touching retrieval or search
 
-- `memory/domains/README.md`
-- `memory/invariants/README.md`
-- `memory/mistakes/recurring-failures.md`
+- `.agentic-workspace/memory/repo/domains/README.md`
+- `.agentic-workspace/memory/repo/invariants/README.md`
+- `.agentic-workspace/memory/repo/mistakes/recurring-failures.md`
 
 ### If touching tests or validation
 
-- `memory/domains/README.md`
-- `memory/mistakes/recurring-failures.md`
+- `.agentic-workspace/memory/repo/domains/README.md`
+- `.agentic-workspace/memory/repo/mistakes/recurring-failures.md`
 
 ### If touching data model or architecture
 
-- `memory/domains/README.md`
-- `memory/invariants/README.md`
-- `memory/decisions/README.md`
+- `.agentic-workspace/memory/repo/domains/README.md`
+- `.agentic-workspace/memory/repo/invariants/README.md`
+- `.agentic-workspace/memory/repo/decisions/README.md`
 
 ## Loading rule
 
 - Do not load all of `/memory` by default.
 - Start from the smallest useful working set.
-- Default to `memory/index.md` plus at most 2 additional notes unless the task clearly justifies more.
-- Load `memory/current/project-state.md` or `memory/current/task-context.md` only when they will reduce re-orientation cost for the current task.
-- Load `memory/current/routing-feedback.md` only when calibrating routing against a concrete missed-note or over-routing case.
+- Default to `.agentic-workspace/memory/repo/index.md` plus at most 2 additional notes unless the task clearly justifies more.
+- Load `.agentic-workspace/memory/repo/current/project-state.md` or `.agentic-workspace/memory/repo/current/task-context.md` only when they will reduce re-orientation cost for the current task.
+- Load `.agentic-workspace/memory/repo/current/routing-feedback.md` only when calibrating routing against a concrete missed-note or over-routing case.
 - Use touched files, modules, commands, or surfaces to decide which notes to load first.
 
 ## Memory admission rule
@@ -99,8 +99,8 @@ Memory files should normally stay under ~200 lines, with tighter expectations fo
 - runbooks: target <= 140 lines
 - recurring-failures: target <= 140 lines
 - decisions: target <= 160 lines
-- `memory/current/project-state.md`: target <= 100 lines
-- `memory/current/task-context.md`: target <= 80 lines
+- `.agentic-workspace/memory/repo/current/project-state.md`: target <= 100 lines
+- `.agentic-workspace/memory/repo/current/task-context.md`: target <= 80 lines
 
 Large memory files degrade selective loading and retrieval quality.
 
@@ -114,11 +114,11 @@ Large memory files degrade selective loading and retrieval quality.
 ## Canonicality rule
 
 - Prefer checked-in docs first when a note says the canonical truth lives elsewhere.
-- Use `memory/manifest.toml` metadata such as `canonicality`, `canonical_home`, and `task_relevance` to distinguish required task-correctness docs from optional memory context.
+- Use `.agentic-workspace/memory/repo/manifest.toml` metadata such as `canonicality`, `canonical_home`, and `task_relevance` to distinguish required task-correctness docs from optional memory context.
 
 ## Index compactness rule
 
-`memory/index.md` is a routing layer, not a knowledge file.
+`.agentic-workspace/memory/repo/index.md` is a routing layer, not a knowledge file.
 
 Keep it short.  
 Do not summarise note contents beyond what is needed for routing.

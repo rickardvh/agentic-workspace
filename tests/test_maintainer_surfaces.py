@@ -37,13 +37,13 @@ def _baseline_manifest() -> dict[str, object]:
                 "Use `agentic-workspace summary --format json` to recover planning state; use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
             ],
             "surface_roles": [
-                "`docs/routing-contract.md` is the authoritative routing home.",
+                "`.agentic-workspace/docs/routing-contract.md` is the authoritative routing home.",
                 "`llms.txt` is the agent entrypoint router.",
             ],
             "conditional_reads": [
                 "Read the roadmap in `state.toml` (authoritative) only when promoting work.",
                 "Read `agentic-workspace summary --format json` only when recovering planning state.",
-                "Read `docs/routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.",
+                "Read `.agentic-workspace/docs/routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.",
                 "Do not bulk-read all planning surfaces.",
             ],
         }
@@ -70,7 +70,7 @@ def _write_planning_surfaces(tmp_path: Path) -> None:
 
 1. Read `agents.md`.
 2. Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary --format json`.
-3. Read the active feature plan in `docs/execplans/` when the planning state surface points there.
+3. Read the active feature plan in `.agentic-workspace/planning/execplans/` when the planning state surface points there.
 4. Check the roadmap in `state.toml` (authoritative) only when promoting work.
 Read `agentic-workspace config --target . --format json` when the current posture or startup entrypoint matters.
 
@@ -84,7 +84,7 @@ When the question is active planning recovery rather than startup order, prefer 
 # Agent Entrypoint Router
 
 - If you are here to DEVELOP this repository: Read `AGENTS.md`
-- If you are here to INSTALL or ADOPT Agentic Workspace: Read `docs/routing-contract.md`
+- If you are here to INSTALL or ADOPT Agentic Workspace: Read `.agentic-workspace/docs/routing-contract.md`
 """,
     )
     _write(
@@ -114,12 +114,12 @@ Use the following order for a fresh entry:
 
 - ID: plan-alpha
   Status: in-progress
-  Surface: docs/execplans/plan-alpha.md
+  Surface: .agentic-workspace/planning/execplans/plan-alpha.md
   Why now: promote when maintained report signal appears for this bounded next step.
 """,
     )
     _write(
-        tmp_path / "docs/planning-process.md",
+        tmp_path / ".agentic-workspace/planning/process.md",
         """
 # Roadmap
 
@@ -203,7 +203,7 @@ For maintainers:
 - `docs/maintainer-commands.md` - canonical command index for routine maintenance.
 - `docs/collaboration-safety.md` - concurrent-edit and git hygiene rules.
 - `docs/installed-contract-design-checklist.md` - review bar for new or changed shipped surfaces.
-- `memory/runbooks/dogfooding-feedback-routing.md` - classify internal friction before routing it onward.
+- `.agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md` - classify internal friction before routing it onward.
 - `docs/workflow-contract-changes.md` - compact record of recent workflow-surface changes.
 
 for agent maintainers, the primary operating path is `agents.md`, active execplan, and `docs/contributor-playbook.md`.

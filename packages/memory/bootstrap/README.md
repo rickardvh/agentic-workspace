@@ -12,20 +12,20 @@ Treat the CLI as the installer and maintenance entrypoint for this contract, not
 It is intended to be copied into an existing repository to provide:
 
 - `AGENTS.md` as the slim local bootstrap entrypoint
-- `memory/` as durable checked-in technical memory
-- `memory/manifest.toml` as optional machine-readable memory metadata
+- `.agentic-workspace/memory/repo/` as durable checked-in technical memory
+- `.agentic-workspace/memory/repo/manifest.toml` as optional machine-readable memory metadata
 - `.agentic-workspace/memory/bootstrap/` as a temporary bootstrap workspace for install and adopt completion
 - `.agentic-workspace/memory/skills/` as bootstrap-managed shared memory skills
 - `.agentic-workspace/memory/WORKFLOW.md` as the shared reusable memory workflow rules
 - `.agentic-workspace/memory/SKILLS.md` as the shared skill-boundary guidance
 - `.agentic-workspace/memory/VERSION.md` as the installed bootstrap version marker
-- `memory/current/project-state.md` as a weak-authority current overview
-- `memory/current/task-context.md` as optional weak-authority continuation compression
-- `memory/templates/` as starter note templates for the first real repo-specific notes
+- `.agentic-workspace/memory/repo/current/project-state.md` as a weak-authority current overview
+- `.agentic-workspace/memory/repo/current/task-context.md` as optional weak-authority continuation compression
+- `.agentic-workspace/memory/repo/templates/` as starter note templates for the first real repo-specific notes
 - an advisory memory freshness audit
 - optional workflow fragments for common contribution flows
 
-The packaged files are the durable memory layer, not the repository's full canonical documentation layer. Stable human-facing policies and procedures should live in normal checked-in docs outside `memory/`, with memory kept as assistive residue, routing help, or short stubs when needed.
+The packaged files are the durable memory layer, not the repository's full canonical documentation layer. Stable human-facing policies and procedures should live in normal checked-in docs outside `.agentic-workspace/memory/repo/`, with memory kept as assistive residue, routing help, or short stubs when needed.
 
 Repeatable workflow-like actions should live in optional skills rather than expanding the mandatory payload indefinitely.
 
@@ -57,7 +57,7 @@ When maintaining this repository, treat `bootstrap/` as the source of truth for 
 Copy as-is:
 
 - `AGENTS.md`
-- `memory/`
+- `.agentic-workspace/memory/repo/`
 - `scripts/check/check_memory_freshness.py`
 
 Merge or append:
@@ -71,7 +71,7 @@ Do not install maintainer-only repo docs or implementation notes by default.
 ## Recommended installation order
 
 1. Copy `AGENTS.md`.
-2. Copy `memory/`, including `memory/current/project-state.md` and `memory/current/task-context.md`.
+2. Copy `.agentic-workspace/memory/repo/`, including `.agentic-workspace/memory/repo/current/project-state.md` and `.agentic-workspace/memory/repo/current/task-context.md`.
 3. Copy `.agentic-workspace/memory/`.
 4. Optionally merge the workflow fragments.
 5. Run `scripts/check/check_memory_freshness.py`.
@@ -93,40 +93,40 @@ Review and replace repo-specific placeholders such as:
 The installer can also fill these placeholders when you pass the matching explicit CLI flags.
 
 Delete unused routing examples once the target repository has concrete notes.
-When replacing those starter examples or adding the first repo-specific note of a class, start from `memory/templates/memory-note-template.md`, `memory/templates/invariant-template.md`, or `memory/templates/runbook-template.md` instead of copying old prose by hand.
+When replacing those starter examples or adding the first repo-specific note of a class, start from `.agentic-workspace/memory/repo/templates/memory-note-template.md`, `.agentic-workspace/memory/repo/templates/invariant-template.md`, or `.agentic-workspace/memory/repo/templates/runbook-template.md` instead of copying old prose by hand.
 
 `AGENTS.md` should stay short and point to `.agentic-workspace/memory/WORKFLOW.md` for the shared operating model.
 Bootstrap should modify `AGENTS.md` only through the managed workflow pointer block. Repo-specific `AGENTS.md` prose outside that block is repo-owned and should not be treated as shared upgradeable guidance.
 
-This bootstrap is planning-system agnostic. The installed `memory/` tree owns durable repo knowledge, `memory/current/project-state.md` is the overview note, `memory/current/task-context.md` is optional checked-in continuation compression, repo-specific memory skills can live under `memory/skills/`, and `.agentic-workspace/memory/` is the bootstrap-managed surface for shared workflow rules, shipped skills, and temporary bootstrap workspace files. Keep the managed package home concentrated there instead of spreading package-managed machinery through wider repo roots.
+This bootstrap is planning-system agnostic. The installed `.agentic-workspace/memory/repo/` tree owns durable repo knowledge, `.agentic-workspace/memory/repo/current/project-state.md` is the overview note, `.agentic-workspace/memory/repo/current/task-context.md` is optional checked-in continuation compression, repo-specific memory skills can live under `.agentic-workspace/memory/repo/skills/`, and `.agentic-workspace/memory/` is the bootstrap-managed surface for shared workflow rules, shipped skills, and temporary bootstrap workspace files. Keep the managed package home concentrated there instead of spreading package-managed machinery through wider repo roots.
 When planning is installed too, the combined install should be cheaper than either one alone: planning should borrow durable context from memory, and completed planning work should promote durable residue back into memory or canonical docs instead of re-explaining it forever.
 
-Bundled product skills should stay limited to bootstrap lifecycle operations. Repo-local memory procedures should live in repo-owned `memory/skills/`. General non-memory skills should not.
+Bundled product skills should stay limited to bootstrap lifecycle operations. Repo-local memory procedures should live in repo-owned `.agentic-workspace/memory/repo/skills/`. General non-memory skills should not.
 
 Ownership split:
 
 - bootstrap-managed and upgrade-replaceable: the workflow pointer block in `AGENTS.md`, `.agentic-workspace/memory/`, and other shared replaceable payload files
-- repo-owned and expected to diverge: `AGENTS.md` content outside the managed pointer block, repo-added sibling skills under `memory/skills/`, and ordinary notes outside the product-managed shared directories
+- repo-owned and expected to diverge: `AGENTS.md` content outside the managed pointer block, repo-added sibling skills under `.agentic-workspace/memory/repo/skills/`, and ordinary notes outside the product-managed shared directories
 
-`memory/current/project-state.md` should stay aggressively summary-shaped and weak-authority: current focus, recent meaningful progress, blockers, and a few high-value notes are usually enough. If it starts carrying explicit planning-state residue such as an active execplan pointer, move that ownership back to the planning surface and leave only re-orientation context here. If a fact becomes durable, move it into a primary home and leave only a short pointer or remove it.
+`.agentic-workspace/memory/repo/current/project-state.md` should stay aggressively summary-shaped and weak-authority: current focus, recent meaningful progress, blockers, and a few high-value notes are usually enough. If it starts carrying explicit planning-state residue such as an active execplan pointer, move that ownership back to the planning surface and leave only re-orientation context here. If a fact becomes durable, move it into a primary home and leave only a short pointer or remove it.
 
-Small routing layers work better than summary-heavy indexes. A good `memory/index.md` points to a few likely-relevant notes rather than trying to restate them.
-Treat `.agentic-workspace/memory/skills/memory-router/` as the normal entrypoint for day-to-day note selection, with `memory/index.md` and `memory/manifest.toml` providing the visible routing contract behind it.
-When `memory/manifest.toml` marks a note as `canonical_elsewhere`, routing should prefer the canonical checked-in doc and keep the memory note as optional fallback context.
+Small routing layers work better than summary-heavy indexes. A good `.agentic-workspace/memory/repo/index.md` points to a few likely-relevant notes rather than trying to restate them.
+Treat `.agentic-workspace/memory/skills/memory-router/` as the normal entrypoint for day-to-day note selection, with `.agentic-workspace/memory/repo/index.md` and `.agentic-workspace/memory/repo/manifest.toml` providing the visible routing contract behind it.
+When `.agentic-workspace/memory/repo/manifest.toml` marks a note as `canonical_elsewhere`, routing should prefer the canonical checked-in doc and keep the memory note as optional fallback context.
 Planning/status surfaces identify touched paths or surfaces; memory routing returns the smallest relevant durable note set.
 If the same note keeps being routed for safe work on one subsystem, that is often a cue to suggest clearer docs, stronger validation, or refactor review.
 In combined installs, memory should reduce what planning has to restate, not become a second plan explanation layer.
-Use `memory/manifest.toml` to make that improvement pressure legible: optional fields such as `memory_role`, `preferred_remediation`, `improvement_note`, `elimination_target`, and `retention_justification` explain whether a note is durable truth or a symptom pointing at upstream docs, tests, skills, scripts, validation, or refactor work.
+Use `.agentic-workspace/memory/repo/manifest.toml` to make that improvement pressure legible: optional fields such as `memory_role`, `preferred_remediation`, `improvement_note`, `elimination_target`, and `retention_justification` explain whether a note is durable truth or a symptom pointing at upstream docs, tests, skills, scripts, validation, or refactor work.
 
 Common task bundles:
 
-- current-state refresh: `memory/current/project-state.md` plus `memory/current/task-context.md` only when active continuation context is genuinely needed
-- live decision review: the active planning slice plus `memory/decisions/README.md`
-- runtime or deployment change: `memory/domains/<runtime-or-deployment-note>.md` plus `memory/runbooks/<relevant-operator-runbook>.md`
-- API or interface change: `memory/domains/<api-or-interface-note>.md` plus `memory/invariants/<response-or-contract-note>.md`
-- retrieval or search change: `memory/domains/<retrieval-or-search-note>.md` plus `memory/invariants/<retrieval-contract-note>.md` plus `memory/mistakes/recurring-failures.md`
-- tests or validation work: `memory/domains/<testing-or-validation-note>.md` plus `memory/mistakes/recurring-failures.md`
-- architecture or data-model work: `memory/domains/<data-model-or-architecture-note>.md` plus `memory/invariants/<relevant-invariant-note>.md` plus `memory/decisions/README.md`
+- current-state refresh: `.agentic-workspace/memory/repo/current/project-state.md` plus `.agentic-workspace/memory/repo/current/task-context.md` only when active continuation context is genuinely needed
+- live decision review: the active planning slice plus `.agentic-workspace/memory/repo/decisions/README.md`
+- runtime or deployment change: `.agentic-workspace/memory/repo/domains/<runtime-or-deployment-note>.md` plus `.agentic-workspace/memory/repo/runbooks/<relevant-operator-runbook>.md`
+- API or interface change: `.agentic-workspace/memory/repo/domains/<api-or-interface-note>.md` plus `.agentic-workspace/memory/repo/invariants/<response-or-contract-note>.md`
+- retrieval or search change: `.agentic-workspace/memory/repo/domains/<retrieval-or-search-note>.md` plus `.agentic-workspace/memory/repo/invariants/<retrieval-contract-note>.md` plus `.agentic-workspace/memory/repo/mistakes/recurring-failures.md`
+- tests or validation work: `.agentic-workspace/memory/repo/domains/<testing-or-validation-note>.md` plus `.agentic-workspace/memory/repo/mistakes/recurring-failures.md`
+- architecture or data-model work: `.agentic-workspace/memory/repo/domains/<data-model-or-architecture-note>.md` plus `.agentic-workspace/memory/repo/invariants/<relevant-invariant-note>.md` plus `.agentic-workspace/memory/repo/decisions/README.md`
 
 Optional repo pattern only: keep short-horizon task execution in the repo's chosen planning/status surface, keep long-horizon roadmap or epic planning separate, and use checked-in current-context notes only for concise re-orientation. Current notes should stay easy to compress, replace, or delete rather than becoming a second durable knowledge layer.
 
@@ -140,7 +140,7 @@ Interoperability pattern catalogue:
 ## Current Decisions
 
 - keep live architectural or cross-cutting decisions in the repo's active planning/status surface while they still steer execution
-- move a decision into `memory/decisions/` once it no longer changes implementation choices and is only worth keeping as durable rationale
+- move a decision into `.agentic-workspace/memory/repo/decisions/` once it no longer changes implementation choices and is only worth keeping as durable rationale
 - preserve decisions at the level of consequence or still-relevant rejected-path boundaries, not meeting history
 - do not keep completed transitions or operational residue in the current decision note
 
@@ -207,7 +207,7 @@ Use `agentic-memory-bootstrap list-files` to preview the packaged files that the
 Use `agentic-memory-bootstrap promotion-report --target <repo>` to identify notes that should likely be promoted into canonical docs or reviewed as elimination candidates.
 Use `agentic-memory-bootstrap promotion-report --mode remediation --target <repo>` to focus on medium/high-confidence remediation targets for shrinking or removing memory.
 Use `agentic-memory-bootstrap doctor --strict-doc-ownership --target <repo>` to force doc-ownership and shadow-doc audits before adopting stricter repo policy.
-Use `--policy-profile strict-doc-ownership` with `install`, `adopt`, or `upgrade` to set `forbid_core_docs_depend_on_memory = true` in `memory/manifest.toml`.
+Use `--policy-profile strict-doc-ownership` with `install`, `adopt`, or `upgrade` to set `forbid_core_docs_depend_on_memory = true` in `.agentic-workspace/memory/repo/manifest.toml`.
 
 ## Automation notes
 

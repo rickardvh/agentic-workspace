@@ -10,22 +10,22 @@ Read `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.
 
 ## Before doing work
 
-1. Read `memory/index.md`.
+1. Read `.agentic-workspace/memory/repo/index.md`.
 2. Consult the repository's active planning/status surface or the user's request for what to work on next.
-3. Load only the memory files routed by `memory/index.md` that are relevant to the task.
+3. Load only the memory files routed by `.agentic-workspace/memory/repo/index.md` that are relevant to the task.
 4. Read `.agentic-workspace/memory/WORKFLOW.md` only when the shared policy boundary is unclear.
 5. Read any repository docs referenced by those files.
 
 Use built-in agent planning and memory for task execution.
 Do not rely on transient chat context when the same knowledge should exist in checked-in files.
 
-`memory/index.md` is the routing layer for task-relevant durable knowledge.
+`.agentic-workspace/memory/repo/index.md` is the routing layer for task-relevant durable knowledge.
 `.agentic-workspace/memory/WORKFLOW.md` is a compact policy shim for the shared operating model.
-`.agentic-workspace/memory/SKILLS.md` defines how repo-specific `memory/skills/` and bundled bootstrap-managed skills should coexist.
+`.agentic-workspace/memory/SKILLS.md` defines how repo-specific `.agentic-workspace/memory/repo/skills/` and bundled bootstrap-managed skills should coexist.
 
 Keep durable repo knowledge in checked-in files. Prefer skills for repeatable procedures that operate on that knowledge.
-`memory/skills/` is only for repo-specific skills whose primary purpose is operating on checked-in memory or maintaining the repo's memory system; general non-memory skills do not belong there.
-Treat `.agentic-workspace/memory/` as the bootstrap-managed surface that may be replaced on upgrade. Put repo-specific durable knowledge in other `/memory` notes and repo-specific memory procedures in sibling skills under `memory/skills/`.
+`.agentic-workspace/memory/repo/skills/` is only for repo-specific skills whose primary purpose is operating on checked-in memory or maintaining the repo's memory system; general non-memory skills do not belong there.
+Treat `.agentic-workspace/memory/` as the bootstrap-managed surface that may be replaced on upgrade. Put repo-specific durable knowledge in other `/memory` notes and repo-specific memory procedures in sibling skills under `.agentic-workspace/memory/repo/skills/`.
 
 ## Repo scope
 

@@ -7,7 +7,7 @@ description: Turn an externally tracked task into checked-in planning without ma
 
 Planning Intake Upstream Task converts an upstream issue, ticket, or task into the repo's checked-in planning surfaces.
 
-It exists to keep external trackers as intake sources while preserving execution authority inside `.agentic-workspace/planning/state.toml` and `docs/execplans/`.
+It exists to keep external trackers as intake sources while preserving execution authority inside `.agentic-workspace/planning/state.toml` and `.agentic-workspace/planning/execplans/`.
 
 ## Use When
 
@@ -23,7 +23,7 @@ It exists to keep external trackers as intake sources while preserving execution
 
 ## Workflow
 
-1. Read `AGENTS.md`, `.agentic-workspace/planning/state.toml`, and `docs/upstream-task-intake.md`.
+1. Read `AGENTS.md`, `.agentic-workspace/planning/state.toml`, and `.agentic-workspace/planning/upstream-task-intake.md`.
 2. Read the upstream task or issue that is being ingested.
 3. Normalize it into a compact summary:
    - source system
@@ -33,10 +33,10 @@ It exists to keep external trackers as intake sources while preserving execution
    - product-first reasoning when relevant
 4. Decide the smallest correct routing target:
    - dismiss
-   - `docs/reviews/`
+   - `.agentic-workspace/planning/reviews/`
    - `roadmap` in `.agentic-workspace/planning/state.toml`
    - `todo.active_items` in `.agentic-workspace/planning/state.toml`
-   - `todo.active_items` plus `docs/execplans/`
+   - `todo.active_items` plus `.agentic-workspace/planning/execplans/`
 5. Preserve the upstream source reference in the chosen planning surface.
 6. Keep execution detail in checked-in planning, not in the upstream tracker.
 

@@ -165,7 +165,7 @@ def _rename_like_execplan(*, with_reference_sweep: bool = False) -> str:
     return plan
 
 
-def _baseline_todo(surface: str = "docs/execplans/plan-alpha.md") -> str:
+def _baseline_todo(surface: str = ".agentic-workspace/planning/execplans/plan-alpha.md") -> str:
     return f"""
 # TODO
 
@@ -201,25 +201,25 @@ def _baseline_manifest() -> dict[str, object]:
                 "Use `agentic-workspace defaults --section startup --format json` when startup or first-contact routing is the question.",
             ],
             "surface_roles": [
-                "`docs/agent-installation.md` is only the external install/adopt handoff surface.",
+                "`.agentic-workspace/docs/agent-installation.md` is only the external install/adopt handoff surface.",
                 "`llms.txt` is the agent entrypoint router.",
             ],
             "conditional_reads": [
                 "Read `agentic-workspace summary --format json` first when planning recovery or ownership boundary review is the question.",
                 "Read `TODO.md` only when the compact summary shows active work that still needs raw queue detail.",
                 "Read `ROADMAP.md` only when promoting work.",
-                "Treat `docs/agent-installation.md` as the external install/adopt handoff only; after bootstrap, return to the configured startup entrypoint for normal repo work.",
+                "Treat `.agentic-workspace/docs/agent-installation.md` as the external install/adopt handoff only; after bootstrap, return to the configured startup entrypoint for normal repo work.",
                 "Do not bulk-read all planning surfaces.",
             ],
             "task_source_of_truth": ".agentic-workspace/planning/state.toml",
-            "active_plan_dir": "docs/execplans/",
-            "archived_plan_dir": "docs/execplans/archive/",
+            "active_plan_dir": ".agentic-workspace/planning/execplans/",
+            "archived_plan_dir": ".agentic-workspace/planning/execplans/archive/",
             "roadmap_source_of_truth": "ROADMAP.md",
         },
         "routing": {
             "planning-surfaces": {
                 "when": "Changing TODO, ROADMAP, or execplans.",
-                "touches": [".agentic-workspace/planning/state.toml", "ROADMAP.md", "docs/execplans/"],
+                "touches": [".agentic-workspace/planning/state.toml", "ROADMAP.md", ".agentic-workspace/planning/execplans/"],
                 "commands": ["uv run pytest packages/planning/tests/test_check_planning_surfaces.py"],
             }
         },
@@ -237,7 +237,7 @@ def _baseline_agents() -> str:
 
 1. Read `AGENTS.md`.
 2. Read `TODO.md`.
-3. Read the active feature plan in `docs/execplans/` when the TODO surface points there.
+3. Read the active feature plan in `.agentic-workspace/planning/execplans/` when the TODO surface points there.
 4. Read `ROADMAP.md` only when promoting work.
 
 Do not bulk-read all planning surfaces.
@@ -250,7 +250,7 @@ def _baseline_llms() -> str:
 # Agent Entrypoint Router
 
 - If you are here to DEVELOP this repository: Read `AGENTS.md`
-- If you are here to INSTALL Agentic Workspace: Read `docs/agent-installation.md`
+- If you are here to INSTALL Agentic Workspace: Read `.agentic-workspace/docs/agent-installation.md`
 """
 
 
@@ -314,7 +314,7 @@ The minimum questions are:
 - What residue remains if this slice stops? -> `follow_through_contract`
 - When do I fall back to prose? -> only when the compact summary leaves the answer ambiguous
 
-Use [`docs/execplans/README.md`](execplans/README.md) for the meaning boundary behind those answers.
+Use [`.agentic-workspace/planning/execplans/README.md`](execplans/README.md) for the meaning boundary behind those answers.
 
 The compact rule is:
 
@@ -401,7 +401,7 @@ def _write_hierarchy_docs(tmp_path: Path) -> None:
     _write(tmp_path / "docs" / "default-path-contract.md", _baseline_default_path_contract())
     _write(tmp_path / "docs" / "intent-contract.md", _baseline_intent_contract())
     _write(tmp_path / "docs" / "resumable-execution-contract.md", _baseline_resumable_contract())
-    _write(tmp_path / "docs" / "execplans" / "README.md", _baseline_execplans_readme())
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "README.md", _baseline_execplans_readme())
 
 
 def _has_warning_path_suffix(warnings, suffix: str) -> bool:
@@ -413,7 +413,7 @@ def test_valid_compact_planning_shape_passes(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_valid")
     _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _minimal_execplan())
     assert mod.gather_planning_warnings(repo_root=tmp_path) == []
 
 
@@ -435,7 +435,7 @@ def test_todo_shape_drift_for_checklist_and_missing_execplan(tmp_path: Path) -> 
 """,
     )
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _minimal_execplan())
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "todo_shape_drift" in classes
     assert "todo_missing_execplan_linkage" in classes
@@ -452,7 +452,7 @@ def test_todo_shape_drift_for_finished_work_section(tmp_path: Path) -> None:
 
 - ID: plan-alpha
     Status: in-progress
-    Surface: docs/execplans/plan-alpha.md
+    Surface: .agentic-workspace/planning/execplans/plan-alpha.md
     Why now: promote when maintained report signal appears for this bounded next step.
 
 ## Added In This Pass
@@ -461,7 +461,7 @@ def test_todo_shape_drift_for_finished_work_section(tmp_path: Path) -> None:
 """,
     )
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _minimal_execplan())
 
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "todo_shape_drift" in classes
@@ -503,8 +503,8 @@ The minimum questions are:
     )
     _write(tmp_path / "docs" / "intent-contract.md", _baseline_intent_contract())
     _write(tmp_path / "docs" / "resumable-execution-contract.md", _baseline_resumable_contract())
-    _write(tmp_path / "docs" / "execplans" / "README.md", _baseline_execplans_readme())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "README.md", _baseline_execplans_readme())
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _minimal_execplan())
 
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     assert any(warning.warning_class == "docs_surface_role_drift" for warning in warnings)
@@ -517,8 +517,8 @@ def test_default_path_contract_with_meaning_boundary_passes(tmp_path: Path) -> N
     _write(tmp_path / "docs" / "default-path-contract.md", _baseline_default_path_contract())
     _write(tmp_path / "docs" / "intent-contract.md", _baseline_intent_contract())
     _write(tmp_path / "docs" / "resumable-execution-contract.md", _baseline_resumable_contract())
-    _write(tmp_path / "docs" / "execplans" / "README.md", _baseline_execplans_readme())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "README.md", _baseline_execplans_readme())
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _minimal_execplan())
 
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     assert not [warning for warning in warnings if warning.warning_class == "docs_surface_role_drift"]
@@ -529,7 +529,7 @@ def test_execplan_readiness_missing_warning(tmp_path: Path) -> None:
     plan = _minimal_execplan().replace("- Ready: ready\n", "")
     _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", plan)
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "execplan_readiness_drift" in classes
 
@@ -650,7 +650,7 @@ Long narrative status update line eleven.
 """
     _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", under_specified_plan)
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", under_specified_plan)
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "execplan_under_specified" in classes
     assert "execplan_notebook_drift" in classes
@@ -671,7 +671,7 @@ def test_execplan_intent_continuity_requires_continuation_surface_when_parent_in
     )
     _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", plan)
 
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "execplan_under_specified" in classes
@@ -692,7 +692,7 @@ def test_execplan_requires_structured_required_follow_on_when_parent_intent_is_u
     )
     _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", plan)
 
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "execplan_under_specified" in classes
@@ -710,7 +710,7 @@ def test_execplan_requires_delegated_judgment_when_active(tmp_path: Path) -> Non
     )
     _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", plan)
 
     messages = [warning.message for warning in mod.gather_planning_warnings(repo_root=tmp_path)]
     assert any("Requested outcome" in message for message in messages)
@@ -723,7 +723,7 @@ def test_completed_execplan_left_active_warns_archive_drift(tmp_path: Path) -> N
     mod = _load_module(_checker_script_path(), "planning_completed_active")
     _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan(status="completed"))
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _minimal_execplan(status="completed"))
 
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "archive_accumulation_drift" in classes
@@ -734,7 +734,7 @@ def test_completed_execplan_without_execution_summary_warns_under_specified(tmp_
     _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write(
-        tmp_path / "docs" / "execplans" / "plan-alpha.md",
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md",
         _minimal_execplan(status="completed").replace(
             "- Outcome delivered: Added one bounded planning improvement.",
             "- Outcome delivered: not completed yet",
@@ -750,7 +750,7 @@ def test_active_execplan_set_pressure_warns(tmp_path: Path) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     for name in ("plan-alpha", "plan-beta", "plan-gamma", "plan-delta"):
-        _write(tmp_path / "docs" / "execplans" / f"{name}.md", _minimal_execplan())
+        _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / f"{name}.md", _minimal_execplan())
 
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "execplan_active_set_pressure" in classes
@@ -767,7 +767,7 @@ def test_promotion_linkage_accepts_clear_causal_why_now(tmp_path: Path) -> None:
 
 - ID: promotion-linkage-tuning
   Status: in-progress
-  Surface: docs/execplans/promotion-linkage-tuning-2026-04-05.md
+  Surface: .agentic-workspace/planning/execplans/promotion-linkage-tuning-2026-04-05.md
   Why now: repeated self-hosted dogfooding exposed a false-positive case that should be tuned.
 """,
     )
@@ -785,7 +785,7 @@ def test_promotion_linkage_accepts_clear_causal_why_now(tmp_path: Path) -> None:
 - Reopen when a queue or report signals new work.
 """,
     )
-    _write(tmp_path / "docs" / "execplans" / "promotion-linkage-tuning-2026-04-05.md", _minimal_execplan())
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "promotion-linkage-tuning-2026-04-05.md", _minimal_execplan())
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "promotion_linkage_drift" not in classes
 
@@ -801,7 +801,7 @@ def test_promotion_linkage_still_warns_for_vague_activation(tmp_path: Path) -> N
 
 - ID: vague-thread
   Status: in-progress
-  Surface: docs/execplans/vague-thread-2026-04-05.md
+  Surface: .agentic-workspace/planning/execplans/vague-thread-2026-04-05.md
   Why now: work on this next.
 """,
     )
@@ -819,7 +819,7 @@ def test_promotion_linkage_still_warns_for_vague_activation(tmp_path: Path) -> N
 - Reopen when a queue or report signals new work.
 """,
     )
-    _write(tmp_path / "docs" / "execplans" / "vague-thread-2026-04-05.md", _minimal_execplan())
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "vague-thread-2026-04-05.md", _minimal_execplan())
     classes = {warning.warning_class for warning in mod.gather_planning_warnings(repo_root=tmp_path)}
     assert "promotion_linkage_drift" in classes
 
@@ -839,7 +839,7 @@ def test_contract_shaping_execplan_without_decision_sections_warns_under_specifi
     )
     _write(tmp_path / "TODO.md", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", plan)
 
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     matching = [warning for warning in warnings if warning.warning_class == "execplan_under_specified"]
@@ -868,7 +868,7 @@ def test_contract_shaping_execplan_with_decision_sections_passes(tmp_path: Path)
     )
     _write(tmp_path / "TODO.md", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", plan)
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", plan)
 
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     assert not [warning for warning in warnings if warning.warning_class == "execplan_under_specified"]
@@ -878,7 +878,7 @@ def test_completed_rename_like_execplan_without_reference_sweep_warns(tmp_path: 
     mod = _load_module(_checker_script_path(), "planning_closure_drift")
     _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _rename_like_execplan())
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _rename_like_execplan())
 
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     assert any(warning.warning_class == "execplan_closure_drift" for warning in warnings)
@@ -888,7 +888,7 @@ def test_completed_rename_like_execplan_with_reference_sweep_passes(tmp_path: Pa
     mod = _load_module(_checker_script_path(), "planning_closure_clean")
     _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _rename_like_execplan(with_reference_sweep=True))
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _rename_like_execplan(with_reference_sweep=True))
 
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     assert not [warning for warning in warnings if warning.warning_class == "execplan_closure_drift"]
@@ -898,7 +898,7 @@ def test_main_json_format_outputs_payload(tmp_path: Path, capsys) -> None:
     mod = _load_module(_checker_script_path(), "planning_json")
     _write(tmp_path / "TODO.md", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _minimal_execplan())
 
     original_root = mod.REPO_ROOT
     try:
@@ -952,18 +952,18 @@ def test_active_execplan_space_warns_for_review_artifact(tmp_path: Path) -> None
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
     _write_startup_surfaces(tmp_path)
     _write_hierarchy_docs(tmp_path)
-    _write(tmp_path / "docs" / "execplans" / "review-alpha.md", "# Review\n\nCompleted audit notes.\n")
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "review-alpha.md", "# Review\n\nCompleted audit notes.\n")
 
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     docs_warnings = [warning for warning in warnings if warning.warning_class == "docs_surface_role_drift"]
-    assert _has_warning_path_suffix(docs_warnings, "docs/execplans/review-alpha.md")
+    assert _has_warning_path_suffix(docs_warnings, ".agentic-workspace/planning/execplans/review-alpha.md")
 
 
 def test_docs_surface_role_drift_warns_when_summary_first_hierarchy_is_missing(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_docs_surface_roles")
     _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
     _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
-    _write(tmp_path / "docs" / "execplans" / "plan-alpha.md", _minimal_execplan())
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _minimal_execplan())
     _write_startup_surfaces(tmp_path)
     _write_hierarchy_docs(tmp_path)
     _write(

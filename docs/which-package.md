@@ -64,8 +64,8 @@ Use them when you explicitly need module-level control, not for normal adoption.
 
 | Combination | Supported | Primary writable surfaces |
 | --- | --- | --- |
-| Memory only | Yes | `memory/` plus optional weak-authority `memory/current/` |
-| Planning only | Yes | `.agentic-workspace/planning/state.toml`, `docs/execplans/` |
+| Memory only | Yes | `.agentic-workspace/memory/repo/` plus optional weak-authority `.agentic-workspace/memory/repo/current/` |
+| Planning only | Yes | `.agentic-workspace/planning/state.toml`, `.agentic-workspace/planning/execplans/` |
 | Memory + Planning | Yes | Planning for active-now state, memory for durable knowledge |
 | Workspace lifecycle entrypoint | Yes | Same module-owned surfaces, with thin root orchestration |
 

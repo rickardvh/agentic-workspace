@@ -56,8 +56,8 @@ def render_quickstart(manifest: dict) -> str:
             lines.append(
                 f"- Active queue and lightweight direct tasks: `{bootstrap.get('task_source_of_truth', '.agentic-workspace/planning/state.toml')}`"
             )
-            lines.append(f"- Active feature plans: `{bootstrap.get('active_plan_dir', 'docs/execplans/')}`")
-            lines.append(f"- Archived plans: `{bootstrap.get('archived_plan_dir', 'docs/execplans/archive/')}`")
+            lines.append(f"- Active feature plans: `{bootstrap.get('active_plan_dir', '.agentic-workspace/planning/execplans/')}`")
+            lines.append(f"- Archived plans: `{bootstrap.get('archived_plan_dir', '.agentic-workspace/planning/execplans/archive/')}`")
             lines.append(f"- Long-horizon planning: `{bootstrap.get('roadmap_source_of_truth', '.agentic-workspace/planning/state.toml')}`")
             lines.append("- Machine-readable routing: `.agentic-workspace/planning/agent-manifest.json`")
             lines.append("")

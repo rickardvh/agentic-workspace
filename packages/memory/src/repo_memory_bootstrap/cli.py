@@ -282,7 +282,9 @@ def _add_project_metadata_arguments(command_parser: argparse.ArgumentParser) -> 
         "--policy-profile",
         choices=("default", "strict-doc-ownership"),
         default="default",
-        help=("Installer policy preset. strict-doc-ownership enables forbid_core_docs_depend_on_memory in memory/manifest.toml."),
+        help=(
+            "Installer policy preset. strict-doc-ownership enables forbid_core_docs_depend_on_memory in .agentic-workspace/memory/repo/manifest.toml."
+        ),
     )
 
 
@@ -662,9 +664,9 @@ def _print_install_summary(result) -> None:
         "<repo>` when that work is complete."
     )
     print("- Treat `.agentic-workspace/memory/` as the bootstrap-managed surface, and keep repo-specific memory procedures outside it.")
-    print("- Keep memory/current/project-state.md as a short overview note, not a task list.")
+    print("- Keep .agentic-workspace/memory/repo/current/project-state.md as a short overview note, not a task list.")
     print(
-        "- Populate memory/current/task-context.md only when active work would benefit from "
+        "- Populate .agentic-workspace/memory/repo/current/task-context.md only when active work would benefit from "
         "short checked-in continuation compression, not a shadow planner."
     )
     print("- Use `.agentic-workspace/memory/skills/memory-refresh/` after code or docs changes that may have shifted durable memory.")
@@ -734,8 +736,8 @@ def _print_report(report: dict[str, object]) -> None:
 
 def _created_current_memory_notes(result) -> bool:
     current_paths = {
-        "memory/current/project-state.md",
-        "memory/current/task-context.md",
+        ".agentic-workspace/memory/repo/current/project-state.md",
+        ".agentic-workspace/memory/repo/current/task-context.md",
     }
     for action in result.actions:
         if action.kind not in {"created", "copied", "would create", "would copy"}:
@@ -765,7 +767,7 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
             f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out "
             f"that `{target_root}/.agentic-workspace/memory/` is the bootstrap-managed surface while repo-specific "
-            "memory notes stay under `memory/`."
+            "memory notes stay under `.agentic-workspace/memory/repo/`."
         )
     if command == "adopt":
         return (
@@ -775,15 +777,15 @@ def _build_agent_prompt(command: str, *, target: str | None) -> str:
             "If new current-memory files were created, use `populate` from the same path before cleanup. "
             f"When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out "
             f"that `{target_root}/.agentic-workspace/memory/` is the bootstrap-managed surface while repo-specific "
-            "memory notes stay under `memory/`."
+            "memory notes stay under `.agentic-workspace/memory/repo/`."
         )
     if command == "populate":
         return (
             f"Run `{runner} current show{target_args}`. "
             f"Next, use the `populate` skill at `{bootstrap_skills}` to fill the current-memory notes "
-            "conservatively from existing repo docs and visible repo state. Keep `memory/current/project-state.md` as "
-            "an overview note only, and treat `memory/current/task-context.md` as optional continuation compression. "
-            "Populate `memory/current/task-context.md` only when there is clearly active work worth "
+            "conservatively from existing repo docs and visible repo state. Keep `.agentic-workspace/memory/repo/current/project-state.md` as "
+            "an overview note only, and treat `.agentic-workspace/memory/repo/current/task-context.md` as optional continuation compression. "
+            "Populate `.agentic-workspace/memory/repo/current/task-context.md` only when there is clearly active work worth "
             "preserving across sessions as brief continuation compression."
         )
     if command == "upgrade":

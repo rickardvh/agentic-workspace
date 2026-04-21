@@ -48,8 +48,10 @@ def test_workspace_init_clean() -> None:
         assert (target / ".agentic-workspace/planning/state.toml").exists(), "state.toml not found after workspace init"
 
         # Verify memory bootstrap files exist
-        assert (target / "memory").exists(), "memory directory not found after workspace init"
-        assert (target / "memory" / "index.md").exists(), "memory/index.md not found after workspace init"
+        assert (target / ".agentic-workspace" / "memory" / "repo").exists(), "repo memory directory not found after workspace init"
+        assert (target / ".agentic-workspace" / "memory" / "repo" / "index.md").exists(), (
+            ".agentic-workspace/memory/repo/index.md not found after workspace init"
+        )
 
 
 def test_workspace_init_dry_run() -> None:
@@ -79,7 +81,7 @@ def test_workspace_init_dry_run() -> None:
 
         # Verify no files created
         assert not (target / ".agentic-workspace/planning/state.toml").exists(), "TODO.md created during dry-run"
-        assert not (target / "memory").exists(), "memory directory created during dry-run"
+        assert not (target / ".agentic-workspace" / "memory" / "repo").exists(), "repo memory directory created during dry-run"
 
 
 def test_workspace_status_after_init() -> None:

@@ -35,7 +35,8 @@ def _payload_entries(
     source_root: Path, *, include_bootstrap_workspace: bool = True, target_layout: str = "managed-root"
 ) -> list[PayloadEntry]:
     entries: list[PayloadEntry] = []
-    file_roots = [AGENTS_PATH, AUDIT_SCRIPT_PATH, Path("memory"), Path("docs")]
+    seen_relative_paths: set[Path] = set()
+    file_roots = [AGENTS_PATH, AUDIT_SCRIPT_PATH, Path(".agentic-workspace"), Path("memory"), Path("docs")]
     for relative_root in file_roots:
         source_path = source_root / relative_root
         if not source_path.exists() and relative_root.name.endswith(".md"):
@@ -50,6 +51,9 @@ def _payload_entries(
             if relative_path.name.endswith(".template.md"):
                 relative_path = relative_path.with_name(relative_path.name.replace(".template.md", ".md"))
             role = _classify_role(relative_path)
+            if relative_path in seen_relative_paths:
+                continue
+            seen_relative_paths.add(relative_path)
             entries.append(
                 PayloadEntry(
                     relative_path=relative_path,
@@ -67,6 +71,9 @@ def _payload_entries(
             if not include_bootstrap_workspace and relative_path.as_posix().startswith(workspace_root.as_posix()):
                 continue
             role = _classify_role(relative_path)
+            if relative_path in seen_relative_paths:
+                continue
+            seen_relative_paths.add(relative_path)
             entries.append(
                 PayloadEntry(
                     relative_path=relative_path,
@@ -81,14 +88,29 @@ def _payload_entries(
 
 def _target_relative_path(relative_path: Path, *, target_layout: str) -> Path:
     if target_layout == "legacy":
+        path_str = relative_path.as_posix()
+        if path_str.startswith(".agentic-workspace/docs/"):
+            return Path("docs") / relative_path.relative_to(".agentic-workspace/docs")
+        if path_str.startswith(".agentic-workspace/memory/bootstrap/"):
+            return Path("memory/bootstrap") / relative_path.relative_to(".agentic-workspace/memory/bootstrap")
+        if path_str.startswith(".agentic-workspace/memory/skills/"):
+            return Path("memory/skills") / relative_path.relative_to(".agentic-workspace/memory/skills")
+        if path_str.startswith(".agentic-workspace/memory/repo/"):
+            return Path("memory") / relative_path.relative_to(".agentic-workspace/memory/repo")
+        if path_str.startswith(".agentic-workspace/memory/"):
+            return Path("memory/system") / relative_path.relative_to(".agentic-workspace/memory")
         return relative_path
     path_str = relative_path.as_posix()
+    if path_str.startswith("docs/"):
+        return Path(".agentic-workspace/docs") / relative_path.relative_to("docs")
     if path_str.startswith("memory/system/"):
         return Path(".agentic-workspace/memory") / relative_path.relative_to(LEGACY_SYSTEM_ROOT)
     if path_str.startswith("memory/bootstrap/"):
         return Path(".agentic-workspace/memory/bootstrap") / relative_path.relative_to(LEGACY_BOOTSTRAP_WORKSPACE_ROOT)
     if path_str.startswith("memory/skills/"):
         return Path(".agentic-workspace/memory/skills") / relative_path.relative_to(LEGACY_SHIPPED_SKILLS_ROOT)
+    if path_str.startswith("memory/"):
+        return Path(".agentic-workspace/memory/repo") / relative_path.relative_to("memory")
     if relative_path.name.endswith(".template.md"):
         relative_path = relative_path.with_name(relative_path.name.replace(".template.md", ".md"))
     return relative_path
@@ -100,20 +122,20 @@ def _classify_role(relative_path: Path) -> str:
         return "local-entrypoint"
     if relative_path == AUDIT_SCRIPT_PATH:
         return "shared-replaceable"
+    if path_str.startswith(".agentic-workspace/memory/repo/templates/"):
+        return "shared-template"
+    if path_str == ".agentic-workspace/memory/repo/index.md":
+        return "seed-note"
+    if path_str.startswith(".agentic-workspace/memory/repo/current/"):
+        return "seed-note"
+    if path_str == ".agentic-workspace/memory/repo/mistakes/recurring-failures.md":
+        return "seed-note"
     if path_str.startswith(".agentic-workspace/memory/"):
         return "shared-replaceable"
     if path_str.startswith(BOOTSTRAP_WORKSPACE_ROOT.as_posix()):
         return "shared-replaceable"
     if path_str.startswith(SHIPPED_SKILLS_ROOT.as_posix()):
         return "shared-replaceable"
-    if path_str.startswith("memory/templates/"):
-        return "shared-template"
-    if path_str == "memory/index.md":
-        return "seed-note"
-    if path_str.startswith("memory/current/"):
-        return "seed-note"
-    if path_str == "memory/mistakes/recurring-failures.md":
-        return "seed-note"
     if path_str.endswith("/README.md"):
         return "seed-note"
     return "managed-file"
@@ -716,7 +738,7 @@ def _report_remaining_repo_local_memory(
     removable_paths: set[Path],
     result,
 ) -> None:
-    memory_root = target_root / "memory"
+    memory_root = target_root / ".agentic-workspace" / "memory" / "repo"
     if not memory_root.exists():
         return
 

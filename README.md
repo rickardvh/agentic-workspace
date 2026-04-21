@@ -37,14 +37,14 @@ The normal startup path is:
 Planning state now lives in:
 
 - `.agentic-workspace/planning/state.toml`
-- `docs/execplans/`
+- `.agentic-workspace/planning/execplans/`
 
 For agent maintainers, the primary operating path is `AGENTS.md`, the active execplan, and `docs/contributor-playbook.md`.
 
 Memory state lives under:
 
 - `.agentic-workspace/memory/`
-- `memory/`
+- `.agentic-workspace/memory/repo/`
 
 ## When to use it
 
@@ -62,7 +62,7 @@ Add `planning` when active work needs checked-in continuity.
 
 For another agent bootstrapping a repo, start from:
 
-- [`docs/routing-contract.md`](docs/routing-contract.md)
+- [`.agentic-workspace/docs/routing-contract.md`](.agentic-workspace/docs/routing-contract.md)
 - [`llms.txt`](llms.txt)
 
 After install or adopt, compact first-contact queries are:
@@ -83,7 +83,7 @@ agentic-workspace skills --target ./repo --task "implement the current active mi
 ## Read next
 
 - [`docs/which-package.md`](docs/which-package.md)
-- [`docs/routing-contract.md`](docs/routing-contract.md)
-- [`docs/lifecycle-and-config-contract.md`](docs/lifecycle-and-config-contract.md)
+- [`.agentic-workspace/docs/routing-contract.md`](.agentic-workspace/docs/routing-contract.md)
+- [`.agentic-workspace/docs/lifecycle-and-config-contract.md`](.agentic-workspace/docs/lifecycle-and-config-contract.md)
 - [`tools/AGENT_QUICKSTART.md`](tools/AGENT_QUICKSTART.md)
 - [`tools/AGENT_ROUTING.md`](tools/AGENT_ROUTING.md)

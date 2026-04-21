@@ -17,7 +17,7 @@ It handles the manual-review part of uninstall without deleting repo-local conte
    - customised bootstrap-managed files that differ from payload
 2. Review the remaining memory surface:
    - `AGENTS.md` if it still exists
-   - remaining files under `memory/`
+   - remaining files under `.agentic-workspace/memory/repo/`
    - remaining `scripts/check/` files related to bootstrap
 3. Remove repo-local memory files only when the repository should no longer keep that knowledge.
 4. Preserve anything that the repo still intentionally wants, even if the bootstrap is otherwise being removed.

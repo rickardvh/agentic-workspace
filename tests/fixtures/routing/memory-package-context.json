@@ -3,10 +3,10 @@
   "case_type": "general",
   "files": ["packages/memory/src/repo_memory_bootstrap/installer.py"],
   "surfaces": [],
-  "expected_required": ["memory/index.md"],
+  "expected_required": [".agentic-workspace/memory/repo/index.md"],
   "expected_optional": [
-    "memory/domains/memory-package-context.md",
-    "memory/runbooks/package-context-inspection.md"
+    ".agentic-workspace/memory/repo/domains/memory-package-context.md",
+    ".agentic-workspace/memory/repo/runbooks/package-context-inspection.md"
   ],
   "unexpected_notes": [],
   "missing_note_candidates": []

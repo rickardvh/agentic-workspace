@@ -1,0 +1,14 @@
+{
+  "kind": "agentic-workspace/delegation-outcomes/v1",
+  "records": [
+    {
+      "recorded_at": "2026-04-17",
+      "delegation_target": "opencode_big_pickle",
+      "task_class": "bounded-docs",
+      "outcome": "mixed",
+      "handoff_sufficiency": "borderline",
+      "review_burden": "high",
+      "escalation_required": false
+    }
+  ]
+}

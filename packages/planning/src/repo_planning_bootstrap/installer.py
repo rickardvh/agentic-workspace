@@ -33,24 +33,24 @@ ROOT_MANIFEST_MIRROR_PATH = Path("tools/agent-manifest.json")
 
 REQUIRED_PAYLOAD_FILES = (
     Path("AGENTS.template.md"),
-    Path("docs/execution-flow-contract.md"),
-    Path("docs/routing-contract.md"),
-    Path("docs/lifecycle-and-config-contract.md"),
-    Path("docs/extraction-and-discovery-contract.md"),
-    Path("docs/reporting-contract.md"),
-    Path("docs/capability-aware-execution.md"),
-    Path("docs/capability-contract.json"),
-    Path("docs/signal-hygiene-contract.md"),
-    Path("docs/knowledge-promotion-workflow.md"),
-    Path("docs/standing-intent-contract.md"),
-    Path("docs/candidate-lanes-contract.md"),
-    Path("docs/installer-behavior.md"),
-    Path("docs/execplans/README.md"),
-    Path("docs/execplans/TEMPLATE.md"),
-    Path("docs/execplans/archive/README.md"),
-    Path("docs/reviews/README.md"),
-    Path("docs/reviews/TEMPLATE.md"),
-    Path("docs/upstream-task-intake.md"),
+    Path(".agentic-workspace/docs/execution-flow-contract.md"),
+    Path(".agentic-workspace/docs/routing-contract.md"),
+    Path(".agentic-workspace/docs/lifecycle-and-config-contract.md"),
+    Path(".agentic-workspace/docs/extraction-and-discovery-contract.md"),
+    Path(".agentic-workspace/docs/reporting-contract.md"),
+    Path(".agentic-workspace/docs/capability-aware-execution.md"),
+    Path(".agentic-workspace/docs/capability-contract.json"),
+    Path(".agentic-workspace/docs/signal-hygiene-contract.md"),
+    Path(".agentic-workspace/docs/knowledge-promotion-workflow.md"),
+    Path(".agentic-workspace/docs/standing-intent-contract.md"),
+    Path(".agentic-workspace/docs/candidate-lanes-contract.md"),
+    Path(".agentic-workspace/docs/installer-behavior.md"),
+    Path(".agentic-workspace/planning/execplans/README.md"),
+    Path(".agentic-workspace/planning/execplans/TEMPLATE.md"),
+    Path(".agentic-workspace/planning/execplans/archive/README.md"),
+    Path(".agentic-workspace/planning/reviews/README.md"),
+    Path(".agentic-workspace/planning/reviews/TEMPLATE.md"),
+    Path(".agentic-workspace/planning/upstream-task-intake.md"),
     ROOT_RENDER_SCRIPT_PATH,
     ROOT_CHECKER_SCRIPT_PATH,
     ROOT_MAINTAINER_CHECKER_PATH,
@@ -66,24 +66,24 @@ REQUIRED_PAYLOAD_FILES = (
 
 PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path("AGENTS.template.md"),
-    Path("docs/execution-flow-contract.md"),
-    Path("docs/routing-contract.md"),
-    Path("docs/lifecycle-and-config-contract.md"),
-    Path("docs/extraction-and-discovery-contract.md"),
-    Path("docs/reporting-contract.md"),
-    Path("docs/capability-aware-execution.md"),
-    Path("docs/capability-contract.json"),
-    Path("docs/signal-hygiene-contract.md"),
-    Path("docs/knowledge-promotion-workflow.md"),
-    Path("docs/standing-intent-contract.md"),
-    Path("docs/candidate-lanes-contract.md"),
-    Path("docs/installer-behavior.md"),
-    Path("docs/execplans/README.md"),
-    Path("docs/execplans/TEMPLATE.md"),
-    Path("docs/execplans/archive/README.md"),
-    Path("docs/reviews/README.md"),
-    Path("docs/reviews/TEMPLATE.md"),
-    Path("docs/upstream-task-intake.md"),
+    Path(".agentic-workspace/docs/execution-flow-contract.md"),
+    Path(".agentic-workspace/docs/routing-contract.md"),
+    Path(".agentic-workspace/docs/lifecycle-and-config-contract.md"),
+    Path(".agentic-workspace/docs/extraction-and-discovery-contract.md"),
+    Path(".agentic-workspace/docs/reporting-contract.md"),
+    Path(".agentic-workspace/docs/capability-aware-execution.md"),
+    Path(".agentic-workspace/docs/capability-contract.json"),
+    Path(".agentic-workspace/docs/signal-hygiene-contract.md"),
+    Path(".agentic-workspace/docs/knowledge-promotion-workflow.md"),
+    Path(".agentic-workspace/docs/standing-intent-contract.md"),
+    Path(".agentic-workspace/docs/candidate-lanes-contract.md"),
+    Path(".agentic-workspace/docs/installer-behavior.md"),
+    Path(".agentic-workspace/planning/execplans/README.md"),
+    Path(".agentic-workspace/planning/execplans/TEMPLATE.md"),
+    Path(".agentic-workspace/planning/execplans/archive/README.md"),
+    Path(".agentic-workspace/planning/reviews/README.md"),
+    Path(".agentic-workspace/planning/reviews/TEMPLATE.md"),
+    Path(".agentic-workspace/planning/upstream-task-intake.md"),
     PLANNING_MANIFEST_PATH,
 )
 
@@ -100,12 +100,12 @@ GENERATED_PAYLOAD_FILES = (
 )
 
 PAYLOAD_GUIDANCE_FRAGMENTS = {
-    Path("docs/execplans/TEMPLATE.md"): (
+    Path(".agentic-workspace/planning/execplans/TEMPLATE.md"): (
         "concurrent edits merge cleanly",
         "do not add retrospective sections such as `Added In This Pass`",
         "Replace stale immediate-action text when the next step changes",
     ),
-    Path("docs/execplans/README.md"): (
+    Path(".agentic-workspace/planning/execplans/README.md"): (
         "Do not add sections such as `Added In This Pass`",
         "Treat active plan state as branch-local and low half-life",
     ),
@@ -516,7 +516,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
     todo_path = target_root / "TODO.md"
     legacy_todo_path = target_root / PLANNING_STATE_PATH
     roadmap_path = target_root / "ROADMAP.md"
-    execplan_dir = target_root / "docs" / "execplans"
+    execplan_dir = target_root / ".agentic-workspace" / "planning" / "execplans"
 
     state = _read_state_from_toml(target_root)
     if state:
@@ -712,7 +712,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "module": "planning",
             "command": "agentic-planning-bootstrap report --format json",
             "canonical_docs": [
-                "docs/reporting-contract.md",
+                ".agentic-workspace/docs/reporting-contract.md",
                 "packages/planning/README.md",
             ],
             "shared_fields": [
@@ -777,12 +777,12 @@ def _planning_summary_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-summary-schema/v1",
         "canonical_docs": [
-            "docs/execution-flow-contract.md",
-            "docs/routing-contract.md",
-            "docs/lifecycle-and-config-contract.md",
-            "docs/extraction-and-discovery-contract.md",
-            "docs/candidate-lanes-contract.md",
-            "docs/execplans/README.md",
+            ".agentic-workspace/docs/execution-flow-contract.md",
+            ".agentic-workspace/docs/routing-contract.md",
+            ".agentic-workspace/docs/lifecycle-and-config-contract.md",
+            ".agentic-workspace/docs/extraction-and-discovery-contract.md",
+            ".agentic-workspace/docs/candidate-lanes-contract.md",
+            ".agentic-workspace/planning/execplans/README.md",
         ],
         "command": "agentic-workspace summary --format json",
         "shared_fields": [
@@ -898,7 +898,7 @@ def _planning_summary_schema() -> dict[str, Any]:
 def _planning_handoff_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-handoff-schema/v1",
-        "canonical_doc": "docs/execution-flow-contract.md",
+        "canonical_doc": ".agentic-workspace/docs/execution-flow-contract.md",
         "command": "agentic-planning-bootstrap handoff --format json",
         "shared_fields": [
             "kind",
@@ -958,12 +958,20 @@ def _ownership_review(target_root: Path) -> dict[str, Any]:
         for entry in ledger.get("fences", [])
         if isinstance(entry, dict)
     ]
-    package_owned_roots = [entry["path"] for entry in module_roots if entry.get("ownership") == "module_managed" and entry.get("path")]
+    package_owned_roots = [entry["path"] for entry in module_roots if entry.get("path")]
     repo_owned_surfaces = [
         entry["surface"] for entry in authority_surfaces if entry.get("ownership") == "repo_owned" and entry.get("surface")
     ]
     module_managed_surfaces = [
         entry["surface"] for entry in authority_surfaces if entry.get("ownership") == "module_managed" and entry.get("surface")
+    ]
+    shared_package_surfaces = [
+        entry["surface"]
+        for entry in authority_surfaces
+        if entry.get("ownership") in {"workspace_shared", "module_managed"} and entry.get("surface")
+    ]
+    repo_specific_package_surfaces = [
+        entry["surface"] for entry in authority_surfaces if entry.get("ownership") == "repo_specific_package_owned" and entry.get("surface")
     ]
     minimal_repo_hook = next((f"{entry['file']}#agentic-workspace:workflow" for entry in fences if entry.get("file")), "")
     return {
@@ -971,6 +979,8 @@ def _ownership_review(target_root: Path) -> dict[str, Any]:
         "package_owned_roots": package_owned_roots,
         "repo_owned_surfaces": repo_owned_surfaces,
         "module_managed_surfaces": module_managed_surfaces,
+        "shared_package_surfaces": shared_package_surfaces,
+        "repo_specific_package_surfaces": repo_specific_package_surfaces,
         "managed_fences": fences,
         "minimal_repo_hook": minimal_repo_hook,
         "authority_surfaces": authority_surfaces,
@@ -1391,7 +1401,7 @@ def _active_hierarchy_contract(
         "routing": {
             "current_owner": str(planning_record.get("continuation_owner", "")).strip(),
             "follow_on_owner": str(owner_surface).strip(),
-            "review_queue": "docs/reviews/",
+            "review_queue": ".agentic-workspace/planning/reviews/",
         },
         "minimal_refs": minimal_refs,
     }
@@ -1537,7 +1547,7 @@ def promote_todo_item_to_execplan(
         return result
 
     slug = _slugify(plan_slug or item_id)
-    execplan_relative = Path("docs") / "execplans" / f"{slug}.md"
+    execplan_relative = Path(".agentic-workspace") / "planning" / "execplans" / f"{slug}.md"
     execplan_path = target_root / execplan_relative
     if execplan_path.exists():
         result.add("manual review", execplan_path, "target execplan already exists")
@@ -1589,7 +1599,7 @@ def archive_execplan(
         result.add("manual review", target_root / plan, "execplan was not found")
         return result
 
-    archive_dir = target_root / "docs" / "execplans" / "archive"
+    archive_dir = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive"
     if archive_dir in plan_path.parents:
         result.add("manual review", plan_path, "execplan is already archived")
         return result
@@ -2075,13 +2085,13 @@ def _warning_remediation(warning_class: str) -> str | None:
     return {
         "todo_shape_drift": "Keep TODO focused on activation only; move execution detail into an execplan or durable docs.",
         "todo_activation_overflow": "Prune completed or speculative TODO detail until only the bounded active queue remains.",
-        "todo_missing_execplan_linkage": "Create or promote this item to a docs/execplans plan and point Surface at it.",
+        "todo_missing_execplan_linkage": "Create or promote this item to a .agentic-workspace/planning/execplans plan and point Surface at it.",
         "todo_plan_required_hint": "This direct task has grown beyond direct-task shape; scaffold an execplan for it.",
-        "todo_broken_surface_reference": "Repair Surface so it points at a live docs/execplans path, or remove the stale item.",
+        "todo_broken_surface_reference": "Repair Surface so it points at a live .agentic-workspace/planning/execplans path, or remove the stale item.",
         "execplan_structure_drift": (
             "Restore the current template sections, especially Intent Continuity, Required Continuation, "
             "Delegated Judgment, Active Milestone, and Execution Summary, so the plan matches the newer contract; "
-            "compare the plan with docs/execplans/README.md and docs/execution-flow-contract.md."
+            "compare the plan with .agentic-workspace/planning/execplans/README.md and .agentic-workspace/docs/execution-flow-contract.md."
         ),
         "execplan_immediate_next_action_drift": "Reduce Immediate Next Action to one concrete next step.",
         "execplan_readiness_drift": "Set Ready/Blocked explicitly so the active milestone can be resumed without re-deriving state.",
@@ -2089,7 +2099,7 @@ def _warning_remediation(warning_class: str) -> str | None:
         "execplan_notebook_drift": "Strip status-journal residue out of the plan and keep only the current execution contract.",
         "execplan_under_specified": (
             "Fill in the missing contract sections so the plan can survive upgrades without extra chat context; "
-            "compare the plan with docs/execplans/README.md and docs/execution-flow-contract.md."
+            "compare the plan with .agentic-workspace/planning/execplans/README.md and .agentic-workspace/docs/execution-flow-contract.md."
         ),
         "roadmap_execution_drift": "Reduce ROADMAP back to candidate framing; keep active sequencing in TODO and execplans.",
         "roadmap_stale_candidate_pressure": "Prune stale candidate detail and leave compact candidate stubs only.",
@@ -2376,12 +2386,12 @@ def _render_execplan_from_todo_item(
 
 
 def _surface_execplan_reference(surface_value: str) -> str | None:
-    inline_path_match = re.search(r"docs/execplans/[A-Za-z0-9._/\-]+\.md", surface_value)
+    inline_path_match = re.search(r".agentic-workspace/planning/execplans/[A-Za-z0-9._/\-]+\.md", surface_value)
     if inline_path_match:
         return inline_path_match.group(0)
     markdown_target = re.search(r"\]\(([^)]+)\)", surface_value)
     if markdown_target:
-        target_match = re.search(r"docs/execplans/[A-Za-z0-9._/\-]+\.md", markdown_target.group(1))
+        target_match = re.search(r".agentic-workspace/planning/execplans/[A-Za-z0-9._/\-]+\.md", markdown_target.group(1))
         if target_match:
             return target_match.group(0)
     return None
@@ -2394,10 +2404,10 @@ def _resolve_execplan_path(target_root: Path, plan: str) -> Path | None:
     if candidate.suffix == ".md" and (target_root / candidate).exists():
         return (target_root / candidate).resolve()
     normalized = plan if plan.endswith(".md") else f"{plan}.md"
-    direct = target_root / "docs" / "execplans" / normalized
+    direct = target_root / ".agentic-workspace" / "planning" / "execplans" / normalized
     if direct.exists():
         return direct.resolve()
-    archive = target_root / "docs" / "execplans" / "archive" / normalized
+    archive = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive" / normalized
     if archive.exists():
         return archive.resolve()
     return None

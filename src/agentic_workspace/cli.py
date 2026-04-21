@@ -392,8 +392,8 @@ def _workflow_artifact_profile_payload(profile: str) -> dict[str, Any]:
             "profile": "repo-owned",
             "summary": "Use only the repo-owned planning surfaces; do not rely on native runtime artifacts.",
             "native_artifacts": [],
-            "canonical_surfaces": [".agentic-workspace/planning/state.toml", "docs/execplans/"],
-            "sync_rule": ".agentic-workspace/planning/state.toml and docs/execplans stay authoritative; no extra runtime artifact should carry durable state.",
+            "canonical_surfaces": [".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/execplans/"],
+            "sync_rule": ".agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans stay authoritative; no extra runtime artifact should carry durable state.",
             "handoff_rule": "Use repo-owned planning surfaces directly for restart, review, and cross-agent continuation.",
         },
         "gemini": {
@@ -403,13 +403,13 @@ def _workflow_artifact_profile_payload(profile: str) -> dict[str, Any]:
                 "project durable state back into repo-owned planning before handoff or review."
             ),
             "native_artifacts": ["implementation_plan.md", "task.md", "walkthrough.md"],
-            "canonical_surfaces": [".agentic-workspace/planning/state.toml", "docs/execplans/"],
+            "canonical_surfaces": [".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/execplans/"],
             "sync_rule": (
                 "Before review, handoff, or session end, mirror the durable execution state into "
                 ".agentic-workspace/planning/state.toml and the active execplan instead of leaving it only in native artifacts."
             ),
             "handoff_rule": (
-                "Treat native artifacts as local execution aids; treat .agentic-workspace/planning/state.toml and docs/execplans as the only cross-agent source of truth."
+                "Treat native artifacts as local execution aids; treat .agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans as the only cross-agent source of truth."
             ),
         },
     }
@@ -785,7 +785,7 @@ def _setup_finding_class_payload(finding_class: str) -> dict[str, Any]:
         "planning_candidate": {
             "class": "planning_candidate",
             "summary": "A bounded follow-on or handoff candidate worth preserving as explicit planning promotion guidance.",
-            "promote_to": ".agentic-workspace/planning/state.toml or docs/execplans/ after bounded planning review",
+            "promote_to": ".agentic-workspace/planning/state.toml or .agentic-workspace/planning/execplans/ after bounded planning review",
             "preserve_when": [
                 "confidence is at least 0.75",
                 "the finding includes a bounded next_action",
@@ -1236,12 +1236,12 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             ),
             install_signals=(
                 Path(".agentic-workspace/planning/state.toml"),
-                Path("docs/execplans"),
+                Path(".agentic-workspace/planning/execplans"),
             ),
             workflow_surfaces=(
                 Path("AGENTS.md"),
                 Path(".agentic-workspace/planning/state.toml"),
-                Path("docs/execplans"),
+                Path(".agentic-workspace/planning/execplans"),
                 Path("docs/contributor-playbook.md"),
                 Path("docs/maintainer-commands.md"),
                 Path("tools/AGENT_QUICKSTART.md"),
@@ -1254,7 +1254,7 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             ),
             startup_steps=(
                 "Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary`.",
-                "Read the active feature plan in `docs/execplans/` when the TODO surface points there.",
+                "Read the active feature plan in `.agentic-workspace/planning/execplans/` when the TODO surface points there.",
                 "Check the roadmap in `state.toml` (authoritative) only when promoting work.",
             ),
             sources_of_truth=(
@@ -1288,25 +1288,26 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             selection_rank=20,
             include_in_full_preset=True,
             detector=lambda target_root: (
-                (target_root / "memory" / "index.md").exists() and (target_root / ".agentic-workspace" / "memory").exists()
+                (target_root / ".agentic-workspace" / "memory" / "repo" / "index.md").exists()
+                and (target_root / ".agentic-workspace" / "memory").exists()
             ),
             install_signals=(
-                Path("memory/index.md"),
-                Path("memory/current"),
+                Path(".agentic-workspace/memory/repo/index.md"),
+                Path(".agentic-workspace/memory/repo/current"),
                 Path(".agentic-workspace/memory"),
             ),
             workflow_surfaces=(
                 Path("AGENTS.md"),
-                Path("memory/index.md"),
-                Path("memory/current"),
+                Path(".agentic-workspace/memory/repo/index.md"),
+                Path(".agentic-workspace/memory/repo/current"),
                 Path(".agentic-workspace/memory"),
             ),
             generated_artifacts=(),
             startup_steps=(
-                "Read `memory/index.md` only when memory is installed and the task is not already well-routed.",
+                "Read `.agentic-workspace/memory/repo/index.md` only when memory is installed and the task is not already well-routed.",
                 "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself.",
             ),
-            sources_of_truth=("Durable routed knowledge, when installed: `memory/index.md`",),
+            sources_of_truth=("Durable routed knowledge, when installed: `.agentic-workspace/memory/repo/index.md`",),
             root_agents_cleanup_blocks=(
                 RootAgentsCleanupBlock(
                     block=MEMORY_POINTER_BLOCK,
@@ -1669,7 +1670,7 @@ def _workspace_status_report(
     warnings.extend(policy_warnings)
 
     for config_warning in config.warnings:
-        warnings.append({"path": config.path.as_posix() if config.path else "agentic-workspace.toml", "message": config_warning})
+        warnings.append({"path": config.path.as_posix() if config.path else ".agentic-workspace/config.toml", "message": config_warning})
 
     if command_name == "doctor":
         abs_paths = doctor.check_absolute_paths(target_root)
@@ -1744,7 +1745,7 @@ def _external_agent_handoff_text(
             "- agentic-workspace config --target ./repo --format json",
             "- agentic-planning-bootstrap summary --format json",
             (
-                "- If agentic-workspace.local.toml is present, use the config report to see "
+                "- If .agentic-workspace/config.local.toml is present, use the config report to see "
                 "local capability/cost posture without treating it as checked-in repo policy."
             ),
             "",
@@ -2900,8 +2901,8 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
             "planner_executor_pattern": mixed_agent["derived_mode"]["planner_executor_pattern"],
             "handoff_preference": mixed_agent["derived_mode"]["handoff_preference"],
             "authoritative_sources": [
-                "agentic-workspace.toml",
-                "agentic-workspace.local.toml",
+                ".agentic-workspace/config.toml",
+                ".agentic-workspace/config.local.toml",
             ],
         },
     }
@@ -3041,7 +3042,7 @@ def _bootstrap_intent_payload(*, selected_modules: list[str], resolved_preset: s
 
 def _intent_contract_payload() -> dict[str, Any]:
     return {
-        "canonical_doc": "docs/intent-contract.md",
+        "canonical_doc": ".agentic-workspace/docs/compact-contract-profile.md",
         "command": "agentic-workspace defaults --section intent --format json",
         "rule": "Confirmed intent stays human-owned; interpreted intent must remain visibly inferred.",
         "confirmed_intent": {
@@ -3062,7 +3063,7 @@ def _intent_contract_payload() -> dict[str, Any]:
 
 def _clarification_contract_payload() -> dict[str, Any]:
     return {
-        "canonical_doc": "docs/intent-contract.md",
+        "canonical_doc": ".agentic-workspace/docs/compact-contract-profile.md",
         "command": "agentic-workspace defaults --section clarification --format json",
         "rule": "When a prompt is vague, ask the smallest repo-context question that removes the ambiguity.",
         "mode": "minimal-interruption",
@@ -3090,7 +3091,7 @@ def _clarification_contract_payload() -> dict[str, Any]:
 
 def _prompt_routing_contract_payload() -> dict[str, Any]:
     return {
-        "canonical_doc": "docs/intent-contract.md",
+        "canonical_doc": ".agentic-workspace/docs/compact-contract-profile.md",
         "command": "agentic-workspace defaults --section prompt_routing --format json",
         "rule": "Map vague prompt classes to a proof lane and an owner before widening the task.",
         "route_by_class": [
@@ -3102,12 +3103,12 @@ def _prompt_routing_contract_payload() -> dict[str, Any]:
             {
                 "class": "planning state or contract change",
                 "proof_lane": "planning_surfaces",
-                "owner_surface": "docs/execplans/ or .agentic-workspace/planning/state.toml",
+                "owner_surface": ".agentic-workspace/planning/execplans/ or .agentic-workspace/planning/state.toml",
             },
             {
                 "class": "durable repo knowledge change",
                 "proof_lane": "memory_payload",
-                "owner_surface": "memory/",
+                "owner_surface": ".agentic-workspace/memory/repo/",
             },
             {
                 "class": "cross-cutting workspace contract",
@@ -3123,7 +3124,7 @@ def _prompt_routing_contract_payload() -> dict[str, Any]:
         ],
         "owner_inference": [
             ".agentic-workspace/planning/state.toml or an active execplan implies planning ownership.",
-            "memory/index.md or a runbook implies memory ownership.",
+            ".agentic-workspace/memory/repo/index.md or a runbook implies memory ownership.",
             "workspace lifecycle defaults or routing docs imply workspace ownership.",
         ],
         "escalate_when": [
@@ -3136,7 +3137,7 @@ def _prompt_routing_contract_payload() -> dict[str, Any]:
 
 def _relay_contract_payload() -> dict[str, Any]:
     return {
-        "canonical_doc": "docs/orchestrator-workflow-contract.md",
+        "canonical_doc": ".agentic-workspace/docs/delegation-posture-contract.md",
         "command": "agentic-workspace defaults --section relay --format json",
         "rule": "Use a strong planner to normalize the vague prompt, then hand the compact contract to a bounded executor without prescribing the execution method.",
         "selection_rule": (
@@ -3189,9 +3190,9 @@ def _relay_contract_payload() -> dict[str, Any]:
         "memory_bridge": {
             "summary": "when routed Memory is installed, borrow durable repo understanding before freezing the compact contract.",
             "borrow_from": [
-                "memory/index.md",
-                "memory/current/",
-                "memory/runbooks/",
+                ".agentic-workspace/memory/repo/index.md",
+                ".agentic-workspace/memory/repo/current/",
+                ".agentic-workspace/memory/repo/runbooks/",
             ],
             "fallback": [
                 "continue from checked-in docs when routed Memory is absent",
@@ -3470,7 +3471,7 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
                 "",
                 "Repo-owned config:",
                 f"- {config_payload['config_path']}",
-                "- Treat agentic-workspace.toml as the repo-owned source of lifecycle defaults and update intent.",
+                "- Treat .agentic-workspace/config.toml as the repo-owned source of lifecycle defaults and update intent.",
             ]
         )
     lines.extend(["", "The CLI already:"])
@@ -3983,7 +3984,7 @@ def _defaults_payload() -> dict[str, Any]:
         "prompt_routing": _prompt_routing_contract_payload(),
         "relay": _relay_contract_payload(),
         "config": {
-            "path": "agentic-workspace.toml",
+            "path": ".agentic-workspace/config.toml",
             "command": "agentic-workspace config --target ./repo --format json",
             "supported_fields": [
                 "workspace.default_preset",
@@ -4076,7 +4077,7 @@ def _defaults_payload() -> dict[str, Any]:
             "command": "agentic-workspace defaults --section workflow_artifact_adapters --format json",
             "rule": (
                 "Runtime-native planning artifacts may exist, but durable cross-agent state "
-                "must project back into .agentic-workspace/planning/state.toml and docs/execplans before handoff or review."
+                "must project back into .agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans before handoff or review."
             ),
             "default_profile": DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
             "supported_profiles": [_workflow_artifact_profile_payload(profile) for profile in SUPPORTED_WORKFLOW_ARTIFACT_PROFILES],
@@ -4143,7 +4144,7 @@ def _defaults_payload() -> dict[str, Any]:
             ],
         },
         "delegation_posture": {
-            "canonical_doc": "docs/delegation-posture-contract.md",
+            "canonical_doc": ".agentic-workspace/docs/delegation-posture-contract.md",
             "command": "agentic-workspace defaults --section delegation_posture --format json",
             "rule": (
                 "Use the effective mixed-agent posture to decide whether to keep work direct, "
@@ -4155,12 +4156,12 @@ def _defaults_payload() -> dict[str, Any]:
                 "validator",
             ],
             "config_controls": [
-                "agentic-workspace.local.toml runtime.supports_internal_delegation",
-                "agentic-workspace.local.toml runtime.strong_planner_available",
-                "agentic-workspace.local.toml runtime.cheap_bounded_executor_available",
-                "agentic-workspace.local.toml handoff.prefer_internal_delegation_when_available",
-                "agentic-workspace.local.toml delegation_targets.<target>.*",
-                "agentic-workspace.delegation-outcomes.json",
+                ".agentic-workspace/config.local.toml runtime.supports_internal_delegation",
+                ".agentic-workspace/config.local.toml runtime.strong_planner_available",
+                ".agentic-workspace/config.local.toml runtime.cheap_bounded_executor_available",
+                ".agentic-workspace/config.local.toml handoff.prefer_internal_delegation_when_available",
+                ".agentic-workspace/config.local.toml delegation_targets.<target>.*",
+                ".agentic-workspace/delegation-outcomes.json",
             ],
             "secondary": [
                 "Do not treat config as a scheduler.",
@@ -4203,7 +4204,7 @@ def _defaults_payload() -> dict[str, Any]:
             ],
         },
         "proof_selection": {
-            "canonical_doc": "docs/proof-surfaces-contract.md",
+            "canonical_doc": ".agentic-workspace/docs/proof-surfaces-contract.md",
             "command": "agentic-workspace defaults --section proof_selection --format json",
             "rule": "Make proof choice cheap by naming the narrowest lane that still answers the trust question.",
             "recommended_lanes": [
@@ -4236,7 +4237,7 @@ def _defaults_payload() -> dict[str, Any]:
             ],
         },
         "ownership_mapping": {
-            "canonical_doc": "docs/ownership-authority-contract.md",
+            "canonical_doc": ".agentic-workspace/docs/ownership-authority-contract.md",
             "command": "agentic-workspace ownership --target ./repo --format json",
             "rule": "Resolve the owner and authoritative surface before changing or trusting a contract.",
             "ledger": ".agentic-workspace/OWNERSHIP.toml",
@@ -4244,8 +4245,8 @@ def _defaults_payload() -> dict[str, Any]:
                 "workspace_ownership": "agentic-workspace ownership --target ./repo --format json",
                 "workflow_contract": ".agentic-workspace/WORKFLOW.md",
                 "ownership_ledger": ".agentic-workspace/OWNERSHIP.toml",
-                "compatibility_policy": "docs/compatibility-policy.md",
-                "generated_surface_trust": "docs/generated-surface-trust.md",
+                "compatibility_policy": ".agentic-workspace/docs/compatibility-policy.md",
+                "generated_surface_trust": ".agentic-workspace/docs/generated-surface-trust.md",
             },
             "secondary": [
                 "Read package-local docs only after the ownership map identifies the package as the primary owner.",
@@ -4293,7 +4294,7 @@ def _defaults_payload() -> dict[str, Any]:
             "rule": "When a completed slice came from state.toml, clear the matched queue residue in the same pass.",
             "prefer_surfaces": [
                 ".agentic-workspace/planning/state.toml",
-                "docs/execplans/README.md",
+                ".agentic-workspace/planning/execplans/README.md",
             ],
         },
         "delegated_judgment": {
@@ -4575,7 +4576,7 @@ def _setup_payload(
         orientation: dict[str, Any] = {
             "mode": "no-new-seed-surfaces-needed",
             "summary": "No new seed surfaces are needed; the repo already has the core setup orientation surfaces.",
-            "reason": "AGENTS.md, .agentic-workspace/planning/state.toml, tools/AGENT_QUICKSTART.md, tools/AGENT_ROUTING.md, and memory/index.md are already present.",
+            "reason": "AGENTS.md, .agentic-workspace/planning/state.toml, tools/AGENT_QUICKSTART.md, tools/AGENT_ROUTING.md, and .agentic-workspace/memory/repo/index.md are already present.",
         }
         next_action = {
             "summary": "No new seed surfaces needed",
@@ -4922,6 +4923,54 @@ def _ownership_boundary_review(
             for entry in managed_surfaces
         ],
     }
+    shared_package_state = {
+        "managed_surfaces": [
+            _surface_entry(
+                surface=str(entry.get("path", "")),
+                owner=str(entry.get("module", "")),
+                ownership=str(entry.get("ownership", "")),
+                summary=str(entry.get("kind", "")) or None,
+                source="managed_surface",
+            )
+            for entry in managed_surfaces
+            if str(entry.get("ownership", "")) in {"workspace_shared", "module_managed"}
+        ],
+        "authority_surfaces": [
+            _surface_entry(
+                surface=str(entry.get("surface", "")),
+                owner=str(entry.get("owner", "")),
+                ownership=str(entry.get("ownership", "")),
+                summary=str(entry.get("concern", "")) or None,
+                source="authority_surface",
+            )
+            for entry in authority_surfaces
+            if str(entry.get("ownership", "")) in {"workspace_shared", "module_managed"}
+        ],
+    }
+    repo_specific_package_state = {
+        "managed_surfaces": [
+            _surface_entry(
+                surface=str(entry.get("path", "")),
+                owner=str(entry.get("module", "")),
+                ownership=str(entry.get("ownership", "")),
+                summary=str(entry.get("kind", "")) or None,
+                source="managed_surface",
+            )
+            for entry in managed_surfaces
+            if str(entry.get("ownership", "")) == "repo_specific_package_owned"
+        ],
+        "authority_surfaces": [
+            _surface_entry(
+                surface=str(entry.get("surface", "")),
+                owner=str(entry.get("owner", "")),
+                ownership=str(entry.get("ownership", "")),
+                summary=str(entry.get("concern", "")) or None,
+                source="authority_surface",
+            )
+            for entry in authority_surfaces
+            if str(entry.get("ownership", "")) == "repo_specific_package_owned"
+        ],
+    }
     repo_owned = {
         "authority_surfaces": [
             _surface_entry(
@@ -4950,6 +4999,8 @@ def _ownership_boundary_review(
     smallest_explicit_repo_hook = middle_ground["managed_fences"][0] if middle_ground["managed_fences"] else None
     return {
         "package_owned": package_owned,
+        "shared_package_state": shared_package_state,
+        "repo_specific_package_state": repo_specific_package_state,
         "repo_owned": repo_owned,
         "middle_ground": middle_ground,
         "smallest_explicit_repo_hook": smallest_explicit_repo_hook,
@@ -5557,13 +5608,13 @@ def _sync_update_policy_actions(
                 {
                     "kind": "warning" if command_name in {"status", "doctor"} else "manual review",
                     "path": relative.as_posix(),
-                    "detail": "module upgrade source metadata differs from agentic-workspace.toml or the product default policy",
+                    "detail": "module upgrade source metadata differs from .agentic-workspace/config.toml or the product default policy",
                 }
             )
             warnings.append(
                 {
                     "path": relative.as_posix(),
-                    "message": "module upgrade source metadata differs from agentic-workspace.toml or the product default policy",
+                    "message": "module upgrade source metadata differs from .agentic-workspace/config.toml or the product default policy",
                 }
             )
             continue
@@ -5611,8 +5662,8 @@ def _skill_catalog_sources() -> tuple[SkillCatalogSource, ...]:
         ),
         SkillCatalogSource(
             name="repo-memory",
-            registry_path=Path("memory/skills/REGISTRY.json"),
-            skills_root=Path("memory/skills"),
+            registry_path=Path(".agentic-workspace/memory/repo/skills/REGISTRY.json"),
+            skills_root=Path(".agentic-workspace/memory/repo/skills"),
             owner="repo-local",
             source_kind="repo-owned-memory-skills",
             default_scope="repo-owned",

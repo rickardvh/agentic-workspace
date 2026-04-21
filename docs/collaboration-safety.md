@@ -4,7 +4,7 @@ Use these rules when multiple agents or contributors are working through git.
 
 Use `docs/maintainer-commands.md` for command lookup and `docs/workflow-contract-changes.md` for compact workflow history; this page is only for concurrent-edit and merge-safety rules.
 
-- Keep `memory/current/` compact and weak-authority. If a fact should survive the current thread, move it into a durable primary home.
+- Keep `.agentic-workspace/memory/repo/current/` compact and weak-authority. If a fact should survive the current thread, move it into a durable primary home.
 - Archive execplans aggressively once they stop affecting future execution.
 - Prefer feature-scoped execplan files over growing shared hot files.
 - Edit canonical docs directly; edit module-managed `.agentic-workspace/` planning or memory surfaces only through their owning package or managed source.

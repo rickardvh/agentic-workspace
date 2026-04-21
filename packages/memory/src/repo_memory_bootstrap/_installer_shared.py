@@ -7,7 +7,7 @@ from pathlib import Path
 from repo_memory_bootstrap._ownership import module_root
 
 PROJECT_MARKERS = ("pyproject.toml", "package.json", "Cargo.toml", ".hg")
-AGENT_ROOT_MARKERS = (Path("AGENTS.md"), Path("memory"))
+AGENT_ROOT_MARKERS = (Path("AGENTS.md"), Path(".agentic-workspace/memory/repo"))
 MANAGED_ROOT = module_root("memory")
 WORKSPACE_SHARED_ROOT = Path(".agentic-workspace")
 LEGACY_SYSTEM_ROOT = Path("memory/system")
@@ -17,7 +17,7 @@ WORKFLOW_PATH = MANAGED_ROOT / "WORKFLOW.md"
 WORKSPACE_WORKFLOW_PATH = WORKSPACE_SHARED_ROOT / "WORKFLOW.md"
 LEGACY_WORKFLOW_PATH = LEGACY_SYSTEM_ROOT / "WORKFLOW.md"
 AGENTS_PATH = Path("AGENTS.md")
-MANIFEST_PATH = Path("memory/manifest.toml")
+MANIFEST_PATH = Path(".agentic-workspace/memory/repo/manifest.toml")
 UPGRADE_SOURCE_PATH = MANAGED_ROOT / "UPGRADE-SOURCE.toml"
 LEGACY_UPGRADE_SOURCE_PATH = LEGACY_SYSTEM_ROOT / "UPGRADE-SOURCE.toml"
 AUDIT_SCRIPT_PATH = Path("scripts/check/check_memory_freshness.py")
@@ -29,16 +29,16 @@ SHIPPED_SKILLS_ROOT = MANAGED_ROOT / "skills"
 LEGACY_SHIPPED_SKILLS_ROOT = Path("memory/skills")
 
 CURRENT_MEMORY_BASELINE = (
-    Path("memory/current/project-state.md"),
-    Path("memory/current/task-context.md"),
+    Path(".agentic-workspace/memory/repo/current/project-state.md"),
+    Path(".agentic-workspace/memory/repo/current/task-context.md"),
 )
-OPTIONAL_CURRENT_MEMORY_FILES = (Path("memory/current/routing-feedback.md"),)
-ROUTING_BASELINE = (Path("memory/index.md"),)
+OPTIONAL_CURRENT_MEMORY_FILES = (Path(".agentic-workspace/memory/repo/current/routing-feedback.md"),)
+ROUTING_BASELINE = (Path(".agentic-workspace/memory/repo/index.md"),)
 STARTER_EXAMPLE_FILES = (
-    Path("memory/domains/example-runtime-boundary.md"),
-    Path("memory/invariants/example-response-contract.md"),
-    Path("memory/runbooks/example-release-check.md"),
-    Path("memory/decisions/example-cli-selection.md"),
+    Path(".agentic-workspace/memory/repo/domains/example-runtime-boundary.md"),
+    Path(".agentic-workspace/memory/repo/invariants/example-response-contract.md"),
+    Path(".agentic-workspace/memory/repo/runbooks/example-release-check.md"),
+    Path(".agentic-workspace/memory/repo/decisions/example-cli-selection.md"),
 )
 BOOTSTRAP_WORKSPACE_FILES = (
     BOOTSTRAP_WORKSPACE_ROOT / "README.md",
@@ -65,45 +65,50 @@ CORE_PAYLOAD_SKILL_FILES = (
 )
 PAYLOAD_REQUIRED_FILES = (
     AGENTS_PATH,
-    Path("memory/index.md"),
+    Path(".agentic-workspace/memory/repo/index.md"),
     MANIFEST_PATH,
     MANAGED_ROOT / "SKILLS.md",
     WORKFLOW_PATH,
     UPGRADE_SOURCE_PATH,
-    Path("memory/current/project-state.md"),
-    Path("memory/current/task-context.md"),
-    Path("memory/domains/README.md"),
+    Path(".agentic-workspace/memory/repo/current/project-state.md"),
+    Path(".agentic-workspace/memory/repo/current/task-context.md"),
+    Path(".agentic-workspace/memory/repo/domains/README.md"),
     *STARTER_EXAMPLE_FILES,
-    Path("memory/invariants/README.md"),
-    Path("memory/runbooks/README.md"),
-    Path("memory/mistakes/recurring-failures.md"),
-    Path("memory/decisions/README.md"),
-    Path("docs/memory-metadata-contract.md"),
-    Path("docs/installer-behavior.md"),
+    Path(".agentic-workspace/memory/repo/invariants/README.md"),
+    Path(".agentic-workspace/memory/repo/runbooks/README.md"),
+    Path(".agentic-workspace/memory/repo/mistakes/recurring-failures.md"),
+    Path(".agentic-workspace/memory/repo/decisions/README.md"),
+    Path(".agentic-workspace/docs/memory-metadata-contract.md"),
+    Path(".agentic-workspace/docs/installer-behavior.md"),
     AUDIT_SCRIPT_PATH,
     *BOOTSTRAP_WORKSPACE_FILES,
     *CORE_PAYLOAD_SKILL_FILES,
 )
 MEMORY_COMPATIBILITY_CONTRACT_FILES = (
     AGENTS_PATH,
-    Path("memory/index.md"),
+    Path(".agentic-workspace/memory/repo/index.md"),
     MANIFEST_PATH,
     MANAGED_ROOT / "SKILLS.md",
     WORKFLOW_PATH,
-    Path("memory/current/project-state.md"),
-    Path("memory/current/task-context.md"),
-    Path("memory/domains/README.md"),
-    Path("memory/invariants/README.md"),
-    Path("memory/runbooks/README.md"),
-    Path("memory/mistakes/recurring-failures.md"),
-    Path("memory/decisions/README.md"),
-    Path("docs/memory-metadata-contract.md"),
+    Path(".agentic-workspace/memory/repo/current/project-state.md"),
+    Path(".agentic-workspace/memory/repo/current/task-context.md"),
+    Path(".agentic-workspace/memory/repo/domains/README.md"),
+    Path(".agentic-workspace/memory/repo/invariants/README.md"),
+    Path(".agentic-workspace/memory/repo/runbooks/README.md"),
+    Path(".agentic-workspace/memory/repo/mistakes/recurring-failures.md"),
+    Path(".agentic-workspace/memory/repo/decisions/README.md"),
+    Path(".agentic-workspace/docs/memory-metadata-contract.md"),
 )
 MEMORY_LOWER_STABILITY_HELPER_FILES = tuple(
     relative for relative in PAYLOAD_REQUIRED_FILES if relative not in MEMORY_COMPATIBILITY_CONTRACT_FILES
 )
-FORBIDDEN_PAYLOAD_FILES = (Path("TODO.md"), Path("memory/current/active-decisions.md"), LEGACY_SYSTEM_ROOT / "UPGRADE.md")
-OBSOLETE_SHARED_FILES = (LEGACY_SYSTEM_ROOT / "UPGRADE.md",)
+FORBIDDEN_PAYLOAD_FILES = (
+    Path("TODO.md"),
+    Path(".agentic-workspace/memory/repo/current/active-decisions.md"),
+    LEGACY_SYSTEM_ROOT / "UPGRADE.md",
+    MANAGED_ROOT / "UPGRADE.md",
+)
+OBSOLETE_SHARED_FILES = (LEGACY_SYSTEM_ROOT / "UPGRADE.md", MANAGED_ROOT / "UPGRADE.md")
 FORBIDDEN_PAYLOAD_PREFIXES = (".agent-work/",)
 CURRENT_TASK_STALE_DAYS = 30
 CURRENT_TASK_MAX_LINES = 80
@@ -176,10 +181,10 @@ NOTE_TYPE_LINE_LIMITS = {
     "current-context": CURRENT_TASK_MAX_LINES,
     "routing-feedback": ROUTING_FEEDBACK_MAX_LINES,
 }
-ALWAYS_READ_SURFACE = (Path("memory/index.md"),)
+ALWAYS_READ_SURFACE = (Path(".agentic-workspace/memory/repo/index.md"),)
 ALLOWED_HIGH_LEVEL_NOTES = {
-    Path("memory/index.md"),
-    Path("memory/current/project-state.md"),
+    Path(".agentic-workspace/memory/repo/index.md"),
+    Path(".agentic-workspace/memory/repo/current/project-state.md"),
 }
 
 WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
@@ -205,31 +210,31 @@ EMBEDDED_WORKFLOW_HEADINGS = (
 PLACEHOLDER_RE = re.compile(r"<[A-Z0-9_/-]+>")
 DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\b")
 VERSION_RE = re.compile(r"^\s*Version:\s*(\d+)\s*$", re.MULTILINE)
-MEMORY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_.-])memory/[A-Za-z0-9_./-]+")
-MARKDOWN_MEMORY_LINK_RE = re.compile(r"\[[^\]]+\]\((?!https?://)([^)]*memory/[^)]*)\)")
+MEMORY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_.-])(?:memory|\.agentic-workspace/memory/repo)/[A-Za-z0-9_./-]+")
+MARKDOWN_MEMORY_LINK_RE = re.compile(r"\[[^\]]+\]\((?!https?://)([^)]*(?:memory/|\.agentic-workspace/memory/repo/)[^)]*)\)")
 LEGACY_BOOTSTRAP_AGENTS_PHRASES = (
     (
-        "Check `memory/skills/README.md` and the skill directories under "
-        "`memory/skills/` for a checked-in memory skill whose name or "
+        "Check `.agentic-workspace/memory/repo/skills/README.md` and the skill directories under "
+        "`.agentic-workspace/memory/repo/skills/` for a checked-in memory skill whose name or "
         "description matches the task."
     ),
     (
         "Use the matching checked-in skill when it fits; otherwise load only "
-        "the memory files routed by `memory/index.md` that are relevant to "
+        "the memory files routed by `.agentic-workspace/memory/repo/index.md` that are relevant to "
         "the task."
     ),
     (
         "Use the matching checked-in skill when it fits; otherwise read only "
-        "the memory files routed by `memory/index.md` that are relevant to "
+        "the memory files routed by `.agentic-workspace/memory/repo/index.md` that are relevant to "
         "the subsystem you will touch."
     ),
     (
-        "Treat a quick `memory/skills/` scan as part of setup in repos that "
+        "Treat a quick `.agentic-workspace/memory/repo/skills/` scan as part of setup in repos that "
         "have checked-in memory skills; this keeps repeatable memory "
         "workflows discoverable instead of implicit."
     ),
     (
-        "Treat a quick `memory/skills/` scan as part of setup in repos that "
+        "Treat a quick `.agentic-workspace/memory/repo/skills/` scan as part of setup in repos that "
         "have checked-in memory skills so repeatable procedures are easy to "
         "detect and reuse."
     ),
@@ -243,6 +248,7 @@ DEFAULT_CORE_DOC_GLOBS = (
 )
 DEFAULT_CORE_DOC_EXCLUDE_GLOBS = (
     "AGENTS.md",
+    ".agentic-workspace/memory/repo/**/*.md",
     "memory/**/*.md",
     "memory/bootstrap/**/*.md",
 )

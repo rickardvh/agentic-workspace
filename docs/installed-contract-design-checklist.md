@@ -2,7 +2,7 @@
 
 Use this checklist when adding or materially changing a shipped installed surface in a package payload.
 
-Use `docs/compatibility-policy.md` for stable-versus-mutable surface guidance, `docs/maintainer-commands.md` for commands, and `docs/contributor-playbook.md` for routing; this page is only the review bar for collaboration-sensitive installed surfaces.
+Use `.agentic-workspace/docs/compatibility-policy.md` for stable-versus-mutable surface guidance, `docs/maintainer-commands.md` for commands, and `docs/contributor-playbook.md` for routing; this page is only the review bar for collaboration-sensitive installed surfaces.
 
 ## Ownership
 

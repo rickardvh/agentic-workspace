@@ -20,17 +20,17 @@ Resolve instruction conflicts in this order:
 1. Read `AGENTS.md`.
 2. Read `agentic-workspace summary --format json` for the compact planning and ownership state.
 3. Read `agentic-workspace config --target . --format json` when the current posture or startup entrypoint matters.
-4. Read the active feature plan in `docs/execplans/` when the summary points there.
+4. Read the active feature plan in `.agentic-workspace/planning/execplans/` when the summary points there.
 7. Load package-local docs only for the package being edited.
 8. Before touching a shipped package, refresh it to the latest checked-in version through that package's canonical update workflow so local work starts from the current package contract.
-9. When a change crosses package source, package payload, and root install boundaries, read `docs/extraction-and-discovery-contract.md` before editing.
+9. When a change crosses package source, package payload, and root install boundaries, read `.agentic-workspace/docs/extraction-and-discovery-contract.md` before editing.
 10. When making claims about GitHub issue state, verify the live issue set with `gh` instead of relying only on checked-in intake notes.
 
 Do not start coding from chat context alone when the same information exists in checked-in files.
 Do not bulk-read all planning surfaces.
 When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
-Read `docs/routing-contract.md` when execution hits an edge case, routing ambiguity, or requires deep context on the operating model.
-Read `docs/lifecycle-and-config-contract.md` before editing CLI initialization or configuration logic.
+Read `.agentic-workspace/docs/routing-contract.md` when execution hits an edge case, routing ambiguity, or requires deep context on the operating model.
+Read `.agentic-workspace/docs/lifecycle-and-config-contract.md` before editing CLI initialization or configuration logic.
 
 ### Planning Continuity
 - the execplan must record both `Intent Continuity` and `Required Continuation` before archive.
@@ -45,7 +45,7 @@ Read `docs/lifecycle-and-config-contract.md` before editing CLI initialization o
 
 - Prefer task-by-task judgment about whether work should stay direct, be split into planner/implementer/validator subtasks, or be escalated to a stronger planner.
 - Use the effective mixed-agent posture from `agentic-workspace config --target . --format json` when deciding how much to delegate and how much reasoning to spend.
-- Treat `agentic-workspace.local.toml` as the control surface for capability/cost posture: if it says internal delegation or a strong planner is available, prefer that mode when it reduces cost or risk; if it does not, stay direct unless the task shape clearly justifies promotion or escalation.
+- Treat `.agentic-workspace/config.local.toml` as the control surface for capability/cost posture: if it says internal delegation or a strong planner is available, prefer that mode when it reduces cost or risk; if it does not, stay direct unless the task shape clearly justifies promotion or escalation.
 - Do not require the user to restate this preference every session when the config already makes the posture clear.
 - Keep the chosen execution shape bounded and explicit in checked-in planning when the task is broad enough to survive across sessions.
 
