@@ -4055,6 +4055,75 @@ def _defaults_payload() -> dict[str, Any]:
             ],
             "stop_rule": "Do not reopen broader docs once one compact surface has answered the routine question.",
         },
+        "install_profiles": {
+            "canonical_doc": "docs/which-package.md",
+            "command": "agentic-workspace defaults --section install_profiles --format json",
+            "rule": "Use the public workspace entrypoint and choose the preset that matches the repo's main operating problem.",
+            "default_entrypoint": "agentic-workspace",
+            "default_answer": "Use `agentic-workspace` and choose the preset that matches the repo problem.",
+            "profiles": [
+                {
+                    "preset": "memory",
+                    "main_problem": "Stable repo knowledge keeps getting rediscovered.",
+                    "why": "Memory is the smallest useful operational profile for durable context and quiet routing.",
+                    "good_fit": [
+                        "subsystem knowledge is expensive to rediscover",
+                        "recurring traps or operator sequences should be shared",
+                        "the repo already has task tracking but lacks durable shared knowledge",
+                    ],
+                },
+                {
+                    "preset": "planning",
+                    "main_problem": "Active work keeps drifting or fragmenting.",
+                    "why": "Planning gives a checked-in active queue and bounded execplans.",
+                    "good_fit": [
+                        "work spans many short sessions",
+                        "active execution drifts without a checked-in queue",
+                        "backlog tools exist, but active implementation still fragments",
+                    ],
+                },
+                {
+                    "preset": "full",
+                    "main_problem": "You want both durable knowledge and checked-in execution.",
+                    "why": "The workspace layer composes both modules through one lifecycle entrypoint.",
+                    "good_fit": [
+                        "the repo wants both restartable execution and lower rediscovery cost",
+                        "agents are regular maintainers and need both active state and durable context",
+                    ],
+                },
+            ],
+            "partial_adoption": [
+                {
+                    "combination": "memory only",
+                    "supported": True,
+                    "primary_writable_surfaces": [
+                        ".agentic-workspace/memory/repo/",
+                        ".agentic-workspace/memory/repo/current/ (weak authority)",
+                    ],
+                },
+                {
+                    "combination": "planning only",
+                    "supported": True,
+                    "primary_writable_surfaces": [
+                        ".agentic-workspace/planning/state.toml",
+                        ".agentic-workspace/planning/execplans/",
+                    ],
+                },
+                {
+                    "combination": "memory + planning",
+                    "supported": True,
+                    "primary_writable_surfaces": [
+                        "Planning for active-now state",
+                        "memory for durable knowledge",
+                    ],
+                },
+            ],
+            "lightweight_profile": {
+                "preset": "memory",
+                "summary": "Choose `memory` when you want the smallest useful core.",
+                "why": "It keeps the visible surface smaller than `planning` or `full` while still giving the repo durable knowledge and compact routing.",
+            },
+        },
         "lifecycle": {
             "primary_entrypoint": "agentic-workspace",
             "default_install_command": "agentic-workspace install --target ./repo --preset <memory|planning|full>",

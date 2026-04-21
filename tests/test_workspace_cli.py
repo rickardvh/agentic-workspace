@@ -138,6 +138,11 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["operating_questions"]["questions"][0]["id"] == "startup_or_lifecycle_path"
     assert payload["operating_questions"]["questions"][1]["ask_first"] == "agentic-workspace summary --format json"
     assert payload["operating_questions"]["questions"][2]["ask_first"] == "agentic-workspace report --target ./repo --format json"
+    assert payload["install_profiles"]["canonical_doc"] == "docs/which-package.md"
+    assert payload["install_profiles"]["command"] == "agentic-workspace defaults --section install_profiles --format json"
+    assert payload["install_profiles"]["profiles"][0]["preset"] == "memory"
+    assert payload["install_profiles"]["profiles"][1]["preset"] == "planning"
+    assert payload["install_profiles"]["lightweight_profile"]["preset"] == "memory"
     assert payload["lifecycle"]["primary_entrypoint"] == "agentic-workspace"
     assert "agentic-workspace install --target ./repo --preset <memory|planning|full>" == payload["lifecycle"]["default_install_command"]
     assert payload["lifecycle"]["canonical_external_agent_handoff"] == "llms.txt"
@@ -809,6 +814,23 @@ def test_defaults_operating_questions_section_selector_returns_compact_contract_
     assert payload["answer"]["questions"][3]["id"] == "proof_or_ownership_answer"
     assert payload["answer"]["questions"][4]["then_if_needed"][0] == "llms.txt"
     assert payload["answer"]["stop_rule"] == ("Do not reopen broader docs once one compact surface has answered the routine question.")
+    assert "docs/which-package.md" in payload["refs"]
+
+
+def test_defaults_install_profiles_section_selector_returns_compact_contract_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "install_profiles", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "install_profiles"}
+    assert payload["matched"] is True
+    assert payload["answer"]["canonical_doc"] == "docs/which-package.md"
+    assert payload["answer"]["default_entrypoint"] == "agentic-workspace"
+    assert payload["answer"]["profiles"][0]["preset"] == "memory"
+    assert payload["answer"]["profiles"][2]["preset"] == "full"
+    assert payload["answer"]["partial_adoption"][1]["combination"] == "planning only"
+    assert payload["answer"]["lightweight_profile"]["preset"] == "memory"
     assert "docs/which-package.md" in payload["refs"]
 
 
