@@ -369,6 +369,21 @@ def _print_summary(summary: dict) -> None:
             "Finished-run review contract view: "
             f"{finished_run_review_contract.get('status')} ({finished_run_review_contract.get('reason', 'no finished-run review contract available')})"
         )
+    intent_validation_contract = summary.get("intent_validation_contract", {})
+    if intent_validation_contract.get("status") == "present":
+        counts = intent_validation_contract.get("counts", {})
+        external = intent_validation_contract.get("external_evidence", {})
+        print("Intent-validation contract view:")
+        print(f"- Attention count: {counts.get('attention_count', 0)}")
+        print(f"- Untracked external open items: {counts.get('untracked_external_open_count', 0)}")
+        print(f"- Lower-trust closeouts: {counts.get('lower_trust_closeout_count', 0)}")
+        print(f"- External evidence: {external.get('status', 'absent')}")
+        print(f"- Recommended next action: {intent_validation_contract.get('recommended_next_action', '')}")
+    elif intent_validation_contract:
+        print(
+            "Intent-validation contract view: "
+            f"{intent_validation_contract.get('status')} ({intent_validation_contract.get('reason', 'no intent-validation contract available')})"
+        )
     if summary["todo"]["active_items"]:
         print("Active items:")
         for item in summary["todo"]["active_items"]:
@@ -437,6 +452,17 @@ def _print_report(report: dict) -> None:
         finished_run_review_contract = active.get("finished_run_review_contract", {})
         if isinstance(finished_run_review_contract, dict) and finished_run_review_contract.get("status") == "present":
             print(f"Finished-run review: {finished_run_review_contract.get('review_status', '')}")
+    intent_validation = report.get("intent_validation", {})
+    if isinstance(intent_validation, dict) and intent_validation.get("status") == "present":
+        counts = intent_validation.get("counts", {})
+        external = intent_validation.get("external_evidence", {})
+        print(
+            "Intent validation: "
+            f"{counts.get('attention_count', 0)} attention / "
+            f"{counts.get('untracked_external_open_count', 0)} untracked external open / "
+            f"{counts.get('lower_trust_closeout_count', 0)} lower-trust closeouts"
+        )
+        print(f"External intent evidence: {external.get('status', 'absent')}")
     completed_execplans = report.get("completed_execplans", [])
     if completed_execplans:
         print(f"Completed execplans awaiting archive: {len(completed_execplans)}")

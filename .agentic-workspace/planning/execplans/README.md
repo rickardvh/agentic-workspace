@@ -154,6 +154,7 @@ Keep this section compact.
 It exists to preserve the intended end state, the allowed local latitude, and the escalation boundary when a safe first slice might otherwise drift into a substitute for the larger request.
 Use `none` only when the slice is so local that delegated-judgment framing would add no value beyond the surrounding plan.
 `agentic-workspace summary --format json` exposes a typed `planning-summary/v1` payload. Inside that payload, `planning_record` is the canonical active planning record when planning has one active TODO item and one active execplan. `active_contract` is the narrower intent projection over that record.
+`intent_validation_contract` is the compact inspection view for dangling larger intent, lower-trust closeout, and optional external evidence reconciliation when no active execplan is present.
 Treat `planning_record` as canonical active state when it is available; raw `.agentic-workspace/planning/state.toml` and execplan prose remain the thin human maintenance layer and semantic fallback.
 
 Intent interpretation belongs under `## Intent Interpretation` when the slice should preserve how it moved from the literal request to the bounded intended outcome:

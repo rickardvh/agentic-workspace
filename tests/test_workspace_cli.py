@@ -2408,6 +2408,42 @@ def test_report_handles_modules_with_empty_findings_lists(tmp_path: Path, monkey
     assert payload["findings"] == []
 
 
+def test_report_surfaces_planning_intent_validation_findings(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    (target / ".agentic-workspace" / "planning" / "external-intent-evidence.json").write_text(
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "system": "manual",
+                        "id": "EXT-quiet-open",
+                        "title": "Quiet but open",
+                        "status": "open",
+                        "kind": "lane",
+                        "parent_id": "",
+                        "planning_residue_expected": "required",
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert any("Open external planning item EXT-quiet-open" in finding["message"] for finding in payload["findings"])
+    planning_report = next(report for report in payload["module_reports"] if report["module"] == "planning")
+    assert planning_report["intent_validation"]["counts"]["untracked_external_open_count"] == 1
+
+
 def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

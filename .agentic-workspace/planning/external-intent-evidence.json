@@ -1,0 +1,77 @@
+{
+  "kind": "planning-external-intent-evidence/v1",
+  "items": [
+    {
+      "system": "github",
+      "id": "#230",
+      "title": "[Workspace]: Strip away visible product residue that is no longer earning its keep so the system becomes easier to enter, recover, and trust without losing real leverage",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#251",
+      "title": "[Workspace]: Design for graceful partial compliance so generic agents still get value from the package, and bypassing it becomes visible and harder to trust",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#253",
+      "title": "[Workspace]: Make core package surfaces cheaper for generic agents to consume so using the package is easier than broad repo scavenging or private reinvention",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#251",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#254",
+      "title": "[Workspace]: Make the default entry path easier for generic agents to discover and follow so startup compliance does not depend on deep product awareness",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#251",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#255",
+      "title": "[Workspace]: Make core package surfaces easier for generic agents to use so package startup and state feel cheaper than ad hoc repo reading",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#251",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#256",
+      "title": "[Review]: Surface lower-trust signals when package use was likely bypassed so review and closure do not silently assume disciplined package usage",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#251",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#257",
+      "title": "[Workspace]: Surface dangling larger intent and lower-trust closeout signals without assuming any external planning system",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#252",
+      "title": "[Workspace]: Make the default entry path easier for generic agents to discover and follow so startup compliance does not depend on deep product awareness",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#251",
+      "planning_residue_expected": "required"
+    }
+  ]
+}

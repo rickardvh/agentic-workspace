@@ -2719,7 +2719,7 @@ def _run_report_command(
         config=config,
     )
     warnings = list(status_payload.get("warnings", []))
-    findings: list[dict[str, Any]] = []
+    aggregated_findings: list[dict[str, Any]] = []
     seen_findings: set[tuple[str, str, str | None, str | None]] = set()
 
     def _add_finding(*, severity: str, module: str, message: str, path: str | None = None) -> None:
@@ -2734,7 +2734,7 @@ def _run_report_command(
         }
         if path is not None:
             finding["path"] = path
-        findings.append(finding)
+        aggregated_findings.append(finding)
 
     for warning in warnings:
         _add_finding(severity="warning", module="workspace", message=warning)
@@ -2756,9 +2756,9 @@ def _run_report_command(
         else:
             continue
         module_reports.append(module_report)
-        findings = cast(Any, module_report.get("findings"))
-        if isinstance(findings, list):
-            for finding in findings:
+        module_findings = cast(Any, module_report.get("findings"))
+        if isinstance(module_findings, list):
+            for finding in module_findings:
                 if not isinstance(finding, dict):
                     continue
                 _add_finding(
@@ -2815,7 +2815,7 @@ def _run_report_command(
             surface="report",
         ),
         "execution_shape": execution_shape,
-        "findings": findings,
+        "findings": aggregated_findings,
         "next_action": next_action,
         "discovery": discovery,
         "standing_intent": standing_intent,

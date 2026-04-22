@@ -41,6 +41,21 @@ def _load_module(path: Path, module_name: str):
     return module
 
 
+def _write_external_intent_evidence(path: Path, *, items: list[dict[str, str]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": items,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def _minimal_execplan(status: str = "in-progress") -> str:
     execution_run = (
         "- Run status: completed\n"
@@ -1482,6 +1497,39 @@ Use `agentic-workspace summary --format json` first; keep this file as the repo-
     assert any(action.kind == "updated" and action.path == tmp_path / ".agentic-workspace/planning/state.toml" for action in result.actions)
 
 
+def test_archive_execplan_apply_cleanup_removes_compact_state_active_item_pointer(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "#257", surface = ".agentic-workspace/planning/execplans/intent-validation-and-dangling-debt-2026-04-22.md", why_now = "Ship vendor-agnostic intent validation." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "intent-validation-and-dangling-debt-2026-04-22.md"
+    _write(plan_path, _minimal_execplan(status="completed").replace("plan-alpha", "intent-validation-and-dangling-debt"))
+
+    result = archive_execplan("intent-validation-and-dangling-debt-2026-04-22", target=tmp_path, apply_cleanup=True)
+
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    archived_path = (
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "intent-validation-and-dangling-debt-2026-04-22.md"
+    )
+
+    assert archived_path.exists()
+    assert not plan_path.exists()
+    assert "intent-validation-and-dangling-debt-2026-04-22.md" not in state_text
+    assert "active_items = []" in state_text
+    assert any(action.kind == "updated" and "remove TODO item '#257'" in action.detail for action in result.actions)
+
+
 def test_archive_execplan_apply_cleanup_removes_matching_candidate_queue_entry(tmp_path: Path) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
@@ -1924,6 +1972,100 @@ def test_planning_report_derives_compact_module_state_from_summary(tmp_path: Pat
     assert report["system_intent"]["canonical_doc"] == ".agentic-workspace/docs/system-intent-contract.md"
 
 
+def test_planning_summary_exposes_intent_validation_contract(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "tracked-lane", title = "Tracked lane", priority = "first", issues = ["EXT-1"], outcome = "Keep tracked.", reason = "Needed.", promotion_signal = "Promote when needed.", suggested_first_slice = "Do the thing." },
+]
+candidates = [
+  { priority = "first", summary = "Tracked lane" },
+]
+""",
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "EXT-1",
+                "title": "Tracked lane",
+                "status": "open",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            },
+            {
+                "system": "manual",
+                "id": "EXT-2",
+                "title": "Untracked lane",
+                "status": "open",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            },
+            {
+                "system": "manual",
+                "id": "EXT-3",
+                "title": "Closed without residue",
+                "status": "closed",
+                "kind": "slice",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            },
+        ],
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    assert "intent_validation_contract" in summary["schema"]["shared_fields"]
+    contract = summary["intent_validation_contract"]
+    assert contract["status"] == "present"
+    assert contract["external_evidence"]["status"] == "loaded"
+    assert contract["external_evidence"]["item_count"] == 3
+    assert contract["counts"]["tracked_external_open_count"] == 1
+    assert contract["counts"]["untracked_external_open_count"] == 1
+    assert contract["counts"]["lower_trust_closeout_count"] == 1
+    assert contract["counts"]["attention_count"] == 2
+    assert contract["signals"][0]["kind"] == "external_open_untracked"
+    assert contract["signals"][1]["kind"] == "closed_without_planning_residue"
+
+
+def test_planning_report_promotes_intent_validation_signals_to_findings(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "EXT-9",
+                "title": "Untracked lane",
+                "status": "open",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            }
+        ],
+    )
+
+    report = planning_report(target=tmp_path)
+
+    assert report["intent_validation"]["counts"]["untracked_external_open_count"] == 1
+    assert report["status"]["intent_validation_attention_count"] == 1
+    assert any(finding["warning_class"] == "external_open_untracked" for finding in report["findings"])
+
+
 def test_planning_summary_exposes_closure_evidence(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
@@ -2033,12 +2175,14 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "context_budget_contract" in summary["schema"]["shared_fields"]
     assert "execution_run_contract" in summary["schema"]["shared_fields"]
     assert "finished_run_review_contract" in summary["schema"]["shared_fields"]
+    assert "intent_validation_contract" in summary["schema"]["shared_fields"]
     assert "hierarchy_contract" in summary["schema"]["shared_fields"]
     assert "handoff_contract" in summary["schema"]["shared_fields"]
     assert "literal_request" in summary["schema"]["view_fields"]["intent_interpretation_contract"]
     assert "live_working_set" in summary["schema"]["view_fields"]["context_budget_contract"]
     assert "run_status" in summary["schema"]["view_fields"]["execution_run_contract"]
     assert "review_status" in summary["schema"]["view_fields"]["finished_run_review_contract"]
+    assert "counts" in summary["schema"]["view_fields"]["intent_validation_contract"]
     assert "parent_lane" in summary["schema"]["view_fields"]["hierarchy_contract"]
     assert "next_likely_slice" in summary["schema"]["view_fields"]["follow_through_contract"]
     assert "read_first" in summary["schema"]["view_fields"]["handoff_contract"]

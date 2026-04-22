@@ -137,6 +137,8 @@ Use the machine-readable report as the default combined-state inspection path wh
 - what execution bounds and stop conditions currently shape a delegated worker handoff?
 - what happened in the current or most recent bounded execution run at a useful level of abstraction?
 - how returned delegated work should be reviewed cheaply for scope, proof, and intent fit?
+- what dangling larger intent or lower-trust closeout signals currently exist even when no execplan is active?
+- whether optional external planning evidence is present, absent, invalid, or in conflict with checked-in planning visibility?
 - what findings or warnings need attention?
 
 Use `agentic-workspace defaults --section intent --format json` when the question is confirmed versus interpreted intent; keep report for combined workspace state.
@@ -178,6 +180,7 @@ Only open raw module files or broader docs when the report points you to a follo
 - Keep concern-shaped subobjects narrow enough that one question does not force unrelated contract domains to load.
 - Keep discovery read-only until a setup promotion explicitly decides to seed.
 - Keep `agentic-workspace summary --format json` as the planning-side companion surface rather than stretching the workspace report into a second planning schema.
+- Keep optional external planning evidence advisory and subordinate to checked-in planning ownership.
 - Let optimization bias change report density and rendered text style only; do not let it change report truth, execution posture, or module ownership semantics.
 - Keep the optimization-bias surface boundary explicit:
   - honors bias: derived report rendering density, rendered human-facing views, and durable residue style when truth stays unchanged

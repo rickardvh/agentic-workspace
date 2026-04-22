@@ -23,6 +23,7 @@ PLANNING_MANAGED_ROOT = module_root("planning")
 PLANNING_SKILLS_MANAGED_ROOT = PLANNING_MANAGED_ROOT / "skills"
 PLANNING_MANIFEST_PATH = PLANNING_MANAGED_ROOT / "agent-manifest.json"
 PLANNING_STATE_PATH = PLANNING_MANAGED_ROOT / "state.toml"
+PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "external-intent-evidence.json"
 PLANNING_RENDER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "render_agent_docs.py"
 PLANNING_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
 PLANNING_MAINTAINER_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_maintainer_surfaces.py"
@@ -47,6 +48,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path(".agentic-workspace/docs/standing-intent-contract.md"),
     Path(".agentic-workspace/docs/candidate-lanes-contract.md"),
     Path(".agentic-workspace/docs/context-budget-contract.md"),
+    Path(".agentic-workspace/docs/external-intent-evidence-contract.md"),
     Path(".agentic-workspace/docs/installer-behavior.md"),
     Path(".agentic-workspace/planning/execplans/README.md"),
     Path(".agentic-workspace/planning/execplans/TEMPLATE.md"),
@@ -83,6 +85,7 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path(".agentic-workspace/docs/standing-intent-contract.md"),
     Path(".agentic-workspace/docs/candidate-lanes-contract.md"),
     Path(".agentic-workspace/docs/context-budget-contract.md"),
+    Path(".agentic-workspace/docs/external-intent-evidence-contract.md"),
     Path(".agentic-workspace/docs/installer-behavior.md"),
     Path(".agentic-workspace/planning/execplans/README.md"),
     Path(".agentic-workspace/planning/execplans/TEMPLATE.md"),
@@ -647,6 +650,12 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         execution_run_contract=execution_run_contract,
         intent_interpretation_contract=intent_interpretation_contract,
     )
+    intent_validation_contract = _intent_validation_contract(
+        target_root=target_root,
+        active_items=active_items,
+        active_execplans=active_execplans,
+        roadmap_lanes=roadmap_lanes,
+    )
     hierarchy_contract = _active_hierarchy_contract(
         target_root=target_root,
         planning_record=planning_record,
@@ -697,6 +706,10 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
             finished_run_review_contract,
             view_name="finished_run_review_contract",
         ),
+        "intent_validation_contract": _contract_projection(
+            intent_validation_contract,
+            view_name="intent_validation_contract",
+        ),
         "hierarchy_contract": _contract_projection(hierarchy_contract, view_name="hierarchy_contract"),
         "handoff_contract": _contract_projection(handoff_contract, view_name="handoff_contract"),
         "system_intent": _system_intent_contract_payload(),
@@ -723,6 +736,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
     context_budget_contract = summary.get("context_budget_contract", {})
     execution_run_contract = summary.get("execution_run_contract", {})
     finished_run_review_contract = summary.get("finished_run_review_contract", {})
+    intent_validation_contract = summary.get("intent_validation_contract", {})
     hierarchy_contract = summary.get("hierarchy_contract", {})
     handoff_contract = summary.get("handoff_contract", {})
     warnings = list(summary.get("warnings", []))
@@ -735,10 +749,28 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
         }
         for warning in warnings
     ]
+    validation_signals = intent_validation_contract.get("signals", [])
+    if isinstance(validation_signals, list):
+        for signal in validation_signals:
+            if not isinstance(signal, dict):
+                continue
+            findings.append(
+                {
+                    "severity": str(signal.get("severity", "warning")),
+                    "path": str(signal.get("path", "")) or None,
+                    "message": str(signal.get("message", "")),
+                    "warning_class": str(signal.get("kind", "")),
+                }
+            )
     next_action = "No active planning work right now."
     commands: list[str] = []
     if planning_record.get("status") == "present":
         next_action = str(planning_record.get("next_action", next_action))
+    elif intent_validation_contract.get("status") == "present" and intent_validation_contract.get("counts", {}).get("attention_count", 0):
+        next_action = str(
+            intent_validation_contract.get("recommended_next_action", "Review intent-validation signals before treating planning as quiet.")
+        )
+        commands.append("Inspect the intent_validation contract in agentic-planning-bootstrap report --format json")
     elif summary["todo"]["active_count"]:
         first_item = summary["todo"]["active_items"][0]
         next_action = f"Continue active TODO item {first_item.get('id', '')}: {first_item.get('surface', '')}".strip(": ")
@@ -762,6 +794,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
                 ".agentic-workspace/docs/reporting-contract.md",
                 ".agentic-workspace/docs/system-intent-contract.md",
                 ".agentic-workspace/docs/context-budget-contract.md",
+                ".agentic-workspace/docs/external-intent-evidence-contract.md",
                 "packages/planning/README.md",
             ],
             "shared_fields": [
@@ -775,6 +808,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
                 "ownership_review",
                 "active",
                 "system_intent",
+                "intent_validation",
                 "findings",
                 "next_action",
             ],
@@ -791,6 +825,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "completed_execplan_count": summary["execplans"].get("completed_count", 0),
             "roadmap_lane_count": summary["roadmap"].get("lane_count", 0),
             "roadmap_candidate_count": summary["roadmap"]["candidate_count"],
+            "intent_validation_attention_count": intent_validation_contract.get("counts", {}).get("attention_count", 0),
             "warning_count": summary["warning_count"],
         },
         "completed_execplans": completed_execplans,
@@ -808,6 +843,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "handoff_contract": handoff_contract,
         },
         "system_intent": summary.get("system_intent", {}),
+        "intent_validation": intent_validation_contract,
         "findings": findings,
         "next_action": {
             "summary": next_action,
@@ -839,6 +875,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             ".agentic-workspace/docs/extraction-and-discovery-contract.md",
             ".agentic-workspace/docs/candidate-lanes-contract.md",
             ".agentic-workspace/docs/context-budget-contract.md",
+            ".agentic-workspace/docs/external-intent-evidence-contract.md",
             ".agentic-workspace/planning/execplans/README.md",
         ],
         "command": "agentic-workspace summary --format json",
@@ -858,6 +895,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "context_budget_contract",
             "execution_run_contract",
             "finished_run_review_contract",
+            "intent_validation_contract",
             "hierarchy_contract",
             "handoff_contract",
             "system_intent",
@@ -956,6 +994,15 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "follow_on_decision",
                 "minimal_refs",
             ],
+            "intent_validation_contract": [
+                "rule",
+                "primary_owner",
+                "counts",
+                "external_evidence",
+                "signals",
+                "recommended_next_action",
+                "minimal_refs",
+            ],
             "hierarchy_contract": [
                 "current_layer",
                 "parent_lane",
@@ -1000,11 +1047,12 @@ def _planning_summary_schema() -> dict[str, Any]:
             "planning_record is the canonical compact active planning state when it is available",
             (
                 "active_contract, resumable_contract, follow_through_contract, intent_interpretation_contract, "
-                "context_budget_contract, execution_run_contract, finished_run_review_contract, and hierarchy_contract "
+                "context_budget_contract, execution_run_contract, finished_run_review_contract, intent_validation_contract, and hierarchy_contract "
                 "remain thinner projections over that state"
             ),
             "system intent remains durable and queryable even when the active slice is narrower than the parent issue or lane",
             "closure decisions must distinguish bounded slice completion from larger-intent satisfaction",
+            "intent validation must still work when there is no active execplan by reconciling checked-in planning state with optional external evidence",
             "handoff_contract remains a thinner delegated-worker view over the same active planning state",
             "prefer the summary schema over raw TODO or execplan parsing when one structured answer is enough",
         ],
@@ -1031,6 +1079,281 @@ def _planning_handoff_schema() -> dict[str, Any]:
             "use the handoff packet to preserve execution bounds, stop conditions, and return-with residue instead of reconstructing them from chat",
         ],
     }
+
+
+def _intent_validation_contract(
+    *,
+    target_root: Path,
+    active_items: list[dict[str, Any]],
+    active_execplans: list[dict[str, str]],
+    roadmap_lanes: list[dict[str, Any]],
+) -> dict[str, Any]:
+    surface_index = _planning_surface_reference_index(target_root)
+    external_evidence = _load_external_intent_evidence(target_root)
+    signals: list[dict[str, Any]] = []
+
+    internal_signals = _internal_continuation_signals(
+        target_root=target_root,
+        roadmap_lanes=roadmap_lanes,
+    )
+    signals.extend(internal_signals)
+    if external_evidence.get("status") == "invalid":
+        signals.append(
+            {
+                "kind": "external_evidence_invalid",
+                "severity": "warning",
+                "path": external_evidence.get("path", ""),
+                "message": str(external_evidence.get("reason", "optional external intent evidence could not be loaded")),
+                "refs": [external_evidence.get("path", "")],
+            }
+        )
+
+    tracked_open = 0
+    untracked_open = 0
+    lower_trust_closeouts = 0
+    external_items = external_evidence.get("items", [])
+    if isinstance(external_items, list):
+        for item in external_items:
+            if not isinstance(item, dict):
+                continue
+            item_id = str(item.get("id", "")).strip()
+            if not item_id:
+                continue
+            refs = _reference_locations(token=item_id, surface_index=surface_index)
+            active_refs = [ref for ref in refs if _is_live_planning_tracking_ref(ref)]
+            status = str(item.get("status", "")).strip().lower()
+            if status == "open":
+                if active_refs:
+                    tracked_open += 1
+                else:
+                    untracked_open += 1
+                    signals.append(
+                        {
+                            "kind": "external_open_untracked",
+                            "severity": "warning",
+                            "path": external_evidence.get("path", ""),
+                            "message": (
+                                f"Open external planning item {item_id} is not represented in active or candidate checked-in planning state."
+                            ),
+                            "refs": [external_evidence.get("path", ""), *refs],
+                        }
+                    )
+            elif status == "closed" and str(item.get("planning_residue_expected", "")).strip().lower() == "required" and not refs:
+                lower_trust_closeouts += 1
+                signals.append(
+                    {
+                        "kind": "closed_without_planning_residue",
+                        "severity": "warning",
+                        "path": external_evidence.get("path", ""),
+                        "message": (
+                            f"Closed external planning item {item_id} has no visible checked-in planning residue; treat closeout trust as lower."
+                        ),
+                        "refs": [external_evidence.get("path", "")],
+                    }
+                )
+
+    counts = {
+        "internal_dangling_count": len(internal_signals),
+        "tracked_external_open_count": tracked_open,
+        "untracked_external_open_count": untracked_open,
+        "lower_trust_closeout_count": lower_trust_closeouts,
+        "attention_count": len(signals),
+    }
+    recommended_next_action = "No dangling larger intent or lower-trust closeout signals detected."
+    if untracked_open:
+        recommended_next_action = (
+            "Route open external planning items into checked-in active or candidate planning state before treating the repo as quiet."
+        )
+    elif lower_trust_closeouts:
+        recommended_next_action = "Review lower-trust closeout signals before assuming recently closed work is fully evidenced."
+    elif internal_signals:
+        recommended_next_action = "Restore missing checked-in continuation ownership for partially archived intent."
+
+    refs = [
+        ".agentic-workspace/planning/state.toml",
+        *([str(external_evidence.get("path", ""))] if external_evidence.get("path") else []),
+    ]
+    for path in active_execplans:
+        relative = str(path.get("path", "")).strip()
+        if relative:
+            refs.append(relative)
+    for item in active_items:
+        surface = str(item.get("surface", "")).strip()
+        if surface:
+            refs.append(surface)
+
+    return {
+        "status": "present",
+        "rule": (
+            "Treat checked-in planning state as primary, then reconcile optional external planning evidence when present to spot dangling larger intent and lower-trust closeout."
+        ),
+        "primary_owner": ".agentic-workspace/planning/state.toml",
+        "primary_owner_rule": (
+            "Active items, candidate lanes, execplans, and archived continuation residue remain the product-owned planning truth."
+        ),
+        "external_evidence": {
+            "status": external_evidence.get("status", "absent"),
+            "path": external_evidence.get("path", ""),
+            "kind": external_evidence.get("kind", ""),
+            "systems": external_evidence.get("systems", []),
+            "item_count": external_evidence.get("item_count", 0),
+            "reason": external_evidence.get("reason", ""),
+        },
+        "counts": counts,
+        "signals": signals,
+        "recommended_next_action": recommended_next_action,
+        "minimal_refs": [ref for ref in refs if ref],
+    }
+
+
+def _planning_surface_reference_index(target_root: Path) -> dict[str, str]:
+    surface_index: dict[str, str] = {}
+    candidate_paths = [
+        target_root / PLANNING_STATE_PATH,
+        *[
+            path
+            for path in sorted((target_root / ".agentic-workspace" / "planning" / "execplans").glob("*.md"))
+            if path.name not in {"README.md", "TEMPLATE.md"}
+        ],
+        *[
+            path
+            for path in sorted((target_root / ".agentic-workspace" / "planning" / "execplans" / "archive").glob("*.md"))
+            if path.name != "README.md"
+        ],
+        *[
+            path
+            for path in sorted((target_root / ".agentic-workspace" / "planning" / "reviews").glob("*.md"))
+            if path.name not in {"README.md", "TEMPLATE.md"}
+        ],
+    ]
+    for path in candidate_paths:
+        if not path.exists() or not path.is_file():
+            continue
+        try:
+            surface_index[path.relative_to(target_root).as_posix()] = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+    return surface_index
+
+
+def _reference_locations(*, token: str, surface_index: dict[str, str]) -> list[str]:
+    return [path for path, text in surface_index.items() if token in text]
+
+
+def _is_live_planning_tracking_ref(relative_path: str) -> bool:
+    if relative_path == ".agentic-workspace/planning/state.toml":
+        return True
+    return relative_path.startswith(".agentic-workspace/planning/execplans/") and "/archive/" not in relative_path
+
+
+def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
+    path = target_root / PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH
+    relative_path = PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH.as_posix()
+    if not path.exists():
+        return {
+            "status": "absent",
+            "path": relative_path,
+            "kind": "planning-external-intent-evidence/v1",
+            "systems": [],
+            "item_count": 0,
+            "items": [],
+            "reason": "optional evidence file not present",
+        }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return {
+            "status": "invalid",
+            "path": relative_path,
+            "kind": "planning-external-intent-evidence/v1",
+            "systems": [],
+            "item_count": 0,
+            "items": [],
+            "reason": f"failed to load optional evidence: {exc}",
+        }
+    if not isinstance(payload, dict) or payload.get("kind") != "planning-external-intent-evidence/v1":
+        return {
+            "status": "invalid",
+            "path": relative_path,
+            "kind": "planning-external-intent-evidence/v1",
+            "systems": [],
+            "item_count": 0,
+            "items": [],
+            "reason": "optional evidence file does not match planning-external-intent-evidence/v1",
+        }
+    normalized_items: list[dict[str, Any]] = []
+    systems: list[str] = []
+    for raw in payload.get("items", []):
+        if not isinstance(raw, dict):
+            continue
+        system = str(raw.get("system", "")).strip()
+        item = {
+            "system": system,
+            "id": str(raw.get("id", "")).strip(),
+            "title": str(raw.get("title", "")).strip(),
+            "status": str(raw.get("status", "")).strip().lower(),
+            "kind": str(raw.get("kind", "")).strip(),
+            "parent_id": str(raw.get("parent_id", "")).strip(),
+            "planning_residue_expected": str(raw.get("planning_residue_expected", "optional")).strip().lower(),
+        }
+        if not item["id"]:
+            continue
+        normalized_items.append(item)
+        if system and system not in systems:
+            systems.append(system)
+    return {
+        "status": "loaded",
+        "path": relative_path,
+        "kind": "planning-external-intent-evidence/v1",
+        "systems": systems,
+        "item_count": len(normalized_items),
+        "items": normalized_items,
+        "reason": "",
+    }
+
+
+def _internal_continuation_signals(*, target_root: Path, roadmap_lanes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    archive_dir = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    if not archive_dir.exists():
+        return []
+    signals: list[dict[str, Any]] = []
+    for path in sorted(archive_dir.glob("*.md")):
+        if path.name == "README.md":
+            continue
+        closure = _execplan_closure_check(path)
+        if str(closure.get("closure decision", "")).strip().lower() != "archive-but-keep-lane-open":
+            continue
+        label = _roadmap_continuation_label(path)
+        required = _execplan_required_continuation(path)
+        owner_surface = str(required.get("owner surface", "")).strip()
+        if label and _roadmap_has_lane(roadmap_lanes=roadmap_lanes, label=label):
+            continue
+        if owner_surface and owner_surface not in {"none", "n/a"} and (target_root / owner_surface).exists():
+            continue
+        relative = path.relative_to(target_root).as_posix()
+        signals.append(
+            {
+                "kind": "missing_internal_continuation_owner",
+                "severity": "warning",
+                "path": relative,
+                "message": (f"Archived partial-intent plan {relative} no longer has a visible checked-in continuation owner."),
+                "refs": [relative, owner_surface or ".agentic-workspace/planning/state.toml"],
+            }
+        )
+    return signals
+
+
+def _roadmap_has_lane(*, roadmap_lanes: list[dict[str, Any]], label: str) -> bool:
+    tokens = _label_tokens(label)
+    if not tokens:
+        return False
+    for lane in roadmap_lanes:
+        if not isinstance(lane, dict):
+            continue
+        identity = " ".join(str(value).strip().lower() for value in (lane.get("title", ""), lane.get("id", "")) if str(value).strip())
+        if all(token in identity for token in tokens):
+            return True
+    return False
 
 
 def _ownership_review(target_root: Path) -> dict[str, Any]:
@@ -3234,6 +3557,20 @@ def _validation_has_reference_sweep(commands: list[str]) -> bool:
 
 
 def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path) -> list[TodoItem]:
+    if todo_path.name == "state.toml":
+        state = _read_state_from_toml(target_root)
+        if state and isinstance(state.get("todo"), dict):
+            relative = plan_path.relative_to(target_root).as_posix()
+            matches: list[TodoItem] = []
+            for bucket in ("active_items", "queued_items"):
+                for raw in state.get("todo", {}).get(bucket, []):
+                    if not isinstance(raw, dict):
+                        continue
+                    if _surface_execplan_reference(str(raw.get("surface", ""))) != relative:
+                        continue
+                    fields = {str(key): str(value) for key, value in raw.items()}
+                    matches.append(TodoItem(fields=fields, field_order=list(fields.keys()), start=0, end=0))
+            return matches
     _, items = _read_todo_items(todo_path)
     relative = plan_path.relative_to(target_root).as_posix()
     matches: list[TodoItem] = []
@@ -3244,6 +3581,20 @@ def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path)
 
 
 def _remove_todo_items(todo_path: Path, items_to_remove: list[TodoItem]) -> list[str]:
+    if todo_path.name == "state.toml":
+        target_root = todo_path.parents[2]
+        state = _read_state_from_toml(target_root)
+        if state and isinstance(state.get("todo"), dict):
+            item_ids = {item.item_id for item in items_to_remove if item.item_id}
+            if not item_ids:
+                return _read_lines(todo_path)
+            todo_state = state.setdefault("todo", {})
+            for bucket in ("active_items", "queued_items"):
+                raw_items = todo_state.get(bucket, [])
+                if not isinstance(raw_items, list):
+                    continue
+                todo_state[bucket] = [item for item in raw_items if not (isinstance(item, dict) and str(item.get("id", "")) in item_ids)]
+            return _state_to_toml_lines(state)
     lines, _ = _read_todo_items(todo_path)
     indexes_to_remove: set[int] = set()
     for item in items_to_remove:
@@ -3610,7 +3961,10 @@ def _read_state_from_toml(target_root: Path) -> dict[str, Any] | None:
 def _write_state_to_toml(target_root: Path, state: dict[str, Any]) -> None:
     state_path = target_root / PLANNING_STATE_PATH
     state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text("\n".join(_state_to_toml_lines(state)), encoding="utf-8")
 
+
+def _state_to_toml_lines(state: dict[str, Any]) -> list[str]:
     lines = []
     if "todo" in state:
         lines.append("[todo]")
@@ -3641,8 +3995,7 @@ def _write_state_to_toml(target_root: Path, state: dict[str, Any]) -> None:
                         lines.append(f"  {{ {item_str} }},")
                     lines.append("]")
         lines.append("")
-
-    state_path.write_text("\n".join(lines), encoding="utf-8")
+    return lines
 
 
 def _ensure_state_toml_exists(target_root: Path, *, overwrite: bool = False) -> None:
