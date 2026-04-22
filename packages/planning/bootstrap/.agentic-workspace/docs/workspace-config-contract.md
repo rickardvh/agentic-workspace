@@ -64,6 +64,25 @@ Prefer the smallest compact query that answers the current configuration questio
 
 Open deeper docs or module-local surfaces only when the compact query is insufficient.
 
+## Compact Query Classes
+
+The structured substrate should answer a small number of high-value questions cheaply:
+
+| Query class | Ask first | Deeper only if needed |
+| --- | --- | --- |
+| Startup path | `agentic-workspace defaults --section startup --format json` | `agentic-workspace config --target ./repo --format json`, then `AGENTS.md` |
+| Active behavior modules | `agentic-workspace ownership --target ./repo --format json` | `agentic-workspace modules --format json`, then `agentic-workspace report --target ./repo --format json` |
+| Proof and ownership rules | `agentic-workspace ownership --target ./repo --format json` | `agentic-workspace defaults --section validation --format json`, then `agentic-workspace report --target ./repo --format json` |
+| Repo-local current work | `agentic-workspace summary --format json` | `agentic-workspace report --target ./repo --format json`, then the active execplan only if summary points there |
+| Relevant subinstructions | `agentic-workspace defaults --section agent_configuration_queries --format json` | `agentic-workspace report --target ./repo --format json`, then only the module-local docs or runbooks already in scope |
+
+Selective loading means:
+
+- prefer one compact answer over broad rereads
+- route from defaults, config, ownership, report, or summary before opening module-local prose
+- load planning or memory details only when the compact answer points at active work or durable module-owned state
+- leave unrelated modules and subinstructions unloaded unless the current surface, proof lane, or active planning state makes them relevant
+
 ## Prose Adapter Rule
 
 The structured substrate is authoritative.

@@ -339,6 +339,9 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["agent_configuration_system"]["configuration_classes"][0]["id"] == "startup_and_adapter_policy"
     assert payload["agent_configuration_system"]["authority_map"][0]["surface"] == ".agentic-workspace/config.toml"
     assert payload["agent_configuration_system"]["adapter_surfaces"][0]["surface"] == "AGENTS.md"
+    assert payload["agent_configuration_queries"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
+    assert payload["agent_configuration_queries"]["query_classes"][0]["id"] == "startup_path"
+    assert payload["agent_configuration_queries"]["query_classes"][3]["ask_first"] == "agentic-workspace summary --format json"
     assert payload["improvement_latitude"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["improvement_latitude"]["command"] == "agentic-workspace defaults --section improvement_latitude --format json"
     assert payload["improvement_latitude"]["owner_surface"] == "workspace"
@@ -432,6 +435,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Relay:" in text
     assert "strong planner" in text
     assert "Agent configuration system:" in text
+    assert "Agent configuration queries:" in text
     assert "Improvement latitude:" in text
     assert "owner: workspace" in text
     assert "default mode: conservative" in text
@@ -817,6 +821,21 @@ def test_defaults_section_selector_returns_agent_configuration_system_answer(cap
     )
     assert ".agentic-workspace/docs/workspace-config-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
+
+
+def test_defaults_section_selector_returns_agent_configuration_queries_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "agent_configuration_queries", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "agent_configuration_queries"}
+    assert payload["matched"] is True
+    assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
+    assert payload["answer"]["query_classes"][1]["id"] == "active_behavior_modules"
+    assert payload["answer"]["query_classes"][2]["then_if_needed"][0] == "agentic-workspace defaults --section validation --format json"
+    assert payload["answer"]["stop_rule"].startswith("Stop after the first compact answer")
+    assert ".agentic-workspace/docs/workspace-config-contract.md" in payload["refs"]
 
 
 def test_defaults_setup_findings_promotion_section_selector_returns_compact_contract_answer(capsys) -> None:
@@ -2323,6 +2342,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "standing_intent" in payload["schema"]["shared_fields"]
     assert "repo_friction" in payload["schema"]["shared_fields"]
     assert "output_contract" in payload["schema"]["shared_fields"]
+    assert "agent_configuration_queries" in payload["schema"]["shared_fields"]
     assert "execution_shape" in payload["schema"]["shared_fields"]
     assert "module_reports" in payload["schema"]["shared_fields"]
     assert payload["selected_modules"] == ["planning", "memory"]
@@ -2338,6 +2358,9 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["agent_configuration_system"]["startup_entrypoint"] == "AGENTS.md"
     assert payload["agent_configuration_system"]["workflow_artifact_profile"] == "repo-owned"
     assert payload["agent_configuration_system"]["module_attachment_status"][0]["module"] == "planning"
+    assert payload["agent_configuration_queries"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
+    assert payload["agent_configuration_queries"]["current_work_status"] == "no-active-direction"
+    assert payload["agent_configuration_queries"]["current_queries"][0]["id"] == "startup_path"
     assert payload["execution_shape"]["status"] == "present"
     assert payload["execution_shape"]["task_shape"]["id"] == "direct-or-no-active-plan"
     assert payload["execution_shape"]["recommendation"]["id"] == "stay-direct"

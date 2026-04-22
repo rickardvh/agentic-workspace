@@ -136,6 +136,17 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
                     continue
                 installed = "installed" if item.get("installed") else "not installed"
                 print(f"  module: {item.get('module', '')} ({installed}) -> {item.get('owner_surface', '')}")
+    agent_configuration_queries = payload.get("agent_configuration_queries", {})
+    if isinstance(agent_configuration_queries, dict):
+        print("Agent configuration queries:")
+        print(f"- default query surface: {agent_configuration_queries.get('default_query_surface', '')}")
+        print(f"- current work status: {agent_configuration_queries.get('current_work_status', '')}")
+        current_queries = agent_configuration_queries.get("current_queries", [])
+        if isinstance(current_queries, list):
+            for item in current_queries[:3]:
+                if not isinstance(item, dict):
+                    continue
+                print(f"  query: {item.get('id', '')} -> {item.get('ask_first', '')}")
     standing_intent = payload.get("standing_intent", {})
     if isinstance(standing_intent, dict):
         effective_view = standing_intent.get("effective_view", {})

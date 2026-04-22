@@ -2819,6 +2819,10 @@ def _run_report_command(
             config=config,
             installed_modules=installed_modules,
         ),
+        "agent_configuration_queries": _agent_configuration_queries_report_payload(
+            installed_modules=installed_modules,
+            active_direction=_effective_active_direction_payload(module_reports=module_reports),
+        ),
         "findings": aggregated_findings,
         "next_action": next_action,
         "discovery": discovery,
@@ -2878,6 +2882,49 @@ def _agent_configuration_report_payload(*, config: WorkspaceConfig, installed_mo
         "adapter_surfaces": substrate["adapter_surfaces"],
         "selective_loading": substrate["selective_loading"],
         "current_system_intent_role": "compass for shaping means and review, not active execution authority",
+    }
+
+
+def _agent_configuration_queries_report_payload(
+    *,
+    installed_modules: list[str],
+    active_direction: dict[str, Any] | None,
+) -> dict[str, Any]:
+    query_catalog = _agent_configuration_queries_payload()
+    current_queries = []
+    for item in query_catalog["query_classes"]:
+        current_item = {
+            "id": item["id"],
+            "question": item["question"],
+            "ask_first": item["ask_first"],
+        }
+        if item["id"] == "repo_local_current_work":
+            current_item["status"] = "active-planning-present" if active_direction else "no-active-planning-direction"
+            current_item["current_owner"] = (
+                active_direction.get("owner_surface", ".agentic-workspace/planning/state.toml")
+                if isinstance(active_direction, dict)
+                else ".agentic-workspace/planning/state.toml"
+            )
+            current_item["then_if_needed"] = (
+                active_direction.get("refs", ["agentic-workspace report --target ./repo --format json"])
+                if isinstance(active_direction, dict)
+                else item["then_if_needed"]
+            )
+        elif item["id"] == "relevant_subinstructions":
+            current_item["status"] = "planning-and-memory-installed"
+            current_item["modules_in_scope"] = [module for module in ("planning", "memory") if module in installed_modules]
+            current_item["then_if_needed"] = item["then_if_needed"]
+        else:
+            current_item["status"] = "available"
+            current_item["then_if_needed"] = item["then_if_needed"]
+        current_queries.append(current_item)
+    return {
+        "canonical_doc": query_catalog["canonical_doc"],
+        "rule": query_catalog["rule"],
+        "default_query_surface": query_catalog["command"],
+        "current_work_status": "planning-backed" if active_direction else "no-active-direction",
+        "current_queries": current_queries,
+        "stop_rule": query_catalog["stop_rule"],
     }
 
 
@@ -3736,6 +3783,72 @@ def _agent_configuration_system_payload() -> dict[str, Any]:
     }
 
 
+def _agent_configuration_queries_payload() -> dict[str, Any]:
+    canonical_doc = ".agentic-workspace/docs/workspace-config-contract.md"
+    return {
+        "canonical_doc": canonical_doc,
+        "command": "agentic-workspace defaults --section agent_configuration_queries --format json",
+        "rule": (
+            "Treat selective loading as a first-class design constraint: ask one compact configuration question first, "
+            "then route to deeper module or doc surfaces only when the compact answer is insufficient."
+        ),
+        "query_classes": [
+            {
+                "id": "startup_path",
+                "question": "What is the startup path?",
+                "ask_first": "agentic-workspace defaults --section startup --format json",
+                "then_if_needed": [
+                    "agentic-workspace config --target ./repo --format json",
+                    "AGENTS.md",
+                ],
+            },
+            {
+                "id": "active_behavior_modules",
+                "question": "What behavior modules are active?",
+                "ask_first": "agentic-workspace ownership --target ./repo --format json",
+                "then_if_needed": [
+                    "agentic-workspace modules --format json",
+                    "agentic-workspace report --target ./repo --format json",
+                ],
+            },
+            {
+                "id": "proof_and_ownership_rules",
+                "question": "What proof and ownership rules apply here?",
+                "ask_first": "agentic-workspace ownership --target ./repo --format json",
+                "then_if_needed": [
+                    "agentic-workspace defaults --section validation --format json",
+                    "agentic-workspace report --target ./repo --format json",
+                ],
+            },
+            {
+                "id": "repo_local_current_work",
+                "question": "What repo-local behavior is relevant to the current lane or surface?",
+                "ask_first": "agentic-workspace summary --format json",
+                "then_if_needed": [
+                    "agentic-workspace report --target ./repo --format json",
+                    ".agentic-workspace/planning/execplans/<active>.md",
+                ],
+            },
+            {
+                "id": "relevant_subinstructions",
+                "question": "Which subinstructions are relevant right now, and which can remain unloaded?",
+                "ask_first": "agentic-workspace defaults --section agent_configuration_queries --format json",
+                "then_if_needed": [
+                    "agentic-workspace report --target ./repo --format json",
+                    "module-local docs or runbooks only for the modules and surfaces already in scope",
+                ],
+            },
+        ],
+        "loading_rules": [
+            "prefer one compact answer over broad prose rereads",
+            "route from workspace defaults/config/ownership/report before opening module-local prose",
+            "load planning or memory details only when the compact answer points at active work or durable module-owned state",
+            "leave unrelated modules and subinstructions unloaded unless the current surface, proof lane, or active planning state makes them relevant",
+        ],
+        "stop_rule": "Stop after the first compact answer that settles the question; deeper reads are justified only when the compact answer points at a specific owner or active surface.",
+    }
+
+
 def _emit_startup_report(
     *,
     format_name: str,
@@ -4341,6 +4454,7 @@ def _defaults_payload() -> dict[str, Any]:
             ],
         },
         "agent_configuration_system": _agent_configuration_system_payload(),
+        "agent_configuration_queries": _agent_configuration_queries_payload(),
         "system_intent": _system_intent_payload(),
         "intent": _intent_contract_payload(),
         "clarification": _clarification_contract_payload(),
@@ -4825,6 +4939,10 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- command: {payload['agent_configuration_system']['command']}")
     print(f"- rule: {payload['agent_configuration_system']['rule']}")
     print(f"- owner surface: {payload['agent_configuration_system']['owner_surface']}")
+    print("Agent configuration queries:")
+    print(f"- doc: {payload['agent_configuration_queries']['canonical_doc']}")
+    print(f"- command: {payload['agent_configuration_queries']['command']}")
+    print(f"- rule: {payload['agent_configuration_queries']['rule']}")
     print("Improvement latitude:")
     print(f"- doc: {payload['improvement_latitude']['canonical_doc']}")
     print(f"- command: {payload['improvement_latitude']['command']}")

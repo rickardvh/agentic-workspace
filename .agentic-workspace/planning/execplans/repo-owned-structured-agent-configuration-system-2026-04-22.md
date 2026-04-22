@@ -25,12 +25,12 @@
 
 ## Iterative Follow-Through
 
-- What this slice enabled: milestone 1 now has an explicit canonical contract and compact workspace query surfaces for the substrate.
-- Intentionally deferred: milestone 2 selective-loading work plus milestone 3 adapter, module-extension, and system-intent integration remain open.
-- Discovered implications: the repo already had most primitives; the missing move was to bind them into one named substrate and expose that substrate compactly.
-- Proof achieved now: pending milestone-1 closure checks.
-- Validation still needed: planning-surface checks, workspace CLI tests, package boundary checks, and root upgrades for the milestone-1 contract.
-- Next likely slice: commit milestone 1, then add selective-loading and compact query refinements for milestone 2.
+- What this slice enabled: milestone 1 established the substrate contract, and milestone 2 now turns selective loading into explicit compact query classes plus a current-work loading view.
+- Intentionally deferred: milestone 3 adapter, module-extension, and system-intent integration remain open.
+- Discovered implications: the query layer is most useful when it distinguishes stable query classes from current-work routing instead of collapsing both into one static section.
+- Proof achieved now: milestone-2 focused checks and live defaults/report outputs are green.
+- Validation still needed: commit milestone 2, then finish the adapter and closeout tranche.
+- Next likely slice: commit the selective-loading query layer, then implement milestone 3 across adapters, repo-custom extension points, and system-intent integration.
 
 ## Intent Interpretation
 
@@ -76,14 +76,14 @@
 
 - ID: repo-owned-structured-agent-configuration-system-2026-04-22
 - Status: in-progress
-- Scope: milestone 1 (`#271`) define the structured configuration model, authority map, and module attachment points through a canonical workspace contract plus compact defaults/report/config exposure.
+- Scope: milestone 2 (`#272`) define the selective-loading and compact-query layer through explicit query classes, current-work routing, and lazy-discovery defaults/report surfaces.
 - Ready: ready
 - Blocked: none
 - optional_deps: none
 
 ## Immediate Next Action
 
-- Rerun planning-surface checks, then stage and commit the milestone-1 contract and workspace query changes.
+- Stage and commit the milestone-2 selective-loading query layer.
 
 ## Blockers
 
@@ -112,7 +112,6 @@
 
 ## Open Questions To Close
 
-- Milestone 2: which selective-loading answers should become the canonical compact queries for substrate discovery?
 - Milestone 3: which minimum module and adapter fields are enough to support repo-custom workflow extensions without inventing a workflow engine?
 
 ## Validation Commands
@@ -143,12 +142,12 @@
 - Run status: in-progress
 - Executor: Codex
 - Handoff source: roadmap lane plus live GitHub issue cluster
-- What happened: implemented milestone-1 code for the canonical substrate contract, compact defaults/report/config exposure, and planning payload wiring; planning-surface cleanup is the remaining pre-commit step.
+- What happened: committed milestone 1 as the substrate contract slice, then implemented milestone 2 by adding explicit agent-configuration query classes, a report-side current-work loading view, selective-loading docs, and matching report-contract/schema/test updates.
 - Scope touched: workspace contract docs, workspace CLI/report surfaces, planning payload inventory, contract inventory, tests, and active planning residue.
-- Changed surfaces: `.agentic-workspace/docs/workspace-config-contract.md`, `packages/planning/bootstrap/.agentic-workspace/docs/workspace-config-contract.md`, `packages/planning/src/repo_planning_bootstrap/installer.py`, `src/agentic_workspace/cli.py`, `src/agentic_workspace/workspace_output.py`, `src/agentic_workspace/contracts/contract_inventory.json`, `tests/test_workspace_cli.py`, and planning state/execplan surfaces.
-- Validations run: `uv run pytest tests/test_workspace_cli.py -q`; `uv run pytest packages/planning/tests/test_packaging.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`; `uv run agentic-workspace summary --format json`
-- Result for continuation: milestone-1 implementation is ready once planning-surface warnings are cleared and the commit is cut.
-- Next step: make the execplan checker-clean, rerun summary, then commit milestone 1.
+- Changed surfaces: `.agentic-workspace/docs/workspace-config-contract.md`, `packages/planning/bootstrap/.agentic-workspace/docs/workspace-config-contract.md`, `src/agentic_workspace/cli.py`, `src/agentic_workspace/workspace_output.py`, `src/agentic_workspace/contracts/report_contract.json`, `src/agentic_workspace/contracts/schemas/workspace_report.schema.json`, `tests/test_workspace_cli.py`, and active planning residue.
+- Validations run: `uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q`; `uv run python scripts/check/check_contract_tooling_surfaces.py`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run agentic-workspace defaults --section agent_configuration_queries --format json`; `uv run agentic-workspace report --target . --format json`
+- Result for continuation: milestone 2 is implemented and ready to commit; milestone 3 remains open.
+- Next step: commit milestone 2, then move to adapter, extension-point, and system-intent integration.
 
 ## Finished-Run Review
 
@@ -162,23 +161,24 @@
 
 ## Execution Summary
 
-- Outcome delivered: milestone 1 implementation is in place but not yet committed.
-- Validation confirmed: targeted tests and boundary checks passed; planning-surface cleanup remains before milestone-1 closeout.
+- Outcome delivered: milestone 1 is committed, and milestone 2 now adds an explicit selective-loading query catalog plus a current-work routing view.
+- Validation confirmed: targeted workspace CLI, contract-tooling, planning-surface, boundary, defaults, and report checks all passed for the milestone-2 slice.
 - Follow-on routed to: .agentic-workspace/planning/execplans/repo-owned-structured-agent-configuration-system-2026-04-22.md
-- Post-work posterity capture: preserve the canonical substrate contract and compact query surfaces in workspace-owned docs and CLI/report outputs.
-- Knowledge promoted (Memory/Docs/Config): workspace docs plus defaults/config/report exposure for the agent-configuration substrate.
-- Resume from: planning-surface cleanup, then milestone-1 commit.
+- Post-work posterity capture: preserve the compact query classes and current-work routing rules in workspace-owned docs and defaults/report outputs.
+- Knowledge promoted (Memory/Docs/Config): workspace docs plus defaults/report exposure for selective loading and lazy discovery.
+- Resume from: milestone-3 adapter, extension-point, and system-intent integration.
 
 ## Closure Check
 
 - Slice status: in progress
 - Larger-intent status: open
 - Closure decision: keep-active
-- Why this decision is honest: milestone 1 is not committed yet and milestone 2 plus milestone 3 remain open.
-- Evidence carried forward: the active execplan, the live issue cluster, and the milestone-1 implementation already in the worktree.
+- Why this decision is honest: milestone 1 is committed and milestone 2 is ready to commit, but milestone 3 plus final lane closeout remain open.
+- Evidence carried forward: the active execplan, the live issue cluster, commit `a640893`, and the milestone-2 implementation in the worktree.
 - Reopen trigger: finish the current milestone and reassess closure after each committed slice.
 
 ## Drift Log
 
 - 2026-04-22: Promoted the first roadmap lane into one active execplan after verifying issues `#269` through `#274` are still open with `gh`.
-- 2026-04-22: Implemented the milestone-1 canonical contract and compact query surfaces; planning cleanup remains before commit.
+- 2026-04-22: Committed milestone 1 as `a640893` after wiring the canonical substrate contract through workspace docs, defaults, config, report, and planning payload surfaces.
+- 2026-04-22: Implemented milestone 2 by adding explicit agent-configuration query classes, current-work lazy-discovery routing, and matching report-contract/schema coverage.

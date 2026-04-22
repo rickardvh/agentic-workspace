@@ -13,6 +13,7 @@
     "health",
     "output_contract",
     "agent_configuration_system",
+    "agent_configuration_queries",
     "findings",
     "next_action",
     "discovery",
@@ -86,6 +87,9 @@
       "type": "object"
     },
     "agent_configuration_system": {
+      "type": "object"
+    },
+    "agent_configuration_queries": {
       "type": "object"
     },
     "findings": {

@@ -12,6 +12,7 @@
     "health",
     "output_contract",
     "agent_configuration_system",
+    "agent_configuration_queries",
     "execution_shape",
     "findings",
     "next_action",
