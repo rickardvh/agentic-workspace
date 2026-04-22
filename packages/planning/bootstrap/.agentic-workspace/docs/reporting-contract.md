@@ -133,6 +133,10 @@ Use the machine-readable report as the default combined-state inspection path wh
 - what state is each installed module in without opening its raw files first?
 - what existing repo surfaces look like durable Memory or Planning seed candidates?
 - what standing-intent class should a durable repo-wide instruction belong to?
+- what literal request the active delegated slice started from and how the current interpretation moved from it?
+- what execution bounds and stop conditions currently shape a delegated worker handoff?
+- what happened in the current or most recent bounded execution run at a useful level of abstraction?
+- how returned delegated work should be reviewed cheaply for scope, proof, and intent fit?
 - what findings or warnings need attention?
 
 Use `agentic-workspace defaults --section intent --format json` when the question is confirmed versus interpreted intent; keep report for combined workspace state.

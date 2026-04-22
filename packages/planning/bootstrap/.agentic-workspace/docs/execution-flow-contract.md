@@ -66,6 +66,42 @@ When a stronger planner delegates work to a smaller or separate executor:
 - **Contract Source**: Derive the handoff from `agentic-planning-bootstrap handoff --format json`.
 - **Agent-Agnostic**: The handoff should not prescribe a specific executor model or brand.
 - **Write Scope**: The worker's assigned scope must be explicit and narrow.
+- **Execution Bounds**: Keep allowed paths, max-changed-file guidance, required validation, and ask-before-refactor thresholds close to the active plan rather than in chat-only instructions.
+- **Stop Conditions**: Make "stop and escalate" explicit enough that a weaker or external executor can stop cheaply when scope, proof, or interpretation boundaries are reached.
+- **Return-With Residue**: The handoff should name the minimum execution-run and finished-run-review residue the executor must return so later review does not have to reconstruct the run from scratch.
+
+### Intent Interpretation Review
+When a plan narrows a literal request into a more concrete bounded slice:
+- keep the literal request visible
+- record the inferred intended outcome
+- record the chosen concrete "what"
+- keep the interpretation distance explicit
+- add one short review cue for when that interpretation should be corrected
+
+This is a compact review surface, not a reasoning trace.
+
+### Execution-Run Residue
+Delegated execution should leave one compact per-run residue inside the active plan:
+- run status
+- executor
+- handoff source
+- what happened
+- scope touched
+- validations run
+- result for continuation
+- next step
+
+This residue should be enough for pause/resume, returned-run review, and cheap correction without becoming a full trace system.
+
+### Finished-Run Review
+When delegated work returns:
+- review scope respected?
+- review proof status
+- review whether the intended outcome was served
+- record the misinterpretation risk
+- record the follow-on decision
+
+Keep this review compact and decision-supporting. It complements proof and intent-satisfaction review; it does not replace them.
 
 ---
 

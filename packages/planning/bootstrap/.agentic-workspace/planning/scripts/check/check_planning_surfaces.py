@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Advisory planning-surface health check.
 
-Warn when TODO, active execplans, and ROADMAP drift away from the intended
-three-layer planning split. This check is advisory and exits with 0.
+Warn when package-owned planning state, active execplans, and any lingering
+legacy planning views drift away from the intended split. This check is
+advisory and exits with 0.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ import argparse
 import importlib.util
 import json
 import re
+import tomllib
 from pathlib import Path
 from typing import NamedTuple
 
@@ -32,9 +34,10 @@ def _find_repo_root() -> Path:
 
 
 REPO_ROOT = _find_repo_root()
-TODO_PATH = REPO_ROOT / "TODO.md"
-ROADMAP_PATH = REPO_ROOT / "ROADMAP.md"
-EXECPLAN_DIR = REPO_ROOT / "docs" / "execplans"
+STATE_TOML_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "state.toml"
+LEGACY_TODO_PATH = REPO_ROOT / "TODO.md"
+LEGACY_ROADMAP_PATH = REPO_ROOT / "ROADMAP.md"
+EXECPLAN_DIR = REPO_ROOT / ".agentic-workspace" / "planning" / "execplans"
 
 TODO_MAX_LINES = 150
 TODO_MAX_NOW_ITEMS = 3
@@ -58,6 +61,8 @@ WARNING_EXECPLAN_NOTEBOOK_DRIFT = "execplan_notebook_drift"
 WARNING_EXECPLAN_UNDER_SPECIFIED = "execplan_under_specified"
 WARNING_EXECPLAN_CLOSURE_DRIFT = "execplan_closure_drift"
 WARNING_EXECPLAN_ACTIVE_SET_PRESSURE = "execplan_active_set_pressure"
+WARNING_EXECPLAN_PROOF_DRIFT = "execplan_proof_drift"
+WARNING_EXECPLAN_INTENT_SATISFACTION_DRIFT = "execplan_intent_satisfaction_drift"
 WARNING_ROADMAP_EXECUTION_DRIFT = "roadmap_execution_drift"
 WARNING_ROADMAP_MISSING_PROMOTION_SIGNAL = "roadmap_missing_promotion_signal"
 WARNING_ROADMAP_MISSING_REOPEN_SIGNAL = "roadmap_missing_reopen_signal"
@@ -72,10 +77,13 @@ WARNING_PLANNING_MEMORY_BOUNDARY_BLUR = "planning_memory_boundary_blur"
 EXPECTED_EXECPLAN_SECTIONS = [
     "Goal",
     "Non-Goals",
-    "Machine-Readable Contract",
     "Intent Continuity",
     "Required Continuation",
     "Iterative Follow-Through",
+    "Intent Interpretation",
+    "Execution Bounds",
+    "Stop Conditions",
+    "Context Budget",
     "Delegated Judgment",
     "Active Milestone",
     "Immediate Next Action",
@@ -84,6 +92,8 @@ EXPECTED_EXECPLAN_SECTIONS = [
     "Invariants",
     "Validation Commands",
     "Completion Criteria",
+    "Execution Run",
+    "Finished-Run Review",
     "Execution Summary",
     "Drift Log",
 ]
@@ -217,6 +227,66 @@ def _read_lines(path: Path) -> list[str]:
     return path.read_text(encoding="utf-8").splitlines()
 
 
+def _read_state_toml(path: Path = STATE_TOML_PATH) -> dict[str, object] | None:
+    if not path.exists():
+        return None
+    try:
+        payload = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (tomllib.TOMLDecodeError, OSError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _todo_items_from_state(state: dict[str, object] | None) -> list[dict[str, str]]:
+    if not isinstance(state, dict):
+        return []
+    todo = state.get("todo")
+    if not isinstance(todo, dict):
+        return []
+    items: list[dict[str, str]] = []
+
+    for raw in todo.get("active_items", []):
+        if not isinstance(raw, dict):
+            continue
+        items.append(
+            {
+                "id": str(raw.get("id", "")),
+                "surface": str(raw.get("surface", "")),
+                "why_now": str(raw.get("why_now", "")),
+                "status": "in-progress",
+            }
+        )
+
+    for raw in todo.get("queued_items", []):
+        if not isinstance(raw, dict):
+            continue
+        items.append(
+            {
+                "id": str(raw.get("id", "")),
+                "surface": str(raw.get("surface", "")),
+                "why_now": str(raw.get("why_now", "")),
+                "status": str(raw.get("status", "")),
+            }
+        )
+
+    return items
+
+
+def _roadmap_counts_from_state(state: dict[str, object] | None) -> tuple[int, int]:
+    if not isinstance(state, dict):
+        return 0, 0
+    roadmap = state.get("roadmap")
+    if not isinstance(roadmap, dict):
+        return 0, 0
+    lanes = roadmap.get("lanes", [])
+    candidates = roadmap.get("candidates", [])
+    lane_count = len(lanes) if isinstance(lanes, list) else 0
+    candidate_count = len(candidates) if isinstance(candidates, list) else 0
+    if candidate_count == 0 and lane_count:
+        candidate_count = lane_count
+    return lane_count, candidate_count
+
+
 def _section_content(lines: list[str], section_name: str) -> list[str]:
     start = -1
     target = f"## {section_name}".strip().lower()
@@ -345,14 +415,16 @@ def _check_todo(path: Path, *, repo_root: Path = REPO_ROOT) -> tuple[list[Planni
     lines = _read_lines(path)
     text = "\n".join(lines)
 
-    if not lines:
+    if not lines and not STATE_TOML_PATH.exists():
         warnings.append(
             PlanningWarning(
                 WARNING_TODO_SHAPE_DRIFT,
                 _render_path(path),
-                "TODO.md is missing or empty; keep an explicit activation surface.",
+                "TODO.md is missing or empty; keep an explicit activation surface or use consolidated package state.",
             )
         )
+        return warnings, active_ids, active_items
+    elif not lines:
         return warnings, active_ids, active_items
 
     if len(lines) > TODO_MAX_LINES:
@@ -542,7 +614,9 @@ def _surface_basename_tokens(surface_value: str) -> set[str]:
 def _check_promotion_linkage(*, roadmap_path: Path, active_items: list[dict[str, str]]) -> list[PlanningWarning]:
     warnings: list[PlanningWarning] = []
     roadmap_text = "\n".join(_read_lines(roadmap_path)).lower()
-    if not roadmap_text:
+    if not roadmap_text and not STATE_TOML_PATH.exists():
+        return warnings
+    elif not roadmap_text:
         return warnings
 
     signal_hints = ("signal", "trigger", "queue", "report", "when", "if")
@@ -608,15 +682,12 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         or "do not bulk-read all planning surfaces" not in quickstart_text
         or "## first queries" not in quickstart_text
         or "## surface roles" not in quickstart_text
-        or "## tiny safe model" not in quickstart_text
-        or "## boundary-triggered escalation" not in quickstart_text
-        or "## top-level capabilities" not in quickstart_text
     ):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(quickstart_path),
-                "Quickstart must keep the tiny safe model, escalation cues, startup query order, and roadmap/bulk-read constraints explicit.",
+                "Quickstart must keep startup query order, surface roles, and roadmap/bulk-read constraints explicit.",
             )
         )
 
@@ -641,8 +712,6 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         for fragment in (
             "authoritative routing home",
             "startup and first contact",
-            "cold-start protocol",
-            "tiny safe model",
             "agentic-workspace summary --format json",
             "agentic-workspace report --target ./repo --format json",
         )
@@ -704,10 +773,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     bootstrap = manifest.get("bootstrap", {}) if isinstance(manifest, dict) else {}
     first_reads = bootstrap.get("first_reads", []) if isinstance(bootstrap, dict) else []
     first_queries = bootstrap.get("first_queries", []) if isinstance(bootstrap, dict) else []
-    tiny_safe_model = bootstrap.get("tiny_safe_model", []) if isinstance(bootstrap, dict) else []
     surface_roles = bootstrap.get("surface_roles", []) if isinstance(bootstrap, dict) else []
-    boundary_triggered_escalation = bootstrap.get("boundary_triggered_escalation", []) if isinstance(bootstrap, dict) else []
-    top_level_capabilities = bootstrap.get("top_level_capabilities", []) if isinstance(bootstrap, dict) else []
     conditional_reads = bootstrap.get("conditional_reads", []) if isinstance(bootstrap, dict) else []
 
     first_reads_lower = [str(item).lower() for item in first_reads]
@@ -715,8 +781,17 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     surface_roles_lower = [str(item).lower() for item in surface_roles]
     conditional_reads_lower = [str(item).lower() for item in conditional_reads]
 
+    if not any("summary --format json" in row for row in first_queries_lower):
+        warnings.append(
+            PlanningWarning(
+                WARNING_STARTUP_POLICY_DRIFT,
+                _render_path(manifest_path),
+                "Manifest first_queries must include a summary-first planning recovery query.",
+            )
+        )
+
     if (
-        "todo.md" in first_reads_lower
+        "TODO.md" in first_reads_lower
         or ".agentic-workspace/planning/state.toml" in first_reads_lower
         or "roadmap.md" in first_reads_lower
         or ".agentic-workspace/planning/execplans/readme.md" in first_reads_lower
@@ -729,30 +804,12 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
             )
         )
 
-    if not any("summary --format json" in row for row in first_queries_lower):
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(manifest_path),
-                "Manifest first_queries must include a summary-first planning recovery query.",
-            )
-        )
-
     if not any("defaults --section startup" in row for row in first_queries_lower):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
                 "Manifest first_queries must still mention the startup defaults query.",
-            )
-        )
-
-    if not isinstance(tiny_safe_model, list) or len(tiny_safe_model) < 3:
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(manifest_path),
-                "Manifest tiny_safe_model must keep the compact minimum operating model explicit.",
             )
         )
 
@@ -771,24 +828,6 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(manifest_path),
                 "Manifest surface_roles must keep llms.txt as the agent entrypoint router.",
-            )
-        )
-
-    if not isinstance(boundary_triggered_escalation, list) or len(boundary_triggered_escalation) < 3:
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(manifest_path),
-                "Manifest boundary_triggered_escalation must advertise the main discovery boundaries.",
-            )
-        )
-
-    if not isinstance(top_level_capabilities, list) or len(top_level_capabilities) < 3:
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(manifest_path),
-                "Manifest top_level_capabilities must keep compact capability advertisement for the main modules.",
             )
         )
 
@@ -815,7 +854,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
 
 def _check_active_surface_hygiene(repo_root: Path) -> list[PlanningWarning]:
     warnings: list[PlanningWarning] = []
-    execplan_dir = repo_root / "docs" / "execplans"
+    execplan_dir = repo_root / ".agentic-workspace" / "planning" / "execplans"
     if not execplan_dir.exists():
         return warnings
 
@@ -906,7 +945,7 @@ def _check_docs_surface_roles(repo_root: Path) -> list[PlanningWarning]:
             "Resumable contract must describe planning_record as canonical and raw prose as fallback.",
         ),
         (
-            repo_root / "docs" / "execplans" / "README.md",
+            repo_root / ".agentic-workspace" / "planning" / "execplans" / "README.md",
             (
                 "agentic-workspace summary --format json` first",
                 "raw `todo.md` and execplan prose after that only when the compact summary is insufficient",
@@ -1143,7 +1182,13 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
     active_milestone_fields = _extract_kv_fields(active_milestone_section)
     intent_continuity_fields = _extract_kv_fields(_section_content(lines, "Intent Continuity"))
     required_continuation_fields = _extract_kv_fields(_section_content(lines, "Required Continuation"))
+    intent_interpretation_fields = _extract_kv_fields(_section_content(lines, "Intent Interpretation"))
+    execution_bounds_fields = _extract_kv_fields(_section_content(lines, "Execution Bounds"))
+    stop_conditions_fields = _extract_kv_fields(_section_content(lines, "Stop Conditions"))
+    context_budget_fields = _extract_kv_fields(_section_content(lines, "Context Budget"))
     delegated_judgment_fields = _extract_kv_fields(_section_content(lines, "Delegated Judgment"))
+    execution_run_fields = _extract_kv_fields(_section_content(lines, "Execution Run"))
+    finished_run_review_fields = _extract_kv_fields(_section_content(lines, "Finished-Run Review"))
     is_active_execplan = not has_only_non_active_status
     larger_intended_outcome = intent_continuity_fields.get("larger intended outcome", "").strip()
     completes_larger_outcome = intent_continuity_fields.get("this slice completes the larger intended outcome", "").strip().lower()
@@ -1245,6 +1290,65 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
         )
 
     if is_active_execplan:
+        for label in (
+            "literal request",
+            "inferred intended outcome",
+            "chosen concrete what",
+            "interpretation distance",
+            "review guidance",
+        ):
+            if not intent_interpretation_fields.get(label, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_UNDER_SPECIFIED,
+                        _render_path(path),
+                        f"Active execplan is missing `{label.title()}` in Intent Interpretation.",
+                    )
+                )
+        for label in (
+            "allowed paths",
+            "max changed files",
+            "required validation commands",
+            "ask-before-refactor threshold",
+            "stop before touching",
+        ):
+            if not execution_bounds_fields.get(label, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_UNDER_SPECIFIED,
+                        _render_path(path),
+                        f"Active execplan is missing `{label.title()}` in Execution Bounds.",
+                    )
+                )
+        for label in (
+            "stop when",
+            "escalate when boundary reached",
+            "escalate on scope drift",
+            "escalate on proof failure",
+        ):
+            if not stop_conditions_fields.get(label, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_UNDER_SPECIFIED,
+                        _render_path(path),
+                        f"Active execplan is missing `{label.title()}` in Stop Conditions.",
+                    )
+                )
+        for label in (
+            "live working set",
+            "recoverable later",
+            "externalize before shift",
+            "tiny resumability note",
+            "context-shift triggers",
+        ):
+            if not context_budget_fields.get(label, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_UNDER_SPECIFIED,
+                        _render_path(path),
+                        f"Active execplan is missing `{label.title()}` in Context Budget.",
+                    )
+                )
         if not requested_outcome:
             warnings.append(
                 PlanningWarning(
@@ -1277,6 +1381,40 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                     "Active execplan is missing `Escalate when` in Delegated Judgment.",
                 )
             )
+        for label in (
+            "run status",
+            "executor",
+            "handoff source",
+            "what happened",
+            "scope touched",
+            "validations run",
+            "result for continuation",
+            "next step",
+        ):
+            if not execution_run_fields.get(label, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_UNDER_SPECIFIED,
+                        _render_path(path),
+                        f"Active execplan is missing `{label.title()}` in Execution Run.",
+                    )
+                )
+        for label in (
+            "review status",
+            "scope respected",
+            "proof status",
+            "intent served",
+            "misinterpretation risk",
+            "follow-on decision",
+        ):
+            if not finished_run_review_fields.get(label, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_UNDER_SPECIFIED,
+                        _render_path(path),
+                        f"Active execplan is missing `{label.title()}` in Finished-Run Review.",
+                    )
+                )
 
     if is_active_execplan:
         ready_value = active_milestone_fields.get("ready", "").strip().lower()
@@ -1416,6 +1554,67 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
             )
         )
 
+    if has_only_completed_status:
+        execution_run, execution_run_bullets = _extract_section_stats(lines, "Execution Run")
+        if execution_run_bullets == 0 or not [line for line in execution_run if line.strip()]:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Completed execplan is missing an Execution Run section.",
+                )
+            )
+        else:
+            for field_name in (
+                "run status",
+                "executor",
+                "handoff source",
+                "what happened",
+                "scope touched",
+                "validations run",
+                "result for continuation",
+                "next step",
+            ):
+                value = execution_run_fields.get(field_name, "").strip().lower()
+                if not value or value in {"pending", "tbd", "todo", "not-run-yet"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_UNDER_SPECIFIED,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Execution Run field: {field_name}.",
+                        )
+                    )
+                    break
+
+        finished_run_review, finished_run_review_bullets = _extract_section_stats(lines, "Finished-Run Review")
+        if finished_run_review_bullets == 0 or not [line for line in finished_run_review if line.strip()]:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Completed execplan is missing a Finished-Run Review section.",
+                )
+            )
+        else:
+            for field_name in (
+                "review status",
+                "scope respected",
+                "proof status",
+                "intent served",
+                "misinterpretation risk",
+                "follow-on decision",
+            ):
+                value = finished_run_review_fields.get(field_name, "").strip().lower()
+                if not value or value in {"pending", "tbd", "todo"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_UNDER_SPECIFIED,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Finished-Run Review field: {field_name}.",
+                        )
+                    )
+                    break
+
     execution_summary, execution_summary_bullets = _extract_section_stats(lines, "Execution Summary")
     execution_summary_fields = _extract_kv_fields(execution_summary)
     if has_only_completed_status:
@@ -1428,13 +1627,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 )
             )
         else:
-            for field_name in (
-                "outcome delivered",
-                "validation confirmed",
-                "follow-on routed to",
-                "knowledge promoted (memory/docs/config)",
-                "resume from",
-            ):
+            for field_name in ("outcome delivered", "validation confirmed", "follow-on routed to", "resume from"):
                 value = execution_summary_fields.get(field_name, "").strip().lower()
                 if not value or value in {"pending", "tbd", "todo", "not completed yet", "none yet", "current milestone"}:
                     warnings.append(
@@ -1445,6 +1638,129 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                         )
                     )
                     break
+
+        proof_report, proof_report_bullets = _extract_section_stats(lines, "Proof Report")
+        proof_report_fields = _extract_kv_fields(proof_report)
+        if proof_report_bullets == 0 or not [line for line in proof_report if line.strip()]:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_PROOF_DRIFT,
+                    _render_path(path),
+                    "Completed execplan is missing a Proof Report.",
+                )
+            )
+        else:
+            for field_name in ("validation proof", "proof achieved now", 'evidence for "proof achieved" state'):
+                value = proof_report_fields.get(field_name, "").strip()
+                if not value or value.lower() in {"pending", "tbd", "todo", "not completed yet", "none yet"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_PROOF_DRIFT,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Proof Report field: {field_name}.",
+                        )
+                    )
+                    break
+
+        intent_satisfaction, intent_satisfaction_bullets = _extract_section_stats(lines, "Intent Satisfaction")
+        intent_satisfaction_fields = _extract_kv_fields(intent_satisfaction)
+        if intent_satisfaction_bullets == 0 or not [line for line in intent_satisfaction if line.strip()]:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_INTENT_SATISFACTION_DRIFT,
+                    _render_path(path),
+                    "Completed execplan is missing an Intent Satisfaction section.",
+                )
+            )
+        else:
+            for field_name in (
+                "original intent",
+                "was original intent fully satisfied?",
+                "evidence of intent satisfaction",
+                "unsolved intent passed to",
+            ):
+                value = intent_satisfaction_fields.get(field_name, "").strip()
+                if not value or value.lower() in {"pending", "tbd", "todo", "not completed yet", "none yet"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_INTENT_SATISFACTION_DRIFT,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Intent Satisfaction field: {field_name}.",
+                        )
+                    )
+                    break
+
+    closure_check, closure_check_bullets = _extract_section_stats(lines, "Closure Check")
+    closure_check_fields = _extract_kv_fields(closure_check)
+    if closure_check_bullets == 0 or not [line for line in closure_check if line.strip()]:
+        warnings.append(
+            PlanningWarning(
+                WARNING_EXECPLAN_CLOSURE_DRIFT,
+                _render_path(path),
+                "Execplan is missing a Closure Check.",
+            )
+        )
+    else:
+        required_closure_fields = (
+            "slice status",
+            "larger-intent status",
+            "closure decision",
+            "why this decision is honest",
+            "evidence carried forward",
+            "reopen trigger",
+        )
+        for field_name in required_closure_fields:
+            if not closure_check_fields.get(field_name, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_CLOSURE_DRIFT,
+                        _render_path(path),
+                        f"Execplan has an incomplete Closure Check field: {field_name}.",
+                    )
+                )
+                break
+
+        if has_only_completed_status:
+            closure_decision = closure_check_fields.get("closure decision", "").strip().lower()
+            larger_intent_status = closure_check_fields.get("larger-intent status", "").strip().lower()
+            if closure_decision in {"keep-active", "stay-active", "continue-active"}:
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_CLOSURE_DRIFT,
+                        _render_path(path),
+                        "Completed execplan still says it should remain active in Closure Check.",
+                    )
+                )
+            elif closure_decision == "archive-and-close" and larger_intent_status not in {"closed", "complete", "completed"}:
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_CLOSURE_DRIFT,
+                        _render_path(path),
+                        "Archive-and-close requires a closed larger-intent status in Closure Check.",
+                    )
+                )
+            elif closure_decision == "archive-but-keep-lane-open" and larger_intent_status not in {"open", "partial", "unfinished"}:
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_CLOSURE_DRIFT,
+                        _render_path(path),
+                        "Archive-but-keep-lane-open requires an open or partial larger-intent status in Closure Check.",
+                    )
+                )
+            elif closure_decision and closure_decision not in {
+                "archive-and-close",
+                "archive-but-keep-lane-open",
+                "keep-active",
+                "stay-active",
+                "continue-active",
+            }:
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_CLOSURE_DRIFT,
+                        _render_path(path),
+                        f"Closure Check uses an unsupported closure decision: {closure_decision}.",
+                    )
+                )
 
     validation_commands, validation_bullets = _extract_section_stats(lines, "Validation Commands")
     if not [line for line in validation_commands if line.strip()] or validation_bullets == 0:
@@ -1463,63 +1779,6 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 "Completed rename/refactor-like work is missing a stale-reference sweep in Validation Commands.",
             )
         )
-
-    proof_report, proof_report_bullets = _extract_section_stats(lines, "Proof Report")
-    proof_report_fields = _extract_kv_fields(proof_report)
-    if has_only_completed_status:
-        if proof_report_bullets == 0:
-            warnings.append(
-                PlanningWarning(
-                    WARNING_EXECPLAN_UNDER_SPECIFIED,
-                    _render_path(path),
-                    "Completed execplan is missing a Proof Report.",
-                )
-            )
-        else:
-            for field_name in (
-                "validation proof (logs, command output, or screenshots)",
-                "proof achieved now",
-                'evidence for "proof achieved" state',
-            ):
-                value = proof_report_fields.get(field_name, "").strip().lower()
-                if not value or value in {"pending", "tbd", "todo", "none yet", "current milestone"}:
-                    warnings.append(
-                        PlanningWarning(
-                            WARNING_EXECPLAN_UNDER_SPECIFIED,
-                            _render_path(path),
-                            f"Completed execplan has an incomplete Proof Report field: {field_name}.",
-                        )
-                    )
-                    break
-
-    intent_satisfaction, intent_satisfaction_bullets = _extract_section_stats(lines, "Intent Satisfaction")
-    intent_satisfaction_fields = _extract_kv_fields(intent_satisfaction)
-    if has_only_completed_status:
-        if intent_satisfaction_bullets == 0:
-            warnings.append(
-                PlanningWarning(
-                    WARNING_EXECPLAN_UNDER_SPECIFIED,
-                    _render_path(path),
-                    "Completed execplan is missing an Intent Satisfaction section.",
-                )
-            )
-        else:
-            for field_name in (
-                "original intent",
-                "was original intent fully satisfied?",
-                "evidence of intent satisfaction",
-                "unsolved intent passed to",
-            ):
-                value = intent_satisfaction_fields.get(field_name, "").strip().lower()
-                if not value or value in {"pending", "tbd", "todo", "none yet", "current milestone"}:
-                    warnings.append(
-                        PlanningWarning(
-                            WARNING_EXECPLAN_UNDER_SPECIFIED,
-                            _render_path(path),
-                            f"Completed execplan has an incomplete Intent Satisfaction field: {field_name}.",
-                        )
-                    )
-                    break
 
     drift_log = _section_content(lines, "Drift Log")
     drift_entries = [line for line in drift_log if re.match(r"^\s*[-*]\s+\d{4}-\d{2}-\d{2}:", line)]
@@ -1785,14 +2044,30 @@ def _check_execplan_active_set(execplan_dir: Path) -> list[PlanningWarning]:
 
 
 def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWarning]:
+    state = _read_state_toml(repo_root / ".agentic-workspace" / "planning" / "state.toml")
     todo_path = repo_root / "TODO.md"
     roadmap_path = repo_root / "ROADMAP.md"
-    execplan_dir = repo_root / "docs" / "execplans"
+    execplan_dir = repo_root / ".agentic-workspace" / "planning" / "execplans"
 
     warnings: list[PlanningWarning] = []
 
-    todo_warnings, todo_active_ids, todo_active_items = _check_todo(todo_path, repo_root=repo_root)
-    warnings.extend(todo_warnings)
+    if todo_path.exists():
+        todo_warnings, todo_active_ids, todo_active_items = _check_todo(todo_path, repo_root=repo_root)
+        warnings.extend(todo_warnings)
+    else:
+        todo_active_items = []
+        todo_active_ids = set()
+        for item in _todo_items_from_state(state):
+            status = item.get("status", "").lower()
+            if "in-progress" in status or "active" in status or "ongoing" in status:
+                todo_active_ids.add(item.get("id", ""))
+                todo_active_items.append(
+                    {
+                        "id": item.get("id", ""),
+                        "surface": item.get("surface", ""),
+                        "why_now": item.get("why_now", ""),
+                    }
+                )
 
     execplan_active_ids: set[str] = set()
     for plan_path in _active_execplans(execplan_dir):
@@ -1801,8 +2076,9 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
         execplan_active_ids.update(plan_active_ids)
 
     warnings.extend(_check_execplan_active_set(execplan_dir))
-    warnings.extend(_check_roadmap(roadmap_path, todo_active_ids | execplan_active_ids))
-    warnings.extend(_check_promotion_linkage(roadmap_path=roadmap_path, active_items=todo_active_items))
+    if roadmap_path.exists():
+        warnings.extend(_check_roadmap(roadmap_path, todo_active_ids | execplan_active_ids))
+        warnings.extend(_check_promotion_linkage(roadmap_path=roadmap_path, active_items=todo_active_items))
     warnings.extend(_check_startup_policy(repo_root))
     warnings.extend(_check_docs_surface_roles(repo_root))
     warnings.extend(_check_active_surface_hygiene(repo_root))
@@ -1811,23 +2087,39 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
 
 
 def gather_planning_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
+    state = _read_state_toml(repo_root / ".agentic-workspace" / "planning" / "state.toml")
     todo_path = repo_root / "TODO.md"
     roadmap_path = repo_root / "ROADMAP.md"
-    execplan_dir = repo_root / "docs" / "execplans"
+    execplan_dir = repo_root / ".agentic-workspace" / "planning" / "execplans"
 
-    todo_lines = _read_lines(todo_path)
-    todo_items = _todo_item_blocks(todo_lines)
-    active_items = []
-    for block in todo_items:
-        status = block.get("status", "").lower()
-        if "in-progress" in status or "active" in status or "ongoing" in status:
-            active_items.append(
-                {
-                    "id": block.get("id", ""),
-                    "surface": block.get("surface", ""),
-                    "why_now": block.get("why now", ""),
-                }
-            )
+    if todo_path.exists():
+        todo_lines = _read_lines(todo_path)
+        todo_items = _todo_item_blocks(todo_lines)
+        active_items = []
+        for block in todo_items:
+            status = block.get("status", "").lower()
+            if "in-progress" in status or "active" in status or "ongoing" in status:
+                active_items.append(
+                    {
+                        "id": block.get("id", ""),
+                        "surface": block.get("surface", ""),
+                        "why_now": block.get("why now", ""),
+                    }
+                )
+    else:
+        todo_lines = []
+        todo_items = _todo_items_from_state(state)
+        active_items = [
+            {
+                "id": item.get("id", ""),
+                "surface": item.get("surface", ""),
+                "why_now": item.get("why_now", ""),
+            }
+            for item in todo_items
+            if "in-progress" in item.get("status", "").lower()
+            or "active" in item.get("status", "").lower()
+            or "ongoing" in item.get("status", "").lower()
+        ]
 
     active_execplans = []
     for plan_path in _active_execplans(execplan_dir):
@@ -1835,8 +2127,16 @@ def gather_planning_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
         if status and status not in {"completed", "done", "closed", "planned", "pending", "not-started"}:
             active_execplans.append({"path": _render_path(plan_path), "status": status})
 
-    candidate_section = _section_content(_read_lines(roadmap_path), "Next Candidate Queue")
-    lane_blocks = _candidate_lane_blocks(_read_lines(roadmap_path))
+    if roadmap_path.exists():
+        roadmap_lines = _read_lines(roadmap_path)
+        candidate_section = _section_content(roadmap_lines, "Next Candidate Queue")
+        lane_blocks = _candidate_lane_blocks(roadmap_lines)
+        lane_count = len(lane_blocks)
+        candidate_count = len(lane_blocks) if lane_blocks else sum(1 for line in candidate_section if re.match(r"^\s*-\s+", line))
+    else:
+        candidate_section = []
+        lane_blocks = []
+        lane_count, candidate_count = _roadmap_counts_from_state(state)
     warnings = gather_planning_warnings(repo_root=repo_root)
 
     return {
@@ -1856,8 +2156,8 @@ def gather_planning_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
             else 0,
         },
         "roadmap": {
-            "lane_count": len(lane_blocks),
-            "candidate_count": len(lane_blocks) if lane_blocks else sum(1 for line in candidate_section if re.match(r"^\s*-\s+", line)),
+            "lane_count": lane_count,
+            "candidate_count": candidate_count,
         },
     }
 

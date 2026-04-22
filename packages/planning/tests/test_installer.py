@@ -42,6 +42,40 @@ def _load_module(path: Path, module_name: str):
 
 
 def _minimal_execplan(status: str = "in-progress") -> str:
+    execution_run = (
+        "- Run status: completed\n"
+        "- Executor: bounded external executor\n"
+        "- Handoff source: agentic-planning-bootstrap handoff --format json\n"
+        "- What happened: implemented the bounded checker update and returned compact residue.\n"
+        "- Scope touched: scripts/check/check_planning_surfaces.py\n"
+        "- Validations run: uv run pytest tests/test_check_planning_surfaces.py\n"
+        "- Result for continuation: no further delegated execution needed for this bounded slice.\n"
+        "- Next step: archive the plan.\n"
+        if status in {"completed", "done", "closed"}
+        else "- Run status: not-run-yet\n"
+        "- Executor: pending\n"
+        "- Handoff source: agentic-planning-bootstrap handoff --format json\n"
+        "- What happened: pending delegated execution.\n"
+        "- Scope touched: scripts/check/check_planning_surfaces.py\n"
+        "- Validations run: pending\n"
+        "- Result for continuation: return compact residue after the first bounded run.\n"
+        "- Next step: execute the bounded checker update.\n"
+    )
+    finished_run_review = (
+        "- Review status: completed\n"
+        "- Scope respected: yes\n"
+        "- Proof status: satisfied\n"
+        "- Intent served: yes\n"
+        "- Misinterpretation risk: low\n"
+        "- Follow-on decision: archive-and-close\n"
+        if status in {"completed", "done", "closed"}
+        else "- Review status: pending\n"
+        "- Scope respected: pending\n"
+        "- Proof status: pending\n"
+        "- Intent served: pending\n"
+        "- Misinterpretation risk: pending\n"
+        "- Follow-on decision: pending\n"
+    )
     execution_summary = (
         "- Outcome delivered: Added one bounded planning improvement.\n"
         "- Validation confirmed: uv run pytest tests/test_check_planning_surfaces.py\n"
@@ -120,6 +154,29 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 - Validation still needed: run the bounded planning checker test before archive.
 - Next likely slice: finish the current milestone and archive if no larger follow-on remains.
 
+## Intent Interpretation
+
+- Literal request: Keep scope clear.
+- Inferred intended outcome: land one bounded planning improvement without widening the lane.
+- Chosen concrete what: update the planning checker contract and validate it narrowly.
+- Interpretation distance: low
+- Review guidance: correct the slice if the implementation expands beyond the named planning checker surface.
+
+## Execution Bounds
+
+- Allowed paths: scripts/check/check_planning_surfaces.py
+- Max changed files: 1
+- Required validation commands: uv run pytest tests/test_check_planning_surfaces.py
+- Ask-before-refactor threshold: stop before broad planning-surface refactors.
+- Stop before touching: unrelated workspace or memory surfaces.
+
+## Stop Conditions
+
+- Stop when: the work needs broader planning-surface rereads than the named checker update.
+- Escalate when boundary reached: the change no longer fits one bounded checker slice.
+- Escalate on scope drift: additional owned surfaces are required.
+- Escalate on proof failure: the named planning test stops proving the change.
+
 ## Context Budget
 
 - Live working set: the active checker change, proof command, and closure state for this bounded slice.
@@ -172,6 +229,14 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 
 - Warning classes are emitted for known drift.
 
+## Execution Run
+
+{execution_run}
+
+## Finished-Run Review
+
+{finished_run_review}
+
 ## Execution Summary
 
 {execution_summary}
@@ -183,7 +248,15 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 ## Drift Log
 
 - 2026-04-04: Initial plan created.
-"""
+""".format(
+        status=status,
+        execution_run=execution_run,
+        finished_run_review=finished_run_review,
+        execution_summary=execution_summary,
+        proof_report=proof_report,
+        intent_satisfaction=intent_satisfaction,
+        closure_check=closure_check,
+    )
 
 
 def _minimal_execplan_with_required_tools(status: str = "in-progress") -> str:
@@ -1701,6 +1774,9 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["follow_through_contract"]["what_this_slice_enabled"] == "Added one bounded planning improvement."
     assert summary["follow_through_contract"]["validation_still_needed"] == ("run the bounded planning checker test before archive.")
     assert summary["follow_through_contract"]["larger_intended_outcome"] == "Land plan alpha end to end."
+    assert summary["intent_interpretation_contract"]["status"] == "present"
+    assert summary["intent_interpretation_contract"]["literal_request"] == "Keep scope clear."
+    assert summary["intent_interpretation_contract"]["interpretation_distance"] == "low"
     assert summary["context_budget_contract"]["status"] == "present"
     assert summary["context_budget_contract"]["live_working_set"] == (
         "the active checker change, proof command, and closure state for this bounded slice."
@@ -1708,6 +1784,11 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["context_budget_contract"]["tiny_resumability_note"] == (
         "keep the warning-class boundary explicit if this slice is revisited later."
     )
+    assert summary["execution_run_contract"]["status"] == "present"
+    assert summary["execution_run_contract"]["run_status"] == "not-run-yet"
+    assert summary["execution_run_contract"]["handoff_source"] == "agentic-planning-bootstrap handoff --format json"
+    assert summary["finished_run_review_contract"]["status"] == "present"
+    assert summary["finished_run_review_contract"]["review_status"] == "pending"
     assert summary["hierarchy_contract"]["status"] == "present"
     assert summary["hierarchy_contract"]["current_layer"] == "execution"
     assert summary["hierarchy_contract"]["parent_lane"]["id"] == "plan-alpha-lane"
@@ -1727,6 +1808,10 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     ]
     assert summary["handoff_contract"]["owned_write_scope"] == ["scripts/check/check_planning_surfaces.py"]
     assert summary["handoff_contract"]["context_budget"]["status"] == "present"
+    assert summary["handoff_contract"]["execution_bounds"]["allowed paths"] == "scripts/check/check_planning_surfaces.py"
+    assert summary["handoff_contract"]["stop_conditions"]["stop when"].startswith("the work needs broader")
+    assert summary["handoff_contract"]["intent_interpretation"]["status"] == "present"
+    assert summary["handoff_contract"]["return_with"]["execution_run_fields"][0] == "run status"
     assert summary["handoff_contract"]["worker_contract"]["allowed_execution_methods"][1] == "external cli or api"
     assert summary["roadmap"]["candidate_count"] == 1
     assert summary["roadmap"]["candidates"] == [
@@ -1865,6 +1950,9 @@ def test_planning_summary_exposes_closure_evidence(tmp_path: Path) -> None:
     assert completed_execplans[0]["proof_report"]["proof achieved now"] == "validation and closure checks passed for the bounded slice."
     assert completed_execplans[0]["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
     assert completed_execplans[0]["closure_check"]["closure decision"] == "archive-and-close"
+    assert "intent_interpretation" in summary["schema"]["view_fields"]["planning_record"]
+    assert "execution_run" in summary["schema"]["view_fields"]["planning_record"]
+    assert "finished_run_review" in summary["schema"]["view_fields"]["planning_record"]
     assert "proof_report" in summary["schema"]["view_fields"]["planning_record"]
     assert "intent_satisfaction" in summary["schema"]["view_fields"]["planning_record"]
     assert "closure_check" in summary["schema"]["view_fields"]["planning_record"]
@@ -1935,13 +2023,22 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     summary = planning_summary(target=tmp_path)
 
     assert summary["schema"]["view_fields"]["planning_record"][0] == "task"
+    assert "intent_interpretation" in summary["schema"]["view_fields"]["planning_record"]
+    assert "execution_run" in summary["schema"]["view_fields"]["planning_record"]
+    assert "finished_run_review" in summary["schema"]["view_fields"]["planning_record"]
     assert "tool_verification" in summary["schema"]["view_fields"]["planning_record"]
     assert "tool_verification" in summary["schema"]["view_fields"]["resumable_contract"]
     assert "follow_through_contract" in summary["schema"]["shared_fields"]
+    assert "intent_interpretation_contract" in summary["schema"]["shared_fields"]
     assert "context_budget_contract" in summary["schema"]["shared_fields"]
+    assert "execution_run_contract" in summary["schema"]["shared_fields"]
+    assert "finished_run_review_contract" in summary["schema"]["shared_fields"]
     assert "hierarchy_contract" in summary["schema"]["shared_fields"]
     assert "handoff_contract" in summary["schema"]["shared_fields"]
+    assert "literal_request" in summary["schema"]["view_fields"]["intent_interpretation_contract"]
     assert "live_working_set" in summary["schema"]["view_fields"]["context_budget_contract"]
+    assert "run_status" in summary["schema"]["view_fields"]["execution_run_contract"]
+    assert "review_status" in summary["schema"]["view_fields"]["finished_run_review_contract"]
     assert "parent_lane" in summary["schema"]["view_fields"]["hierarchy_contract"]
     assert "next_likely_slice" in summary["schema"]["view_fields"]["follow_through_contract"]
     assert "read_first" in summary["schema"]["view_fields"]["handoff_contract"]
@@ -1995,6 +2092,10 @@ def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> Non
     assert handoff["handoff_contract"]["status"] == "present"
     assert handoff["handoff_contract"]["next_action"] == "Add one checker."
     assert handoff["handoff_contract"]["context_budget"]["status"] == "present"
+    assert handoff["handoff_contract"]["intent_interpretation"]["status"] == "present"
+    assert handoff["handoff_contract"]["execution_bounds"]["allowed paths"] == "scripts/check/check_planning_surfaces.py"
+    assert handoff["handoff_contract"]["stop_conditions"]["stop when"].startswith("the work needs broader")
+    assert handoff["handoff_contract"]["return_with"]["finished_run_review_fields"][0] == "review status"
     assert handoff["handoff_contract"]["worker_contract"]["worker_must_not_own_by_default"][0] == "roadmap routing"
 
 
@@ -2055,6 +2156,9 @@ def test_planning_summary_human_view_starts_with_planning_record(tmp_path: Path,
     assert "Resumable contract view:" in out
     assert "Follow-through contract view:" in out
     assert "Context budget contract view:" in out
+    assert "Intent-interpretation contract view:" in out
+    assert "Execution-run contract view:" in out
+    assert "Finished-run review contract view:" in out
 
 
 def test_summary_text_prints_planning_record_before_contract_views(tmp_path: Path, capsys) -> None:

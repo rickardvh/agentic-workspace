@@ -262,6 +262,25 @@ def _print_summary(summary: dict) -> None:
         if closure_check:
             print(f"- Closure decision: {closure_check.get('closure decision', '')}")
             print(f"- Larger-intent status: {closure_check.get('larger-intent status', '')}")
+        intent_interpretation = planning_record.get("intent_interpretation", {})
+        if intent_interpretation:
+            print(f"- Literal request: {intent_interpretation.get('literal request', '')}")
+            print(f"- Inferred intended outcome: {intent_interpretation.get('inferred intended outcome', '')}")
+        execution_bounds = planning_record.get("execution_bounds", {})
+        if execution_bounds:
+            print(f"- Allowed paths: {execution_bounds.get('allowed paths', '')}")
+            print(f"- Max changed files: {execution_bounds.get('max changed files', '')}")
+        stop_conditions = planning_record.get("stop_conditions", {})
+        if stop_conditions:
+            print(f"- Stop when: {stop_conditions.get('stop when', '')}")
+        execution_run = planning_record.get("execution_run", {})
+        if execution_run:
+            print(f"- Execution run status: {execution_run.get('run status', '')}")
+            print(f"- Execution run next step: {execution_run.get('next step', '')}")
+        finished_run_review = planning_record.get("finished_run_review", {})
+        if finished_run_review:
+            print(f"- Finished-run review: {finished_run_review.get('review status', '')}")
+            print(f"- Intent served: {finished_run_review.get('intent served', '')}")
         tool_verification = planning_record.get("tool_verification", {})
         required_tools = tool_verification.get("required_tools", [])
         if required_tools:
@@ -317,6 +336,38 @@ def _print_summary(summary: dict) -> None:
         print(
             "Context budget contract view: "
             f"{context_budget_contract.get('status')} ({context_budget_contract.get('reason', 'no context-budget contract available')})"
+        )
+    intent_interpretation_contract = summary.get("intent_interpretation_contract", {})
+    if intent_interpretation_contract.get("status") == "present":
+        print("Intent-interpretation contract view:")
+        print(f"- Literal request: {intent_interpretation_contract.get('literal_request', '')}")
+        print(f"- Inferred intended outcome: {intent_interpretation_contract.get('inferred_intended_outcome', '')}")
+    elif intent_interpretation_contract:
+        print(
+            "Intent-interpretation contract view: "
+            f"{intent_interpretation_contract.get('status')} ({intent_interpretation_contract.get('reason', 'no intent-interpretation contract available')})"
+        )
+    execution_run_contract = summary.get("execution_run_contract", {})
+    if execution_run_contract.get("status") == "present":
+        print("Execution-run contract view:")
+        print(f"- Run status: {execution_run_contract.get('run_status', '')}")
+        print(f"- Executor: {execution_run_contract.get('executor', '')}")
+        print(f"- Next step: {execution_run_contract.get('next_step', '')}")
+    elif execution_run_contract:
+        print(
+            "Execution-run contract view: "
+            f"{execution_run_contract.get('status')} ({execution_run_contract.get('reason', 'no execution-run contract available')})"
+        )
+    finished_run_review_contract = summary.get("finished_run_review_contract", {})
+    if finished_run_review_contract.get("status") == "present":
+        print("Finished-run review contract view:")
+        print(f"- Review status: {finished_run_review_contract.get('review_status', '')}")
+        print(f"- Scope respected: {finished_run_review_contract.get('scope_respected', '')}")
+        print(f"- Intent served: {finished_run_review_contract.get('intent_served', '')}")
+    elif finished_run_review_contract:
+        print(
+            "Finished-run review contract view: "
+            f"{finished_run_review_contract.get('status')} ({finished_run_review_contract.get('reason', 'no finished-run review contract available')})"
         )
     if summary["todo"]["active_items"]:
         print("Active items:")
@@ -377,6 +428,15 @@ def _print_report(report: dict) -> None:
                 print(f"Intent satisfaction: {intent_satisfaction.get('was original intent fully satisfied?', '')}")
             if closure_check:
                 print(f"Closure decision: {closure_check.get('closure decision', '')}")
+        intent_interpretation_contract = active.get("intent_interpretation_contract", {})
+        if isinstance(intent_interpretation_contract, dict) and intent_interpretation_contract.get("status") == "present":
+            print(f"Intent interpretation: {intent_interpretation_contract.get('interpretation_distance', '')}")
+        execution_run_contract = active.get("execution_run_contract", {})
+        if isinstance(execution_run_contract, dict) and execution_run_contract.get("status") == "present":
+            print(f"Execution run: {execution_run_contract.get('run_status', '')}")
+        finished_run_review_contract = active.get("finished_run_review_contract", {})
+        if isinstance(finished_run_review_contract, dict) and finished_run_review_contract.get("status") == "present":
+            print(f"Finished-run review: {finished_run_review_contract.get('review_status', '')}")
     completed_execplans = report.get("completed_execplans", [])
     if completed_execplans:
         print(f"Completed execplans awaiting archive: {len(completed_execplans)}")
@@ -418,6 +478,17 @@ def _print_handoff(handoff: dict) -> None:
     print(f"- Read first: {', '.join(contract.get('read_first', []))}")
     print(f"- Write scope: {', '.join(contract.get('owned_write_scope', []))}")
     print(f"- Proof: {', '.join(contract.get('proof_expectations', []))}")
+    intent_interpretation = contract.get("intent_interpretation", {})
+    if isinstance(intent_interpretation, dict) and intent_interpretation.get("status") == "present":
+        print(f"- Literal request: {intent_interpretation.get('literal_request', '')}")
+        print(f"- Interpreted outcome: {intent_interpretation.get('inferred_intended_outcome', '')}")
+    execution_bounds = contract.get("execution_bounds", {})
+    if isinstance(execution_bounds, dict) and execution_bounds:
+        print(f"- Allowed paths: {execution_bounds.get('allowed paths', '')}")
+        print(f"- Max changed files: {execution_bounds.get('max changed files', '')}")
+    stop_conditions = contract.get("stop_conditions", {})
+    if isinstance(stop_conditions, dict) and stop_conditions:
+        print(f"- Stop when: {stop_conditions.get('stop when', '')}")
     context_budget = contract.get("context_budget", {})
     if isinstance(context_budget, dict) and context_budget.get("status") == "present":
         print(f"- Live working set: {context_budget.get('live_working_set', '')}")
@@ -425,6 +496,9 @@ def _print_handoff(handoff: dict) -> None:
     worker_contract = contract.get("worker_contract", {})
     print(f"- Allowed methods: {', '.join(worker_contract.get('allowed_execution_methods', []))}")
     print(f"- Worker owns by default: {', '.join(worker_contract.get('worker_owns_by_default', []))}")
+    return_with = contract.get("return_with", {})
+    if isinstance(return_with, dict):
+        print(f"- Return with execution-run fields: {', '.join(return_with.get('execution_run_fields', []))}")
 
 
 def _build_prompt(command: str, target: str | None) -> str:

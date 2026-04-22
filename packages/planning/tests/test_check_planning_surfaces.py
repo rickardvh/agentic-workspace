@@ -37,6 +37,40 @@ def _write(path: Path, text: str) -> None:
 
 
 def _minimal_execplan(*, status: str = "in-progress") -> str:
+    execution_run = (
+        "- Run status: completed\n"
+        "- Executor: bounded external executor\n"
+        "- Handoff source: agentic-planning-bootstrap handoff --format json\n"
+        "- What happened: implemented the bounded checker update and returned compact residue.\n"
+        "- Scope touched: scripts/check/check_planning_surfaces.py\n"
+        "- Validations run: uv run pytest tests/test_check_planning_surfaces.py\n"
+        "- Result for continuation: no further delegated execution needed for this bounded slice.\n"
+        "- Next step: archive the plan.\n"
+        if status in {"completed", "done", "closed"}
+        else "- Run status: not-run-yet\n"
+        "- Executor: pending\n"
+        "- Handoff source: agentic-planning-bootstrap handoff --format json\n"
+        "- What happened: pending delegated execution.\n"
+        "- Scope touched: scripts/check/check_planning_surfaces.py\n"
+        "- Validations run: pending\n"
+        "- Result for continuation: return compact residue after the first bounded run.\n"
+        "- Next step: execute the bounded checker update.\n"
+    )
+    finished_run_review = (
+        "- Review status: completed\n"
+        "- Scope respected: yes\n"
+        "- Proof status: satisfied\n"
+        "- Intent served: yes\n"
+        "- Misinterpretation risk: low\n"
+        "- Follow-on decision: archive-and-close\n"
+        if status in {"completed", "done", "closed"}
+        else "- Review status: pending\n"
+        "- Scope respected: pending\n"
+        "- Proof status: pending\n"
+        "- Intent served: pending\n"
+        "- Misinterpretation risk: pending\n"
+        "- Follow-on decision: pending\n"
+    )
     execution_summary = (
         "- Outcome delivered: Added one bounded planning improvement.\n"
         "- Validation confirmed: uv run pytest tests/test_check_planning_surfaces.py\n"
@@ -114,6 +148,29 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
 - Validation still needed: run the bounded planning checker test before archive.
 - Next likely slice: finish the current milestone and archive if no larger follow-on remains.
 
+## Intent Interpretation
+
+- Literal request: Keep scope clear.
+- Inferred intended outcome: land one bounded planning improvement without widening the lane.
+- Chosen concrete what: update the planning checker contract and validate it narrowly.
+- Interpretation distance: low
+- Review guidance: correct the slice if the implementation expands beyond the named planning checker surface.
+
+## Execution Bounds
+
+- Allowed paths: scripts/check/check_planning_surfaces.py
+- Max changed files: 1
+- Required validation commands: uv run pytest tests/test_check_planning_surfaces.py
+- Ask-before-refactor threshold: stop before broad planning-surface refactors.
+- Stop before touching: unrelated workspace or memory surfaces.
+
+## Stop Conditions
+
+- Stop when: the work needs broader planning-surface rereads than the named checker update.
+- Escalate when boundary reached: the change no longer fits one bounded checker slice.
+- Escalate on scope drift: additional owned surfaces are required.
+- Escalate on proof failure: the named planning test stops proving the change.
+
 ## Context Budget
 
 - Live working set: the active checker change, proof command, and closure state for this bounded slice.
@@ -162,6 +219,14 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
 
 - Warning classes are emitted for known drift.
 
+## Execution Run
+
+{execution_run}
+
+## Finished-Run Review
+
+{finished_run_review}
+
 ## Execution Summary
 
 {execution_summary}
@@ -175,6 +240,8 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
 - 2026-04-04: Initial plan created.
 """.format(
         status=status,
+        execution_run=execution_run,
+        finished_run_review=finished_run_review,
         execution_summary=execution_summary,
         proof_report=proof_report,
         intent_satisfaction=intent_satisfaction,

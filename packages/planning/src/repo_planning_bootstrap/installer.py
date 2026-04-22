@@ -625,10 +625,27 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         planning_record=planning_record,
         active_execplans=active_execplans,
     )
+    intent_interpretation_contract = _active_intent_interpretation_contract(
+        target_root=target_root,
+        planning_record=planning_record,
+        active_execplans=active_execplans,
+    )
     context_budget_contract = _active_context_budget_contract(
         target_root=target_root,
         planning_record=planning_record,
         active_execplans=active_execplans,
+    )
+    execution_run_contract = _active_execution_run_contract(
+        target_root=target_root,
+        planning_record=planning_record,
+        active_execplans=active_execplans,
+    )
+    finished_run_review_contract = _active_finished_run_review_contract(
+        target_root=target_root,
+        planning_record=planning_record,
+        active_execplans=active_execplans,
+        execution_run_contract=execution_run_contract,
+        intent_interpretation_contract=intent_interpretation_contract,
     )
     hierarchy_contract = _active_hierarchy_contract(
         target_root=target_root,
@@ -644,6 +661,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         planning_record=planning_record,
         hierarchy_contract=hierarchy_contract,
         context_budget_contract=context_budget_contract,
+        intent_interpretation_contract=intent_interpretation_contract,
     )
     return {
         "kind": "planning-summary/v1",
@@ -669,7 +687,16 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         "active_contract": _contract_projection(active_contract, view_name="active_contract"),
         "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
         "follow_through_contract": _contract_projection(follow_through_contract, view_name="follow_through_contract"),
+        "intent_interpretation_contract": _contract_projection(
+            intent_interpretation_contract,
+            view_name="intent_interpretation_contract",
+        ),
         "context_budget_contract": _contract_projection(context_budget_contract, view_name="context_budget_contract"),
+        "execution_run_contract": _contract_projection(execution_run_contract, view_name="execution_run_contract"),
+        "finished_run_review_contract": _contract_projection(
+            finished_run_review_contract,
+            view_name="finished_run_review_contract",
+        ),
         "hierarchy_contract": _contract_projection(hierarchy_contract, view_name="hierarchy_contract"),
         "handoff_contract": _contract_projection(handoff_contract, view_name="handoff_contract"),
         "system_intent": _system_intent_contract_payload(),
@@ -692,7 +719,10 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
     active_contract = summary.get("active_contract", {})
     resumable_contract = summary.get("resumable_contract", {})
     follow_through_contract = summary.get("follow_through_contract", {})
+    intent_interpretation_contract = summary.get("intent_interpretation_contract", {})
     context_budget_contract = summary.get("context_budget_contract", {})
+    execution_run_contract = summary.get("execution_run_contract", {})
+    finished_run_review_contract = summary.get("finished_run_review_contract", {})
     hierarchy_contract = summary.get("hierarchy_contract", {})
     handoff_contract = summary.get("handoff_contract", {})
     warnings = list(summary.get("warnings", []))
@@ -770,7 +800,10 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "active_contract": active_contract,
             "resumable_contract": resumable_contract,
             "follow_through_contract": follow_through_contract,
+            "intent_interpretation_contract": intent_interpretation_contract,
             "context_budget_contract": context_budget_contract,
+            "execution_run_contract": execution_run_contract,
+            "finished_run_review_contract": finished_run_review_contract,
             "hierarchy_contract": hierarchy_contract,
             "handoff_contract": handoff_contract,
         },
@@ -821,7 +854,10 @@ def _planning_summary_schema() -> dict[str, Any]:
             "active_contract",
             "resumable_contract",
             "follow_through_contract",
+            "intent_interpretation_contract",
             "context_budget_contract",
+            "execution_run_contract",
+            "finished_run_review_contract",
             "hierarchy_contract",
             "handoff_contract",
             "system_intent",
@@ -840,6 +876,11 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "proof_report",
                 "intent_satisfaction",
                 "closure_check",
+                "intent_interpretation",
+                "execution_bounds",
+                "stop_conditions",
+                "execution_run",
+                "finished_run_review",
                 "tool_verification",
                 "escalate_when",
                 "continuation_owner",
@@ -877,6 +918,14 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "next_likely_slice",
                 "minimal_refs",
             ],
+            "intent_interpretation_contract": [
+                "literal_request",
+                "inferred_intended_outcome",
+                "chosen_concrete_what",
+                "interpretation_distance",
+                "review_guidance",
+                "minimal_refs",
+            ],
             "context_budget_contract": [
                 "live_working_set",
                 "recoverable_later",
@@ -885,6 +934,26 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "context_shift_triggers",
                 "interaction_cost_rule",
                 "resume_rule",
+                "minimal_refs",
+            ],
+            "execution_run_contract": [
+                "run_status",
+                "executor",
+                "handoff_source",
+                "what_happened",
+                "scope_touched",
+                "validations_run",
+                "result_for_continuation",
+                "next_step",
+                "minimal_refs",
+            ],
+            "finished_run_review_contract": [
+                "review_status",
+                "scope_respected",
+                "proof_status",
+                "intent_served",
+                "misinterpretation_risk",
+                "follow_on_decision",
                 "minimal_refs",
             ],
             "hierarchy_contract": [
@@ -911,9 +980,13 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "read_first",
                 "owned_write_scope",
                 "proof_expectations",
+                "intent_interpretation",
+                "execution_bounds",
+                "stop_conditions",
                 "tool_verification",
                 "continuation_owner",
                 "context_budget",
+                "return_with",
                 "worker_contract",
             ],
             "roadmap": [
@@ -926,8 +999,9 @@ def _planning_summary_schema() -> dict[str, Any]:
         "rules": [
             "planning_record is the canonical compact active planning state when it is available",
             (
-                "active_contract, resumable_contract, follow_through_contract, and "
-                "context_budget_contract and hierarchy_contract remain thinner projections over that state"
+                "active_contract, resumable_contract, follow_through_contract, intent_interpretation_contract, "
+                "context_budget_contract, execution_run_contract, finished_run_review_contract, and hierarchy_contract "
+                "remain thinner projections over that state"
             ),
             "system intent remains durable and queryable even when the active slice is narrower than the parent issue or lane",
             "closure decisions must distinguish bounded slice completion from larger-intent satisfaction",
@@ -954,6 +1028,7 @@ def _planning_handoff_schema() -> dict[str, Any]:
             "derive delegated worker handoff from the active planning record instead of authoring a second durable plan",
             "treat runtime delegation method as tool-owned and agent-agnostic",
             "keep worker closure bounded; lane shaping and roadmap routing stay orchestrator-owned",
+            "use the handoff packet to preserve execution bounds, stop conditions, and return-with residue instead of reconstructing them from chat",
         ],
     }
 
@@ -1268,10 +1343,20 @@ def _canonical_planning_record(
     proof_report: dict[str, str] = {}
     intent_satisfaction: dict[str, str] = {}
     closure_check: dict[str, str] = {}
+    intent_interpretation: dict[str, str] = {}
+    execution_bounds: dict[str, str] = {}
+    stop_conditions: dict[str, str] = {}
+    execution_run: dict[str, str] = {}
+    finished_run_review: dict[str, str] = {}
     if plan_path is not None:
         proof_report = _execplan_proof_report(plan_path)
         intent_satisfaction = _execplan_intent_satisfaction(plan_path)
         closure_check = _execplan_closure_check(plan_path)
+        intent_interpretation = _execplan_intent_interpretation(plan_path)
+        execution_bounds = _execplan_execution_bounds(plan_path)
+        stop_conditions = _execplan_stop_conditions(plan_path)
+        execution_run = _execplan_execution_run(plan_path)
+        finished_run_review = _execplan_finished_run_review(plan_path)
     continuation_owner = str(todo_item.get("surface", "")).strip()
     if not continuation_owner and minimal_refs:
         continuation_owner = minimal_refs[-1]
@@ -1290,6 +1375,11 @@ def _canonical_planning_record(
         "proof_report": proof_report,
         "intent_satisfaction": intent_satisfaction,
         "closure_check": closure_check,
+        "intent_interpretation": intent_interpretation,
+        "execution_bounds": execution_bounds,
+        "stop_conditions": stop_conditions,
+        "execution_run": execution_run,
+        "finished_run_review": finished_run_review,
         "tool_verification": dict(resumable_contract.get("tool_verification", {})),
         "escalate_when": str(resumable_contract.get("escalate_when", "")).strip(),
         "continuation_owner": continuation_owner,
@@ -1363,6 +1453,56 @@ def _active_follow_through_contract(
     }
 
 
+def _active_intent_interpretation_contract(
+    *,
+    target_root: Path,
+    planning_record: dict[str, Any],
+    active_execplans: list[dict[str, str]],
+) -> dict[str, Any]:
+    if planning_record.get("status") != "present" or len(active_execplans) != 1:
+        return {
+            "status": "unavailable",
+            "reason": "requires one active execplan with a present planning record",
+        }
+
+    plan_path = _resolve_execplan_path(target_root, active_execplans[0]["path"])
+    if plan_path is None or not plan_path.exists():
+        return {
+            "status": "unavailable",
+            "reason": "active execplan path is not available for intent-interpretation extraction",
+        }
+
+    interpretation = _execplan_intent_interpretation(plan_path)
+    required_fields = {
+        "literal request",
+        "inferred intended outcome",
+        "chosen concrete what",
+        "interpretation distance",
+        "review guidance",
+    }
+    if not required_fields.issubset(interpretation):
+        return {
+            "status": "unavailable",
+            "reason": "active execplan is missing intent-interpretation fields",
+        }
+
+    minimal_refs = _dedupe(
+        [
+            *planning_record.get("minimal_refs", []),
+            ".agentic-workspace/docs/execution-flow-contract.md",
+        ]
+    )
+    return {
+        "status": "present",
+        "literal_request": interpretation.get("literal request", "").strip(),
+        "inferred_intended_outcome": interpretation.get("inferred intended outcome", "").strip(),
+        "chosen_concrete_what": interpretation.get("chosen concrete what", "").strip(),
+        "interpretation_distance": interpretation.get("interpretation distance", "").strip(),
+        "review_guidance": interpretation.get("review guidance", "").strip(),
+        "minimal_refs": minimal_refs,
+    }
+
+
 def _active_context_budget_contract(
     *,
     target_root: Path,
@@ -1417,6 +1557,118 @@ def _active_context_budget_contract(
         "resume_rule": (
             "Use the tiny resumability note plus explicit minimal refs instead of broad rereads when returning after an interruption or tool switch."
         ),
+        "minimal_refs": minimal_refs,
+    }
+
+
+def _active_execution_run_contract(
+    *,
+    target_root: Path,
+    planning_record: dict[str, Any],
+    active_execplans: list[dict[str, str]],
+) -> dict[str, Any]:
+    if planning_record.get("status") != "present" or len(active_execplans) != 1:
+        return {
+            "status": "unavailable",
+            "reason": "requires one active execplan with a present planning record",
+        }
+
+    plan_path = _resolve_execplan_path(target_root, active_execplans[0]["path"])
+    if plan_path is None or not plan_path.exists():
+        return {
+            "status": "unavailable",
+            "reason": "active execplan path is not available for execution-run extraction",
+        }
+
+    execution_run = _execplan_execution_run(plan_path)
+    required_fields = {
+        "run status",
+        "executor",
+        "handoff source",
+        "what happened",
+        "scope touched",
+        "validations run",
+        "result for continuation",
+        "next step",
+    }
+    if not required_fields.issubset(execution_run):
+        return {
+            "status": "unavailable",
+            "reason": "active execplan is missing execution-run fields",
+        }
+
+    minimal_refs = _dedupe(
+        [
+            *planning_record.get("minimal_refs", []),
+            ".agentic-workspace/docs/execution-flow-contract.md",
+        ]
+    )
+    return {
+        "status": "present",
+        "run_status": execution_run.get("run status", "").strip(),
+        "executor": execution_run.get("executor", "").strip(),
+        "handoff_source": execution_run.get("handoff source", "").strip(),
+        "what_happened": execution_run.get("what happened", "").strip(),
+        "scope_touched": execution_run.get("scope touched", "").strip(),
+        "validations_run": execution_run.get("validations run", "").strip(),
+        "result_for_continuation": execution_run.get("result for continuation", "").strip(),
+        "next_step": execution_run.get("next step", "").strip(),
+        "minimal_refs": minimal_refs,
+    }
+
+
+def _active_finished_run_review_contract(
+    *,
+    target_root: Path,
+    planning_record: dict[str, Any],
+    active_execplans: list[dict[str, str]],
+    execution_run_contract: dict[str, Any],
+    intent_interpretation_contract: dict[str, Any],
+) -> dict[str, Any]:
+    if planning_record.get("status") != "present" or len(active_execplans) != 1:
+        return {
+            "status": "unavailable",
+            "reason": "requires one active execplan with a present planning record",
+        }
+
+    plan_path = _resolve_execplan_path(target_root, active_execplans[0]["path"])
+    if plan_path is None or not plan_path.exists():
+        return {
+            "status": "unavailable",
+            "reason": "active execplan path is not available for finished-run review extraction",
+        }
+
+    review = _execplan_finished_run_review(plan_path)
+    required_fields = {
+        "review status",
+        "scope respected",
+        "proof status",
+        "intent served",
+        "misinterpretation risk",
+        "follow-on decision",
+    }
+    if not required_fields.issubset(review):
+        return {
+            "status": "unavailable",
+            "reason": "active execplan is missing finished-run review fields",
+        }
+
+    minimal_refs = _dedupe(
+        [
+            *planning_record.get("minimal_refs", []),
+            *(execution_run_contract.get("minimal_refs", []) if execution_run_contract.get("status") == "present" else []),
+            *(intent_interpretation_contract.get("minimal_refs", []) if intent_interpretation_contract.get("status") == "present" else []),
+            ".agentic-workspace/docs/reporting-contract.md",
+        ]
+    )
+    return {
+        "status": "present",
+        "review_status": review.get("review status", "").strip(),
+        "scope_respected": review.get("scope respected", "").strip(),
+        "proof_status": review.get("proof status", "").strip(),
+        "intent_served": review.get("intent served", "").strip(),
+        "misinterpretation_risk": review.get("misinterpretation risk", "").strip(),
+        "follow_on_decision": review.get("follow-on decision", "").strip(),
         "minimal_refs": minimal_refs,
     }
 
@@ -1524,6 +1776,7 @@ def _active_handoff_contract(
     planning_record: dict[str, Any],
     hierarchy_contract: dict[str, Any],
     context_budget_contract: dict[str, Any],
+    intent_interpretation_contract: dict[str, Any],
 ) -> dict[str, Any]:
     if planning_record.get("status") != "present":
         return {
@@ -1549,9 +1802,32 @@ def _active_handoff_contract(
         "proof_expectations": list(planning_record.get("proof_expectations", [])),
         "proof_report": dict(planning_record.get("proof_report", {})),
         "intent_satisfaction": dict(planning_record.get("intent_satisfaction", {})),
+        "intent_interpretation": dict(intent_interpretation_contract if intent_interpretation_contract.get("status") == "present" else {}),
+        "execution_bounds": dict(planning_record.get("execution_bounds", {})),
+        "stop_conditions": dict(planning_record.get("stop_conditions", {})),
         "tool_verification": dict(planning_record.get("tool_verification", {})),
         "continuation_owner": str(planning_record.get("continuation_owner", "")).strip(),
         "context_budget": dict(context_budget_contract if context_budget_contract.get("status") == "present" else {}),
+        "return_with": {
+            "execution_run_fields": [
+                "run status",
+                "executor",
+                "handoff source",
+                "what happened",
+                "scope touched",
+                "validations run",
+                "result for continuation",
+                "next step",
+            ],
+            "finished_run_review_fields": [
+                "review status",
+                "scope respected",
+                "proof status",
+                "intent served",
+                "misinterpretation risk",
+                "follow-on decision",
+            ],
+        },
         "worker_contract": {
             "allowed_execution_methods": [
                 "internal delegation",
@@ -1571,6 +1847,10 @@ def _active_handoff_contract(
                 "repo-wide policy changes",
             ],
             "stop_when": [
+                str(planning_record.get("stop_conditions", {}).get("stop when", "")).strip(),
+                str(planning_record.get("stop_conditions", {}).get("escalate when boundary reached", "")).strip(),
+                str(planning_record.get("stop_conditions", {}).get("escalate on scope drift", "")).strip(),
+                str(planning_record.get("stop_conditions", {}).get("escalate on proof failure", "")).strip(),
                 str(planning_record.get("escalate_when", "")).strip(),
                 "the task needs broad rereads beyond the explicit read-first refs and owned write scope",
                 "the chosen delegation method cannot preserve the checked-in handoff contract",
@@ -1756,7 +2036,12 @@ def _render_inactive_execplan_residue(*, plan_path: Path, target_root: Path) -> 
     intent_continuity = _execplan_intent_continuity(plan_path)
     required_continuation = _execplan_required_continuation(plan_path)
     delegated_judgment = _execplan_delegated_judgment(plan_path)
+    intent_interpretation = _execplan_intent_interpretation(plan_path)
+    execution_bounds = _execplan_execution_bounds(plan_path)
+    stop_conditions = _execplan_stop_conditions(plan_path)
     context_budget = _execplan_context_budget(plan_path)
+    execution_run = _execplan_execution_run(plan_path)
+    finished_run_review = _execplan_finished_run_review(plan_path)
     proof_report = _execplan_proof_report(plan_path)
     intent_satisfaction = _execplan_intent_satisfaction(plan_path)
     closure_check = _execplan_closure_check(plan_path)
@@ -1800,6 +2085,38 @@ def _render_inactive_execplan_residue(*, plan_path: Path, target_root: Path) -> 
     ):
         if key in delegated_judgment:
             lines.append(f"- {key.title()}: {delegated_judgment[key]}")
+    if intent_interpretation:
+        lines.extend(["", "## Intent Interpretation", ""])
+        for key in (
+            "literal request",
+            "inferred intended outcome",
+            "chosen concrete what",
+            "interpretation distance",
+            "review guidance",
+        ):
+            if key in intent_interpretation:
+                lines.append(f"- {key.title()}: {intent_interpretation[key]}")
+    if execution_bounds:
+        lines.extend(["", "## Execution Bounds", ""])
+        for key in (
+            "allowed paths",
+            "max changed files",
+            "required validation commands",
+            "ask-before-refactor threshold",
+            "stop before touching",
+        ):
+            if key in execution_bounds:
+                lines.append(f"- {key.title()}: {execution_bounds[key]}")
+    if stop_conditions:
+        lines.extend(["", "## Stop Conditions", ""])
+        for key in (
+            "stop when",
+            "escalate when boundary reached",
+            "escalate on scope drift",
+            "escalate on proof failure",
+        ):
+            if key in stop_conditions:
+                lines.append(f"- {key.title()}: {stop_conditions[key]}")
     if context_budget:
         lines.extend(["", "## Context Budget", ""])
         for key in (
@@ -1811,6 +2128,32 @@ def _render_inactive_execplan_residue(*, plan_path: Path, target_root: Path) -> 
         ):
             if key in context_budget:
                 lines.append(f"- {key.title()}: {context_budget[key]}")
+    if execution_run:
+        lines.extend(["", "## Execution Run", ""])
+        for key in (
+            "run status",
+            "executor",
+            "handoff source",
+            "what happened",
+            "scope touched",
+            "validations run",
+            "result for continuation",
+            "next step",
+        ):
+            if key in execution_run:
+                lines.append(f"- {key.title()}: {execution_run[key]}")
+    if finished_run_review:
+        lines.extend(["", "## Finished-Run Review", ""])
+        for key in (
+            "review status",
+            "scope respected",
+            "proof status",
+            "intent served",
+            "misinterpretation risk",
+            "follow-on decision",
+        ):
+            if key in finished_run_review:
+                lines.append(f"- {key.title()}: {finished_run_review[key]}")
     lines.extend(["", "## Proof Report", ""])
     for key in (
         "validation proof",
@@ -2807,9 +3150,34 @@ def _execplan_delegated_judgment(path: Path) -> dict[str, str]:
     return _extract_kv_fields(_section_lines(lines, "Delegated Judgment"))
 
 
+def _execplan_intent_interpretation(path: Path) -> dict[str, str]:
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Intent Interpretation"))
+
+
+def _execplan_execution_bounds(path: Path) -> dict[str, str]:
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Execution Bounds"))
+
+
+def _execplan_stop_conditions(path: Path) -> dict[str, str]:
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Stop Conditions"))
+
+
 def _execplan_context_budget(path: Path) -> dict[str, str]:
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Context Budget"))
+
+
+def _execplan_execution_run(path: Path) -> dict[str, str]:
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Execution Run"))
+
+
+def _execplan_finished_run_review(path: Path) -> dict[str, str]:
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "Finished-Run Review"))
 
 
 def _execplan_active_milestone(path: Path) -> dict[str, str]:

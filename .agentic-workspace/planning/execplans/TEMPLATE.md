@@ -68,6 +68,38 @@ Use this section when the slice is expected to stop before the broader goal is c
 Keep it compact and carry-forward shaped.
 Record what this slice changed about the broader line of work, not a backlog dump or a second drift log.
 
+## Intent Interpretation
+
+- Literal request:
+- Inferred intended outcome:
+- Chosen concrete what:
+- Interpretation distance:
+- Review guidance:
+
+Use this section to make the request-to-intent move inspectable without turning the plan into a reasoning trace.
+Keep it compact enough that a later reviewer can cheaply tell whether the slice stayed plausibly aligned with the user's likely purpose.
+
+## Execution Bounds
+
+- Allowed paths:
+- Max changed files:
+- Required validation commands:
+- Ask-before-refactor threshold:
+- Stop before touching:
+
+Use this section when the slice may be handed to a bounded executor and you want cheap explicit scope rails close to the task/plan.
+Keep it compact and targeted; do not turn it into a generic policy engine.
+
+## Stop Conditions
+
+- Stop when:
+- Escalate when boundary reached:
+- Escalate on scope drift:
+- Escalate on proof failure:
+
+Use this section to make "stop and escalate" cheaper than silent drift.
+Keep the conditions practical and local to the bounded slice.
+
 ## Context Budget
 
 - Live working set:
@@ -160,9 +192,35 @@ Keep the first slice advisory: if a required tool is unavailable, stop or escala
 
 -
 
+## Execution Run
+
+- Run status:
+- Executor:
+- Handoff source:
+- What happened:
+- Scope touched:
+- Validations run:
+- Result for continuation:
+- Next step:
+
+Use this section for the smallest useful residue from one delegated execution attempt.
+Keep it compact, human-readable, and executor-agnostic; it should help later review and continuation without becoming a trace log.
+
+## Finished-Run Review
+
+- Review status:
+- Scope respected:
+- Proof status:
+- Intent served:
+- Misinterpretation risk:
+- Follow-on decision:
+
+Use this section when delegated work returns and a planner/reviewer needs one cheap answer about scope, proof, and intent alignment.
+Keep it decision-supporting rather than exhaustive.
+
 ## Proof Report
 
-- Validation proof (logs, command output, or screenshots):
+- Validation proof:
 - Proof achieved now:
 - Evidence for "Proof achieved" state:
 

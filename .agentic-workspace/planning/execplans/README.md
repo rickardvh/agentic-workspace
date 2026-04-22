@@ -74,6 +74,8 @@ Each active plan should stay compact and include:
 - non-goals
 - intent continuity
 - required continuation
+- intent interpretation when the slice is meaningfully shaped from a literal request into a bounded concrete "what"
+- execution bounds and stop conditions when the slice may benefit from bounded delegated execution
 - context budget
 - delegated judgment
 - active milestone
@@ -85,6 +87,8 @@ Each active plan should stay compact and include:
 - validation commands
 - required tools when the task depends on a capability that may be absent in some runtimes
 - completion criteria
+- execution run residue when delegated work is attempted
+- finished-run review when delegated work returns for planner/reviewer inspection
 - execution summary
 - closure check
 - drift log
@@ -152,6 +156,35 @@ Use `none` only when the slice is so local that delegated-judgment framing would
 `agentic-workspace summary --format json` exposes a typed `planning-summary/v1` payload. Inside that payload, `planning_record` is the canonical active planning record when planning has one active TODO item and one active execplan. `active_contract` is the narrower intent projection over that record.
 Treat `planning_record` as canonical active state when it is available; raw `.agentic-workspace/planning/state.toml` and execplan prose remain the thin human maintenance layer and semantic fallback.
 
+Intent interpretation belongs under `## Intent Interpretation` when the slice should preserve how it moved from the literal request to the bounded intended outcome:
+
+- `Literal request`
+- `Inferred intended outcome`
+- `Chosen concrete what`
+- `Interpretation distance`
+- `Review guidance`
+
+Keep this section compact and review-oriented. It should make the interpretive move inspectable enough to catch overreach or drift without turning the plan into a reasoning trace.
+
+Execution bounds belong under `## Execution Bounds` when a bounded executor should have explicit local rails:
+
+- `Allowed paths`
+- `Max changed files`
+- `Required validation commands`
+- `Ask-before-refactor threshold`
+- `Stop before touching`
+
+Keep these bounds close to the active plan so the worker does not have to reconstruct them from chat.
+
+Stop conditions belong under `## Stop Conditions` when a bounded executor should know when to stop cheaply:
+
+- `Stop when`
+- `Escalate when boundary reached`
+- `Escalate on scope drift`
+- `Escalate on proof failure`
+
+These conditions should make "stop and escalate" cheaper than silent drift.
+
 Closure checks belong under `## Closure Check` for completed or nearly-complete plans:
 
 - `Slice status`
@@ -199,6 +232,15 @@ Context-budget and cheap-resume answers belong in the compact `context_budget_co
 
 That object should stay compact enough to reduce rereads and mixed-agent restart cost rather than creating a second planning narrative.
 Use it when the question is what can be dropped now, what must be written down first, or what should trigger reloading a different bundle later.
+
+Delegated-work inspection answers belong in three compact projections over the same active plan state:
+
+- `intent_interpretation_contract`
+- `execution_run_contract`
+- `finished_run_review_contract`
+
+Use them when the question is how the slice interpreted the request, what happened in one bounded delegated run, or how returned work should be judged for scope/proof/intent fit.
+Keep those projections thin and derived; they are not a second planning authority.
 
 For larger-picture restart and queue questions, `hierarchy_contract` may also be present as a thin projection over the same active planning state. Use it for parent-lane, next-chunk, continuation-owner, and proof-state answers; do not treat it as a second planning authority.
 When queued TODO items exist, the same hierarchy view may also expose the near-term queue so the next same-thread chunk does not survive only in prose or chat.

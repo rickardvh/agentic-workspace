@@ -4,10 +4,8 @@ queued_items = []
 
 [roadmap]
 lanes = [
-  { id = "bounded-delegation-and-run-review", title = "Bounded delegation and run review", priority = "third", issues = ["#242", "#241", "#239", "#235", "#233"], outcome = "Make delegated executor work cheaper to bound, inspect, compare, and correct without losing intended outcome, stop conditions, or proof expectations.", reason = "The repo already supports mixed-agent posture locally, but external execution still needs tighter stop boundaries, compact run residue, and faster intent-interpretation and finished-run review.", promotion_signal = "Promote when external executor work is attractive but review, scope drift, or intent-mismatch cost is still too high to trust the handoff cheaply.", suggested_first_slice = "Define one compact executor handoff plus one finished-run review surface that captures intended outcome, execution bounds, stop conditions, and the smallest useful run residue." },
   { id = "further-product-compression-on-repeated-pressure", title = "Further product compression on repeated pressure", priority = "fourth", issues = ["#230"], outcome = "Continue removing, demoting, or internalizing visible product residue only when repeated real use shows another surface still imposes first-line cognitive cost.", reason = "The bounded startup/front-door/doctrine/query compression tranche is complete; future subtraction should reopen only on repeated evidence rather than on abstract appetite for simplification.", promotion_signal = "Promote when repeated dogfooding shows another visible surface still behaves like a first-line handbook, leaves avoidable startup ambiguity, or keeps unnecessary product residue in the default mental model.", suggested_first_slice = "Capture one repeated remaining residue class and prove whether it should disappear, merge, demote, or move behind a compact query surface." },
 ]
 candidates = [
-  { priority = "third", summary = "Bounded delegation and run review" },
   { priority = "fourth", summary = "Further product compression on repeated pressure" },
 ]
