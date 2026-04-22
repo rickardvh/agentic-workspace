@@ -2815,6 +2815,10 @@ def _run_report_command(
             surface="report",
         ),
         "execution_shape": execution_shape,
+        "agent_configuration_system": _agent_configuration_report_payload(
+            config=config,
+            installed_modules=installed_modules,
+        ),
         "findings": aggregated_findings,
         "next_action": next_action,
         "discovery": discovery,
@@ -2847,6 +2851,33 @@ def _effective_active_direction_payload(*, module_reports: list[dict[str, Any]])
         "summary": str(planning_record.get("next_action") or "Active planning carries the current bounded direction."),
         "requested_outcome": str(planning_record.get("requested_outcome") or ""),
         "refs": refs if isinstance(refs, list) else [],
+    }
+
+
+def _agent_configuration_report_payload(*, config: WorkspaceConfig, installed_modules: list[str]) -> dict[str, Any]:
+    substrate = _agent_configuration_system_payload()
+    return {
+        "canonical_doc": substrate["canonical_doc"],
+        "rule": substrate["rule"],
+        "startup_entrypoint": config.agent_instructions_file,
+        "workflow_artifact_profile": config.workflow_artifact_profile,
+        "workspace_policy_surface": ".agentic-workspace/config.toml",
+        "ownership_surface": ".agentic-workspace/OWNERSHIP.toml",
+        "module_attachment_status": [
+            {
+                "module": "planning",
+                "installed": "planning" in installed_modules,
+                "owner_surface": ".agentic-workspace/planning/state.toml",
+            },
+            {
+                "module": "memory",
+                "installed": "memory" in installed_modules,
+                "owner_surface": ".agentic-workspace/memory/repo/",
+            },
+        ],
+        "adapter_surfaces": substrate["adapter_surfaces"],
+        "selective_loading": substrate["selective_loading"],
+        "current_system_intent_role": "compass for shaping means and review, not active execution authority",
     }
 
 
@@ -3627,6 +3658,84 @@ def _reporting_schema_payload() -> dict[str, Any]:
     return report_contract_manifest().copy()
 
 
+def _agent_configuration_system_payload() -> dict[str, Any]:
+    canonical_doc = ".agentic-workspace/docs/workspace-config-contract.md"
+    return {
+        "canonical_doc": canonical_doc,
+        "command": "agentic-workspace defaults --section agent_configuration_system --format json",
+        "rule": (
+            "Treat Agentic Workspace as the repo-owned structured agent configuration substrate: "
+            "workspace hosts the substrate, planning and memory attach as modules, and prose startup surfaces act as adapters."
+        ),
+        "owner_surface": ".agentic-workspace/config.toml",
+        "owner_rule": "Repo-owned config selects workspace policy; workspace-owned contract docs, ownership, and descriptors define the substrate shape.",
+        "configuration_classes": [
+            {
+                "id": "startup_and_adapter_policy",
+                "summary": "startup entrypoint, prose-adapter role, and workflow-artifact profile",
+                "primary_owner": "workspace config plus workspace contract docs",
+                "ask_first": "agentic-workspace defaults --section startup --format json",
+            },
+            {
+                "id": "workspace_policy",
+                "summary": "repo-owned preset, update intent, improvement latitude, and optimization bias",
+                "primary_owner": ".agentic-workspace/config.toml",
+                "ask_first": "agentic-workspace config --target ./repo --format json",
+            },
+            {
+                "id": "module_attachment",
+                "summary": "which modules exist, what they own, and how they compose",
+                "primary_owner": "module descriptors plus .agentic-workspace/OWNERSHIP.toml",
+                "ask_first": "agentic-workspace ownership --target ./repo --format json",
+            },
+            {
+                "id": "module_state",
+                "summary": "active planning state and durable memory state that consume the substrate without moving ownership to workspace",
+                "primary_owner": "planning and memory surfaces",
+                "ask_first": "agentic-workspace report --target ./repo --format json",
+            },
+        ],
+        "authority_map": [
+            {"concern": "workspace policy", "surface": ".agentic-workspace/config.toml", "owner": "repo"},
+            {"concern": "shared substrate contract", "surface": canonical_doc, "owner": "workspace"},
+            {"concern": "ownership and authority lookup", "surface": ".agentic-workspace/OWNERSHIP.toml", "owner": "workspace"},
+            {"concern": "module attachment metadata", "surface": "workspace module descriptors", "owner": "workspace"},
+            {"concern": "active execution state", "surface": ".agentic-workspace/planning/state.toml", "owner": "planning"},
+            {"concern": "durable understanding", "surface": ".agentic-workspace/memory/repo/", "owner": "memory"},
+        ],
+        "module_attachment_points": [
+            "descriptor lifecycle commands and install detection",
+            "workflow surfaces and generated artifacts",
+            "startup steps and sources of truth",
+            "capabilities, dependencies, and conflicts",
+            "module result-contract shape",
+        ],
+        "adapter_surfaces": [
+            {"surface": "AGENTS.md", "role": "ordinary startup adapter over structured substrate"},
+            {"surface": "llms.txt", "role": "external install/adopt adapter over structured substrate"},
+            {
+                "surface": "tools/AGENT_QUICKSTART.md and tools/AGENT_ROUTING.md",
+                "role": "generated helper adapters over structured substrate",
+            },
+        ],
+        "selective_loading": {
+            "rule": "Prefer the smallest compact query that answers the current configuration question before opening broader prose.",
+            "first_queries": [
+                "agentic-workspace defaults --section agent_configuration_system --format json",
+                "agentic-workspace config --target ./repo --format json",
+                "agentic-workspace ownership --target ./repo --format json",
+                "agentic-workspace modules --format json",
+                "agentic-workspace report --target ./repo --format json",
+            ],
+        },
+        "must_not": [
+            "treat planning as the owner of general workflow extension machinery",
+            "turn the workspace substrate into a scheduler or full workflow engine",
+            "let prose startup files become the primary authority again once the substrate can answer the question directly",
+        ],
+    }
+
+
 def _emit_startup_report(
     *,
     format_name: str,
@@ -4231,6 +4340,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "Do not preserve findings that have no durable owner or bounded next action.",
             ],
         },
+        "agent_configuration_system": _agent_configuration_system_payload(),
         "system_intent": _system_intent_payload(),
         "intent": _intent_contract_payload(),
         "clarification": _clarification_contract_payload(),
@@ -4257,7 +4367,7 @@ def _defaults_payload() -> dict[str, Any]:
             ],
         },
         "improvement_latitude": {
-            "canonical_doc": "docs/workspace-config-contract.md",
+            "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
             "command": "agentic-workspace defaults --section improvement_latitude --format json",
             "rule": (
                 "Repo-owned improvement latitude may widen means to reduce proven repo friction, "
@@ -4302,7 +4412,7 @@ def _defaults_payload() -> dict[str, Any]:
             "validation_friction": _validation_friction_payload(),
         },
         "optimization_bias": {
-            "canonical_doc": "docs/workspace-config-contract.md",
+            "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
             "command": "agentic-workspace defaults --section optimization_bias --format json",
             "rule": (
                 "Repo-owned optimization bias may change output density and residue style, "
@@ -4326,7 +4436,7 @@ def _defaults_payload() -> dict[str, Any]:
             ],
         },
         "workflow_artifact_adapters": {
-            "canonical_doc": "docs/workspace-config-contract.md",
+            "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
             "command": "agentic-workspace defaults --section workflow_artifact_adapters --format json",
             "rule": (
                 "Runtime-native planning artifacts may exist, but durable cross-agent state "
@@ -4710,6 +4820,11 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- planner: {payload['relay']['planner_role']['summary']}")
     print(f"- implementer: {payload['relay']['implementer_role']['summary']}")
     print(f"- memory bridge: {payload['relay']['memory_bridge']['summary']}")
+    print("Agent configuration system:")
+    print(f"- doc: {payload['agent_configuration_system']['canonical_doc']}")
+    print(f"- command: {payload['agent_configuration_system']['command']}")
+    print(f"- rule: {payload['agent_configuration_system']['rule']}")
+    print(f"- owner surface: {payload['agent_configuration_system']['owner_surface']}")
     print("Improvement latitude:")
     print(f"- doc: {payload['improvement_latitude']['canonical_doc']}")
     print(f"- command: {payload['improvement_latitude']['command']}")
@@ -5706,6 +5821,12 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "optimization_bias": config.optimization_bias,
             "optimization_bias_source": config.optimization_bias_source,
             "workflow_artifact_adapter": _workflow_artifact_profile_payload(config.workflow_artifact_profile),
+            "agent_configuration_substrate": {
+                "canonical_doc": _agent_configuration_system_payload()["canonical_doc"],
+                "command": _agent_configuration_system_payload()["command"],
+                "owner_surface": _agent_configuration_system_payload()["owner_surface"],
+                "rule": _agent_configuration_system_payload()["rule"],
+            },
             "detected_agent_instructions_files": list(config.detected_agent_instructions_files),
             "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
             "supported_workflow_artifact_profiles": list(SUPPORTED_WORKFLOW_ARTIFACT_PROFILES),
@@ -5742,6 +5863,11 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
         "Workflow artifact profile: "
         f"{payload['workspace']['workflow_artifact_profile']} "
         f"({payload['workspace']['workflow_artifact_profile_source']})"
+    )
+    print(
+        "Agent configuration substrate: "
+        f"{payload['workspace']['agent_configuration_substrate']['canonical_doc']} "
+        f"({payload['workspace']['agent_configuration_substrate']['owner_surface']})"
     )
     print(f"Improvement latitude: {payload['workspace']['improvement_latitude']} ({payload['workspace']['improvement_latitude_source']})")
     print(f"Optimization bias: {payload['workspace']['optimization_bias']} ({payload['workspace']['optimization_bias_source']})")

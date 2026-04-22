@@ -332,7 +332,14 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "workspace.improvement_latitude" in payload["config"]["supported_fields"]
     assert "workspace.optimization_bias" in payload["config"]["supported_fields"]
     assert "workspace.workflow_artifact_profile" in payload["config"]["supported_fields"]
-    assert payload["improvement_latitude"]["canonical_doc"] == "docs/workspace-config-contract.md"
+    assert payload["agent_configuration_system"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
+    assert (
+        payload["agent_configuration_system"]["command"] == "agentic-workspace defaults --section agent_configuration_system --format json"
+    )
+    assert payload["agent_configuration_system"]["configuration_classes"][0]["id"] == "startup_and_adapter_policy"
+    assert payload["agent_configuration_system"]["authority_map"][0]["surface"] == ".agentic-workspace/config.toml"
+    assert payload["agent_configuration_system"]["adapter_surfaces"][0]["surface"] == "AGENTS.md"
+    assert payload["improvement_latitude"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["improvement_latitude"]["command"] == "agentic-workspace defaults --section improvement_latitude --format json"
     assert payload["improvement_latitude"]["owner_surface"] == "workspace"
     assert payload["improvement_latitude"]["policy_target"] == "repo-directed-improvement"
@@ -372,7 +379,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "the improvement changes what counts as success instead of only changing the means"
         in payload["improvement_latitude"]["decision_test"]["changed_task_when"]
     )
-    assert payload["optimization_bias"]["canonical_doc"] == "docs/workspace-config-contract.md"
+    assert payload["optimization_bias"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["optimization_bias"]["command"] == "agentic-workspace defaults --section optimization_bias --format json"
     assert payload["optimization_bias"]["owner_surface"] == "workspace"
     assert payload["optimization_bias"]["default_mode"] == "balanced"
@@ -381,7 +388,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "execution method" in payload["optimization_bias"]["must_not_change"]
     assert payload["optimization_bias"]["surface_boundary"]["honors_bias"][0] == "derived report rendering density"
     assert "machine-readable report truth" in payload["optimization_bias"]["surface_boundary"]["stays_invariant"]
-    assert payload["workflow_artifact_adapters"]["canonical_doc"] == "docs/workspace-config-contract.md"
+    assert payload["workflow_artifact_adapters"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert (
         payload["workflow_artifact_adapters"]["command"] == "agentic-workspace defaults --section workflow_artifact_adapters --format json"
     )
@@ -424,6 +431,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Prompt routing:" in text
     assert "Relay:" in text
     assert "strong planner" in text
+    assert "Agent configuration system:" in text
     assert "Improvement latitude:" in text
     assert "owner: workspace" in text
     assert "default mode: conservative" in text
@@ -449,7 +457,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Completion:" in text
     assert "Config:" in text
     assert "Workflow artifact adapters:" in text
-    assert "docs/workspace-config-contract.md" in text
+    assert ".agentic-workspace/docs/workspace-config-contract.md" in text
     assert "Delegated judgment:" in text
     assert "Delegated judgment follow-through:" in text
     assert "Mixed-agent:" in text
@@ -508,6 +516,8 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans/",
     ]
+    assert payload["workspace"]["agent_configuration_substrate"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
+    assert payload["workspace"]["agent_configuration_substrate"]["owner_surface"] == ".agentic-workspace/config.toml"
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
     assert payload["mixed_agent"]["status"] == "reporting-only"
@@ -729,7 +739,7 @@ def test_defaults_section_selector_returns_improvement_latitude_answer(capsys) -
     assert payload["surface"] == "defaults"
     assert payload["selector"] == {"section": "improvement_latitude"}
     assert payload["matched"] is True
-    assert payload["answer"]["canonical_doc"] == "docs/workspace-config-contract.md"
+    assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["answer"]["default_mode"] == "conservative"
     assert payload["answer"]["owner_surface"] == "workspace"
     assert payload["answer"]["policy_target"] == "repo-directed-improvement"
@@ -753,7 +763,7 @@ def test_defaults_section_selector_returns_improvement_latitude_answer(capsys) -
         "the improvement changes what counts as success instead of only changing the means"
         in payload["answer"]["decision_test"]["changed_task_when"]
     )
-    assert "docs/workspace-config-contract.md" in payload["refs"]
+    assert ".agentic-workspace/docs/workspace-config-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
@@ -765,13 +775,13 @@ def test_defaults_section_selector_returns_optimization_bias_answer(capsys) -> N
     assert payload["surface"] == "defaults"
     assert payload["selector"] == {"section": "optimization_bias"}
     assert payload["matched"] is True
-    assert payload["answer"]["canonical_doc"] == "docs/workspace-config-contract.md"
+    assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["answer"]["default_mode"] == "balanced"
     assert payload["answer"]["supported_modes"][0]["mode"] == "agent-efficiency"
     assert payload["answer"]["supported_modes"][1]["mode"] == "balanced"
     assert payload["answer"]["supported_modes"][2]["mode"] == "human-legibility"
     assert "canonical state semantics" in payload["answer"]["must_not_change"]
-    assert "docs/workspace-config-contract.md" in payload["refs"]
+    assert ".agentic-workspace/docs/workspace-config-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
@@ -787,6 +797,26 @@ def test_defaults_setup_section_selector_returns_compact_contract_answer(capsys)
     assert payload["answer"]["phase"] == "post-bootstrap"
     assert "docs/jumpstart-contract.md" in payload["refs"]
     assert "agentic-workspace setup --target ./repo --format json" in payload["refs"]
+
+
+def test_defaults_section_selector_returns_agent_configuration_system_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "agent_configuration_system", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "agent_configuration_system"}
+    assert payload["matched"] is True
+    assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
+    assert payload["answer"]["configuration_classes"][1]["id"] == "workspace_policy"
+    assert payload["answer"]["module_attachment_points"][0] == "descriptor lifecycle commands and install detection"
+    assert payload["answer"]["adapter_surfaces"][1]["surface"] == "llms.txt"
+    assert (
+        payload["answer"]["selective_loading"]["first_queries"][0]
+        == "agentic-workspace defaults --section agent_configuration_system --format json"
+    )
+    assert ".agentic-workspace/docs/workspace-config-contract.md" in payload["refs"]
+    assert "agentic-workspace defaults --format json" in payload["refs"]
 
 
 def test_defaults_setup_findings_promotion_section_selector_returns_compact_contract_answer(capsys) -> None:
@@ -2304,6 +2334,10 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["output_contract"]["rendered_view_style"] == "brief-explanatory"
     assert payload["output_contract"]["surface_boundary"]["honors_bias"][1] == "rendered human-facing views"
     assert "ownership semantics" in payload["output_contract"]["surface_boundary"]["stays_invariant"]
+    assert payload["agent_configuration_system"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
+    assert payload["agent_configuration_system"]["startup_entrypoint"] == "AGENTS.md"
+    assert payload["agent_configuration_system"]["workflow_artifact_profile"] == "repo-owned"
+    assert payload["agent_configuration_system"]["module_attachment_status"][0]["module"] == "planning"
     assert payload["execution_shape"]["status"] == "present"
     assert payload["execution_shape"]["task_shape"]["id"] == "direct-or-no-active-plan"
     assert payload["execution_shape"]["recommendation"]["id"] == "stay-direct"

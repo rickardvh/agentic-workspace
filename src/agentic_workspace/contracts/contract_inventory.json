@@ -36,7 +36,7 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
       "consumers": [
-        "docs/workspace-config-contract.md",
+        ".agentic-workspace/docs/workspace-config-contract.md",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Repo config shape is now documented as a formal schema in addition to parser enforcement."
@@ -46,7 +46,7 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
       "consumers": [
-        "docs/workspace-config-contract.md",
+        ".agentic-workspace/docs/workspace-config-contract.md",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Local mixed-agent override shape is now documented as a formal schema in addition to parser enforcement."
@@ -67,7 +67,7 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/schemas/delegation_outcomes.schema.json",
       "consumers": [
-        "docs/workspace-config-contract.md",
+        ".agentic-workspace/docs/workspace-config-contract.md",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Local delegation outcome evidence shape is formalized separately from the editable local override so accumulated tuning evidence stays quiet and machine-readable."

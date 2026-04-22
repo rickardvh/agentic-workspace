@@ -122,6 +122,20 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
                 surface = item.get("surface", "")
                 reason = item.get("reason", "")
                 print(f"- {surface}: {reason}")
+    agent_configuration_system = payload.get("agent_configuration_system", {})
+    if isinstance(agent_configuration_system, dict):
+        print("Agent configuration system:")
+        print(f"- startup entrypoint: {agent_configuration_system.get('startup_entrypoint', '')}")
+        print(f"- workflow artifact profile: {agent_configuration_system.get('workflow_artifact_profile', '')}")
+        print(f"- workspace policy surface: {agent_configuration_system.get('workspace_policy_surface', '')}")
+        print(f"- ownership surface: {agent_configuration_system.get('ownership_surface', '')}")
+        attachment_status = agent_configuration_system.get("module_attachment_status", [])
+        if isinstance(attachment_status, list):
+            for item in attachment_status:
+                if not isinstance(item, dict):
+                    continue
+                installed = "installed" if item.get("installed") else "not installed"
+                print(f"  module: {item.get('module', '')} ({installed}) -> {item.get('owner_surface', '')}")
     standing_intent = payload.get("standing_intent", {})
     if isinstance(standing_intent, dict):
         effective_view = standing_intent.get("effective_view", {})

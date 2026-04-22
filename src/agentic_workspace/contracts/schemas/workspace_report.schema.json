@@ -12,6 +12,7 @@
     "installed_modules",
     "health",
     "output_contract",
+    "agent_configuration_system",
     "findings",
     "next_action",
     "discovery",
@@ -82,6 +83,9 @@
       "type": "string"
     },
     "output_contract": {
+      "type": "object"
+    },
+    "agent_configuration_system": {
       "type": "object"
     },
     "findings": {
