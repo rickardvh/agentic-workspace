@@ -19,6 +19,7 @@ REQUIRED_MANAGED_PATHS = {
     "bootstrap/.agentic-workspace/memory/repo/current/task-context.md",
     "bootstrap/.agentic-workspace/memory/repo/current/routing-feedback.md",
     "bootstrap/.agentic-workspace/memory/repo/mistakes/recurring-failures.md",
+    "bootstrap/.agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md",
     "bootstrap/.agentic-workspace/memory/repo/skills/README.md",
     "bootstrap/scripts/check/check_memory_freshness.py",
     "skills/README.md",

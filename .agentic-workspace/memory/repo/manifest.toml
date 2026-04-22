@@ -234,6 +234,32 @@ routes_from = [".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-rout
 stale_when = [".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md", "docs/lazy-discovery-measurements.md"]
 memory_role = "durable_truth"
 
+[notes.".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"]
+note_type = "runbook"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system", "planning"]
+surfaces = ["review", "architecture", "tests"]
+routes_from = [
+  ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
+  ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
+  ".agentic-workspace/memory/repo/mistakes/recurring-failures.md",
+]
+stale_when = [
+  ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
+  ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
+  ".agentic-workspace/memory/repo/mistakes/recurring-failures.md",
+]
+memory_role = "improvement_signal"
+symptom_of = "workflow_friction"
+preferred_remediation = "validation"
+improvement_candidate = true
+improvement_note = "When the same friction class repeats, route it into planning or the strongest fitting docs, test, validation, automation, or code change instead of letting the signal reset."
+elimination_target = "promote"
+
 [notes.".agentic-workspace/memory/repo/runbooks/vague-instruction-failure-capture.md"]
 note_type = "runbook"
 canonical_home = ".agentic-workspace/memory/repo/runbooks/vague-instruction-failure-capture.md"

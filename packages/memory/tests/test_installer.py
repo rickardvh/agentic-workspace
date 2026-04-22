@@ -1015,6 +1015,16 @@ def test_bootstrap_recurring_failures_note_clarifies_anti_trap_contract() -> Non
     )
 
 
+def test_bootstrap_recurring_friction_ledger_clarifies_pre_backlog_evidence_contract() -> None:
+    text = (installer.payload_root() / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "recurring-friction-ledger.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "without opening a new issue yet" in text
+    assert "This note is pre-backlog evidence, not a backlog, issue mirror, or execution log." in text
+    assert "A later promotion decision can cite concrete recurrence bullets instead of chat memory." in text
+
+
 def test_install_writes_upgrade_source_metadata(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
@@ -3917,6 +3927,112 @@ elimination_target = "shrink"
     result = installer.doctor_bootstrap(target=target)
 
     assert not any("retention_justification" in action.detail for action in result.actions)
+
+
+def test_doctor_emits_recurring_friction_promotion_pressure_for_repeated_entry(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks").mkdir(parents=True, exist_ok=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 32\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "recurring-friction-ledger.md").write_text(
+        """
+# Recurring Friction Ledger
+
+## Status
+
+Active
+
+## Scope
+
+- Lightweight recurring friction evidence.
+
+## Load when
+
+- The same friction shows up again.
+
+## Review when
+
+- A friction class is promoted elsewhere.
+
+## Failure signals
+
+- The same friction keeps recurring.
+
+## When to use this
+
+- The signal is real but still below issue threshold.
+
+## Rules
+
+- Keep one entry per friction class.
+
+## Entry format
+
+### Friction: missing-memory-capture
+
+Observed recurrences
+- 2026-04-20: Post-task friction was noticed but not captured.
+- 2026-04-22: Another task required the same manual rescue.
+
+Keep now
+- Two recurrences are enough to preserve, but the exact fix still needs shaping.
+
+Promote when
+- The same friction recurs again or a clear package change presents itself.
+
+Most likely remediation
+- validation
+
+Last seen
+2026-04-22 during issue #263 first slice
+
+## Verification
+
+- Repeated friction can be preserved without opening an issue immediately.
+
+## Boundary reminder
+
+- This note is pre-backlog evidence.
+
+## Last confirmed
+
+2026-04-22 during issue #263 first slice
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"]
+note_type = "runbook"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+memory_role = "improvement_signal"
+preferred_remediation = "validation"
+improvement_candidate = true
+improvement_note = "Promote repeated friction into stronger remediation."
+elimination_target = "promote"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.path == target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "recurring-friction-ledger.md"
+        and action.role == "recurring-friction-audit"
+        and action.kind == "consider"
+        and "has 2 observed recurrences" in action.detail
+        for action in result.actions
+    )
 
 
 def test_doctor_flags_manifest_routing_drift_for_small_default_surface(tmp_path: Path) -> None:

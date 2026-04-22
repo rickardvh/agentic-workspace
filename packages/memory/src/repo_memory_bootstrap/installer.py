@@ -37,6 +37,8 @@ from repo_memory_bootstrap._installer_memory import (
     _normalise_surface_name,
     _parse_route_sections,
     _path_matches_pattern,
+    _recurring_friction_promotion_findings,
+    _recurring_friction_structure_findings,
     _routing_baseline_paths,
 )
 from repo_memory_bootstrap._installer_output import (
@@ -735,6 +737,29 @@ def doctor_bootstrap(
                 role="routing-feedback-audit",
                 safety="manual",
                 source=routing_feedback_path.relative_to(target_root).as_posix(),
+                category="manual-review",
+            )
+    recurring_friction_path = target_root / ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"
+    if recurring_friction_path.exists():
+        recurring_friction_text = recurring_friction_path.read_text(encoding="utf-8")
+        for finding in _recurring_friction_structure_findings(recurring_friction_text):
+            result.add(
+                "manual review",
+                recurring_friction_path,
+                finding,
+                role="recurring-friction-audit",
+                safety="manual",
+                source=recurring_friction_path.relative_to(target_root).as_posix(),
+                category="manual-review",
+            )
+        for finding in _recurring_friction_promotion_findings(recurring_friction_text):
+            result.add(
+                "consider",
+                recurring_friction_path,
+                finding,
+                role="recurring-friction-audit",
+                safety="advisory",
+                source=recurring_friction_path.relative_to(target_root).as_posix(),
                 category="manual-review",
             )
     _emit_memory_shape_pressure(target_root=target_root, manifest=manifest, result=result)

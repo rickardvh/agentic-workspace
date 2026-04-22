@@ -8,6 +8,7 @@ Use this folder for:
 - debugging procedures
 - deployment or system-change steps
 - recovery sequences
+- lightweight recurring-friction evidence that should accumulate before it graduates into planning or issue form
 
 Keep runbooks symptom-driven, concrete, and easy to follow under time pressure.
 Use a runbook for entry conditions, symptoms, checks, boundaries, and verification.

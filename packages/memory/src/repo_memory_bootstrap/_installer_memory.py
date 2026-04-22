@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from repo_memory_bootstrap._installer_output import _current_note_structure_findings
 from repo_memory_bootstrap._installer_shared import (
     ALLOWED_HIGH_LEVEL_NOTES,
     ALWAYS_READ_SURFACE,
@@ -37,6 +38,7 @@ from repo_memory_bootstrap._installer_shared import (
 
 H2_RE = re.compile(r"^\s{0,3}##\s+(.+?)\s*$")
 H3_RE = re.compile(r"^\s{0,3}###\s+(?:Case:\s*)?(.+?)\s*$")
+RECURRING_FRICTION_ENTRY_RE = re.compile(r"^\s{0,3}###\s+Friction:\s*(.+?)\s*$")
 INVARIANT_SIGNAL_RE = re.compile(r"\b(?:must|must not|never|always|cannot|do not|invariant)\b", re.IGNORECASE)
 RATIONALE_SIGNAL_RE = re.compile(r"\b(?:because|therefore|trade-?off|rejected|decision|rationale)\b", re.IGNORECASE)
 NOTE_METADATA_SECTION_TITLES = {
@@ -1632,6 +1634,95 @@ def _audit_routing_feedback_note(*, target_root: Path, result) -> None:
                 source=note_path.relative_to(target_root).as_posix(),
                 category="manual-review",
             )
+
+
+def _parse_recurring_friction_entries(text: str) -> list[dict[str, object]]:
+    entries: list[dict[str, object]] = []
+    lines = text.splitlines()
+    idx = 0
+    while idx < len(lines):
+        match = RECURRING_FRICTION_ENTRY_RE.match(lines[idx])
+        if not match:
+            idx += 1
+            continue
+        label = match.group(1).strip()
+        sections: dict[str, int] = {
+            "observed recurrences": 0,
+            "keep now": 0,
+            "promote when": 0,
+            "most likely remediation": 0,
+            "last seen": 0,
+        }
+        current_section = ""
+        idx += 1
+        while idx < len(lines) and not RECURRING_FRICTION_ENTRY_RE.match(lines[idx]):
+            stripped = lines[idx].strip()
+            lowered = stripped.lower()
+            if lowered in sections:
+                current_section = lowered
+            elif current_section == "observed recurrences" and re.match(r"^(?:-|\*|\d+\.)\s+\S", stripped):
+                sections["observed recurrences"] += 1
+            elif current_section and stripped:
+                sections[current_section] += 1
+            idx += 1
+        entries.append({"label": label, **sections})
+    return entries
+
+
+def _recurring_friction_structure_findings(text: str) -> list[str]:
+    findings = _current_note_structure_findings(
+        text=text,
+        expected_sections=(
+            "Status",
+            "Scope",
+            "Load when",
+            "Review when",
+            "Failure signals",
+            "When to use this",
+            "Rules",
+            "Entry format",
+            "Verification",
+            "Boundary reminder",
+            "Last confirmed",
+        ),
+        note_name="recurring-friction ledger",
+    )
+    entries = [entry for entry in _parse_recurring_friction_entries(text) if "<short recurring friction label>" not in str(entry["label"])]
+    for entry in entries:
+        label = str(entry["label"])
+        if not int(entry["observed recurrences"]):
+            findings.append(
+                f"recurring-friction entry '{label}' is missing observed recurrence bullets; add short dated evidence before treating it as durable pressure"
+            )
+        if not int(entry["keep now"]):
+            findings.append(
+                f"recurring-friction entry '{label}' is missing Keep now guidance; explain why the signal should stay below issue or active-plan level for now"
+            )
+        if not int(entry["promote when"]):
+            findings.append(
+                f"recurring-friction entry '{label}' is missing Promote when guidance; record the trigger that should move this friction into planning or stronger remediation"
+            )
+        if not int(entry["most likely remediation"]):
+            findings.append(
+                f"recurring-friction entry '{label}' is missing Most likely remediation; name the preferred upstream fix direction before the signal compounds"
+            )
+        if not int(entry["last seen"]):
+            findings.append(
+                f"recurring-friction entry '{label}' is missing Last seen; keep the evidence reviewable instead of letting recurrence timing drift into chat"
+            )
+    return findings
+
+
+def _recurring_friction_promotion_findings(text: str) -> list[str]:
+    findings: list[str] = []
+    entries = [entry for entry in _parse_recurring_friction_entries(text) if "<short recurring friction label>" not in str(entry["label"])]
+    for entry in entries:
+        recurrence_count = int(entry["observed recurrences"])
+        if recurrence_count >= 2:
+            findings.append(
+                f"recurring-friction entry '{entry['label']}' has {recurrence_count} observed recurrences; promote it into planning, docs, tests, validation, or automation before the same friction resets again"
+            )
+    return findings
 
 
 def _parse_routing_feedback_case(*, case_id: str, case_type: str, lines: list[str]) -> RoutingFeedbackCase | None:

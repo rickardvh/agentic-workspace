@@ -136,6 +136,7 @@ Use the machine-readable report as the default combined-state inspection path wh
 - what literal request the active delegated slice started from and how the current interpretation moved from it?
 - what execution bounds and stop conditions currently shape a delegated worker handoff?
 - what happened in the current or most recent bounded execution run at a useful level of abstraction?
+- what actually changed in that bounded run without broad diff reconstruction?
 - how returned delegated work should be reviewed cheaply for scope, proof, and intent fit?
 - what dangling larger intent or lower-trust closeout signals currently exist even when no execplan is active?
 - whether optional external planning evidence is present, absent, invalid, or in conflict with checked-in planning visibility?
