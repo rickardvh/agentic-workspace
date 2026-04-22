@@ -352,6 +352,7 @@ def _print_summary(summary: dict) -> None:
         print("Execution-run contract view:")
         print(f"- Run status: {execution_run_contract.get('run_status', '')}")
         print(f"- Executor: {execution_run_contract.get('executor', '')}")
+        print(f"- Changed surfaces: {execution_run_contract.get('changed_surfaces', '')}")
         print(f"- Next step: {execution_run_contract.get('next_step', '')}")
     elif execution_run_contract:
         print(
@@ -464,6 +465,7 @@ def _print_report(report: dict) -> None:
         execution_run_contract = active.get("execution_run_contract", {})
         if isinstance(execution_run_contract, dict) and execution_run_contract.get("status") == "present":
             print(f"Execution run: {execution_run_contract.get('run_status', '')}")
+            print(f"Changed surfaces: {execution_run_contract.get('changed_surfaces', '')}")
         finished_run_review_contract = active.get("finished_run_review_contract", {})
         if isinstance(finished_run_review_contract, dict) and finished_run_review_contract.get("status") == "present":
             print(f"Finished-run review: {finished_run_review_contract.get('review_status', '')}")

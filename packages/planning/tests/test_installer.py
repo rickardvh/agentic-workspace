@@ -78,6 +78,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
         "- Handoff source: agentic-planning-bootstrap handoff --format json\n"
         "- What happened: implemented the bounded checker update and returned compact residue.\n"
         "- Scope touched: scripts/check/check_planning_surfaces.py\n"
+        "- Changed surfaces: scripts/check/check_planning_surfaces.py\n"
         "- Validations run: uv run pytest tests/test_check_planning_surfaces.py\n"
         "- Result for continuation: no further delegated execution needed for this bounded slice.\n"
         "- Next step: archive the plan.\n"
@@ -87,6 +88,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
         "- Handoff source: agentic-planning-bootstrap handoff --format json\n"
         "- What happened: pending delegated execution.\n"
         "- Scope touched: scripts/check/check_planning_surfaces.py\n"
+        "- Changed surfaces: none yet; execution has not changed files.\n"
         "- Validations run: pending\n"
         "- Result for continuation: return compact residue after the first bounded run.\n"
         "- Next step: execute the bounded checker update.\n"
@@ -1850,6 +1852,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["execution_run_contract"]["status"] == "present"
     assert summary["execution_run_contract"]["run_status"] == "not-run-yet"
     assert summary["execution_run_contract"]["handoff_source"] == "agentic-planning-bootstrap handoff --format json"
+    assert summary["execution_run_contract"]["changed_surfaces"] == "none yet; execution has not changed files."
     assert summary["finished_run_review_contract"]["status"] == "present"
     assert summary["finished_run_review_contract"]["review_status"] == "pending"
     assert summary["hierarchy_contract"]["status"] == "present"
@@ -1875,6 +1878,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["handoff_contract"]["stop_conditions"]["stop when"].startswith("the work needs broader")
     assert summary["handoff_contract"]["intent_interpretation"]["status"] == "present"
     assert summary["handoff_contract"]["return_with"]["execution_run_fields"][0] == "run status"
+    assert summary["handoff_contract"]["return_with"]["execution_run_fields"][5] == "changed surfaces"
     assert summary["handoff_contract"]["worker_contract"]["allowed_execution_methods"][1] == "external cli or api"
     assert summary["roadmap"]["candidate_count"] == 1
     assert summary["roadmap"]["candidates"] == [
@@ -2293,6 +2297,7 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "literal_request" in summary["schema"]["view_fields"]["intent_interpretation_contract"]
     assert "live_working_set" in summary["schema"]["view_fields"]["context_budget_contract"]
     assert "run_status" in summary["schema"]["view_fields"]["execution_run_contract"]
+    assert "changed_surfaces" in summary["schema"]["view_fields"]["execution_run_contract"]
     assert "review_status" in summary["schema"]["view_fields"]["finished_run_review_contract"]
     assert "counts" in summary["schema"]["view_fields"]["intent_validation_contract"]
     assert "inspections" in summary["schema"]["view_fields"]["finished_work_inspection_contract"]

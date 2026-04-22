@@ -199,12 +199,14 @@ Keep the first slice advisory: if a required tool is unavailable, stop or escala
 - Handoff source:
 - What happened:
 - Scope touched:
+- Changed surfaces:
 - Validations run:
 - Result for continuation:
 - Next step:
 
 Use this section for the smallest useful residue from one delegated execution attempt.
 Keep it compact, human-readable, and executor-agnostic; it should help later review and continuation without becoming a trace log.
+Use `Scope touched` for the bounded intended/claimed touched scope and `Changed surfaces` for the compact answer to what actually changed.
 
 ## Finished-Run Review
 

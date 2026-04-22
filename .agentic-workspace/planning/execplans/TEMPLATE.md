@@ -199,6 +199,7 @@ Keep the first slice advisory: if a required tool is unavailable, stop or escala
 - Handoff source:
 - What happened:
 - Scope touched:
+- Changed surfaces:
 - Validations run:
 - Result for continuation:
 - Next step:

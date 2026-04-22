@@ -87,11 +87,13 @@ Delegated execution should leave one compact per-run residue inside the active p
 - handoff source
 - what happened
 - scope touched
+- changed surfaces
 - validations run
 - result for continuation
 - next step
 
 This residue should be enough for pause/resume, returned-run review, and cheap correction without becoming a full trace system.
+Use `scope touched` for the bounded intended scope and `changed surfaces` for the compact actual-change answer the reviewer should not have to reconstruct from broad diff reading.
 
 ### Finished-Run Review
 When delegated work returns:

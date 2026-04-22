@@ -1177,8 +1177,13 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
     active_milestone_fields = _extract_kv_fields(active_milestone_section)
     intent_continuity_fields = _extract_kv_fields(_section_content(lines, "Intent Continuity"))
     required_continuation_fields = _extract_kv_fields(_section_content(lines, "Required Continuation"))
+    intent_interpretation_fields = _extract_kv_fields(_section_content(lines, "Intent Interpretation"))
+    execution_bounds_fields = _extract_kv_fields(_section_content(lines, "Execution Bounds"))
+    stop_conditions_fields = _extract_kv_fields(_section_content(lines, "Stop Conditions"))
     context_budget_fields = _extract_kv_fields(_section_content(lines, "Context Budget"))
     delegated_judgment_fields = _extract_kv_fields(_section_content(lines, "Delegated Judgment"))
+    execution_run_fields = _extract_kv_fields(_section_content(lines, "Execution Run"))
+    finished_run_review_fields = _extract_kv_fields(_section_content(lines, "Finished-Run Review"))
     is_active_execplan = not has_only_non_active_status
     larger_intended_outcome = intent_continuity_fields.get("larger intended outcome", "").strip()
     completes_larger_outcome = intent_continuity_fields.get("this slice completes the larger intended outcome", "").strip().lower()
@@ -1327,6 +1332,41 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                     "Active execplan is missing `Escalate when` in Delegated Judgment.",
                 )
             )
+        for label in (
+            "run status",
+            "executor",
+            "handoff source",
+            "what happened",
+            "scope touched",
+            "changed surfaces",
+            "validations run",
+            "result for continuation",
+            "next step",
+        ):
+            if not execution_run_fields.get(label, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_UNDER_SPECIFIED,
+                        _render_path(path),
+                        f"Active execplan is missing `{label.title()}` in Execution Run.",
+                    )
+                )
+        for label in (
+            "review status",
+            "scope respected",
+            "proof status",
+            "intent served",
+            "misinterpretation risk",
+            "follow-on decision",
+        ):
+            if not finished_run_review_fields.get(label, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_UNDER_SPECIFIED,
+                        _render_path(path),
+                        f"Active execplan is missing `{label.title()}` in Finished-Run Review.",
+                    )
+                )
 
     if is_active_execplan:
         ready_value = active_milestone_fields.get("ready", "").strip().lower()
@@ -1465,6 +1505,68 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 "Completion Criteria is missing or vague.",
             )
         )
+
+    if has_only_completed_status:
+        execution_run, execution_run_bullets = _extract_section_stats(lines, "Execution Run")
+        if execution_run_bullets == 0 or not [line for line in execution_run if line.strip()]:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Completed execplan is missing an Execution Run section.",
+                )
+            )
+        else:
+            for field_name in (
+                "run status",
+                "executor",
+                "handoff source",
+                "what happened",
+                "scope touched",
+                "changed surfaces",
+                "validations run",
+                "result for continuation",
+                "next step",
+            ):
+                value = execution_run_fields.get(field_name, "").strip().lower()
+                if not value or value in {"pending", "tbd", "todo", "not-run-yet"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_UNDER_SPECIFIED,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Execution Run field: {field_name}.",
+                        )
+                    )
+                    break
+
+        finished_run_review, finished_run_review_bullets = _extract_section_stats(lines, "Finished-Run Review")
+        if finished_run_review_bullets == 0 or not [line for line in finished_run_review if line.strip()]:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Completed execplan is missing a Finished-Run Review section.",
+                )
+            )
+        else:
+            for field_name in (
+                "review status",
+                "scope respected",
+                "proof status",
+                "intent served",
+                "misinterpretation risk",
+                "follow-on decision",
+            ):
+                value = finished_run_review_fields.get(field_name, "").strip().lower()
+                if not value or value in {"pending", "tbd", "todo"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_UNDER_SPECIFIED,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Finished-Run Review field: {field_name}.",
+                        )
+                    )
+                    break
 
     execution_summary, execution_summary_bullets = _extract_section_stats(lines, "Execution Summary")
     execution_summary_fields = _extract_kv_fields(execution_summary)
