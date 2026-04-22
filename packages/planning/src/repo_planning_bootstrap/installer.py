@@ -24,6 +24,7 @@ PLANNING_SKILLS_MANAGED_ROOT = PLANNING_MANAGED_ROOT / "skills"
 PLANNING_MANIFEST_PATH = PLANNING_MANAGED_ROOT / "agent-manifest.json"
 PLANNING_STATE_PATH = PLANNING_MANAGED_ROOT / "state.toml"
 PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "external-intent-evidence.json"
+PLANNING_FINISHED_WORK_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "finished-work-evidence.json"
 PLANNING_RENDER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "render_agent_docs.py"
 PLANNING_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
 PLANNING_MAINTAINER_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_maintainer_surfaces.py"
@@ -49,6 +50,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path(".agentic-workspace/docs/candidate-lanes-contract.md"),
     Path(".agentic-workspace/docs/context-budget-contract.md"),
     Path(".agentic-workspace/docs/external-intent-evidence-contract.md"),
+    Path(".agentic-workspace/docs/finished-work-inspection-contract.md"),
     Path(".agentic-workspace/docs/installer-behavior.md"),
     Path(".agentic-workspace/planning/execplans/README.md"),
     Path(".agentic-workspace/planning/execplans/TEMPLATE.md"),
@@ -86,6 +88,7 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path(".agentic-workspace/docs/candidate-lanes-contract.md"),
     Path(".agentic-workspace/docs/context-budget-contract.md"),
     Path(".agentic-workspace/docs/external-intent-evidence-contract.md"),
+    Path(".agentic-workspace/docs/finished-work-inspection-contract.md"),
     Path(".agentic-workspace/docs/installer-behavior.md"),
     Path(".agentic-workspace/planning/execplans/README.md"),
     Path(".agentic-workspace/planning/execplans/TEMPLATE.md"),
@@ -656,6 +659,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         active_execplans=active_execplans,
         roadmap_lanes=roadmap_lanes,
     )
+    finished_work_inspection_contract = _finished_work_inspection_contract(target_root=target_root)
     hierarchy_contract = _active_hierarchy_contract(
         target_root=target_root,
         planning_record=planning_record,
@@ -710,6 +714,10 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
             intent_validation_contract,
             view_name="intent_validation_contract",
         ),
+        "finished_work_inspection_contract": _contract_projection(
+            finished_work_inspection_contract,
+            view_name="finished_work_inspection_contract",
+        ),
         "hierarchy_contract": _contract_projection(hierarchy_contract, view_name="hierarchy_contract"),
         "handoff_contract": _contract_projection(handoff_contract, view_name="handoff_contract"),
         "system_intent": _system_intent_contract_payload(),
@@ -737,6 +745,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
     execution_run_contract = summary.get("execution_run_contract", {})
     finished_run_review_contract = summary.get("finished_run_review_contract", {})
     intent_validation_contract = summary.get("intent_validation_contract", {})
+    finished_work_inspection_contract = summary.get("finished_work_inspection_contract", {})
     hierarchy_contract = summary.get("hierarchy_contract", {})
     handoff_contract = summary.get("handoff_contract", {})
     warnings = list(summary.get("warnings", []))
@@ -762,10 +771,33 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
                     "warning_class": str(signal.get("kind", "")),
                 }
             )
+    inspection_signals = finished_work_inspection_contract.get("signals", [])
+    if isinstance(inspection_signals, list):
+        for signal in inspection_signals:
+            if not isinstance(signal, dict):
+                continue
+            findings.append(
+                {
+                    "severity": str(signal.get("severity", "warning")),
+                    "path": str(signal.get("path", "")) or None,
+                    "message": str(signal.get("message", "")),
+                    "warning_class": str(signal.get("kind", "")),
+                }
+            )
     next_action = "No active planning work right now."
     commands: list[str] = []
     if planning_record.get("status") == "present":
         next_action = str(planning_record.get("next_action", next_action))
+    elif finished_work_inspection_contract.get("status") == "present" and finished_work_inspection_contract.get("counts", {}).get(
+        "attention_count", 0
+    ):
+        next_action = str(
+            finished_work_inspection_contract.get(
+                "recommended_next_action",
+                "Inspect finished-work signals before treating previously closed work as settled.",
+            )
+        )
+        commands.append("Inspect the finished_work_inspection contract in agentic-planning-bootstrap report --format json")
     elif intent_validation_contract.get("status") == "present" and intent_validation_contract.get("counts", {}).get("attention_count", 0):
         next_action = str(
             intent_validation_contract.get("recommended_next_action", "Review intent-validation signals before treating planning as quiet.")
@@ -809,6 +841,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
                 "active",
                 "system_intent",
                 "intent_validation",
+                "finished_work_inspection",
                 "findings",
                 "next_action",
             ],
@@ -826,6 +859,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "roadmap_lane_count": summary["roadmap"].get("lane_count", 0),
             "roadmap_candidate_count": summary["roadmap"]["candidate_count"],
             "intent_validation_attention_count": intent_validation_contract.get("counts", {}).get("attention_count", 0),
+            "finished_work_inspection_attention_count": finished_work_inspection_contract.get("counts", {}).get("attention_count", 0),
             "warning_count": summary["warning_count"],
         },
         "completed_execplans": completed_execplans,
@@ -844,6 +878,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
         },
         "system_intent": summary.get("system_intent", {}),
         "intent_validation": intent_validation_contract,
+        "finished_work_inspection": finished_work_inspection_contract,
         "findings": findings,
         "next_action": {
             "summary": next_action,
@@ -876,6 +911,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             ".agentic-workspace/docs/candidate-lanes-contract.md",
             ".agentic-workspace/docs/context-budget-contract.md",
             ".agentic-workspace/docs/external-intent-evidence-contract.md",
+            ".agentic-workspace/docs/finished-work-inspection-contract.md",
             ".agentic-workspace/planning/execplans/README.md",
         ],
         "command": "agentic-workspace summary --format json",
@@ -896,6 +932,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "execution_run_contract",
             "finished_run_review_contract",
             "intent_validation_contract",
+            "finished_work_inspection_contract",
             "hierarchy_contract",
             "handoff_contract",
             "system_intent",
@@ -1003,6 +1040,16 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "recommended_next_action",
                 "minimal_refs",
             ],
+            "finished_work_inspection_contract": [
+                "rule",
+                "primary_owner",
+                "counts",
+                "evidence",
+                "signals",
+                "inspections",
+                "recommended_next_action",
+                "minimal_refs",
+            ],
             "hierarchy_contract": [
                 "current_layer",
                 "parent_lane",
@@ -1047,12 +1094,13 @@ def _planning_summary_schema() -> dict[str, Any]:
             "planning_record is the canonical compact active planning state when it is available",
             (
                 "active_contract, resumable_contract, follow_through_contract, intent_interpretation_contract, "
-                "context_budget_contract, execution_run_contract, finished_run_review_contract, intent_validation_contract, and hierarchy_contract "
+                "context_budget_contract, execution_run_contract, finished_run_review_contract, intent_validation_contract, finished_work_inspection_contract, and hierarchy_contract "
                 "remain thinner projections over that state"
             ),
             "system intent remains durable and queryable even when the active slice is narrower than the parent issue or lane",
             "closure decisions must distinguish bounded slice completion from larger-intent satisfaction",
             "intent validation must still work when there is no active execplan by reconciling checked-in planning state with optional external evidence",
+            "finished-work inspection must derive from archived checked-in residue first and treat optional reopening evidence as corroboration only",
             "handoff_contract remains a thinner delegated-worker view over the same active planning state",
             "prefer the summary schema over raw TODO or execplan parsing when one structured answer is enough",
         ],
@@ -1206,6 +1254,129 @@ def _intent_validation_contract(
     }
 
 
+def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
+    archive_dir = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    evidence = _load_finished_work_evidence(target_root)
+    signals: list[dict[str, Any]] = []
+    inspections: list[dict[str, Any]] = []
+    clearly_landed = 0
+    partial = 0
+    likely_premature = 0
+
+    archived_paths = (
+        [path for path in sorted(archive_dir.glob("*.md")) if path.exists() and path.is_file() and path.name != "README.md"]
+        if archive_dir.exists()
+        else []
+    )
+    evidence_items = evidence.get("items", [])
+
+    for path in archived_paths:
+        issue_refs = sorted(_execplan_issue_refs(path))
+        reopened_by = _finished_work_reopeners(issue_refs=issue_refs, evidence_items=evidence_items)
+        closure_check = _execplan_closure_check(path)
+        intent_satisfaction = _execplan_intent_satisfaction(path)
+        closure_decision = str(closure_check.get("closure decision", "")).strip().lower()
+        larger_intent_status = str(closure_check.get("larger-intent status", "")).strip().lower()
+        intent_satisfied = str(intent_satisfaction.get("was original intent fully satisfied?", "")).strip().lower()
+        classification = "clearly_landed"
+        reason = "Archived closeout reports fully satisfied intent and no reopening evidence points back at it."
+        if reopened_by:
+            classification = "likely_premature_closeout"
+            reason = (
+                "Optional reopening evidence points back at this archived closeout, so treat the original close decision as lower trust."
+            )
+            likely_premature += 1
+            signals.append(
+                {
+                    "kind": "likely_premature_closeout",
+                    "severity": "warning",
+                    "path": path.relative_to(target_root).as_posix(),
+                    "message": (
+                        f"Archived closeout {path.relative_to(target_root).as_posix()} now has follow-on evidence reopening {', '.join(item['id'] for item in reopened_by)}."
+                    ),
+                    "refs": [
+                        path.relative_to(target_root).as_posix(),
+                        *[item["id"] for item in reopened_by],
+                    ],
+                }
+            )
+        elif closure_decision == "archive-but-keep-lane-open" or larger_intent_status in {"open", "unfinished"} or intent_satisfied == "no":
+            classification = "partial"
+            reason = "Archived residue itself says the bounded slice landed while larger intent or required continuation remained open."
+            partial += 1
+        else:
+            clearly_landed += 1
+        inspections.append(
+            {
+                "plan": path.relative_to(target_root).as_posix(),
+                "title": _execplan_title(path),
+                "classification": classification,
+                "closure_decision": closure_check.get("closure decision", ""),
+                "larger_intent_status": closure_check.get("larger-intent status", ""),
+                "intent_satisfied": intent_satisfaction.get("was original intent fully satisfied?", ""),
+                "tracked_refs": issue_refs,
+                "reopened_by": reopened_by,
+                "reason": reason,
+            }
+        )
+
+    if evidence.get("status") == "invalid":
+        signals.append(
+            {
+                "kind": "finished_work_evidence_invalid",
+                "severity": "warning",
+                "path": evidence.get("path", ""),
+                "message": str(evidence.get("reason", "optional finished-work evidence could not be loaded")),
+                "refs": [evidence.get("path", "")],
+            }
+        )
+
+    counts = {
+        "archived_closeout_count": len(archived_paths),
+        "clearly_landed_count": clearly_landed,
+        "partial_count": partial,
+        "likely_premature_closeout_count": likely_premature,
+        "attention_count": len(signals),
+    }
+    recommended_next_action = "No suspicious finished-work signals detected."
+    if likely_premature:
+        recommended_next_action = (
+            "Inspect archived closeouts flagged by reopening evidence before trusting previously closed lanes as fully landed."
+        )
+    elif evidence.get("status") == "invalid":
+        recommended_next_action = "Repair optional finished-work evidence or remove it so closeout inspection trust is explicit."
+    elif partial:
+        recommended_next_action = "Previously archived partial-intent lanes are visible; verify their continuation owners before assuming historical work was complete."
+
+    refs = [".agentic-workspace/planning/execplans/archive/"]
+    if evidence.get("path"):
+        refs.append(str(evidence.get("path", "")))
+
+    return {
+        "status": "present",
+        "rule": (
+            "Inspect archived checked-in closeout residue first, then use optional generic reopening evidence only to lower trust when a supposedly finished lane clearly points back into active follow-on."
+        ),
+        "primary_owner": ".agentic-workspace/planning/execplans/archive/",
+        "primary_owner_rule": (
+            "Archived execplans remain the durable closeout evidence; optional reopening evidence may challenge trust but must not replace the archive as source of record."
+        ),
+        "counts": counts,
+        "evidence": {
+            "status": evidence.get("status", "absent"),
+            "path": evidence.get("path", ""),
+            "kind": evidence.get("kind", ""),
+            "systems": evidence.get("systems", []),
+            "item_count": evidence.get("item_count", 0),
+            "reason": evidence.get("reason", ""),
+        },
+        "signals": signals,
+        "inspections": inspections,
+        "recommended_next_action": recommended_next_action,
+        "minimal_refs": [ref for ref in refs if ref],
+    }
+
+
 def _planning_surface_reference_index(target_root: Path) -> dict[str, str]:
     surface_index: dict[str, str] = {}
     candidate_paths = [
@@ -1310,6 +1481,94 @@ def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
         "items": normalized_items,
         "reason": "",
     }
+
+
+def _load_finished_work_evidence(target_root: Path) -> dict[str, Any]:
+    path = target_root / PLANNING_FINISHED_WORK_EVIDENCE_PATH
+    relative_path = PLANNING_FINISHED_WORK_EVIDENCE_PATH.as_posix()
+    if not path.exists():
+        return {
+            "status": "absent",
+            "path": relative_path,
+            "kind": "planning-finished-work-evidence/v1",
+            "systems": [],
+            "item_count": 0,
+            "items": [],
+            "reason": "optional evidence file not present",
+        }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return {
+            "status": "invalid",
+            "path": relative_path,
+            "kind": "planning-finished-work-evidence/v1",
+            "systems": [],
+            "item_count": 0,
+            "items": [],
+            "reason": f"failed to load optional evidence: {exc}",
+        }
+    if not isinstance(payload, dict) or payload.get("kind") != "planning-finished-work-evidence/v1":
+        return {
+            "status": "invalid",
+            "path": relative_path,
+            "kind": "planning-finished-work-evidence/v1",
+            "systems": [],
+            "item_count": 0,
+            "items": [],
+            "reason": "optional evidence file does not match planning-finished-work-evidence/v1",
+        }
+    normalized_items: list[dict[str, Any]] = []
+    systems: list[str] = []
+    for raw in payload.get("items", []):
+        if not isinstance(raw, dict):
+            continue
+        system = str(raw.get("system", "")).strip()
+        item = {
+            "system": system,
+            "id": str(raw.get("id", "")).strip(),
+            "title": str(raw.get("title", "")).strip(),
+            "status": str(raw.get("status", "")).strip().lower(),
+            "kind": str(raw.get("kind", "")).strip(),
+            "reopens": [str(entry).strip() for entry in raw.get("reopens", []) if str(entry).strip()],
+            "reason": str(raw.get("reason", "")).strip(),
+        }
+        if not item["id"]:
+            continue
+        normalized_items.append(item)
+        if system and system not in systems:
+            systems.append(system)
+    return {
+        "status": "loaded",
+        "path": relative_path,
+        "kind": "planning-finished-work-evidence/v1",
+        "systems": systems,
+        "item_count": len(normalized_items),
+        "items": normalized_items,
+        "reason": "",
+    }
+
+
+def _finished_work_reopeners(*, issue_refs: list[str], evidence_items: Any) -> list[dict[str, str]]:
+    if not issue_refs or not isinstance(evidence_items, list):
+        return []
+    reopeners: list[dict[str, str]] = []
+    for raw in evidence_items:
+        if not isinstance(raw, dict):
+            continue
+        if str(raw.get("status", "")).strip().lower() != "open":
+            continue
+        reopens = [str(entry).strip() for entry in raw.get("reopens", []) if str(entry).strip()]
+        if not reopens or not any(ref in reopens for ref in issue_refs):
+            continue
+        reopeners.append(
+            {
+                "id": str(raw.get("id", "")).strip(),
+                "title": str(raw.get("title", "")).strip(),
+                "system": str(raw.get("system", "")).strip(),
+            }
+        )
+    return reopeners
 
 
 def _internal_continuation_signals(*, target_root: Path, roadmap_lanes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -3533,6 +3792,11 @@ def _execplan_title(path: Path) -> str:
         if line.startswith("# "):
             return line[2:].strip()
     return path.stem.replace("-", " ").title()
+
+
+def _execplan_issue_refs(path: Path) -> set[str]:
+    tokens = set(re.findall(r"(?<![A-Za-z0-9_])(?:#[0-9]+|[A-Z][A-Z0-9]+-\d+)(?![A-Za-z0-9_])", path.read_text(encoding="utf-8")))
+    return {token.strip() for token in tokens if token.strip()}
 
 
 def _execplan_validation_commands(path: Path) -> list[str]:

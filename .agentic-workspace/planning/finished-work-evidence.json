@@ -1,0 +1,41 @@
+{
+  "kind": "planning-finished-work-evidence/v1",
+  "items": [
+    {
+      "system": "github",
+      "id": "#258",
+      "title": "Declarative portability follow-through",
+      "status": "open",
+      "kind": "lane",
+      "reopens": ["#161", "#194"],
+      "reason": "Portability follow-through remains open after the original lane closed."
+    },
+    {
+      "system": "github",
+      "id": "#259",
+      "title": "Delegated-run review tightening",
+      "status": "open",
+      "kind": "lane",
+      "reopens": ["#233", "#234", "#235", "#241", "#242"],
+      "reason": "Delegated-run review still needs a stronger changed-surface answer."
+    },
+    {
+      "system": "github",
+      "id": "#260",
+      "title": "Finished-work intent inspection",
+      "status": "open",
+      "kind": "lane",
+      "reopens": ["#216", "#217", "#222", "#229", "#232", "#236", "#237", "#238", "#239"],
+      "reason": "Previously closed intent/closure lanes still needed product-native finished-work inspection."
+    },
+    {
+      "system": "github",
+      "id": "#261",
+      "title": "Machine-first planning chain",
+      "status": "open",
+      "kind": "lane",
+      "reopens": ["#220", "#243", "#244"],
+      "reason": "The planning chain still needs a machine-first canonical source of truth."
+    }
+  ]
+}

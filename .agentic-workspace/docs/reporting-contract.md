@@ -139,6 +139,7 @@ Use the machine-readable report as the default combined-state inspection path wh
 - how returned delegated work should be reviewed cheaply for scope, proof, and intent fit?
 - what dangling larger intent or lower-trust closeout signals currently exist even when no execplan is active?
 - whether optional external planning evidence is present, absent, invalid, or in conflict with checked-in planning visibility?
+- whether previously closed archived lanes still look honestly landed or now have reopening evidence that lowers closeout trust?
 - what findings or warnings need attention?
 
 Use `agentic-workspace defaults --section intent --format json` when the question is confirmed versus interpreted intent; keep report for combined workspace state.

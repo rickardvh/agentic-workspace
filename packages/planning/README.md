@@ -148,9 +148,10 @@ It also defines the bounded-initiative rule: improve means locally, but do not s
 
 For active planning, `agentic-planning-bootstrap summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. `active_contract`, `resumable_contract`, `follow_through_contract`, `context_budget_contract`, `hierarchy_contract`, and `handoff_contract` remain thinner views over that record.
 For delegated execution, `agentic-planning-bootstrap handoff --format json` is the compact worker handoff derived from that same active planning state. It now carries intent interpretation, execution bounds, stop conditions, and explicit return-with residue fields for a bounded execution run plus finished-run review.
-For cheap delegated-work inspection, `intent_interpretation_contract`, `execution_run_contract`, `finished_run_review_contract`, and `intent_validation_contract` remain thin projections over the same active plan and surrounding planning state instead of becoming a second orchestration ledger.
+For cheap delegated-work inspection, `intent_interpretation_contract`, `execution_run_contract`, `finished_run_review_contract`, `intent_validation_contract`, and `finished_work_inspection_contract` remain thin projections over the same active plan and surrounding planning state instead of becoming a second orchestration ledger.
 
 `intent_validation_contract` keeps checked-in planning primary while allowing optional reconciliation against `.agentic-workspace/planning/external-intent-evidence.json` when a repo also tracks work elsewhere.
+`finished_work_inspection_contract` keeps archived execplan residue primary while allowing optional generic reopening evidence from `.agentic-workspace/planning/finished-work-evidence.json` when a repo wants cheap post-closeout verification without assuming any particular tracker exists.
 For compact module-state reporting without opening raw planning files first, use `agentic-planning-bootstrap report --format json`. It stays derived from the same canonical planning state and does not create a second state store.
 Use `hierarchy_contract` when you need the larger-picture restart answer cheaply: active chunk, parent lane, next likely chunk, continuation owner, and proof state.
 

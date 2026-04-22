@@ -56,6 +56,21 @@ def _write_external_intent_evidence(path: Path, *, items: list[dict[str, str]]) 
     )
 
 
+def _write_finished_work_evidence(path: Path, *, items: list[dict[str, object]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-finished-work-evidence/v1",
+                "items": items,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def _minimal_execplan(status: str = "in-progress") -> str:
     execution_run = (
         "- Run status: completed\n"
@@ -2066,6 +2081,102 @@ def test_planning_report_promotes_intent_validation_signals_to_findings(tmp_path
     assert any(finding["warning_class"] == "external_open_untracked" for finding in report["findings"])
 
 
+def test_planning_summary_exposes_finished_work_inspection_contract(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    _write(
+        archive_dir / "system-intent-and-planning-trust-2026-04-21.md",
+        (
+            "# System Intent And Planning Trust\n\n"
+            "## Intent Satisfaction\n\n"
+            "- Was original intent fully satisfied?: yes\n\n"
+            "## Closure Check\n\n"
+            "- Closure decision: archive-and-close\n"
+            "- Larger-intent status: closed\n\n"
+            "Implemented #220, #222, and #229.\n"
+        ),
+    )
+    _write(
+        archive_dir / "bounded-delegation-and-run-contracts-2026-04-21.md",
+        (
+            "# Bounded Delegation And Run Contracts\n\n"
+            "## Intent Satisfaction\n\n"
+            "- Was original intent fully satisfied?: no\n\n"
+            "## Closure Check\n\n"
+            "- Closure decision: archive-but-keep-lane-open\n"
+            "- Larger-intent status: open\n\n"
+            "Implemented #233 and left #241 open.\n"
+        ),
+    )
+    _write_finished_work_evidence(
+        tmp_path / ".agentic-workspace/planning/finished-work-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#260",
+                "title": "Finished-work intent inspection",
+                "status": "open",
+                "kind": "lane",
+                "reopens": ["#220", "#222", "#229"],
+            }
+        ],
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    assert "finished_work_inspection_contract" in summary["schema"]["shared_fields"]
+    contract = summary["finished_work_inspection_contract"]
+    assert contract["status"] == "present"
+    assert contract["counts"]["archived_closeout_count"] == 2
+    assert contract["counts"]["likely_premature_closeout_count"] == 1
+    assert contract["counts"]["partial_count"] == 1
+    assert contract["counts"]["attention_count"] == 1
+    assert contract["evidence"]["status"] == "loaded"
+    assert contract["evidence"]["item_count"] == 1
+    assert contract["inspections"][0]["classification"] == "partial"
+    assert contract["inspections"][1]["classification"] == "likely_premature_closeout"
+    assert contract["signals"][0]["kind"] == "likely_premature_closeout"
+
+
+def test_planning_report_promotes_finished_work_inspection_signals_to_findings(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    _write(
+        archive_dir / "system-intent-and-planning-trust-2026-04-21.md",
+        (
+            "# System Intent And Planning Trust\n\n"
+            "## Intent Satisfaction\n\n"
+            "- Was original intent fully satisfied?: yes\n\n"
+            "## Closure Check\n\n"
+            "- Closure decision: archive-and-close\n"
+            "- Larger-intent status: closed\n\n"
+            "Implemented #220 and #222.\n"
+        ),
+    )
+    _write_finished_work_evidence(
+        tmp_path / ".agentic-workspace/planning/finished-work-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#260",
+                "title": "Finished-work intent inspection",
+                "status": "open",
+                "kind": "lane",
+                "reopens": ["#220"],
+            }
+        ],
+    )
+
+    report = planning_report(target=tmp_path)
+
+    assert report["finished_work_inspection"]["counts"]["likely_premature_closeout_count"] == 1
+    assert report["status"]["finished_work_inspection_attention_count"] == 1
+    assert report["next_action"]["summary"].startswith("Inspect archived closeouts flagged by reopening evidence")
+    assert any(finding["warning_class"] == "likely_premature_closeout" for finding in report["findings"])
+
+
 def test_planning_summary_exposes_closure_evidence(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
@@ -2176,6 +2287,7 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "execution_run_contract" in summary["schema"]["shared_fields"]
     assert "finished_run_review_contract" in summary["schema"]["shared_fields"]
     assert "intent_validation_contract" in summary["schema"]["shared_fields"]
+    assert "finished_work_inspection_contract" in summary["schema"]["shared_fields"]
     assert "hierarchy_contract" in summary["schema"]["shared_fields"]
     assert "handoff_contract" in summary["schema"]["shared_fields"]
     assert "literal_request" in summary["schema"]["view_fields"]["intent_interpretation_contract"]
@@ -2183,6 +2295,7 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "run_status" in summary["schema"]["view_fields"]["execution_run_contract"]
     assert "review_status" in summary["schema"]["view_fields"]["finished_run_review_contract"]
     assert "counts" in summary["schema"]["view_fields"]["intent_validation_contract"]
+    assert "inspections" in summary["schema"]["view_fields"]["finished_work_inspection_contract"]
     assert "parent_lane" in summary["schema"]["view_fields"]["hierarchy_contract"]
     assert "next_likely_slice" in summary["schema"]["view_fields"]["follow_through_contract"]
     assert "read_first" in summary["schema"]["view_fields"]["handoff_contract"]

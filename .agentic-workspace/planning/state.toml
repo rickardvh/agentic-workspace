@@ -1,7 +1,5 @@
 [todo]
-active_items = [
-  { id = "#260", surface = ".agentic-workspace/planning/execplans/finished-work-intent-inspection-2026-04-22.md", why_now = "The repo still needs manual checklists to verify previously closed lanes; ship a compact finished-work inspection surface before auditing more historical closeouts." },
-]
+active_items = []
 queued_items = []
 
 [roadmap]

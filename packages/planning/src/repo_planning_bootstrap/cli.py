@@ -384,6 +384,21 @@ def _print_summary(summary: dict) -> None:
             "Intent-validation contract view: "
             f"{intent_validation_contract.get('status')} ({intent_validation_contract.get('reason', 'no intent-validation contract available')})"
         )
+    finished_work_inspection_contract = summary.get("finished_work_inspection_contract", {})
+    if finished_work_inspection_contract.get("status") == "present":
+        counts = finished_work_inspection_contract.get("counts", {})
+        evidence = finished_work_inspection_contract.get("evidence", {})
+        print("Finished-work inspection contract view:")
+        print(f"- Archived closeouts: {counts.get('archived_closeout_count', 0)}")
+        print(f"- Likely premature closeouts: {counts.get('likely_premature_closeout_count', 0)}")
+        print(f"- Partial archived lanes: {counts.get('partial_count', 0)}")
+        print(f"- Optional evidence: {evidence.get('status', 'absent')}")
+        print(f"- Recommended next action: {finished_work_inspection_contract.get('recommended_next_action', '')}")
+    elif finished_work_inspection_contract:
+        print(
+            "Finished-work inspection contract view: "
+            f"{finished_work_inspection_contract.get('status')} ({finished_work_inspection_contract.get('reason', 'no finished-work inspection contract available')})"
+        )
     if summary["todo"]["active_items"]:
         print("Active items:")
         for item in summary["todo"]["active_items"]:
@@ -463,6 +478,17 @@ def _print_report(report: dict) -> None:
             f"{counts.get('lower_trust_closeout_count', 0)} lower-trust closeouts"
         )
         print(f"External intent evidence: {external.get('status', 'absent')}")
+    finished_work_inspection = report.get("finished_work_inspection", {})
+    if isinstance(finished_work_inspection, dict) and finished_work_inspection.get("status") == "present":
+        counts = finished_work_inspection.get("counts", {})
+        evidence = finished_work_inspection.get("evidence", {})
+        print(
+            "Finished-work inspection: "
+            f"{counts.get('attention_count', 0)} attention / "
+            f"{counts.get('likely_premature_closeout_count', 0)} likely premature / "
+            f"{counts.get('partial_count', 0)} partial archived lanes"
+        )
+        print(f"Finished-work evidence: {evidence.get('status', 'absent')}")
     completed_execplans = report.get("completed_execplans", [])
     if completed_execplans:
         print(f"Completed execplans awaiting archive: {len(completed_execplans)}")
