@@ -11,14 +11,14 @@ Use git history for superseded active-step detail; keep only the closure, contin
 
 - Larger Intended Outcome: make planning and Memory cooperate tightly at the workflow level so work pulls relevant durable understanding before execution and preserves later-useful residue after finishing, while keeping both modules independently usable.
 - This Slice Completes The Larger Intended Outcome: no
-- Continuation Surface: `.agentic-workspace/planning/state.toml`
+- Continuation Surface: .agentic-workspace/planning/execplans/archive/startup-planning-surface-health-2026-04-22.md
 - Parent Lane: `planning-memory-operating-loop`
 
 ## Required Continuation
 
 - Required Follow-On For The Larger Intended Outcome: yes
-- Owner Surface: `.agentic-workspace/planning/state.toml`
-- Activation Trigger: activate the next bounded slice when post-work posterity capture is shipped and startup/resume drift visibility or recurring-friction accumulation still needs its own explicit owner.
+- Owner Surface: .agentic-workspace/planning/execplans/archive/startup-planning-surface-health-2026-04-22.md
+- Activation Trigger: follow the planning-owned continuation recorded in the startup-planning-surface-health archive; any remaining open follow-on after that handoff now lives in .agentic-workspace/planning/state.toml under the separate memory-recurring-friction-improvement-pressure lane.
 
 ## Delegated Judgment
 
@@ -66,8 +66,8 @@ Use git history for superseded active-step detail; keep only the closure, contin
 - What Happened: added the post-work posterity-capture field to the execution-summary template, archive gate, delegated handoff return contract, CLI output, mirrored checker surfaces, and planning package tests.
 - Scope Touched: `.agentic-workspace/planning/`, `packages/planning/`, mirrored planning checkers, and package tests for installer and checker behavior.
 - Validations Run: `uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`
-- Result For Continuation: the post-work half of the planning-memory handshake is now shipped, leaving only lane-level reassessment of early drift visibility and longer-horizon recurring-friction evidence.
-- Next Step: archive this slice, close `#266`, and decide whether `#262` still needs a final bounded planning-owned slice before the lane can honestly deactivate.
+- Result For Continuation: the post-work half of the planning-memory handshake is now shipped; the later startup-planning-surface-health slice resolved the remaining planning-owned reassessment and left only the separate memory-owned recurring-friction follow-on.
+- Next Step: follow .agentic-workspace/planning/execplans/archive/startup-planning-surface-health-2026-04-22.md for the planning-owned continuation; resume only from the separate memory-recurring-friction-improvement-pressure lane if recurring-friction follow-through is still needed.
 
 ## Finished-Run Review
 
@@ -76,7 +76,7 @@ Use git history for superseded active-step detail; keep only the closure, contin
 - Proof Status: satisfied
 - Intent Served: yes
 - Misinterpretation Risk: low
-- Follow-On Decision: archive this slice and reassess `#262` as the remaining planning-owned follow-on under the lane
+- Follow-On Decision: archive this slice and route planning-owned continuation through startup-planning-surface-health-2026-04-22.md; any later open follow-on belongs to the separate memory-recurring-friction-improvement-pressure lane.
 
 ## Proof Report
 
@@ -88,23 +88,23 @@ Use git history for superseded active-step detail; keep only the closure, contin
 
 - Original intent: continue and finish the active lane through honest bounded slices, committing after each completed slice
 - Was original intent fully satisfied?: no
-- Evidence of intent satisfaction: the active bounded slice is complete and committed proof exists for the post-work half of the handshake, but the lane still has open early-drift and recurring-friction issues to resolve honestly.
-- Unsolved intent passed to: `.agentic-workspace/planning/state.toml`
+- Evidence of intent satisfaction: the active bounded slice is complete and committed proof exists for the post-work half of the handshake; the later startup-planning-surface-health slice carried the planning-owned continuation to closure, leaving only the separate memory-owned recurring-friction follow-on.
+- Unsolved intent passed to: .agentic-workspace/planning/execplans/archive/startup-planning-surface-health-2026-04-22.md
 
 ## Closure Check
 
 - Slice status: bounded slice complete
 - Larger-intent status: open
 - Closure decision: archive-but-keep-lane-open
-- Why this decision is honest: the specific `#266` closure prompt shipped with proof, but the broader planning-memory operating-loop lane still has unresolved work that this slice was never meant to absorb.
-- Evidence carried forward: the lane still tracks `#262`, `#263`, and `#264`, and this execplan records that the post-work prompt belongs in planning-owned closure surfaces without creating a Memory dependency.
+- Why this decision is honest: the specific `#266` closure prompt shipped with proof, and this archive now points at the later startup-planning-surface-health slice that carried the remaining planning-owned continuation before the mixed lane retired.
+- Evidence carried forward: this execplan records that the post-work prompt belongs in planning-owned closure surfaces without creating a Memory dependency, while the later startup archive and the separate memory-recurring-friction-improvement-pressure lane carry the follow-on that remained after this slice.
 - Reopen trigger: reopen only if closure stops surfacing the post-work prompt compactly or if later lane work shows the field no longer routes posterity to the right owner surfaces.
 
 ## Execution Summary
 
 - Outcome delivered: shipped an explicit `Post-work posterity capture` field through the planning execplan template, archive gate, delegated handoff return contract, CLI display, mirrored checkers, and package tests.
 - Validation confirmed: `uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`
-- Follow-on routed to: `.agentic-workspace/planning/state.toml` for lane reassessment of `#262`, while `#263` remains an explicitly memory-owned follow-on outside this bounded planning slice.
+- Follow-on routed to: .agentic-workspace/planning/execplans/archive/startup-planning-surface-health-2026-04-22.md for the planning-owned continuation, with any remaining recurring-friction follow-on now tracked separately in .agentic-workspace/planning/state.toml.
 - Post-work posterity capture: preserve the rule that closure must ask what should survive this slice and where it belongs, defaulting to planning/docs/config owners and treating Memory as an optional destination only when that module is installed and is the right owner.
 - Knowledge promoted (memory/docs/config): promoted the closure-routing rule into planning docs/templates and package bootstrap payloads; no Memory-owned implementation change was required.
-- Resume from: reassess `#262` against the now-current summary/report/startup surfaces and decide whether a final compact drift-visibility slice is still required before the lane can deactivate.
+- Resume from: use .agentic-workspace/planning/execplans/archive/startup-planning-surface-health-2026-04-22.md to recover the planning-owned continuation, or resume directly from the memory-recurring-friction-improvement-pressure lane in .agentic-workspace/planning/state.toml if only the recurring-friction follow-on remains relevant.

@@ -11,14 +11,14 @@ Use git history for superseded active-step detail; keep only the closure, contin
 
 - Larger Intended Outcome: make planning and Memory cooperate tightly at the workflow level so work pulls relevant durable understanding before execution and preserves later-useful residue after finishing, while keeping both modules independently usable.
 - This Slice Completes The Larger Intended Outcome: no
-- Continuation Surface: `.agentic-workspace/planning/state.toml`
+- Continuation Surface: .agentic-workspace/planning/state.toml
 - Parent Lane: `planning-memory-operating-loop`
 
 ## Required Continuation
 
 - Required Follow-On For The Larger Intended Outcome: yes
-- Owner Surface: `.agentic-workspace/planning/state.toml`
-- Activation Trigger: activate a memory-owned follow-on only if recurring-friction evidence from `#263` still needs a durable accumulation path after the planning-owned startup/resume gap is closed.
+- Owner Surface: .agentic-workspace/planning/state.toml
+- Activation Trigger: activate the memory-recurring-friction-improvement-pressure lane only if recurring-friction evidence from `#263` still needs additional durable accumulation or stronger validation/reporting after the planning-owned startup/resume gap is closed.
 
 ## Delegated Judgment
 
@@ -104,7 +104,7 @@ Use git history for superseded active-step detail; keep only the closure, contin
 
 - Outcome delivered: shipped a compact `planning_surface_health` startup/resume view through `agentic-workspace summary --format json` and the human summary CLI so resumed work can see clean/not-clean state, warning paths, and the shortest corrective action immediately.
 - Validation confirmed: `uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`
-- Follow-on routed to: `.agentic-workspace/planning/state.toml`, where the mixed planning-memory lane can now retire and the remaining memory-owned recurring-friction work from `#263` can stand alone.
+- Follow-on routed to: .agentic-workspace/planning/state.toml, where the mixed planning-memory lane has retired and the remaining memory-owned recurring-friction work from `#263` stands alone under memory-recurring-friction-improvement-pressure.
 - Post-work posterity capture: preserve the rule that startup/resume health should remain a thin planning-owned projection over existing warnings, not a second checker or a Memory dependency.
 - Knowledge promoted (memory/docs/config): promoted the startup-resume health shape into the planning summary and CLI contract; no Memory-owned implementation change was required.
-- Resume from: archive this slice, close `#262` and `#264`, and leave only the separate memory-owned candidate lane for `#263`.
+- Resume from: .agentic-workspace/planning/state.toml, where memory-recurring-friction-improvement-pressure is the only remaining follow-on from this broader direction.
