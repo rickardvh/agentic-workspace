@@ -28,7 +28,7 @@ forbid_core_docs_depend_on_memory = false
 # - elimination_target = "shrink" | "promote" | "automate" | "refactor_away"
 # - retention_justification = "short reason the note should remain despite being an improvement signal"
 # - config_treatment = "promote" | "cleanup" | "retain" | "no_action"
-# - config_note = "short note describing which current config rule or posture shaped that treatment"
+# - config_note = "short note describing which current config rule or posture shaped that treatment, or explicitly that current config does not materially change it"
 # Existing `routes_from`, `stale_when`, and `related_validations` fields also act as
 # the first evidence-backed trust anchors for durable notes: they say what currently
 # grounds the note and what should make it questionable or stale when repo evidence changes.
@@ -295,6 +295,8 @@ preferred_remediation = "docs"
 improvement_candidate = true
 improvement_note = "If repeated vague prompts keep requiring the same clarification, capture the missing domain knowledge or promote it into canonical docs."
 elimination_target = "promote"
+config_treatment = "promote"
+config_note = "Current workspace posture still prefers promoting repeated clarification pressure into canonical docs rather than retaining a growing assistive note."
 
 [notes.".agentic-workspace/memory/repo/decisions/installed-system-consolidation-2026-04-05.md"]
 note_type = "decision"
@@ -413,3 +415,5 @@ preferred_remediation = "test"
 improvement_candidate = true
 improvement_note = "If recurring failures persist, consider a regression test, validation, or lint rule before growing the note."
 elimination_target = "shrink"
+config_treatment = "promote"
+config_note = "Current repo and local config both favor stronger executable guardrails over leaving recurring failure prevention as passive note residue."

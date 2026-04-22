@@ -14,7 +14,7 @@
       "system": "github",
       "id": "#230",
       "title": "[Workspace]: Strip away visible product residue that is no longer earning its keep so the system becomes easier to enter, recover, and trust without losing real leverage",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -23,7 +23,7 @@
       "system": "github",
       "id": "#251",
       "title": "[Workspace]: Design for graceful partial compliance so generic agents still get value from the package, and bypassing it becomes visible and harder to trust",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -32,7 +32,7 @@
       "system": "github",
       "id": "#253",
       "title": "[Workspace]: Make core package surfaces cheaper for generic agents to consume so using the package is easier than broad repo scavenging or private reinvention",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -41,7 +41,7 @@
       "system": "github",
       "id": "#254",
       "title": "[Workspace]: Make the default entry path easier for generic agents to discover and follow so startup compliance does not depend on deep product awareness",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -140,7 +140,7 @@
       "system": "github",
       "id": "#267",
       "title": "[Planning]: Add an explicit planning↔config handshake so bounded work pulls material config before execution and checks config compliance after finishing",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -149,7 +149,7 @@
       "system": "github",
       "id": "#268",
       "title": "[Memory]: Add an explicit memory↔config handshake so memory creation asks how current config wants signals, notes, promotion, and cleanup to be treated",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"

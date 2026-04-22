@@ -79,6 +79,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - `preferred_remediation` should name the most likely upstream target: docs, skill, script, test, validation, refactor, or code.
 - `improvement_note` should stay short and concrete; say what improvement would reduce the note rather than restating the note.
 - `elimination_target` should describe the intended post-remediation shape: shrink, promote, automate, or refactor away.
+- `config_treatment` and `config_note` should always be present for `improvement_signal` notes, even when the answer is `no_action`, so config-shaped treatment does not stay implicit.
 - `retention_justification` is the fallback when a note remains justified even though it is also an improvement signal.
 - Use the quick reminder in `.agentic-workspace/memory/repo/templates/memory-note-template.md` when you are writing the note itself and the fuller workflow below when deciding how to route follow-through.
 

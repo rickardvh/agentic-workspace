@@ -3897,6 +3897,8 @@ memory_role = "improvement_signal"
 
     assert any("preferred_remediation plus improvement_note, or retention_justification" in action.detail for action in result.actions)
     assert any("missing elimination_target" in action.detail for action in result.actions)
+    assert any("should declare config_treatment" in action.detail for action in result.actions)
+    assert any("should pair config_treatment with config_note" in action.detail for action in result.actions)
 
 
 def test_doctor_accepts_retention_justification_for_improvement_signal(tmp_path: Path) -> None:
@@ -3921,6 +3923,8 @@ task_relevance = "optional"
 memory_role = "improvement_signal"
 retention_justification = "The repo still lacks an executable replacement for this recurring operator trap."
 elimination_target = "shrink"
+config_treatment = "retain"
+config_note = "Current config does not change the need to keep this trap visible until an executable replacement exists."
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -3929,6 +3933,7 @@ elimination_target = "shrink"
     result = installer.doctor_bootstrap(target=target)
 
     assert not any("retention_justification" in action.detail for action in result.actions)
+    assert not any("config_treatment" in action.detail for action in result.actions)
 
 
 def test_doctor_flags_invalid_config_treatment_metadata(tmp_path: Path) -> None:
@@ -3963,7 +3968,7 @@ config_treatment = "escalate"
     result = installer.doctor_bootstrap(target=target)
 
     assert any("manifest config_treatment must be one of" in action.detail for action in result.actions)
-    assert any("config_treatment should be paired with config_note" in action.detail for action in result.actions)
+    assert any("should pair config_treatment with config_note" in action.detail for action in result.actions)
 
 
 def test_doctor_emits_recurring_friction_promotion_pressure_for_repeated_entry(tmp_path: Path) -> None:

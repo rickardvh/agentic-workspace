@@ -9,7 +9,7 @@ Use this folder for:
 - deployment or system-change steps
 - recovery sequences
 - lightweight recurring-friction evidence that should accumulate before it graduates into planning or issue form
-- compact config-shaped treatment guidance for signals when the durable value is how the repo wants a note promoted, retained, cleaned up, or explicitly left alone
+- compact config-shaped treatment guidance for signals when the durable value is how the repo wants a note promoted, retained, cleaned up, or explicitly left alone, with that choice recorded rather than inferred
 
 Keep runbooks symptom-driven, concrete, and easy to follow under time pressure.
 Use a runbook for entry conditions, symptoms, checks, boundaries, and verification.

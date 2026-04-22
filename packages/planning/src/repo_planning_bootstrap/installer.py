@@ -786,6 +786,20 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
                     "warning_class": str(signal.get("kind", "")),
                 }
             )
+    if finished_run_review_contract.get("status") == "present" and finished_run_review_contract.get("config_trust") == "lower-trust":
+        findings.append(
+            {
+                "severity": "warning",
+                "path": planning_record.get("task", {}).get("surface") or None,
+                "message": str(
+                    finished_run_review_contract.get(
+                        "recommended_next_action",
+                        "Config compliance is ambiguous or bypassed; treat this closeout as lower trust until the config gap is made explicit.",
+                    )
+                ),
+                "warning_class": "config_compliance_lower_trust",
+            }
+        )
     next_action = "No active planning work right now."
     commands: list[str] = []
     if planning_record.get("status") == "present":
@@ -813,7 +827,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
         commands.append("Inspect roadmap lanes in .agentic-workspace/planning/state.toml")
 
     health = "healthy"
-    if summary["warning_count"]:
+    if summary["warning_count"] or any(finding.get("warning_class") == "config_compliance_lower_trust" for finding in findings):
         health = "attention-needed"
     elif summary["todo"]["active_count"] or summary["execplans"]["active_count"]:
         health = "active"
@@ -1040,6 +1054,8 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "proof_status",
                 "intent_served",
                 "config_compliance",
+                "config_trust",
+                "recommended_next_action",
                 "misinterpretation_risk",
                 "follow_on_decision",
                 "minimal_refs",
@@ -2303,6 +2319,10 @@ def _active_finished_run_review_contract(
             ".agentic-workspace/docs/reporting-contract.md",
         ]
     )
+    config_signal = _finished_run_config_signal(
+        review_status=review.get("review status", "").strip(),
+        config_compliance=review.get("config compliance", "").strip(),
+    )
     return {
         "status": "present",
         "review_status": review.get("review status", "").strip(),
@@ -2310,9 +2330,78 @@ def _active_finished_run_review_contract(
         "proof_status": review.get("proof status", "").strip(),
         "intent_served": review.get("intent served", "").strip(),
         "config_compliance": review.get("config compliance", "").strip(),
+        "config_trust": config_signal["config_trust"],
+        "recommended_next_action": config_signal["recommended_next_action"],
         "misinterpretation_risk": review.get("misinterpretation risk", "").strip(),
         "follow_on_decision": review.get("follow-on decision", "").strip(),
         "minimal_refs": minimal_refs,
+    }
+
+
+def _finished_run_config_signal(*, review_status: str, config_compliance: str) -> dict[str, str]:
+    normalized_review = review_status.strip().lower()
+    normalized_config = config_compliance.strip().lower()
+    if (
+        not normalized_config
+        or normalized_review in {"pending", "not-run-yet", "draft"}
+        or normalized_config
+        in {
+            "pending",
+            "not-run-yet",
+            "n/a",
+            "not applicable",
+        }
+    ):
+        return {
+            "config_trust": "pending",
+            "recommended_next_action": "Complete the finished-run review before treating config handling as settled.",
+        }
+
+    lower_trust_markers = (
+        "bypass",
+        "bypassed",
+        "ignore",
+        "ignored",
+        "skip",
+        "skipped",
+        "missing",
+        "underspecified",
+        "unclear",
+        "unknown",
+        "not pulled",
+        "not consulted",
+        "not checked",
+        "violated",
+        "drift",
+        "mismatch",
+    )
+    if any(marker in normalized_config for marker in lower_trust_markers):
+        return {
+            "config_trust": "lower-trust",
+            "recommended_next_action": (
+                "Config compliance indicates bypass, omission, or ambiguity; lower trust in this closeout until the config gap is repaired or explicitly accepted."
+            ),
+        }
+
+    positive_markers = (
+        "respect",
+        "compliant",
+        "followed",
+        "honor",
+        "honour",
+        "aligned",
+    )
+    if any(marker in normalized_config for marker in positive_markers):
+        return {
+            "config_trust": "clear",
+            "recommended_next_action": "No additional config-trust follow-up is required for this run.",
+        }
+
+    return {
+        "config_trust": "lower-trust",
+        "recommended_next_action": (
+            "Finished-run config compliance is too ambiguous to trust by default; restate whether config was respected, bypassed, or irrelevant before closing cleanly."
+        ),
     }
 
 

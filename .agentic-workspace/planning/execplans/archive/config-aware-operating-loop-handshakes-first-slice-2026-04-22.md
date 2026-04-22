@@ -11,14 +11,14 @@ Use git history for superseded active-step detail; keep only the closure, contin
 
 - Larger Intended Outcome: make Planning and Memory treat materially relevant config as part of the normal operating loop so bounded work and signal handling pull config before acting, then check compliance and treatment honestly after finishing.
 - This Slice Completes The Larger Intended Outcome: no
-- Continuation Surface: `ROADMAP.md` candidate lane `config-aware-operating-loop-handshakes`
+- Continuation Surface: .agentic-workspace/planning/execplans/archive/config-aware-operating-loop-handshakes-closeout-2026-04-22.md
 - Parent Lane: `config-aware-operating-loop-handshakes`
 
 ## Required Continuation
 
 - Required Follow-On For The Larger Intended Outcome: yes
-- Owner Surface: `ROADMAP.md` candidate lane `config-aware-operating-loop-handshakes`
-- Activation Trigger: activate the next bounded slice when real ordinary use shows whether the new config handshake fields actually catch bypass, missing config-derived bounds, or ambiguous memory signal treatment.
+- Owner Surface: .agentic-workspace/planning/execplans/archive/config-aware-operating-loop-handshakes-closeout-2026-04-22.md
+- Activation Trigger: satisfied on 2026-04-22 when the closeout slice added lower-trust planning review for config bypass and required explicit config treatment for Memory improvement signals.
 
 ## Delegated Judgment
 

@@ -376,6 +376,7 @@ def _print_summary(summary: dict) -> None:
         print(f"- Scope respected: {finished_run_review_contract.get('scope_respected', '')}")
         print(f"- Intent served: {finished_run_review_contract.get('intent_served', '')}")
         print(f"- Config compliance: {finished_run_review_contract.get('config_compliance', '')}")
+        print(f"- Config trust: {finished_run_review_contract.get('config_trust', '')}")
     elif finished_run_review_contract:
         print(
             "Finished-run review contract view: "

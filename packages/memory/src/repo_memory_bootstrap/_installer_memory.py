@@ -347,17 +347,30 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 source=note.path.as_posix(),
                 category="contract-drift",
             )
-        if note.config_treatment and not note.config_note:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "manifest config_treatment should be paired with config_note so the shaping config cue is explicit",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="manual-review",
-            )
         if note.memory_role == "improvement_signal":
+            if not note.config_treatment:
+                result.add(
+                    "manual review",
+                    target_root / note.path,
+                    (
+                        "improvement-signal notes should declare config_treatment so config-shaped promotion, cleanup, retention, "
+                        "or no-action is explicit instead of inferred"
+                    ),
+                    role="memory-manifest",
+                    safety="manual",
+                    source=note.path.as_posix(),
+                    category="manual-review",
+                )
+            if not note.config_note:
+                result.add(
+                    "manual review",
+                    target_root / note.path,
+                    "improvement-signal notes should pair config_treatment with config_note so the shaping config cue is explicit",
+                    role="memory-manifest",
+                    safety="manual",
+                    source=note.path.as_posix(),
+                    category="manual-review",
+                )
             has_remediation = bool(note.preferred_remediation and note.improvement_note)
             has_retention_justification = bool(note.retention_justification)
             if not has_remediation and not has_retention_justification:

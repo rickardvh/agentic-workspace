@@ -42,7 +42,7 @@ Active
 
 - Keep one entry per friction class.
 - Add only short recurrence bullets with a date plus the smallest useful context.
-- Record the compact config-treatment answer when current repo or local config materially shapes whether the signal should stay weak evidence, promote, clean up, or explicitly go no-action.
+- Record the compact config-treatment answer on every entry; use `no_action` when current repo or local config does not materially change the treatment so that non-effect is still explicit.
 - Route stronger follow-on into planning, canonical docs, tests, validation, automation, or code once the same class clearly repeats.
 - Do not mirror issue bodies, execution logs, or narrative incident history here.
 
@@ -63,7 +63,7 @@ Most likely remediation
 - <docs | skill | script | test | validation | refactor | code>
 
 Config treatment
-- <promote | cleanup | retain | no_action plus the config cue when current config materially shaped this decision>
+- <promote | cleanup | retain | no_action plus the config cue that shaped this decision, or say that current config does not materially change it>
 
 Last seen
 2026-04-22 during <task or investigation>

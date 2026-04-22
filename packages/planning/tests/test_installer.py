@@ -1934,6 +1934,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["finished_run_review_contract"]["status"] == "present"
     assert summary["finished_run_review_contract"]["review_status"] == "pending"
     assert summary["finished_run_review_contract"]["config_compliance"] == "pending"
+    assert summary["finished_run_review_contract"]["config_trust"] == "pending"
     assert summary["hierarchy_contract"]["status"] == "present"
     assert summary["hierarchy_contract"]["current_layer"] == "execution"
     assert summary["hierarchy_contract"]["parent_lane"]["id"] == "plan-alpha-lane"
@@ -2075,6 +2076,46 @@ def test_planning_report_derives_compact_module_state_from_summary(tmp_path: Pat
     assert report["status"]["roadmap_lane_count"] == 0
     assert report["next_action"]["summary"] == "Add one checker."
     assert report["system_intent"]["canonical_doc"] == ".agentic-workspace/docs/system-intent-contract.md"
+
+
+def test_planning_report_flags_lower_trust_config_closeout(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+# TODO
+
+## Next
+
+- ID: report-lane
+  Status: in-progress
+  Surface: .agentic-workspace/planning/execplans/report-lane.md
+  Why now: derive compact module state.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n\n## Next Candidate Queue\n- Later lane.\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "report-lane.md",
+        _minimal_execplan()
+        .replace("- Review status: pending\n", "- Review status: completed\n")
+        .replace("- Scope respected: pending\n", "- Scope respected: yes\n")
+        .replace("- Proof status: pending\n", "- Proof status: satisfied\n")
+        .replace("- Intent served: pending\n", "- Intent served: yes\n")
+        .replace(
+            "- Config compliance: pending\n",
+            "- Config compliance: bypassed repo-local config and left the resulting bounds underspecified.\n",
+        )
+        .replace("- Misinterpretation risk: pending\n", "- Misinterpretation risk: medium\n")
+        .replace("- Follow-on decision: pending\n", "- Follow-on decision: repair-before-close\n"),
+    )
+
+    summary = planning_summary(target=tmp_path)
+    report = planning_report(target=tmp_path)
+
+    assert summary["finished_run_review_contract"]["config_trust"] == "lower-trust"
+    assert "bypass" in summary["finished_run_review_contract"]["recommended_next_action"].lower()
+    assert report["health"] == "attention-needed"
+    assert any(finding["warning_class"] == "config_compliance_lower_trust" for finding in report["findings"])
 
 
 def test_planning_summary_exposes_compact_planning_surface_health_when_not_clean(tmp_path: Path) -> None:
@@ -2418,6 +2459,7 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "changed_surfaces" in summary["schema"]["view_fields"]["execution_run_contract"]
     assert "review_status" in summary["schema"]["view_fields"]["finished_run_review_contract"]
     assert "config_compliance" in summary["schema"]["view_fields"]["finished_run_review_contract"]
+    assert "config_trust" in summary["schema"]["view_fields"]["finished_run_review_contract"]
     assert "counts" in summary["schema"]["view_fields"]["intent_validation_contract"]
     assert "inspections" in summary["schema"]["view_fields"]["finished_work_inspection_contract"]
     assert "parent_lane" in summary["schema"]["view_fields"]["hierarchy_contract"]

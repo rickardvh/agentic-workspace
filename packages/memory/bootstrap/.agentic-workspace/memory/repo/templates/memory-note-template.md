@@ -17,7 +17,7 @@ Keep the note short when it is `agent_only`: prefer lessons, pitfalls, and resid
 
 ## Improvement signal metadata
 
-Optional when the note exists because of repo friction rather than durable truth:
+Required when the note exists because of repo friction rather than durable truth:
 
 - `memory_role`: `durable_truth` or `improvement_signal`
 - `preferred_remediation`: `docs` | `skill` | `script` | `test` | `validation` | `refactor` | `code`
@@ -28,7 +28,7 @@ Optional when the note exists because of repo friction rather than durable truth
 Use these when you want the package to recommend an upstream improvement that should reduce the note later.
 Prefer a concrete remediation target and an explicit post-remediation memory shape over vague prose.
 If the likely post-remediation shape is "delete this note", say so explicitly instead of assuming the note will continue by default.
-Use `config_treatment` and `config_note` when current repo or local config materially shapes how this signal should be treated after capture.
+Use `config_treatment = "no_action"` with a short `config_note` when current config does not materially change treatment but you still need that non-effect to be explicit.
 
 ## Scope
 
