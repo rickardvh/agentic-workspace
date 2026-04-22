@@ -1,6 +1,7 @@
 # System Intent
 
 This file states the package's durable purpose and the main intents that should guide future work.
+Treat it as a compass: it should orient shaping and evaluation, but it is not itself the active planning surface or the execution authority.
 
 It exists to keep the system aligned as issues, slices, and implementation details evolve.
 It is not a backlog, a plan, or a full architecture document.

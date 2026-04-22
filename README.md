@@ -23,8 +23,9 @@ If you use `pipx` instead of `uvx`, keep the same command shape.
 The ordinary startup path in a repo using Agentic Workspace is:
 
 1. Read `AGENTS.md`.
-2. Ask `agentic-workspace summary --format json`.
-3. Read the active execplan only when the summary points there.
+2. Read `SYSTEM_INTENT.md` as a compass when you need the repo's higher-level direction.
+3. Ask `agentic-workspace summary --format json`.
+4. Read the active execplan only when the summary points there.
 
 The compact planning home is:
 
@@ -44,9 +45,10 @@ Use `memory` when durable repo knowledge is the main problem. Add `planning` whe
 For agent maintainers, the primary operating path is:
 
 1. Read `AGENTS.md`.
-2. Read `agentic-workspace summary --format json`.
-3. Read the active execplan only when the summary points there.
-4. Read `docs/contributor-playbook.md` before widening into broader maintainer surfaces.
+2. Read `SYSTEM_INTENT.md` as a compass when shaping or evaluating broader repo work.
+3. Read `agentic-workspace summary --format json`.
+4. Read the active execplan only when the summary points there.
+5. Read `docs/contributor-playbook.md` before widening into broader maintainer surfaces.
 
 Use `docs/maintainer-commands.md` for operational commands, `docs/design-principles.md` for must-internalize doctrine, and `docs/dogfooding-feedback.md` when repo friction might need to become product work.
 
