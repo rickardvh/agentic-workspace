@@ -27,6 +27,18 @@ Before deliberately shedding or switching context, externalize the minimum resid
 Do not turn this into broad narrative dumping.
 The rule is to preserve the smallest residue that keeps later continuation honest and cheap.
 
+## Pre-Work Memory Pull
+
+Before bounded execution begins, ask what durable understanding should be recovered first and which area that understanding concerns.
+
+This should stay compact:
+
+- one short retrieval prompt
+- scoped to the surface, subsystem, or planning area that matters now
+- cheap enough for ordinary work instead of becoming a mandatory startup ritual
+
+Use it to pull only the durable planning or canonical-doc context that would otherwise be rediscovered expensively during execution, plus memory context when Memory is installed.
+
 ## Tiny Resumability Note
 
 The tiny resumability note is the cheapest scoped residue that helps a later return without promoting the content into broad planning or memory.
@@ -60,6 +72,7 @@ Interruption and resume should remain cheap across planner, executor, and review
 For mixed-agent work:
 
 - keep the checked-in planning handoff authoritative
+- surface the pre-work prompt where the active planning chain already exposes context-budget cues
 - externalize the minimum residue before a tool or session change
 - prefer resumability notes plus minimal refs over broad rereads
 - reload only the live bundle needed for the next bounded step

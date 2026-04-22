@@ -3,6 +3,15 @@
   "items": [
     {
       "system": "github",
+      "id": "#206",
+      "title": "[Workspace]: Add a local-only installation mode so agents can use Agentic Workspace in repositories they do not own without requiring checked-in adoption",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
       "id": "#230",
       "title": "[Workspace]: Strip away visible product residue that is no longer earning its keep so the system becomes easier to enter, recover, and trust without losing real leverage",
       "status": "open",
@@ -53,6 +62,78 @@
       "status": "open",
       "kind": "issue",
       "parent_id": "#251",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#258",
+      "title": "[Workspace]: Reopen declarative portability so stable lifecycle and runtime truth stops depending on large Python-owned implementations",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#259",
+      "title": "[Review]: Reopen delegated-run review so mixed-agent work can show what actually changed without broad diff reconstruction",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#261",
+      "title": "[Planning]: Reopen execplan modernization so machine-readable planning state becomes canonical and human views become derived",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#262",
+      "title": "[Planning]: Surface planning-surface drift immediately at resume/startup so interrupted-work recovery does not waste effort rediscovering template, checker, or contract mismatches",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#263",
+      "title": "[Memory]: Turn unlogged recurring friction into durable improvement pressure so agents do not silently notice the same package failures without collecting evidence or pushing them toward product improvement",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#264",
+      "title": "[Planning]: Add an explicit planning↔memory handshake so agents are prompted to pull what they may need before work and preserve what later work may need after finishing",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#265",
+      "title": "[Planning]: Prompt pre-work memory pull explicitly so agents ask what they may need to know, and about which area, before they begin bounded execution",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#264",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#266",
+      "title": "[Planning]: Prompt post-work posterity capture explicitly so agents ask what should be preserved for later recovery, follow-on work, or future improvement pressure after finishing",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#264",
       "planning_residue_expected": "required"
     },
     {

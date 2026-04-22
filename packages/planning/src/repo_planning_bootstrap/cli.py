@@ -331,6 +331,7 @@ def _print_summary(summary: dict) -> None:
         print("Context budget contract view:")
         print(f"- Live working set: {context_budget_contract.get('live_working_set', '')}")
         print(f"- Recoverable later: {context_budget_contract.get('recoverable_later', '')}")
+        print(f"- Pre-work memory pull: {context_budget_contract.get('pre_work_memory_pull', '')}")
         print(f"- Shift triggers: {context_budget_contract.get('context_shift_triggers', '')}")
     elif context_budget_contract:
         print(
@@ -448,6 +449,7 @@ def _print_report(report: dict) -> None:
         context_budget_contract = active.get("context_budget_contract", {})
         if isinstance(context_budget_contract, dict) and context_budget_contract.get("status") == "present":
             print(f"Live working set: {context_budget_contract.get('live_working_set', '')}")
+            print(f"Pre-work memory pull: {context_budget_contract.get('pre_work_memory_pull', '')}")
         planning_record = active.get("planning_record", {})
         if isinstance(planning_record, dict) and planning_record.get("status") == "present":
             proof_report = planning_record.get("proof_report", {})
@@ -546,6 +548,7 @@ def _print_handoff(handoff: dict) -> None:
     context_budget = contract.get("context_budget", {})
     if isinstance(context_budget, dict) and context_budget.get("status") == "present":
         print(f"- Live working set: {context_budget.get('live_working_set', '')}")
+        print(f"- Pre-work memory pull: {context_budget.get('pre_work_memory_pull', '')}")
         print(f"- Shift triggers: {context_budget.get('context_shift_triggers', '')}")
     worker_contract = contract.get("worker_contract", {})
     print(f"- Allowed methods: {', '.join(worker_contract.get('allowed_execution_methods', []))}")

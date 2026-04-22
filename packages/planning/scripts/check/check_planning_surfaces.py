@@ -1338,6 +1338,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
             "live working set",
             "recoverable later",
             "externalize before shift",
+            "pre-work memory pull",
             "tiny resumability note",
             "context-shift triggers",
         ):

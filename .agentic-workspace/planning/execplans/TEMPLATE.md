@@ -105,11 +105,13 @@ Keep the conditions practical and local to the bounded slice.
 - Live working set:
 - Recoverable later:
 - Externalize before shift:
+- Pre-work memory pull:
 - Tiny resumability note:
 - Context-shift triggers:
 
 Keep this section tiny.
 It exists to distinguish what must stay mentally live now from what can be reloaded later and from the residue that must be externalized before a context shift.
+Use `Pre-work memory pull` for the one compact question about what durable understanding should be recovered before execution and which area it concerns.
 Do not turn it into a broad notebook or second memory surface.
 
 ## Delegated Judgment
@@ -206,6 +208,7 @@ Keep the first slice advisory: if a required tool is unavailable, stop or escala
 
 Use this section for the smallest useful residue from one delegated execution attempt.
 Keep it compact, human-readable, and executor-agnostic; it should help later review and continuation without becoming a trace log.
+Use `Scope touched` for the bounded intended/claimed touched scope and `Changed surfaces` for the compact answer to what actually changed.
 
 ## Finished-Run Review
 

@@ -214,6 +214,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 - Live working set: the active checker change, proof command, and closure state for this bounded slice.
 - Recoverable later: broader planning doctrine and archived lane history can be reloaded from checked-in docs if needed.
 - Externalize before shift: the exact next action, proof expectation, blocker state, and one scoped caution if the checker semantics change.
+- Pre-work memory pull: ask what durable planning guidance should be recovered before execution and which planning surface it concerns.
 - Tiny resumability note: keep the warning-class boundary explicit if this slice is revisited later.
 - Context-shift triggers: shift when proof lands, when leaving planning-surface work, or when a handoff/interruption stops the slice.
 
@@ -1846,6 +1847,9 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["context_budget_contract"]["live_working_set"] == (
         "the active checker change, proof command, and closure state for this bounded slice."
     )
+    assert summary["context_budget_contract"]["pre_work_memory_pull"] == (
+        "ask what durable planning guidance should be recovered before execution and which planning surface it concerns."
+    )
     assert summary["context_budget_contract"]["tiny_resumability_note"] == (
         "keep the warning-class boundary explicit if this slice is revisited later."
     )
@@ -1872,6 +1876,9 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans/plan-alpha.md",
     ]
+    assert summary["handoff_contract"]["pre_work_memory_pull"] == (
+        "ask what durable planning guidance should be recovered before execution and which planning surface it concerns."
+    )
     assert summary["handoff_contract"]["owned_write_scope"] == ["scripts/check/check_planning_surfaces.py"]
     assert summary["handoff_contract"]["context_budget"]["status"] == "present"
     assert summary["handoff_contract"]["execution_bounds"]["allowed paths"] == "scripts/check/check_planning_surfaces.py"
@@ -2296,6 +2303,7 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "handoff_contract" in summary["schema"]["shared_fields"]
     assert "literal_request" in summary["schema"]["view_fields"]["intent_interpretation_contract"]
     assert "live_working_set" in summary["schema"]["view_fields"]["context_budget_contract"]
+    assert "pre_work_memory_pull" in summary["schema"]["view_fields"]["context_budget_contract"]
     assert "run_status" in summary["schema"]["view_fields"]["execution_run_contract"]
     assert "changed_surfaces" in summary["schema"]["view_fields"]["execution_run_contract"]
     assert "review_status" in summary["schema"]["view_fields"]["finished_run_review_contract"]
@@ -2304,6 +2312,7 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "parent_lane" in summary["schema"]["view_fields"]["hierarchy_contract"]
     assert "next_likely_slice" in summary["schema"]["view_fields"]["follow_through_contract"]
     assert "read_first" in summary["schema"]["view_fields"]["handoff_contract"]
+    assert "pre_work_memory_pull" in summary["schema"]["view_fields"]["handoff_contract"]
 
 
 def test_planning_summary_exposes_ownership_review(tmp_path: Path, capsys) -> None:

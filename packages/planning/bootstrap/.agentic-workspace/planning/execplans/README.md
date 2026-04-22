@@ -136,12 +136,14 @@ Context budget belongs under `## Context Budget` for active plans:
 - `Live working set`
 - `Recoverable later`
 - `Externalize before shift`
+- `Pre-work memory pull`
 - `Tiny resumability note`
 - `Context-shift triggers`
 
 Use this section to keep the smallest necessary live bundle explicit without turning ordinary work into bookkeeping.
 The section should stay smaller than the surrounding execplan.
 It exists so an agent can deliberately shed context after externalizing the residue that later proof, review, or continuation would otherwise have to reconstruct.
+Use `Pre-work memory pull` for the one compact prompt that asks what durable understanding should be recovered before execution and which area it concerns. Planning should answer that question from its own checked-in surfaces first and use Memory only when the repo has it installed.
 
 Delegated judgment belongs under `## Delegated Judgment` for active plans that should preserve broad direction across sessions:
 
@@ -228,6 +230,7 @@ Context-budget and cheap-resume answers belong in the compact `context_budget_co
 - `live_working_set`
 - `recoverable_later`
 - `externalize_before_shift`
+- `pre_work_memory_pull`
 - `tiny_resumability_note`
 - `context_shift_triggers`
 

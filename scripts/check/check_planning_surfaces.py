@@ -1289,6 +1289,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
             "live working set",
             "recoverable later",
             "externalize before shift",
+            "pre-work memory pull",
             "tiny resumability note",
             "context-shift triggers",
         ):
@@ -1506,6 +1507,8 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
             )
         )
 
+    execution_summary, execution_summary_bullets = _extract_section_stats(lines, "Execution Summary")
+    execution_summary_fields = _extract_kv_fields(execution_summary)
     if has_only_completed_status:
         execution_run, execution_run_bullets = _extract_section_stats(lines, "Execution Run")
         if execution_run_bullets == 0 or not [line for line in execution_run if line.strip()]:
@@ -1568,9 +1571,6 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                     )
                     break
 
-    execution_summary, execution_summary_bullets = _extract_section_stats(lines, "Execution Summary")
-    execution_summary_fields = _extract_kv_fields(execution_summary)
-    if has_only_completed_status:
         if execution_summary_bullets == 0:
             warnings.append(
                 PlanningWarning(
