@@ -77,11 +77,13 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
         "- Outcome delivered: Added one bounded planning improvement.\n"
         "- Validation confirmed: uv run pytest tests/test_check_planning_surfaces.py\n"
         "- Follow-on routed to: none; slice complete\n"
+        "- Post-work posterity capture: preserve the checker-boundary reminder in planning docs and route any durable subsystem learning to canonical docs or Memory only when that module is installed and is the right owner.\n"
         "- Resume from: no further action in this plan\n"
         if status in {"completed", "done", "closed"}
         else "- Outcome delivered: not completed yet\n"
         "- Validation confirmed: pending\n"
         "- Follow-on routed to: none yet\n"
+        "- Post-work posterity capture: pending\n"
         "- Resume from: current milestone\n"
     )
     proof_report = (

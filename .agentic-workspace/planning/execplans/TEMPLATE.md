@@ -253,11 +253,13 @@ Make the closure decision explicit enough that later contributors do not have to
 - Outcome delivered:
 - Validation confirmed:
 - Follow-on routed to:
+- Post-work posterity capture:
 - Knowledge promoted (Memory/Docs/Config):
 - Resume from:
 
 Keep this compact and completion-shaped.
 Before archiving a completed plan, replace placeholders with the durable summary a later contributor should not have to reconstruct from chat or drift prose.
+Use `Post-work posterity capture` to answer what should survive this slice and where it belongs, using planning/docs/config by default and Memory only when it is installed and actually the right durable owner.
 Use `Iterative Follow-Through` to preserve deferred work and discovered implications; use `Execution Summary` to record the bounded slice outcome once this plan stops.
 
 ## Drift Log

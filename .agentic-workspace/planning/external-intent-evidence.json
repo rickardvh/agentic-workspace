@@ -131,7 +131,7 @@
       "system": "github",
       "id": "#266",
       "title": "[Planning]: Prompt post-work posterity capture explicitly so agents ask what should be preserved for later recovery, follow-on work, or future improvement pressure after finishing",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#264",
       "planning_residue_expected": "required"

@@ -195,7 +195,7 @@ Execplans now treat four fields as first-class:
 - `Intent Continuity`: whether the larger intended outcome is actually complete and what checked-in surface now owns it if not
 - `Required Continuation`: whether follow-on is mandatory for that larger outcome, plus the owner surface and activation trigger
 - `Iterative Follow-Through`: what the slice enabled, what it intentionally deferred, what new implications were discovered, and what proof or validation still carries forward
-- `Execution Summary`: what the slice delivered, how validation was confirmed, where follow-on was routed, and how later work should resume
+- `Execution Summary`: what the slice delivered, how validation was confirmed, where follow-on was routed, what posterity should survive and where it belongs, and how later work should resume
 Execplans also leave an explicit `Closure Check`: whether the bounded slice is complete, whether the larger intended outcome is actually closed, which archive path is honest, what evidence carries forward, and what should trigger reopening.
 When an execplan is carrying broad direction across sessions, it should also record a compact `Delegated Judgment` section:
 

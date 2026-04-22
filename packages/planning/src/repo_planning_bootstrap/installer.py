@@ -2410,6 +2410,14 @@ def _active_handoff_contract(
                 "result for continuation",
                 "next step",
             ],
+            "execution_summary_fields": [
+                "outcome delivered",
+                "validation confirmed",
+                "follow-on routed to",
+                "post-work posterity capture",
+                "knowledge promoted (memory/docs/config)",
+                "resume from",
+            ],
             "finished_run_review_fields": [
                 "review status",
                 "scope respected",
@@ -2778,6 +2786,7 @@ def _render_inactive_execplan_residue(*, plan_path: Path, target_root: Path) -> 
         "outcome delivered",
         "validation confirmed",
         "follow-on routed to",
+        "post-work posterity capture",
         "knowledge promoted (memory/docs/config)",
         "resume from",
     ):
@@ -2826,6 +2835,7 @@ def archive_execplan(
     outcome_delivered = execution_summary.get("outcome delivered", "").strip()
     validation_confirmed = execution_summary.get("validation confirmed", "").strip()
     follow_on_routed_to = execution_summary.get("follow-on routed to", "").strip()
+    post_work_posterity_capture = execution_summary.get("post-work posterity capture", "").strip()
     resume_from = execution_summary.get("resume from", "").strip()
     proof_report = _execplan_proof_report(plan_path)
     validation_proof = proof_report.get("validation proof", "").strip()
@@ -2937,6 +2947,23 @@ def archive_execplan(
             }
         )
         result.add("manual review", plan_path, "fill `Execution Summary` with the follow-on routing before archiving")
+        return result
+    if not post_work_posterity_capture or post_work_posterity_capture.lower() in {"pending", "tbd", "todo", "none yet"}:
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_execution_summary",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": (
+                    "Completed execplan is missing an explicit post-work posterity capture summary "
+                    "covering what should survive this slice and where it belongs."
+                ),
+            }
+        )
+        result.add(
+            "manual review",
+            plan_path,
+            "fill `Execution Summary` with what should survive this slice and where it belongs before archiving",
+        )
         return result
     if not resume_from or resume_from.lower() in {"pending", "tbd", "todo", "current milestone"}:
         result.warnings.append(

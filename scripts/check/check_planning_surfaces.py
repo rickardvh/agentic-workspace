@@ -1580,7 +1580,13 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 )
             )
         else:
-            for field_name in ("outcome delivered", "validation confirmed", "follow-on routed to", "resume from"):
+            for field_name in (
+                "outcome delivered",
+                "validation confirmed",
+                "follow-on routed to",
+                "post-work posterity capture",
+                "resume from",
+            ):
                 value = execution_summary_fields.get(field_name, "").strip().lower()
                 if not value or value in {"pending", "tbd", "todo", "not completed yet", "none yet", "current milestone"}:
                     warnings.append(

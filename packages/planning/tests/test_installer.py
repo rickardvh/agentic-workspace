@@ -112,11 +112,13 @@ def _minimal_execplan(status: str = "in-progress") -> str:
         "- Outcome delivered: Added one bounded planning improvement.\n"
         "- Validation confirmed: uv run pytest tests/test_check_planning_surfaces.py\n"
         "- Follow-on routed to: none; slice complete\n"
+        "- Post-work posterity capture: preserve the checker-boundary reminder in planning docs and route any durable subsystem learning to canonical docs or Memory only when that module is installed and is the right owner.\n"
         "- Resume from: no further action in this plan\n"
         if status in {"completed", "done", "closed"}
         else "- Outcome delivered: not completed yet\n"
         "- Validation confirmed: pending\n"
         "- Follow-on routed to: none yet\n"
+        "- Post-work posterity capture: pending\n"
         "- Resume from: current milestone\n"
     )
     proof_report = (
@@ -960,7 +962,20 @@ def test_upgrade_bootstrap_overwrites_managed_files_but_preserves_root_surfaces(
 def test_upgrade_bootstrap_legacy_standalone_install_adds_managed_helpers_without_overwriting_root_surfaces(tmp_path: Path) -> None:
     _write(tmp_path / "AGENTS.md", "legacy repo-owned agents\n")
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
-    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Next Candidate Queue
+
+- Candidate alpha
+
+## Reopen Conditions
+
+- Reopen when a queue or report signals new work.
+""",
+    )
     _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "README.md", "# Execution Plans\n")
     _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "TEMPLATE.md", "# Plan Title\n")
     _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "README.md", "# Archive\n")
@@ -1136,7 +1151,16 @@ def test_promote_todo_item_to_execplan_refuses_existing_execplan_surface(tmp_pat
 
 def test_archive_execplan_moves_completed_plan(tmp_path: Path) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
-    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Reopen Conditions
+
+- Reopen when a queue or report signals new work.
+""",
+    )
     plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
     _write(plan_path, _minimal_execplan(status="completed"))
 
@@ -1212,6 +1236,33 @@ def test_archive_execplan_blocks_missing_execution_summary(tmp_path: Path) -> No
     assert any(warning["warning_class"] == "archive_missing_execution_summary" for warning in result.warnings)
     assert any(
         action.kind == "manual review" and action.path == plan_path and "Execution Summary" in action.detail for action in result.actions
+    )
+
+
+def test_archive_execplan_requires_post_work_posterity_capture(tmp_path: Path) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
+    _write(
+        plan_path,
+        _minimal_execplan(status="completed").replace(
+            (
+                "- Post-work posterity capture: preserve the checker-boundary reminder in planning docs and route any durable subsystem "
+                "learning to canonical docs or Memory only when that module is installed and is the right owner."
+            ),
+            "- Post-work posterity capture: pending",
+        ),
+    )
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_missing_execution_summary" for warning in result.warnings)
+    assert any(
+        action.kind == "manual review"
+        and action.path == plan_path
+        and "what should survive this slice and where it belongs" in action.detail
+        for action in result.actions
     )
 
 
@@ -1886,6 +1937,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["handoff_contract"]["intent_interpretation"]["status"] == "present"
     assert summary["handoff_contract"]["return_with"]["execution_run_fields"][0] == "run status"
     assert summary["handoff_contract"]["return_with"]["execution_run_fields"][5] == "changed surfaces"
+    assert summary["handoff_contract"]["return_with"]["execution_summary_fields"][3] == "post-work posterity capture"
     assert summary["handoff_contract"]["worker_contract"]["allowed_execution_methods"][1] == "external cli or api"
     assert summary["roadmap"]["candidate_count"] == 1
     assert summary["roadmap"]["candidates"] == [
@@ -2366,6 +2418,7 @@ def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> Non
     assert handoff["handoff_contract"]["intent_interpretation"]["status"] == "present"
     assert handoff["handoff_contract"]["execution_bounds"]["allowed paths"] == "scripts/check/check_planning_surfaces.py"
     assert handoff["handoff_contract"]["stop_conditions"]["stop when"].startswith("the work needs broader")
+    assert handoff["handoff_contract"]["return_with"]["execution_summary_fields"][3] == "post-work posterity capture"
     assert handoff["handoff_contract"]["return_with"]["finished_run_review_fields"][0] == "review status"
     assert handoff["handoff_contract"]["worker_contract"]["worker_must_not_own_by_default"][0] == "roadmap routing"
 
@@ -2411,7 +2464,20 @@ def test_planning_summary_human_view_starts_with_planning_record(tmp_path: Path,
   Why now: promote when maintained report signal appears.
 """,
     )
-    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Next Candidate Queue
+
+- Candidate alpha; promote when maintained report signal appears.
+
+## Reopen Conditions
+
+- Reopen when a queue or report signals new work.
+""",
+    )
     _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _minimal_execplan())
 
     summary = planning_summary(target=tmp_path)

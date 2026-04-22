@@ -556,6 +556,7 @@ def _print_handoff(handoff: dict) -> None:
     return_with = contract.get("return_with", {})
     if isinstance(return_with, dict):
         print(f"- Return with execution-run fields: {', '.join(return_with.get('execution_run_fields', []))}")
+        print(f"- Return with execution-summary fields: {', '.join(return_with.get('execution_summary_fields', []))}")
 
 
 def _build_prompt(command: str, target: str | None) -> str:

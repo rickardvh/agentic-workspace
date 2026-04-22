@@ -262,11 +262,13 @@ Execution summaries belong under `## Execution Summary` for completed or nearly-
 - `Outcome delivered`
 - `Validation confirmed`
 - `Follow-on routed to`
+- `Post-work posterity capture`
 - `Resume from`
 
 Keep this section compact and decision-shaped.
 It exists so later contributors do not have to reconstruct what the slice achieved, how it was proved, and where follow-through now lives.
 Do not turn it into a second drift log, a notebook, or a memory note.
+Use `Post-work posterity capture` to answer what should survive and where it belongs after the slice finishes. Memory may be one destination when installed, but planning closure must still work without it.
 If the slice ended with intentionally deferred work or newly discovered implications, leave those in `Iterative Follow-Through` instead of stretching `Execution Summary` into a backlog.
 
 Closure discipline should stay cheap and explicit:
