@@ -610,6 +610,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
     warnings = _run_planning_checker(target_root)
     drift = _detect_payload_drift(target_root)
     warnings.extend(drift)
+    planning_surface_health = _planning_surface_health(warnings)
 
     active_contract = _active_intent_contract(
         target_root=target_root,
@@ -728,6 +729,7 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
             "candidates": roadmap_candidates,
         },
         "ownership_review": ownership_review,
+        "planning_surface_health": planning_surface_health,
         "warnings": [warning.copy() for warning in warnings],
         "warning_count": len(warnings),
     }
@@ -923,6 +925,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "todo",
             "execplans",
             "ownership_review",
+            "planning_surface_health",
             "planning_record",
             "active_contract",
             "resumable_contract",
@@ -941,6 +944,12 @@ def _planning_summary_schema() -> dict[str, Any]:
             "warning_count",
         ],
         "view_fields": {
+            "planning_surface_health": [
+                "status",
+                "warning_count",
+                "recommended_next_action",
+                "warnings",
+            ],
             "planning_record": [
                 "task",
                 "requested_outcome",
@@ -1107,6 +1116,44 @@ def _planning_summary_schema() -> dict[str, Any]:
             "handoff_contract remains a thinner delegated-worker view over the same active planning state",
             "prefer the summary schema over raw TODO or execplan parsing when one structured answer is enough",
         ],
+    }
+
+
+def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
+    health_warnings: list[dict[str, str]] = []
+    for warning in warnings:
+        warning_class = str(warning.get("warning_class", "")).strip()
+        path = str(warning.get("path", "")).strip()
+        message = str(warning.get("message", "")).strip()
+        suggested_fix = _warning_remediation(warning_class) or ""
+        health_warnings.append(
+            {
+                "warning_class": warning_class,
+                "path": path,
+                "message": message,
+                "suggested_fix": suggested_fix,
+            }
+        )
+    if not health_warnings:
+        return {
+            "status": "clean",
+            "warning_count": 0,
+            "recommended_next_action": "No planning-surface drift detected.",
+            "warnings": [],
+        }
+    first_fix = next((item["suggested_fix"] for item in health_warnings if item["suggested_fix"]), "")
+    if not first_fix:
+        first = health_warnings[0]
+        first_fix = (
+            f"Inspect {first['path']} and resolve {first['warning_class']} before relying on resumed planning state."
+            if first["path"]
+            else "Inspect the first planning warning before relying on resumed planning state."
+        )
+    return {
+        "status": "not-clean",
+        "warning_count": len(health_warnings),
+        "recommended_next_action": first_fix,
+        "warnings": health_warnings,
     }
 
 

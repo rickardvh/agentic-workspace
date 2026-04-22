@@ -95,7 +95,7 @@
       "system": "github",
       "id": "#262",
       "title": "[Planning]: Surface planning-surface drift immediately at resume/startup so interrupted-work recovery does not waste effort rediscovering template, checker, or contract mismatches",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -112,8 +112,8 @@
     {
       "system": "github",
       "id": "#264",
-      "title": "[Planning]: Add an explicit planning↔memory handshake so agents are prompted to pull what they may need before work and preserve what later work may need after finishing",
-      "status": "open",
+      "title": "[Planning]: Add an explicit planning-memory handshake so agents are prompted to pull what they may need before work and preserve what later work may need after finishing",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"

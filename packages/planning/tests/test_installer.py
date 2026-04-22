@@ -800,7 +800,20 @@ def test_doctor_guides_older_execplans_toward_current_contract_sections(tmp_path
   Why now: the active plan still needs migration hints for the newer contract shape.
 """,
     )
-    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(
+        tmp_path / "ROADMAP.md",
+        """
+# Roadmap
+
+## Next Candidate Queue
+
+- Candidate alpha; promote when maintained report signal appears.
+
+## Reopen Conditions
+
+- Reopen when a queue or report signals new work.
+""",
+    )
     plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
     _write(
         plan_path,
@@ -1854,8 +1867,12 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["schema"]["schema_version"] == "planning-summary-schema/v1"
     assert summary["schema"]["command"] == "agentic-workspace summary --format json"
     assert "planning_record" in summary["schema"]["shared_fields"]
+    assert "planning_surface_health" in summary["schema"]["shared_fields"]
     assert summary["todo"]["active_count"] == 1
     assert summary["execplans"]["active_count"] == 1
+    assert summary["planning_surface_health"]["status"] == "clean"
+    assert summary["planning_surface_health"]["warning_count"] == 0
+    assert summary["planning_surface_health"]["recommended_next_action"] == "No planning-surface drift detected."
     assert summary["planning_record"]["status"] == "present"
     assert summary["planning_record"]["task"]["id"] == "plan-alpha"
     assert summary["planning_record"]["task"]["surface"] == ".agentic-workspace/planning/execplans/plan-alpha.md"
@@ -2048,6 +2065,35 @@ def test_planning_report_derives_compact_module_state_from_summary(tmp_path: Pat
     assert report["status"]["roadmap_lane_count"] == 0
     assert report["next_action"]["summary"] == "Add one checker."
     assert report["system_intent"]["canonical_doc"] == ".agentic-workspace/docs/system-intent-contract.md"
+
+
+def test_planning_summary_exposes_compact_planning_surface_health_when_not_clean(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: .agentic-workspace/planning/execplans/plan-alpha.md
+  Why now: promote when maintained report signal appears.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md",
+        _minimal_execplan().replace("## Delegated Judgment", "## Delegated Notes"),
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    assert summary["planning_surface_health"]["status"] == "not-clean"
+    assert summary["planning_surface_health"]["warning_count"] >= 1
+    assert summary["planning_surface_health"]["warnings"][0]["warning_class"] == "execplan_structure_drift"
+    assert "Restore the current template sections" in summary["planning_surface_health"]["recommended_next_action"]
 
 
 def test_planning_summary_exposes_intent_validation_contract(tmp_path: Path) -> None:
@@ -2353,6 +2399,7 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "finished_work_inspection_contract" in summary["schema"]["shared_fields"]
     assert "hierarchy_contract" in summary["schema"]["shared_fields"]
     assert "handoff_contract" in summary["schema"]["shared_fields"]
+    assert "planning_surface_health" in summary["schema"]["view_fields"]
     assert "literal_request" in summary["schema"]["view_fields"]["intent_interpretation_contract"]
     assert "live_working_set" in summary["schema"]["view_fields"]["context_budget_contract"]
     assert "pre_work_memory_pull" in summary["schema"]["view_fields"]["context_budget_contract"]
@@ -2484,6 +2531,8 @@ def test_planning_summary_human_view_starts_with_planning_record(tmp_path: Path,
     planning_cli._print_summary(summary)
     out = capsys.readouterr().out
 
+    assert "Planning-surface health:" in out
+    assert "- Status: clean" in out
     assert "Planning record:" in out
     assert "Planning hierarchy view:" in out
     assert "Parent lane: plan-alpha-lane" in out

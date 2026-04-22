@@ -206,6 +206,14 @@ def _print_summary(summary: dict) -> None:
         f"{summary['execplans']['archived_count']} archived"
     )
     print(f"Roadmap: {summary['roadmap'].get('lane_count', 0)} candidate lanes / {summary['roadmap']['candidate_count']} candidate bullets")
+    planning_surface_health = summary.get("planning_surface_health", {})
+    if isinstance(planning_surface_health, dict) and planning_surface_health:
+        print("Planning-surface health:")
+        print(f"- Status: {planning_surface_health.get('status', 'unknown')}")
+        print(f"- Warning count: {planning_surface_health.get('warning_count', 0)}")
+        print(f"- Recommended next action: {planning_surface_health.get('recommended_next_action', '')}")
+        for warning in planning_surface_health.get("warnings", [])[:3]:
+            print(f"- [{warning.get('warning_class', '')}] {warning.get('path', '')}: {warning.get('message', '')}")
     ownership_review = summary.get("ownership_review", {})
     if ownership_review.get("status") == "present":
         print("Ownership review:")
