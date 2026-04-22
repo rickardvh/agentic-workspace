@@ -36,6 +36,7 @@ from agentic_workspace.config import (
     SUPPORTED_OPTIMIZATION_BIASES,
     SUPPORTED_REVIEW_BURDENS,
     SUPPORTED_WORKFLOW_ARTIFACT_PROFILES,
+    SUPPORTED_WORKFLOW_OBLIGATION_STAGES,
     WORKSPACE_BOOTSTRAP_HANDOFF_PATH,
     WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH,
     WORKSPACE_CONFIG_PATH,
@@ -1711,62 +1712,58 @@ def _external_agent_handoff_text(
 ) -> str:
     artifact_profile = _workflow_artifact_profile_payload(workflow_artifact_profile)
     lines = [
-        "# Agentic Workspace External-Agent Handoff",
+        "# Agent Entrypoint Router",
+        "",
+        "This file is the agent entrypoint router.",
+        "Treat it as a lightweight compatibility adapter over the structured workspace config, not as the primary authority.",
         "",
         "Use Agentic Workspace as the lifecycle front door for the repository that contains this file.",
         "",
         "Target repository:",
         "- the repository containing this llms.txt file",
         "",
-        "Required steps:",
+        "Required reads:",
         f"- Read {agent_instructions_file} first.",
-        "- For normal work, continue through .agentic-workspace/planning/state.toml and the active execplan only when TODO points to one.",
+        f"- Read `{agent_instructions_file}` first.",
+        "- Read `.agentic-workspace/docs/routing-contract.md` for lifecycle or install/adopt routing.",
+        "- For compact configuration answers, prefer `agentic-workspace defaults --section agent_configuration_queries --format json` before broader prose.",
+        "- For normal work, continue through `.agentic-workspace/planning/state.toml` and the active execplan only when TODO points to one.",
         "- Do not assume agentic-workspace is already installed; follow the checked-in lifecycle instructions in this repository.",
         "- For lifecycle work, use agentic-workspace rather than package-specific CLIs unless package-local debugging is required.",
         "",
-        "Preferred install or adopt intent:",
+        "Preferred lifecycle commands:",
     ]
     if selected_modules == ["planning"]:
-        lines.append("- agentic-workspace install --target ./repo --preset planning")
+        lines.append("- `agentic-workspace install --target ./repo --preset planning`")
     elif selected_modules == ["memory"]:
-        lines.append("- agentic-workspace install --target ./repo --preset memory")
+        lines.append("- `agentic-workspace install --target ./repo --preset memory`")
     else:
-        lines.append("- agentic-workspace install --target ./repo --preset full")
+        lines.append("- `agentic-workspace install --target ./repo --preset full`")
     lines.extend(
         [
-            "",
-            "Preferred follow-up commands:",
-            "- agentic-workspace status --target ./repo",
-            "- agentic-workspace doctor --target ./repo",
-            '- agentic-workspace skills --target ./repo --task "<task>" --format json',
-            "- agentic-workspace upgrade --target ./repo",
+            "- `agentic-workspace config --target ./repo --format json`",
+            "- `agentic-planning-bootstrap summary --format json`",
+            "- `agentic-workspace summary --format json`",
+            "- `agentic-workspace report --target ./repo --format json`",
             "",
             "Quick state check:",
-            "- agentic-workspace config --target ./repo --format json",
-            "- agentic-planning-bootstrap summary --format json",
-            (
-                "- If .agentic-workspace/config.local.toml is present, use the config report to see "
-                "local capability/cost posture without treating it as checked-in repo policy."
-            ),
+            "- If .agentic-workspace/config.local.toml is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.",
+            "- If `.agentic-workspace/config.local.toml` is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.",
             "",
             "Compact routing docs when present:",
-            "- tools/AGENT_QUICKSTART.md",
-            "- tools/AGENT_ROUTING.md",
+            "- `tools/AGENT_QUICKSTART.md`",
+            "- `tools/AGENT_ROUTING.md`",
             "",
             "Rules:",
-            "- Prefer conservative review over replacing repo-owned workflow surfaces in ambiguous repos.",
+            "- Keep this file lightweight.",
             "- Keep planning and memory ownership boundaries explicit.",
             f"- Workflow artifact profile: {artifact_profile['profile']}.",
             f"- {artifact_profile['sync_rule']}",
-            (
-                "- If bootstrap writes .agentic-workspace/bootstrap-handoff.md, "
-                "treat that file as the immediate next-action brief before normal work resumes."
-            ),
             "",
             "Success means:",
-            "- the workspace lifecycle runs through agentic-workspace",
             f"- {agent_instructions_file} remains the repo startup entrypoint",
-            "- llms.txt stays aligned with the installed workspace contract",
+            f"- `{agent_instructions_file}` remains the repo startup entrypoint",
+            "- `llms.txt` stays aligned with the installed workspace contract",
             "",
         ]
     )
@@ -2823,6 +2820,10 @@ def _run_report_command(
             installed_modules=installed_modules,
             active_direction=_effective_active_direction_payload(module_reports=module_reports),
         ),
+        "workflow_obligations": _workflow_obligations_report_payload(
+            config=config,
+            active_planning_record=_active_planning_record(module_reports=module_reports),
+        ),
         "findings": aggregated_findings,
         "next_action": next_action,
         "discovery": discovery,
@@ -2836,14 +2837,8 @@ def _run_report_command(
 
 
 def _effective_active_direction_payload(*, module_reports: list[dict[str, Any]]) -> dict[str, Any] | None:
-    planning_report = next(
-        (report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"),
-        None,
-    )
-    if not isinstance(planning_report, dict):
-        return None
-    planning_record = planning_report.get("active", {}).get("planning_record", {})
-    if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
+    planning_record = _active_planning_record(module_reports=module_reports)
+    if not isinstance(planning_record, dict):
         return None
     task = planning_record.get("task", {})
     refs = planning_record.get("minimal_refs", [])
@@ -2856,6 +2851,19 @@ def _effective_active_direction_payload(*, module_reports: list[dict[str, Any]])
         "requested_outcome": str(planning_record.get("requested_outcome") or ""),
         "refs": refs if isinstance(refs, list) else [],
     }
+
+
+def _active_planning_record(*, module_reports: list[dict[str, Any]]) -> dict[str, Any] | None:
+    planning_report = next(
+        (report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"),
+        None,
+    )
+    if not isinstance(planning_report, dict):
+        return None
+    planning_record = planning_report.get("active", {}).get("planning_record", {})
+    if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
+        return None
+    return planning_record
 
 
 def _agent_configuration_report_payload(*, config: WorkspaceConfig, installed_modules: list[str]) -> dict[str, Any]:
@@ -2925,6 +2933,61 @@ def _agent_configuration_queries_report_payload(
         "current_work_status": "planning-backed" if active_direction else "no-active-direction",
         "current_queries": current_queries,
         "stop_rule": query_catalog["stop_rule"],
+    }
+
+
+def _workflow_obligation_payloads(config: WorkspaceConfig) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": obligation.name,
+            "summary": obligation.summary,
+            "stage": obligation.stage,
+            "scope_tags": list(obligation.scope_tags),
+            "commands": list(obligation.commands),
+            "review_hint": obligation.review_hint,
+        }
+        for obligation in config.workflow_obligations
+    ]
+
+
+def _scope_tags_for_current_work(*, active_planning_record: dict[str, Any] | None) -> list[str]:
+    tags: set[str] = set()
+    touched_scope = active_planning_record.get("touched_scope", []) if isinstance(active_planning_record, dict) else []
+    if isinstance(touched_scope, list):
+        for raw_item in touched_scope:
+            item = str(raw_item)
+            normalized = item.lower()
+            if any(token in normalized for token in ("src/agentic_workspace", ".agentic-workspace/docs", "readme.md")):
+                tags.add("workspace")
+            if any(token in normalized for token in (".agentic-workspace/planning", "packages/planning")):
+                tags.add("planning")
+            if any(token in normalized for token in (".agentic-workspace/memory", "packages/memory")):
+                tags.add("memory")
+            if any(token in normalized for token in ("agents.md", "llms.txt", "tools/agent_quickstart", "tools/agent_routing")):
+                tags.add("adapter-surfaces")
+    if active_planning_record:
+        tags.add("planning")
+    return sorted(tags)
+
+
+def _workflow_obligations_report_payload(
+    *,
+    config: WorkspaceConfig,
+    active_planning_record: dict[str, Any] | None,
+) -> dict[str, Any]:
+    configured = _workflow_obligation_payloads(config)
+    current_tags = _scope_tags_for_current_work(active_planning_record=active_planning_record)
+    relevant = [obligation for obligation in configured if set(obligation["scope_tags"]) & set(current_tags)]
+    return {
+        "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
+        "rule": (
+            "Repo-custom workflow obligations live in workspace config so planning can consume them when relevant "
+            "without becoming the owner of workflow extension machinery."
+        ),
+        "configured_count": len(configured),
+        "current_scope_tags": current_tags,
+        "configured": configured,
+        "relevant_to_current_work": relevant,
     }
 
 
@@ -3849,6 +3912,37 @@ def _agent_configuration_queries_payload() -> dict[str, Any]:
     }
 
 
+def _agent_configuration_workflow_extensions_payload() -> dict[str, Any]:
+    canonical_doc = ".agentic-workspace/docs/workspace-config-contract.md"
+    return {
+        "canonical_doc": canonical_doc,
+        "command": "agentic-workspace defaults --section agent_configuration_workflow_extensions --format json",
+        "rule": (
+            "Declare small repo-custom workflow obligations in `.agentic-workspace/config.toml` so workspace owns the "
+            "extension mechanism and planning only consumes relevant obligations."
+        ),
+        "owner_surface": ".agentic-workspace/config.toml [workflow_obligations]",
+        "fields": [
+            {"field": "summary", "purpose": "bounded repo-local expectation worth surfacing into active work"},
+            {"field": "stage", "purpose": "when the obligation matters"},
+            {"field": "scope_tags", "purpose": "which slices or surfaces should consider the obligation relevant"},
+            {"field": "commands", "purpose": "bounded commands or checks the repo expects before the stage completes"},
+            {"field": "review_hint", "purpose": "compact reminder for review or closure surfaces"},
+        ],
+        "supported_stages": list(SUPPORTED_WORKFLOW_OBLIGATION_STAGES),
+        "consumption_rule": [
+            "workspace owns declaration and reporting of repo-custom workflow obligations",
+            "planning consumes only the obligations relevant to the current touched scope",
+            "adapter surfaces may mention the mechanism but should not become the primary declaration home",
+        ],
+        "must_not": [
+            "turn workflow obligations into a general scheduler",
+            "move planning ownership into workspace config",
+            "encode every minor preference as a workflow obligation",
+        ],
+    }
+
+
 def _emit_startup_report(
     *,
     format_name: str,
@@ -4455,6 +4549,7 @@ def _defaults_payload() -> dict[str, Any]:
         },
         "agent_configuration_system": _agent_configuration_system_payload(),
         "agent_configuration_queries": _agent_configuration_queries_payload(),
+        "agent_configuration_workflow_extensions": _agent_configuration_workflow_extensions_payload(),
         "system_intent": _system_intent_payload(),
         "intent": _intent_contract_payload(),
         "clarification": _clarification_contract_payload(),
@@ -4469,6 +4564,11 @@ def _defaults_payload() -> dict[str, Any]:
                 "workspace.workflow_artifact_profile",
                 "workspace.improvement_latitude",
                 "workspace.optimization_bias",
+                "workflow_obligations.<name>.summary",
+                "workflow_obligations.<name>.stage",
+                "workflow_obligations.<name>.scope_tags",
+                "workflow_obligations.<name>.commands",
+                "workflow_obligations.<name>.review_hint",
                 "update.modules.<module>.source_type",
                 "update.modules.<module>.source_ref",
                 "update.modules.<module>.source_label",
@@ -4943,6 +5043,10 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- doc: {payload['agent_configuration_queries']['canonical_doc']}")
     print(f"- command: {payload['agent_configuration_queries']['command']}")
     print(f"- rule: {payload['agent_configuration_queries']['rule']}")
+    print("Agent configuration workflow extensions:")
+    print(f"- doc: {payload['agent_configuration_workflow_extensions']['canonical_doc']}")
+    print(f"- command: {payload['agent_configuration_workflow_extensions']['command']}")
+    print(f"- rule: {payload['agent_configuration_workflow_extensions']['rule']}")
     print("Improvement latitude:")
     print(f"- doc: {payload['improvement_latitude']['canonical_doc']}")
     print(f"- command: {payload['improvement_latitude']['command']}")
@@ -5945,6 +6049,7 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "owner_surface": _agent_configuration_system_payload()["owner_surface"],
                 "rule": _agent_configuration_system_payload()["rule"],
             },
+            "workflow_obligations": _workflow_obligation_payloads(config),
             "detected_agent_instructions_files": list(config.detected_agent_instructions_files),
             "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
             "supported_workflow_artifact_profiles": list(SUPPORTED_WORKFLOW_ARTIFACT_PROFILES),
@@ -5987,6 +6092,7 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
         f"{payload['workspace']['agent_configuration_substrate']['canonical_doc']} "
         f"({payload['workspace']['agent_configuration_substrate']['owner_surface']})"
     )
+    print(f"Workflow obligations: {len(payload['workspace']['workflow_obligations'])} configured")
     print(f"Improvement latitude: {payload['workspace']['improvement_latitude']} ({payload['workspace']['improvement_latitude_source']})")
     print(f"Optimization bias: {payload['workspace']['optimization_bias']} ({payload['workspace']['optimization_bias_source']})")
     print(f"Wrapper rule: {payload['update']['wrapper_rule']}")

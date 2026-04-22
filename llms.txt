@@ -1,4 +1,44 @@
 # Agent Entrypoint Router
 
-- If you are here to DEVELOP this repository: Read `AGENTS.md`
-- If you are here to INSTALL or ADOPT Agentic Workspace: Read `.agentic-workspace/docs/routing-contract.md`
+This file is the agent entrypoint router.
+Treat it as a lightweight compatibility adapter over the structured workspace config, not as the primary authority.
+
+Use Agentic Workspace as the lifecycle front door for the repository that contains this file.
+
+Target repository:
+- the repository containing this llms.txt file
+
+Required reads:
+- Read AGENTS.md first.
+- Read `AGENTS.md` first.
+- Read `.agentic-workspace/docs/routing-contract.md` for lifecycle or install/adopt routing.
+- For compact configuration answers, prefer `agentic-workspace defaults --section agent_configuration_queries --format json` before broader prose.
+- For normal work, continue through `.agentic-workspace/planning/state.toml` and the active execplan only when TODO points to one.
+- Do not assume agentic-workspace is already installed; follow the checked-in lifecycle instructions in this repository.
+- For lifecycle work, use agentic-workspace rather than package-specific CLIs unless package-local debugging is required.
+
+Preferred lifecycle commands:
+- `agentic-workspace install --target ./repo --preset full`
+- `agentic-workspace config --target ./repo --format json`
+- `agentic-planning-bootstrap summary --format json`
+- `agentic-workspace summary --format json`
+- `agentic-workspace report --target ./repo --format json`
+
+Quick state check:
+- If .agentic-workspace/config.local.toml is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.
+- If `.agentic-workspace/config.local.toml` is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.
+
+Compact routing docs when present:
+- `tools/AGENT_QUICKSTART.md`
+- `tools/AGENT_ROUTING.md`
+
+Rules:
+- Keep this file lightweight.
+- Keep planning and memory ownership boundaries explicit.
+- Workflow artifact profile: repo-owned.
+- .agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans stay authoritative; no extra runtime artifact should carry durable state.
+
+Success means:
+- AGENTS.md remains the repo startup entrypoint
+- `AGENTS.md` remains the repo startup entrypoint
+- `llms.txt` stays aligned with the installed workspace contract

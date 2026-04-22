@@ -86,6 +86,15 @@ def _sample_workspace_config_payload() -> dict[str, object]:
                 },
             }
         },
+        "workflow_obligations": {
+            "adapter_surface_refresh": {
+                "summary": "Refresh adapter surfaces when structured routing changes.",
+                "stage": "before-claiming-completion",
+                "scope_tags": ["workspace", "adapter-surfaces"],
+                "commands": ["make maintainer-surfaces"],
+                "review_hint": "Use when startup routing, llms, or generated agent docs changed.",
+            }
+        },
     }
 
 
@@ -202,6 +211,11 @@ def main() -> int:
         cli.SUPPORTED_OPTIMIZATION_BIASES
     ):
         checks.append(("workspace config schema parity", ["optimization_bias enum drifted from cli supported modes"]))
+    workflow_obligation_schema = workspace_config_schema["$defs"][
+        workspace_config_schema["properties"]["workflow_obligations"]["patternProperties"]["^.+$"]["$ref"].split("/")[-1]
+    ]
+    if workflow_obligation_schema["properties"]["stage"]["enum"] != list(cli.SUPPORTED_WORKFLOW_OBLIGATION_STAGES):
+        checks.append(("workspace config schema parity", ["workflow obligation stages drifted from cli supported values"]))
     local_runtime_properties = local_override_schema["properties"]["runtime"]["properties"]
     expected_runtime = {
         "supports_internal_delegation",

@@ -16,3 +16,17 @@ source_type = "git"
 source_ref = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory"
 source_label = "agentic-memory-bootstrap monorepo master"
 recommended_upgrade_after_days = 30
+
+[workflow_obligations.adapter_surface_refresh]
+summary = "Refresh adapter surfaces when structured startup, routing, or query contracts change."
+stage = "before-claiming-completion"
+scope_tags = ["workspace", "planning", "adapter-surfaces"]
+commands = ["make maintainer-surfaces", "uv run python scripts/check/check_planning_surfaces.py"]
+review_hint = "Use when AGENTS.md, llms.txt, generated agent docs, routing contracts, or workspace query surfaces changed."
+
+[workflow_obligations.commit_after_proof]
+summary = "Commit only after the bounded proof lane passes and the active execplan reflects the current milestone."
+stage = "before-commit"
+scope_tags = ["workspace", "planning", "memory"]
+commands = ["uv run agentic-workspace summary --format json", "git status --short"]
+review_hint = "Treat this as a closeout/readiness gate, not as a substitute for task-specific validation."

@@ -147,6 +147,17 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
                 if not isinstance(item, dict):
                     continue
                 print(f"  query: {item.get('id', '')} -> {item.get('ask_first', '')}")
+    workflow_obligations = payload.get("workflow_obligations", {})
+    if isinstance(workflow_obligations, dict):
+        print("Workflow obligations:")
+        print(f"- configured: {workflow_obligations.get('configured_count', 0)}")
+        print(f"- current scope tags: {', '.join(workflow_obligations.get('current_scope_tags', []))}")
+        relevant = workflow_obligations.get("relevant_to_current_work", [])
+        if isinstance(relevant, list):
+            for item in relevant[:3]:
+                if not isinstance(item, dict):
+                    continue
+                print(f"  obligation: {item.get('id', '')} ({item.get('stage', '')})")
     standing_intent = payload.get("standing_intent", {})
     if isinstance(standing_intent, dict):
         effective_view = standing_intent.get("effective_view", {})

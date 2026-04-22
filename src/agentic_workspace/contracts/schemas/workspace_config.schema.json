@@ -68,6 +68,15 @@
         }
       },
       "additionalProperties": false
+    },
+    "workflow_obligations": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": {
+          "$ref": "#/$defs/workflow_obligation"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false,
@@ -91,6 +100,51 @@
         },
         "recommended_upgrade_after_days": {
           "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "workflow_obligation": {
+      "type": "object",
+      "required": [
+        "summary",
+        "stage",
+        "scope_tags",
+        "commands"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage": {
+          "enum": [
+            "pre-work",
+            "before-claiming-completion",
+            "before-commit",
+            "review",
+            "closeout"
+          ]
+        },
+        "scope_tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "review_hint": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "additionalProperties": false

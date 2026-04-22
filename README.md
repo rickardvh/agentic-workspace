@@ -25,7 +25,11 @@ The ordinary startup path in a repo using Agentic Workspace is:
 1. Read `AGENTS.md`.
 2. Read `SYSTEM_INTENT.md` as a compass when you need the repo's higher-level direction.
 3. Ask `agentic-workspace summary --format json`.
-4. Read the active execplan only when the summary points there.
+4. Ask `agentic-workspace defaults --section agent_configuration_queries --format json` when you need the next compact routing answer.
+5. Read the active execplan only when the summary points there.
+
+`AGENTS.md`, `llms.txt`, and the generated helper docs are compatibility adapters over the structured workspace config.
+New durable workflow behavior should land in the structured substrate first, then flow outward into those prose adapters.
 
 The compact planning home is:
 

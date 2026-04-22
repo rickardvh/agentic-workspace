@@ -171,6 +171,60 @@
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#269",
+      "title": "[Workspace]: Formalize modules and repo-custom workflow extensions in the orchestrator so planning can consume them when relevant",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#270",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#270",
+      "title": "[Workspace]: Build a repo-owned, vendor-independent, structured agent configuration system that planning, memory, and other behavior modules can plug into",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#271",
+      "title": "[Workspace]: Define the structured repo-owned agent configuration model, authority map, and module attachment points",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#270",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#272",
+      "title": "[Workspace]: Design selective loading, compact queries, and lazy discovery for structured repo-owned agent configuration",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#270",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#273",
+      "title": "[Workspace]: Make AGENTS.md, llms.txt, and other prose entry surfaces compatibility adapters over structured agent config rather than the primary authority",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#270",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#274",
+      "title": "[Workspace]: Make system intent shape slice implementation tradeoffs, review, and aligned follow-on work rather than acting only as high-level directional prose",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#270",
+      "planning_residue_expected": "required"
     }
   ]
 }

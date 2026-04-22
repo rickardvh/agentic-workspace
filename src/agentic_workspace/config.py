@@ -41,6 +41,13 @@ SUPPORTED_OPTIMIZATION_BIASES = (
     "balanced",
     "human-legibility",
 )
+SUPPORTED_WORKFLOW_OBLIGATION_STAGES = (
+    "pre-work",
+    "before-claiming-completion",
+    "before-commit",
+    "review",
+    "closeout",
+)
 SUPPORTED_DELEGATION_TARGET_STRENGTHS = (
     "strong",
     "medium",
@@ -117,6 +124,16 @@ class MixedAgentLocalOverride:
 
 
 @dataclass(frozen=True)
+class WorkflowObligation:
+    name: str
+    summary: str
+    stage: str
+    scope_tags: tuple[str, ...]
+    commands: tuple[str, ...]
+    review_hint: str | None
+
+
+@dataclass(frozen=True)
 class WorkspaceConfig:
     target_root: Path | None
     path: Path | None
@@ -133,6 +150,7 @@ class WorkspaceConfig:
     optimization_bias_source: str
     detected_agent_instructions_files: tuple[str, ...]
     update_modules: dict[str, ModuleUpdatePolicy]
+    workflow_obligations: tuple[WorkflowObligation, ...]
     local_override: MixedAgentLocalOverride
     warnings: tuple[str, ...] = ()
 
@@ -252,6 +270,59 @@ def validate_optimization_bias(bias: str) -> str:
         supported = ", ".join(SUPPORTED_OPTIMIZATION_BIASES)
         raise WorkspaceUsageError(f"workspace.optimization_bias must be one of: {supported}.")
     return normalized
+
+
+def load_workflow_obligations(
+    *,
+    raw_obligations: dict[str, Any],
+    config_path: Path,
+) -> tuple[tuple[WorkflowObligation, ...], list[str]]:
+    obligations: list[WorkflowObligation] = []
+    warnings: list[str] = []
+    for obligation_name in sorted(raw_obligations):
+        raw_obligation = raw_obligations[obligation_name]
+        obligation_path = Path(f"{config_path.as_posix()} workflow_obligations.{obligation_name}")
+        if not isinstance(raw_obligation, dict):
+            raise WorkspaceUsageError(f"{obligation_path.as_posix()} must be a table.")
+        unknown_fields = sorted(set(raw_obligation) - {"summary", "stage", "scope_tags", "commands", "review_hint"})
+        if unknown_fields:
+            unknown_text = ", ".join(unknown_fields)
+            warnings.append(f"{obligation_path.as_posix()} contains unsupported field(s): {unknown_text}.")
+        summary = raw_obligation.get("summary")
+        if not isinstance(summary, str) or not summary.strip():
+            raise WorkspaceUsageError(f"{obligation_path.as_posix()} summary must be a non-empty string.")
+        stage = raw_obligation.get("stage")
+        if not isinstance(stage, str) or stage not in SUPPORTED_WORKFLOW_OBLIGATION_STAGES:
+            allowed_text = ", ".join(SUPPORTED_WORKFLOW_OBLIGATION_STAGES)
+            raise WorkspaceUsageError(f"{obligation_path.as_posix()} stage must be one of: {allowed_text}.")
+        scope_tags = require_optional_string_list(
+            payload=raw_obligation,
+            key="scope_tags",
+            config_path=obligation_path,
+        )
+        if not scope_tags:
+            raise WorkspaceUsageError(f"{obligation_path.as_posix()} scope_tags must list at least one non-empty string.")
+        commands = require_optional_string_list(
+            payload=raw_obligation,
+            key="commands",
+            config_path=obligation_path,
+        )
+        if not commands:
+            raise WorkspaceUsageError(f"{obligation_path.as_posix()} commands must list at least one non-empty string.")
+        review_hint = raw_obligation.get("review_hint")
+        if review_hint is not None and (not isinstance(review_hint, str) or not review_hint.strip()):
+            raise WorkspaceUsageError(f"{obligation_path.as_posix()} review_hint must be a non-empty string when present.")
+        obligations.append(
+            WorkflowObligation(
+                name=obligation_name,
+                summary=summary.strip(),
+                stage=stage,
+                scope_tags=scope_tags,
+                commands=commands,
+                review_hint=review_hint.strip() if isinstance(review_hint, str) else None,
+            )
+        )
+    return tuple(obligations), warnings
 
 
 def resolve_effective_agent_instructions_file(*, target_root: Path, configured: str | None) -> tuple[str, str, tuple[str, ...]]:
@@ -566,6 +637,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             optimization_bias_source=optimization_bias_source,
             detected_agent_instructions_files=detected_agent_instruction_files,
             update_modules=defaults,
+            workflow_obligations=(),
             local_override=local_override,
             warnings=tuple(warnings),
         )
@@ -681,6 +753,17 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             source="repo-config",
         )
 
+    raw_workflow_obligations = payload.get("workflow_obligations", {})
+    if raw_workflow_obligations is None:
+        raw_workflow_obligations = {}
+    if not isinstance(raw_workflow_obligations, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} [workflow_obligations] section must be a table.")
+    workflow_obligations, workflow_obligation_warnings = load_workflow_obligations(
+        raw_obligations=raw_workflow_obligations,
+        config_path=WORKSPACE_CONFIG_PATH,
+    )
+    warnings.extend(workflow_obligation_warnings)
+
     agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = resolve_effective_agent_instructions_file(
         target_root=effective_root,
         configured=configured_agent_instructions_file,
@@ -701,6 +784,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         optimization_bias_source=optimization_bias_source,
         detected_agent_instructions_files=detected_agent_instruction_files,
         update_modules=update_modules,
+        workflow_obligations=workflow_obligations,
         local_override=local_override,
         warnings=tuple(warnings),
     )

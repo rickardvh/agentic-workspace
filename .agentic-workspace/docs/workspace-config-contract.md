@@ -99,12 +99,34 @@ They should:
 - avoid inventing new durable behavior first
 - preserve weaker-agent compatibility without reclaiming primary authority
 
+## Repo-Custom Workflow Obligations
+
+Repo-custom workflow additions should be declared in `.agentic-workspace/config.toml` under `workflow_obligations`, not invented first in `AGENTS.md` or active planning.
+
+Each obligation stays small and reviewable:
+
+- `summary`: what repo-local expectation matters
+- `stage`: when it matters, such as `before-claiming-completion`, `before-commit`, or `review`
+- `scope_tags`: which slices or surfaces should treat it as relevant
+- `commands`: the bounded checks or finishing steps the repo expects
+- `review_hint`: the compact reminder review or closure should carry forward
+
+The workspace layer owns declaration and reporting of these obligations.
+Planning consumes only the obligations relevant to the current touched scope.
+Do not use this mechanism to create a scheduler, a giant static workflow catalog, or a substitute for task-specific proof.
+
 ## System Intent Boundary
 
 `SYSTEM_INTENT.md` remains a compass for shaping means and review.
 It is not itself the configuration substrate, active planning state, or enforcement layer.
 
 Use the substrate to make relevant system-intent hooks queryable and operational.
+System intent should shape:
+
+- which compact query or workflow obligation is worth surfacing for the current slice
+- which local tradeoffs favor cheaper continuation, sharper boundaries, lower residue, or lower operating cost
+- how review talks about whether the landed slice served the repo's declared direction instead of only satisfying task intent
+
 Do not turn system intent into a scheduler or a replacement for bounded task intent.
 
 ## Repo-Custom Extension Boundary

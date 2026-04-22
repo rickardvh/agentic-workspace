@@ -332,6 +332,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "workspace.improvement_latitude" in payload["config"]["supported_fields"]
     assert "workspace.optimization_bias" in payload["config"]["supported_fields"]
     assert "workspace.workflow_artifact_profile" in payload["config"]["supported_fields"]
+    assert "workflow_obligations.<name>.summary" in payload["config"]["supported_fields"]
     assert payload["agent_configuration_system"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert (
         payload["agent_configuration_system"]["command"] == "agentic-workspace defaults --section agent_configuration_system --format json"
@@ -436,6 +437,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "strong planner" in text
     assert "Agent configuration system:" in text
     assert "Agent configuration queries:" in text
+    assert "Agent configuration workflow extensions:" in text
     assert "Improvement latitude:" in text
     assert "owner: workspace" in text
     assert "default mode: conservative" in text
@@ -497,6 +499,8 @@ def test_external_agent_handoff_text_reports_workflow_artifact_profile() -> None
     )
 
     assert "Workflow artifact profile: gemini." in text
+    assert "compatibility adapter over the structured workspace config" in text
+    assert "agentic-workspace defaults --section agent_configuration_queries --format json" in text
     assert "mirror the durable execution state into .agentic-workspace/planning/state.toml and the active execplan" in text
 
 
@@ -522,6 +526,7 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     ]
     assert payload["workspace"]["agent_configuration_substrate"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["workspace"]["agent_configuration_substrate"]["owner_surface"] == ".agentic-workspace/config.toml"
+    assert payload["workspace"]["workflow_obligations"] == []
     assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
     assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
     assert payload["mixed_agent"]["status"] == "reporting-only"
@@ -571,6 +576,27 @@ def test_config_command_accepts_agent_efficiency_optimization_bias(tmp_path: Pat
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["optimization_bias"] == "agent-efficiency"
     assert payload["workspace"]["optimization_bias_source"] == "repo-config"
+
+
+def test_config_command_reports_workflow_obligations_from_repo_config(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".agentic-workspace").mkdir(exist_ok=True)
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        "schema_version = 1\n\n"
+        "[workflow_obligations.adapter_surface_refresh]\n"
+        'summary = "Refresh adapter surfaces."\n'
+        'stage = "before-claiming-completion"\n'
+        'scope_tags = ["workspace", "adapter-surfaces"]\n'
+        'commands = ["make maintainer-surfaces"]\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workspace"]["workflow_obligations"][0]["id"] == "adapter_surface_refresh"
+    assert payload["workspace"]["workflow_obligations"][0]["stage"] == "before-claiming-completion"
+    assert payload["workspace"]["workflow_obligations"][0]["commands"] == ["make maintainer-surfaces"]
 
 
 def test_config_command_autodetects_existing_supported_agent_instructions_file(tmp_path: Path, capsys) -> None:
@@ -836,6 +862,19 @@ def test_defaults_section_selector_returns_agent_configuration_queries_answer(ca
     assert payload["answer"]["query_classes"][2]["then_if_needed"][0] == "agentic-workspace defaults --section validation --format json"
     assert payload["answer"]["stop_rule"].startswith("Stop after the first compact answer")
     assert ".agentic-workspace/docs/workspace-config-contract.md" in payload["refs"]
+
+
+def test_defaults_section_selector_returns_agent_configuration_workflow_extensions_answer(capsys) -> None:
+    assert cli.main(["defaults", "--section", "agent_configuration_workflow_extensions", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "agent_configuration_workflow_extensions"}
+    assert payload["matched"] is True
+    assert payload["answer"]["owner_surface"] == ".agentic-workspace/config.toml [workflow_obligations]"
+    assert payload["answer"]["supported_stages"][0] == "pre-work"
+    assert payload["answer"]["consumption_rule"][0].startswith("workspace owns declaration")
 
 
 def test_defaults_setup_findings_promotion_section_selector_returns_compact_contract_answer(capsys) -> None:
@@ -2343,6 +2382,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "repo_friction" in payload["schema"]["shared_fields"]
     assert "output_contract" in payload["schema"]["shared_fields"]
     assert "agent_configuration_queries" in payload["schema"]["shared_fields"]
+    assert "workflow_obligations" in payload["schema"]["shared_fields"]
     assert "execution_shape" in payload["schema"]["shared_fields"]
     assert "module_reports" in payload["schema"]["shared_fields"]
     assert payload["selected_modules"] == ["planning", "memory"]
@@ -2361,6 +2401,8 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["agent_configuration_queries"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["agent_configuration_queries"]["current_work_status"] == "no-active-direction"
     assert payload["agent_configuration_queries"]["current_queries"][0]["id"] == "startup_path"
+    assert payload["workflow_obligations"]["configured_count"] == 0
+    assert payload["workflow_obligations"]["relevant_to_current_work"] == []
     assert payload["execution_shape"]["status"] == "present"
     assert payload["execution_shape"]["task_shape"]["id"] == "direct-or-no-active-plan"
     assert payload["execution_shape"]["recommendation"]["id"] == "stay-direct"

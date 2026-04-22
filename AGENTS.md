@@ -5,6 +5,7 @@ Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules.
 <!-- agentic-workspace:workflow:end -->
 
 Local bootstrap contract for agents working in this monorepo.
+Treat `AGENTS.md` as the ordinary startup adapter over the structured workspace config surfaces, not as the only durable authority for new behavior.
 
 ## Precedence
 
@@ -21,17 +22,19 @@ Resolve instruction conflicts in this order:
 2. Read `SYSTEM_INTENT.md` as a compass when the task needs the repo's higher-level direction or design pull.
 3. Read `agentic-workspace summary --format json` for the compact planning state.
 4. Read `agentic-workspace config --target . --format json` when the current posture or startup entrypoint matters.
-5. Inspect `.agentic-workspace/planning/state.toml` only when the compact summary is insufficient and raw queue detail is still needed.
-6. Read the active feature plan in `.agentic-workspace/planning/execplans/` when the summary points there.
-7. Inspect the roadmap data in `.agentic-workspace/planning/state.toml` only when promoting work.
-8. Load package-local docs only for the package being edited.
-9. Before touching a shipped package, refresh it to the latest checked-in version through that package's canonical update workflow so local work starts from the current package contract.
-10. When a change crosses package source, package payload, and root install boundaries, read `.agentic-workspace/docs/extraction-and-discovery-contract.md` before editing.
-11. When making claims about GitHub issue state, verify the live issue set with `gh` instead of relying only on checked-in intake notes.
+5. Read `agentic-workspace defaults --section agent_configuration_queries --format json` when the question is which compact query or subinstruction layer should load next.
+6. Inspect `.agentic-workspace/planning/state.toml` only when the compact summary is insufficient and raw queue detail is still needed.
+7. Read the active feature plan in `.agentic-workspace/planning/execplans/` when the summary points there.
+8. Inspect the roadmap data in `.agentic-workspace/planning/state.toml` only when promoting work.
+9. Load package-local docs only for the package being edited.
+10. Before touching a shipped package, refresh it to the latest checked-in version through that package's canonical update workflow so local work starts from the current package contract.
+11. When a change crosses package source, package payload, and root install boundaries, read `.agentic-workspace/docs/extraction-and-discovery-contract.md` before editing.
+12. When making claims about GitHub issue state, verify the live issue set with `gh` instead of relying only on checked-in intake notes.
 
 Do not start coding from chat context alone when the same information exists in checked-in files.
 Do not bulk-read all planning surfaces.
 When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
+When repo-local workflow expectations matter, prefer `.agentic-workspace/config.toml` plus `agentic-workspace report --target . --format json` over prose-only reminders.
 Read `.agentic-workspace/docs/routing-contract.md` when execution hits an edge case, routing ambiguity, or requires deep context on the operating model.
 Read `.agentic-workspace/docs/lifecycle-and-config-contract.md` before editing CLI initialization or configuration logic.
 
