@@ -48,6 +48,27 @@ Active
 
 ## Entry format
 
+### Friction: archived-partial-intent-continuation-owner-warning
+
+Observed recurrences
+- 2026-04-22: `agentic-workspace summary --format json` still warned that `.agentic-workspace/planning/execplans/archive/post-work-posterity-capture-2026-04-22.md` no longer had a visible checked-in continuation owner.
+- 2026-04-22: the same summary also warned that `.agentic-workspace/planning/execplans/archive/startup-planning-surface-health-2026-04-22.md` no longer had a visible checked-in continuation owner.
+
+Keep now
+- The repeated warning is real enough to preserve, but the smallest honest fix still needs shaping across planning archive hygiene rather than a rushed one-off edit.
+
+Promote when
+- Another archived partial-intent slice loses its continuation owner, or a compact planning-side rule for repairing/archive-routing this warning is ready to ship.
+
+Most likely remediation
+- validation
+
+Config treatment
+- promote because the current repo posture prefers turning repeated planning-residue drift into an explicit validation or routing fix instead of letting it remain a repeated advisory warning.
+
+Last seen
+2026-04-22 during recurring-friction lane dogfood slice
+
 ### Friction: <short recurring friction label>
 
 Observed recurrences
@@ -81,4 +102,4 @@ Last seen
 
 ## Last confirmed
 
-2026-04-22 during issue #263 first slice
+2026-04-22 during recurring-friction lane dogfood slice

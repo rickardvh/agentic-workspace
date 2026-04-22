@@ -4027,6 +4027,9 @@ Promote when
 Most likely remediation
 - validation
 
+Config treatment
+- promote because current repo posture prefers escalating repeated workflow drift instead of letting it stay note-only evidence.
+
 Last seen
 2026-04-22 during issue #263 first slice
 
@@ -4075,6 +4078,107 @@ elimination_target = "promote"
         and "has 2 observed recurrences" in action.detail
         for action in result.actions
     )
+
+
+def test_doctor_flags_missing_config_treatment_in_recurring_friction_entry(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks").mkdir(parents=True, exist_ok=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 32\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "recurring-friction-ledger.md").write_text(
+        """
+# Recurring Friction Ledger
+
+## Status
+
+Active
+
+## Scope
+
+- Lightweight recurring friction evidence.
+
+## Load when
+
+- The same friction shows up again.
+
+## Review when
+
+- A friction class is promoted elsewhere.
+
+## Failure signals
+
+- The same friction keeps recurring.
+
+## When to use this
+
+- The signal is real but still below issue threshold.
+
+## Rules
+
+- Keep one entry per friction class.
+
+## Entry format
+
+### Friction: missing-memory-capture
+
+Observed recurrences
+- 2026-04-20: Post-task friction was noticed but not captured.
+
+Keep now
+- One recurrence is enough to preserve while the exact remediation is still forming.
+
+Promote when
+- The same friction recurs again or a clear package change presents itself.
+
+Most likely remediation
+- validation
+
+Last seen
+2026-04-22 during issue #263 second slice
+
+## Verification
+
+- Repeated friction can be preserved without opening an issue immediately.
+
+## Boundary reminder
+
+- This note is pre-backlog evidence.
+
+## Last confirmed
+
+2026-04-22 during issue #263 second slice
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"]
+note_type = "runbook"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+memory_role = "improvement_signal"
+preferred_remediation = "validation"
+improvement_candidate = true
+improvement_note = "Promote repeated friction into stronger remediation."
+elimination_target = "promote"
+config_treatment = "promote"
+config_note = "Current repo posture prefers escalating repeated workflow drift."
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any("missing Config treatment" in action.detail for action in result.actions)
 
 
 def test_doctor_flags_manifest_routing_drift_for_small_default_surface(tmp_path: Path) -> None:

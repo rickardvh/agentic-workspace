@@ -1692,6 +1692,7 @@ def _parse_recurring_friction_entries(text: str) -> list[dict[str, object]]:
             "keep now": 0,
             "promote when": 0,
             "most likely remediation": 0,
+            "config treatment": 0,
             "last seen": 0,
         }
         current_section = ""
@@ -1728,6 +1729,7 @@ def _recurring_friction_structure_findings(text: str) -> list[str]:
         ),
         note_name="recurring-friction ledger",
     )
+    findings = [finding for finding in findings if "chronological task-log style bullets" not in finding]
     entries = [entry for entry in _parse_recurring_friction_entries(text) if "<short recurring friction label>" not in str(entry["label"])]
     for entry in entries:
         label = str(entry["label"])
@@ -1746,6 +1748,10 @@ def _recurring_friction_structure_findings(text: str) -> list[str]:
         if not int(entry["most likely remediation"]):
             findings.append(
                 f"recurring-friction entry '{label}' is missing Most likely remediation; name the preferred upstream fix direction before the signal compounds"
+            )
+        if not int(entry["config treatment"]):
+            findings.append(
+                f"recurring-friction entry '{label}' is missing Config treatment; make the config-shaped promote/cleanup/retain/no_action decision explicit before treating it as durable pressure"
             )
         if not int(entry["last seen"]):
             findings.append(
