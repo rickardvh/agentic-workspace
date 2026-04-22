@@ -2537,6 +2537,8 @@ def test_memory_note_template_includes_improvement_signal_metadata() -> None:
     assert "## Improvement signal metadata" in text
     assert "`preferred_remediation`" in text
     assert "`elimination_target`" in text
+    assert "`config_treatment`" in text
+    assert "`config_note`" in text
 
 
 def test_bootstrap_task_context_starter_is_continuation_only() -> None:
@@ -3927,6 +3929,41 @@ elimination_target = "shrink"
     result = installer.doctor_bootstrap(target=target)
 
     assert not any("retention_justification" in action.detail for action in result.actions)
+
+
+def test_doctor_flags_invalid_config_treatment_metadata(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks").mkdir(parents=True, exist_ok=True)
+    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "recurring-friction-ledger.md").write_text(
+        "# Recurring Friction Ledger\n", encoding="utf-8"
+    )
+    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"]
+note_type = "runbook"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+memory_role = "improvement_signal"
+preferred_remediation = "validation"
+improvement_note = "Promote repeated friction into stronger remediation."
+elimination_target = "promote"
+config_treatment = "escalate"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any("manifest config_treatment must be one of" in action.detail for action in result.actions)
+    assert any("config_treatment should be paired with config_note" in action.detail for action in result.actions)
 
 
 def test_doctor_emits_recurring_friction_promotion_pressure_for_repeated_entry(tmp_path: Path) -> None:

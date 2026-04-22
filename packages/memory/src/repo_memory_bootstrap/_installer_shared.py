@@ -260,6 +260,7 @@ VALID_CANONICALITY_VALUES = {
 }
 VALID_TASK_RELEVANCE_VALUES = {"required", "optional"}
 VALID_MEMORY_ROLE_VALUES = {"durable_truth", "improvement_signal"}
+VALID_CONFIG_TREATMENT_VALUES = {"promote", "cleanup", "retain", "no_action"}
 VALID_SYMPTOM_OF_VALUES = {
     "workflow_friction",
     "guidance_drift",
@@ -470,6 +471,8 @@ class MemoryNoteRecord:
     improvement_note: str = ""
     elimination_target: str = ""
     retention_justification: str = ""
+    config_treatment: str = ""
+    config_note: str = ""
 
 
 @dataclass(frozen=True, slots=True)

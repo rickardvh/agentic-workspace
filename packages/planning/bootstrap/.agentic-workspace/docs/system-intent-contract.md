@@ -1,6 +1,7 @@
 # System Intent Contract
 
 This contract keeps the larger intended outcome visible even when work is executed in smaller bounded slices.
+`SYSTEM_INTENT.md` is the repo's directional compass for that larger outcome; checked-in planning still owns active execution state, bounded slices, and continuation routing.
 
 ## Core Rule
 

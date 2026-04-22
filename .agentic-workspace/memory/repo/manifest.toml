@@ -27,6 +27,8 @@ forbid_core_docs_depend_on_memory = false
 # - improvement_note = "short advisory hint"
 # - elimination_target = "shrink" | "promote" | "automate" | "refactor_away"
 # - retention_justification = "short reason the note should remain despite being an improvement signal"
+# - config_treatment = "promote" | "cleanup" | "retain" | "no_action"
+# - config_note = "short note describing which current config rule or posture shaped that treatment"
 # Existing `routes_from`, `stale_when`, and `related_validations` fields also act as
 # the first evidence-backed trust anchors for durable notes: they say what currently
 # grounds the note and what should make it questionable or stale when repo evidence changes.
@@ -259,6 +261,8 @@ preferred_remediation = "validation"
 improvement_candidate = true
 improvement_note = "When the same friction class repeats, route it into planning or the strongest fitting docs, test, validation, automation, or code change instead of letting the signal reset."
 elimination_target = "promote"
+config_treatment = "promote"
+config_note = "Use current repo or local config to decide whether repeated friction should promote into planning or stronger enforcement instead of remaining weak evidence."
 
 [notes.".agentic-workspace/memory/repo/runbooks/vague-instruction-failure-capture.md"]
 note_type = "runbook"

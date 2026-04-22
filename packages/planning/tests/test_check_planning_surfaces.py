@@ -63,6 +63,7 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
         "- Scope respected: yes\n"
         "- Proof status: satisfied\n"
         "- Intent served: yes\n"
+        "- Config compliance: respected checked-in and local config for the bounded slice.\n"
         "- Misinterpretation risk: low\n"
         "- Follow-on decision: archive-and-close\n"
         if status in {"completed", "done", "closed"}
@@ -70,6 +71,7 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
         "- Scope respected: pending\n"
         "- Proof status: pending\n"
         "- Intent served: pending\n"
+        "- Config compliance: pending\n"
         "- Misinterpretation risk: pending\n"
         "- Follow-on decision: pending\n"
     )
@@ -180,6 +182,7 @@ def _minimal_execplan(*, status: str = "in-progress") -> str:
 - Live working set: the active checker change, proof command, and closure state for this bounded slice.
 - Recoverable later: broader planning doctrine and archived lane history can be reloaded from checked-in docs if needed.
 - Externalize before shift: the exact next action, proof expectation, blocker state, and one scoped caution if the checker semantics change.
+- Pre-work config pull: ask which repo or local config materially constrains this bounded slice and where those limits must show up in execution bounds, stop conditions, or review.
 - Pre-work memory pull: ask what durable planning guidance should be recovered before execution and which planning surface it concerns.
 - Tiny resumability note: keep the warning-class boundary explicit if this slice is revisited later.
 - Context-shift triggers: shift when proof lands, when leaving planning-surface work, or when a handoff/interruption stops the slice.

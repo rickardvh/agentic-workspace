@@ -1338,6 +1338,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
             "live working set",
             "recoverable later",
             "externalize before shift",
+            "pre-work config pull",
             "tiny resumability note",
             "context-shift triggers",
         ):
@@ -1404,6 +1405,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
             "scope respected",
             "proof status",
             "intent served",
+            "config compliance",
             "misinterpretation risk",
             "follow-on decision",
         ):

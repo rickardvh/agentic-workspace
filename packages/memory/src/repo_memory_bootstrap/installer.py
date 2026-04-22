@@ -1854,6 +1854,8 @@ def _memory_trust_item(*, note: MemoryNoteRecord, target_root: Path) -> dict[str
         "matched_evidence": matched_paths,
         "preferred_remediation": note.preferred_remediation,
         "elimination_target": note.elimination_target,
+        "config_treatment": note.config_treatment,
+        "config_note": note.config_note,
     }
 
 

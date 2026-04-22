@@ -339,6 +339,7 @@ def _print_summary(summary: dict) -> None:
         print("Context budget contract view:")
         print(f"- Live working set: {context_budget_contract.get('live_working_set', '')}")
         print(f"- Recoverable later: {context_budget_contract.get('recoverable_later', '')}")
+        print(f"- Pre-work config pull: {context_budget_contract.get('pre_work_config_pull', '')}")
         print(f"- Pre-work memory pull: {context_budget_contract.get('pre_work_memory_pull', '')}")
         print(f"- Shift triggers: {context_budget_contract.get('context_shift_triggers', '')}")
     elif context_budget_contract:
@@ -374,6 +375,7 @@ def _print_summary(summary: dict) -> None:
         print(f"- Review status: {finished_run_review_contract.get('review_status', '')}")
         print(f"- Scope respected: {finished_run_review_contract.get('scope_respected', '')}")
         print(f"- Intent served: {finished_run_review_contract.get('intent_served', '')}")
+        print(f"- Config compliance: {finished_run_review_contract.get('config_compliance', '')}")
     elif finished_run_review_contract:
         print(
             "Finished-run review contract view: "
@@ -457,6 +459,7 @@ def _print_report(report: dict) -> None:
         context_budget_contract = active.get("context_budget_contract", {})
         if isinstance(context_budget_contract, dict) and context_budget_contract.get("status") == "present":
             print(f"Live working set: {context_budget_contract.get('live_working_set', '')}")
+            print(f"Pre-work config pull: {context_budget_contract.get('pre_work_config_pull', '')}")
             print(f"Pre-work memory pull: {context_budget_contract.get('pre_work_memory_pull', '')}")
         planning_record = active.get("planning_record", {})
         if isinstance(planning_record, dict) and planning_record.get("status") == "present":
@@ -556,6 +559,7 @@ def _print_handoff(handoff: dict) -> None:
     context_budget = contract.get("context_budget", {})
     if isinstance(context_budget, dict) and context_budget.get("status") == "present":
         print(f"- Live working set: {context_budget.get('live_working_set', '')}")
+        print(f"- Pre-work config pull: {context_budget.get('pre_work_config_pull', '')}")
         print(f"- Pre-work memory pull: {context_budget.get('pre_work_memory_pull', '')}")
         print(f"- Shift triggers: {context_budget.get('context_shift_triggers', '')}")
     worker_contract = contract.get("worker_contract", {})

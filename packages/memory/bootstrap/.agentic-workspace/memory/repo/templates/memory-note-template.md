@@ -22,10 +22,13 @@ Optional when the note exists because of repo friction rather than durable truth
 - `memory_role`: `durable_truth` or `improvement_signal`
 - `preferred_remediation`: `docs` | `skill` | `script` | `test` | `validation` | `refactor` | `code`
 - `elimination_target`: `shrink` | `promote` | `automate` | `refactor_away`
+- `config_treatment`: `promote` | `cleanup` | `retain` | `no_action`
+- `config_note`: short note describing which current config rule or posture shaped that treatment
 
 Use these when you want the package to recommend an upstream improvement that should reduce the note later.
 Prefer a concrete remediation target and an explicit post-remediation memory shape over vague prose.
 If the likely post-remediation shape is "delete this note", say so explicitly instead of assuming the note will continue by default.
+Use `config_treatment` and `config_note` when current repo or local config materially shapes how this signal should be treated after capture.
 
 ## Scope
 

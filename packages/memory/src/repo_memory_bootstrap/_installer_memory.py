@@ -25,6 +25,7 @@ from repo_memory_bootstrap._installer_shared import (
     ROUTING_FEEDBACK_MAX_RESOLVED,
     SHADOW_DOC_MIN_SHARED_TERMS,
     VALID_CANONICALITY_VALUES,
+    VALID_CONFIG_TREATMENT_VALUES,
     VALID_ELIMINATION_TARGET_VALUES,
     VALID_MEMORY_ROLE_VALUES,
     VALID_PREFERRED_REMEDIATION_VALUES,
@@ -106,6 +107,8 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
                 improvement_note=str(raw.get("improvement_note", "") or "").strip(),
                 elimination_target=str(raw.get("elimination_target", "") or "").strip(),
                 retention_justification=str(raw.get("retention_justification", "") or "").strip(),
+                config_treatment=str(raw.get("config_treatment", "") or "").strip(),
+                config_note=str(raw.get("config_note", "") or "").strip(),
             )
         )
 
@@ -333,6 +336,26 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 safety="manual",
                 source=note.path.as_posix(),
                 category="contract-drift",
+            )
+        if note.config_treatment and note.config_treatment not in VALID_CONFIG_TREATMENT_VALUES:
+            result.add(
+                "manual review",
+                target_root / note.path,
+                "manifest config_treatment must be one of: promote, cleanup, retain, no_action",
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="contract-drift",
+            )
+        if note.config_treatment and not note.config_note:
+            result.add(
+                "manual review",
+                target_root / note.path,
+                "manifest config_treatment should be paired with config_note so the shaping config cue is explicit",
+                role="memory-manifest",
+                safety="manual",
+                source=note.path.as_posix(),
+                category="manual-review",
             )
         if note.memory_role == "improvement_signal":
             has_remediation = bool(note.preferred_remediation and note.improvement_note)
@@ -1370,6 +1393,11 @@ def _manifest_improvement_hint(
         parts.append(note.improvement_note.rstrip("."))
     if note.retention_justification:
         parts.append(f"retention justification: {note.retention_justification.rstrip('.')}")
+    if note.config_treatment:
+        config_summary = note.config_treatment
+        if note.config_note:
+            config_summary = f"{config_summary} ({note.config_note.rstrip('.')})"
+        parts.append(f"config treatment: {config_summary}")
 
     if note.memory_role == "improvement_signal" and not parts:
         parts.append(("an upstream repo improvement rather than treating the memory note as the long-term endpoint"))
