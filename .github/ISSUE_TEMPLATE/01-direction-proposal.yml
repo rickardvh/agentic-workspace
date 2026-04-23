@@ -1,0 +1,105 @@
+name: Direction / Proposal
+description: File a new product direction, architectural proposal, or bounded planning slice.
+title: "[Workspace]: "
+labels:
+  - planning
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for new directions, architectural proposals, or bounded slices.
+
+        Use GitHub sub-issues for parent/child hierarchy.
+        This form is about **issue kind**, not hierarchy level.
+
+  - type: dropdown
+    id: issue_kind
+    attributes:
+      label: Issue kind
+      description: What kind of planning issue is this?
+      options:
+        - Parent direction / lane
+        - Child slice / bounded follow-on
+        - Cross-cutting proposal
+    validations:
+      required: true
+
+  - type: input
+    id: parent_issue
+    attributes:
+      label: Parent issue or lane
+      description: If this belongs under an existing parent, link it here (for example #270).
+      placeholder: "#270"
+    validations:
+      required: false
+
+  - type: textarea
+    id: problem_intent
+    attributes:
+      label: Problem / intent
+      description: What is missing, mis-shaped, or too weak today?
+      placeholder: Describe the real problem and intended direction.
+    validations:
+      required: true
+
+  - type: textarea
+    id: intended_outcome
+    attributes:
+      label: Intended outcome
+      description: What should become true if this lands?
+      placeholder: Describe the desired capability or improvement.
+    validations:
+      required: true
+
+  - type: textarea
+    id: larger_picture
+    attributes:
+      label: How it fits the larger picture
+      description: Which larger direction, system thesis, or product lane does this serve?
+      placeholder: Explain why this matters beyond the local change.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What is in scope and out of scope?
+      placeholder: |
+        In scope:
+        - ...
+
+        Out of scope:
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance / success signal
+      description: How would we know this direction has been meaningfully advanced?
+      placeholder: Define what better looks like.
+    validations:
+      required: true
+
+  - type: textarea
+    id: planning_expectations
+    attributes:
+      label: Planning expectations
+      description: Any guidance for future slicing, implementation posture, or boundaries.
+      placeholder: Keep this compact and operational.
+    validations:
+      required: false
+
+  - type: textarea
+    id: related_references
+    attributes:
+      label: References
+      description: Link related issues, files, documents, PRs, or screenshots.
+      placeholder: |
+        - #...
+        - path/to/file
+        - https://...
+    validations:
+      required: false

@@ -1,5 +1,5 @@
-name: Bug Report
-description: Report a correctness, reliability, or regression issue in the repo or shipped packages.
+name: Bug / Regression
+description: Report a correctness, reliability, or regression problem in the repo or shipped product.
 title: "[Bug]: "
 labels:
   - bug
@@ -10,13 +10,12 @@ body:
         Use this form for broken behavior, regressions, and reliability failures.
 
         Before filing, ask:
-        "Could or should this have been found, prevented, or remediated by the product itself?"
+        “Could or should this have been found, prevented, or remediated by the product itself?”
 
   - type: checkboxes
     id: existing_issue
     attributes:
       label: Existing issue check
-      description: Avoid filing duplicate reports.
       options:
         - label: I searched the existing issues first
           required: true
@@ -26,12 +25,15 @@ body:
     attributes:
       label: Affected surface
       options:
-        - planning package
-        - memory package
-        - repo workflow or instructions
-        - docs or contract surfaces
-        - validation or checks
-        - unknown yet
+        - Workspace / orchestrator
+        - Planning surfaces
+        - Memory surfaces
+        - Structured config
+        - Workflow substrate
+        - System intent
+        - Startup / routing adapters
+        - Proof / review / validation
+        - Repo-local / unknown
     validations:
       required: true
 
@@ -39,7 +41,7 @@ body:
     id: current_behavior
     attributes:
       label: Current behavior
-      placeholder: What broke, what failed, or what produced the wrong result?
+      placeholder: What broke, failed, or produced the wrong result?
     validations:
       required: true
 
@@ -68,7 +70,7 @@ body:
     id: evidence
     attributes:
       label: Evidence
-      description: Include logs, file paths, screenshots, linked reviews, or related commits.
+      description: Include logs, file paths, screenshots, issue links, or related commits.
       placeholder: Paste the smallest useful evidence set.
     validations:
       required: false
@@ -102,4 +104,3 @@ body:
         - Useful follow-up, not urgent
     validations:
       required: true
-

@@ -1,0 +1,90 @@
+name: Review / Friction
+description: Report review gaps, trust gaps, dogfooding friction, or product-vs-repo ambiguity.
+title: "[Review]: "
+labels:
+  - review
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when the main problem is not a simple bug or a new direction,
+        but that the system is too hard to review, trust, continue, hand off, or use cleanly.
+
+  - type: dropdown
+    id: issue_kind
+    attributes:
+      label: Issue kind
+      options:
+        - Review / trust gap
+        - Dogfooding friction
+        - Product-vs-repo ambiguity
+        - Continuation / handoff friction
+    validations:
+      required: true
+
+  - type: input
+    id: parent_issue
+    attributes:
+      label: Related issue or lane
+      description: If this belongs under an existing lane, link it here.
+      placeholder: "#..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: observed_problem
+    attributes:
+      label: Observed problem
+      description: What was hard to inspect, trust, review, continue, or use?
+      placeholder: Describe the friction or trust gap concretely.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Include issue links, file paths, screenshots, transcripts, or other concrete evidence.
+      placeholder: Paste the smallest useful evidence set.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: likely_classification
+    attributes:
+      label: Likely classification
+      description: What kind of problem does this appear to be?
+      options:
+        - Product-general issue
+        - Repo-local adaptation need
+        - Mixed / unclear
+    validations:
+      required: true
+
+  - type: dropdown
+    id: product_should_absorb
+    attributes:
+      label: Should the product absorb this first?
+      options:
+        - "Yes"
+        - "Maybe"
+        - "No"
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired_signal
+    attributes:
+      label: Desired review or workflow signal
+      description: What should the system surface, preserve, or make cheaper?
+      placeholder: Describe the missing signal, check, or support.
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What cheaper correction should become possible?
+      placeholder: Explain what should become easier after this is addressed.
+    validations:
+      required: true

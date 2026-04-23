@@ -1,6 +1,9 @@
 blank_issues_enabled: false
 
 contact_links:
-  - name: Issue template guidance
+  - name: Template guidance
     url: https://github.com/rickardvh/agentic-workspace
-    about: Intent issues are the default. Use execution slices and reviews only when tighter scoping is materially useful.
+    about: |
+      Use GitHub sub-issues for hierarchy.
+      Choose a template based on issue kind:
+      Direction / proposal, Bug / regression, or Review / friction.
