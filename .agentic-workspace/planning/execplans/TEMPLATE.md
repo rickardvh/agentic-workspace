@@ -127,6 +127,21 @@ Do not turn it into a broad notebook or second memory surface.
 Use `none` only when the slice is so local that delegated-judgment framing would add no value.
 Otherwise keep this section compact and specific so later contributors do not have to reconstruct the intended end state, allowed local latitude, or escalation triggers from chat residue.
 
+## References
+
+- kind: issue | target: #123 | role: context | label: Parent issue
+
+Use this section when the plan should point explicitly at important artifacts instead of relying on prose mentions alone.
+Keep each entry lightweight and typed:
+
+- `kind`: issue | file | range | url | image | plan | proof | artifact
+- `target`: the canonical pointer such as `#123`, `src/app.py`, or `https://...`
+- `role`: context | dependency | implementation-target | proof-artifact | review-target | related-work | visual-reference
+- `label`: optional short human hint
+- `locator`: optional extra precision such as `L10-L30`, `page 2`, or `figure A`
+
+Prefer one compact reference row per artifact that later continuation, review, or delegation should not have to rediscover from prose.
+
 ## Active Milestone
 
 - Status:

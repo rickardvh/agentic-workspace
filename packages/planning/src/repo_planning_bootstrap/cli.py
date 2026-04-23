@@ -546,6 +546,21 @@ def _print_handoff(handoff: dict) -> None:
     print(f"- Read first: {', '.join(contract.get('read_first', []))}")
     print(f"- Write scope: {', '.join(contract.get('owned_write_scope', []))}")
     print(f"- Proof: {', '.join(contract.get('proof_expectations', []))}")
+    references = contract.get("references", [])
+    if references:
+        rendered = []
+        for reference in references:
+            if not isinstance(reference, dict):
+                continue
+            target = str(reference.get("target", "")).strip()
+            if not target:
+                continue
+            rendered.append(
+                f"{reference.get('kind', 'artifact')}:{target}"
+                + (f" ({reference.get('role', 'context')})" if reference.get("role") else "")
+            )
+        if rendered:
+            print(f"- References: {', '.join(rendered)}")
     capability_posture = contract.get("capability_posture", {})
     if isinstance(capability_posture, dict) and capability_posture:
         print(

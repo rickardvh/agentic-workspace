@@ -79,6 +79,15 @@
     "agent may decide locally": "",
     "escalate when": ""
   },
+  "references": [
+    {
+      "kind": "",
+      "target": "",
+      "label": "",
+      "role": "",
+      "locator": ""
+    }
+  ],
   "active_milestone": {
     "id": "",
     "status": "",

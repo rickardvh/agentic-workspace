@@ -130,6 +130,8 @@ PAYLOAD_GUIDANCE_FRAGMENTS = {
 TODO_EMPTY_STATE_LINE = "- No active work right now."
 _COMPATIBILITY_VIEW_NOTICE = "<!-- GENERATED COMPATIBILITY VIEW: authoritative source is .agentic-workspace/planning/state.toml -->"
 EXECPLAN_RECORD_KIND = "planning-execplan/v1"
+PLANNING_REFERENCE_KIND_DEFAULT = "artifact"
+PLANNING_REFERENCE_ROLE_DEFAULT = "context"
 
 PACKAGE_MANAGED_FILES = tuple(
     relative for relative in REQUIRED_PAYLOAD_FILES if relative not in ROOT_SURFACE_FILES and relative not in GENERATED_PAYLOAD_FILES
@@ -146,6 +148,7 @@ EXECPLAN_SECTION_ORDER: tuple[tuple[str, str, str], ...] = (
     ("Stop Conditions", "stop_conditions", "dict"),
     ("Context Budget", "context_budget", "dict"),
     ("Delegated Judgment", "delegated_judgment", "dict"),
+    ("References", "references", "references"),
     ("Active Milestone", "active_milestone", "dict"),
     ("Immediate Next Action", "immediate_next_action", "list"),
     ("Blockers", "blockers", "list"),
@@ -380,6 +383,68 @@ def _record_section_list(record: dict[str, Any] | None, key: str) -> list[str] |
     return [str(item).strip() for item in raw if str(item).strip()]
 
 
+def _normalize_reference_record(raw: Any) -> dict[str, str] | None:
+    if not isinstance(raw, dict):
+        return None
+    target = str(raw.get("target", "")).strip()
+    if not target:
+        return None
+    reference = {
+        "kind": str(raw.get("kind", "")).strip() or PLANNING_REFERENCE_KIND_DEFAULT,
+        "target": target,
+        "label": str(raw.get("label", "")).strip(),
+        "role": str(raw.get("role", "")).strip() or PLANNING_REFERENCE_ROLE_DEFAULT,
+        "locator": str(raw.get("locator", "")).strip(),
+    }
+    return {key: value for key, value in reference.items() if value}
+
+
+def _record_section_references(record: dict[str, Any] | None, key: str) -> list[dict[str, str]] | None:
+    if not isinstance(record, dict):
+        return None
+    raw = record.get(key)
+    if not isinstance(raw, list):
+        return None
+    references: list[dict[str, str]] = []
+    for item in raw:
+        reference = _normalize_reference_record(item)
+        if reference is not None and reference not in references:
+            references.append(reference)
+    return references
+
+
+def _render_reference_line(reference: dict[str, str]) -> str:
+    ordered_keys = ("kind", "target", "role", "label", "locator")
+    return "- " + " | ".join(f"{key}: {reference[key]}" for key in ordered_keys if reference.get(key))
+
+
+def _parse_reference_line(line: str) -> dict[str, str] | None:
+    stripped = line.strip()
+    if not stripped.startswith("- "):
+        return None
+    fields: dict[str, str] = {}
+    for fragment in stripped[2:].split("|"):
+        key, separator, value = fragment.partition(":")
+        if not separator:
+            continue
+        normalized_key = key.strip().lower()
+        if normalized_key not in {"kind", "target", "label", "role", "locator"}:
+            continue
+        normalized_value = value.strip()
+        if normalized_value:
+            fields[normalized_key] = normalized_value
+    return _normalize_reference_record(fields)
+
+
+def _extract_reference_section(path: Path, section_name: str) -> list[dict[str, str]]:
+    references: list[dict[str, str]] = []
+    for line in _section_lines(_read_lines(path), section_name):
+        reference = _parse_reference_line(line)
+        if reference is not None and reference not in references:
+            references.append(reference)
+    return references
+
+
 def _render_execplan_markdown_from_record(record: dict[str, Any]) -> str:
     lines = [f"# {str(record.get('title', 'Plan Title')).strip() or 'Plan Title'}", ""]
     machine_contract = record.get("machine_readable_contract", {})
@@ -402,6 +467,15 @@ def _render_execplan_markdown_from_record(record: dict[str, Any]) -> str:
                 continue
             for field, field_value in value.items():
                 lines.append(f"- {str(field).strip().capitalize()}: {str(field_value).strip()}")
+        elif value_kind == "references":
+            if not isinstance(value, list):
+                continue
+            rendered_references = [_normalize_reference_record(item) for item in value]
+            rendered_references = [item for item in rendered_references if item is not None]
+            if not rendered_references:
+                rendered_references = [{"kind": "artifact", "target": "none", "role": "context"}]
+            for reference in rendered_references:
+                lines.append(_render_reference_line(reference))
         else:
             if not isinstance(value, list):
                 continue
@@ -1090,6 +1164,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "hard_constraints",
                 "agent_may_decide",
                 "capability_posture",
+                "references",
                 "next_action",
                 "proof_expectations",
                 "proof_report",
@@ -1111,6 +1186,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "active_contract": [
                 "todo_item",
                 "intent",
+                "references",
                 "touched_scope",
                 "proof_expectations",
                 "tool_verification",
@@ -1220,6 +1296,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "hard_constraints",
                 "agent_may_decide",
                 "capability_posture",
+                "references",
                 "next_action",
                 "completion_criteria",
                 "read_first",
@@ -2014,11 +2091,13 @@ def _active_intent_contract(
     touched_scope = _extract_section_bullets(plan_path, "Touched Paths")
     proof_expectations = _extract_section_bullets(plan_path, "Validation Commands")
     required_tools = [tool for tool in _extract_section_bullets(plan_path, "Required Tools") if tool.lower() not in {"none", "none."}]
+    references = _execplan_references(plan_path)
     minimal_refs = _dedupe(
         [
             ".agentic-workspace/planning/state.toml",
             plan_path.relative_to(target_root).as_posix(),
             *([surface] if surface else []),
+            *(reference.get("target", "") for reference in references),
         ]
     )
     return {
@@ -2035,6 +2114,7 @@ def _active_intent_contract(
             "escalate_when": escalate_when,
         },
         "capability_posture": _execplan_capability_posture(plan_path),
+        "references": references,
         "touched_scope": touched_scope,
         "proof_expectations": proof_expectations,
         "tool_verification": {
@@ -2146,6 +2226,7 @@ def _canonical_planning_record(
         "hard_constraints": str(active_contract["intent"]["hard_constraints"]).strip(),
         "agent_may_decide": str(active_contract["intent"]["agent_may_decide"]).strip(),
         "capability_posture": dict(active_contract.get("capability_posture", {})),
+        "references": list(active_contract.get("references", [])),
         "next_action": str(resumable_contract["current_next_action"]).strip(),
         "proof_expectations": list(resumable_contract.get("proof_expectations", [])),
         "proof_report": proof_report,
@@ -2654,6 +2735,7 @@ def _active_handoff_contract(
         "hard_constraints": str(planning_record.get("hard_constraints", "")).strip(),
         "agent_may_decide": str(planning_record.get("agent_may_decide", "")).strip(),
         "capability_posture": dict(planning_record.get("capability_posture", {})),
+        "references": list(planning_record.get("references", [])),
         "next_action": str(planning_record.get("next_action", "")).strip(),
         "completion_criteria": list(planning_record.get("completion_criteria", [])),
         "read_first": list(planning_record.get("minimal_refs", [])),
@@ -3994,6 +4076,7 @@ def _build_execplan_record_from_todo_item(
             "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
             "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
         },
+        "references": [],
         "active_milestone": {
             "id": item_id,
             "status": status,
@@ -4135,6 +4218,13 @@ def _execplan_context_budget(path: Path) -> dict[str, str]:
         return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Context Budget"))
+
+
+def _execplan_references(path: Path) -> list[dict[str, str]]:
+    record = _record_section_references(_load_execplan_record(path), "references")
+    if record is not None:
+        return record
+    return _extract_reference_section(path, "References")
 
 
 def _execplan_execution_run(path: Path) -> dict[str, str]:

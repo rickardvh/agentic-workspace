@@ -71,7 +71,13 @@ def _write_finished_work_evidence(path: Path, *, items: list[dict[str, object]])
     )
 
 
-def _write_execplan_record(path: Path, *, item_id: str = "plan-alpha", status: str = "in-progress") -> None:
+def _write_execplan_record(
+    path: Path,
+    *,
+    item_id: str = "plan-alpha",
+    status: str = "in-progress",
+    references: list[dict[str, str]] | None = None,
+) -> None:
     record = installer_mod._build_execplan_record_from_todo_item(
         title="Plan Alpha",
         item_id=item_id,
@@ -80,6 +86,8 @@ def _write_execplan_record(path: Path, *, item_id: str = "plan-alpha", status: s
         next_action="add one checker.",
         done_when="the bounded change is implemented and validated.",
     )
+    if references is not None:
+        record["references"] = references
     if status in {"completed", "done", "closed"}:
         record["iterative_follow_through"] = {
             "what this slice enabled": "one bounded planning improvement landed",
@@ -1309,6 +1317,63 @@ def test_planning_summary_prefers_canonical_execplan_record_when_markdown_stales
     assert summary["planning_record"]["requested_outcome"] == "this item needs a bounded execution contract."
     assert summary["planning_record"]["next_action"] == "add one checker."
     assert summary["planning_record"]["task"]["surface"] == ".agentic-workspace/planning/execplans/plan-alpha.md"
+
+
+def test_planning_summary_and_handoff_expose_structured_execplan_references(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: .agentic-workspace/planning/execplans/plan-alpha.md
+  Why now: keep explicit references queryable for continuation and handoff.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write_execplan_record(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json",
+        references=[
+            {
+                "kind": "issue",
+                "target": "#280",
+                "role": "related-work",
+                "label": "Structured references",
+            },
+            {
+                "kind": "file",
+                "target": "packages/planning/src/repo_planning_bootstrap/installer.py",
+                "role": "implementation-target",
+                "locator": "L2000-L2100",
+            },
+        ],
+    )
+
+    summary = planning_summary(target=tmp_path)
+    handoff = planning_handoff(target=tmp_path)
+
+    assert summary["planning_record"]["references"] == [
+        {
+            "kind": "issue",
+            "target": "#280",
+            "role": "related-work",
+            "label": "Structured references",
+        },
+        {
+            "kind": "file",
+            "target": "packages/planning/src/repo_planning_bootstrap/installer.py",
+            "role": "implementation-target",
+            "locator": "L2000-L2100",
+        },
+    ]
+    assert "#280" in summary["active_contract"]["minimal_refs"]
+    assert "packages/planning/src/repo_planning_bootstrap/installer.py" in summary["active_contract"]["minimal_refs"]
+    assert handoff["handoff_contract"]["references"][0]["target"] == "#280"
+    assert handoff["handoff_contract"]["references"][1]["role"] == "implementation-target"
 
 
 def test_archive_execplan_blocks_unfinished_larger_intent_without_continuation_surface(tmp_path: Path) -> None:
