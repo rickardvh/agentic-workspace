@@ -89,11 +89,16 @@ def scan_file(path: Path) -> list[Finding]:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Fail when tracked files contain absolute filesystem paths.")
+    parser.add_argument(
+        "--quiet-success",
+        action="store_true",
+        help="Emit a compact one-line success message when no findings are present.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
-    parse_args(argv)
+    args = parse_args(argv)
 
     findings: list[Finding] = []
     for path in _tracked_files(REPO_ROOT):
@@ -101,7 +106,10 @@ def main(argv: list[str] | None = None) -> int:
             findings.extend(scan_file(path))
 
     if not findings:
-        print("No absolute filesystem paths found in tracked files.")
+        if args.quiet_success:
+            print("[ok] no absolute filesystem paths")
+        else:
+            print("No absolute filesystem paths found in tracked files.")
         return 0
 
     print("Absolute filesystem paths found in tracked files:")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import tempfile
 from pathlib import Path
 
@@ -15,6 +16,16 @@ from agentic_workspace.contract_tooling import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Validate contract-tooling schemas, samples, and parity surfaces.")
+    parser.add_argument(
+        "--quiet-success",
+        action="store_true",
+        help="Emit a compact one-line success message when no drift warnings are present.",
+    )
+    return parser.parse_args(argv)
 
 
 def _validator(schema_name: str) -> Draft202012Validator:
@@ -163,7 +174,8 @@ def _sample_setup_findings_payload() -> dict[str, object]:
     }
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    args = _parse_args(argv)
     checks: list[tuple[str, list[str]]] = [
         ("compact_contract_profile.json", _validate(compact_contract_manifest(), "selector_contracts_manifest.schema.json")),
         ("proof_routes.json", _validate(proof_routes_manifest(), "proof_routes_manifest.schema.json")),
@@ -264,8 +276,11 @@ def main() -> int:
             for error in errors:
                 print(f"- [{name}] {error}")
         return 1
-    print("Contract tooling health report")
-    print("- No contract-tooling drift warnings detected.")
+    if args.quiet_success:
+        print("[ok] contract tooling")
+    else:
+        print("Contract tooling health report")
+        print("- No contract-tooling drift warnings detected.")
     return 0
 
 

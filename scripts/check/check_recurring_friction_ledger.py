@@ -46,6 +46,11 @@ def gather_ledger_warnings(*, repo_root: Path = REPO_ROOT) -> list[LedgerWarning
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--format", choices=("text", "json"), default="text")
+    parser.add_argument(
+        "--quiet-success",
+        action="store_true",
+        help="Emit a compact one-line success message when no warnings are present.",
+    )
     args = parser.parse_args()
 
     warnings = gather_ledger_warnings()
@@ -61,12 +66,15 @@ def main() -> int:
             )
         )
     else:
-        print("Recurring friction ledger health report")
-        if not warnings:
-            print("- No recurring-friction ledger warnings detected.")
+        if args.quiet_success and not warnings:
+            print("[ok] recurring friction ledger")
         else:
-            for warning in warnings:
-                print(f"- {warning.warning_class}: {warning.path}: {warning.message}")
+            print("Recurring friction ledger health report")
+            if not warnings:
+                print("- No recurring-friction ledger warnings detected.")
+            else:
+                for warning in warnings:
+                    print(f"- {warning.warning_class}: {warning.path}: {warning.message}")
     if any(warning.warning_class in {"missing_recurring_friction_ledger", "recurring_friction_structure"} for warning in warnings):
         return 1
     return 0
