@@ -14,16 +14,19 @@ requires_human_verification_on_pr = true
 
 [delegation_targets.gpt_5_4]
 strength = "strong"
+location = "either"
 confidence = 0.92
 task_fit = [
   "ambiguous-contract-shaping",
   "boundary-decisions",
   "cross-cutting-review",
 ]
+capability_classes = ["boundary-shaping", "reasoning-heavy"]
 execution_methods = ["internal", "api"]
 
 [delegation_targets.gpt_5_4_mini]
 strength = "weak"
+location = "either"
 confidence = 0.62
 task_fit = [
   "bounded-implementation",
@@ -31,24 +34,29 @@ task_fit = [
   "narrow-tests",
   "mechanical-follow-through",
 ]
+capability_classes = ["mechanical-follow-through", "mixed"]
 execution_methods = ["internal", "api"]
 
 [delegation_targets.github_copilot]
 strength = "medium"
+location = "external"
 confidence = 0.72
 task_fit = [
   "bounded-implementation",
   "narrow-tests",
   "mechanical-follow-through",
 ]
+capability_classes = ["mixed", "mechanical-follow-through"]
 execution_methods = ["cli", "api"]
 
 [delegation_targets.opencode_big_pickle]
 strength = "weak"
+location = "external"
 confidence = 0.45
 task_fit = [
   "bounded-docs",
   "narrow-tests",
   "mechanical-follow-through",
 ]
+capability_classes = ["mechanical-follow-through"]
 execution_methods = ["cli"]

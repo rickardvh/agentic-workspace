@@ -29,6 +29,8 @@ from agentic_workspace.config import (
     MEMORY_WORKFLOW_MARKER_END,
     MEMORY_WORKFLOW_MARKER_START,
     SUPPORTED_AGENT_INSTRUCTIONS_FILES,
+    SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
+    SUPPORTED_CAPABILITY_LOCATIONS,
     SUPPORTED_DELEGATION_OUTCOMES,
     SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS,
     SUPPORTED_DELEGATION_TARGET_STRENGTHS,
@@ -93,8 +95,10 @@ MIXED_AGENT_LOCAL_OVERRIDE_FIELDS = (
     "safety.safe_to_auto_run_commands",
     "safety.requires_human_verification_on_pr",
     "delegation_targets.<target>.strength",
+    "delegation_targets.<target>.location",
     "delegation_targets.<target>.confidence",
     "delegation_targets.<target>.task_fit",
+    "delegation_targets.<target>.capability_classes",
     "delegation_targets.<target>.execution_methods",
 )
 WORKSPACE_PAYLOAD_FILES = (
@@ -3253,6 +3257,25 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
     }
 
     if isinstance(planning_record, dict) and planning_record.get("status") == "present" and has_active_execplan:
+        capability_posture = planning_record.get("capability_posture", {}) if isinstance(planning_record, dict) else {}
+        target_profiles = mixed_agent.get("delegation_targets", {}).get("profiles", [])
+        resolution = []
+        if isinstance(capability_posture, dict) and capability_posture:
+            for profile_payload in target_profiles:
+                profile_name = str(profile_payload.get("name", "")).strip()
+                profile = next((item for item in config.local_override.delegation_targets if item.name == profile_name), None)
+                if profile is None:
+                    continue
+                resolution.append(
+                    {
+                        "name": profile.name,
+                        "strength": profile.strength,
+                        "location": profile.location,
+                        "capability_classes": list(profile.capability_classes),
+                        **_capability_resolution_for_profile(profile=profile, capability_posture=capability_posture),
+                    }
+                )
+            resolution.sort(key=lambda item: (-int(item["score"]), str(item["name"])))
         payload["task_shape"] = {
             "id": "planning-backed-broad-work",
             "summary": "The current slice is already planning-backed with an active execplan.",
@@ -3266,6 +3289,9 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
             "surface": planning_record.get("task", {}).get("surface", ""),
             "next_action": planning_record.get("next_action", ""),
         }
+        if isinstance(capability_posture, dict) and capability_posture:
+            payload["capability_posture"] = capability_posture
+            payload["resolved_targets"] = resolution
         if strong_planner and cheap_executor:
             payload["recommendation"] = {
                 "id": "planner-first-then-bounded-executor",
@@ -3280,6 +3306,7 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
                     "allowed_execution_methods",
                     ["internal delegation", "external cli or api", "single-agent fallback"],
                 ),
+                "best_target_fits": [target["name"] for target in resolution if target.get("status") == "recommended"][:3],
                 "deviation_visibility": (
                     "If you intentionally stay direct for this planning-backed slice, record the reason in the active "
                     "execplan's Iterative Follow-Through, Execution Summary, or Drift Log instead of leaving the deviation implicit."
@@ -4902,6 +4929,8 @@ def _defaults_payload() -> dict[str, Any]:
                 "status": "supported-local-only",
                 "supported_fields": list(MIXED_AGENT_LOCAL_OVERRIDE_FIELDS),
                 "supported_target_strengths": list(SUPPORTED_DELEGATION_TARGET_STRENGTHS),
+                "supported_target_locations": list(SUPPORTED_CAPABILITY_LOCATIONS),
+                "supported_capability_classes": list(SUPPORTED_CAPABILITY_EXECUTION_CLASSES),
                 "supported_target_execution_methods": list(SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS),
                 "intended_scope": [
                     "machine-specific capability posture",
@@ -4965,6 +4994,14 @@ def _defaults_payload() -> dict[str, Any]:
                 "Do not treat config as a scheduler.",
                 "Do not delegate when the task stays cheap and direct.",
                 "Do not silently rewrite ends.",
+            ],
+            "capability_posture_fields": [
+                "execution class",
+                "recommended strength",
+                "preferred location",
+                "delegation friendly",
+                "strong external reasoning",
+                "why",
             ],
         },
         "skill_discovery": {
@@ -6073,6 +6110,98 @@ def _delegation_target_advisory(profile: DelegationTargetProfile) -> dict[str, s
     }
 
 
+def _strength_rank(strength: str) -> int:
+    return {
+        "weak": 1,
+        "medium": 2,
+        "strong": 3,
+    }[strength]
+
+
+def _location_match_score(*, preferred_location: str, target_location: str) -> int:
+    if preferred_location == target_location:
+        return 2
+    if preferred_location == "either" or target_location == "either":
+        return 1
+    return -2
+
+
+def _capability_resolution_for_profile(
+    *,
+    profile: DelegationTargetProfile,
+    capability_posture: dict[str, Any],
+) -> dict[str, Any]:
+    recommended_strength = str(capability_posture.get("recommended strength", "")).strip()
+    execution_class = str(capability_posture.get("execution class", "")).strip()
+    preferred_location = str(capability_posture.get("preferred location", "")).strip() or "either"
+    delegation_friendly = str(capability_posture.get("delegation friendly", "")).strip()
+    strong_external_reasoning = str(capability_posture.get("strong external reasoning", "")).strip()
+
+    score = 0
+    reasons: list[str] = []
+
+    if recommended_strength:
+        profile_rank = _strength_rank(profile.strength)
+        required_rank = _strength_rank(recommended_strength)
+        if profile_rank < required_rank:
+            score -= 3
+            reasons.append("target strength is below the recommended strength")
+        elif profile.strength == recommended_strength:
+            score += 3
+            reasons.append("target strength matches the recommended strength")
+        else:
+            score += 1
+            reasons.append("target strength exceeds the recommended strength")
+
+    location_score = _location_match_score(preferred_location=preferred_location, target_location=profile.location)
+    score += location_score
+    if location_score > 1:
+        reasons.append("target location matches the preferred location")
+    elif location_score > 0:
+        reasons.append("target location remains acceptable because one side is location-agnostic")
+    else:
+        reasons.append("target location conflicts with the preferred location")
+
+    if execution_class:
+        if execution_class in profile.capability_classes:
+            score += 2
+            reasons.append("target advertises support for the required capability class")
+        elif profile.capability_classes:
+            score -= 1
+            reasons.append("target does not advertise the required capability class")
+
+    if delegation_friendly == "yes":
+        if "internal" in profile.execution_methods or "cli" in profile.execution_methods or "api" in profile.execution_methods:
+            score += 1
+            reasons.append("target exposes an execution method that keeps delegation viable")
+
+    if strong_external_reasoning == "preferred":
+        if profile.location == "external":
+            score += 2
+            reasons.append("target satisfies the strong-external preference directly")
+        elif profile.location == "either":
+            score += 1
+            reasons.append("target can satisfy the strong-external preference through a location-agnostic profile")
+        else:
+            score -= 2
+            reasons.append("target stays local despite a strong-external preference")
+    elif strong_external_reasoning == "avoid" and profile.location == "external":
+        score -= 1
+        reasons.append("target is external even though strong external reasoning is not preferred")
+
+    if score >= 5:
+        status = "recommended"
+    elif score >= 2:
+        status = "acceptable"
+    else:
+        status = "poor-fit"
+    return {
+        "status": status,
+        "score": score,
+        "reasons": reasons,
+    }
+
+
 def _record_delegation_outcome(
     *,
     target_root: Path,
@@ -6173,18 +6302,24 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             ),
             "supported_fields": [
                 "delegation_targets.<target>.strength",
+                "delegation_targets.<target>.location",
                 "delegation_targets.<target>.confidence",
                 "delegation_targets.<target>.task_fit",
+                "delegation_targets.<target>.capability_classes",
                 "delegation_targets.<target>.execution_methods",
             ],
             "supported_strengths": list(SUPPORTED_DELEGATION_TARGET_STRENGTHS),
+            "supported_locations": list(SUPPORTED_CAPABILITY_LOCATIONS),
+            "supported_capability_classes": list(SUPPORTED_CAPABILITY_EXECUTION_CLASSES),
             "supported_execution_methods": list(SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS),
             "profiles": [
                 {
                     "name": profile.name,
                     "strength": profile.strength,
+                    "location": profile.location,
                     "confidence": profile.confidence,
                     "task_fit": list(profile.task_fit),
+                    "capability_classes": list(profile.capability_classes),
                     "execution_methods": list(profile.execution_methods),
                     "advisory": _delegation_target_advisory(profile),
                     "outcome_evidence": _delegation_outcome_advisory(

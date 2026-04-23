@@ -28,8 +28,8 @@
 - What this slice enabled: planning-backed work can now declare typed capability posture, planning handoff can carry it, and workspace mixed-agent reporting can resolve it against local target hints.
 - Intentionally deferred: richer workflow-engine semantics, full scheduler policy, and broader machine-first planning extraction.
 - Discovered implications: the current lane can close without changing ownership boundaries because the new posture remains advisory and compact.
-- Proof achieved now: milestone 1 is landed because the active execplan template, compact planning record, and delegated handoff view now carry typed capability posture.
-- Validation still needed: finish workspace target-resolution follow-through, then run focused planning and workspace CLI tests plus compact contract checks together.
+- Proof achieved now: milestone 2 is landed because local target profiles can now resolve the checked-in capability posture and the shipped docs/config example describe the posture as advisory rather than scheduler policy.
+- Validation still needed: run the combined planning and workspace proof set, then archive the lane and close the linked GitHub issues if the proof stays clean.
 - Next likely slice: archive the lane and continue to the machine-first planning chain only if a new owner deliberately promotes it.
 
 ## Intent Interpretation
@@ -83,16 +83,16 @@
 
 ## Active Milestone
 
-- ID: milestone-2
+- ID: milestone-3
 - Status: in-progress
-- Scope: extend workspace mixed-agent target profiles and execution-shape reporting so the active capability posture resolves against available local targets compactly.
+- Scope: run the lane proof, refresh closeout residue, archive the lane, and close the linked GitHub issues.
 - Ready: ready
 - Blocked: none
-- Optional_deps: milestone-3 lane closeout and archive
+- Optional_deps: none
 
 ## Immediate Next Action
 
-- Extend local target-profile metadata and workspace reporting so the active capability posture resolves without turning local config into scheduler policy.
+- Run the combined planning and workspace proof set, then archive the lane and close the linked GitHub issues if the proof stays clean.
 
 ## Blockers
 
@@ -103,8 +103,16 @@
 - .agentic-workspace/planning/state.toml
 - .agentic-workspace/planning/execplans/capability-class-delegation-and-handoff-posture-2026-04-23.md
 - .agentic-workspace/planning/execplans/TEMPLATE.plan.json
+- .agentic-workspace/config.local.toml
+- .agentic-workspace/docs/delegation-posture-contract.md
+- .agentic-workspace/docs/capability-aware-execution.md
+- src/agentic_workspace/config.py
+- src/agentic_workspace/doctor.py
+- src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json
+- src/agentic_workspace/cli.py
 - packages/planning/src/repo_planning_bootstrap/installer.py
 - packages/planning/src/repo_planning_bootstrap/cli.py
+- tests/test_workspace_cli.py
 - packages/planning/tests/test_installer.py
 
 ## Invariants
@@ -148,12 +156,12 @@
 - Run status: in-progress
 - Executor: Codex
 - Handoff source: agentic-planning-bootstrap handoff --format json
-- What happened: activated the lane in checked-in planning, added typed capability posture to the active execplan template, and projected that posture through the compact planning record plus delegated handoff contract.
-- Scope touched: .agentic-workspace/planning state and execplan surfaces plus planning installer, CLI, and focused planning tests.
-- Changed surfaces: .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/capability-class-delegation-and-handoff-posture-2026-04-23.md; .agentic-workspace/planning/execplans/TEMPLATE.plan.json; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/src/repo_planning_bootstrap/cli.py; packages/planning/tests/test_installer.py
-- Validations run: uv run pytest packages/planning/tests/test_installer.py -q -k handoff; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json
-- Result for continuation: workspace still needs to resolve the new posture against local target hints before the lane can close.
-- Next step: implement milestone 2 and commit it.
+- What happened: activated the lane in checked-in planning, added typed capability posture to the planning handoff contract, extended local target profiles plus execution-shape reporting to resolve that posture, and refreshed the shipped local config example plus delegation docs.
+- Scope touched: planning state and handoff surfaces, workspace config/schema/reporting code, shipped local target profiles, compact delegation docs, and focused planning/workspace tests.
+- Changed surfaces: .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/capability-class-delegation-and-handoff-posture-2026-04-23.md; .agentic-workspace/planning/execplans/TEMPLATE.plan.json; .agentic-workspace/config.local.toml; .agentic-workspace/docs/delegation-posture-contract.md; .agentic-workspace/docs/capability-aware-execution.md; src/agentic_workspace/config.py; src/agentic_workspace/doctor.py; src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json; src/agentic_workspace/cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/src/repo_planning_bootstrap/cli.py; tests/test_workspace_cli.py; packages/planning/tests/test_installer.py
+- Validations run: uv run pytest packages/planning/tests/test_installer.py -q -k handoff; uv run pytest tests/test_workspace_cli.py -q -k "delegation or execution_shape or config_command_reports_local_delegation_target_profiles"; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json
+- Result for continuation: the lane is functionally landed and only needs the combined proof set plus archive/issue closeout.
+- Next step: run the closeout proof set, archive the lane, and close #283 and #284.
 
 ## Finished-Run Review
 

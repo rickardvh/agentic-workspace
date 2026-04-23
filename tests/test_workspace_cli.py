@@ -287,11 +287,20 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "safety.safe_to_auto_run_commands",
         "safety.requires_human_verification_on_pr",
         "delegation_targets.<target>.strength",
+        "delegation_targets.<target>.location",
         "delegation_targets.<target>.confidence",
         "delegation_targets.<target>.task_fit",
+        "delegation_targets.<target>.capability_classes",
         "delegation_targets.<target>.execution_methods",
     ]
     assert payload["mixed_agent"]["local_override"]["supported_target_strengths"] == ["strong", "medium", "weak"]
+    assert payload["mixed_agent"]["local_override"]["supported_target_locations"] == ["local", "external", "either"]
+    assert payload["mixed_agent"]["local_override"]["supported_capability_classes"] == [
+        "boundary-shaping",
+        "reasoning-heavy",
+        "mixed",
+        "mechanical-follow-through",
+    ]
     assert payload["mixed_agent"]["local_override"]["supported_target_execution_methods"] == ["internal", "cli", "api"]
     assert payload["mixed_agent"]["local_outcome_artifact"] == {
         "path": ".agentic-workspace/delegation-outcomes.json",
@@ -325,6 +334,14 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "Do not treat config as a scheduler.",
         "Do not delegate when the task stays cheap and direct.",
         "Do not silently rewrite ends.",
+    ]
+    assert payload["delegation_posture"]["capability_posture_fields"] == [
+        "execution class",
+        "recommended strength",
+        "preferred location",
+        "delegation friendly",
+        "strong external reasoning",
+        "why",
     ]
     assert payload["config"]["path"] == ".agentic-workspace/config.toml"
     assert payload["config"]["command"] == "agentic-workspace config --target ./repo --format json"
@@ -667,6 +684,7 @@ def test_config_command_surfaces_unknown_local_override_fields_as_warnings(tmp_p
                 "",
                 "[delegation_targets.gpt_5_4_mini]",
                 'strength = "weak"',
+                'location = "either"',
                 'execution_methods = ["internal"]',
                 'unexpected = "note"',
             )
@@ -1419,12 +1437,16 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
         "schema_version = 1\n\n"
         "[delegation_targets.fast_docs]\n"
         'strength = "weak"\n'
+        'location = "external"\n'
         "confidence = 0.58\n"
         'task_fit = ["bounded-docs", "narrow-tests"]\n'
+        'capability_classes = ["mechanical-follow-through"]\n'
         'execution_methods = ["cli"]\n\n'
         "[delegation_targets.primary_planner]\n"
         'strength = "strong"\n'
+        'location = "local"\n'
         "confidence = 0.92\n"
+        'capability_classes = ["boundary-shaping", "reasoning-heavy"]\n'
         'execution_methods = ["internal", "api"]\n',
         encoding="utf-8",
     )
@@ -1436,14 +1458,18 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
     assert targets["status"] == "configured"
     fast_docs = next(item for item in targets["profiles"] if item["name"] == "fast_docs")
     assert fast_docs["strength"] == "weak"
+    assert fast_docs["location"] == "external"
     assert fast_docs["confidence"] == 0.58
     assert fast_docs["task_fit"] == ["bounded-docs", "narrow-tests"]
+    assert fast_docs["capability_classes"] == ["mechanical-follow-through"]
     assert fast_docs["execution_methods"] == ["cli"]
     assert fast_docs["advisory"] == {
         "handoff_detail": "high",
         "review_burden": "high",
     }
     planner = next(item for item in targets["profiles"] if item["name"] == "primary_planner")
+    assert planner["location"] == "local"
+    assert planner["capability_classes"] == ["boundary-shaping", "reasoning-heavy"]
     assert planner["execution_methods"] == ["internal", "api"]
     assert planner["advisory"] == {
         "handoff_detail": "compact",
@@ -1524,8 +1550,10 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
         "schema_version = 1\n\n"
         "[delegation_targets.gpt_5_4_mini]\n"
         'strength = "weak"\n'
+        'location = "external"\n'
         "confidence = 0.62\n"
         'task_fit = ["bounded-docs"]\n'
+        'capability_classes = ["mechanical-follow-through"]\n'
         'execution_methods = ["cli"]\n',
         encoding="utf-8",
     )
@@ -1578,6 +1606,8 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
         "record_count": 3,
     }
     mini = targets["profiles"][0]
+    assert mini["location"] == "external"
+    assert mini["capability_classes"] == ["mechanical-follow-through"]
     assert mini["outcome_evidence"]["record_count"] == 3
     assert mini["outcome_evidence"]["confidence"]["action"] == "raise"
     assert mini["outcome_evidence"]["task_fit"]["suggest_add"] == ["narrow-tests"]
@@ -2771,6 +2801,13 @@ def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_
         "- Hard constraints: Keep it advisory and config-driven.\n"
         "- Agent may decide locally: the smallest combined report surface.\n"
         "- Escalate when: a new source of truth would be required.\n\n"
+        "## Capability Posture\n\n"
+        "- Execution class: boundary-shaping\n"
+        "- Recommended strength: strong\n"
+        "- Preferred location: either\n"
+        "- Delegation friendly: yes\n"
+        "- Strong external reasoning: allowed\n"
+        "- Why: contract shaping needs stronger judgment before bounded follow-through.\n\n"
         "## Active Milestone\n\n"
         "- ID: execution-shape\n"
         "- Status: in-progress\n"
@@ -2801,9 +2838,12 @@ def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_
     assert execution_shape["task_shape"]["id"] == "planning-backed-broad-work"
     assert execution_shape["default_posture"]["planner_executor_pattern"] == "strong-planner-cheap-executor-available"
     assert execution_shape["default_posture"]["handoff_preference"] == "prefer-internal-when-safe"
+    assert execution_shape["capability_posture"]["execution class"] == "boundary-shaping"
     assert execution_shape["recommendation"]["id"] == "planner-first-then-bounded-executor"
     assert execution_shape["recommendation"]["consult"] == ["agentic-planning-bootstrap handoff --format json"]
+    assert execution_shape["recommendation"]["best_target_fits"] == []
     assert execution_shape["current_slice"]["task_id"] == "execution-shape-slice"
+    assert execution_shape["resolved_targets"] == []
     assert "active execplan" in execution_shape["task_shape"]["summary"]
 
 

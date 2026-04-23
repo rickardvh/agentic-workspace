@@ -61,6 +61,19 @@ The text form should stay short and stable:
 - `preferred split: planner -> implementer -> validator`
 - `config controls: .agentic-workspace/config.local.toml runtime, handoff, optional delegation-target posture fields, and local delegation outcome evidence`
 
+## Capability Posture
+
+When bounded work already has a checked-in execplan, let the handoff carry one compact capability posture packet:
+
+- `execution class`: `boundary-shaping`, `reasoning-heavy`, `mixed`, or `mechanical-follow-through`
+- `recommended strength`: `strong`, `medium`, or `weak`
+- `preferred location`: `local`, `external`, or `either`
+- `delegation friendly`: `yes`, `no`, or another short advisory cue
+- `strong external reasoning`: `avoid`, `allowed`, or `preferred`
+- `why`: one sentence explaining why the posture fits the slice
+
+Keep this posture advisory. The runtime or local layer may resolve it against configured target profiles, but the checked-in plan must not hard-bind one vendor, machine, or exact target by default.
+
 ## Relationship To Other Docs
 
 - Use [`docs/delegated-judgment-contract.md`](docs/delegated-judgment-contract.md) for the boundary between human-set outcomes and agent-local means.

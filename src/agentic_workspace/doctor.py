@@ -127,6 +127,10 @@ def check_contract_integrity() -> list[str]:
     delegation_target_schema = local_override_schema["properties"]["delegation_targets"]["patternProperties"]["^.+$"]
     if delegation_target_schema["properties"]["strength"]["enum"] != list(config.SUPPORTED_DELEGATION_TARGET_STRENGTHS):
         errors.append("workspace_local_override schema delegation target strengths drifted from config constants")
+    if delegation_target_schema["properties"]["location"]["enum"] != list(config.SUPPORTED_CAPABILITY_LOCATIONS):
+        errors.append("workspace_local_override schema delegation target locations drifted from config constants")
+    if delegation_target_schema["properties"]["capability_classes"]["items"]["enum"] != list(config.SUPPORTED_CAPABILITY_EXECUTION_CLASSES):
+        errors.append("workspace_local_override schema delegation target capability classes drifted from config constants")
     if delegation_target_schema["properties"]["execution_methods"]["items"]["enum"] != list(
         config.SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS
     ):

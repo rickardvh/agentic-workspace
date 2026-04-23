@@ -64,6 +64,14 @@
                 "weak"
               ]
             },
+            "location": {
+              "type": "string",
+              "enum": [
+                "local",
+                "external",
+                "either"
+              ]
+            },
             "confidence": {
               "type": "number",
               "minimum": 0,
@@ -74,6 +82,18 @@
               "items": {
                 "type": "string",
                 "minLength": 1
+              }
+            },
+            "capability_classes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "boundary-shaping",
+                  "reasoning-heavy",
+                  "mixed",
+                  "mechanical-follow-through"
+                ]
               }
             },
             "execution_methods": {

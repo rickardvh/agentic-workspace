@@ -56,6 +56,17 @@ SUPPORTED_DELEGATION_TARGET_STRENGTHS = (
     "medium",
     "weak",
 )
+SUPPORTED_CAPABILITY_EXECUTION_CLASSES = (
+    "boundary-shaping",
+    "reasoning-heavy",
+    "mixed",
+    "mechanical-follow-through",
+)
+SUPPORTED_CAPABILITY_LOCATIONS = (
+    "local",
+    "external",
+    "either",
+)
 SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS = (
     "internal",
     "cli",
@@ -107,9 +118,11 @@ class ModuleUpdatePolicy:
 class DelegationTargetProfile:
     name: str
     strength: str
+    location: str
     execution_methods: tuple[str, ...]
     confidence: float | None
     task_fit: tuple[str, ...]
+    capability_classes: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -419,7 +432,9 @@ def load_delegation_target_profiles(
         target_path = Path(f"{config_path.as_posix()} delegation_targets.{target_name}")
         if not isinstance(raw_profile, dict):
             raise WorkspaceUsageError(f"{target_path.as_posix()} must be a table.")
-        unknown_fields = sorted(set(raw_profile) - {"strength", "confidence", "task_fit", "execution_methods"})
+        unknown_fields = sorted(
+            set(raw_profile) - {"strength", "location", "confidence", "task_fit", "capability_classes", "execution_methods"}
+        )
         if unknown_fields:
             unknown_text = ", ".join(unknown_fields)
             warnings.append(f"{target_path.as_posix()} contains unsupported field(s): {unknown_text}.")
@@ -428,6 +443,10 @@ def load_delegation_target_profiles(
         if not isinstance(strength, str) or strength not in SUPPORTED_DELEGATION_TARGET_STRENGTHS:
             allowed_text = ", ".join(SUPPORTED_DELEGATION_TARGET_STRENGTHS)
             raise WorkspaceUsageError(f"{target_path.as_posix()} strength must be one of: {allowed_text}.")
+        raw_location = str(raw_profile.get("location", "either")).strip() or "either"
+        if raw_location not in SUPPORTED_CAPABILITY_LOCATIONS:
+            allowed_text = ", ".join(SUPPORTED_CAPABILITY_LOCATIONS)
+            raise WorkspaceUsageError(f"{target_path.as_posix()} location must be one of: {allowed_text}.")
         execution_methods = require_optional_string_list(
             payload=raw_profile,
             key="execution_methods",
@@ -440,6 +459,7 @@ def load_delegation_target_profiles(
             DelegationTargetProfile(
                 name=target_name,
                 strength=strength,
+                location=raw_location,
                 execution_methods=execution_methods,
                 confidence=require_optional_confidence(
                     payload=raw_profile,
@@ -450,6 +470,12 @@ def load_delegation_target_profiles(
                     payload=raw_profile,
                     key="task_fit",
                     config_path=target_path,
+                ),
+                capability_classes=require_optional_string_list(
+                    payload=raw_profile,
+                    key="capability_classes",
+                    config_path=target_path,
+                    allowed=SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
                 ),
             )
         )
