@@ -1423,89 +1423,46 @@ def _workspace_agents_template(
     agent_instructions_file: str = DEFAULT_AGENT_INSTRUCTIONS_FILE,
     workflow_artifact_profile: str = DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
 ) -> str:
-    startup_steps = [f"Read `{agent_instructions_file}`."]
+    _ = workflow_artifact_profile
+    startup_steps: list[str] = []
     sources_of_truth: list[str] = []
-    repo_rules = [
-        "Keep package boundaries explicit.",
-        "Preserve independent package versioning and CLI entry points.",
-    ]
-    validation_rules = [
-        "Run the narrowest validation that proves a change.",
-        "Prefer package-local checks after package import.",
-        "Add broader cross-package checks only when the change crosses package boundaries.",
-    ]
 
     for module_name in selected_modules:
         descriptor = descriptors[module_name]
         startup_steps.extend(descriptor.startup_steps)
         sources_of_truth.extend(descriptor.sources_of_truth)
 
-    startup_steps.append("Load package-local docs only for the package being edited.")
-    artifact_profile = _workflow_artifact_profile_payload(workflow_artifact_profile)
-
     lines = [
         "# Agent Instructions",
         "",
         WORKSPACE_POINTER_BLOCK,
+        "",
+        "Keep this file thin. Treat it as the repo-owned startup adapter over the structured workspace surfaces under `.agentic-workspace/`.",
+        "",
+        "## Startup",
+        "",
+        f"1. Read `{agent_instructions_file}`.",
+        "2. Use `agentic-workspace defaults --section startup --format json` when startup order or first-contact routing is the question.",
+        "3. Use `agentic-workspace config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.",
+        "4. Use `agentic-workspace summary --format json` when active planning or ownership state is the question.",
+        "5. Open raw planning state, an active execplan, or deeper routing docs only when those compact answers point there.",
+        "6. Read package-local `AGENTS.md` only for the package being edited.",
     ]
-    lines.extend(
-        [
-            "",
-            "Local bootstrap contract for agents working in this repository.",
-            "",
-            "## Precedence",
-            "",
-            "1. Explicit user request.",
-            f"2. `{agent_instructions_file}`.",
-            "3. Package-local `AGENTS.md` under `packages/*/` once imported.",
-            "4. Routed memory or canonical repo docs when present.",
-            "",
-            "## Startup Procedure",
-            "",
-        ]
-    )
-    lines.extend(f"{index}. {step}" for index, step in enumerate(startup_steps, start=1))
-    lines.extend(
-        [
-            "",
-            "Do not start coding from chat context alone when the same information exists in checked-in files.",
-            "",
-            "## Sources Of Truth",
-            "",
-        ]
-    )
-    lines.extend(f"- {item}" for item in sources_of_truth)
-    if "planning" in selected_modules:
-        lines.extend(["", "Do not bulk-read all planning surfaces."])
+    if startup_steps or sources_of_truth:
+        lines.extend(["", "## Module Notes", ""])
+        lines.extend(f"- {step}" for step in startup_steps)
+        lines.extend(f"- {item}" for item in sources_of_truth)
     lines.extend(
         [
             "",
             "## Repo Rules",
             "",
+            "Do not start coding from chat context alone when the same information exists in checked-in files.",
+            "Do not bulk-read all planning surfaces.",
+            "Keep package boundaries explicit.",
+            "Preserve independent package versioning and CLI entry points.",
         ]
     )
-    lines.extend(f"- {rule}" for rule in repo_rules)
-    lines.extend(
-        [
-            "",
-            "## Workflow Artifacts",
-            "",
-            f"- profile: `{artifact_profile['profile']}`",
-            f"- canonical surfaces: {', '.join(artifact_profile['canonical_surfaces'])}",
-            f"- sync rule: {artifact_profile['sync_rule']}",
-            f"- handoff rule: {artifact_profile['handoff_rule']}",
-        ]
-    )
-    if artifact_profile["native_artifacts"]:
-        lines.append(f"- allowed native artifacts: {', '.join(artifact_profile['native_artifacts'])}")
-    lines.extend(
-        [
-            "",
-            "## Validation",
-            "",
-        ]
-    )
-    lines.extend(f"- {rule}" for rule in validation_rules)
     return "\n".join(lines) + "\n"
 
 

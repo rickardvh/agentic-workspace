@@ -664,7 +664,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     required_agents_fragments = (
         "agentic-workspace summary --format json",
         "agentic-workspace config --target . --format json",
-        "read the active feature plan in `.agentic-workspace/planning/execplans/`",
+        "active execplan",
         "do not bulk-read all planning surfaces",
         "agentic-workspace defaults --section startup --format json",
     )

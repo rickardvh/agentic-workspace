@@ -116,14 +116,23 @@ def _write_planning_surfaces(tmp_path: Path) -> None:
         """
 # Agent Instructions
 
-1. Read `agents.md`.
-2. Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary --format json`.
-3. Read the active feature plan in `.agentic-workspace/planning/execplans/` when the planning state surface points there.
-4. Check the roadmap in `state.toml` (authoritative) only when promoting work.
-Read `agentic-workspace config --target . --format json` when the current posture or startup entrypoint matters.
+Keep this file thin. Treat it as the repo-owned startup adapter over the structured workspace surfaces under `.agentic-workspace/`.
 
+## Startup
+
+1. Read `AGENTS.md`.
+2. Use `agentic-workspace defaults --section startup --format json` when startup order or first-contact routing is the question.
+3. Use `agentic-workspace config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.
+4. Use `agentic-workspace summary --format json` when active planning or ownership state is the question.
+5. Open raw planning state, an active execplan, or deeper routing docs only when those compact answers point there.
+6. Read package-local `AGENTS.md` only for the package being edited.
+
+## Repo Rules
+
+Do not start coding from chat context alone when the same information exists in checked-in files.
 Do not bulk-read all planning surfaces.
-When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
+Keep package boundaries explicit.
+Preserve independent package versioning and CLI entry points.
 """,
     )
     _write(

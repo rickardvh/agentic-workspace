@@ -700,16 +700,14 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "`Iterative Follow-Through`" in readme_text
     assert "`Execution Summary`" in readme_text
     assert "Required continuation for an unfinished larger intended outcome" in readme_text
-    assert "the execplan must record both `Intent Continuity` and `Required Continuation` before archive" in bootstrap_agents_text
-    assert "keep `Iterative Follow-Through` current" in bootstrap_agents_text
-    assert "remove or archive the matched planning residue in the same pass" in bootstrap_agents_text
-    assert "record the required next owner and activation trigger explicitly before archive" in bootstrap_agents_text
+    assert "Keep this file thin." in bootstrap_agents_text
     assert "agentic-workspace summary --format json" in bootstrap_agents_text
     assert "agentic-workspace defaults --section startup --format json" in bootstrap_agents_text
     assert (
-        "Read `agentic-workspace config --target . --format json` when the current posture or startup entrypoint matters."
+        "Use `agentic-workspace config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter."
         in bootstrap_agents_text
     )
+    assert "Read package-local docs only for the package being edited." in bootstrap_agents_text
     assert "remove or archive the matched queue residue in the same pass" in execplans_readme_text
     assert "Iterative carry-forward belongs under `## Iterative Follow-Through`" in execplans_readme_text
     assert any(

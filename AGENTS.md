@@ -4,80 +4,29 @@
 Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules.
 <!-- agentic-workspace:workflow:end -->
 
-Local bootstrap contract for agents working in this monorepo.
-Treat `AGENTS.md` as the ordinary startup adapter over the structured workspace config surfaces, not as the only durable authority for new behavior.
+Keep this file thin. Treat it as the repo-owned startup adapter over the structured workspace surfaces under `.agentic-workspace/`.
 
-## Precedence
-
-Resolve instruction conflicts in this order:
-
-1. Explicit user request.
-2. `AGENTS.md`.
-3. Package-local `AGENTS.md` under `packages/*/` once imported.
-4. Routed memory or canonical repo docs when present.
-
-## Startup Path
+## Startup
 
 1. Read `AGENTS.md`.
-2. Read `SYSTEM_INTENT.md` as a compass when the task needs the repo's higher-level direction or design pull.
-3. Read `agentic-workspace summary --format json` for the compact planning state.
-4. Read `agentic-workspace config --target . --format json` when the current posture or startup entrypoint matters.
-5. Read `agentic-workspace defaults --section agent_configuration_queries --format json` when the question is which compact query or subinstruction layer should load next.
-6. Inspect `.agentic-workspace/planning/state.toml` only when the compact summary is insufficient and raw queue detail is still needed.
-7. Read the active feature plan in `.agentic-workspace/planning/execplans/` when the summary points there.
-8. Inspect the roadmap data in `.agentic-workspace/planning/state.toml` only when promoting work.
-9. Load package-local docs only for the package being edited.
-10. Before touching a shipped package, refresh it to the latest checked-in version through that package's canonical update workflow so local work starts from the current package contract.
-11. When a change crosses package source, package payload, and root install boundaries, read `.agentic-workspace/docs/extraction-and-discovery-contract.md` before editing.
-12. When making claims about GitHub issue state, verify the live issue set with `gh` instead of relying only on checked-in intake notes.
+2. Use `agentic-workspace defaults --section startup --format json` when startup order or first-contact routing is the question.
+3. Use `agentic-workspace config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.
+4. Use `agentic-workspace summary --format json` when active planning or ownership state is the question.
+5. Open raw planning state, an active execplan, or deeper routing docs only when those compact answers point there.
+6. Read package-local `AGENTS.md` only for the package being edited.
 
-Do not start coding from chat context alone when the same information exists in checked-in files.
-Do not bulk-read all planning surfaces.
-When the question is active planning recovery rather than startup order, prefer `agentic-workspace summary --format json` and `agentic-workspace defaults --section startup --format json` before reopening broader planning prose.
-When repo-local workflow expectations matter, prefer `.agentic-workspace/config.toml` plus `agentic-workspace report --target . --format json` over prose-only reminders.
-Read `.agentic-workspace/docs/routing-contract.md` when execution hits an edge case, routing ambiguity, or requires deep context on the operating model.
-Read `.agentic-workspace/docs/lifecycle-and-config-contract.md` before editing CLI initialization or configuration logic.
+## Repo Rules
 
-### Planning Continuity
-
-- the execplan must record both `Intent Continuity` and `Required Continuation` before archive.
-- Every active slice must belong to a larger intended outcome.
-- record the required next owner and activation trigger explicitly before archive if the larger outcome is unfinished.
-- keep `Iterative Follow-Through` current.
-- remove or archive the matched planning residue in the same pass.
-
-## Operating Rules
-
-### Execution Posture
-
-- Prefer task-by-task judgment about whether work should stay direct, be split into planner/implementer/validator subtasks, or be escalated to a stronger planner.
-- Use the effective mixed-agent posture from `agentic-workspace config --target . --format json` when deciding how much to delegate and how much reasoning to spend.
-- Treat `.agentic-workspace/config.local.toml` as the control surface for capability/cost posture: if it says internal delegation or a strong planner is available, prefer that mode when it reduces cost or risk; if it does not, stay direct unless the task shape clearly justifies promotion or escalation.
-- Do not require the user to restate this preference every session when the config already makes the posture clear.
-- Keep the chosen execution shape bounded and explicit in checked-in planning when the task is broad enough to survive across sessions.
-
-### Sources Of Truth
-
-- Active queue and candidate lanes: `.agentic-workspace/planning/state.toml`
-- Design constraints for future changes: `docs/design-principles.md`
-- Directional compass for shaping work: `SYSTEM_INTENT.md`
-
-### Repo Rules
-
+- Do not start coding from chat context alone when the same information exists in checked-in files.
+- Do not bulk-read all planning surfaces.
 - Keep package boundaries explicit.
 - Preserve independent package versioning and CLI entry points.
-- Treat line-ending-only drift in generated `tools/` mirrors as noise unless the canonical manifest or rendered content changed.
-- In checked-in human-facing docs, keep links clickable but use repo-relative paths only; do not commit absolute filesystem paths in Markdown links or prose path references unless a non-repo absolute path is the subject of the documentation itself.
 
-### Validation
+## When Needed
 
-- Run the narrowest validation that proves a change.
-- Prefer package-local checks after package import.
-- Add monorepo-wide checks only when cross-package integration changes.
-- As a final repo-level test after package work, refresh the root install to the latest checked-in version of both shipped packages: `uv run agentic-planning-bootstrap upgrade --target .` and `uv run agentic-memory-bootstrap upgrade --target .`.
-- When verifying that the repo is on the latest shipped package contract, distinguish payload freshness from repo-local advisory warnings: run the package upgrade flow, `verify-payload`, package/root doctor surfaces, and report separately whether remaining warnings are package drift or expected repo-local customisation/noise.
-
-### Dogfooding Rule
-
-- Treat this monorepo as the proving ground for shipped agent workflows.
-- For detailed dogfooding and product doctrine, see `docs/design-principles.md`.
+- Read `SYSTEM_INTENT.md` when the task needs the repo's higher-level direction or design pull.
+- Use `.agentic-workspace/config.toml` plus `agentic-workspace report --target . --format json` when repo-local workflow expectations matter.
+- Read `.agentic-workspace/docs/routing-contract.md` when execution hits a routing edge case or ambiguity.
+- Read `.agentic-workspace/docs/lifecycle-and-config-contract.md` before editing CLI initialization or configuration logic.
+- Read `.agentic-workspace/docs/extraction-and-discovery-contract.md` before changes that cross package source, package payload, and root install boundaries.
+- Verify live GitHub issue state with `gh` before making claims about open or closed issues.

@@ -2342,7 +2342,7 @@ def test_install_real_init_can_use_gemini_as_root_startup_entrypoint(tmp_path: P
     assert not (target / "AGENTS.md").exists()
     gemini_text = (target / "GEMINI.md").read_text(encoding="utf-8")
     assert "Read `GEMINI.md`." in gemini_text
-    assert "2. `GEMINI.md`." in gemini_text
+    assert "Keep this file thin." in gemini_text
     assert "Read GEMINI.md first." in (target / "llms.txt").read_text(encoding="utf-8")
 
 
