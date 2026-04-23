@@ -1,7 +1,5 @@
 [todo]
-active_items = [
-  { id = "machine-first-planning-chain", status = "in-progress", surface = ".agentic-workspace/planning/execplans/machine-first-planning-chain.plan.json", why_now = "Finalize the transition to a machine-first planning infrastructure by enforcing a canonical JSON sidecar model and purging derived Markdown artifacts." },
-]
+active_items = []
 queued_items = []
 
 [roadmap]

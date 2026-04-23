@@ -4432,12 +4432,12 @@ def _build_execplan_record_from_todo_item(
 
 
 def _surface_execplan_reference(surface_value: str) -> str | None:
-    inline_path_match = re.search(r".agentic-workspace/planning/execplans/[A-Za-z0-9._/\-]+\.md", surface_value)
+    inline_path_match = re.search(r".agentic-workspace/planning/execplans/[A-Za-z0-9._/\-]+\.(?:md|plan\.json)", surface_value)
     if inline_path_match:
         return inline_path_match.group(0)
     markdown_target = re.search(r"\]\(([^)]+)\)", surface_value)
     if markdown_target:
-        target_match = re.search(r".agentic-workspace/planning/execplans/[A-Za-z0-9._/\-]+\.md", markdown_target.group(1))
+        target_match = re.search(r".agentic-workspace/planning/execplans/[A-Za-z0-9._/\-]+\.(?:md|plan\.json)", markdown_target.group(1))
         if target_match:
             return target_match.group(0)
     return None
