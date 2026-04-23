@@ -1112,6 +1112,28 @@ def test_startup_policy_ignores_generic_readme_but_warns_for_contributor_drift(t
     assert _has_warning_path_suffix(startup_warnings, "docs/contributor-playbook.md")
 
 
+def test_config_workflow_obligations_are_validated_in_config_not_entrypoint(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_workflow_policy")
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", _baseline_todo())
+    _write(tmp_path / "ROADMAP.md", _baseline_roadmap())
+    _write_startup_surfaces(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[system_intent]
+sources = ["SYSTEM_INTENT.md"]
+preferred_source = "SYSTEM_INTENT.md"
+""",
+    )
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    workflow_warnings = [warning for warning in warnings if warning.warning_class == "workflow_policy_drift"]
+
+    assert _has_warning_path_suffix(workflow_warnings, ".agentic-workspace/config.toml")
+
+
 def test_generated_docs_warn_for_drift_and_missing_marker(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_generated_docs")
     _write_startup_surfaces(tmp_path)

@@ -28,9 +28,34 @@ scope_tags = ["workspace", "planning", "adapter-surfaces"]
 commands = ["make maintainer-surfaces", "uv run python scripts/check/check_planning_surfaces.py"]
 review_hint = "Use when AGENTS.md, llms.txt, generated agent docs, routing contracts, or workspace query surfaces changed."
 
+[workflow_obligations.boundary_and_context_discipline]
+summary = "Keep package boundaries explicit and start from checked-in surfaces before broad rereads."
+stage = "pre-work"
+scope_tags = ["workspace", "planning", "memory", "package-boundaries"]
+commands = ["agentic-workspace report --target . --format json", "agentic-workspace ownership --target . --format json"]
+review_hint = "Do not start coding from chat context alone when checked-in files already answer the question, and do not bulk-read all planning surfaces."
+
 [workflow_obligations.commit_after_proof]
 summary = "Commit only after the bounded proof lane passes and the active execplan reflects the current milestone."
 stage = "before-commit"
 scope_tags = ["workspace", "planning", "memory"]
 commands = ["uv run agentic-workspace summary --format json", "git status --short"]
 review_hint = "Treat this as a closeout/readiness gate, not as a substitute for task-specific validation."
+
+[workflow_obligations.startup_first_contact_routing]
+summary = "Use compact startup, config, and summary queries before opening raw planning or routing docs."
+stage = "pre-work"
+scope_tags = ["workspace", "startup", "routing", "planning"]
+commands = [
+  "agentic-workspace defaults --section startup --format json",
+  "agentic-workspace config --target . --format json",
+  "agentic-workspace summary --format json",
+]
+review_hint = "Open raw planning state, an active execplan, or deeper routing docs only when the compact answers point there."
+
+[workflow_obligations.system_intent_refresh]
+summary = "Refresh the declared system-intent source and mirrored interpretation when higher-level direction changes materially."
+stage = "review"
+scope_tags = ["workspace", "system-intent"]
+commands = ["agentic-workspace system-intent --target . --sync --format json"]
+review_hint = "Treat system intent as directional input and keep the mirror aligned without turning it into active task state."

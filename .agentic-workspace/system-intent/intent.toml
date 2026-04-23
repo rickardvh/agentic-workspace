@@ -14,6 +14,6 @@ last_synced_at = "2026-04-23"
 [[source_records]]
 path = "SYSTEM_INTENT.md"
 present = true
-sha256 = "c40c8ed07e85fdeb5cf777cca5ff92ae4a739438e042425e260455e005c9a2b5"
+sha256 = "8fde3d608bd04d6cbbbc689888189e1b7e9ebf0138680248b4785e3fb4d180a3"
 first_heading = "System Intent"
-line_count = 166
+line_count = 212

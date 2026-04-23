@@ -69,6 +69,7 @@ WARNING_ROADMAP_MISSING_REOPEN_SIGNAL = "roadmap_missing_reopen_signal"
 WARNING_ROADMAP_STALE_CANDIDATE_PRESSURE = "roadmap_stale_candidate_pressure"
 WARNING_PROMOTION_LINKAGE_DRIFT = "promotion_linkage_drift"
 WARNING_STARTUP_POLICY_DRIFT = "startup_policy_drift"
+WARNING_WORKFLOW_POLICY_DRIFT = "workflow_policy_drift"
 WARNING_DOCS_SURFACE_ROLE_DRIFT = "docs_surface_role_drift"
 WARNING_GENERATED_DOCS_DRIFT = "generated_docs_drift"
 WARNING_ARCHIVE_ACCUMULATION_DRIFT = "archive_accumulation_drift"
@@ -1896,11 +1897,23 @@ def _check_execplan_active_set(execplan_dir: Path) -> list[PlanningWarning]:
 
 def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWarning]:
     state = _read_state_toml(repo_root / ".agentic-workspace" / "planning" / "state.toml")
+    config_path = repo_root / ".agentic-workspace" / "config.toml"
     todo_path = repo_root / "TODO.md"
     roadmap_path = repo_root / "ROADMAP.md"
     execplan_dir = repo_root / ".agentic-workspace" / "planning" / "execplans"
 
     warnings: list[PlanningWarning] = []
+
+    if config_path.exists():
+        config_text = "\n".join(_read_lines(config_path)).lower()
+        if "[workflow_obligations." not in config_text:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_WORKFLOW_POLICY_DRIFT,
+                    _render_path(config_path),
+                    ".agentic-workspace/config.toml must carry repo-custom workflow obligations instead of listing them in the startup entrypoint.",
+                )
+            )
 
     if todo_path.exists():
         todo_warnings, todo_active_ids, todo_active_items = _check_todo(todo_path, repo_root=repo_root)
