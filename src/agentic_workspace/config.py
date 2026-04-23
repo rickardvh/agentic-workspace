@@ -71,6 +71,7 @@ SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS = (
     "internal",
     "cli",
     "api",
+    "manual",
 )
 WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"

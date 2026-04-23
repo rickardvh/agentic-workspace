@@ -49,6 +49,18 @@ task_fit = [
 capability_classes = ["mixed", "mechanical-follow-through"]
 execution_methods = ["cli", "api"]
 
+[delegation_targets.chatgpt]
+strength = "strong"
+location = "external"
+confidence = 0.88
+task_fit = [
+  "general-purpose-planning",
+  "ambiguous-contract-shaping",
+  "cross-cutting-review",
+]
+capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed"]
+execution_methods = ["manual"]
+
 [delegation_targets.opencode_big_pickle]
 strength = "weak"
 location = "external"

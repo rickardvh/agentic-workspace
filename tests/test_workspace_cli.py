@@ -301,7 +301,12 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "mixed",
         "mechanical-follow-through",
     ]
-    assert payload["mixed_agent"]["local_override"]["supported_target_execution_methods"] == ["internal", "cli", "api"]
+    assert payload["mixed_agent"]["local_override"]["supported_target_execution_methods"] == [
+        "internal",
+        "cli",
+        "api",
+        "manual",
+    ]
     assert payload["mixed_agent"]["local_outcome_artifact"] == {
         "path": ".agentic-workspace/delegation-outcomes.json",
         "kind": "agentic-workspace/delegation-outcomes/v1",
@@ -1472,6 +1477,45 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
     assert planner["capability_classes"] == ["boundary-shaping", "reasoning-heavy"]
     assert planner["execution_methods"] == ["internal", "api"]
     assert planner["advisory"] == {
+        "handoff_detail": "compact",
+        "review_burden": "light",
+    }
+
+
+def test_config_command_accepts_manual_external_delegation_target(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "AGENTS.md").write_text("repo instructions\n", encoding="utf-8")
+    (target / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation_targets.chatgpt]",
+                'strength = "strong"',
+                'location = "external"',
+                "confidence = 0.88",
+                'task_fit = ["general-purpose-planning", "cross-cutting-review"]',
+                'capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed"]',
+                'execution_methods = ["manual"]',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    targets = payload["mixed_agent"]["delegation_targets"]["profiles"]
+    chatgpt = next(profile for profile in targets if profile["name"] == "chatgpt")
+    assert chatgpt["strength"] == "strong"
+    assert chatgpt["location"] == "external"
+    assert chatgpt["capability_classes"] == ["boundary-shaping", "reasoning-heavy", "mixed"]
+    assert chatgpt["execution_methods"] == ["manual"]
+    assert chatgpt["advisory"] == {
         "handoff_detail": "compact",
         "review_burden": "light",
     }

@@ -104,7 +104,8 @@
                 "enum": [
                   "internal",
                   "cli",
-                  "api"
+                  "api",
+                  "manual"
                 ]
               }
             }
