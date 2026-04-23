@@ -35,6 +35,7 @@ from repo_memory_bootstrap._installer_memory import (
     _load_routing_feedback_cases,
     _lookup_manifest_note,
     _normalise_surface_name,
+    _parse_recurring_friction_entries,
     _parse_route_sections,
     _path_matches_pattern,
     _recurring_friction_promotion_findings,
@@ -2147,6 +2148,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
     stale_notes = [item for item in trust_items if item["state"] == "stale"]
     questionable_notes = [item for item in trust_items if item["state"] == "questionable"]
     elimination_candidates = [item for item in trust_items if item["state"] == "elimination_candidate"]
+    recurring_friction = _recurring_friction_report(target_root=target_root)
     usefulness_audit = _memory_usefulness_audit(route_snapshot=route_snapshot, remediation=remediation)
     habitual_pull = _memory_habitual_pull_view(
         manifest=manifest,
@@ -2176,6 +2178,12 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
             next_action_summary = str(first_finding.get("message", next_action_summary))
         next_action_commands = [
             "agentic-memory-bootstrap doctor --target ./repo",
+            "agentic-memory-bootstrap promotion-report --target ./repo --mode remediation",
+        ]
+    elif recurring_friction["promotion_pressure_count"]:
+        next_action_summary = "Recurring friction has repeated enough times that it should promote into stronger remediation instead of staying note-only evidence."
+        next_action_commands = [
+            "python scripts/check/check_recurring_friction_ledger.py",
             "agentic-memory-bootstrap promotion-report --target ./repo --mode remediation",
         ]
     elif remediation_counts.get("candidate", 0):
@@ -2215,6 +2223,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
                 "active",
                 "habitual_pull",
                 "trust",
+                "recurring_friction",
                 "usefulness_audit",
                 "findings",
                 "next_action",
@@ -2246,12 +2255,41 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
             "stale_notes": stale_notes[:5],
             "elimination_candidates": elimination_candidates[:5],
         },
+        "recurring_friction": recurring_friction,
         "usefulness_audit": usefulness_audit,
         "findings": findings,
         "next_action": {
             "summary": next_action_summary,
             "commands": next_action_commands,
         },
+    }
+
+
+def _recurring_friction_report(*, target_root: Path) -> dict[str, object]:
+    ledger_path = target_root / ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"
+    if not ledger_path.exists():
+        return {
+            "status": "missing",
+            "path": ledger_path.relative_to(target_root).as_posix(),
+            "entry_count": 0,
+            "structure_warning_count": 0,
+            "promotion_pressure_count": 0,
+            "structure_warnings": [],
+            "promotion_pressure": [],
+        }
+
+    text = ledger_path.read_text(encoding="utf-8")
+    entries = [entry for entry in _parse_recurring_friction_entries(text) if "<short recurring friction label>" not in str(entry["label"])]
+    structure_warnings = _recurring_friction_structure_findings(text)
+    promotion_pressure = _recurring_friction_promotion_findings(text)
+    return {
+        "status": "present",
+        "path": ledger_path.relative_to(target_root).as_posix(),
+        "entry_count": len(entries),
+        "structure_warning_count": len(structure_warnings),
+        "promotion_pressure_count": len(promotion_pressure),
+        "structure_warnings": structure_warnings,
+        "promotion_pressure": promotion_pressure,
     }
 
 

@@ -68,6 +68,26 @@ Config treatment
 Last seen
 2026-04-22 during <task or investigation>
 
+### Friction: recurring-friction-proof-needed-manual-rescue
+
+Observed recurrences
+- 2026-04-23: Lane closeout verification showed that the recurring-friction path still needed an explicit repo-local proof entry before the installed report could demonstrate real preserved weak-signal usage.
+
+Keep now
+- Keep one short proof entry.
+
+Promote when
+- Promote if another task leaves this signal uncaptured.
+
+Most likely remediation
+- validation
+
+Config treatment
+- retain because the current proactive posture favors one compact proof entry.
+
+Last seen
+2026-04-23 during issue #263 lane closeout
+
 ## Verification
 
 - Repeated friction can be preserved without opening an issue immediately.
@@ -81,4 +101,4 @@ Last seen
 
 ## Last confirmed
 
-2026-04-22 during issue #263 first slice
+2026-04-23 during issue #263 lane closeout

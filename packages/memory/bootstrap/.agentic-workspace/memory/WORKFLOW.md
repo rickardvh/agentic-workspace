@@ -157,6 +157,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - If the same note keeps being needed for safe work on one subsystem, consider whether the repo needs docs promotion, a skill, a script, a regression test, stronger validation, or refactor review.
 - Apply that pressure during normal task work, not only during explicit maintenance passes.
 - When routing or syncing memory exposes repeated friction, note sprawl, or recurring workarounds, propose or make the smallest upstream improvement that would reduce the note when it is safe and in scope.
+- When the same friction shows up again but is still below issue or active-plan threshold, add or update one short dated entry in `.agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md` instead of letting the signal reset into chat.
 - When planning and memory are both installed, repeated restart friction or repeated execplan background prose should be treated as an improvement-targeting signal about the interaction contract, not only as a local writing preference.
 - Prefer emitting a concrete remediation target over a vague hint: suggest where the docs, skill, script, test, validation, or refactor should land, then keep the memory note only as residue, a stub, or a short fallback summary.
 - Treat `promotion-report` as the main elimination workflow: use it to decide the upstream target and the intended post-remediation memory shape before expanding the note further.
@@ -205,3 +206,4 @@ Keep it concise, repo-agnostic, and non-procedural.
 1. Update or remove stale memory in the same change.
 2. Update `.agentic-workspace/memory/repo/current/project-state.md` only if the shared overview changed materially.
 3. Refresh `.agentic-workspace/memory/repo/current/task-context.md` only if it will reduce re-orientation cost for the next session.
+4. If repeated friction appeared during the work, capture or update the smallest dated entry in `.agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md` before ending the task.

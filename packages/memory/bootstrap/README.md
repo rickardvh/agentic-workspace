@@ -59,6 +59,7 @@ Copy as-is:
 - `AGENTS.md`
 - `.agentic-workspace/memory/repo/`
 - `scripts/check/check_memory_freshness.py`
+- `scripts/check/check_recurring_friction_ledger.py`
 
 Merge or append:
 
@@ -75,6 +76,7 @@ Do not install maintainer-only repo docs or implementation notes by default.
 3. Copy `.agentic-workspace/memory/`.
 4. Optionally merge the workflow fragments.
 5. Run `scripts/check/check_memory_freshness.py`.
+6. Run `scripts/check/check_recurring_friction_ledger.py` when repeated friction should stay visible without creating a new issue yet.
 
 For CI-style enforcement, run `scripts/check/check_memory_freshness.py --strict`.
 

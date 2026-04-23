@@ -17,13 +17,13 @@ Use git history for superseded active-step detail; keep only the closure, contin
 
 - Larger Intended Outcome: preserve lightweight recurring-friction evidence in Memory or adjacent durable surfaces so repeated package failures accumulate visible improvement pressure without turning every annoyance into backlog.
 - This Slice Completes The Larger Intended Outcome: no
-- Continuation Surface: `ROADMAP.md` candidate lane `memory-recurring-friction-improvement-pressure`
+- Continuation Surface: .agentic-workspace/planning/execplans/archive/memory-recurring-friction-improvement-pressure-closeout-2026-04-23.md
 - Parent Lane: `memory-recurring-friction-improvement-pressure`
 
 ## Required Continuation
 
 - Required Follow-On For The Larger Intended Outcome: yes
-- Owner Surface: `ROADMAP.md` candidate lane `memory-recurring-friction-improvement-pressure`
+- Owner Surface: .agentic-workspace/planning/execplans/archive/memory-recurring-friction-improvement-pressure-closeout-2026-04-23.md
 - Activation Trigger: activate the next lane slice when real ordinary-use evidence shows the new recurring-friction ledger is either working, too awkward, or still leaking repeated signals that should promote faster.
 
 ## Iterative Follow-Through
@@ -81,7 +81,7 @@ Use git history for superseded active-step detail; keep only the closure, contin
 - Original intent: implement the first promoted roadmap lane for recurring-friction improvement pressure.
 - Was original intent fully satisfied?: no
 - Evidence of intent satisfaction: the first slice shipped the promised durable evidence path, but the larger lane still needs real ordinary-use follow-through to judge whether this path is sufficient or whether promotion/reporting should tighten.
-- Unsolved intent passed to: `.agentic-workspace/planning/state.toml`
+- Unsolved intent passed to: .agentic-workspace/planning/execplans/archive/memory-recurring-friction-improvement-pressure-closeout-2026-04-23.md
 
 ## Closure Check
 
@@ -96,7 +96,7 @@ Use git history for superseded active-step detail; keep only the closure, contin
 
 - Outcome delivered: shipped a dedicated recurring-friction ledger in Memory and a doctor audit that surfaces promotion pressure when a friction class has at least two observed recurrences.
 - Validation confirmed: `uv run pytest packages/memory/tests/test_installer.py -k "recurring_friction or recurring_failures or improvement_pressure" -q`; `uv run pytest packages/memory/tests/test_packaging.py -q`; `uv run agentic-memory-bootstrap doctor --target . --format json`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run agentic-memory-bootstrap upgrade --target .`; `uv run agentic-planning-bootstrap upgrade --target .`
-- Follow-On Routed To: `.agentic-workspace/planning/state.toml`
+- Follow-On Routed To: .agentic-workspace/planning/execplans/archive/memory-recurring-friction-improvement-pressure-closeout-2026-04-23.md
 - Post-work Posterity Capture: preserve the rule that weak recurring friction should get one compact durable home before issue creation, and that stronger follow-on still routes into planning or the strongest remediation surface once recurrence is proven.
 - Knowledge Promoted (Memory/Docs/Config): promoted the new recurring-friction evidence path into shipped Memory payload, installed repo Memory surfaces, and package tests.
-- Resume from: the roadmap lane `memory-recurring-friction-improvement-pressure`
+- Resume from: .agentic-workspace/planning/execplans/archive/memory-recurring-friction-improvement-pressure-closeout-2026-04-23.md

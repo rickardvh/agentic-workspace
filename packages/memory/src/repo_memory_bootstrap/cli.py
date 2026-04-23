@@ -678,6 +678,9 @@ def _print_install_summary(result) -> None:
         )
     print("- Run agentic-memory-bootstrap doctor --target <repo> before upgrading an older install.")
     print("- Run python scripts/check/check_memory_freshness.py after customising memory notes.")
+    print(
+        "- Run python scripts/check/check_recurring_friction_ledger.py when repeated friction should stay visible without opening a new issue yet."
+    )
 
 
 def _print_report(report: dict[str, object]) -> None:
@@ -709,6 +712,14 @@ def _print_report(report: dict[str, object]) -> None:
                 f"{state_counts.get('stale', 0)} stale / "
                 f"{state_counts.get('elimination_candidate', 0)} elimination-biased"
             )
+    recurring_friction = cast(dict[str, Any], report.get("recurring_friction", {}))
+    if isinstance(recurring_friction, dict) and recurring_friction.get("status") == "present":
+        print(
+            "Recurring friction: "
+            f"{recurring_friction.get('entry_count', 0)} entries / "
+            f"{recurring_friction.get('promotion_pressure_count', 0)} promotion-pressure / "
+            f"{recurring_friction.get('structure_warning_count', 0)} structure warnings"
+        )
     usefulness_audit = cast(dict[str, Any], report.get("usefulness_audit", {}))
     if isinstance(usefulness_audit, dict) and usefulness_audit.get("summary"):
         print(f"Usefulness: {usefulness_audit['summary']}")

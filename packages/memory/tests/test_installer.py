@@ -942,6 +942,62 @@ def test_upgrade_reports_customised_seed_notes_as_expected_customisation(
     )
 
 
+def test_upgrade_preserves_customised_recurring_friction_ledger(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+    ledger_path = target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "recurring-friction-ledger.md"
+    ledger_path.write_text(
+        """
+# Recurring Friction Ledger
+
+## Status
+
+Active
+
+## Scope
+
+- Lightweight evidence for repeated friction.
+
+## Entry format
+
+### Friction: recurring-ledger-preservation
+
+Observed recurrences
+- 2026-04-22: Upgrade-safe evidence should not reset to the shipped placeholder.
+
+Keep now
+- One recurrence is enough to prove the local signal exists.
+
+Promote when
+- A second recurrence or a clear upstream guardrail lands.
+
+Most likely remediation
+- validation
+
+Config treatment
+- promote because current repo posture prefers keeping repeated friction visible until stronger enforcement lands.
+
+Last seen
+2026-04-22 during recurring-friction lane closeout
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.upgrade_bootstrap(target=target)
+
+    assert ledger_path.read_text(encoding="utf-8").startswith("# Recurring Friction Ledger")
+    assert "recurring-ledger-preservation" in ledger_path.read_text(encoding="utf-8")
+    assert any(
+        action.path == ledger_path
+        and action.kind == "customised"
+        and action.category == "customisation-present"
+        and "preserving repo-local customisation during upgrade" in action.detail
+        for action in result.actions
+    )
+
+
 def test_list_payload_files_excludes_agent_work_templates_and_gitignore_append(
     tmp_path: Path,
 ) -> None:
@@ -2304,6 +2360,79 @@ elimination_target = "promote"
     assert any(
         item["path"] == ".agentic-workspace/memory/repo/mistakes/improvement-note.md" for item in report["trust"]["elimination_candidates"]
     )
+
+
+def test_memory_report_surfaces_recurring_friction_pressure(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    ledger_path = target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "recurring-friction-ledger.md"
+    ledger_path.write_text(
+        """
+# Recurring Friction Ledger
+
+## Status
+
+Active
+
+## Scope
+
+- Lightweight recurring friction evidence.
+
+## Load when
+
+- The same friction shows up again.
+
+## Review when
+
+- A friction class is promoted elsewhere.
+
+## Failure signals
+
+- The same friction keeps recurring.
+
+## When to use this
+
+- The signal is real but still below issue threshold.
+
+## Rules
+
+- Keep one entry per friction class.
+
+## Entry format
+
+### Friction: missing-memory-capture
+
+Observed recurrences
+- 2026-04-20: Post-task friction was noticed but not captured.
+- 2026-04-22: Another task required the same manual rescue.
+
+Keep now
+- Two recurrences are enough to preserve, but the exact fix still needs shaping.
+
+Promote when
+- The same friction recurs again or a clear package change presents itself.
+
+Most likely remediation
+- validation
+
+Config treatment
+- promote because current repo posture prefers escalating repeated workflow drift instead of letting it stay note-only evidence.
+
+Last seen
+2026-04-22 during issue #263 closeout
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = installer.memory_report(target=target)
+
+    assert report["recurring_friction"]["status"] == "present"
+    assert report["recurring_friction"]["entry_count"] == 1
+    assert report["recurring_friction"]["promotion_pressure_count"] == 1
+    assert any("has 2 observed recurrences" in message for message in report["recurring_friction"]["promotion_pressure"])
 
 
 def test_cli_version_flag_prints_package_version(capsys) -> None:

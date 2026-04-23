@@ -12,7 +12,7 @@ PYTEST_PARALLEL_ARGS ?= -n auto
 	format format-workspace format-memory format-planning \
 	format-check format-check-workspace format-check-memory format-check-planning \
 	verify verify-workspace verify-memory verify-planning \
-	memory-freshness memory-freshness-strict planning-surfaces planning-surfaces-strict source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs absolute-paths \
+	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs absolute-paths \
 	check check-memory check-planning check-all
 
 help:
@@ -32,6 +32,7 @@ help:
 	@echo "  format-check         Run formatting checks across workspace and packages."
 	@echo "  verify               Verify workspace CLI wiring and both packaged payload contracts."
 	@echo "  memory-freshness     Run the root memory freshness audit."
+	@echo "  recurring-friction-ledger  Run the root recurring-friction ledger audit."
 	@echo "  planning-surfaces    Run the root planning surface audit."
 	@echo "  source-payload-operational-install  Run source/payload/root-install boundary checks."
 	@echo "  maintainer-surfaces  Run maintainer-surface freshness and liveness checks."
@@ -134,6 +135,9 @@ memory-freshness:
 memory-freshness-strict:
 	uv run python scripts/check/check_memory_freshness.py --strict
 
+recurring-friction-ledger:
+	uv run python scripts/check/check_recurring_friction_ledger.py
+
 planning-surfaces:
 	uv run python scripts/check/check_planning_surfaces.py
 
@@ -158,7 +162,7 @@ render-agent-docs:
 absolute-paths:
 	uv run python scripts/check/check_no_absolute_paths.py
 
-check-memory: sync-all test-memory lint-memory typecheck-memory verify-memory memory-freshness-strict
+check-memory: sync-all test-memory lint-memory typecheck-memory verify-memory memory-freshness-strict recurring-friction-ledger
 
 check-planning: sync-all test-planning lint-planning typecheck-planning maintainer-surfaces memory-freshness
 
