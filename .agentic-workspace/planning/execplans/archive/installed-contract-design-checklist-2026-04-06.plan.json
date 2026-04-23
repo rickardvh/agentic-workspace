@@ -1,0 +1,66 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Installed-Contract Design Checklist",
+  "goal": [
+    "Give package authors a short checklist for evaluating new installed surfaces against concurrent git workflows, canonical-source boundaries, lifecycle clarity, and collaboration-safe file shape."
+  ],
+  "non_goals": [
+    "Create new package-scaffolding automation.",
+    "Expand the workspace layer's ownership.",
+    "Replace the existing package READMEs with maintainer-only process docs."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "added one canonical package-authoring checklist and routed maintainers to it from the existing workflow docs without scattering duplicate policy prose.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Revisit shared-tooling extraction only when repeated checker maintenance friction is proven in real use."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "TODO.md",
+    "ROADMAP.md",
+    "docs/"
+  ],
+  "invariants": [
+    "The checklist must stay short and actionable.",
+    "Canonical-source and write-authority rules must remain consistent with the integration contract.",
+    "Package authorship guidance should not become a new top-level policy layer."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "make maintainer-surfaces"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "A maintainer can review a proposed installed surface against collaboration-safe criteria without reverse-engineering prior chat context.",
+    "Existing maintainer docs point to the checklist instead of rephrasing the same rules in multiple places."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-06: Activated the installed-contract collaboration design checklist tranche after completing the cross-module collaboration contract docs.",
+    "2026-04-06: Completed the tranche after adding a canonical checklist and routing maintainers to it from the existing workflow docs."
+  ]
+}

@@ -665,7 +665,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     required_agents_fragments = (
         "agentic-workspace summary --format json",
         "agentic-workspace config --target . --format json",
-        "active execplan",
+        "the active execplan in `.agentic-workspace/planning/execplans/`",
         "do not bulk-read all planning surfaces",
         "agentic-workspace defaults --section startup --format json",
     )
@@ -1339,7 +1339,7 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
             "live working set",
             "recoverable later",
             "externalize before shift",
-            "pre-work config pull",
+            "pre-work memory pull",
             "tiny resumability note",
             "context-shift triggers",
         ):
@@ -1406,7 +1406,6 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
             "scope respected",
             "proof status",
             "intent served",
-            "config compliance",
             "misinterpretation risk",
             "follow-on decision",
         ):
@@ -1630,7 +1629,13 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 )
             )
         else:
-            for field_name in ("outcome delivered", "validation confirmed", "follow-on routed to", "resume from"):
+            for field_name in (
+                "outcome delivered",
+                "validation confirmed",
+                "follow-on routed to",
+                "post-work posterity capture",
+                "resume from",
+            ):
                 value = execution_summary_fields.get(field_name, "").strip().lower()
                 if not value or value in {"pending", "tbd", "todo", "not completed yet", "none yet", "current milestone"}:
                     warnings.append(

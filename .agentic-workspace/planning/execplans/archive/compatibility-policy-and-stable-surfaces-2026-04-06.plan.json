@@ -1,0 +1,69 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Compatibility Policy and Stable Surfaces",
+  "goal": [
+    "Define a compact compatibility policy that names which workspace, package, and generated surfaces are stable today, which remain mutable, and what counts as a breaking change for installed repo surfaces, manifests, generated docs, lifecycle behavior, and module metadata."
+  ],
+  "non_goals": [
+    "Redesign the module contract itself.",
+    "Expand the public extension boundary.",
+    "Promise immutability for surfaces that are still intentionally in flux."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "define the stable-surface promise and upgrade expectations without overcommitting to surfaces that are still intentionally moving.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan and move the repository-stewardship milestone into active execution."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "docs/",
+    "README.md",
+    "AGENTS.md",
+    "docs/maintainer-commands.md",
+    "docs/contributor-playbook.md",
+    "docs/installed-contract-design-checklist.md"
+  ],
+  "invariants": [
+    "Stable surfaces must be named once and treated consistently across docs and report payloads.",
+    "The policy must stay narrower than the boundary docs and not re-litigate settled ownership rules.",
+    "Breaking changes need a clear definition for adopters without promising immutability where the repo is still moving."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Adopters can tell which surfaces are stable and which are still moving.",
+    "Breaking changes have a clear definition for the surfaces that matter.",
+    "The policy stays compact enough to remain readable as a promise rather than a second roadmap."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-06: Parked from the planning-spec intake so the compatibility promise could be promoted after the module-registry tranche finished.",
+    "2026-04-06: Milestone complete: the repo now has a canonical compatibility-policy doc plus short references from the adopter and maintainer guidance surfaces."
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Delegated Judgment Front-Door Contract",
+  "goal": [
+    "Ship a front-door delegated-judgment contract that makes the \"hand the agent direction and leave it to execute\" model explicit in both canonical docs and machine-readable defaults."
+  ],
+  "non_goals": [
+    "Do not add vendor-specific model routing.",
+    "Do not create a separate planner or autonomy subsystem.",
+    "Do not widen this slice into implementing every remaining long-horizon capability."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "delegated-judgment-front-door-contract",
+    "status": "completed",
+    "scope": "Add the canonical delegated-judgment contract, ship it in the planning payload, expose it through workspace defaults, and align the front-door docs around that contract.",
+    "ready": "false",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan and clear the active queue residue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`docs/delegated-judgment-contract.md`",
+    "`packages/planning/bootstrap/docs/delegated-judgment-contract.md`",
+    "`src/agentic_workspace/cli.py`",
+    "`tests/test_workspace_cli.py`",
+    "`packages/planning/src/repo_planning_bootstrap/installer.py`",
+    "`packages/planning/tests/test_installer.py`",
+    "`README.md`",
+    "`docs/default-path-contract.md`",
+    "`packages/planning/README.md`",
+    "`llms.txt`"
+  ],
+  "invariants": [
+    "Keep the contract quiet, tool-agnostic, and bounded.",
+    "Humans set direction and constraints; agents may improve local means.",
+    "Agents must not silently widen requested ends, owned surface, or time horizon."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run pytest tests/test_workspace_cli.py`",
+    "`uv run pytest packages/planning/tests/test_installer.py`",
+    "`uv run python scripts/check/check_planning_surfaces.py`",
+    "`make maintainer-surfaces`",
+    "`uv run agentic-planning-bootstrap upgrade --target .`",
+    "`uv run agentic-memory-bootstrap upgrade --target .`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The repo has a canonical delegated-judgment contract doc.",
+    "The planning payload ships that doc.",
+    "`agentic-workspace defaults --format json` exposes the same contract in machine-readable form.",
+    "Front-door docs point at the contract as the normal answer for direction, local authority, and escalation."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-09: Created to turn bounded delegated judgment from capability model into a shipped front-door contract.",
+    "2026-04-09: Completed by shipping the delegated-judgment contract doc, exposing it through `agentic-workspace defaults --format json`, and aligning the front-door docs and payload with the same rule."
+  ]
+}

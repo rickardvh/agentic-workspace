@@ -1,0 +1,28 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Orchestrator Workflow Evidence",
+  "goal": [
+    "Capture what the lane-scale planner-to-worker trial actually cost and saved so the repo can draft a cheaper reusable workflow for this mode."
+  ],
+  "scope": [
+    "`.agentic-workspace/planning/execplans/planning-surface-clarity-lane-2026-04-17.md`",
+    "`.agentic-workspace/planning/reviews/planning-recovery-ambiguity-audit-2026-04-17.md`",
+    "worker task for issue `#162`",
+    "worker task for issue `#164`",
+    "local orchestration, validation, cleanup, and closure work done around those slices"
+  ],
+  "non_goals": [],
+  "review_mode": {},
+  "review_method": {},
+  "references": [],
+  "findings": [],
+  "recommendation": {},
+  "validation_commands": [
+    "`uv run python scripts/check/check_planning_surfaces.py`",
+    "`uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`",
+    "`uv run agentic-planning-bootstrap summary --format json`"
+  ],
+  "drift_log": [
+    "2026-04-17: Recorded evidence from the `planning-surface-clarity-lane` orchestrator-to-worker trial."
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning Surface Clarity Routine Recovery",
+  "goal": [
+    "Define a bounded first slice of the `planning-surface-clarity-routine-recovery` lane that a smaller agent can execute safely: audit repeated routine-recovery ambiguity, define the minimum routine-recovery question set, and tighten one high-value compact planning surface only if the answer is clear from the audit."
+  ],
+  "non_goals": [
+    "Redesign Planning from scratch.",
+    "Reopen the recently closed hierarchy/routing lane.",
+    "Add a second planning authority, new planning artifact, or broad new process.",
+    "Expand into standing-intent, optimization-bias, Memory, or declarative-contract work in the same slice."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "make planning surfaces cheaper for agents to distinguish, recover from, and trust without broad prose rereads.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "ROADMAP.md",
+    "parent lane": "planning-surface-clarity-routine-recovery"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "ROADMAP.md",
+    "activation trigger": "when the routine-recovery question set and first ambiguity audit are stable enough to justify one targeted surface refinement or one follow-on review-derived candidate."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "the front-door route now answers routine planning recovery from one compact question set instead of scattering the answer across multiple projections.",
+    "intentionally deferred": "any broader schema redesign, multi-surface cleanup, or standing-guidance integration work.",
+    "discovered implications": "if routine-recovery questions still grow beyond this bundle, the next cheapest move is still a compact field-set clarification rather than more prose.",
+    "proof achieved now": "`docs/default-path-contract.md` names the minimum recovery questions and the checker enforces that compact route contract.",
+    "validation still needed": "a live dogfood pass should confirm the recovery path stays obvious in ordinary restart work.",
+    "next likely slice": "implement the highest-value follow-on refinement from `ROADMAP.md` if the compact recovery path still feels split."
+  },
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "prepare a handoff-safe first slice for a smaller agent to audit routine planning recovery, define the minimum operational question set, and land one narrow clarification if it is mechanically obvious.",
+    "hard constraints": "keep `planning_record` canonical; prefer clarifying existing surfaces over inventing new ones; keep the result compact enough that a cheaper agent can execute it without broad rereads or product-shape debate; do not silently widen into hierarchy redesign, standing-intent enforcement, or backlog semantics.",
+    "agent may decide locally": "exact wording of the question set, which recent planning surfaces provide the best ordinary-work evidence, whether the audit should live in a review artifact or directly in the execplan summary, and whether the first clarification belongs in summary/report output, selector docs, or one contract doc.",
+    "escalate when": "the best-looking fix would require changing canonical planning ownership, adding a new planning artifact, redefining the roadmap/TODO/execplan hierarchy, or touching more than one compact surface family at once."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "planning-surface-clarity-routine-recovery",
+    "status": "completed",
+    "scope": "shape a smaller-agent-ready first slice around routine-recovery questions, evidence, and one bounded clarification target.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "None; the slice is complete and follow-on work is routed to `ROADMAP.md`."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "TODO.md",
+    "docs/default-path-contract.md",
+    ".agentic-workspace/planning/execplans/planning-surface-clarity-routine-recovery-2026-04-17.md",
+    "packages/planning/tests/",
+    ".agentic-workspace/planning/scripts/check/check_planning_surfaces.py",
+    "packages/planning/bootstrap/.agentic-workspace/planning/scripts/check/check_planning_surfaces.py"
+  ],
+  "invariants": [
+    "`planning_record` remains the canonical compact active planning state.",
+    "New clarity work must reduce ordinary rereading rather than add more planning vocabulary.",
+    "The smaller-agent handoff must stay bounded enough that implementation can proceed without high-level product reinterpretation."
+  ],
+  "contract_decisions_to_freeze": [
+    "The first slice should answer a small routine-recovery question set before it tries to redesign planning surfaces.",
+    "The smaller agent should only implement one compact clarification target if the audit makes that target obvious.",
+    "If the audit reveals broader ambiguity than one cheap slice can safely resolve, route that residue back to `ROADMAP.md` instead of widening the tranche."
+  ],
+  "open_questions_to_close": [
+    "Which routine-recovery questions are truly minimum and repeated in ordinary work?",
+    "Which compact surface should own each answer first?",
+    "Is the first clarification best expressed as a summary/report field tweak, a selector/doc clarification, or a narrow reporting rule?"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-planning-bootstrap summary --format json",
+    "uv run agentic-planning-bootstrap report --format json"
+  ],
+  "required_tools": [
+    "uv"
+  ],
+  "completion_criteria": [
+    "The minimum routine-recovery question set is checked in and small enough to guide future planning-surface cleanup.",
+    "The first slice leaves behind one explicit smaller-agent-safe recommendation or one landed narrow clarification target.",
+    "The resulting artifact makes it cheaper to answer routine planning recovery questions from compact surfaces than from raw planning prose."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "Added a compact routine-planning-recovery question set to the default-path contract and enforced it in the planning-surface checker.",
+    "validation confirmed": "`uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run pytest packages/planning/tests/test_installer.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-planning-bootstrap summary --format json`; `uv run agentic-planning-bootstrap report --format json`",
+    "follow-on routed to": "`ROADMAP.md`",
+    "resume from": "the `planning-surface-clarity-routine-recovery` roadmap lane"
+  },
+  "drift_log": [
+    "2026-04-17: Promoted the top-priority planning-surface-clarity lane into an active first slice and shaped it explicitly for smaller-agent handoff.",
+    "2026-04-17: Tightened the default-path contract so routine planning recovery has one compact question set and one guarded front-door route."
+  ]
+}

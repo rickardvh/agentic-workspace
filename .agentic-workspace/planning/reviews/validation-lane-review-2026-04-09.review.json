@@ -1,0 +1,40 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Validation Lane Review",
+  "goal": [
+    "Check whether the documented validation lane still proves the promised contract for the current repo state."
+  ],
+  "scope": [
+    "`Makefile`",
+    "`docs/maintainer-commands.md`",
+    "`make check`",
+    "package verify and freshness lanes"
+  ],
+  "non_goals": [
+    "Do not open new feature work from this review alone.",
+    "Do not treat a now-fixed transient failure as an ongoing regression."
+  ],
+  "review_mode": {
+    "mode": "`validation-lane`",
+    "review question": "Does the normal aggregate validation lane still catch the important contract failures and run to completion?",
+    "default finding cap": "3",
+    "inputs inspected first": "`Makefile`, `docs/maintainer-commands.md`, `make check`, strict memory freshness, payload verification"
+  },
+  "review_method": {
+    "commands used": "",
+    "evidence sources": ""
+  },
+  "references": [],
+  "findings": [],
+  "recommendation": {
+    "promote": "none",
+    "defer": "none",
+    "dismiss": "validation-lane weakness concerns in the current repo state"
+  },
+  "validation_commands": [
+    "`make check`"
+  ],
+  "drift_log": [
+    "2026-04-09: Review created as part of the full review-matrix pass after confirming the absolute-path checker caught and rejected a stored review placeholder until it was corrected."
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Automatic Skill Selection Routing",
+  "goal": [
+    "Let the workspace recommend the right bundled or repo-owned skills from task text so users can ask for outcomes without needing to know skill names."
+  ],
+  "non_goals": [
+    "Build a generic LLM runtime inside the workspace CLI.",
+    "Treat loose directory scanning as enough for skill selection quality.",
+    "Collapse bundled and repo-owned skills into one undifferentiated authority class."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "add explicit task-matching metadata to skill registries, expose a workspace recommendation path on top of the registry-backed discovery surface, document the selection contract, and prove the routing with narrow tests.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "None. Milestone completed and ready to archive."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`src/agentic_workspace/`",
+    "`packages/planning/`",
+    "`packages/memory/`",
+    "`.agentic-workspace/memory/repo/skills/`",
+    "`docs/`",
+    "`README.md`",
+    "`TODO.md`"
+  ],
+  "invariants": [
+    "Users should be able to ask for outcomes without knowing skill ids.",
+    "Skill recommendation must remain registry-backed and explainable.",
+    "Bundled package skills and repo-owned skills must stay distinct in selection output and ownership metadata."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run pytest tests/test_workspace_cli.py tests/test_workspace_lifecycle.py`",
+    "`cd packages/planning && uv run pytest tests/test_installer.py tests/test_skills_catalog.py`",
+    "`cd packages/memory && uv run pytest tests/test_installer.py`",
+    "`uv run python scripts/check/check_planning_surfaces.py`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Skill registries carry explicit activation hints suitable for task matching.",
+    "`agentic-workspace skills` can recommend likely skills for a task description and explain why they matched.",
+    "The installed planning and memory surfaces preserve the same recommendation contract after upgrade."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-08: Promoted after confirming that explicit skill names should be optional expert overrides, not the normal operating mode for users or agents.",
+    "2026-04-08: Completed by adding activation hints to bundled and repo-owned skill registries, teaching `agentic-workspace skills --task ...` to rank likely matches with reasons, and refreshing the installed planning and memory surfaces so the root workspace exposes the same recommendation contract."
+  ]
+}

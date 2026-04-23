@@ -88,14 +88,6 @@
       "locator": ""
     }
   ],
-  "capability_posture": {
-    "execution class": "",
-    "recommended strength": "",
-    "preferred location": "",
-    "delegation friendly": "",
-    "strong external reasoning": "",
-    "why": ""
-  },
   "active_milestone": {
     "id": "",
     "status": "",

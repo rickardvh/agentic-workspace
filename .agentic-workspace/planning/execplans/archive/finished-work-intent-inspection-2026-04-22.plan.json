@@ -1,0 +1,108 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Finished Work Intent Inspection",
+  "goal": [],
+  "non_goals": [],
+  "intent_continuity": {
+    "larger intended outcome": "make closure truthfulness inspectable not only at archive time, but also later when a human or agent needs to verify whether previously closed work really landed.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "`finished-work-intent-inspection`"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {
+    "literal request": "ingest the new reopening issues, prioritize them, and start with intent/closure so the repo does not need to repeat the manual verification process.",
+    "inferred intended outcome": "make verification of previously closed lanes a product-native capability rather than a bespoke one-off audit ritual.",
+    "chosen concrete what": "add a compact finished-work inspection contract derived from archived planning residue plus optional external evidence, expose it through report/summary surfaces, and dogfood it against at least one closed lane.",
+    "interpretation distance": "low",
+    "review guidance": "reject the slice if it still depends on a hand-authored checklist file or assumes GitHub is always present."
+  },
+  "execution_bounds": {
+    "allowed paths": "`packages/planning/src/`, `packages/planning/bootstrap/.agentic-workspace/`, `src/agentic_workspace/`, `tests/`, `.agentic-workspace/`",
+    "max changed files": "30",
+    "required validation commands": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`",
+    "ask-before-refactor threshold": "stop before broad archive or issue-ingestion redesign outside planning/reporting surfaces",
+    "stop before touching": "unrelated memory package semantics or already-open graceful-compliance work"
+  },
+  "stop_conditions": {
+    "stop when": "the design would require a second durable archive store rather than deriving from checked-in residue.",
+    "escalate when boundary reached": "the current summary/report path cannot carry a compact finished-work inspection view without a broader reporting-contract redesign.",
+    "escalate on scope drift": "the work turns into a mass historical audit instead of shipping the reusable inspection surface.",
+    "escalate on proof failure": "the new surface cannot classify at least one previously closed lane from checked-in residue plus optional evidence."
+  },
+  "context_budget": {
+    "live working set": "archived execplan residue shape, intent-validation logic, planning report surfaces, and the closed-lane proof cases behind `#260`.",
+    "recoverable later": "broader product-compression and portability follow-on lanes.",
+    "externalize before shift": "the finished-work inspection contract shape, classification vocabulary, and the proof-case lane used to validate it.",
+    "tiny resumability note": "the surface must work from archived residue first; external issue state is only optional corroborating evidence.",
+    "context-shift triggers": "shift when the contract shape is frozen, when report integration starts, or when only dogfood validation and closeout remain."
+  },
+  "delegated_judgment": {
+    "requested outcome": "ship a compact finished-work inspection path and dogfood it immediately on one previously closed lane.",
+    "hard constraints": "keep checked-in archive residue primary, keep external evidence optional, and avoid creating a second archival state system.",
+    "agent may decide locally": "the exact classification names, where the compact inspection view lives, and which archived lane is the best proof case.",
+    "escalate when": "the smallest honest implementation still needs a heavyweight historical audit store or mandatory network access."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {},
+  "immediate_next_action": [],
+  "blockers": [],
+  "touched_paths": [],
+  "invariants": [],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [],
+  "required_tools": [],
+  "completion_criteria": [],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "direct single-agent implementation",
+    "handoff source": "active execplan plus shipped planning summary/report contracts",
+    "what happened": "added `finished_work_inspection_contract` to planning summary/report, supported optional generic reopening evidence through `.agentic-workspace/planning/finished-work-evidence.json`, refreshed the installed payload, and dogfooded the new surface against archived closeouts that had actually been reopened.",
+    "scope touched": "planning installer/report code, shipped planning docs, planning/workspace tests, repo-local finished-work evidence, and this execplan closeout.",
+    "validations run": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest tests/test_workspace_cli.py -q`; `uv run pytest tests/test_maintainer_surfaces.py -q`; `uv run agentic-workspace summary --format json`; `uv run agentic-planning-bootstrap report --format json`",
+    "result for continuation": "no further execution is required for `#260`; the product-native inspection path is now in place and already feeding the remaining reopened lanes back into visible planning state.",
+    "next step": "archive the plan, close the issue, run the final repo-level refresh and checks, and commit."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest tests/test_workspace_cli.py -q`; `uv run pytest tests/test_maintainer_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`; `uv run agentic-planning-bootstrap report --format json`; `uv run agentic-workspace report --target . --format json`",
+    "proof achieved now": "planning now ships a compact finished-work inspection surface, and the repo dogfood state shows it flagging reopened archived lanes directly from archive residue plus optional reopening evidence instead of from a bespoke checklist file.",
+    "evidence for \"proof achieved\" state": "`agentic-planning-bootstrap report --format json` now exposes `finished_work_inspection` with likely-premature signals for archived `system-intent-and-planning-trust-2026-04-21.md`, `bounded-delegation-and-run-contracts-2026-04-21.md`, and the archived local-only-residue closeouts; workspace report carries the same findings through module aggregation."
+  },
+  "intent_satisfaction": {
+    "original intent": "make verification of previously closed lanes a product-native capability rather than another manual one-off inspection pass.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "the shipped product now derives a compact finished-work inspection answer from archived execplans and optional generic evidence, and the repo no longer needs `issue-inspection.md` or chat reconstruction to justify the reopened follow-on lanes already routed into planning state.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "`#260` asked for the reusable inspection capability itself, not for every reopened lane to be fixed immediately; that capability is now shipped, dogfooded, and already feeding the remaining work back into explicit open lanes.",
+    "evidence carried forward": "the shipped contract/docs/tests, `.agentic-workspace/planning/finished-work-evidence.json`, and the archived closeout findings surfaced by planning/workspace report.",
+    "reopen trigger": "reopen only if verifying previously closed lanes again requires bespoke manual reconstruction rather than the shipped summary/report surfaces."
+  },
+  "execution_summary": {
+    "outcome delivered": "shipped a compact finished-work inspection path for archived closeouts and dogfooded it against the repo’s reopened historical lanes.",
+    "validation confirmed": "targeted planning/workspace tests passed, planning-surface checks stayed clean, and summary/report now expose finished-work classifications and findings from checked-in residue plus optional generic evidence.",
+    "follow-on routed to": "existing open lanes `#259`, `#258`, `#261`, `#251/#253/#254/#255/#256`, and `#230` remain in `.agentic-workspace/planning/state.toml`.",
+    "knowledge promoted (memory/docs/config)": "promoted the contract into shipped planning docs and added repo-local finished-work evidence under `.agentic-workspace/planning/finished-work-evidence.json`.",
+    "resume from": "no resume needed for this lane once archived; promote the next queued lane when ready."
+  },
+  "drift_log": []
+}

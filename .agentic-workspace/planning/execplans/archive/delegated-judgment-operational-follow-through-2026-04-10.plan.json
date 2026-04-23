@@ -1,0 +1,95 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Delegated Judgment Operational Follow-Through",
+  "goal": [
+    "Make delegated judgment operational in active execplans rather than leaving it as a separate doctrine page."
+  ],
+  "non_goals": [
+    "Build a new approval workflow.",
+    "Add heavy process to direct tasks.",
+    "Turn planning into a generic permissions engine."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Finish the bounded delegated-judgment capability so broad direction can survive across sessions without silent scope inflation.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "Operationalize delegated judgment inside the planning contract so active execplans preserve intended outcome, hard constraints, allowed local latitude, and escalation triggers explicitly.",
+    "hard constraints": "Keep the change inside planning and delegated-judgment contract surfaces; do not invent a broader approval system or widen direct-task ceremony.",
+    "agent may decide locally": "Add the compact execplan section, enforce it in planning checks and archive flow, update payload copies and tests, and use this slice to dogfood the result.",
+    "escalate when": "The cleaner fix requires changing planning ownership, adding new top-level workflow surfaces, or forcing heavy delegated-judgment structure onto simple direct tasks."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "wire delegated judgment into the execplan template, checker, archive helper, and planning docs with regression coverage.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Finish the planning and test updates, then validate the package and root planning surfaces under the new section."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`TODO.md`",
+    "`.agentic-workspace/planning/execplans/`",
+    "`docs/delegated-judgment-contract.md`",
+    "`packages/planning/`",
+    "`.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`"
+  ],
+  "invariants": [
+    "Keep delegated judgment compact and execution-shaped.",
+    "Preserve cheap direct execution for truly local work.",
+    "Make archive fail closed when an active plan did not preserve the delegated-judgment boundary it depended on."
+  ],
+  "contract_decisions_to_freeze": [
+    "Delegated judgment should be part of active execplan shape, not a separate optional note when the work is broad enough to need a plan.",
+    "The compact section should preserve requested outcome, hard constraints, allowed local latitude, and escalation triggers.",
+    "Enforcement should stay in the existing planning checker and archive path rather than creating a second review lane."
+  ],
+  "open_questions_to_close": [
+    "No blocking open questions remain for this slice."
+  ],
+  "validation_commands": [
+    "`uv run pytest packages/planning/tests/test_check_planning_surfaces.py`",
+    "`uv run pytest packages/planning/tests/test_installer.py`",
+    "`uv run python scripts/check/check_planning_surfaces.py`",
+    "`uv run agentic-planning-bootstrap upgrade --target .`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Execplan docs and scaffold include `## Delegated Judgment`.",
+    "Planning checks warn when active execplans omit delegated-judgment fields.",
+    "Archive fails closed when delegated-judgment fields are missing.",
+    "This slice archives cleanly using the new contract."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "Active execplans now carry a compact delegated-judgment section, the planning checker warns when it is missing, archive fails closed when delegated-judgment fields are absent, and promoted plans scaffold the section automatically.",
+    "validation confirmed": "`uv run pytest packages/planning/tests/test_check_planning_surfaces.py`; `uv run pytest packages/planning/tests/test_installer.py`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`; `make maintainer-surfaces`",
+    "follow-on routed to": "none",
+    "resume from": "no further delegated-judgment follow-through is queued right now"
+  },
+  "drift_log": [
+    "2026-04-10: Promoted directly from maintainer choice after the capability review identified operational follow-through as the main remaining delegated-judgment gap."
+  ]
+}

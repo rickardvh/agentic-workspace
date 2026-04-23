@@ -236,19 +236,6 @@ It should remain useful whether the environment offers:
 The durable question is not which named model to use.
 The durable question is what task shape the current execution path can safely support.
 
-## Capability Posture Packet
-
-When a bounded slice is already planning-backed, encode the minimum execution guidance directly in the checked-in work contract:
-
-- `execution class`: what kind of work this slice primarily is
-- `recommended strength`: the weakest safe strength the slice should expect
-- `preferred location`: whether local, external, or either execution is a better fit
-- `delegation friendly`: whether a planner-to-worker split is a good idea
-- `strong external reasoning`: whether strong external general-purpose reasoning should be avoided, merely allowed, or actively preferred
-- `why`: a short rationale that survives handoff and review
-
-That packet exists to make runtime resolution easier, not to introduce scheduler policy into checked-in planning.
-
 ## Complexity-Reduction Feedback
 
 Repeated stronger-capability needs are not only routing outcomes.

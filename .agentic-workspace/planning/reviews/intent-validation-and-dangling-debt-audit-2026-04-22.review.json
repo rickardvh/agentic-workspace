@@ -1,0 +1,22 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Intent Validation And Dangling Debt Audit",
+  "goal": [
+    "Identify why unfinished larger intent can still disappear from active inspection and closure flow, even though execplans now carry `Intent Continuity`, `Required Continuation`, `Intent Satisfaction`, and `Closure Check`."
+  ],
+  "scope": [
+    "Audit the current planning, archive, and reporting path against the failure mode:",
+    "a bounded slice closes cleanly",
+    "the larger issue or lane is still unfinished",
+    "the unresolved follow-on is not easy to inspect later",
+    "Use live GitHub issue state plus checked-in planning state."
+  ],
+  "non_goals": [],
+  "review_mode": {},
+  "review_method": {},
+  "references": [],
+  "findings": [],
+  "recommendation": {},
+  "validation_commands": [],
+  "drift_log": []
+}

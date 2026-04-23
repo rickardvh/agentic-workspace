@@ -1,0 +1,120 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planner-Worker Orchestrator Workflow",
+  "goal": [
+    "Productize the planner-to-worker delegated workflow so lane-scale execution can use a reusable checked-in handoff instead of ad hoc prompting, while staying agent-agnostic and local-config-driven."
+  ],
+  "non_goals": [
+    "Turn the repo into a scheduler for runtime model or vendor choice.",
+    "Require only internal subagents or only external delegation.",
+    "Make planning own account-specific or machine-specific preferences that already belong in `.agentic-workspace/config.local.toml`.",
+    "Replace the canonical planning surfaces with a second durable state store."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "make delegated execution cheaper than ad hoc prompting while preserving checked-in continuity across agents, tools, subscriptions, and local models.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "planner-worker-orchestrator-workflow"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "planning can emit a reusable delegated handoff contract and a bundled workflow for orchestrated execution instead of relying on handwritten prompts alone.",
+    "intentionally deferred": "any future runtime-specific adapter or CLI helper beyond the first agent-agnostic contract and skill.",
+    "discovered implications": "the base handoff is strong enough to carry a delegated slice, but target capability confidence still belongs in a local-only advisory layer rather than in repo-owned planning policy.",
+    "proof achieved now": "the reusable handoff command, bundled skill, relay/config integration, and one real delegated docs slice all completed cleanly.",
+    "validation still needed": "none for this lane beyond archive and issue closure.",
+    "next likely slice": "promote `#172` if local target-confidence notes are worth productizing as the next delegation-cost reduction."
+  },
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "define and ship a formal delegated workflow that uses the existing local mixed-agent posture, stays agent-agnostic, and supports internal delegation or external CLI/API handoff without making the repo prescriptive about executor choice.",
+    "hard constraints": "keep repo-owned planning canonical; settings stay in local config rather than checked-in scheduler policy; use the existing planner/implementer posture fields instead of inventing new preference sprawl; preserve one-home ownership for planning state; keep the workflow usable for internal delegation, local models, or other vendors.",
+    "agent may decide locally": "exact contract field shape, whether the formal workflow lives as a skill plus command or equivalent checked-in surface, how to dogfood the new workflow on one bounded slice, and which narrow validations prove the tranche.",
+    "escalate when": "a proposed workflow surface starts dictating runtime routing by vendor/model, requires hidden repo-local state, or cannot remain useful when delegation happens outside this runtime."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "planner-worker-workflow-contract",
+    "status": "completed",
+    "scope": "shipped the first reusable delegated handoff contract and bundled workflow, then proved it on one real delegated slice.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this lane, close `#171`, and route the local target-confidence follow-on into `ROADMAP.md` as `#172`."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "TODO.md",
+    ".agentic-workspace/planning/execplans/planner-worker-orchestrator-workflow-2026-04-17.md",
+    "docs/",
+    "packages/planning/src/",
+    "packages/planning/bootstrap/",
+    "packages/planning/skills/",
+    "packages/planning/tests/",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Runtime execution method stays tool-owned and agent-agnostic.",
+    "Local capability and cost posture stays in `.agentic-workspace/config.local.toml`, not checked-in repo config.",
+    "The workflow must remain usable whether delegation is internal, external over CLI/API, or unavailable.",
+    "Durable continuity must remain in checked-in planning surfaces rather than in tool-local subagent state alone."
+  ],
+  "contract_decisions_to_freeze": [
+    "The reusable worker handoff should be derivable from active planning state rather than authored from scratch every run.",
+    "The formal workflow should describe boundaries and handoff shape, not prescribe vendor-specific executor routing.",
+    "Worker-owned closure should be explicit and bounded; lane shaping, roadmap routing, and product-shape decisions remain orchestrator-owned.",
+    "The existing mixed-agent posture fields should remain the only local settings this workflow depends on."
+  ],
+  "open_questions_to_close": [
+    "Which handoff fields are genuinely needed to keep an external or smaller worker bounded without broad rereads?",
+    "Which cleanup and validation steps can safely move into the worker contract by default?",
+    "What is the smallest formal workflow surface that still works across internal delegation and external CLI/API delegation?"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace defaults --section relay --format json",
+    "uv run agentic-workspace config --target . --format json",
+    "uv run agentic-planning-bootstrap handoff --format json"
+  ],
+  "required_tools": [
+    "uv",
+    "gh"
+  ],
+  "completion_criteria": [
+    "A formal delegated workflow exists in shipped checked-in surfaces.",
+    "The workflow uses the existing local mixed-agent posture instead of inventing a scheduler.",
+    "A reusable handoff can be derived from active planning state for internal or external delegation.",
+    "One real delegated dogfood pass uses the new workflow and captures evidence about remaining cost or friction."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "the repo now ships a formal orchestrator workflow contract, a reusable `agentic-planning-bootstrap handoff --format json` surface, a bundled `planning-orchestrator-workflow` skill, and front-door docs that explain how the local mixed-agent posture and active handoff fit together.",
+    "validation confirmed": "`uv run pytest tests/test_workspace_cli.py -q`; `uv run pytest packages/planning/tests/test_installer.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace defaults --section relay --format json`; `uv run agentic-planning-bootstrap handoff --format json`.",
+    "follow-on routed to": "`.agentic-workspace/planning/reviews/orchestrator-workflow-dogfood-2026-04-17.md`, GitHub issue `#172`, and `ROADMAP.md`.",
+    "resume from": "`#172` if local delegation-target capability/confidence support is promoted."
+  },
+  "drift_log": [
+    "2026-04-17: Promoted from roadmap issue `#171` immediately after the planning-surface-clarity dogfood pass showed the workflow value was real but still too manual.",
+    "2026-04-17: Core workflow tranche landed with a reusable handoff command, bundled orchestrator skill, and relay/config integration; next proof is a real delegated slice on top of that contract.",
+    "2026-04-17: Delegated docs dogfood pass landed through the new workflow and confirmed the next uncovered cost class is local target-confidence, not repo-owned orchestration policy."
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Bounded Delegation And Run Review",
+  "goal": [],
+  "non_goals": [],
+  "intent_continuity": {
+    "larger intended outcome": "make delegated executor work cheaper to bound, inspect, compare, and correct without losing intended outcome, stop conditions, or proof expectations.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "bounded-delegation-and-run-review"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {
+    "literal request": "implement the next lane end to end as before.",
+    "inferred intended outcome": "finish the full `bounded-delegation-and-run-review` issue cluster, not just promote it or land a review-only slice.",
+    "chosen concrete what": "extend the active execplan contract and derived planning views so handoff, run residue, and returned-run review all come from the same checked-in source.",
+    "interpretation distance": "medium; the literal request names the lane, while the concrete product shape still needs one bounded implementation choice.",
+    "review guidance": "correct the interpretation if the result starts behaving like a heavyweight orchestration system instead of a compact delegated-work contract."
+  },
+  "execution_bounds": {
+    "allowed paths": "`.agentic-workspace/planning/`, `.agentic-workspace/docs/`, `packages/planning/`, `src/agentic_workspace/`, `tests/`.",
+    "max changed files": "keep the slice within the planning package, its shipped payload, installed planning docs, and the minimal root workspace integration/tests required to prove the contract.",
+    "required validation commands": "`uv run pytest packages/planning/tests/test_installer.py -q`, `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`, `uv run pytest tests/test_workspace_cli.py -q`, `uv run python scripts/check/check_planning_surfaces.py`.",
+    "ask-before-refactor threshold": "stop before broad renderer/manifest refactors unless the new contract cannot be shipped without them.",
+    "stop before touching": "unrelated product-compression, memory-boundary, or startup-lane surfaces outside the delegated-work contract."
+  },
+  "stop_conditions": {
+    "stop when": "the work needs broad rereads or new machinery beyond compact execplan-derived surfaces.",
+    "escalate when boundary reached": "the handoff/review chain cannot stay derived from the active execplan or would force vendor-specific executor behavior.",
+    "escalate on scope drift": "more than the named planning/workspace surfaces or proof lanes would need reshaping.",
+    "escalate on proof failure": "the planning checker or installer tests cannot prove the new sections without changing unrelated contracts."
+  },
+  "context_budget": {
+    "live working set": "planning installer projections, execplan template/checker rules, and the active lane/state archive path.",
+    "recoverable later": "older mixed-agent and context-budget tranche history can be reloaded from archive if a regression appears.",
+    "externalize before shift": "the exact section names, required delegated-work fields, issue-closeout rule, and final validation commands.",
+    "tiny resumability note": "keep delegated-work residue inside the execplan and expose compact derived views instead of inventing a parallel artifact store.",
+    "context-shift triggers": "shift when the source/payload/install boundary is crossed, when the checker starts enforcing the new sections, or when the lane moves from active implementation to archive/issue closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "implement the bounded delegation and run-review lane end to end with one compact handoff-plus-review contract.",
+    "hard constraints": "keep the product executor-agnostic, keep `planning_record` canonical, avoid heavy telemetry/orchestration, and finish the lane in one pass.",
+    "agent may decide locally": "exact section names, projection field names, whether the review views live in summary/report/handoff, and the narrowest validation expansion that proves the contract.",
+    "escalate when": "the design would require a second durable planning store, vendor-specific executor coupling, or broad rewrite of unrelated startup/reporting surfaces."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {},
+  "immediate_next_action": [],
+  "blockers": [],
+  "touched_paths": [],
+  "invariants": [],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [],
+  "required_tools": [],
+  "completion_criteria": [],
+  "execution_run": {
+    "run status": "completed.",
+    "executor": "single-agent local implementation in this repo.",
+    "handoff source": "`.agentic-workspace/planning/execplans/bounded-delegation-and-run-contracts-2026-04-21.md` plus `agentic-planning-bootstrap handoff --format json`.",
+    "what happened": "extended the planning record and derived views with intent interpretation, execution bounds, stop conditions, execution-run residue, and finished-run review; then aligned the template, docs, checker, tests, and installed payload.",
+    "scope touched": "planning source, planning payload docs/template/checker, installed planning docs/checkers, workspace CLI proof, and the active lane/state surfaces.",
+    "validations run": "`uv run pytest packages/planning/tests/test_installer.py -q`, `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`, `uv run pytest tests/test_workspace_cli.py -q`, `uv run pytest tests/test_maintainer_surfaces.py -q`, `uv run python scripts/check/check_planning_surfaces.py`, `uv run agentic-planning-bootstrap summary --format json`, `uv run agentic-planning-bootstrap handoff --format json`, `uv run agentic-planning-bootstrap report --format json`, `uv run agentic-workspace summary --format json`, `uv run agentic-planning-bootstrap verify-payload`, `uv run agentic-planning-bootstrap upgrade --target .`, `uv run agentic-memory-bootstrap upgrade --target .`.",
+    "result for continuation": "no further implementation residue remains; only archive and issue closeout remain.",
+    "next step": "archive the completed lane, close the issue cluster, and commit."
+  },
+  "finished_run_review": {
+    "review status": "completed.",
+    "scope respected": "yes; the work stayed inside planning source/payload/install plus the minimal root workspace proof lane.",
+    "proof status": "satisfied; targeted package and root proof lanes plus final payload refresh passed.",
+    "intent served": "yes; the result is one compact delegated-work chain rather than a new orchestration subsystem.",
+    "misinterpretation risk": "low; the implementation widened the existing handoff/report chain instead of inventing a second durable planning system.",
+    "follow-on decision": "archive-and-close."
+  },
+  "proof_report": {
+    "validation proof": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run pytest tests/test_workspace_cli.py -q`; `uv run pytest tests/test_maintainer_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-planning-bootstrap summary --format json`; `uv run agentic-planning-bootstrap handoff --format json`; `uv run agentic-planning-bootstrap report --format json`; `uv run agentic-workspace summary --format json`; `uv run agentic-planning-bootstrap verify-payload`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`.",
+    "proof achieved now": "the delegated-work contract is implemented end to end across planning source, shipped payload, installed root surfaces, and compact query outputs.",
+    "evidence for \"proof achieved\" state": "package tests, root tests, planning-surface check, handoff/report/summary queries, and final payload refresh all passed with no planning-surface drift."
+  },
+  "intent_satisfaction": {
+    "original intent": "implement the bounded delegation and run-review lane end to end.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "the handoff packet, execution bounds, stop conditions, execution-run residue, and finished-run review all ship from one compact execplan-derived chain, matching issues `#233`, `#235`, `#239`, `#241`, and `#242`.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "the bounded lane outcome and its linked issue cluster are fully implemented with green proof and no required continuation.",
+    "reopen evidence": "later GitHub follow-on work reopened related review gaps in `#259` and `#260`, so archived trust should be read as lower even though the slice itself landed.",
+    "evidence carried forward": "archived execplan residue, source/payload/install changes, and the closed issue cluster preserve the delivered contract.",
+    "reopen trigger": "reopen if delegated-work handoff or finished-run review stops resolving cleanly from summary/report/handoff or if a linked issue is reopened for a substantive gap."
+  },
+  "execution_summary": {
+    "outcome delivered": "planning now ships one compact delegated-work chain that adds intent interpretation, execution bounds, stop conditions, execution-run residue, and finished-run review to the active execplan and exposes them through summary/report/handoff.",
+    "validation confirmed": "package installer/checker tests, root workspace CLI and maintainer tests, planning-surface check, handoff/report/summary queries, payload verification, and final planning/memory upgrades all passed.",
+    "follow-on routed to": "none; lane complete.",
+    "knowledge promoted (memory/docs/config)": "planning docs and templates now carry the delegated-work contract directly inside the package-owned planning domain.",
+    "resume from": "promote the next inactive roadmap lane when ready."
+  },
+  "drift_log": []
+}

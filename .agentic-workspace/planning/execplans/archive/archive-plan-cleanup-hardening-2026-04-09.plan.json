@@ -1,0 +1,75 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Archive-Plan Cleanup Hardening",
+  "goal": [
+    "Make `agentic-planning-bootstrap archive-plan --apply-cleanup` reliably clear completed active work from the repo's compact `TODO.md` queue shape so plan archival does not leave manual planning residue."
+  ],
+  "non_goals": [
+    "No issue-tracker integration.",
+    "No broad redesign of TODO parsing or planning summary semantics.",
+    "No roadmap or review workflow expansion beyond the cleanup defect."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "archive-plan-cleanup-hardening",
+    "status": "completed",
+    "scope": "extend archive cleanup to support the compact `## Now` plus `## Action` TODO shape, add regression coverage, refresh the root install, and validate the full local lane before commit.",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan with `archive-plan --apply-cleanup`, verify that the active queue returns to idle automatically, then commit the fix."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`TODO.md`",
+    "`.agentic-workspace/planning/execplans/archive-plan-cleanup-hardening-2026-04-09.md`",
+    "`packages/planning/src/repo_planning_bootstrap/installer.py`",
+    "`packages/planning/tests/test_installer.py`"
+  ],
+  "invariants": [
+    "Planning remains issue-tracker agnostic.",
+    "`archive-plan --apply-cleanup` stays narrow and file-native.",
+    "Root, payload, and source copies stay aligned before the repo relies on the fix."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`cd packages/planning && uv run pytest`",
+    "`cd packages/memory && uv run pytest`",
+    "`uv run pytest`",
+    "`uv run python scripts/check/check_planning_surfaces.py`",
+    "`uv run python scripts/check/check_memory_freshness.py`",
+    "`make maintainer-surfaces`",
+    "`uv run agentic-planning-bootstrap upgrade --target .`",
+    "`uv run agentic-memory-bootstrap upgrade --target .`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Archiving a completed execplan with `--apply-cleanup` removes compact active queue residue from `TODO.md`.",
+    "Planning package regression coverage proves the compact TODO cleanup path.",
+    "Full local tests and validation pass before commit.",
+    "Active planning state returns to idle after the fix lands."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-09: Promoted immediately from dogfooded archive cleanup residue after the front-door defaults tranche.",
+    "2026-04-09: Completed the cleanup fix, regression coverage, root refresh, and full local validation lane."
+  ]
+}

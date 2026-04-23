@@ -81,6 +81,9 @@ EXPECTED_EXECPLAN_SECTIONS = [
     "Intent Continuity",
     "Required Continuation",
     "Iterative Follow-Through",
+    "Intent Interpretation",
+    "Execution Bounds",
+    "Stop Conditions",
     "Context Budget",
     "Delegated Judgment",
     "Active Milestone",
@@ -90,6 +93,8 @@ EXPECTED_EXECPLAN_SECTIONS = [
     "Invariants",
     "Validation Commands",
     "Completion Criteria",
+    "Execution Run",
+    "Finished-Run Review",
     "Execution Summary",
     "Drift Log",
 ]
@@ -660,7 +665,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     required_agents_fragments = (
         "agentic-workspace summary --format json",
         "agentic-workspace config --target . --format json",
-        "active execplan",
+        "the active execplan in `.agentic-workspace/planning/execplans/`",
         "do not bulk-read all planning surfaces",
         "agentic-workspace defaults --section startup --format json",
     )
@@ -1178,8 +1183,13 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
     active_milestone_fields = _extract_kv_fields(active_milestone_section)
     intent_continuity_fields = _extract_kv_fields(_section_content(lines, "Intent Continuity"))
     required_continuation_fields = _extract_kv_fields(_section_content(lines, "Required Continuation"))
+    intent_interpretation_fields = _extract_kv_fields(_section_content(lines, "Intent Interpretation"))
+    execution_bounds_fields = _extract_kv_fields(_section_content(lines, "Execution Bounds"))
+    stop_conditions_fields = _extract_kv_fields(_section_content(lines, "Stop Conditions"))
     context_budget_fields = _extract_kv_fields(_section_content(lines, "Context Budget"))
     delegated_judgment_fields = _extract_kv_fields(_section_content(lines, "Delegated Judgment"))
+    execution_run_fields = _extract_kv_fields(_section_content(lines, "Execution Run"))
+    finished_run_review_fields = _extract_kv_fields(_section_content(lines, "Finished-Run Review"))
     is_active_execplan = not has_only_non_active_status
     larger_intended_outcome = intent_continuity_fields.get("larger intended outcome", "").strip()
     completes_larger_outcome = intent_continuity_fields.get("this slice completes the larger intended outcome", "").strip().lower()
@@ -1282,9 +1292,54 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
 
     if is_active_execplan:
         for label in (
+            "literal request",
+            "inferred intended outcome",
+            "chosen concrete what",
+            "interpretation distance",
+            "review guidance",
+        ):
+            if not intent_interpretation_fields.get(label, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_UNDER_SPECIFIED,
+                        _render_path(path),
+                        f"Active execplan is missing `{label.title()}` in Intent Interpretation.",
+                    )
+                )
+        for label in (
+            "allowed paths",
+            "max changed files",
+            "required validation commands",
+            "ask-before-refactor threshold",
+            "stop before touching",
+        ):
+            if not execution_bounds_fields.get(label, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_UNDER_SPECIFIED,
+                        _render_path(path),
+                        f"Active execplan is missing `{label.title()}` in Execution Bounds.",
+                    )
+                )
+        for label in (
+            "stop when",
+            "escalate when boundary reached",
+            "escalate on scope drift",
+            "escalate on proof failure",
+        ):
+            if not stop_conditions_fields.get(label, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_UNDER_SPECIFIED,
+                        _render_path(path),
+                        f"Active execplan is missing `{label.title()}` in Stop Conditions.",
+                    )
+                )
+        for label in (
             "live working set",
             "recoverable later",
             "externalize before shift",
+            "pre-work memory pull",
             "tiny resumability note",
             "context-shift triggers",
         ):
@@ -1328,6 +1383,40 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                     "Active execplan is missing `Escalate when` in Delegated Judgment.",
                 )
             )
+        for label in (
+            "run status",
+            "executor",
+            "handoff source",
+            "what happened",
+            "scope touched",
+            "validations run",
+            "result for continuation",
+            "next step",
+        ):
+            if not execution_run_fields.get(label, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_UNDER_SPECIFIED,
+                        _render_path(path),
+                        f"Active execplan is missing `{label.title()}` in Execution Run.",
+                    )
+                )
+        for label in (
+            "review status",
+            "scope respected",
+            "proof status",
+            "intent served",
+            "misinterpretation risk",
+            "follow-on decision",
+        ):
+            if not finished_run_review_fields.get(label, "").strip():
+                warnings.append(
+                    PlanningWarning(
+                        WARNING_EXECPLAN_UNDER_SPECIFIED,
+                        _render_path(path),
+                        f"Active execplan is missing `{label.title()}` in Finished-Run Review.",
+                    )
+                )
 
     if is_active_execplan:
         ready_value = active_milestone_fields.get("ready", "").strip().lower()
@@ -1467,6 +1556,67 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
             )
         )
 
+    if has_only_completed_status:
+        execution_run, execution_run_bullets = _extract_section_stats(lines, "Execution Run")
+        if execution_run_bullets == 0 or not [line for line in execution_run if line.strip()]:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Completed execplan is missing an Execution Run section.",
+                )
+            )
+        else:
+            for field_name in (
+                "run status",
+                "executor",
+                "handoff source",
+                "what happened",
+                "scope touched",
+                "validations run",
+                "result for continuation",
+                "next step",
+            ):
+                value = execution_run_fields.get(field_name, "").strip().lower()
+                if not value or value in {"pending", "tbd", "todo", "not-run-yet"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_UNDER_SPECIFIED,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Execution Run field: {field_name}.",
+                        )
+                    )
+                    break
+
+        finished_run_review, finished_run_review_bullets = _extract_section_stats(lines, "Finished-Run Review")
+        if finished_run_review_bullets == 0 or not [line for line in finished_run_review if line.strip()]:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_EXECPLAN_UNDER_SPECIFIED,
+                    _render_path(path),
+                    "Completed execplan is missing a Finished-Run Review section.",
+                )
+            )
+        else:
+            for field_name in (
+                "review status",
+                "scope respected",
+                "proof status",
+                "intent served",
+                "misinterpretation risk",
+                "follow-on decision",
+            ):
+                value = finished_run_review_fields.get(field_name, "").strip().lower()
+                if not value or value in {"pending", "tbd", "todo"}:
+                    warnings.append(
+                        PlanningWarning(
+                            WARNING_EXECPLAN_UNDER_SPECIFIED,
+                            _render_path(path),
+                            f"Completed execplan has an incomplete Finished-Run Review field: {field_name}.",
+                        )
+                    )
+                    break
+
     execution_summary, execution_summary_bullets = _extract_section_stats(lines, "Execution Summary")
     execution_summary_fields = _extract_kv_fields(execution_summary)
     if has_only_completed_status:
@@ -1479,7 +1629,13 @@ def _check_execplan(path: Path) -> tuple[list[PlanningWarning], set[str]]:
                 )
             )
         else:
-            for field_name in ("outcome delivered", "validation confirmed", "follow-on routed to", "resume from"):
+            for field_name in (
+                "outcome delivered",
+                "validation confirmed",
+                "follow-on routed to",
+                "post-work posterity capture",
+                "resume from",
+            ):
                 value = execution_summary_fields.get(field_name, "").strip().lower()
                 if not value or value in {"pending", "tbd", "todo", "not completed yet", "none yet", "current milestone"}:
                     warnings.append(
@@ -2049,11 +2205,6 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Return non-zero exit status when warnings are present.",
     )
-    parser.add_argument(
-        "--quiet-success",
-        action="store_true",
-        help="Emit a compact one-line success message when no warnings are present.",
-    )
     return parser.parse_args(argv)
 
 
@@ -2065,10 +2216,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.format == "json":
         print(json.dumps(summary, ensure_ascii=False, indent=2))
     else:
-        if args.quiet_success and not warnings:
-            print("[ok] planning surfaces")
-        else:
-            _print_warnings(warnings)
+        _print_warnings(warnings)
 
     return 1 if args.strict and warnings else 0
 

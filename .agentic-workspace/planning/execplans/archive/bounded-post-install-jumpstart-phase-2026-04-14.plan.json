@@ -1,0 +1,98 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Bounded Post-Install Jumpstart Phase",
+  "goal": [
+    "Define the first bounded post-bootstrap jumpstart phase for mature repos so safe install/adopt can deliver visible value sooner without broad repo conversion."
+  ],
+  "non_goals": [
+    "Make `init` more aggressive in ambiguous repos.",
+    "Bulk-import docs into Memory or Planning.",
+    "Build a generic repo analysis pipeline or full migration flow.",
+    "Convert all mature-repo context in one pass."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "make mature-repo adoption feel useful quickly while preserving the conservative safe-install posture.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "promote GitHub issue `#48` into an active execplan that defines the first bounded jumpstart phase for mature repos.",
+    "hard constraints": "stay post-bootstrap; keep `init` conservative; avoid bulk import; keep the first slice small and reviewable; preserve explicit safety boundaries.",
+    "agent may decide locally": "the exact surfaced name, which one or two seeded surfaces matter first, how much ranking policy belongs in this slice, and the smallest validation set needed to dogfood it.",
+    "escalate when": "the slice would require widening `init`, introducing broad repository conversion semantics, or building a generic analysis engine instead of a bounded jumpstart phase."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "bounded-post-install-jumpstart-phase",
+    "status": "completed",
+    "scope": "define the first bounded jumpstart phase for mature repos, including what counts as jumpstart relative to `init` and which one or two surfaces prove visible value first.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "GitHub issue `#48`"
+  },
+  "immediate_next_action": [
+    "Archive the completed jumpstart phase and keep the discovery/reporting surfaces as the read path for future mature-repo adoption."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`TODO.md`",
+    "`ROADMAP.md`",
+    "`.agentic-workspace/planning/execplans/bounded-post-install-jumpstart-phase-2026-04-14.md`",
+    "root planning docs and any downstream contract/docs needed after the first slice is shaped"
+  ],
+  "invariants": [
+    "`init` stays conservative in ambiguous repos.",
+    "Jumpstart happens only after safe install/adopt.",
+    "The first slice stays bounded and reviewable.",
+    "The slice seeds value without pretending to convert the entire repo."
+  ],
+  "contract_decisions_to_freeze": [
+    "Jumpstart is a post-bootstrap phase, not a more aggressive `init`.",
+    "Jumpstart may seed only a small number of clearly high-value surfaces.",
+    "The first slice should prefer visible value over completeness.",
+    "Broad discovery and ranking stay separate unless they are needed to keep the slice bounded."
+  ],
+  "open_questions_to_close": [
+    "Resolved by the seed-target tranche."
+  ],
+  "validation_commands": [
+    "`python scripts/check/check_planning_surfaces.py`",
+    "`uv run pytest tests`",
+    "`uv run agentic-workspace defaults --format json`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The repo has one checked-in execplan for the bounded mature-repo jumpstart phase.",
+    "The plan clearly distinguishes post-bootstrap jumpstart from `init`.",
+    "The first visible-value surfaces and the follow-on candidate lanes are explicit enough to guide implementation."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "bounded post-install jumpstart now has a compact discovery report, explicit Memory seed candidates, explicit Planning seed targets, and a fast-payoff ranking rule.",
+    "validation confirmed": "`uv run pytest tests/test_workspace_cli.py -q`, `uv run ruff check src tests`, `uv run python scripts/check/check_planning_surfaces.py`, and `uv run python scripts/check/check_memory_freshness.py` all passed.",
+    "follow-on routed to": "none",
+    "resume from": "none",
+    "product improvement signal": "the jumpstart phase was easier to finish once discovery, memory seeding, planning seeding, and ranking each had their own compact surfaces instead of a single broad post-bootstrap concept."
+  },
+  "drift_log": [
+    "2026-04-14: Promoted from GitHub issue `#48` after the mature-repo jumpstart tranche was reprioritized ahead of the remaining follow-on items.",
+    "2026-04-14: Active plan created to define the first bounded post-install jumpstart phase for mature repos."
+  ]
+}

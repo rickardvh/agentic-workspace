@@ -1,0 +1,67 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Capability Extraction Criteria",
+  "goal": [
+    "Define the promotion bar for when a cross-cutting capability such as routing or checks should graduate into a standalone package."
+  ],
+  "non_goals": [
+    "Extract a new package in this tranche.",
+    "Lock the repo into a five-package taxonomy regardless of dogfooding evidence.",
+    "Add new runtime code beyond documentation and planning-surface updates."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "document the extraction criteria in the root architecture guidance and then clear the roadmap candidate.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan and remove the finished capability-extraction-criteria candidate from the roadmap queue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "TODO.md",
+    "ROADMAP.md",
+    "README.md",
+    ".agentic-workspace/planning/execplans/"
+  ],
+  "invariants": [
+    "The current architecture stance remains: memory and planning are the standalone products, and the workspace layer owns orchestration.",
+    "Routing and checks remain capabilities first, not packages by default.",
+    "The extraction bar must be evidence-based and compatible with selective adoption."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Root architecture guidance states when a capability is mature enough to become a standalone package.",
+    "The criteria include stable ownership, schema/adapter seams, independent adoption value, and reuse pressure.",
+    "The roadmap no longer carries a separate open capability-extraction-criteria candidate."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-05: Plan activated after the boundary-charter docs tranche cleared, using the already-committed root architecture stance as the base contract.",
+    "2026-04-05: Milestone complete: the root architecture guidance now defines the evidence-based promotion bar for extracting cross-cutting capabilities into standalone packages."
+  ]
+}

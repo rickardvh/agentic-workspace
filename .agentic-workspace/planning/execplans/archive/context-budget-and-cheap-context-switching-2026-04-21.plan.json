@@ -1,0 +1,75 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Context Budget And Cheap Context Switching",
+  "goal": [],
+  "non_goals": [],
+  "intent_continuity": {
+    "larger intended outcome": "Keep the live working set minimal, make context shifts cheaper and safer, and preserve only the residue needed for later reload, review, proof, or continuation.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "`context-budget-and-cheap-context-switching`"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {
+    "live working set": "the active planning contract, archive behavior, resume/handoff projections, and the current issue cluster for this lane.",
+    "recoverable later": "older archived planning tranches, surrounding product-compression history, and broader package doctrine that can be reloaded from checked-in docs if needed.",
+    "externalize before shift": "the exact next implementation slice, the remaining issue-closeout state, any archive-shape decisions, and the smallest mixed-agent resume cues that later work should not have to reconstruct.",
+    "tiny resumability note": "keep the live-vs-recoverable-vs-externalize distinction explicit when touching summary, report, handoff, and archive surfaces.",
+    "context-shift triggers": "shift when the active projection/archive tranche lands, when moving from planning contracts into another package domain, or when interruption/delegation stops the pass."
+  },
+  "delegated_judgment": {
+    "requested outcome": "implement the context-budget and cheap-context-switching lane in full across planning contracts, projections, archive behavior, and mixed-agent resume surfaces.",
+    "hard constraints": "keep the solution compact, queryable, and repo-visible; do not invent a heavyweight context runtime or broad narrative archive system.",
+    "agent may decide locally": "exact field names, the smallest shared context-budget form, archive-residue rendering details, and how to thread the contract through summary/report/handoff surfaces.",
+    "escalate when": "the lane would require model-internals assumptions, a second planning state store, or a heavyweight orchestration framework."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {},
+  "immediate_next_action": [],
+  "blockers": [],
+  "touched_paths": [],
+  "invariants": [],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [],
+  "required_tools": [],
+  "completion_criteria": [],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {
+    "validation proof": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest --no-cov packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run pytest --no-cov tests/test_workspace_cli.py -k \"summary or report or defaults\" -q`; `uv run agentic-planning-bootstrap verify-payload`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`; `uv run agentic-planning-bootstrap report --format json`.",
+    "proof achieved now": "context-budget, cheap-resume, and inactive-residue behavior all land end to end across source, payload, and installed planning surfaces.",
+    "evidence for \"proof achieved\" state": "active planning exposes `context_budget_contract` and hierarchy/handoff context-shift fields; archive output compacts completed execplans; payload verification passes; planning-surface checks are clean; targeted planning and workspace CLI tests pass."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement the context-budget and cheap-context-switching lane in full.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "the lane now ships the context-budget contract, context-budget summary/report/handoff projections, compact inactive-plan residue, and mixed-agent cheap-resume guidance with passing proof.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "the lane-level context-budget outcome is now implemented across the planning contract, archive behavior, and mixed-agent resume path with no required continuation left in this lane.",
+    "evidence carried forward": "the compact archived residue, the shipped context-budget contract, and the updated planning summary/report/handoff surfaces.",
+    "reopen trigger": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "shipped a compact context-budget contract, added `context_budget_contract` plus hierarchy/handoff context-shift projections, made archive output compact inactive-plan residue, and aligned mixed-agent resume around the same checked-in planning surfaces.",
+    "validation confirmed": "targeted planning package tests, workspace CLI selector tests, payload verification, planning-surface checks, planning report, and workspace summary all passed after source/payload/install sync.",
+    "follow-on routed to": "none; the next independent work remains in the inactive roadmap queue.",
+    "knowledge promoted (memory/docs/config)": "`.agentic-workspace/docs/context-budget-contract.md`",
+    "resume from": "promote `bounded-delegation-and-run-review` when the next bounded lane should start"
+  },
+  "drift_log": []
+}

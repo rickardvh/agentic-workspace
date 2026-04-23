@@ -1,0 +1,71 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Cross-Tool Lifecycle Matrix Hardening",
+  "goal": [],
+  "non_goals": [
+    "Full end-to-end orchestration tests (delegate to integration test suite)",
+    "User manual/documentation (lifecycle behavior is self-evident if contract is sound)",
+    "Artifact signing or cryptographic verification",
+    "Multi-repo coordination logic"
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "",
+    "test idempotence": "running install/adopt twice leaves same state",
+    "test cross-package sequencing": "install planning, then memory; verify no conflicts",
+    "ready": "Packaging tests passing; CLI interfaces available in each package",
+    "blocked": "None",
+    "optional_deps": "(none)"
+  },
+  "immediate_next_action": [],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`packages/planning/tests/`",
+    "`packages/memory/tests/`",
+    "`tests/` (root)"
+  ],
+  "invariants": [
+    "All lifecycle operations are idempotent: running twice produces same state as running once.",
+    "Install must be safe on clean repository; must fail gracefully on existing payload.",
+    "Adopt must preserve durable user state (existing memory, planning notes).",
+    "Upgrade must preserve all user-written content and only update bootstrap infrastructure.",
+    "Uninstall must remove all bootstrap-managed content without touching user content.",
+    "Cross-package install order must not matter (planning then memory = memory then planning)."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [],
+  "required_tools": [],
+  "completion_criteria": [
+    "[x] Lifecycle test suite created for root workspace, planning, and memory packages",
+    "[x] All install/adopt/upgrade/uninstall scenarios covered",
+    "[x] All lifecycle tests passing on clean repository state",
+    "[x] Idempotence validated: running twice produces same state",
+    "[x] Cross-package sequencing tested (planning+memory install order independence)",
+    "[x] Upgrade scenario tests state preservation (memory, planning, config)",
+    "[x] Uninstall scenario tests clean removal (no orphaned files)",
+    "[x] All tests committed as milestone"
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-07: Initial plan created; activating from ROADMAP promotion.",
+    "2026-04-08: Completed after root workspace, planning, and memory lifecycle tests passed in the narrow validation lane."
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Local Delegation Outcome Evidence And Derived Tuning",
+  "goal": [
+    "Add the smallest local-only evidence loop that lets delegation target profiles improve over time from real outcomes without turning the repo into a scheduler."
+  ],
+  "non_goals": [
+    "Auto-route tasks to targets.",
+    "Rewrite `.agentic-workspace/config.local.toml` automatically in this first slice.",
+    "Introduce repo-owned policy for target confidence or task fit.",
+    "Build a heavy telemetry or experiment system."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "make planner-to-worker delegation cheaper over time by turning repeated local experience into better advisory target confidence and task-fit hints.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "local-delegation-outcome-evidence"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "the orchestrator can read one local-only outcome artifact, compare repeated target results by task class, and see derived confidence/task-fit suggestions in the config surface.",
+    "intentionally deferred": "automated profile rewrites, target invocation adapters, multi-armed-bandit logic, per-run token accounting, and repo-owned policy changes.",
+    "discovered implications": "a separate sibling evidence artifact is quieter than extending the editable local TOML profile, and confidence tuning already becomes useful before any automatic write-back exists.",
+    "proof achieved now": "the local outcome log command, schema, config reporting surface, and live repo dogfood pass all worked with advisory-only semantics.",
+    "validation still needed": "none for this lane beyond archive and issue closure.",
+    "next likely slice": "none right now."
+  },
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "support local-only delegation outcome evidence and derived tuning suggestions while keeping the target profiles and handoff contract advisory.",
+    "hard constraints": "local-only; no checked-in semantics; no scheduler behavior; no hidden auto-edits; capability- and outcome-shaped rather than vendor-prescriptive.",
+    "agent may decide locally": "the smallest evidence artifact shape, which fields are enough to derive coarse suggestions, how suggestions are surfaced in `config`, and what minimal command records outcomes.",
+    "escalate when": "the slice would require repo-owned orchestration policy, automatic routing decisions, or a broad analytics framework instead of one narrow local evidence loop."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "local-delegation-outcome-evidence",
+    "status": "completed",
+    "scope": "added a local-only delegation outcome artifact, ingested it through workspace config reporting, derived coarse confidence/task-fit suggestions, and dogfooded it on this repo.",
+    "ready": "done",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this lane, close `#173`, and advance the roadmap back to the next broader candidate lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".gitignore",
+    "TODO.md",
+    "ROADMAP.md",
+    ".agentic-workspace/planning/execplans/local-delegation-outcome-evidence-2026-04-17.md",
+    ".agentic-workspace/planning/execplans/archive/local-delegation-outcome-evidence-2026-04-17.md",
+    ".agentic-workspace/planning/reviews/local-delegation-outcome-evidence-dogfood-2026-04-17.md",
+    "docs/workspace-config-contract.md",
+    "docs/orchestrator-workflow-contract.md",
+    ".agentic-workspace/docs/delegation-posture-contract.md",
+    ".agentic-workspace/docs/contract-schema-index.md",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/contract_inventory.json",
+    "src/agentic_workspace/contracts/schemas/delegation_outcomes.schema.json",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Checked-in planning and repo policy remain authoritative for work shape; local evidence only tunes target hints.",
+    "The existing handoff contract remains the canonical worker boundary.",
+    "Outcome evidence must stay local-only and optional.",
+    "Suggestions must stay advisory and auditable."
+  ],
+  "contract_decisions_to_freeze": [
+    "Outcome evidence belongs next to the local override, not in checked-in state.",
+    "Derived suggestions should appear in `agentic-workspace config --target ./repo --format json`, not in a separate orchestration dashboard.",
+    "The first slice may suggest confidence/task-fit adjustments, but it must not rewrite profiles automatically.",
+    "If a target keeps failing a task class, the product should suggest narrower fit or more review, not silently stop using the target."
+  ],
+  "open_questions_to_close": [
+    "None. The bounded slice closed cleanly."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace note-delegation-outcome --target . --delegation-target gpt_5_4_mini --task-class bounded-docs --outcome success --format json",
+    "uv run agentic-workspace config --target . --format json"
+  ],
+  "required_tools": [
+    "uv",
+    "gh"
+  ],
+  "completion_criteria": [
+    "A local-only delegation outcome artifact shape exists and is documented.",
+    "`agentic-workspace config --target ./repo --format json` reports derived advisory tuning suggestions from that evidence.",
+    "The loop is dogfooded on this repo with a realistic local example.",
+    "No scheduler behavior or repo-owned policy change is introduced."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "local delegation outcomes now record through `agentic-workspace note-delegation-outcome`, accumulate in `.agentic-workspace/delegation-outcomes.json`, and surface advisory confidence/task-fit suggestions through `agentic-workspace config --target ./repo --format json`.",
+    "validation confirmed": "`uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q`; `uv run python scripts/check/check_contract_tooling_surfaces.py`; `uv run python scripts/check/check_planning_surfaces.py`; live repo dogfood via repeated `agentic-workspace note-delegation-outcome` calls followed by `agentic-workspace config --target . --format json`.",
+    "follow-on routed to": "none; the roadmap returns to the next broader candidate lane.",
+    "resume from": "not needed unless a new local-outcome follow-on is explicitly promoted."
+  },
+  "drift_log": [
+    "2026-04-17: Promoted immediately after real local target profiles were configured and the next obvious cost class became manual confidence/task-fit maintenance over time.",
+    "2026-04-17: Implemented as a sibling local JSON artifact plus derived config suggestions instead of extending the editable local override TOML.",
+    "2026-04-17: Dogfooding showed the loop is already useful for advisory confidence tuning without any automatic profile rewrite."
+  ]
+}

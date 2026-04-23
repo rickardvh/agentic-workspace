@@ -1,0 +1,89 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Long-Horizon Doctrine Refresh Discipline",
+  "goal": [
+    "Make doctrine refresh a repeatable checked-in rule instead of an implicit maintainer habit."
+  ],
+  "non_goals": [
+    "Re-argue the whole product direction.",
+    "Turn doctrine pages into a shadow backlog.",
+    "Expand this slice into extension-boundary design changes."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Keep long-horizon product direction current without letting doctrine decay into stale narrative or hidden backlog.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "define the refresh discipline, add explicit review markers to the main doctrine pages, and align the doctrine-maintenance language across those pages.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Update the review portfolio and doctrine pages so doctrine refresh has one named lane and one consistent last-reviewed signal."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`TODO.md`",
+    "`ROADMAP.md`",
+    "`.agentic-workspace/planning/reviews/`",
+    "`docs/agent-os-capabilities.md`",
+    "`docs/ecosystem-roadmap.md`",
+    "`docs/maturity-model.md`"
+  ],
+  "invariants": [
+    "Keep doctrine pages doctrinal, not queue-shaped.",
+    "Prefer lightweight review metadata over process-heavy maintenance ceremony.",
+    "Keep this slice focused on refresh discipline, not on reopening settled product decisions."
+  ],
+  "contract_decisions_to_freeze": [
+    "Doctrine refresh should be expressed as a named review discipline rather than implicit maintainer folklore.",
+    "Core doctrine pages should carry a lightweight `Last doctrinal review` marker.",
+    "Concrete next work discovered during doctrine refresh still belongs in `ROADMAP.md`, not inside doctrine pages."
+  ],
+  "open_questions_to_close": [
+    "No blocking open questions remain for this slice."
+  ],
+  "validation_commands": [
+    "`uv run python scripts/check/check_planning_surfaces.py`",
+    "`make maintainer-surfaces`",
+    "`uv run agentic-planning-bootstrap upgrade --target .`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The review portfolio includes a doctrine-refresh lane or equivalent explicit doctrine-review rule.",
+    "The core doctrine pages carry consistent review markers and refresh guidance.",
+    "The roadmap candidate is removed after archival."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "Doctrine refresh is now a named review discipline, the core doctrine pages carry lightweight doctrinal review markers, and the doctrine pages now share the same “refresh doctrine, route concrete work into ROADMAP” rule.",
+    "validation confirmed": "`uv run pytest packages/planning/tests/test_installer.py`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-planning-bootstrap upgrade --target .`",
+    "follow-on routed to": "none",
+    "resume from": "archive this slice, then promote `Extension-boundary readiness review`"
+  },
+  "drift_log": [
+    "2026-04-10: Promoted from `ROADMAP.md` after the doctrine consolidation pass left refresh discipline as explicit remaining work."
+  ]
+}

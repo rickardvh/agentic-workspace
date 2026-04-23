@@ -1,0 +1,97 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Ownership Boundary And Low-Residue Installs",
+  "goal": [
+    "Separate package-owned state cleanly from repo-owned surfaces so install and uninstall become low-residue operations even for local-only mode."
+  ],
+  "non_goals": [
+    "Delete all repo-facing surfaces.",
+    "Pretend every current repo surface is a package mistake.",
+    "Commit to remote or shared storage as near-term roadmap work.",
+    "Rewrite the installer architecture in one pass."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Cleaner package/repo separation with lower install and uninstall residue.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "ownership-boundary-and-local-only-mode"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "a concrete ownership review surface plus a local-only uninstall path that removes the `.gemini/agentic-workspace/` install tree and its ignore residue.",
+    "intentionally deferred": "broader installer architecture changes and any storage-backend redesign.",
+    "discovered implications": "the boundary review needs to stay explicit enough that future storage backends can move without changing ownership semantics.",
+    "proof achieved now": "the ownership command returns a current surface inventory and points to the smallest explicit repo hook.",
+    "validation still needed": "none for this lane.",
+    "next likely slice": "none."
+  },
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "issue `#231` and the ownership-boundary lane it represents.",
+    "hard constraints": "preserve repo-owned contracts, keep local-only compatible, and avoid broad installer rewrites.",
+    "agent may decide locally": "the initial surface taxonomy, the smallest stable repo hook, and the exact presentation order for the boundary review.",
+    "escalate when": "the boundary cannot be expressed without breaking current repo-owned contracts."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "Classify package-owned, repo-owned, and ambiguous middle-ground surfaces; clean up local-only residue.",
+    "ready": "no",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "No further action required for this execplan slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "TODO.md",
+    "ROADMAP.md",
+    ".agentic-workspace/planning/execplans/archive/ownership-boundary-and-low-residue-installs-2026-04-20.md"
+  ],
+  "invariants": [
+    "Local-only install and uninstall must remain compatible with repo-owned startup surfaces.",
+    "Package-owned state should be identified before any implementation changes widen the boundary.",
+    "The first slice must stay bounded to classification and repo-hook review.",
+    "Local-only uninstall must remove the whole `.gemini/agentic-workspace/` install tree when the repo owns no additional local-only residue."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run pytest tests/test_workspace_cli.py -q -k \"local_only or ownership_command_reports_authority_map\"",
+    "uv run agentic-planning-bootstrap upgrade --target .",
+    "uv run agentic-memory-bootstrap upgrade --target ."
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The current surface set is classified into package-owned, repo-owned, and ambiguous middle-ground groups.",
+    "The minimum explicit repo hook is identified and justified.",
+    "The boundary review and local-only uninstall cleanup are ready for implementation follow-through without widening the lane."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "added a queryable ownership boundary review to `agentic-workspace ownership` and a local-only uninstall path that removes the `.gemini/agentic-workspace/` tree plus local-only ignore residue.",
+    "validation confirmed": "`uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`.",
+    "follow-on routed to": "none.",
+    "knowledge promoted (memory/docs/config)": ".agentic-workspace/docs/ownership-authority-contract.md, .agentic-workspace/docs/agent-installation.md, .agentic-workspace/docs/memory-metadata-contract.md, .agentic-workspace/docs/installer-behavior.md, .agentic-workspace/docs/routing-contract.md",
+    "resume from": "none."
+  },
+  "drift_log": [
+    "2026-04-20: Promoted issue `#231` into active planning as the ownership-boundary and low-residue installs lane."
+  ]
+}

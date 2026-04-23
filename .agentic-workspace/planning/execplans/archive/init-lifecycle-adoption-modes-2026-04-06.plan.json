@@ -1,0 +1,69 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Init Lifecycle and Adoption Modes",
+  "goal": [
+    "Create a dedicated durable doc for the root `init` lifecycle so clean install, conservative adopt, and high-ambiguity adopt behavior are easy to understand without forcing readers to reconstruct them from the README and report payloads."
+  ],
+  "non_goals": [
+    "Redefine the root lifecycle commands.",
+    "Replace package-local installer documentation.",
+    "Duplicate the README in full."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "define a dedicated `init` lifecycle/adoption doc that can be referenced from the README and maintainer surfaces without becoming redundant.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan and move the selective-adoption proof milestone into active execution."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "README.md",
+    "docs/",
+    "AGENTS.md",
+    "docs/contributor-playbook.md",
+    "docs/maintainer-commands.md",
+    "tests/"
+  ],
+  "invariants": [
+    "The dedicated doc must stay shorter than the README and explain `init` modes without becoming a second root manual.",
+    "Prompt semantics must remain aligned with the machine-readable lifecycle reports.",
+    "Direct package CLIs stay documented as maintainable entrypoints, not replaced by the root flow."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Readers can understand root `init` behavior without inferring it from implementation details.",
+    "The README stays compact while lifecycle behavior has one canonical reference.",
+    "The prompt-generation rules are explicit and stable."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-06: Parked from the planning-spec intake so the `init` lifecycle doc could be promoted after the active registry tranche.",
+    "2026-04-06: Milestone complete: the root README now points to a dedicated `init` lifecycle doc that explains the mode matrix and prompt requirements."
+  ]
+}

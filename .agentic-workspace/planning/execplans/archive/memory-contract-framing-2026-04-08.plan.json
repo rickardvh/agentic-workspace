@@ -1,0 +1,68 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Memory Contract Framing",
+  "goal": [
+    "Clarify `.agentic-workspace/memory/repo/mistakes/recurring-failures.md` as anti-trap and anti-rediscovery memory rather than bug tracking, and tighten the high-level memory-package framing so skimming readers are pushed toward one-home ownership and subordination to planning earlier."
+  ],
+  "non_goals": [
+    "Redesign the memory taxonomy or routing system.",
+    "Reopen the weak-authority current-note contract that already landed.",
+    "Build new automation around memory capture or issue sync."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "update the recurring-failures contract, top-level memory framing, and shipped memory workflow/docs so the package is harder to overread as a generic bug tracker or broad fallback knowledge store.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "None. Milestone completed and archived after the recurring-failures contract pass, high-level framing updates, and focused memory validation lane all passed."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`packages/memory/`",
+    "`.agentic-workspace/memory/repo/`",
+    "`.agentic-workspace/memory/`",
+    "`docs/`"
+  ],
+  "invariants": [
+    "Memory must remain selectively adoptable without planning installed.",
+    "Recurring-failures must stay distinct from tests, issue tracking, and active planning.",
+    "High-level framing should bias toward expensive-to-rediscover knowledge and one primary home per fact."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`cd packages/memory && uv run pytest`",
+    "`uv run python scripts/check/check_memory_freshness.py`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The recurring-failures surface is clearly framed as anti-trap memory rather than bug tracking.",
+    "High-level memory docs and workflow wording bias earlier toward anti-rediscovery value, one-home ownership, and planning subordination.",
+    "The shipped memory package surfaces stay internally consistent after the docs pass."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-08: Promoted from live GitHub issue intake after issue `#5` proved compound and issues `#3` and `#4` stayed open as duplicate recurring-failures signals.",
+    "2026-04-08: Completed after updating recurring-failures, memory index/workflow framing, shipped package README surfaces, and focused installer assertions."
+  ]
+}

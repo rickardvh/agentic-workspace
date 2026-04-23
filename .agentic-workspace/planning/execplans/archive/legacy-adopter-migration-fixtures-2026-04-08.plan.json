@@ -1,0 +1,69 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Legacy-Adopter Migration Fixtures",
+  "goal": [
+    "Add representative migration fixtures for older standalone installs, partial conversions, and stale residue so upgrade paths detect incomplete state and preserve user-owned content."
+  ],
+  "non_goals": [
+    "Redesign install, adopt, or upgrade semantics from scratch.",
+    "Expand the work into a full lifecycle matrix replacement.",
+    "Add broad end-to-end automation across every package command."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "defined the first realistic migration fixture tranche and added focused upgrade-path coverage for legacy installs, partial managed state, and stale residue across the workspace and package layers.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "None. Archived after the migration-fixture tranche landed and passed the focused validation lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`tests/`",
+    "`packages/planning/tests/`",
+    "`packages/memory/tests/`",
+    "`docs/`"
+  ],
+  "invariants": [
+    "Migration fixtures must preserve user-owned content while tightening package-managed state.",
+    "The first slice should exercise realistic legacy and partial-managed states, not synthetic happy paths.",
+    "Validation should stay focused on migration and incomplete-state detection rather than reopening the full lifecycle contract."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run pytest tests/test_workspace_cli.py`",
+    "`cd packages/planning && uv run pytest`",
+    "`cd packages/memory && uv run pytest`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Define fixture coverage for at least one legacy standalone install shape, one partial conversion shape, and one stale-residue shape.",
+    "Add regression tests that prove upgrade or doctor flows detect incomplete state and preserve user-owned content.",
+    "Keep the fixtures bounded enough that future migration bugs can reuse them instead of inventing new ad hoc setups."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-08: Promoted from ROADMAP after upstream intake, packaging artifact validation, lifecycle matrix hardening, and selective-adoption proof work had already landed and archived.",
+    "2026-04-08: Added coverage for legacy standalone planning installs, partial managed planning state, stale generated routing residue, and stale generated planning residue in the workspace doctor path; validated with the focused workspace, planning, and memory pytest lanes."
+  ]
+}

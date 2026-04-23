@@ -1,0 +1,69 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning Archive Cleanup Hardening",
+  "goal": [
+    "Reduce manual residue after `archive-plan --apply-cleanup` by making the planning package clean completed roadmap and TODO references more reliably."
+  ],
+  "non_goals": [
+    "Rework the full planning surface model.",
+    "Introduce new planning surface types.",
+    "Generalize cleanup behavior beyond clearly plan-linked residue in this tranche."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "improve archive cleanup heuristics and tests for completed plan linkage in roadmap and TODO surfaces.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan and remove the finished planning archive cleanup hardening candidate from the roadmap queue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "TODO.md",
+    "ROADMAP.md",
+    ".agentic-workspace/planning/execplans/",
+    "packages/planning/src/",
+    "packages/planning/tests/"
+  ],
+  "invariants": [
+    "Archive cleanup must stay conservative and should not delete unrelated roadmap content.",
+    "Completed TODO references linked to the archived plan should still be removable automatically when `--apply-cleanup` is used.",
+    "The planning checker should remain green after archive cleanup runs."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The planning archive cleanup logic removes the recently observed plan-linked roadmap residue without manual follow-up edits.",
+    "Coverage exists for the new cleanup behavior in planning package tests.",
+    "The roadmap no longer carries a separate open `Planning archive cleanup hardening` candidate."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-05: Plan activated after repeated archive flows showed that roadmap residue still sometimes needed manual cleanup even when `--apply-cleanup` was requested.",
+    "2026-04-05: Milestone complete: archive cleanup now removes matching candidate-queue residue as well as active handoff residue, with regression coverage in the planning package tests."
+  ]
+}

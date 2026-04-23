@@ -377,11 +377,6 @@ def _print_section(title: str, items: list[str]) -> None:
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Audit memory freshness and structure.")
     parser.add_argument(
-        "--quiet-success",
-        action="store_true",
-        help="Emit a compact one-line success message when no findings are present.",
-    )
-    parser.add_argument(
         "--strict",
         action="store_true",
         help="Exit with status 1 when selected finding categories are present.",
@@ -524,6 +519,33 @@ def main() -> int:
     )
     uncustomised_index_placeholders = _index_placeholder_findings(memory_root / "index.md")
 
+    print("Memory freshness report")
+    _print_section("Needs verification", needs_verification)
+    _print_section("Missing trigger metadata", missing_trigger)
+    _print_section("Missing Last confirmed", missing_last_confirmed)
+    _print_section("Invalid Last confirmed date", invalid_last_confirmed)
+    _print_section("Missing verification section", missing_verify)
+    _print_section("Missing Load when", missing_load)
+    _print_section("Missing Review when", missing_review)
+    _print_section("Missing Failure signals", missing_failure)
+    _print_section(f"Old confirmations (>{STALE_DAYS} days)", old_confirmations)
+    _print_section("Oversized files", oversized_files)
+    _print_section("Current-context drift signals", current_context_shape)
+    _print_section("Current-note authority drift", current_authority_drift)
+    _print_section("Current-note durable-truth drift", current_durable_truth_drift)
+    _print_section("Current-note overlap pressure", current_note_overlap_pressure)
+    _print_section("Incomplete improvement-signal lifecycle", incomplete_improvement_signals)
+    _print_section("Always-read surface creep", always_read_creep)
+    _print_section("Manifest note-type drift", manifest_note_type_drift)
+    _print_section("Canonical-dir drift", canonical_dir_drift)
+    _print_section("Task-board dependence", task_board_dependence)
+    _print_section("Duplicate titles", duplicate_titles)
+    _print_section("Missing manifest entries", missing_manifest_entries)
+    _print_section("Manifest records for missing notes", manifest_records_for_missing_notes)
+    _print_section("Shared canonical homes", shared_canonical_homes)
+    if uncustomised_index_placeholders:
+        _print_section("Uncustomised routing placeholders", uncustomised_index_placeholders)
+
     findings = {
         "needs_verification": needs_verification,
         "missing_trigger": missing_trigger,
@@ -550,37 +572,6 @@ def main() -> int:
         "shared_canonical_homes": shared_canonical_homes,
         "uncustomised_index_placeholders": uncustomised_index_placeholders,
     }
-    has_any_findings = any(findings.values())
-
-    if args.quiet_success and not has_any_findings:
-        print("[ok] memory freshness")
-    else:
-        print("Memory freshness report")
-        _print_section("Needs verification", needs_verification)
-        _print_section("Missing trigger metadata", missing_trigger)
-        _print_section("Missing Last confirmed", missing_last_confirmed)
-        _print_section("Invalid Last confirmed date", invalid_last_confirmed)
-        _print_section("Missing verification section", missing_verify)
-        _print_section("Missing Load when", missing_load)
-        _print_section("Missing Review when", missing_review)
-        _print_section("Missing Failure signals", missing_failure)
-        _print_section(f"Old confirmations (>{STALE_DAYS} days)", old_confirmations)
-        _print_section("Oversized files", oversized_files)
-        _print_section("Current-context drift signals", current_context_shape)
-        _print_section("Current-note authority drift", current_authority_drift)
-        _print_section("Current-note durable-truth drift", current_durable_truth_drift)
-        _print_section("Current-note overlap pressure", current_note_overlap_pressure)
-        _print_section("Incomplete improvement-signal lifecycle", incomplete_improvement_signals)
-        _print_section("Always-read surface creep", always_read_creep)
-        _print_section("Manifest note-type drift", manifest_note_type_drift)
-        _print_section("Canonical-dir drift", canonical_dir_drift)
-        _print_section("Task-board dependence", task_board_dependence)
-        _print_section("Duplicate titles", duplicate_titles)
-        _print_section("Missing manifest entries", missing_manifest_entries)
-        _print_section("Manifest records for missing notes", manifest_records_for_missing_notes)
-        _print_section("Shared canonical homes", shared_canonical_homes)
-        if uncustomised_index_placeholders:
-            _print_section("Uncustomised routing placeholders", uncustomised_index_placeholders)
     strict_categories = set(args.strict_categories or DEFAULT_STRICT_CATEGORIES)
     if args.strict and any(findings[name] for name in strict_categories):
         return 1

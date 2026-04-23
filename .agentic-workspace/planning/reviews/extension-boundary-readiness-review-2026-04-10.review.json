@@ -1,0 +1,42 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Extension-Boundary Readiness Review",
+  "goal": [
+    "Revalidate whether the closed extension boundary still matches the current first-party module contract and ecosystem reality."
+  ],
+  "scope": [
+    "`docs/extension-boundary.md`",
+    "`docs/module-capability-contract.md`",
+    "`docs/integration-contract.md`",
+    "current `agentic-workspace modules --format json` output"
+  ],
+  "non_goals": [
+    "Designing a plugin API",
+    "Opening the extension boundary",
+    "Inventing hypothetical downstream modules without concrete pressure"
+  ],
+  "review_mode": {
+    "mode": "doctrine-refresh",
+    "review question": "Does the current closed extension boundary still match the repo’s actual first-party module contract and dogfooding reality?",
+    "default finding cap": "2 findings",
+    "inputs inspected first": "`docs/extension-boundary.md`, `docs/module-capability-contract.md`, `docs/integration-contract.md`, `agentic-workspace modules --format json`"
+  },
+  "review_method": {
+    "commands used": "",
+    "evidence sources": ""
+  },
+  "references": [],
+  "findings": [],
+  "recommendation": {
+    "promote": "none",
+    "defer": "none",
+    "dismiss": "any immediate pressure to open the public extension boundary"
+  },
+  "validation_commands": [
+    "`uv run agentic-workspace modules --format json`",
+    "`uv run python scripts/check/check_planning_surfaces.py`"
+  ],
+  "drift_log": [
+    "2026-04-10: Review created during the bounded roadmap slice for extension-boundary readiness."
+  ]
+}

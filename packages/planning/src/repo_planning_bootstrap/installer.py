@@ -54,11 +54,9 @@ REQUIRED_PAYLOAD_FILES = (
     Path(".agentic-workspace/docs/finished-work-inspection-contract.md"),
     Path(".agentic-workspace/docs/installer-behavior.md"),
     Path(".agentic-workspace/planning/execplans/README.md"),
-    Path(".agentic-workspace/planning/execplans/TEMPLATE.md"),
     Path(".agentic-workspace/planning/execplans/TEMPLATE.plan.json"),
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
     Path(".agentic-workspace/planning/reviews/README.md"),
-    Path(".agentic-workspace/planning/reviews/TEMPLATE.md"),
     Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json"),
     Path(".agentic-workspace/planning/upstream-task-intake.md"),
     ROOT_RENDER_SCRIPT_PATH,
@@ -95,11 +93,9 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path(".agentic-workspace/docs/finished-work-inspection-contract.md"),
     Path(".agentic-workspace/docs/installer-behavior.md"),
     Path(".agentic-workspace/planning/execplans/README.md"),
-    Path(".agentic-workspace/planning/execplans/TEMPLATE.md"),
     Path(".agentic-workspace/planning/execplans/TEMPLATE.plan.json"),
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
     Path(".agentic-workspace/planning/reviews/README.md"),
-    Path(".agentic-workspace/planning/reviews/TEMPLATE.md"),
     Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json"),
     Path(".agentic-workspace/planning/upstream-task-intake.md"),
     PLANNING_MANIFEST_PATH,
@@ -504,7 +500,7 @@ def _render_execplan_markdown_from_record(record: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _write_execplan_record(*, record_path: Path, record: dict[str, Any], render_markdown: bool = True) -> None:
+def _write_execplan_record(*, record_path: Path, record: dict[str, Any], render_markdown: bool = False) -> None:
     record_path.parent.mkdir(parents=True, exist_ok=True)
     record_path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if render_markdown:
@@ -607,7 +603,7 @@ def _render_review_markdown_from_record(record: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _write_review_record(*, record_path: Path, record: dict[str, Any], render_markdown: bool = True) -> None:
+def _write_review_record(*, record_path: Path, record: dict[str, Any], render_markdown: bool = False) -> None:
     record_path.parent.mkdir(parents=True, exist_ok=True)
     record_path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if render_markdown:
@@ -692,9 +688,95 @@ def _backfill_review_records(target_root: Path) -> None:
         if record is None:
             record = _build_review_record_from_markdown(review_path)
             _write_review_record(record_path=record_path, record=record)
+        # Remove the derived .md now that a canonical .review.json exists
+        if record_path.exists() and review_path.exists():
+            review_path.unlink()
+
+
+def _build_execplan_record_from_markdown(plan_path: Path) -> dict[str, Any]:
+    lines = _read_lines(plan_path)
+    title = plan_path.stem.replace("-", " ").title()
+    for line in lines:
+        if line.startswith("# "):
+            title = line[2:].strip()
+            break
+    return {
+        "kind": EXECPLAN_RECORD_KIND,
+        "title": title,
+        "goal": _extract_section_bullets(plan_path, "Goal"),
+        "non_goals": _extract_section_bullets(plan_path, "Non-Goals"),
+        "intent_continuity": _extract_kv_fields(_section_lines(lines, "Intent Continuity")),
+        "required_continuation": _extract_kv_fields(_section_lines(lines, "Required Continuation")),
+        "iterative_follow_through": _extract_kv_fields(_section_lines(lines, "Iterative Follow-Through")),
+        "intent_interpretation": _extract_kv_fields(_section_lines(lines, "Intent Interpretation")),
+        "execution_bounds": _extract_kv_fields(_section_lines(lines, "Execution Bounds")),
+        "stop_conditions": _extract_kv_fields(_section_lines(lines, "Stop Conditions")),
+        "context_budget": _extract_kv_fields(_section_lines(lines, "Context Budget")),
+        "delegated_judgment": _extract_kv_fields(_section_lines(lines, "Delegated Judgment")),
+        "references": _extract_reference_section(plan_path, "References"),
+        "capability_posture": _extract_kv_fields(_section_lines(lines, "Capability Posture")),
+        "active_milestone": _extract_kv_fields(_section_lines(lines, "Active Milestone")),
+        "immediate_next_action": _extract_section_bullets(plan_path, "Immediate Next Action"),
+        "blockers": _extract_section_bullets(plan_path, "Blockers"),
+        "touched_paths": _extract_section_bullets(plan_path, "Touched Paths"),
+        "invariants": _extract_section_bullets(plan_path, "Invariants"),
+        "contract_decisions_to_freeze": _extract_section_bullets(plan_path, "Contract Decisions To Freeze"),
+        "open_questions_to_close": _extract_section_bullets(plan_path, "Open Questions To Close"),
+        "validation_commands": _extract_section_bullets(plan_path, "Validation Commands"),
+        "required_tools": _extract_section_bullets(plan_path, "Required Tools"),
+        "completion_criteria": _extract_section_bullets(plan_path, "Completion Criteria"),
+        "execution_run": _extract_kv_fields(_section_lines(lines, "Execution Run")),
+        "finished_run_review": _extract_kv_fields(_section_lines(lines, "Finished-Run Review")),
+        "proof_report": _extract_kv_fields(_section_lines(lines, "Proof Report")),
+        "intent_satisfaction": _extract_kv_fields(_section_lines(lines, "Intent Satisfaction")),
+        "closure_check": _extract_kv_fields(_section_lines(lines, "Closure Check")),
+        "execution_summary": _extract_kv_fields(_section_lines(lines, "Execution Summary")),
+        "drift_log": _extract_section_bullets(plan_path, "Drift Log"),
+    }
+
+
+def _backfill_execplan_records(target_root: Path) -> None:
+    for execplan_dir in (
+        target_root / ".agentic-workspace" / "planning" / "execplans",
+        target_root / ".agentic-workspace" / "planning" / "execplans" / "archive",
+    ):
+        if not execplan_dir.exists():
             continue
-        if not _derived_review_markdown_path(record_path).exists():
-            _write_review_record(record_path=record_path, record=record)
+        for plan_path in sorted(execplan_dir.glob("*.md")):
+            if plan_path.name in {"README.md", "TEMPLATE.md"}:
+                continue
+            record_path = _canonical_execplan_record_path(plan_path)
+            record = _load_execplan_record(plan_path)
+            if record is None:
+                record = _build_execplan_record_from_markdown(plan_path)
+                _write_execplan_record(record_path=record_path, record=record)
+            # Remove the derived .md now that a canonical .plan.json exists
+            if record_path.exists() and plan_path.exists():
+                plan_path.unlink()
+
+
+def _cleanup_derived_markdown_views(target_root: Path) -> None:
+    """Remove derived .md views where a canonical JSON record exists."""
+    for execplan_dir in (
+        target_root / ".agentic-workspace" / "planning" / "execplans",
+        target_root / ".agentic-workspace" / "planning" / "execplans" / "archive",
+    ):
+        if not execplan_dir.exists():
+            continue
+        for md_path in sorted(execplan_dir.glob("*.md")):
+            if md_path.name in {"README.md", "TEMPLATE.md"}:
+                continue
+            record_path = _canonical_execplan_record_path(md_path)
+            if record_path.exists():
+                md_path.unlink()
+    review_dir = target_root / ".agentic-workspace" / "planning" / "reviews"
+    if review_dir.exists():
+        for md_path in sorted(review_dir.glob("*.md")):
+            if md_path.name in {"README.md", "TEMPLATE.md"}:
+                continue
+            record_path = _canonical_review_record_path(md_path)
+            if record_path.exists():
+                md_path.unlink()
 
 
 def list_payload_files() -> list[str]:
@@ -718,7 +800,9 @@ def install_bootstrap(
         _migrate_legacy_planning_surfaces(target_root, force=force)
         _ensure_state_toml_exists(target_root, overwrite=force)
         _remove_generated_planning_views(target_root, result=result)
+        _backfill_execplan_records(target_root)
         _backfill_review_records(target_root)
+        _cleanup_derived_markdown_views(target_root)
     if local_only and not dry_run:
         _ensure_local_ignored(target or Path.cwd())
     return result
@@ -744,7 +828,9 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) 
         _migrate_legacy_planning_surfaces(target_root)
         _ensure_state_toml_exists(target_root)
         _remove_generated_planning_views(target_root, result=result)
+        _backfill_execplan_records(target_root)
         _backfill_review_records(target_root)
+        _cleanup_derived_markdown_views(target_root)
     return result
 
 
@@ -765,7 +851,9 @@ def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False
         _migrate_legacy_planning_surfaces(target_root)
         _ensure_state_toml_exists(target_root)
         _remove_generated_planning_views(target_root, result=result)
+        _backfill_execplan_records(target_root)
         _backfill_review_records(target_root)
+        _cleanup_derived_markdown_views(target_root)
     return result
 
 
@@ -985,9 +1073,19 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
     completed_execplans: list[dict[str, Any]] = []
     archived_execplans = 0
     if execplan_dir.exists():
+        # Collect unique execplan stems, preferring .plan.json over .md
+        seen_stems: set[str] = set()
+        plan_files: list[Path] = []
+        for path in sorted(execplan_dir.glob("*.plan.json")):
+            stem = path.name[: -len(".plan.json")]
+            seen_stems.add(stem)
+            plan_files.append(path)
         for path in sorted(execplan_dir.glob("*.md")):
             if path.name in {"README.md", "TEMPLATE.md"}:
                 continue
+            if path.stem not in seen_stems:
+                plan_files.append(path)
+        for path in sorted(plan_files):
             status = _execplan_status(path)
             if status and status not in {"completed", "done", "closed", "planned", "pending", "not-started"}:
                 active_execplans.append({"path": path.relative_to(target_root).as_posix(), "status": status})
@@ -1003,7 +1101,9 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
                 )
         archive_dir = execplan_dir / "archive"
         if archive_dir.exists():
-            archived_execplans = sum(1 for path in archive_dir.glob("*.md") if path.is_file())
+            archived_md = sum(1 for path in archive_dir.glob("*.md") if path.is_file() and path.name not in {"README.md", "TEMPLATE.md"})
+            archived_json = sum(1 for path in archive_dir.glob("*.plan.json") if path.is_file())
+            archived_execplans = max(archived_md, archived_json)
 
     warnings = _run_planning_checker(target_root)
     drift = _detect_payload_drift(target_root)
@@ -3181,14 +3281,12 @@ def promote_todo_item_to_execplan(
 
     if dry_run:
         result.add("would create", execplan_record_path, "scaffold canonical execplan record from TODO item")
-        result.add("would create", execplan_path, "render derived execplan view from canonical record")
         result.add("would update", todo_path, f"point '{item_id}' at {execplan_relative.as_posix()} and remove direct-task fields")
         return result
 
     _write_execplan_record(record_path=execplan_record_path, record=plan_record)
     todo_path.write_text("\n".join(new_todo_lines).rstrip() + "\n", encoding="utf-8")
     result.add("created", execplan_record_path, "scaffolded canonical execplan record from TODO item")
-    result.add("created", execplan_path, "rendered derived execplan view from canonical record")
     result.add("updated", todo_path, f"pointed '{item_id}' at {execplan_relative.as_posix()} and removed direct-task fields")
     return result
 
@@ -3747,26 +3845,31 @@ def archive_execplan(
         result.add("suggested fix", legacy_roadmap_path, note)
 
     if dry_run:
-        result.add("would move", destination, f"archive {plan_path.relative_to(target_root).as_posix()}")
         if has_record:
             result.add("would move", destination_record, f"archive {record_path.relative_to(target_root).as_posix()}")
+        else:
+            result.add("would create", destination_record, "build canonical record from Markdown and archive")
+        if plan_path != record_path:
+            result.add("would remove", plan_path, "remove active Markdown view")
         return result
 
-    rendered_archive = _render_inactive_execplan_residue(plan_path=plan_path, target_root=target_root)
     archive_dir.mkdir(parents=True, exist_ok=True)
-    destination.write_text(rendered_archive, encoding="utf-8")
-    plan_path.unlink()
     if has_record:
         shutil.move(str(record_path), str(destination_record))
+    else:
+        # Build a canonical record from the Markdown before archiving
+        record = _build_execplan_record_from_markdown(plan_path)
+        _write_execplan_record(record_path=destination_record, record=record)
+    # Remove the active .md (if plan_path is .md and separate from the record)
+    if plan_path.exists() and plan_path != record_path:
+        plan_path.unlink()
     if cleanup_todo_lines is not None:
         (target_root / ".agentic-workspace/planning/state.toml").write_text("\n".join(cleanup_todo_lines).rstrip() + "\n", encoding="utf-8")
     if cleanup_roadmap_state["changed"] and apply_cleanup:
         _write_state_to_toml(target_root, cleanup_roadmap_state["state"])
     if cleanup_legacy_roadmap["changed"] and apply_cleanup and cleanup_legacy_roadmap["text"] is not None:
         legacy_roadmap_path.write_text(cleanup_legacy_roadmap["text"], encoding="utf-8")
-    result.add("moved", destination, f"archived {plan_path.relative_to(target_root).as_posix()}")
-    if has_record:
-        result.add("moved", destination_record, f"archived {record_path.relative_to(target_root).as_posix()}")
+    result.add("archived", destination_record, f"canonical record for {plan_path.relative_to(target_root).as_posix()}")
     return result
 
 
@@ -4144,6 +4247,24 @@ def _extract_kv_fields(lines: list[str]) -> dict[str, str]:
 
 
 def _extract_section_bullets(path: Path, heading: str) -> list[str]:
+    record = _load_execplan_record(path)
+    if isinstance(record, dict):
+        mapping = {
+            "Goal": "goal",
+            "Non-Goals": "non_goals",
+            "Immediate Next Action": "immediate_next_action",
+            "Completion Criteria": "completion_criteria",
+            "Blockers": "blockers",
+            "Touched Paths": "touched_paths",
+            "Validation Commands": "validation_commands",
+            "Required Tools": "required_tools",
+        }
+        key = mapping.get(heading)
+        if key:
+            values = _record_section_list(record, key)
+            if values is not None:
+                return values
+
     values: list[str] = []
     for line in _section_lines(_read_lines(path), heading):
         match = re.match(r"^\s*-\s+(.*\S)\s*$", line)
@@ -4153,6 +4274,10 @@ def _extract_section_bullets(path: Path, heading: str) -> list[str]:
 
 
 def _execplan_capability_posture(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "capability_posture")
+    if record is not None:
+        return record
+
     fields = _extract_kv_fields(_section_lines(_read_lines(path), "Capability Posture"))
     required_fields = (
         "execution class",
@@ -4324,13 +4449,29 @@ def _resolve_execplan_path(target_root: Path, plan: str) -> Path | None:
         return candidate
     if candidate.suffix == ".md" and (target_root / candidate).exists():
         return (target_root / candidate).resolve()
-    normalized = plan if plan.endswith(".md") else f"{plan}.md"
-    direct = target_root / ".agentic-workspace" / "planning" / "execplans" / normalized
-    if direct.exists():
-        return direct.resolve()
-    archive = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive" / normalized
-    if archive.exists():
-        return archive.resolve()
+    if candidate.name.endswith(".plan.json") and (target_root / candidate).exists():
+        return (target_root / candidate).resolve()
+    # When a .md surface is referenced but only the .plan.json sibling exists
+    if candidate.suffix == ".md":
+        json_sibling = (target_root / candidate).with_suffix(".plan.json")
+        if json_sibling.exists():
+            return json_sibling.resolve()
+    # Try .md first for backwards compatibility
+    normalized_md = plan if plan.endswith(".md") else f"{plan}.md"
+    direct_md = target_root / ".agentic-workspace" / "planning" / "execplans" / normalized_md
+    if direct_md.exists():
+        return direct_md.resolve()
+    archive_md = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive" / normalized_md
+    if archive_md.exists():
+        return archive_md.resolve()
+    # Try .plan.json (canonical record without derived .md)
+    normalized_json = plan if plan.endswith(".plan.json") else f"{plan}.plan.json"
+    direct_json = target_root / ".agentic-workspace" / "planning" / "execplans" / normalized_json
+    if direct_json.exists():
+        return direct_json.resolve()
+    archive_json = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive" / normalized_json
+    if archive_json.exists():
+        return archive_json.resolve()
     return None
 
 
@@ -4512,14 +4653,25 @@ def _execplan_validation_commands(path: Path) -> list[str]:
 
 
 def _execplan_needs_reference_sweep(path: Path) -> bool:
-    lines = _read_lines(path)
-    relevant = [
-        *_section_lines(lines, "Goal"),
-        *_section_lines(lines, "Active Milestone"),
-        *_section_lines(lines, "Touched Paths"),
-        *_section_lines(lines, "Execution Summary"),
-    ]
-    text = "\n".join(relevant).lower()
+    record = _load_execplan_record(path)
+    if isinstance(record, dict):
+        relevant_text: list[str] = []
+        relevant_text.extend(record.get("goal", []))
+        active_milestone = record.get("active_milestone", {})
+        relevant_text.append(active_milestone.get("scope", ""))
+        relevant_text.extend(record.get("touched_paths", []))
+        execution_summary = record.get("execution_summary", {})
+        relevant_text.append(execution_summary.get("outcome delivered", ""))
+        text = "\n".join(relevant_text).lower()
+    else:
+        lines = _read_lines(path)
+        relevant = [
+            *_section_lines(lines, "Goal"),
+            *_section_lines(lines, "Active Milestone"),
+            *_section_lines(lines, "Touched Paths"),
+            *_section_lines(lines, "Execution Summary"),
+        ]
+        text = "\n".join(relevant).lower()
     return any(token in text for token in ("rename", "renamed", "refactor", "refactored", "move", "moved", "retire", "retired"))
 
 

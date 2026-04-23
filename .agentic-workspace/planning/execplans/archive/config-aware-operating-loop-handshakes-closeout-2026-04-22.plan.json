@@ -1,0 +1,111 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Config-Aware Operating-Loop Handshakes Closeout",
+  "goal": [],
+  "non_goals": [],
+  "intent_continuity": {
+    "larger intended outcome": "make Planning and Memory treat materially relevant config as part of the normal operating loop so bounded work and signal handling pull config before acting, then check compliance and treatment honestly after finishing.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "`config-aware-operating-loop-handshakes`"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "reopen only if ordinary use reveals a new config-handshake failure mode that the shipped trust signals do not surface cleanly."
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {
+    "literal request": "implement the rest of the lane so it can be closed cleanly",
+    "inferred intended outcome": "finish the remaining enforcement/trust work, then retire the lane honestly instead of leaving the roadmap open for a problem the shipped contracts now cover.",
+    "chosen concrete what": "derive an explicit lower-trust planning signal from finished-run config compliance, require explicit config-treatment metadata on Memory improvement signals, close the paired GitHub issues, archive the lane closeout, and drop the roadmap candidate.",
+    "interpretation distance": "low",
+    "review guidance": "reject the closeout if config bypass still remains invisible in planning review, if Memory still permits implicit config-shaped treatment for improvement signals, or if the lane stays open only because issue/roadmap residue was not cleaned up."
+  },
+  "execution_bounds": {
+    "allowed paths": "`.agentic-workspace/planning/`, `packages/planning/`, `packages/memory/`",
+    "max changed files": "25",
+    "required validation commands": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run pytest packages/memory/tests/test_installer.py -q`; `uv run pytest packages/memory/tests/test_packaging.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run agentic-memory-bootstrap doctor --target . --format json`; `uv run agentic-workspace summary --format json`",
+    "ask-before-refactor threshold": "stop before any broader config execution layer, new planning storage model, or Memory routing redesign.",
+    "stop before touching": "unrelated roadmap lanes or issue clusters."
+  },
+  "stop_conditions": {
+    "stop when": "making config treatment visible would require more than compact trust signaling and existing contract fields.",
+    "escalate when boundary reached": "lower-trust planning review or explicit Memory treatment still cannot be expressed without larger lifecycle work.",
+    "escalate on scope drift": "broader graceful-compliance, portability, or machine-first planning work becomes necessary.",
+    "escalate on proof failure": "package tests or root doctor/summary surfaces still leave the lane in ambiguous or warning-heavy state."
+  },
+  "context_budget": {
+    "live working set": "issues `#267` and `#268`, planning finished-run review projection/reporting, Memory improvement-signal manifest validation, and the roadmap/external-evidence residue for this lane.",
+    "recoverable later": "future config execution engines or stricter contract generation if later dogfooding demands them.",
+    "externalize before shift": "the rule that config-bypass closeouts are lower trust in Planning, the rule that improvement-signal notes must always record config treatment explicitly, and the fact that the lane has been closed.",
+    "tiny resumability note": "the final slice converts config from advisory metadata into explicit trust state in Planning and explicit required treatment metadata in Memory.",
+    "context-shift triggers": "shift after validations pass and roadmap/issue residue is retired."
+  },
+  "delegated_judgment": {
+    "requested outcome": "finish the lane by making config-bypass or ambiguous config treatment visible enough that the lane can close without pretending the first slice already proved enforcement.",
+    "hard constraints": "keep the change compact; avoid turning config into a policy engine; preserve the existing planning and memory boundaries; do not widen into unrelated graceful-compliance or memory-routing redesign.",
+    "agent may decide locally": "exact lower-trust classification rules, the minimum Memory metadata enforcement needed to make config-shaped treatment explicit, and the narrowest tests/docs required to prove the closeout.",
+    "escalate when": "lane closure would require a larger config engine, a second planning state system, or heavy ritual across ordinary Memory notes."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {},
+  "immediate_next_action": [],
+  "blockers": [],
+  "touched_paths": [],
+  "invariants": [],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [],
+  "required_tools": [],
+  "completion_criteria": [],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "roadmap lane plus live GitHub issues `#267` and `#268`",
+    "what happened": "planning now derives `config_trust` and lower-trust closeout guidance from finished-run config compliance and reports that state as a warning when config was bypassed or left ambiguous; Memory now requires every `improvement_signal` note to declare `config_treatment` and `config_note`; the shipped Memory payload guidance was updated accordingly; GitHub issues `#267` and `#268` were closed and external intent evidence was refreshed.",
+    "scope touched": "planning package source/tests, memory package source/payload/tests, and the repo planning residue/evidence for the closed lane.",
+    "changed surfaces": "planning finished-run review/reporting now surfaces config-bypass trust explicitly; memory doctor now treats implicit config-shaped note treatment as remediation debt instead of optional metadata.",
+    "validations run": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run pytest packages/memory/tests/test_installer.py -q`; `uv run pytest packages/memory/tests/test_packaging.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap doctor --target . --format json`; `uv run agentic-workspace summary --format json`",
+    "result for continuation": "the lane no longer needs an open roadmap owner because both the planning-side closeout trust gap and the memory-side implicit-treatment gap now have shipped compact enforcement.",
+    "next step": "none; reopen only on new recurring evidence."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "respected the compact config boundary by tightening trust reporting and explicit note treatment rather than adding a new config execution engine",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "focused planning and memory tests passed, the planning checker stayed clean, source/payload/install alignment passed, root Memory doctor remained clean aside from pre-existing repo-context warnings, and the workspace summary stayed clean after issue/evidence refresh.",
+    "proof achieved now": "config-bypass closeouts are visible as lower trust during planning review/reporting, and improvement-signal notes can no longer leave config-shaped treatment implicit.",
+    "evidence for \"proof achieved\" state": "planning summary/report now carries `config_trust` plus lower-trust follow-up guidance; Memory doctor now flags missing `config_treatment` or `config_note` for `improvement_signal` notes; the paired GitHub issues are closed."
+  },
+  "intent_satisfaction": {
+    "original intent": "make Planning and Memory ask materially relevant config questions at the moments that shape execution, signal treatment, cleanup, and closeout so config behaves like part of the operating loop instead of ambient advice",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "the first slice shipped the handshake fields, and this closeout slice made bypass or ambiguity visible enough to trust the loop without keeping a standing roadmap lane open.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "the lane now has both the compact handshake and the remaining trust enforcement needed to catch config bypass or implicit Memory treatment without leaving the outcome dependent on chat memory.",
+    "evidence carried forward": "the first-slice archive, this closeout archive, the updated package contracts/tests, and the closed GitHub issues.",
+    "reopen trigger": "reopen only if real ordinary use exposes a new config-handshake failure mode that the current planning trust signal and Memory metadata enforcement do not catch."
+  },
+  "execution_summary": {
+    "outcome delivered": "closed the remaining config-handshake lane by adding lower-trust planning closeout signaling, requiring explicit config treatment for Memory improvement signals, and retiring the paired external issue residue.",
+    "validation confirmed": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run pytest packages/memory/tests/test_installer.py -q`; `uv run pytest packages/memory/tests/test_packaging.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap doctor --target . --format json`; `uv run agentic-workspace summary --format json`",
+    "follow-on routed to": "none; the larger lane is closed",
+    "post-work posterity capture": "keep the rule that config bypass in finished-run review lowers trust by default, and that Memory improvement signals must record explicit config treatment even when the answer is `no_action`.",
+    "knowledge promoted (memory/docs/config)": "planning and memory package contracts now encode the closeout trust rule directly; no further standing roadmap residue is needed.",
+    "resume from": "next roadmap lane only if new work is intentionally promoted"
+  },
+  "drift_log": []
+}

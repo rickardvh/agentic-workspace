@@ -1,0 +1,96 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Bootstrap AGENTS Preservation Hardening",
+  "goal": [
+    "Fix the workspace upgrade path so it keeps repo-owned `AGENTS.md` content outside the managed workspace fence instead of rewriting the whole file.",
+    "Re-prove the remaining bootstrap-hardening contract after that fix and close the bootstrap issue if no narrower remainder survives."
+  ],
+  "non_goals": [
+    "Redesign the whole bootstrap classifier.",
+    "Replace the current external-agent handoff surface.",
+    "Introduce broader startup-filename configurability in this slice."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "finish the remaining bootstrap-hardening follow-through around external-agent trust, conservative policy, and repo-owned surface preservation.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "`none`"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "`none`",
+    "activation trigger": "`none`"
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "correct the upgrade behavior so repo-owned `AGENTS.md` content survives outside the managed workspace fence, add focused regression coverage, and reassess whether issue `#27` can close.",
+    "hard constraints": "preserve the managed workspace pointer block; do not normalize the whole file on upgrade; keep install behavior for blank repos intact; keep the slice bounded to bootstrap hardening rather than startup-filename expansion.",
+    "agent may decide locally": "the smallest upgrade-path rule change, the exact regression tests, and the minimum docs/planning updates needed if the bootstrap issue closes.",
+    "escalate when": "fixing the preservation bug would require a broader ownership redesign, breaks install/adopt semantics, or exposes another bootstrap-hardening remainder that needs separate promotion."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "bootstrap-agents-preservation-hardening",
+    "status": "completed",
+    "scope": "fix upgrade-time `AGENTS.md` preservation, prove the current bootstrap contract with focused tests and live dogfooding, and close issue `#27` if the remaining scope is satisfied.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "GitHub issue `#27`"
+  },
+  "immediate_next_action": [
+    "None. Slice completed; promote the next remaining open issue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`TODO.md`",
+    "`ROADMAP.md`",
+    "`.agentic-workspace/planning/execplans/bootstrap-agents-preservation-hardening-2026-04-14.md`",
+    "`src/agentic_workspace/cli.py`",
+    "`tests/test_workspace_cli.py`"
+  ],
+  "invariants": [
+    "`AGENTS.md` remains repo-owned outside the managed workspace fence.",
+    "The workspace pointer block stays current.",
+    "Upgrade should still keep `llms.txt` current.",
+    "Blank-repo install behavior should remain unchanged."
+  ],
+  "contract_decisions_to_freeze": [
+    "Upgrade should preserve repo-owned startup instructions outside the managed workspace fence when `AGENTS.md` already exists.",
+    "The workspace layer owns the fenced pointer block, not the whole root startup file."
+  ],
+  "open_questions_to_close": [
+    "Is there any remaining bootstrap-hardening gap after the AGENTS preservation fix and the recent structured handoff work?"
+  ],
+  "validation_commands": [
+    "`uv run pytest tests/test_workspace_cli.py -q`",
+    "`uv run python scripts/check/check_planning_surfaces.py`",
+    "`uv run ruff check src tests`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Workspace upgrade no longer rewrites repo-owned `AGENTS.md` content outside the managed fence.",
+    "Focused regression coverage proves the preserved-content behavior.",
+    "Live bootstrap/handoff dogfooding shows no narrower remainder in issue `#27`, or routes one explicitly if it remains."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "workspace upgrade now preserves repo-owned `AGENTS.md` content outside the managed workspace fence instead of rewriting the whole file, while still keeping the workspace pointer current; focused regression coverage proves the preserved-content behavior, and live dry-run bootstrap/upgrade dogfooding shows the external-agent and policy-selection surfaces remain consistent.",
+    "validation confirmed": "`uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run ruff check src tests`; `uv run agentic-workspace upgrade --target . --dry-run --format json`.",
+    "follow-on routed to": "`ROADMAP.md`.",
+    "resume from": "promote the next remaining issue, likely lazy-discovery measurement or configurable canonical startup filename support."
+  },
+  "drift_log": [
+    "2026-04-14: Promoted after identifying a concrete remaining bootstrap-hardening bug: `upgrade` still rewrote the whole root `AGENTS.md` instead of preserving repo-owned content outside the managed workspace fence.",
+    "2026-04-14: Completed by changing upgrade to patch the managed workspace fence inside `AGENTS.md`, proving repo-owned content survives through regression coverage, and confirming the live bootstrap/handoff reports stay conservative and target-repo-specific."
+  ]
+}

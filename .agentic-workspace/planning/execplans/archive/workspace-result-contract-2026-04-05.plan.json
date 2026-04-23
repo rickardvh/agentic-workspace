@@ -1,0 +1,72 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Workspace Result Contract",
+  "goal": [
+    "Make the root orchestrator consume module results through an explicit adapter layer instead of ad hoc shape compensation inside the CLI."
+  ],
+  "non_goals": [
+    "Change module package installer result types in this tranche.",
+    "Add new module families beyond memory and planning.",
+    "Expand the root lifecycle CLI into a richer orchestration engine before the result seam is stabilized."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "extract root result normalization into an explicit adapter layer and cover the supported result shapes with tests.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan and remove the finished workspace result contract candidate from the roadmap queue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "TODO.md",
+    "ROADMAP.md",
+    ".agentic-workspace/planning/execplans/",
+    "src/agentic_workspace/",
+    "tests/"
+  ],
+  "invariants": [
+    "The root lifecycle CLI must remain a thin orchestrator.",
+    "The adapter layer must tolerate current module result differences without forcing immediate upstream package churn.",
+    "JSON and text output must remain stable for current supported module operations."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py",
+    "uv run ruff check src tests",
+    "uv run ty check src",
+    "uv run agentic-workspace status --format json"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The root orchestrator has a dedicated result adapter or normalization module.",
+    "The adapter supports both current module action/result shapes without special-case code scattered through the CLI.",
+    "Root tests cover the supported result normalization behavior.",
+    "The roadmap no longer carries a separate open `Workspace result contract` candidate."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-05: Plan activated after the roadmap finding was captured from real wrapper friction while orchestrating memory and planning module results.",
+    "2026-04-05: Milestone complete: result normalization now flows through a dedicated adapter module that handles the current module action and warning shapes without ad hoc logic in the CLI body."
+  ]
+}

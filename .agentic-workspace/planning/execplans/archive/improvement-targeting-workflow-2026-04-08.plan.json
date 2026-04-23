@@ -1,0 +1,71 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Improvement-Targeting Workflow",
+  "goal": [
+    "Make symptom-to-remediation routing explicit so memory-derived and review-derived signals routinely turn into upstream improvements and then shrink, stub, or disappear instead of lingering as long-lived workaround notes."
+  ],
+  "non_goals": [
+    "Build new automation or issue sync.",
+    "Redesign the memory taxonomy.",
+    "Force every signal into active work immediately."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "add the explicit improvement-targeting workflow to the shared memory and review contract surfaces, thread post-remediation shape into the review template, and lock the wording with focused payload assertions.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "None. Milestone completed and archived after the symptom-to-remediation workflow landed in the shared memory and review docs and the focused package lanes passed."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`.agentic-workspace/memory/`",
+    "`packages/memory/`",
+    "`.agentic-workspace/planning/reviews/`",
+    "`packages/planning/`",
+    "`TODO.md`",
+    "`ROADMAP.md`"
+  ],
+  "invariants": [
+    "Durable truth and improvement signals remain distinct.",
+    "The workflow stays advisory outside the managed bootstrap surface.",
+    "Promotion into roadmap or active planning remains explicit rather than automatic."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run pytest packages/memory/tests/test_installer.py packages/planning/tests/test_installer.py`",
+    "`uv run python scripts/check/check_memory_freshness.py`",
+    "`uv run python scripts/check/check_planning_surfaces.py`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The shipped memory and review docs define the symptom-to-remediation workflow explicitly.",
+    "The review template requires the intended post-remediation note shape.",
+    "Memory and planning payload assertions cover the new workflow contract."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-08: Promoted from GitHub issue `#8` after the repo had improvement-signal concepts and promotion tools but still lacked an explicit end-to-end workflow for turning symptomatic notes into upstream improvement work.",
+    "2026-04-08: Completed after defining the improvement-targeting workflow in memory and review surfaces, adding post-remediation note-shape guidance, and validating the updated payload assertions."
+  ]
+}

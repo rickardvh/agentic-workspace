@@ -1,0 +1,40 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Memory Boundary Review",
+  "goal": [
+    "Check whether memory remains routed, justified, and subordinate to planning and canonical docs in normal repo operation."
+  ],
+  "scope": [
+    "`.agentic-workspace/memory/repo/index.md`",
+    "`.agentic-workspace/memory/repo/manifest.toml`",
+    "`.agentic-workspace/memory/repo/skills/`",
+    "strict memory freshness output"
+  ],
+  "non_goals": [
+    "Do not perform another broad memory-audit history pass.",
+    "Do not review bootstrap-managed memory payload internals."
+  ],
+  "review_mode": {
+    "mode": "`memory-boundary`",
+    "review question": "Does memory still present clear boundaries with no evidence of authority sprawl or routing noise?",
+    "default finding cap": "3",
+    "inputs inspected first": "`.agentic-workspace/memory/repo/index.md`, `.agentic-workspace/memory/repo/manifest.toml`, `.agentic-workspace/memory/repo/skills/`, strict memory freshness output"
+  },
+  "review_method": {
+    "commands used": "",
+    "evidence sources": ""
+  },
+  "references": [],
+  "findings": [],
+  "recommendation": {
+    "promote": "none",
+    "defer": "keep the older installed-history fragmentation signal in `memory-audit-signal-quality-2026-04-07.md` deferred until another maintenance cycle confirms it",
+    "dismiss": "memory-boundary drift concerns in current day-to-day surfaces"
+  },
+  "validation_commands": [
+    "`uv run python scripts/check/check_memory_freshness.py --strict`"
+  ],
+  "drift_log": [
+    "2026-04-09: Review created as part of the full review-matrix pass."
+  ]
+}

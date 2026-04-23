@@ -1,0 +1,21 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Planning Beta-Readiness Review",
+  "goal": [],
+  "scope": [
+    "Judge whether the current planning maturity label still matches current package reality.",
+    "Identify only the remaining maturity blockers that are still real enough to deserve queued follow-through."
+  ],
+  "non_goals": [
+    "Re-review every planning feature in depth.",
+    "Promote work directly into active execution from this review.",
+    "Treat historical churn as a blocker unless it still affects the current contract."
+  ],
+  "review_mode": {},
+  "review_method": {},
+  "references": [],
+  "findings": [],
+  "recommendation": {},
+  "validation_commands": [],
+  "drift_log": []
+}

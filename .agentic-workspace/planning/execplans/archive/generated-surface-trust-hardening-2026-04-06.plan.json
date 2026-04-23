@@ -1,0 +1,69 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Generated Surface Trust Hardening",
+  "goal": [
+    "Make generated surfaces boringly trustworthy by tightening canonical-source declarations, rerender expectations, generated-file markings, and liveness checks across maintainer-facing paths."
+  ],
+  "non_goals": [
+    "Invent new generated artifacts without need.",
+    "Duplicate the compatibility-policy work.",
+    "Turn every drift warning into a hard failure."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "harden generated-surface trust without duplicating the compatibility policy or boundary docs.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan and leave `TODO.md` empty until a new roadmap candidate is explicitly promoted."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "docs/",
+    "scripts/",
+    "tests/",
+    "README.md",
+    "tools/",
+    ".agentic-workspace/"
+  ],
+  "invariants": [
+    "Canonical sources should remain named once and referenced consistently.",
+    "Generated-file markings must stay obvious and non-manual.",
+    "Liveness checks should stay quiet when nothing changed."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Generated surfaces are clearly derived and easy to trust.",
+    "Drift detection is explicit and quiet when nothing changed.",
+    "Maintainer-facing documentation reflects one canonical trust model."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-06: Parked from the planning-spec intake so generated-surface trust could follow the stable-surface and lifecycle docs.",
+    "2026-04-06: Milestone complete: the repo now has a canonical generated-surface trust doc plus maintainer references for canonical sources, rerendering, and freshness checks."
+  ]
+}

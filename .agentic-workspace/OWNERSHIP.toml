@@ -11,12 +11,6 @@ summary = "Repository-native state owned by the repo and not upgrade-replaceable
 [ownership_classes.managed_fence]
 summary = "Product-managed content inside an explicit fence in a repo-owned file."
 
-[ownership_classes.workspace_shared]
-summary = "Shared package-owned workspace doctrine and support under .agentic-workspace/."
-
-[ownership_classes.repo_specific_package_owned]
-summary = "Repo-specific but still package-managed state kept inside .agentic-workspace/."
-
 [ownership_classes.module_managed]
 summary = "Upgrade-replaceable content owned by one installed module under .agentic-workspace/."
 
@@ -42,132 +36,34 @@ uninstall_policy = "remove-managed-files-only"
 module = "workspace"
 path = ".agentic-workspace/WORKFLOW.md"
 kind = "workflow-contract"
-ownership = "workspace_shared"
+ownership = "module_managed"
 uninstall_policy = "remove-if-owned"
 
 [[managed_surfaces]]
 module = "workspace"
 path = ".agentic-workspace/OWNERSHIP.toml"
 kind = "ownership-ledger"
-ownership = "workspace_shared"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/config.toml"
-kind = "workspace-config"
-ownership = "repo_specific_package_owned"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/config.local.toml"
-kind = "workspace-local-config"
-ownership = "repo_specific_package_owned"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/delegation-outcomes.json"
-kind = "delegation-outcomes"
-ownership = "repo_specific_package_owned"
+ownership = "module_managed"
 uninstall_policy = "remove-if-owned"
 
 [[managed_surfaces]]
 module = "workspace"
 path = ".agentic-workspace/system-intent/WORKFLOW.md"
 kind = "system-intent-workflow"
-ownership = "workspace_shared"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/system-intent/intent.toml"
-kind = "system-intent-mirror"
-ownership = "repo_specific_package_owned"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/docs/**"
-kind = "shared-contract-doc"
-ownership = "workspace_shared"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "memory"
-path = ".agentic-workspace/memory/bootstrap/**"
-kind = "bootstrap-workspace"
 ownership = "module_managed"
 uninstall_policy = "remove-if-owned"
 
 [[managed_surfaces]]
 module = "memory"
-path = ".agentic-workspace/memory/skills/**"
-kind = "shared-skill"
-ownership = "module_managed"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "memory"
-path = ".agentic-workspace/memory/repo/**"
-kind = "repo-memory"
-ownership = "repo_specific_package_owned"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "planning"
-path = ".agentic-workspace/planning/state.toml"
-kind = "planning-state"
-ownership = "repo_specific_package_owned"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "planning"
-path = ".agentic-workspace/planning/execplans/**"
-kind = "execplan"
-ownership = "repo_specific_package_owned"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "planning"
-path = ".agentic-workspace/planning/reviews/**"
-kind = "review"
-ownership = "repo_specific_package_owned"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "planning"
-path = ".agentic-workspace/planning/upstream-task-intake.md"
-kind = "planning-intake"
-ownership = "repo_specific_package_owned"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "planning"
-path = ".agentic-workspace/planning/process.md"
-kind = "planning-process"
-ownership = "repo_specific_package_owned"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "planning"
-path = ".agentic-workspace/planning/skills/**"
-kind = "shared-skill"
+path = ".agentic-workspace/memory/**"
+kind = "module-root"
 ownership = "module_managed"
 uninstall_policy = "remove-if-owned"
 
 [[managed_surfaces]]
 module = "planning"
-path = ".agentic-workspace/planning/scripts/**"
-kind = "managed-script"
-ownership = "module_managed"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "planning"
-path = ".agentic-workspace/planning/agent-manifest.json"
-kind = "agent-manifest"
+path = ".agentic-workspace/planning/**"
+kind = "module-root"
 ownership = "module_managed"
 uninstall_policy = "remove-if-owned"
 
@@ -192,26 +88,9 @@ summary = "Repo-level startup instructions and local operating constraints."
 concern = "compact-planning-state"
 surface = ".agentic-workspace/planning/state.toml"
 owner = "planning"
-ownership = "repo_specific_package_owned"
+ownership = "module_managed"
 authority = "primary"
 summary = "Consolidated active queue and roadmap state owned by the planning package."
-
-[[authority_surfaces]]
-concern = "workspace-config"
-surface = ".agentic-workspace/config.toml"
-owner = "workspace"
-ownership = "repo_specific_package_owned"
-authority = "primary"
-summary = "Checked-in package-owned workspace config and lifecycle defaults."
-
-[[authority_surfaces]]
-concern = "shared-contract-docs"
-surface = ".agentic-workspace/docs/"
-owner = "workspace"
-ownership = "workspace_shared"
-authority = "primary"
-summary = "Shared package-owned contract and operating docs kept inside the workspace domain."
-
 
 [[authority_surfaces]]
 concern = "design-constraints"
@@ -225,7 +104,7 @@ summary = "Design tests for product-shape, ownership, and lifecycle changes."
 concern = "shared-workflow-contract"
 surface = ".agentic-workspace/WORKFLOW.md"
 owner = "workspace"
-ownership = "workspace_shared"
+ownership = "module_managed"
 authority = "primary"
 summary = "Shared workflow rules installed by the workspace layer."
 
@@ -233,7 +112,7 @@ summary = "Shared workflow rules installed by the workspace layer."
 concern = "ownership-ledger"
 surface = ".agentic-workspace/OWNERSHIP.toml"
 owner = "workspace"
-ownership = "workspace_shared"
+ownership = "module_managed"
 authority = "primary"
 summary = "Ownership ledger for managed paths, fences, and authority surfaces."
 
@@ -241,7 +120,7 @@ summary = "Ownership ledger for managed paths, fences, and authority surfaces."
 concern = "system-intent-mirror"
 surface = ".agentic-workspace/system-intent/intent.toml"
 owner = "workspace"
-ownership = "repo_specific_package_owned"
+ownership = "module_managed"
 authority = "primary"
 summary = "Workspace-owned mirrored system-intent contract consumed by package operations."
 
@@ -251,23 +130,7 @@ surface = ".agentic-workspace/planning/"
 owner = "planning"
 ownership = "module_managed"
 authority = "primary"
-summary = "Planning-owned installed helper surfaces and package support."
-
-[[authority_surfaces]]
-concern = "planning-execplans"
-surface = ".agentic-workspace/planning/execplans/"
-owner = "planning"
-ownership = "repo_specific_package_owned"
-authority = "primary"
-summary = "Repo-specific planning execution contracts owned by the planning package."
-
-[[authority_surfaces]]
-concern = "planning-reviews"
-surface = ".agentic-workspace/planning/reviews/"
-owner = "planning"
-ownership = "repo_specific_package_owned"
-authority = "primary"
-summary = "Repo-specific review artifacts owned by the planning package."
+summary = "Planning-owned installed workflow and helper surfaces."
 
 [[authority_surfaces]]
 concern = "memory-shared-support"
@@ -276,14 +139,6 @@ owner = "memory"
 ownership = "module_managed"
 authority = "primary"
 summary = "Memory-owned shared workflow, version, bootstrap, and skill support surfaces."
-
-[[authority_surfaces]]
-concern = "repo-memory-home"
-surface = ".agentic-workspace/memory/repo/"
-owner = "memory"
-ownership = "repo_specific_package_owned"
-authority = "primary"
-summary = "Repo-specific durable memory kept inside the package-owned workspace domain."
 
 [[authority_surfaces]]
 concern = "workspace-workflow-pointer"

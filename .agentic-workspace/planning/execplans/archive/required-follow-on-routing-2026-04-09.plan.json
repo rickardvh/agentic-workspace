@@ -1,0 +1,90 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Required Follow-On Routing",
+  "goal": [
+    "Make required continuation for unfinished larger intent a first-class part of the planning contract so follow-on work is recorded in checked-in planning surfaces instead of prose or chat residue."
+  ],
+  "non_goals": [
+    "Do not turn planning into a broad epic tracker.",
+    "Do not require optional nice-to-have follow-ups to block archive.",
+    "Do not add retrospective status journaling to active plans."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "planning should not let required follow-on for unfinished larger intent disappear into archived prose or chat residue.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "`ROADMAP.md` candidate `Required follow-on routing follow-through`"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "`ROADMAP.md` candidate `Required follow-on routing follow-through`",
+    "activation trigger": "promote when another bounded slice finishes part of a larger intended outcome and must leave an explicit next owner behind."
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "required-follow-on-routing",
+    "status": "completed",
+    "scope": "add first-class required-continuation fields to execplans, enforce them in the planning checker and archive flow, and teach cleanup to preserve explicit required follow-on owners.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed slice now that required follow-on routing is part of the contract and the broader continuation candidate is preserved in `ROADMAP.md`."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`.agentic-workspace/planning/execplans/README.md`",
+    "`.agentic-workspace/planning/execplans/TEMPLATE.md`",
+    "`packages/planning/bootstrap/.agentic-workspace/planning/execplans/README.md`",
+    "`packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.md`",
+    "`.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`",
+    "`packages/planning/bootstrap/.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`",
+    "`packages/planning/src/repo_planning_bootstrap/installer.py`",
+    "`packages/planning/tests/test_check_planning_surfaces.py`",
+    "`packages/planning/tests/test_installer.py`",
+    "`ROADMAP.md`",
+    "`TODO.md`"
+  ],
+  "invariants": [
+    "Unfinished larger intent must keep one explicit checked-in owner after a slice completes.",
+    "Required follow-on must be recorded as structured plan state, not only prose.",
+    "Optional follow-up must not block archive if the larger intended outcome is actually complete."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run pytest packages/planning/tests/test_check_planning_surfaces.py`",
+    "`uv run pytest packages/planning/tests/test_installer.py`",
+    "`uv run python scripts/check/check_planning_surfaces.py`",
+    "`make maintainer-surfaces`",
+    "`uv run agentic-planning-bootstrap upgrade --target .`",
+    "`uv run agentic-memory-bootstrap upgrade --target .`",
+    "`make check`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Execplans include first-class required-continuation fields.",
+    "Planning checks warn when unfinished larger intent lacks required follow-on owner or activation trigger.",
+    "Archive flow blocks completed slices that leave required follow-on unrecorded.",
+    "Cleanup preserves explicit required follow-on owners instead of deleting them as archived residue."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-09: Promoted after dogfooding showed that intent continuity still needs explicit required-follow-on routing to keep larger work alive after bounded slice archive.",
+    "2026-04-09: Added first-class Required Continuation fields, archive gating, cleanup preservation, and regression coverage for follow-on ownership."
+  ]
+}

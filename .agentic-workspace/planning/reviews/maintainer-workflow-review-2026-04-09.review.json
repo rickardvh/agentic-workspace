@@ -1,0 +1,40 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Maintainer Workflow Review",
+  "goal": [
+    "Check whether maintainer-facing docs and commands still describe one real runnable workflow."
+  ],
+  "scope": [
+    "`docs/maintainer-commands.md`",
+    "`make maintainer-surfaces`",
+    "direct maintainer check wrapper"
+  ],
+  "non_goals": [
+    "Do not re-review source-payload alignment separately.",
+    "Do not audit contributor-facing startup docs here."
+  ],
+  "review_mode": {
+    "mode": "`maintainer-workflow`",
+    "review question": "Do maintainer docs still describe the real command path without overclaiming coverage?",
+    "default finding cap": "3",
+    "inputs inspected first": "`docs/maintainer-commands.md`, `make maintainer-surfaces`, `python scripts/check/check_maintainer_surfaces.py`"
+  },
+  "review_method": {
+    "commands used": "",
+    "evidence sources": ""
+  },
+  "references": [],
+  "findings": [],
+  "recommendation": {
+    "promote": "none",
+    "defer": "none",
+    "dismiss": "maintainer workflow drift concerns in this scope"
+  },
+  "validation_commands": [
+    "`make maintainer-surfaces`",
+    "`uv run python scripts/check/check_maintainer_surfaces.py`"
+  ],
+  "drift_log": [
+    "2026-04-09: Review created as part of the full review-matrix pass."
+  ]
+}

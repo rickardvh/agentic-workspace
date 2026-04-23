@@ -1,0 +1,70 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Workspace-First Lifecycle",
+  "goal": [
+    "Make `agentic-workspace` the normal public lifecycle entrypoint for memory-only, planning-only, and combined installs through the existing generic module contract, while keeping module lifecycle logic package-local and preserving package CLIs as advanced/package-local paths."
+  ],
+  "non_goals": [
+    "Redesign the orchestrator or replace the existing module descriptor model.",
+    "Build a third-party plugin system.",
+    "Remove direct module CLIs."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "add the root prompt surface, tighten the public docs contract around workspace-first lifecycle use, and validate that the orchestrator still stays thin while routing module-specific work back into the packages.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "None. Milestone completed and archived after the root prompt lane, workspace-first docs pass, and root workspace validation lane all passed."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`src/agentic_workspace/`",
+    "`tests/`",
+    "`README.md`",
+    "`docs/`",
+    "`packages/memory/`",
+    "`packages/planning/`"
+  ],
+  "invariants": [
+    "The orchestrator remains thin and generic; module-specific lifecycle implementation stays package-local.",
+    "Memory and planning remain selectively adoptable through workspace presets as well as package-local paths.",
+    "Direct module CLIs remain available for maintainers, package-local workflows, and advanced debugging, but they no longer carry the normal public lifecycle contract."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run pytest tests/test_workspace_cli.py tests/test_workspace_lifecycle.py`",
+    "`uv run python scripts/check/check_planning_surfaces.py`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The workspace CLI exposes a public prompt lane for lifecycle handoff work.",
+    "Root and package docs consistently present `agentic-workspace` as the normal public lifecycle entrypoint for all supported module selections.",
+    "The remaining docs keep package-local CLIs framed as advanced or package-local rather than the default repo-adopter path."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-08: Promoted from GitHub issue `#7` after the orchestrator, registry, and module contract already existed but the public lifecycle contract still underclaimed the workspace layer and left the root CLI without an explicit prompt lane.",
+    "2026-04-08: Completed after adding the root `prompt` surface, routing root and package docs through workspace presets as the normal public path, and keeping package CLIs framed as advanced/package-local workflows."
+  ]
+}

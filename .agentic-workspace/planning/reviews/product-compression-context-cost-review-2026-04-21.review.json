@@ -1,0 +1,63 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Product Compression Startup Review",
+  "goal": [
+    "Identify the first bounded work that should land under the active product-compression lane before broader README, doctrine, or query-surface cleanup starts."
+  ],
+  "scope": [
+    "Startup-entry surfaces and the current active issue cluster for product compression and gradual discovery."
+  ],
+  "non_goals": [
+    "Planning every follow-on slice up front.",
+    "Reopening the ownership-boundary cleanup that already closed.",
+    "Converting this review into an active implementation plan."
+  ],
+  "review_mode": {
+    "mode": "context-cost",
+    "review question": "What bounded startup/discovery work should come first so the product can move toward a tiny safe operating model without flattening ownership or starting a broad docs rewrite?",
+    "default finding cap": "2 findings",
+    "inputs inspected first": "`AGENTS.md`, `agentic-workspace defaults --section startup --format json`, `README.md`, `tools/AGENT_QUICKSTART.md`, `docs/design-principles.md`, live issues `#223`, `#224`, `#225`, `#226`, `#227`, `#228`, `#230`"
+  },
+  "review_method": {
+    "commands used": "",
+    "evidence sources": ""
+  },
+  "references": [],
+  "findings": [
+    {
+      "title": "The first slice should freeze the tiny startup model before broader compression work",
+      "summary": "The repo already has a compact startup answer in queryable form, but the visible front-door surfaces have not yet been reduced to match it. The first implementation slice should therefore define and freeze the tiny safe startup model plus the discovery/escalation cues around it, rather than beginning with README or doctrine compression.",
+      "risk if unchanged": "Work starts as a diffuse “make docs smaller” pass, which can remove text without actually lowering startup cost or clarifying when deeper concepts should become discoverable.",
+      "suggested action": "Make the first active tranche explicitly cover three outputs together: the minimum startup contract, the escalation/discovery cues that justify deeper reads, and the compact top-level capability advertisement that explains what the main modules are for.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "`.agentic-workspace/planning/state.toml (todo.active_items)`",
+      "promotion trigger": "immediate, because the active execplan already names this lane and needs a more precise first tranche definition.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "README and doctrine compression should be sequenced as follow-on work, not the anchor slice",
+      "summary": "The issue cluster is dependency-ordered. `#223`, `#227`, and `#228` define the operating model that later cleanup depends on. `#224`, `#225`, and `#226` look like follow-on compression and routing work that should be driven by that operating model instead of being planned first.",
+      "risk if unchanged": "The lane expands into a multi-surface documentation sweep before the repo has decided what the stable minimal model actually is, increasing churn and the chance of repeated rewrites.",
+      "suggested action": "Keep the active plan ordered as:",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "`.agentic-workspace/planning/state.toml (todo.active_items)`",
+      "promotion trigger": "immediate for sequencing in the active execplan; roadmap promotion is not needed because the lane is already active.",
+      "post-remediation note shape": "shrink"
+    }
+  ],
+  "recommendation": {
+    "promote": "refine the active execplan so the first tranche is explicitly `#223` + `#227` + `#228`, with README/doctrine/query-surface cleanup marked as follow-on slices driven by that model.",
+    "defer": "`#224`, `#225`, and `#226` as immediate implementation anchors until the startup/discovery contract is frozen.",
+    "dismiss": "any broader “compress everything visible” framing for this lane."
+  },
+  "validation_commands": [
+    "`uv run agentic-workspace defaults --section startup --format json`",
+    "`uv run agentic-workspace summary --format json`",
+    "`uv run python scripts/check/check_planning_surfaces.py`"
+  ],
+  "drift_log": [
+    "2026-04-21: Review created to bound the first startup/discovery tranche under the active product-compression lane."
+  ]
+}

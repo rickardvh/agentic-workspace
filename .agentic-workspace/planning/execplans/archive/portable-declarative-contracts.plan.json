@@ -1,0 +1,108 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Portable Declarative Contracts and Agent-Native Alignment",
+  "goal": [
+    "Define a machine-readable \"Cold-Start\" Protocol for immediate agent orientation.",
+    "Align `execplan` and `summary` schemas with agent-native planning structures.",
+    "Inventory and extract lifecycle truths from Python into declarative manifests."
+  ],
+  "non_goals": [
+    "Inventing a new workflow language or generic automation system.",
+    "Replacing human-legible documentation entirely with JSON."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Consolidate agentic-workspace CLI and operating model by aligning repository planning contracts with agent-native reasoning structures.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/execplans/portable-declarative-contracts.md",
+    "parent lane": "Portable declarative contracts and agent-native alignment"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/execplans/portable-declarative-contracts.md",
+    "activation trigger": "Completion of the first implementation slice."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "High-signal cold-start orientation and machine-readable startup protocol.",
+    "intentionally deferred": "Extraction of broader lifecycle logic (beyond startup) into the manifest.",
+    "discovered implications": "Need for stricter `TODO.md` and `execplan` parsing to ensure high-quality structured output.",
+    "proof achieved now": "`agentic-workspace report --startup` returns a valid block.",
+    "validation still needed": "Verified integration with a simulated fresh agent.",
+    "next likely slice": "Aligning `summary` fields and extracting more lifecycle truth."
+  },
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "A working \"Cold-Start\" protocol and aligned summary schemas that reduce agent startup friction.",
+    "hard constraints": "Maintain zero-warning repository health; avoid breaking existing human-legible surfaces.",
+    "agent may decide locally": "Local implementation details of CLI flags and JSON structures.",
+    "escalate when": "Proposed changes would break backward compatibility in a way that blocks other active lanes."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "Define protocol in manifest, implement --startup flag, and update summary fields.",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "immediate_next_action": [
+    "None; this implementation slice is complete."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    ".agentic-workspace/planning/agent-manifest.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py"
+  ],
+  "invariants": [
+    "`agentic-workspace report --startup` must always return high-signal orientation context.",
+    "Schema changes must be backward-compatible or explicitly noted as breaking."
+  ],
+  "contract_decisions_to_freeze": [
+    "The `startup-report/v1` schema is now the canonical cold-start entrypoint."
+  ],
+  "open_questions_to_close": [
+    "Should we also extract `setup` and `init` lifecycle logic into the manifest in this slice? (No, deferred to next slice)."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace report --startup --format json",
+    "make maintainer-surfaces"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "`agentic-workspace report --startup` returns a valid, high-signal JSON block.",
+    "`agentic-workspace summary` includes Requested Outcome, Hard Constraints, and Escalation Boundaries.",
+    "Zero warnings from `make maintainer-surfaces`."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {
+    "validation proof": "`uv run agentic-workspace report --startup --format json`; `uv run agentic-workspace summary --format json`; `make check`.",
+    "proof achieved now": "startup-report output is present and stable (`startup-report/v1`), and summary/report surfaces expose aligned planning contract projections.",
+    "evidence for \"proof achieved\" state": "full repo checks pass with startup report and planning summary contracts active."
+  },
+  "intent_satisfaction": {
+    "original intent": "define a machine-readable startup protocol and align summary/report planning contracts with agent-native execution framing.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "startup-report and planning summary/report contract fields are present and validated in workspace checks.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "startup report and planning summary now expose aligned, high-signal contract fields for agent-native startup and handoff.",
+    "validation confirmed": "`uv run agentic-workspace report --startup --format json`; `make check`; `cd packages/planning && uv run pytest -q`.",
+    "follow-on routed to": "future lifecycle extraction slices only when additional declarative surfaces are intentionally promoted.",
+    "knowledge promoted (memory/docs/config)": "`.agentic-workspace/planning/agent-manifest.json`; `.agentic-workspace/planning/execplans/portable-declarative-contracts.md`",
+    "resume from": "extend manifest-driven lifecycle extraction only if a new lane explicitly requires it."
+  },
+  "drift_log": [
+    "2026-04-19: Initial plan created for portable contracts and agent-native alignment.",
+    "2026-04-19: Aligned plan with TEMPLATE.md for better tool integration.",
+    "2026-04-19: Filled out required sections to satisfy planning checker.",
+    "2026-04-20: Completed startup-report/summary alignment validation and closed this implementation slice."
+  ]
+}

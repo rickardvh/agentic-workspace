@@ -1,0 +1,92 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Selective-Adoption Proof Refresh",
+  "goal": [
+    "Refresh the proof that memory-only, planning-only, and combined installs still feel clean, cheap, and coherent in practice.",
+    "Fix any concrete product or contract gap found through the narrowest canonical path."
+  ],
+  "non_goals": [
+    "Reopen the extension boundary.",
+    "Build a permanent CI matrix for every selective-adoption shape in one pass.",
+    "Redesign the workspace lifecycle around one-off proof friction."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "selective adoption should remain a first-class product truth, not a doctrinal claim.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "run fresh clean-room proof passes for `memory`, `planning`, and `full`, then tighten the smallest canonical product or docs surface needed to keep selective adoption trustworthy.",
+    "hard constraints": "prefer the workspace lifecycle front door; keep validation narrow and representative; do not widen into portability or bootstrap-policy redesign unless the same evidence genuinely requires it.",
+    "agent may decide locally": "which temporary repo shapes to use, which proof commands are enough for each install shape, and whether the outcome is proof-only or requires a small fix.",
+    "escalate when": "a selective-adoption gap cannot be corrected without broader lifecycle or module-boundary redesign."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "run clean-room `memory`, `planning`, and `full` installs through `agentic-workspace init`, audit the resulting startup and lifecycle surfaces, and fix the smallest real gap if one appears.",
+    "ready": "completed",
+    "blocked": "none",
+    "optional_deps": "GitHub issue `#25`"
+  },
+  "immediate_next_action": [
+    "Promote `Portability evidence review` from the highest-priority queue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`TODO.md`",
+    "`ROADMAP.md`",
+    "`packages/memory/src/repo_memory_bootstrap/_installer_payload.py`",
+    "`packages/memory/tests/test_installer.py`",
+    "`packages/planning/bootstrap/.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`",
+    "`packages/planning/tests/test_installer.py`",
+    "`.agentic-workspace/planning/execplans/archive/selective-adoption-proof-refresh-2026-04-13.md`"
+  ],
+  "invariants": [
+    "`memory`, `planning`, and `full` remain first-class supported intents.",
+    "Selective-adoption proof should use the same public lifecycle path that adopters are expected to use.",
+    "Any fix should preserve one-home ownership between planning, memory, and workspace orchestration."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`cd packages/memory && uv run pytest tests/test_installer.py -k \"optional_append or absent_optional_append_targets or current_memory_synergy or install_does_not_duplicate_existing_optional_fragment\"`",
+    "`cd packages/planning && uv run pytest tests/test_installer.py -k \"generic_repo_readme_without_startup_claims or partial_readme_startup_guidance or starter_todo_for_milestone_word_in_hygiene_rules\"`",
+    "`uv run ruff check packages/memory packages/planning`",
+    "clean-room `agentic-workspace init/status/doctor` passes for `memory`, `planning`, and `full`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Fresh clean-room installs provide clear evidence for all three supported adoption shapes.",
+    "Any concrete trust or friction gap found is fixed or rerouted into a narrower backlog lane.",
+    "The resulting proof is archived so later work can build on evidence instead of restating doctrine."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "yes. Fresh `memory`, `planning`, and `full` installs were re-run through the workspace lifecycle front door and used as the proof surface for selective adoption.",
+    "validation confirmed": "yes. Focused package tests, Ruff, and repeated clean-room lifecycle passes confirmed the proof and the fixes.",
+    "follow-on routed to": "`ROADMAP.md` remains open only for `Portability evidence review` in the highest-priority queue.",
+    "resume from": "promote the portability evidence review milestone."
+  },
+  "drift_log": [
+    "2026-04-13: Promoted from the highest-priority queue after the cross-agent handoff audit completed and the next unresolved proof question narrowed to selective adoption.",
+    "2026-04-13: Completed after clean-room installs surfaced two real false-positive checks, both were fixed in-package, and the refreshed proof showed only expected starter follow-up."
+  ]
+}

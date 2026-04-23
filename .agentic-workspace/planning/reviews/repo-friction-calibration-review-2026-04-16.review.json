@@ -1,0 +1,22 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Repo Friction Calibration Review",
+  "goal": [],
+  "scope": [
+    "Inspect the current repo-friction evidence and a bounded recent sample of agent-driven work.",
+    "Judge whether the shipped improvement-latitude posture is justified for this repo.",
+    "Identify only the repeated moderation or friction patterns that still matter after the current contract work."
+  ],
+  "non_goals": [
+    "Do not turn this into a broad code-quality review.",
+    "Do not reopen the just-landed workspace contract work unless the review shows it is still insufficient.",
+    "Do not activate new work from the review alone unless the existing roadmap queue still needs it."
+  ],
+  "review_mode": {},
+  "review_method": {},
+  "references": [],
+  "findings": [],
+  "recommendation": {},
+  "validation_commands": [],
+  "drift_log": []
+}

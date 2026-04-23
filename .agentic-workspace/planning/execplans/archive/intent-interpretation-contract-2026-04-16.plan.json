@@ -1,0 +1,117 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Intent Interpretation Contract",
+  "goal": [
+    "Add a first-class contract for vague prompt handling so Memory can inform Planning without silently rewriting user ends.",
+    "Distinguish confirmed intent from interpreted intent and keep escalation boundaries explicit.",
+    "Make the cheap clarification path, relay path, and durable Memory capture path cheaper than ad hoc prompt polishing."
+  ],
+  "non_goals": [
+    "Do not build generic natural-language understanding research.",
+    "Do not require long formal prompts from users.",
+    "Do not turn Memory into an active planner.",
+    "Do not add a second full intent system."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "make vague prompts cheap to interpret without losing the human/agent boundary.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "preserve confirmed intent, inferred intent, and escalation boundaries while making vague prompts cheaper to handle.",
+    "hard constraints": "do not silently widen user ends; do not require Memory for every install; keep the contract compact.",
+    "agent may decide locally": "field names, whether the bridge lives in docs, defaults, reporting, or planning summary surfaces first, and the narrowest validation that proves the slice.",
+    "escalate when": "the better-looking answer changes the requested outcome, needs a broader rewrite, or requires turning the work into a generic prompt engine."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "completed",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Completed."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`docs/intent-contract.md`",
+    "`.agentic-workspace/docs/proof-surfaces-contract.md`",
+    "`.agentic-workspace/docs/ownership-authority-contract.md`",
+    "`docs/delegated-judgment-contract.md`",
+    "`.agentic-workspace/docs/capability-aware-execution.md`",
+    "`docs/default-path-contract.md`",
+    "`.agentic-workspace/docs/reporting-contract.md`",
+    "`.agentic-workspace/memory/repo/templates/memory-note-template.md`",
+    "`.agentic-workspace/memory/repo/runbooks/README.md`",
+    "`.agentic-workspace/memory/repo/runbooks/`",
+    "`.agentic-workspace/memory/repo/manifest.toml`",
+    "`src/agentic_workspace/cli.py`",
+    "`tests/test_workspace_cli.py`"
+  ],
+  "invariants": [
+    "Confirmed intent stays human-owned.",
+    "Interpreted intent must remain visibly inferred.",
+    "Escalation boundaries stay compact and explicit.",
+    "Memory remains additive, not required for basic Planning functionality."
+  ],
+  "contract_decisions_to_freeze": [
+    "`defaults --section intent --format json` owns the front-door confirmed-versus-interpreted split.",
+    "`defaults --section clarification --format json` owns the smallest repo-context follow-up for vague prompts.",
+    "`defaults --section prompt_routing --format json` owns the compact proof-lane and owner inference surface.",
+    "`defaults --section relay --format json` owns the planner-to-implementer handoff and routed-Memory bridge.",
+    "`init` handoff mirrors the same split for bootstrap follow-through.",
+    "`report` stays the combined workspace-state surface rather than becoming a second intent contract."
+  ],
+  "open_questions_to_close": [
+    "None."
+  ],
+  "validation_commands": [
+    "`uv run pytest tests/test_workspace_cli.py -q`",
+    "`uv run ruff check src tests`",
+    "`uv run python scripts/check/check_planning_surfaces.py`",
+    "`git diff --check`"
+  ],
+  "required_tools": [
+    "`uv`",
+    "`gh`"
+  ],
+  "completion_criteria": [
+    "The repo can name confirmed intent versus interpreted intent in a compact contract surface.",
+    "The distinction is visible in the checked-in docs or machine-readable defaults.",
+    "At least one real vague-prompt path is documented and validated end to end.",
+    "The next tranche can continue from the checked-in plan without chat reconstruction."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "confirmed versus interpreted intent, cheap clarification, prompt routing, relay, and durable Memory capture guidance now all appear in checked-in contract surfaces.",
+    "validation confirmed": "`uv run pytest tests/test_workspace_cli.py -q`, `uv run ruff check src tests`, `uv run python scripts/check/check_planning_surfaces.py`, `uv run python scripts/check/check_memory_freshness.py`.",
+    "follow-on routed to": "none.",
+    "resume from": "none."
+  },
+  "drift_log": [
+    "2026-04-16: Plan created from the vague-prompt / intent-interpretation tranche.",
+    "2026-04-16: First slice landed the confirmed-versus-interpreted intent split in defaults and bootstrap handoff surfaces.",
+    "2026-04-16: Second slice landed cheap clarification and prompt routing selectors for vague prompts.",
+    "2026-04-16: Third slice landed the relay selector and routed-Memory handoff contract.",
+    "2026-04-16: Final slice landed durable Memory capture guidance for repeated vague-instruction failures."
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Memory Collaboration Safety",
+  "goal": [
+    "Strengthen the installed Agentic Memory contract for larger git-heavy teams by making `.agentic-workspace/memory/repo/current/` explicitly weak-authority, easier to compress or replace, and less likely to duplicate durable memory notes under concurrent edits."
+  ],
+  "non_goals": [
+    "Redesign the planning package in this tranche.",
+    "Add a new memory taxonomy or new top-level memory directories.",
+    "Make memory depend on the planning package for safety checks."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "tightened current-note manifest metadata, docs, templates, and freshness audits around weak-authority current-state notes, one-fact-one-home discipline, and duplication pressure against durable memory notes.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Promote the cross-module collaboration contract tranche once package-facing write-authority rules are bounded."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "TODO.md",
+    "ROADMAP.md",
+    ".agentic-workspace/planning/execplans/",
+    "memory/",
+    "scripts/check/",
+    "packages/memory/"
+  ],
+  "invariants": [
+    "Memory must remain planning-agnostic and selectively adoptable.",
+    "Durable facts should stay in canonical memory notes or checked-in docs rather than migrating into `.agentic-workspace/memory/repo/current/`.",
+    "Current-context notes must stay compact, optional, and safe to compress or remove.",
+    "The package payload, checker, and doctor guidance must stay aligned."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run pytest packages/memory/tests/test_installer.py",
+    "make check-memory"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The shipped memory manifest no longer presents `.agentic-workspace/memory/repo/current/` notes as canonical durable authority.",
+    "Memory docs and starter notes explain weak-authority current-state handling and one-fact-one-home expectations more explicitly.",
+    "The freshness audit warns about current-note authority drift and duplicate durable-note pressure.",
+    "Package tests and root checks stay green after the tightened contract."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-06: Activated the memory collaboration-safety tranche from the collaboration-safe roadmap candidate set.",
+    "2026-04-06: Completed the tranche after aligning manifests, docs, templates, doctor guidance, and the strict freshness audit."
+  ]
+}

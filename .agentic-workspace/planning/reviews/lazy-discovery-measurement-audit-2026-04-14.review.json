@@ -1,0 +1,16 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Lazy Discovery Measurement Audit",
+  "goal": [],
+  "scope": [
+    "Run the first cheap lazy-discovery measurement framework against the current selector-enabled defaults, proof, and ownership surfaces in this repo."
+  ],
+  "non_goals": [],
+  "review_mode": {},
+  "review_method": {},
+  "references": [],
+  "findings": [],
+  "recommendation": {},
+  "validation_commands": [],
+  "drift_log": []
+}

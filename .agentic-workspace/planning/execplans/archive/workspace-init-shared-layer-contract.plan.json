@@ -1,0 +1,75 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Execplan: Workspace Init Shared-Layer Contract",
+  "goal": [],
+  "non_goals": [
+    "Do not move planning or memory domain logic into the workspace layer.",
+    "Do not bypass package-local installers for planning or memory.",
+    "Do not solve unrelated memory-hygiene advisories in adopter repositories.",
+    "Do not treat repo-specific install drift as fixed if the product still cannot reproduce the correct state in a clean repo."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "defined the shared-layer requirements, implemented them in the root workspace init path, and added coverage that fails when full init omits or mis-shapes the shared workspace layer.",
+    "ready": "completed",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "None. Archived after the workspace layer became a first-class root contract."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`src/agentic_workspace/`",
+    "`tests/test_workspace_cli.py`",
+    "`docs/`",
+    "`TODO.md`",
+    "`ROADMAP.md`",
+    "`.agentic-workspace/planning/execplans/workspace-init-shared-layer-contract.md`"
+  ],
+  "invariants": [
+    "The workspace layer stays thin and orchestration-only.",
+    "Full init must leave one coherent startup path rather than competing module-local entrypoints.",
+    "Shared workspace-layer requirements must be enforced by product behavior and tests, not only by docs.",
+    "Planning and memory installers remain the owners of their package-local surfaces.",
+    "Adopter repos should not need manual cleanup to discover missing workspace-layer files after a nominally successful full init."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run pytest tests/test_workspace_cli.py`",
+    "`uv run pytest packages/planning/tests`",
+    "`uv run pytest packages/memory/tests`",
+    "`uv run ruff check src tests packages/planning packages/memory`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Clean full init creates `.agentic-workspace/WORKFLOW.md` and `.agentic-workspace/OWNERSHIP.toml`.",
+    "The root CLI reports those workspace-layer files as part of the installed composed contract.",
+    "Full init produces a coherent root `AGENTS.md` entrypoint for composed installs.",
+    "Tests fail if the shared workspace layer is omitted or if full init regresses to module-only composition.",
+    "The radiatorvvs-calculator failure mode is explainable as a closed product bug rather than an undocumented adopter cleanup step."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-07: Promoted after dogfooding found that full init can report healthy module installs while omitting the shared workspace layer and leaving AGENTS composition incoherent.",
+    "2026-04-07: Completed after the root CLI gained packaged workspace-layer sources, composed AGENTS handling, and shared-layer status/doctor coverage."
+  ]
+}

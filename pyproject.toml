@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "agentic-workspace"
 version = "0.0.0"
-description = "Monorepo host for agentic-memory and agentic-planning."
+description = "Repo-native continuity and execution layer for agents, combining workspace routing, active planning, and durable memory."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

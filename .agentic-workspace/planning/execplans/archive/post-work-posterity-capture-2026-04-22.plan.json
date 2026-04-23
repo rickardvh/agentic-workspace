@@ -1,0 +1,109 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Post-Work Posterity Capture",
+  "goal": [],
+  "non_goals": [],
+  "intent_continuity": {
+    "larger intended outcome": "make planning and Memory cooperate tightly at the workflow level so work pulls relevant durable understanding before execution and preserves later-useful residue after finishing, while keeping both modules independently usable.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/execplans/archive/startup-planning-surface-health-2026-04-22.md",
+    "parent lane": "`planning-memory-operating-loop`"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/execplans/archive/startup-planning-surface-health-2026-04-22.md",
+    "activation trigger": "follow the planning-owned continuation recorded in the startup-planning-surface-health archive; any remaining open follow-on after that handoff now lives in .agentic-workspace/planning/state.toml under the separate memory-recurring-friction-improvement-pressure lane."
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {
+    "literal request": "continue and finish the active lane, and commit after each slice",
+    "inferred intended outcome": "keep advancing the top-priority planning-memory lane through honest bounded slices, leaving checked-in proof and a clean commit after each completed tranche",
+    "chosen concrete what": "activate `#266` next and add the compact post-work posterity question to the closure path before deciding whether `#262` is still needed",
+    "interpretation distance": "low",
+    "review guidance": "reject the slice if it turns the prompt into a Memory dependency, a broad note-taking ritual, or a substitute for the still-open startup-drift question."
+  },
+  "execution_bounds": {
+    "allowed paths": "`.agentic-workspace/planning/`, `.agentic-workspace/docs/`, `packages/planning/`, `tests/`",
+    "max changed files": "20",
+    "required validation commands": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`",
+    "ask-before-refactor threshold": "stop before broad summary/report redesign or any memory-module implementation change beyond optional destination wording",
+    "stop before touching": "unrelated graceful-compliance, portability, machine-first planning, or memory-package-owned accumulation workflows"
+  },
+  "stop_conditions": {
+    "stop when": "the smallest honest host surface for the post-work question would require a new planning schema family or a hard dependency on Memory",
+    "escalate when boundary reached": "the posterity prompt cannot be made useful without redesigning summary/report/handoff contracts more broadly than this bounded slice",
+    "escalate on scope drift": "more than the nearest planning-owned closure surfaces, docs, tests, and narrow reporting proof would need reshaping",
+    "escalate on proof failure": "the slice cannot show that ordinary closure now asks what should survive and where it belongs without adding more ceremony than value"
+  },
+  "context_budget": {
+    "live working set": "issue `#266`, the existing execution-summary closure path, archive validation rules, and the delegated handoff return contract",
+    "recoverable later": "broader lane rationale from `#264`, startup drift work from `#262`, and recurring-friction accumulation expectations from `#263`",
+    "externalize before shift": "the chosen host field, the exact posterity question, and the rule that planning-first closure must still work without Memory installed",
+    "tiny resumability note": "keep the post-work prompt about compact posterity capture and routing, not broad retrospection",
+    "context-shift triggers": "shift once the host surface is chosen or if the posterity cue requires broader reporting or memory-ownership redesign"
+  },
+  "delegated_judgment": {
+    "requested outcome": "land the smallest useful post-work posterity prompt in the planning chain and prove it is cheap enough for routine closure use",
+    "hard constraints": "keep the change compact, planning-owned, closure-focused, and explicitly non-dependent on Memory",
+    "agent may decide locally": "the exact field wording, the narrowest host surface, and the smallest proof that delegated or direct work will actually see the prompt at finish time",
+    "escalate when": "the change would require a broader planning-memory architecture pass, a new closure subsystem, or memory-owned implementation work"
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {},
+  "immediate_next_action": [],
+  "blockers": [],
+  "touched_paths": [],
+  "invariants": [],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [],
+  "required_tools": [],
+  "completion_criteria": [],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "active execplan plus checked-in planning summary",
+    "what happened": "added the post-work posterity-capture field to the execution-summary template, archive gate, delegated handoff return contract, CLI output, mirrored checker surfaces, and planning package tests.",
+    "scope touched": "`.agentic-workspace/planning/`, `packages/planning/`, mirrored planning checkers, and package tests for installer and checker behavior.",
+    "validations run": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`",
+    "result for continuation": "the post-work half of the planning-memory handshake is now shipped; the later startup-planning-surface-health slice resolved the remaining planning-owned reassessment and left only the separate memory-owned recurring-friction follow-on.",
+    "next step": "follow .agentic-workspace/planning/execplans/archive/startup-planning-surface-health-2026-04-22.md for the planning-owned continuation; resume only from the separate memory-recurring-friction-improvement-pressure lane if recurring-friction follow-through is still needed."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive this slice and route planning-owned continuation through startup-planning-surface-health-2026-04-22.md; any later open follow-on belongs to the separate memory-recurring-friction-improvement-pressure lane."
+  },
+  "proof_report": {
+    "validation proof": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`",
+    "proof achieved now": "planning-owned closure now asks what should survive and where it belongs, and the archive/checker/handoff chain all enforce the field without requiring Memory to exist.",
+    "evidence for \"proof achieved\" state": "installer tests passed with the new archive and handoff assertions, checker tests passed with the expanded execution-summary requirement, repo-level planning drift check reported no warnings, and the compact summary now exposes the new execution-summary return fields."
+  },
+  "intent_satisfaction": {
+    "original intent": "continue and finish the active lane through honest bounded slices, committing after each completed slice",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "the active bounded slice is complete and committed proof exists for the post-work half of the handshake; the later startup-planning-surface-health slice carried the planning-owned continuation to closure, leaving only the separate memory-owned recurring-friction follow-on.",
+    "unsolved intent passed to": ".agentic-workspace/planning/execplans/archive/startup-planning-surface-health-2026-04-22.md"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "the specific `#266` closure prompt shipped with proof, and this archive now points at the later startup-planning-surface-health slice that carried the remaining planning-owned continuation before the mixed lane retired.",
+    "evidence carried forward": "this execplan records that the post-work prompt belongs in planning-owned closure surfaces without creating a Memory dependency, while the later startup archive and the separate memory-recurring-friction-improvement-pressure lane carry the follow-on that remained after this slice.",
+    "reopen trigger": "reopen only if closure stops surfacing the post-work prompt compactly or if later lane work shows the field no longer routes posterity to the right owner surfaces."
+  },
+  "execution_summary": {
+    "outcome delivered": "shipped an explicit `Post-work posterity capture` field through the planning execplan template, archive gate, delegated handoff return contract, CLI display, mirrored checkers, and package tests.",
+    "validation confirmed": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`",
+    "follow-on routed to": ".agentic-workspace/planning/execplans/archive/startup-planning-surface-health-2026-04-22.md for the planning-owned continuation, with any remaining recurring-friction follow-on now tracked separately in .agentic-workspace/planning/state.toml.",
+    "post-work posterity capture": "preserve the rule that closure must ask what should survive this slice and where it belongs, defaulting to planning/docs/config owners and treating Memory as an optional destination only when that module is installed and is the right owner.",
+    "knowledge promoted (memory/docs/config)": "promoted the closure-routing rule into planning docs/templates and package bootstrap payloads; no Memory-owned implementation change was required.",
+    "resume from": "use .agentic-workspace/planning/execplans/archive/startup-planning-surface-health-2026-04-22.md to recover the planning-owned continuation, or resume directly from the memory-recurring-friction-improvement-pressure lane in .agentic-workspace/planning/state.toml if only the recurring-friction follow-on remains relevant."
+  },
+  "drift_log": []
+}

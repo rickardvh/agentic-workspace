@@ -1,0 +1,70 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Workflow Overhead Context-Cost Review",
+  "goal": [
+    "Check whether the repo's own startup and handoff guidance imposes unnecessary rereads or dead-end workflow steps on routine agent work."
+  ],
+  "scope": [
+    "`AGENTS.md`",
+    "`.agentic-workspace/WORKFLOW.md`",
+    "`docs/contributor-playbook.md`",
+    "`.agentic-workspace/planning/reviews/README.md`"
+  ],
+  "non_goals": [
+    "Package-level workflow guidance",
+    "Validation-lane correctness outside startup and handoff reading cost",
+    "General roadmap reprioritization"
+  ],
+  "review_mode": {
+    "mode": "`context-cost`",
+    "review question": "Do the repo-defined startup and handoff docs add duplicated or stale workflow overhead for routine agent use?",
+    "default finding cap": "2 findings",
+    "inputs inspected first": "`AGENTS.md`, `.agentic-workspace/WORKFLOW.md`, `docs/contributor-playbook.md`, `.agentic-workspace/planning/reviews/README.md`"
+  },
+  "review_method": {
+    "commands used": "",
+    "evidence sources": ""
+  },
+  "references": [],
+  "findings": [
+    {
+      "title": "Contributor playbook duplicates the startup path internally",
+      "summary": "`docs/contributor-playbook.md` carries two startup sections, `Agent Maintainer Path` and `Start Here`, that repeat the same early-read and compact-summary guidance with only minor wording differences.",
+      "evidence": "Both sections tell maintainers to read `AGENTS.md`, then `TODO.md`, then prefer `agentic-planning-bootstrap summary --format json` before opening raw planning files; each section also controls when to read active execplans and package-local docs.",
+      "risk if unchanged": "Agents pay extra reading and comparison cost to determine which startup path is canonical, and the duplicated sections can drift apart as the workflow evolves.",
+      "suggested action": "Collapse the startup guidance into one canonical section in `docs/contributor-playbook.md` that extends `AGENTS.md` instead of restating the same sequence twice.",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": "canonical docs",
+      "promotion trigger": "Next maintainer-doc cleanup or contributor playbook edit",
+      "post-remediation note shape": "delete"
+    },
+    {
+      "title": "Contributor playbook points to a removed review mode",
+      "summary": "`docs/contributor-playbook.md` still tells maintainers to use `.agentic-workspace/planning/reviews/README.md` `ordinary-use-pull` mode, but that review mode no longer exists in the current review portfolio.",
+      "evidence": "The playbook says `Use .agentic-workspace/planning/reviews/README.md ordinary-use-pull mode...`, while `.agentic-workspace/planning/reviews/README.md` currently defines `context-cost` for startup and handoff reading-cost audits and contains no `ordinary-use-pull` mode.",
+      "risk if unchanged": "A maintainer following the documented path hits a dead end and either spends extra tokens reinterpreting the intended mode or skips the review path entirely.",
+      "suggested action": "Replace the stale review-mode reference with the current `context-cost` route, or remove the sentence if the contributor playbook should no longer route this workflow through review artifacts.",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": "canonical docs",
+      "promotion trigger": "Next contributor playbook edit",
+      "post-remediation note shape": "delete"
+    }
+  ],
+  "recommendation": {
+    "promote": "both findings to canonical docs cleanup",
+    "defer": "none",
+    "dismiss": "none"
+  },
+  "validation_commands": [
+    "`Get-Content AGENTS.md`",
+    "`Get-Content .agentic-workspace/WORKFLOW.md`",
+    "`Get-Content docs/contributor-playbook.md`",
+    "`Get-Content .agentic-workspace/planning/reviews/README.md`",
+    "`Select-String -Path docs/contributor-playbook.md -Pattern \"Agent Maintainer Path|Start Here|ordinary-use-pull\"`"
+  ],
+  "drift_log": [
+    "2026-04-17: Review created."
+  ]
+}

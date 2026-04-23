@@ -1,0 +1,98 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Compact Intent Contract",
+  "goal": [
+    "Define one compact machine-readable intent contract for active work so requested outcome, hard constraints, proof expectations, and escalation boundaries survive across sessions without broad rereading.",
+    "Reuse the existing execplan contract instead of adding a second planning schema."
+  ],
+  "non_goals": [
+    "Add another required execplan section.",
+    "Turn planning into a narrative handoff system or backlog database.",
+    "Solve the full minimal-resumable-execution problem in this slice."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "make active planning state cheap enough to resume and hand off across agents, sessions, and subscriptions without reconstructing the human's intent from prose and chat residue.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "`ROADMAP.md`"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "`ROADMAP.md`",
+    "activation trigger": "the compact intent contract lands and ordinary repo work still needs a smaller resumable execution slice to avoid broad rereads."
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "expose a compact active intent contract derived from the existing execplan/TODO planning contract, align the planning docs around it, and dogfood it in this repo.",
+    "hard constraints": "keep the contract small; derive it from existing fields instead of inventing a second plan schema; keep package source, payload, and root install aligned; validate with package-local tests first.",
+    "agent may decide locally": "the exact summary shape, the narrowest existing sections to project from, the minimal doc updates needed to keep the contract trustworthy, and the smallest dogfood path that proves the new contract reduces rereading.",
+    "escalate when": "the slice would require a new mandatory plan section, broad TODO schema growth, or a generic task-history system instead of a compact active-work contract."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "compact-intent-contract",
+    "status": "completed",
+    "scope": "add one compact machine-readable active intent-contract projection to planning summary, document the contract, and prove it against this repo's live active planning state.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "GitHub issue `#33`"
+  },
+  "immediate_next_action": [
+    "None. Slice completed; promote the minimal resumable execution-contract follow-through."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`packages/planning/src/repo_planning_bootstrap/installer.py`",
+    "`packages/planning/src/repo_planning_bootstrap/cli.py`",
+    "`packages/planning/tests/test_installer.py`",
+    "`packages/planning/README.md`",
+    "`packages/planning/bootstrap/docs/`",
+    "root planning docs and root installed planning payload after refresh"
+  ],
+  "invariants": [
+    "The contract must be recoverable from existing planning fields.",
+    "One bounded active task should be resumable from the compact contract plus narrow refs.",
+    "The new surface should reduce rereading, not add another required planning dashboard."
+  ],
+  "contract_decisions_to_freeze": [
+    "The first compact intent contract should be a projection of existing plan fields, not a new authoring burden.",
+    "The canonical machine-readable home should be an existing planning query surface, not a new top-level command unless the existing surface proves insufficient."
+  ],
+  "open_questions_to_close": [
+    "Which existing planning fields are the minimum required compact intent bundle for safe restart?",
+    "Should the compact intent contract live only in planning summary, or should the root workspace layer mirror it once the planning-side contract proves useful?"
+  ],
+  "validation_commands": [
+    "`cd packages/planning && uv run pytest tests/test_installer.py`",
+    "`cd packages/planning && uv run ruff check .`",
+    "`uv run python scripts/check/check_planning_surfaces.py`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Planning exposes one machine-readable compact intent contract for the current active work.",
+    "The contract preserves requested outcome, hard constraints, local latitude, proof expectations, escalation boundaries, and minimal refs without requiring a new execplan section.",
+    "Docs and tests align to the same compact contract.",
+    "The new surface is dogfooded against this repo's live active planning state."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "`agentic-planning-bootstrap summary --format json` now exposes `active_contract` as a compact machine-readable projection of the current active execplan contract, carrying requested outcome, hard constraints, local latitude, escalation boundary, touched scope, proof expectations, and minimal refs without adding a new required plan section.",
+    "validation confirmed": "`cd packages/planning && uv run pytest tests/test_installer.py -q`; `cd packages/planning && uv run ruff check .`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`; `uv run agentic-planning-bootstrap summary --format json`; `uv run python scripts/check/check_planning_surfaces.py`.",
+    "follow-on routed to": "`ROADMAP.md` candidate `Minimal resumable execution contract`.",
+    "resume from": "promote the resumable-execution slice if ordinary work still needs current next action, proof, and escalation state in one smaller active contract."
+  },
+  "drift_log": [
+    "2026-04-14: Promoted from GitHub issue `#33` after the startup-entrypoint tranche closed and the next clearest continuity gap was preserving active intent in a smaller machine-readable contract.",
+    "2026-04-14: Completed by projecting the existing execplan contract into `planning_summary` as `active_contract`, adding the canonical intent-contract doc, refreshing the root planning install, and dogfooding the result against this repo's live active execplan."
+  ]
+}

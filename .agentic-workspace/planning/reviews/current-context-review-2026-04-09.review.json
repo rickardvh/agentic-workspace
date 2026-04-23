@@ -1,0 +1,39 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Current Context Review",
+  "goal": [
+    "Check whether the current-state notes remain weak-authority re-orientation surfaces rather than shadow planning."
+  ],
+  "scope": [
+    "`.agentic-workspace/memory/repo/current/`",
+    "`TODO.md`",
+    "memory freshness output"
+  ],
+  "non_goals": [
+    "Do not review the whole memory system.",
+    "Do not revisit already-resolved overlap-audit work."
+  ],
+  "review_mode": {
+    "mode": "`current-context`",
+    "review question": "Do current-state notes stay compact, non-authoritative, and cheap to use?",
+    "default finding cap": "2",
+    "inputs inspected first": "`.agentic-workspace/memory/repo/current/`, `TODO.md`, strict memory freshness output"
+  },
+  "review_method": {
+    "commands used": "",
+    "evidence sources": ""
+  },
+  "references": [],
+  "findings": [],
+  "recommendation": {
+    "promote": "none",
+    "defer": "none",
+    "dismiss": "current-context drift concerns in this scope"
+  },
+  "validation_commands": [
+    "`uv run python scripts/check/check_memory_freshness.py --strict`"
+  ],
+  "drift_log": [
+    "2026-04-09: Review created as part of the full review-matrix pass."
+  ]
+}

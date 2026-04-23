@@ -1,0 +1,71 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Archive Cleanup Follow-Through",
+  "goal": [
+    "Make `archive-plan --apply-cleanup` handle the normal active TODO pointer to the plan being archived, so archive cleanup works for the repo's standard active queue shape without manual pre-cleanup."
+  ],
+  "non_goals": [
+    "Do not make archive cleanup rewrite unrelated TODO residue.",
+    "Do not relax fail-closed behavior for unrelated active references or ambiguous queue state.",
+    "Do not expand this slice into broader TODO-shape normalization."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "archive-cleanup-follow-through",
+    "status": "completed",
+    "scope": "Teach archive cleanup to remove or rewrite the plan's own TODO pointer before blocking on it, add regression coverage, and refresh the root install from the updated planning payload.",
+    "ready": "false",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan and clear the active queue residue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`packages/planning/src/repo_planning_bootstrap/installer.py`",
+    "`packages/planning/tests/test_installer.py`"
+  ],
+  "invariants": [
+    "`archive-plan --apply-cleanup` should stay explicit and conservative.",
+    "The plan's own TODO pointer should not block cleanup when the user already asked for cleanup.",
+    "Unrelated residue should still fail closed or surface as explicit follow-up."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run pytest packages/planning/tests/test_installer.py`",
+    "`uv run python scripts/check/check_planning_surfaces.py`",
+    "`make maintainer-surfaces`",
+    "`uv run agentic-planning-bootstrap upgrade --target .`",
+    "`uv run agentic-memory-bootstrap upgrade --target .`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Archive cleanup removes the normal active TODO pointer to the plan being archived.",
+    "Regression coverage proves the cleaned active-pointer case.",
+    "Root install is refreshed from the updated planning payload.",
+    "The plan archives without manual TODO pre-cleanup."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-09: Promoted from the roadmap after dogfooding showed that archive cleanup still failed on the normal active TODO pointer shape.",
+    "2026-04-09: Completed by teaching archive cleanup to remove the plan's own TODO pointer, restoring the default Action hint when the queue empties, and proving the behavior with a regression test."
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Repository Stewardship Rule",
+  "goal": [
+    "Add a durable stewardship rule that keeps the repository in a better state after task execution, with bounded cleanup, adjacent improvements, and explicit follow-up for broader work."
+  ],
+  "non_goals": [
+    "Turn routine task completion into a large refactor mandate.",
+    "Expand scope silently beyond the touched surfaces.",
+    "Replace the existing design principles or maintainer playbook."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "define the stewardship rule and place it in the repo’s durable guidance surfaces without turning it into a broad cleanup policy.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan and move the init-lifecycle milestone into active execution."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "docs/design-principles.md",
+    "AGENTS.md",
+    "docs/contributor-playbook.md",
+    "docs/maintainer-commands.md",
+    "docs/dogfooding-feedback.md"
+  ],
+  "invariants": [
+    "Cleanup stays bounded to the touched surfaces and should not expand scope silently.",
+    "Broader improvements must be recorded as follow-up instead of absorbed without a trace.",
+    "The stewardship rule must stay short enough to remain usable during task completion."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Maintainers can tell what cleanup is expected at the end of a task.",
+    "Broader improvements are captured as follow-up instead of being silently absorbed.",
+    "Repeated cleanup burden becomes an explicit improvement signal."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-06: Parked from the planning-spec intake to keep the repo stewardship rule queued behind the active registry work.",
+    "2026-04-06: Milestone complete: the repo now says to leave touched surfaces cleaner than you found them and routes repeated cleanup burden through a specific stewardship-friction signal."
+  ]
+}

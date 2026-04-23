@@ -1,0 +1,14 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Optimization Bias Visibility Audit",
+  "goal": [],
+  "scope": [],
+  "non_goals": [],
+  "review_mode": {},
+  "review_method": {},
+  "references": [],
+  "findings": [],
+  "recommendation": {},
+  "validation_commands": [],
+  "drift_log": []
+}

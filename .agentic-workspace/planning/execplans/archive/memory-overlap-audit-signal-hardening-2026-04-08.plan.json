@@ -1,0 +1,69 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Memory Overlap-Audit Signal Hardening",
+  "goal": [
+    "Reduce repeated low-signal overlap warnings around the installed-system decision family and adjacent package-context notes so memory doctor output remains trustworthy during normal maintenance."
+  ],
+  "non_goals": [
+    "Perform broad memory-note consolidation across the repo.",
+    "Redesign the entire memory doctor or freshness systems.",
+    "Suppress genuine multi-home drift warnings for unrelated note families."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "inspected the current overlap-warning cluster, tightened the overlap heuristic and current-note handoff handling for this class of adjacent durable notes, and proved the repeated low-signal warnings were reduced without hiding the remaining package-context overlap problem.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "None. Archived after the overlap-audit warning cluster was reduced and the focused validation lane passed."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`packages/memory/src/`",
+    "`packages/memory/tests/`",
+    "`.agentic-workspace/memory/repo/`",
+    "`docs/`"
+  ],
+  "invariants": [
+    "The overlap audit must still surface genuinely ambiguous multi-home durable notes.",
+    "The fix should prefer structural evidence over brittle keyword suppression.",
+    "Current-note authority and freshness checks must stay intact."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run agentic-memory-bootstrap doctor --target .`",
+    "`uv run python scripts/check/check_memory_freshness.py`",
+    "`cd packages/memory && uv run pytest`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The repeated low-signal installed-system overlap cluster is reduced or reclassified to match the real maintenance risk.",
+    "A focused regression test covers the chosen heuristic or note-family rule.",
+    "Memory doctor and freshness outputs remain coherent for the current repo after the change."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-08: Promoted from `ROADMAP.md` after another normal maintenance cycle confirmed the overlap audit remained the dominant unresolved workflow signal.",
+    "2026-04-08: Tightened the decision-family overlap audit to require topical alignment in titles, taught current-note overlap pressure to respect explicit durable-handoff wording, and reduced the live doctor output to one remaining package-context overlap warning."
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Selective Adoption Proof Program",
+  "goal": [
+    "Prove that memory-only, planning-only, and composed installs work cleanly outside the monorepo with explicit evidence instead of assuming full-stack adoption is the only meaningful path."
+  ],
+  "non_goals": [
+    "Build the public plugin boundary.",
+    "Require every proof to run in CI immediately.",
+    "Overfit validation to the monorepo’s exact layouts."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "define the proof matrix and validation evidence so selective adoption is treated as a first-class acceptance path.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan and move the generated-surface trust milestone into active execution."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "tests/",
+    "docs/",
+    "README.md",
+    "docs/contributor-playbook.md",
+    "docs/maintainer-commands.md",
+    "docs/ecosystem-roadmap.md"
+  ],
+  "invariants": [
+    "The proof program must keep memory-only and planning-only adoption shapes first-class.",
+    "Validation evidence must not collapse into a full-stack-only success story.",
+    "External-repo-style proofs should remain representative rather than monorepo-specific."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Selective adoption shapes are documented and testable.",
+    "The repo has a clear evidence bar for external-repo-style proofs.",
+    "Future work can reuse the matrix instead of redefining adoption assumptions."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-06: Parked from the planning-spec intake to keep selective adoption queued after the compatibility and lifecycle threads.",
+    "2026-04-06: Milestone complete: the chooser page now includes an explicit proof bar and the planning package README states that selective adoption must remain valid."
+  ]
+}

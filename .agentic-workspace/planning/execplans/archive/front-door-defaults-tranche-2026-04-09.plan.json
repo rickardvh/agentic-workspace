@@ -1,0 +1,78 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Front-Door Defaults Tranche",
+  "goal": [
+    "Make the normal adoption and operating path feel obvious and light by compressing front-door docs, exposing the default route in machine-readable form, and capturing the remaining default-path and cheap-execution audits in shipped review artifacts."
+  ],
+  "non_goals": [
+    "No new module or automatic routing feature.",
+    "No broad docs rewrite across every repo surface.",
+    "No removal of legitimate advanced or package-local workflows."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "front-door-defaults",
+    "status": "completed",
+    "scope": "refine root and package-facing start-here surfaces, add a machine-readable default-route contract to the workspace CLI, and ship bounded audit artifacts for default-path and cheap-execution friction.",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed tranche and close GitHub issues `#14` through `#18` against the landed docs, CLI, and review surfaces."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`README.md`",
+    "`docs/which-package.md`",
+    "`docs/default-path-contract.md`",
+    "`.agentic-workspace/planning/reviews/default-path-audit-2026-04-09.md`",
+    "`.agentic-workspace/planning/reviews/machine-readable-over-prose-audit-2026-04-09.md`",
+    "`.agentic-workspace/planning/reviews/cheap-execution-defaults-audit-2026-04-09.md`",
+    "`src/agentic_workspace/cli.py`",
+    "`tests/test_workspace_cli.py`",
+    "`packages/planning/README.md`",
+    "`packages/memory/README.md`",
+    "`ROADMAP.md`"
+  ],
+  "invariants": [
+    "`agentic-workspace` remains the default public lifecycle entrypoint.",
+    "Machine-readable structure should answer recurring route questions before prose grows further.",
+    "Advanced, maintainer-only, and package-local paths remain available but clearly secondary.",
+    "Cheap execution should become easier by reducing interpretation, not by adding a new auto-routing feature."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run pytest tests/test_workspace_cli.py`",
+    "`uv run python scripts/check/check_planning_surfaces.py`",
+    "`make maintainer-surfaces`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Front-door docs make the default adoption path obvious with advanced routes clearly secondary.",
+    "A machine-readable default-route contract is available from the workspace CLI.",
+    "Default-path and cheap-execution audits are captured as bounded review artifacts with concrete findings and promotion guidance.",
+    "The active planning state returns to idle and issues `#14` through `#18` can be closed with landed evidence."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-09: Promoted from GitHub issues `#14`-`#18` for one bounded implementation tranche by explicit maintainer choice.",
+    "2026-04-09: Completed the front-door compression pass, added `agentic-workspace defaults`, captured bounded audit artifacts, and validated the resulting route contract."
+  ]
+}

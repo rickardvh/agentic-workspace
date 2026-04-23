@@ -1,0 +1,88 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Cross-Agent Handoff Quality Audit",
+  "goal": [
+    "Audit whether the repo's current external-agent and restart surfaces preserve enough intent, active state, durable context, proof expectations, and next action to support cheap cross-agent continuation.",
+    "Fix any concrete trust bug found in those surfaces through the canonical ownership path."
+  ],
+  "non_goals": [
+    "Build a new cross-agent orchestration layer.",
+    "Prove every possible multi-agent transition pattern.",
+    "Reopen the already-landed mixed-agent contract boundary."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "contributors should be able to switch agents, subscriptions, or tools without repaying orientation cost that the repo could have persisted.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "inspect the external-agent and restart surfaces, repair any concrete drift found there, and route unrelated follow-on into the smallest more-appropriate backlog lane.",
+    "hard constraints": "use the canonical workspace path rather than hand-editing generated or managed surfaces; do not widen this slice into general bootstrap-policy redesign.",
+    "agent may decide locally": "which handoff surfaces to inspect first, whether the fix belongs in source or root install, and which remaining issue should be rerouted instead of kept here.",
+    "escalate when": "the handoff drift cannot be fixed without broader lifecycle or ownership redesign."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "audit `llms.txt`, `.agentic-workspace/bootstrap-handoff.md`, and the default-path contract; repair concrete handoff drift if found.",
+    "ready": "completed",
+    "blocked": "none",
+    "optional_deps": "GitHub issue `#25`"
+  },
+  "immediate_next_action": [
+    "Promote `Selective-adoption proof refresh` from the highest-priority queue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`ROADMAP.md`",
+    "`TODO.md`",
+    "`llms.txt`",
+    "`.agentic-workspace/planning/execplans/archive/cross-agent-handoff-quality-audit-2026-04-13.md`"
+  ],
+  "invariants": [
+    "`llms.txt` remains the canonical external-agent handoff surface.",
+    "Bootstrap next-action state remains `.agentic-workspace/bootstrap-handoff.md` only when bootstrap actually leaves review-required work.",
+    "Unrelated bootstrap-policy problems should route into the narrower bootstrap-hardening queue rather than staying in this audit lane."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run agentic-workspace status --target .`",
+    "`uv run agentic-workspace doctor --target .`",
+    "`uv run python scripts/check/check_planning_surfaces.py`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The audit either finds no concrete issue or fixes the concrete handoff drift it finds.",
+    "The workspace status/doctor surfaces confirm the handoff file is current afterward.",
+    "The broader queue is narrowed rather than left carrying a spent trust bug."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "yes. The audit found and fixed a concrete `llms.txt` drift bug.",
+    "validation confirmed": "yes. Workspace status and doctor now report `llms.txt` as current.",
+    "follow-on routed to": "none.",
+    "resume from": "promote selective-adoption proof refresh."
+  },
+  "drift_log": [
+    "2026-04-13: Promoted after the strong-planner / cheap-implementer proof refresh narrowed the next unresolved question to external-agent and restart surface trust.",
+    "2026-04-13: Completed after a real `llms.txt` drift bug was fixed through the canonical workspace upgrade path and the broader lane was retired."
+  ]
+}

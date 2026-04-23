@@ -1,0 +1,109 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Startup Planning-Surface Health",
+  "goal": [],
+  "non_goals": [],
+  "intent_continuity": {
+    "larger intended outcome": "make planning and Memory cooperate tightly at the workflow level so work pulls relevant durable understanding before execution and preserves later-useful residue after finishing, while keeping both modules independently usable.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "`planning-memory-operating-loop`"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "activate the memory-recurring-friction-improvement-pressure lane only if recurring-friction evidence from `#263` still needs additional durable accumulation or stronger validation/reporting after the planning-owned startup/resume gap is closed."
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {
+    "literal request": "continue and finish the active lane, and commit after each slice",
+    "inferred intended outcome": "close the remaining planning-owned lane work through bounded slices and leave only genuinely separate follow-on behind",
+    "chosen concrete what": "add a compact planning-surface health view to the startup summary and CLI output so resume/startup sees clean/not-clean state, mismatches, and the shortest next fix",
+    "interpretation distance": "low",
+    "review guidance": "reject the slice if it adds a second checker, broad telemetry, or any Memory dependency instead of reusing the existing planning warning path."
+  },
+  "execution_bounds": {
+    "allowed paths": "`.agentic-workspace/planning/`, `packages/planning/`, `tests/`",
+    "max changed files": "12",
+    "required validation commands": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`",
+    "ask-before-refactor threshold": "stop before broad summary/report redesign or any new planning validation subsystem",
+    "stop before touching": "memory package code, recurring-friction accumulation workflows, or unrelated roadmap/doctor/report architecture"
+  },
+  "stop_conditions": {
+    "stop when": "the startup signal cannot be expressed as a thin view over existing planning warnings",
+    "escalate when boundary reached": "the slice would require a second checker, a new persistence layer, or broad report redesign",
+    "escalate on scope drift": "more than the summary/CLI/docs/tests path is needed to show the startup health signal",
+    "escalate on proof failure": "the signal cannot stay compact and actionable enough for interrupted-work recovery"
+  },
+  "context_budget": {
+    "live working set": "issue `#262`, the current summary startup path, existing warning list, and the shortest remediation mapping already available in the planning package",
+    "recoverable later": "broader lane rationale from `#264`, the completed pre-work and post-work handshake slices, and the memory-owned recurring-friction follow-on from `#263`",
+    "externalize before shift": "the exact startup health shape, the shortest next-action rule, and the rule that this remains a thin planning-owned view over existing warnings",
+    "tiny resumability note": "keep the startup signal to clean/not-clean status, compact mismatch rows, and the shortest corrective action",
+    "context-shift triggers": "shift once the startup host surface is chosen or if the work starts demanding broader report architecture changes"
+  },
+  "delegated_judgment": {
+    "requested outcome": "expose a compact planning-surface health signal early enough that startup and resume do not have to rediscover drift through exploratory reading",
+    "hard constraints": "reuse the existing warning path, stay compact and actionable, and keep planning independent from Memory",
+    "agent may decide locally": "the exact health field names, whether the human summary output mirrors the JSON shape directly, and the smallest proof that startup/resume now sees the signal",
+    "escalate when": "the change would require a second checker, a broader summary/report redesign, or any dependency on Memory being installed"
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {},
+  "immediate_next_action": [],
+  "blockers": [],
+  "touched_paths": [],
+  "invariants": [],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [],
+  "required_tools": [],
+  "completion_criteria": [],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "active execplan plus checked-in planning summary",
+    "what happened": "added a compact `planning_surface_health` projection to the planning summary schema and human summary CLI so startup/resume can see clean/not-clean state, warning paths, and the shortest suggested corrective action without rerunning a separate checker.",
+    "scope touched": "`.agentic-workspace/planning/state.toml`, `.agentic-workspace/planning/execplans/`, `packages/planning/src/repo_planning_bootstrap/{installer,cli}.py`, and `packages/planning/tests/test_installer.py`.",
+    "validations run": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`",
+    "result for continuation": "the remaining follow-on is no longer a planning-owned startup/resume gap; it is the memory-owned recurring-friction evidence lane from `#263`.",
+    "next step": "archive this slice, close `#262`, close the completed handshake parent `#264`, and split the remaining memory-owned follow-on into its own candidate lane."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive this slice and retire the mixed planning-memory lane in favor of a separate memory-only follow-on for `#263`"
+  },
+  "proof_report": {
+    "validation proof": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`",
+    "proof achieved now": "startup and resume now expose a compact planning-surface health view with clean/not-clean state, warning paths, and the shortest next corrective action through the existing summary path.",
+    "evidence for \"proof achieved\" state": "installer tests passed with the new summary schema and human-output assertions, checker tests stayed green, the repo planning checker reported no drift warnings, and the live summary now exposes a `planning_surface_health` block with `status`, `warning_count`, `recommended_next_action`, and compact warning rows."
+  },
+  "intent_satisfaction": {
+    "original intent": "continue and finish the active lane, and commit after each completed slice",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "the remaining planning-owned startup/resume gap is closed, but the broader product direction still has a separate memory-owned recurring-friction follow-on that should not be forced to remain inside a mixed planning lane.",
+    "unsolved intent passed to": "`.agentic-workspace/planning/state.toml`"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "the planning-owned lane work is complete, but the repo still has a separate memory-owned follow-on around recurring-friction evidence that should stay visible in checked-in planning state instead of being silently dropped.",
+    "evidence carried forward": "startup/resume health now lives in the planning summary path, the handshake parent can close, and the remaining open issue is `#263` under a separate memory-owned candidate lane.",
+    "reopen trigger": "reopen only if startup/resume stops surfacing compact planning-surface health early enough or if new planning-owned drift gaps appear beyond the existing warning path."
+  },
+  "execution_summary": {
+    "outcome delivered": "shipped a compact `planning_surface_health` startup/resume view through `agentic-workspace summary --format json` and the human summary CLI so resumed work can see clean/not-clean state, warning paths, and the shortest corrective action immediately.",
+    "validation confirmed": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml, where the mixed planning-memory lane has retired and the remaining memory-owned recurring-friction work from `#263` stands alone under memory-recurring-friction-improvement-pressure.",
+    "post-work posterity capture": "preserve the rule that startup/resume health should remain a thin planning-owned projection over existing warnings, not a second checker or a Memory dependency.",
+    "knowledge promoted (memory/docs/config)": "promoted the startup-resume health shape into the planning summary and CLI contract; no Memory-owned implementation change was required.",
+    "resume from": ".agentic-workspace/planning/state.toml, where memory-recurring-friction-improvement-pressure is the only remaining follow-on from this broader direction."
+  },
+  "drift_log": []
+}

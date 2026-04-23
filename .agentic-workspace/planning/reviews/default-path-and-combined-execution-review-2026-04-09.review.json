@@ -1,0 +1,79 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Review: Default Path And Combined Execution",
+  "goal": [
+    "Review how well the current repo state supports the cheapest safe default path for agents, and how well combined Memory + Planning installs reduce restart cost without blurring ownership."
+  ],
+  "scope": [
+    "Root README and default-path surfaces",
+    "Capability-aware execution contract and contributor guidance",
+    "Memory/Planning integration contract",
+    "Current planning completion state in `TODO.md`"
+  ],
+  "non_goals": [
+    "Do not re-litigate the already-known absolute-path link regression in front-door docs.",
+    "Do not activate work directly from this review alone.",
+    "Do not re-review package-internal implementation details outside their checked-in contract surfaces."
+  ],
+  "review_mode": {
+    "mode": "`context-cost`",
+    "review question": "Does the current repo state make the normal path cheap enough and make combined installs meaningfully better than either module alone?",
+    "default finding cap": "3",
+    "inputs inspected first": "`README.md`, `docs/default-path-contract.md`, `.agentic-workspace/docs/capability-aware-execution.md`, `docs/integration-contract.md`, `docs/contributor-playbook.md`, `TODO.md`"
+  },
+  "review_method": {
+    "commands used": "none; checked-in contract inspection only",
+    "evidence sources": "root README, default-path contract, capability-aware execution contract, integration contract, contributor playbook, and current completed-work record in `TODO.md`"
+  },
+  "references": [],
+  "findings": [
+    {
+      "title": "Cheap-execution support is now a real product capability, not only a philosophy",
+      "summary": "The repo now has a credible checked-in contract for safe cheap execution. Default-path docs, capability-aware execution guidance, and task-to-skill discovery together make lower-cost execution a real supported mode rather than an informal aspiration.",
+      "evidence": "`README.md` now presents one default lifecycle path through `agentic-workspace`; `docs/default-path-contract.md` gives one default answer for install, startup, skill discovery, validation, and combined use; `.agentic-workspace/docs/capability-aware-execution.md` defines cheap direct execution, medium-reasoning direct work, stronger-planning-first, delegation-friendly, and stop-and-escalate categories while explicitly preferring quiet shaping over user interruption.",
+      "risk if unchanged": "Low. This is a positive state change. The remaining risk is mostly that the repo could fail to keep the cheap path visibly lighter than secondary routes as more features land.",
+      "suggested action": "Preserve this direction and treat any future increase in front-door or startup-path ambiguity as an efficiency regression.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "none",
+      "post-remediation note shape": "not-applicable"
+    },
+    {
+      "title": "Validation guidance is still somewhat prose-heavy relative to the new machine-readable default-path ambition",
+      "summary": "The repo now has a strong machine-readable/default-route direction, but validation choice still appears to depend more on contributor prose than on a clearly demonstrated structured recommendation surface. That keeps some interpretation burden in place for lower-capability agents.",
+      "evidence": "`docs/default-path-contract.md` says the normal path should prefer machine-readable defaults for validation, but the practical proving lanes still primarily appear in `docs/contributor-playbook.md` as prose guidance keyed to route type and surface ownership. The current public docs do not yet show an equivalently concrete queryable validation-recommendation surface the way module and skill discovery now do.",
+      "risk if unchanged": "Agents may still over-read maintainer prose or choose broader checks than necessary because the cheapest safe proving lane is documented but not yet surfaced as plainly or structurally as the newer registry-backed defaults.",
+      "suggested action": "Treat this as a likely next efficiency refinement: either expose validation defaults more explicitly through machine-readable/default-route surfaces, or narrow the docs so the cheap proving lane is even harder to miss.",
+      "confidence": "medium",
+      "source": "static-analysis",
+      "promotion target": "`ROADMAP.md`",
+      "promotion trigger": "Promote when another audit still finds that lower-capability agents must infer the proving lane mainly from prose rather than from explicit default-path structure.",
+      "post-remediation note shape": "delete"
+    },
+    {
+      "title": "Memory/Planning synergy is now clearly specified, but still needs repeated ordinary-use proof more than more contract writing",
+      "summary": "The combined-install interaction model is now strong: Planning should borrow durable context from Memory, completed Planning work should promote durable residue into Memory or canonical docs, and repeated plan re-explanation is explicitly treated as a missing-synergy signal. The next maturity step is to demonstrate that loop repeatedly in ordinary work until it feels effortless.",
+      "evidence": "`docs/integration-contract.md` now explicitly says combined installs should be stronger than simple compatibility, defines the borrow rule, the residue rule, the combined startup-and-resume model, and the missing-synergy signals. `TODO.md` records the `memory-planning-synergy` tranche as completed, describing planning borrowing durable context from memory and repeated plan re-explanation becoming a signal for cheaper future execution.",
+      "risk if unchanged": "The repo could keep refining the interaction contract without generating enough lived evidence that combined installs really reduce restart cost more than either module alone. That would leave the synergy strategically correct but not yet operationally inevitable.",
+      "suggested action": "Prefer future dogfooding and bounded reviews that inspect ordinary combined-mode work for short plans, clean residue promotion, and reduced restart reading, instead of writing much more abstract interaction policy first.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "`ROADMAP.md`",
+      "promotion trigger": "Promote when another ordinary maintenance cycle still finds repeated plan re-explanation, stranded durable residue, or broad restart reading despite the current combined-install contract.",
+      "post-remediation note shape": "delete"
+    }
+  ],
+  "recommendation": {
+    "promote": "None immediately.",
+    "defer": "The validation-defaults refinement and the need for repeated combined-mode proof.",
+    "dismiss": "None."
+  },
+  "validation_commands": [
+    "`agentic-workspace defaults --format json`",
+    "`agentic-workspace modules --format json`",
+    "`agentic-workspace skills --target ./repo --task \"implement the current active milestone\" --format json`"
+  ],
+  "drift_log": [
+    "2026-04-09: Review created after contract-integrity, cheap-execution, and memory/planning-synergy passes were consolidated, excluding the already-addressed absolute-path link regression."
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Payload Drift Detection and Local-only Adoption",
+  "goal": [
+    "Restore high trust in payload integrity through early drift detection.",
+    "Enable \"guest mode\" usage of Agentic Workspace in unowned repositories through `--local-only` installation."
+  ],
+  "non_goals": [
+    "Redesigning the entire packaging model.",
+    "Broadly rewriting installer internals for both packages in one pass (beyond what's needed for drift/local-only)."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Formalizing Agentic Workspace Memory and Hygiene",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "payload-drift-and-installer-knowledge, local-only-adoption-and-external-agent-ergonomics"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Drift detection now fails fast on payload mismatch, so local-only work can build on a stable trust signal.",
+    "intentionally deferred": "none for this lane.",
+    "discovered implications": "Local-only adoption is now a first-class install path rather than a hidden inference path.",
+    "proof achieved now": "Lane 1 and Lane 2 are implemented and checked by the planning/report surfaces.",
+    "validation still needed": "none for this execplan slice.",
+    "next likely slice": "none."
+  },
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "Restore trust in payload integrity and enable local-only adoption without breaking existing install or upgrade workflows.",
+    "hard constraints": "Preserve monorepo mirroring invariants and avoid broad installer rewrites beyond what this slice needs.",
+    "agent may decide locally": "The exact drift-report wording and the narrowest implementation approach that proves drift and local-only behavior.",
+    "escalate when": "Payload-root resolution or installer flow changes would require a breaking contract change."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "Lane 2 (Local-only Adoption)",
+    "ready": "no",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "No further action required for this execplan slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/memory/src/repo_memory_bootstrap/installer.py",
+    "src/agentic_workspace/cli.py",
+    ".agentic-workspace/docs/installer-behavior.md"
+  ],
+  "invariants": [
+    "`agentic-workspace report` must be the primary surface for discovering drift.",
+    "Local-only mode must never write to tracked repository files (except .gitignore)."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`agentic-workspace report`",
+    "`agentic-workspace install --local-only`",
+    "`uv run pytest packages/planning/tests`",
+    "`uv run pytest packages/memory/tests`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "[x] `agentic-workspace report` surfaces drift when a mirror file is missing or differs from root.",
+    "[x] `agentic-workspace install --local-only` creates a functional installation in `.gemini/agentic-workspace/`.",
+    "[x] `.agentic-workspace/docs/installer-behavior.md` accurately describes payload resolution for both packages.",
+    "[x] All tests pass."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "enabled explicit local-only install support through `agentic-workspace install --local-only`, wrote the workspace into `.gemini/agentic-workspace/`, and updated the surrounding docs and tests so the guest-mode path is explicit rather than inferred.",
+    "validation confirmed": "`uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`.",
+    "follow-on routed to": "none.",
+    "resume from": "none."
+  },
+  "drift_log": [
+    "2026-04-19: Initial plan created for Lane 1 and 2."
+  ]
+}

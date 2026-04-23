@@ -1,0 +1,99 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Memory Recurring Friction Evidence First Slice",
+  "goal": [],
+  "non_goals": [],
+  "intent_continuity": {
+    "larger intended outcome": "preserve lightweight recurring-friction evidence in Memory or adjacent durable surfaces so repeated package failures accumulate visible improvement pressure without turning every annoyance into backlog.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/execplans/archive/memory-recurring-friction-improvement-pressure-closeout-2026-04-23.md",
+    "parent lane": "`memory-recurring-friction-improvement-pressure`"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/execplans/archive/memory-recurring-friction-improvement-pressure-closeout-2026-04-23.md",
+    "activation trigger": "activate the next lane slice when real ordinary-use evidence shows the new recurring-friction ledger is either working, too awkward, or still leaking repeated signals that should promote faster."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "a shipped recurring-friction ledger plus doctor-side promotion pressure so repeated friction can accumulate durable evidence before issue creation.",
+    "intentionally deferred": "broader reporting integration, config-shaped signal handling, and any automation beyond doctor visibility.",
+    "discovered implications": "the new ledger immediately creates a reusable Memory home, but real dogfooding still has to prove whether the path is cheap enough in normal use.",
+    "proof achieved now": "the package ships the new note, the doctor can flag repeated recurrence, and the repo-installed memory surface refreshes cleanly from package payload.",
+    "validation still needed": "real repeated-signal use plus any later tightening of promotion/reporting if the new path proves too manual.",
+    "next likely slice": "dogfood the new ledger with one real repeated signal and tighten promotion/reporting only if repeated friction still disappears or stays too awkward to route."
+  },
+  "intent_interpretation": {
+    "literal request": "promote and implement the first lane.",
+    "inferred intended outcome": "move the top inactive Memory lane into active execution and deliver its smallest useful shipped slice now.",
+    "chosen concrete what": "add a purpose-built recurring-friction note path and doctor pressure so repeated friction becomes durable and promotable without immediately becoming backlog.",
+    "interpretation distance": "medium",
+    "review guidance": "reject solutions that create a second tracker, require heavy manual logging, or sprawl into unrelated memory/planning redesign."
+  },
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "implement the first recurring-friction lane with a shipped Memory slice.",
+    "hard constraints": "keep the feature lightweight, package-owned, and compatible with the existing improvement-signal model.",
+    "agent may decide locally": "the exact note name, the structured entry shape, and the narrow doctor pressure threshold.",
+    "escalate when": "the feature would need a broader promotion workflow or package-crossing redesign."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {},
+  "immediate_next_action": [],
+  "blockers": [],
+  "touched_paths": [],
+  "invariants": [],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [],
+  "required_tools": [],
+  "completion_criteria": [],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "active execplan plus checked-in planning state",
+    "what happened": "added a shipped `recurring-friction-ledger.md` runbook and manifest entry, taught memory doctor to audit entry structure and surface promotion pressure once a friction class has at least two observed recurrences, refreshed the installed memory payload, and kept the first slice inside memory source/payload/install plus planning state.",
+    "scope touched": "`.agentic-workspace/planning/state.toml`, `packages/memory/src/repo_memory_bootstrap/`, `packages/memory/bootstrap/.agentic-workspace/memory/repo/`, `packages/memory/tests/`, and the refreshed repo-installed memory surfaces.",
+    "validations run": "`uv run pytest packages/memory/tests/test_installer.py -k \"recurring_friction or recurring_failures or improvement_pressure\" -q`; `uv run pytest packages/memory/tests/test_packaging.py -q`; `uv run agentic-memory-bootstrap doctor --target . --format json`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run agentic-memory-bootstrap upgrade --target .`; `uv run agentic-planning-bootstrap upgrade --target .`",
+    "result for continuation": "the lane no longer lacks a durable evidence path; the remaining question is whether ordinary use proves this path sufficient or reveals that promotion/reporting must get tighter.",
+    "next step": "archive this slice and return the broader lane to roadmap follow-through with a dogfooding-focused next slice."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive this slice and keep the broader recurring-friction lane open in roadmap form."
+  },
+  "proof_report": {
+    "validation proof": "`uv run pytest packages/memory/tests/test_installer.py -k \"recurring_friction or recurring_failures or improvement_pressure\" -q`; `uv run pytest packages/memory/tests/test_packaging.py -q`; `uv run agentic-memory-bootstrap doctor --target . --format json`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run agentic-memory-bootstrap upgrade --target .`; `uv run agentic-planning-bootstrap upgrade --target .`",
+    "proof achieved now": "the memory package ships a lightweight recurring-friction note and doctor audit, the artifact inventory includes the new payload file, and the repo-installed Memory surface now carries the same contract.",
+    "evidence for \"proof achieved\" state": "targeted installer and packaging tests passed, the source/payload/root-install checker reported no boundary drift, the installed repo gained `.agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md`, and memory doctor can now emit `recurring-friction-audit` findings when repeated entries accumulate."
+  },
+  "intent_satisfaction": {
+    "original intent": "implement the first promoted roadmap lane for recurring-friction improvement pressure.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "the first slice shipped the promised durable evidence path, but the larger lane still needs real ordinary-use follow-through to judge whether this path is sufficient or whether promotion/reporting should tighten.",
+    "unsolved intent passed to": ".agentic-workspace/planning/execplans/archive/memory-recurring-friction-improvement-pressure-closeout-2026-04-23.md"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "the first slice is fully implemented and proved, but the broader lane is about ongoing recurring-friction improvement pressure rather than just adding the first durable note path.",
+    "evidence carried forward": "archived execplan residue, the shipped memory package changes, the refreshed installed memory surface, and the roadmap lane now updated with the next dogfooding-focused slice.",
+    "reopen trigger": "reopen only if the shipped recurring-friction ledger stops existing in the installed surface or the doctor no longer surfaces repeated recurrence pressure."
+  },
+  "execution_summary": {
+    "outcome delivered": "shipped a dedicated recurring-friction ledger in Memory and a doctor audit that surfaces promotion pressure when a friction class has at least two observed recurrences.",
+    "validation confirmed": "`uv run pytest packages/memory/tests/test_installer.py -k \"recurring_friction or recurring_failures or improvement_pressure\" -q`; `uv run pytest packages/memory/tests/test_packaging.py -q`; `uv run agentic-memory-bootstrap doctor --target . --format json`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run agentic-memory-bootstrap upgrade --target .`; `uv run agentic-planning-bootstrap upgrade --target .`",
+    "follow-on routed to": ".agentic-workspace/planning/execplans/archive/memory-recurring-friction-improvement-pressure-closeout-2026-04-23.md",
+    "post-work posterity capture": "preserve the rule that weak recurring friction should get one compact durable home before issue creation, and that stronger follow-on still routes into planning or the strongest remediation surface once recurrence is proven.",
+    "knowledge promoted (memory/docs/config)": "promoted the new recurring-friction evidence path into shipped Memory payload, installed repo Memory surfaces, and package tests.",
+    "resume from": ".agentic-workspace/planning/execplans/archive/memory-recurring-friction-improvement-pressure-closeout-2026-04-23.md"
+  },
+  "drift_log": []
+}

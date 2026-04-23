@@ -1,0 +1,96 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Lazy Discovery Measurement Audit",
+  "goal": [
+    "Add the first small measurement framework for lazy-discovery cost so compact contract work can be justified by less reading, not only cleaner structure.",
+    "Use it in one bounded audit of the current defaults/proof/ownership selector path in this repo."
+  ],
+  "non_goals": [
+    "Add telemetry or runtime monitoring.",
+    "Claim exact model-token accounting.",
+    "Broaden the slice into generic analytics."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "close the remaining lazy-discovery measurement issue and leave a reusable proof bar for future compact-contract work.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "add a small checked-in measurement script plus one audit artifact showing how much the current selector path reduces retrieval size for common one-answer questions.",
+    "hard constraints": "keep the framework cheap and reproducible; use explicit approximations rather than pretending to know model-exact tokens; stay focused on defaults/proof/ownership selector work.",
+    "agent may decide locally": "the exact proxy metrics, the audit format, and the smallest reusable script shape that keeps future compactness work measurable.",
+    "escalate when": "the slice would require invasive instrumentation, runtime logging, or provider-specific token accounting."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "lazy-discovery-measurement-audit",
+    "status": "completed",
+    "scope": "ship one measurement script and one audit artifact for the current selector path, then close issue `#32`.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "GitHub issue `#32`"
+  },
+  "immediate_next_action": [
+    "None. Slice completed; promote the final remaining open issue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`TODO.md`",
+    "`ROADMAP.md`",
+    "`.agentic-workspace/planning/execplans/lazy-discovery-measurement-audit-2026-04-14.md`",
+    "`docs/lazy-discovery-measurements.md`",
+    "`.agentic-workspace/planning/reviews/lazy-discovery-measurement-audit-2026-04-14.md`",
+    "`scripts/check/measure_lazy_discovery.py`"
+  ],
+  "invariants": [
+    "The framework should stay cheap enough to run routinely.",
+    "Measurements should compare one-answer retrieval against the corresponding full-surface dump.",
+    "Report approximations clearly instead of implying exact token truth."
+  ],
+  "contract_decisions_to_freeze": [
+    "Byte length and a simple character-based token approximation are acceptable first-pass proxies.",
+    "The first audit should focus on current selector-enabled defaults, proof, and ownership questions."
+  ],
+  "open_questions_to_close": [
+    "What is the smallest useful proxy set for measuring lazy discovery?",
+    "Which one-answer queries best represent the current compact-contract value?"
+  ],
+  "validation_commands": [
+    "`uv run python scripts/check/measure_lazy_discovery.py --target .`",
+    "`uv run python scripts/check/check_planning_surfaces.py`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "A checked-in script can measure full-vs-narrow retrieval for at least the current defaults/proof/ownership selector path.",
+    "One audit artifact records the measured reductions in this repo.",
+    "Issue `#32` can close on the resulting proof."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "added `scripts/check/measure_lazy_discovery.py` plus the canonical measurement doc and a checked-in audit artifact; the first audit shows the current defaults/proof/ownership selector path reduces total retrieval size by 60.8% and the simple token proxy by 60.7% for the three current one-answer questions.",
+    "validation confirmed": "`uv run python scripts/check/measure_lazy_discovery.py --target .`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run ruff check scripts/check/measure_lazy_discovery.py`.",
+    "follow-on routed to": "`ROADMAP.md`.",
+    "resume from": "promote the final remaining issue for configurable canonical startup filename support."
+  },
+  "drift_log": [
+    "2026-04-14: Promoted after the bootstrap hardening issue closed and the remaining open queue narrowed to measurement proof plus startup-filename configurability.",
+    "2026-04-14: Completed by shipping the first cheap measurement framework and auditing the current selector path in this repo instead of claiming compactness wins by intuition alone."
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Pre-Work Memory Pull",
+  "goal": [],
+  "non_goals": [],
+  "intent_continuity": {
+    "larger intended outcome": "make planning and Memory cooperate tightly at the workflow level so work pulls relevant durable understanding before execution and preserves later-useful residue after finishing, while keeping both modules independently usable.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "`planning-memory-operating-loop`"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "activate the next bounded slice when pre-work retrieval is shipped and the remaining post-work posterity or recurring-friction follow-through still needs an explicit owner."
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {
+    "literal request": "finish any open work and close existing gaps, then activate the top candidate lane",
+    "inferred intended outcome": "leave the queue with no stale completed residue and one honest active owner for the next most important bounded planning slice",
+    "chosen concrete what": "clean stale `#259`/`#206` residue, then promote `#265` as the first bounded slice under the new planning-memory lane",
+    "interpretation distance": "low",
+    "review guidance": "reject the slice if it widens into the full handshake lane or tries to solve posterity capture in the same pass without explicit proof that the first slice stays bounded"
+  },
+  "execution_bounds": {
+    "allowed paths": "`.agentic-workspace/planning/`, `.agentic-workspace/docs/`, `packages/planning/`, `tests/`",
+    "max changed files": "20",
+    "required validation commands": "`uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`; `uv run agentic-workspace report --target . --format json`",
+    "ask-before-refactor threshold": "stop before broad planning-summary or memory-routing redesign beyond what the pre-work prompt directly needs",
+    "stop before touching": "unrelated graceful-compliance, portability, machine-first planning, or post-work posterity-capture implementation"
+  },
+  "stop_conditions": {
+    "stop when": "the smallest honest insertion point for the prompt would still require simultaneous redesign of startup, summary, and memory routing contracts",
+    "escalate when boundary reached": "the pre-work prompt cannot be made useful without bundling it with post-work posterity capture or broader planning-memory loop changes",
+    "escalate on scope drift": "more than the planning-owned prompt surface, its nearest docs/tests, and the narrowest reporting proof would need reshaping",
+    "escalate on proof failure": "the slice cannot show that the prompt is visible in ordinary planning use without adding more ceremony than value"
+  },
+  "context_budget": {
+    "live working set": "issue `#265`, the active planning template/surfaces ordinary work touches first, and the compact planning/report validation path",
+    "recoverable later": "broader handshake-lane rationale from `#264`, recurring-friction evidence shaping from `#263`, and startup drift work from `#262`",
+    "externalize before shift": "the chosen insertion point, the exact prompt shape, and why it is compact enough for ordinary use",
+    "tiny resumability note": "keep this slice about pre-work retrieval only; do not silently absorb posterity capture",
+    "context-shift triggers": "shift once the insertion point is chosen or if the narrow prompt requires broader startup-chain redesign"
+  },
+  "delegated_judgment": {
+    "requested outcome": "land the smallest useful pre-work memory-pull prompt in the planning chain and prove it is cheap enough for routine use",
+    "hard constraints": "keep the change compact, planning-owned, and explicitly about pre-work durable understanding rather than broad ritual",
+    "agent may decide locally": "the exact field or prompt wording, the narrowest host surface, and the smallest proof that ordinary work will actually see it",
+    "escalate when": "the change would require a larger planning-memory architecture pass or a second durable planning store"
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {},
+  "immediate_next_action": [],
+  "blockers": [],
+  "touched_paths": [],
+  "invariants": [],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [],
+  "required_tools": [],
+  "completion_criteria": [],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "active execplan plus checked-in planning summary",
+    "what happened": "added `Pre-work memory pull` to the execplan template and context-budget contract, threaded it through planning summary/report/handoff and CLI text views, updated docs/tests/checker enforcement, and set the active slice's prompt to the planning-memory retrieval question it needs.",
+    "scope touched": "`.agentic-workspace/planning/execplans/`, `.agentic-workspace/docs/`, `packages/planning/`, `tests/`",
+    "validations run": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`",
+    "result for continuation": "the active planning chain now asks the pre-work durable-context question explicitly; later slices can build on that same loop instead of inventing a new startup ritual.",
+    "next step": "archive the slice and route the broader lane back to the candidate queue for `#266` or `#262`."
+  },
+  "finished_run_review": {
+    "review status": "approved",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-but-keep-lane-open"
+  },
+  "proof_report": {
+    "validation proof": "`packages/planning` installer and checker tests pass, workspace CLI tests pass, and the repo planning-surface checker stays clean after the new field becomes required.",
+    "proof achieved now": "ordinary planning surfaces now carry the explicit pre-work retrieval prompt end to end through template, checker, summary/report/handoff JSON, and CLI text output.",
+    "evidence for \"proof achieved\" state": "`79` planning installer tests passed, `28` planning-surface checker tests passed, `114` workspace CLI tests passed, and `uv run python scripts/check/check_planning_surfaces.py` reported no drift warnings."
+  },
+  "intent_satisfaction": {
+    "original intent": "make planning and Memory behave like one operating loop that pulls relevant durable understanding before work and preserves later-useful residue after work",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "this slice fully implemented and proved the bounded `#265` pre-work half of that larger operating-loop intent by adding the explicit `Pre-work memory pull` field and surfacing it through ordinary summary/report/handoff paths, but it did not complete the broader loop.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml, where the `planning-memory-operating-loop` candidate lane now carries later slices such as `#266` and `#262`"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "the bounded `#265` slice is fully implemented and proved, while the larger planning-memory operating-loop intent remains open because post-work posterity capture (`#266`) and possible startup/resume drift follow-through (`#262`) still need their own bounded owners.",
+    "evidence carried forward": "the shipped contract/docs/tests for `Pre-work memory pull`, this archived execplan, and the `planning-memory-operating-loop` candidate lane in .agentic-workspace/planning/state.toml",
+    "reopen trigger": "reopen only if the new field is not actually enough to make ordinary work ask the pre-work durable-context question cheaply."
+  },
+  "execution_summary": {
+    "outcome delivered": "the planning chain now has an explicit `Pre-work memory pull` field in `Context Budget`, and the summary/report/handoff views expose it as the compact pre-work retrieval prompt for bounded execution.",
+    "validation confirmed": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run pytest tests/test_workspace_cli.py -q`; `uv run python scripts/check/check_planning_surfaces.py`",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml, with `planning-memory-operating-loop` still active as the candidate lane and `#266` as the next suggested bounded slice.",
+    "knowledge promoted (memory/docs/config)": "planning docs and contract surfaces now encode the pre-work retrieval question directly; no separate memory note was needed for this slice.",
+    "resume from": "promote the next bounded planning-memory slice when you want to add post-work posterity capture or startup/resume follow-through."
+  },
+  "drift_log": []
+}

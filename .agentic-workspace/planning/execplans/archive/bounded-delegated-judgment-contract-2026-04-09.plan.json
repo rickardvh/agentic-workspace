@@ -1,0 +1,76 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Bounded Delegated Judgment Contract",
+  "goal": [
+    "Define the first shipped planning contract for bounded delegated judgment: humans set direction and constraints, agents may improve bounded local execution, and agents must not silently widen requested outcomes."
+  ],
+  "non_goals": [
+    "Do not introduce tool-specific model-routing policy.",
+    "Do not turn delegated judgment into a separate standalone package contract.",
+    "Do not expand this slice into a broad autonomy framework beyond planning/workflow boundaries."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "bounded-delegated-judgment-contract",
+    "status": "completed",
+    "scope": "Update the shipped planning contract so sticky intent, bounded initiative, and explicit scope-expansion triggers are part of capability-aware execution and adjacent planning guidance.",
+    "ready": "false",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan and clear the active queue residue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`.agentic-workspace/docs/capability-aware-execution.md`",
+    "`packages/planning/bootstrap/.agentic-workspace/docs/capability-aware-execution.md`",
+    "`.agentic-workspace/planning/execplans/README.md`",
+    "`packages/planning/bootstrap/.agentic-workspace/planning/execplans/README.md`",
+    "`packages/planning/README.md`",
+    "`docs/contributor-playbook.md`",
+    "`packages/planning/tests/test_installer.py`"
+  ],
+  "invariants": [
+    "Preserve the existing capability-aware execution stance: advisory, quiet, and tool-agnostic.",
+    "Allow agents to improve means, not silently replace user ends.",
+    "Treat any better solution that widens requested outcome, ownership surface, or time horizon as a promotion or escalation decision."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`cd packages/planning && uv run pytest tests/test_installer.py`",
+    "`uv run python scripts/check/check_planning_surfaces.py`",
+    "`make maintainer-surfaces`",
+    "`uv run agentic-planning-bootstrap upgrade --target .`",
+    "`uv run agentic-memory-bootstrap upgrade --target .`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The shipped planning contract explicitly encodes sticky intent, bounded initiative, and scope-expansion triggers.",
+    "Root install guidance reflects the same rule.",
+    "Payload regression coverage proves the updated contract ships in the planning package.",
+    "The root install is refreshed and the plan can archive cleanly without manual TODO cleanup."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-09: Promoted from the roadmap after dogfooding showed the need for a clearer human-direction and bounded-agent-judgment contract.",
+    "2026-04-09: Completed by tightening the planning contract so agents may improve local means without silently widening requested ends, then refreshing the root install from the updated payload."
+  ]
+}

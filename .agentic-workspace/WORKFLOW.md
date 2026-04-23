@@ -34,5 +34,7 @@ Keep this file concise, product-managed, and replaceable.
 
 ## Module delegation
 
+- Treat this file as the only required top-level startup handoff from `AGENTS.md`.
 - Use `.agentic-workspace/memory/WORKFLOW.md` for memory-specific operating rules.
+- Read module-local workflow files only when the shared workspace contract routes you there or when the task directly changes that module's behavior or workflow.
 - Add module-local workflow files only when a module needs guidance that should not live in the shared workspace contract.

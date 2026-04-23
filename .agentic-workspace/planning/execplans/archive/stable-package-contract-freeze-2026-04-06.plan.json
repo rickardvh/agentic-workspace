@@ -1,0 +1,78 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Stable Package Contract Freeze",
+  "goal": [
+    "Define and freeze the installed planning and memory surfaces that should stop changing shape casually so future work can refine the products without quietly invalidating adopters."
+  ],
+  "non_goals": [
+    "Promise permanent stability for every generated or helper surface immediately.",
+    "Redesign lifecycle orchestration or module boundaries from scratch.",
+    "Replace fixture hardening with a formal semantic-versioning system in one pass."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "identify the installed planning and memory surfaces that now behave like compatibility contract surfaces, document their expected stability, and tighten validation or docs where the current promise is still ambiguous.",
+    "ready": "false",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Promote the first-party module contract tranche so the workspace layer can replace lingering module-specific orchestration assumptions with an explicit shared internal contract."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "ROADMAP.md",
+    "README.md",
+    "docs/",
+    "packages/memory/",
+    "packages/planning/",
+    "src/"
+  ],
+  "invariants": [
+    "Compatibility promises must stay narrower than the total payload.",
+    "Generated mirrors should only inherit stability from their canonical sources when that relationship is explicit.",
+    "Planning and memory must remain selectively adoptable with clear module boundaries.",
+    "Validation should prove the declared contract rather than relying on informal maintainer memory.",
+    "The frozen contract should reduce ambiguity for adopters without adding new ceremony for simple lifecycle work."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "make maintainer-surfaces",
+    "cd packages/planning && uv run pytest",
+    "cd packages/memory && uv run pytest",
+    "uv run pytest tests/test_workspace_cli.py"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Planning and memory each have an explicit shortlist of installed surfaces that count as compatibility contract files.",
+    "Lower-stability helpers and generated mirrors are clearly distinguished from those contract surfaces.",
+    "Validation or package docs reflect the frozen contract boundaries rather than relying on implication.",
+    "The resulting contract is narrow enough to be believable and stable enough to be useful."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-06: Promoted once lifecycle wording, adoption realism, and design-principles guidance were stable enough that compatibility drift became the next maturity risk.",
+    "2026-04-06: Declared explicit planning and memory compatibility-contract shortlists, separated lower-stability helpers, and documented that boundary in package READMEs and installer tests.",
+    "2026-04-06: Surfaced the contract shortlists in planning and memory doctor and verify-payload output, then proved the root workspace doctor JSON and text output already preserve those module-level summaries without needing a new top-level contract schema.",
+    "2026-04-06: Normalized workspace adapter path serialization for dataclass-based module actions and added one root README note pointing maintainers at `agentic-workspace doctor` for contract-boundary inspection."
+  ]
+}

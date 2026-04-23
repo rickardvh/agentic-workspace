@@ -431,8 +431,8 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert lifecycle_doc_path.exists()
     assert extraction_doc_path.exists()
     assert review_readme_path.exists()
-    assert review_template_path.exists()
     assert review_record_template_path.exists()
+    assert not review_template_path.exists()
     assert intake_doc_path.exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "TEMPLATE.plan.json").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
@@ -644,14 +644,13 @@ def test_bootstrap_review_readme_includes_canonical_review_portfolio() -> None:
 
 
 def test_bootstrap_review_template_includes_mode_and_cap_fields() -> None:
-    text = (installer_mod.payload_root() / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.md").read_text(encoding="utf-8")
+    record = json.loads(
+        (installer_mod.payload_root() / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.review.json").read_text(encoding="utf-8")
+    )
 
-    assert "## Review Mode" in text
-    assert "- Mode:" in text
-    assert "- Review question:" in text
-    assert "- Default finding cap:" in text
-    assert "- Inputs inspected first:" in text
-    assert "- Post-remediation note shape:" in text
+    assert record["kind"] == "planning-review/v1"
+    assert "review_mode" in record
+    assert "findings" in record
 
 
 def test_bootstrap_capability_aware_execution_doc_defines_categories() -> None:
@@ -727,7 +726,7 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
         "Use `agentic-workspace config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter."
         in bootstrap_agents_text
     )
-    assert "Read package-local docs only for the package being edited." in bootstrap_agents_text
+    assert "Read package-local `AGENTS.md` only for the package being edited." in bootstrap_agents_text
     assert "remove or archive the matched queue residue in the same pass" in execplans_readme_text
     assert "Iterative carry-forward belongs under `## Iterative Follow-Through`" in execplans_readme_text
     assert any(
@@ -831,7 +830,7 @@ def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
         and "compatibility contract files:" in action.detail
         and "AGENTS.md" in action.detail
         and ".agentic-workspace/docs/capability-aware-execution.md" in action.detail
-        and ".agentic-workspace/planning/execplans/TEMPLATE.md" in action.detail
+        and ".agentic-workspace/planning/execplans/TEMPLATE.plan.json" in action.detail
         and ".agentic-workspace/planning/upstream-task-intake.md" in action.detail
         for action in result.actions
     )
@@ -1218,24 +1217,19 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
     plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "direct-item.md"
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "direct-item.plan.json"
 
-    assert plan_path.exists()
+    assert not plan_path.exists()
     assert record_path.exists()
-    plan_text = plan_path.read_text(encoding="utf-8")
     record = json.loads(record_path.read_text(encoding="utf-8"))
     todo_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
-    assert "## Intent Continuity" in plan_text
-    assert "## Required Continuation" in plan_text
-    assert "## Delegated Judgment" in plan_text
     assert record["kind"] == "planning-execplan/v1"
     assert record["active_milestone"]["id"] == "direct-item"
-    assert "- This slice completes the larger intended outcome: yes" in plan_text
-    assert "- Continuation surface: none" in plan_text
-    assert "- Required follow-on for the larger intended outcome: no" in plan_text
-    assert "- Requested outcome: this thread needs a bounded execution contract." in plan_text
+    assert record["intent_continuity"]["this slice completes the larger intended outcome"] == "yes"
+    assert record["intent_continuity"]["continuation surface"] == "none"
+    assert record["required_continuation"]["required follow-on for the larger intended outcome"] == "no"
+    assert record["delegated_judgment"]["requested outcome"] == "this thread needs a bounded execution contract."
     assert "Surface: .agentic-workspace/planning/execplans/direct-item.md" in todo_text
     assert "Next Action:" not in todo_text
     assert "Done When:" not in todo_text
-    assert any(action.kind == "created" and action.path == plan_path for action in result.actions)
     assert any(action.kind == "created" and action.path == record_path for action in result.actions)
 
 
@@ -1277,20 +1271,15 @@ def test_archive_execplan_moves_completed_plan(tmp_path: Path) -> None:
     _write_execplan_record(record_path, status="completed")
 
     result = archive_execplan("plan-alpha", target=tmp_path)
-    archived_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.md"
     archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
 
-    assert archived_path.exists()
     assert archived_record_path.exists()
     assert not plan_path.exists()
     assert not record_path.exists()
-    assert any(action.kind == "moved" and action.path == archived_path for action in result.actions)
-    assert any(action.kind == "moved" and action.path == archived_record_path for action in result.actions)
-    archived_text = archived_path.read_text(encoding="utf-8")
-    assert "Compact inactive-plan residue generated at archive time." in archived_text
-    assert "## Proof Report" in archived_text
-    assert "## Active Milestone" not in archived_text
-    assert "## Drift Log" not in archived_text
+    assert any(action.kind == "archived" and action.path == archived_record_path for action in result.actions)
+    archived_record = json.loads(archived_record_path.read_text(encoding="utf-8"))
+    assert archived_record["kind"] == "planning-execplan/v1"
+    assert archived_record["proof_report"]["proof achieved now"] == "validation and closure checks passed for the bounded slice."
 
 
 def test_planning_summary_prefers_canonical_execplan_record_when_markdown_stales(tmp_path: Path) -> None:
@@ -1311,9 +1300,6 @@ def test_planning_summary_prefers_canonical_execplan_record_when_markdown_stales
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
     _write_execplan_record(record_path, status="in-progress")
-    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
-    stale_markdown = plan_path.read_text(encoding="utf-8").replace("Plan Alpha", "Stale Markdown Title")
-    _write(plan_path, stale_markdown)
 
     summary = planning_summary(target=tmp_path)
 
@@ -1632,9 +1618,9 @@ def test_archive_execplan_allows_partial_intent_when_continuation_is_explicit(tm
     )
 
     result = archive_execplan("plan-alpha", target=tmp_path)
-    archived_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.md"
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
 
-    assert archived_path.exists()
+    assert archived_record_path.exists()
     assert not plan_path.exists()
     assert not result.warnings
 
@@ -1687,11 +1673,11 @@ def test_archive_execplan_allows_rename_like_work_with_reference_sweep(tmp_path:
     _write(plan_path, _rename_like_execplan(with_reference_sweep=True))
 
     result = archive_execplan("plan-alpha", target=tmp_path)
-    archived_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.md"
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
 
-    assert archived_path.exists()
+    assert archived_record_path.exists()
     assert not plan_path.exists()
-    assert any(action.kind == "moved" and action.path == archived_path for action in result.actions)
+    assert any(action.kind == "archived" and action.path == archived_record_path for action in result.actions)
 
 
 def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_path: Path) -> None:
@@ -1774,7 +1760,7 @@ def test_archive_execplan_apply_cleanup_removes_active_todo_pointer_to_same_plan
         for action in result.actions
     )
     assert (
-        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "bounded-delegated-judgment-contract-2026-04-09.md"
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "bounded-delegated-judgment-contract-2026-04-09.plan.json"
     ).exists()
 
 
@@ -1865,7 +1851,7 @@ candidates = []
 
     state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     archived_path = (
-        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "intent-validation-and-dangling-debt-2026-04-22.md"
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "intent-validation-and-dangling-debt-2026-04-22.plan.json"
     )
 
     assert archived_path.exists()

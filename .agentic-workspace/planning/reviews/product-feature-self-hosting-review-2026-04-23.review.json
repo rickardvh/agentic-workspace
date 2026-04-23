@@ -1,0 +1,78 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Product Feature Self-Hosting Review",
+  "goal": [
+    "Review how well this repo is actually using Agentic Workspace's shipped and important internal capabilities itself.",
+    "Distinguish features that are strongly dogfooded from features that are still more doctrinal than routine in ordinary work."
+  ],
+  "scope": [
+    "`README.md`",
+    "`docs/agent-os-capabilities.md`",
+    "`docs/maturity-model.md`",
+    "`docs/ecosystem-roadmap.md`",
+    "`.agentic-workspace/WORKFLOW.md`",
+    "`.agentic-workspace/planning/reviews/`",
+    "`.agentic-workspace/planning/execplans/archive/`",
+    "`.agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md`",
+    "`.agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md`",
+    "`.agentic-workspace/delegation-outcomes.json`",
+    "live `agentic-workspace summary --format json`",
+    "live `agentic-workspace config --target . --format json`"
+  ],
+  "non_goals": [
+    "Re-open planning automatically from this review.",
+    "Re-rate package maturity labels.",
+    "Re-audit every individual command or doc surface in depth."
+  ],
+  "review_mode": {
+    "mode": "`doctrine-refresh`",
+    "review question": "Which product capabilities are genuinely exercised in ordinary self-hosting here, and which ones still have thinner real-use evidence than their doctrinal weight suggests?",
+    "default finding cap": "2 findings",
+    "inputs inspected first": "`docs/agent-os-capabilities.md`, `README.md`, `agentic-workspace summary --format json`, `agentic-workspace config --target . --format json`"
+  },
+  "review_method": {
+    "commands used": "",
+    "evidence sources": ""
+  },
+  "references": [],
+  "findings": [
+    {
+      "title": "Registry-shaped features are still more described than exercised",
+      "summary": "The capability and module registry contract looks architecturally real, but the repo's own day-to-day operating path still depends far more on summary/config/planning surfaces than on explicit registry-driven discovery.",
+      "evidence": "`docs/module-capability-contract.md` and `docs/architecture.md` make the registry sound central; `README.md` and `docs/contributor-playbook.md` route ordinary work through `summary`, `config`, and planning surfaces instead; the strongest live proof I found for registry use is doctrinal and review-oriented rather than repeated ordinary-use evidence.",
+      "risk if unchanged": "the repo may overestimate how self-proving the registry is and keep broadening a capability that still has relatively light first-line product pull.",
+      "suggested action": "keep the registry internal and treat it as support infrastructure until repeated ordinary work or extension-boundary pressure clearly depends on it.",
+      "confidence": "medium-high",
+      "source": "mixed",
+      "promotion target": "none",
+      "promotion trigger": "promote only if another doctrine-refresh or extension-boundary review again finds that registry semantics are important but still thinly exercised.",
+      "post-remediation note shape": "retain"
+    },
+    {
+      "title": "Delegation and handoff are credible, but still not routine enough to count as fully self-proven",
+      "summary": "The repo has real delegated-execution and handoff contracts, but the actual self-hosting evidence is still thinner than the amount of doctrine and surface area dedicated to them.",
+      "evidence": "`.agentic-workspace/delegation-outcomes.json` contains only one local recorded outcome; the strongest direct evidence lives in bounded review artifacts such as `local-delegation-outcome-evidence-dogfood-2026-04-17.md`, `local-delegation-target-profiles-dogfood-2026-04-17.md`, and `orchestrator-workflow-evidence-2026-04-17.md`; `finished_work_inspection_contract` from the live summary still shows four `likely_premature_closeout` signals, which means execution-summary and closure trust are improved but not yet fully routine.",
+      "risk if unchanged": "the repo may treat delegated handoff quality as more operationally settled than the current evidence really supports, especially for closure and cross-agent continuation.",
+      "suggested action": "keep delegation and handoff in the actively dogfooded set, but judge them by repeated ordinary-use evidence and clean closeout behavior rather than by contract richness alone.",
+      "confidence": "high",
+      "source": "friction-confirmed",
+      "promotion target": "none",
+      "promotion trigger": "promote only if repeated ordinary work keeps surfacing the same thin-evidence pattern after the current `machine-first-planning-chain` and `graceful-partial-compliance` follow-through.",
+      "post-remediation note shape": "retain"
+    }
+  ],
+  "recommendation": {
+    "promote": "none now; the review does not justify a new queue item beyond already-open follow-through.",
+    "defer": "revisit this review after another mixed-agent and closeout-heavy tranche, especially if registry or delegation evidence remains thin.",
+    "dismiss": "any conclusion that the product is only doctrinal. The core loop is already strongly self-hosted; the weaker evidence is concentrated in a smaller set of supporting capabilities."
+  },
+  "validation_commands": [
+    "`uv run agentic-workspace summary --format json`",
+    "`uv run agentic-workspace config --target . --format json`",
+    "`rg -n \"feature|capability|product|dogfood|dogfooding|review\" README.md docs .agentic-workspace packages -g \"*.md\"`",
+    "`rg -n \"module registry|capability registry|modules output|result_contract|workflow_obligations|optimization_bias|summary --format json|config --target \\\\. --format json|planning-review|upstream-task-intake|OWNERSHIP|render_agent_docs|check_planning_surfaces|delegation-outcomes|handoff\" docs .agentic-workspace packages README.md -g \"*.md\"`"
+  ],
+  "drift_log": [
+    "2026-04-23: Review created to assess how fully the repo self-hosts the product's own feature set without activating new work automatically."
+  ]
+}

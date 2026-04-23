@@ -1,0 +1,74 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Execplan: Review-Driven Future Work Discovery",
+  "goal": [],
+  "non_goals": [
+    "Do not collapse review findings into ordinary implementation behavior.",
+    "Do not treat static-analysis findings as equivalent to friction-derived improvement signals.",
+    "Do not send all findings directly into `TODO.md` or create broad speculative cleanup work.",
+    "Do not make review artifacts a substitute for durable memory or canonical docs."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "Define the planning contract for review-driven future-work discovery and land the initial shipped review-artifact surfaces.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this execplan now that the review-artifact contract, bundled skills, and package docs have landed."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`.agentic-workspace/planning/execplans/review-driven-future-work-discovery.md`",
+    "`packages/planning/`",
+    "`packages/memory/`",
+    "`docs/design-principles.md`",
+    "`ROADMAP.md`",
+    "`TODO.md`"
+  ],
+  "invariants": [
+    "Friction-derived improvement signals remain the higher-trust planning input.",
+    "Review findings must be explicitly labeled as analysis-derived until confirmed.",
+    "Capture and promotion remain separate steps.",
+    "Review output must stay compact, evidence-based, and bounded.",
+    "Planning remains the home for candidate future work; memory only receives durable knowledge that outlives immediate planning.",
+    "The workflow must reduce agent supervision burden without creating self-generated maintenance churn."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`make planning-surfaces`",
+    "`make maintainer-surfaces`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The repo has a clear planning contract for review-driven future-work discovery.",
+    "Review findings and improvement signals are explicitly separated.",
+    "Promotion rules are concrete enough to prevent speculative queue churn.",
+    "The intended artifact shape and candidate skills are clear enough for implementation planning.",
+    "Follow-up package and doc changes are identified."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-07: Created as a temporary execplan to capture the proposed review-driven planning lane before deciding how much should become shipped planning behavior.",
+    "2026-04-07: Promoted the review lane into shipped planning docs, bundled skills, and packaged `.agentic-workspace/planning/reviews/` contract surfaces."
+  ]
+}

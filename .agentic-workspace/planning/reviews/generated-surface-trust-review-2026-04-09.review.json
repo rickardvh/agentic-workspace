@@ -1,0 +1,40 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Generated Surface Trust Review",
+  "goal": [
+    "Check whether generated routing and helper surfaces still faithfully reflect their canonical manifest sources."
+  ],
+  "scope": [
+    "`tools/agent-manifest.json`",
+    "`tools/AGENT_QUICKSTART.md`",
+    "`tools/AGENT_ROUTING.md`",
+    "render and maintainer checks"
+  ],
+  "non_goals": [
+    "Do not review skill content itself.",
+    "Do not re-review package source/payload alignment here."
+  ],
+  "review_mode": {
+    "mode": "`generated-surface-trust`",
+    "review question": "Do the generated planning helper surfaces still match the manifest-driven source of truth?",
+    "default finding cap": "2",
+    "inputs inspected first": "generated `tools/` surfaces, render command, maintainer checks"
+  },
+  "review_method": {
+    "commands used": "",
+    "evidence sources": ""
+  },
+  "references": [],
+  "findings": [],
+  "recommendation": {
+    "promote": "none",
+    "defer": "none",
+    "dismiss": "generated-surface trust concerns in this scope"
+  },
+  "validation_commands": [
+    "`make maintainer-surfaces`"
+  ],
+  "drift_log": [
+    "2026-04-09: Review created as part of the full review-matrix pass."
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Execplan: Bootstrap-Tooling Packaging Tests",
+  "goal": [],
+  "non_goals": [
+    "Do not refactor packaging metadata or build configuration in this pass.",
+    "Do not add new payload files or restructure existing ones.",
+    "Do not change the installer or bootstrap logic itself."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "immediate_next_action": [],
+  "blockers": [],
+  "touched_paths": [
+    "`tests/test_workspace_packaging.py`",
+    "`packages/planning/tests/test_packaging.py`",
+    "`packages/memory/tests/test_packaging.py`",
+    "`scripts/check/check_packaging_artifacts.py` (helper, optional)"
+  ],
+  "invariants": [
+    "Packaging tests must run without requiring external package installations (build artifacts locally).",
+    "Tests should fail loudly if required payload files are missing from any artifact."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run pytest tests/test_workspace_packaging.py`",
+    "`uv run pytest packages/planning/tests/test_packaging.py`",
+    "`uv run pytest packages/memory/tests/test_packaging.py`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "[x] Root workspace package test asserts wheel/sdist contain `.agentic-workspace/WORKFLOW.md` and `.agentic-workspace/OWNERSHIP.toml`",
+    "[x] Planning package test asserts wheel/sdist contain required payload files and generated routing docs",
+    "[x] Memory package test asserts wheel/sdist contain required payload files and skills",
+    "[x] All three tests pass in the CI lane and locally with `make check-all`",
+    "[x] Packages produce identical file inventories across clean source builds and artifact installs"
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-07: Promoted from `.agentic-workspace/planning/reviews/bootstrap-tooling-followup-requirements-2026-04-07.md` as high-priority friction-confirmed finding.",
+    "2026-04-08: Archived after the root, planning, and memory packaging tests were validated."
+  ]
+}

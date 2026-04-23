@@ -1,0 +1,28 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Orchestrator Workflow Dogfood",
+  "goal": [
+    "Record whether the new planner-to-worker workflow is actually usable in normal repo work and what remaining cost classes should survive as follow-on work."
+  ],
+  "scope": [
+    "`docs/orchestrator-workflow-contract.md`",
+    "`agentic-workspace defaults --section relay --format json`",
+    "`agentic-workspace config --target . --format json`",
+    "`agentic-planning-bootstrap handoff --format json`",
+    "bundled skill `planning-orchestrator-workflow`",
+    "one bounded delegated docs slice on `docs/contributor-playbook.md` and `docs/workspace-config-contract.md`"
+  ],
+  "non_goals": [],
+  "review_mode": {},
+  "review_method": {},
+  "references": [],
+  "findings": [],
+  "recommendation": {},
+  "validation_commands": [
+    "`uv run python scripts/check/check_planning_surfaces.py`",
+    "`uv run agentic-planning-bootstrap handoff --format json`"
+  ],
+  "drift_log": [
+    "2026-04-17: Recorded the first post-productization delegated dogfood pass for the orchestrator workflow lane."
+  ]
+}

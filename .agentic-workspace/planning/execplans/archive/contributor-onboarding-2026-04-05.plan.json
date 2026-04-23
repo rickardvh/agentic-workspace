@@ -1,0 +1,69 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Contributor Onboarding",
+  "goal": [
+    "Add package ownership metadata and a contributor playbook so new work can route to the right package and validation lane with less rediscovery."
+  ],
+  "non_goals": [
+    "Define a full maintainer process beyond the current package boundaries.",
+    "Add automation around reviewer assignment in this tranche.",
+    "Rewrite package READMEs or AGENTS contracts beyond what is needed for onboarding references."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "add a root `CODEOWNERS` file and a concise contributor playbook aligned with the current package and orchestration boundaries.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan and remove the finished contributor-onboarding candidate from the roadmap queue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "TODO.md",
+    "ROADMAP.md",
+    ".agentic-workspace/planning/execplans/",
+    "docs/",
+    ".github/",
+    "README.md"
+  ],
+  "invariants": [
+    "Ownership metadata must match the current package and workspace boundaries.",
+    "The playbook should route contributors toward the smallest relevant validation lane.",
+    "The onboarding guidance should reinforce the current architecture stance instead of implying more packages than the repo actually ships."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "A root `CODEOWNERS` file exists with package-aware ownership boundaries.",
+    "A contributor playbook exists with startup, routing, and validation guidance for this monorepo.",
+    "The roadmap no longer carries a separate open contributor-onboarding candidate."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-05: Plan activated once package boundaries and the root lifecycle entrypoint were stable enough to freeze contributor guidance without guessing ownership.",
+    "2026-04-05: Milestone complete: the repo now has package-aware CODEOWNERS metadata and a contributor playbook that routes contributors to the right package and validation lane."
+  ]
+}

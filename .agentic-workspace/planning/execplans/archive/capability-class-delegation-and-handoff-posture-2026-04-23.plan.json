@@ -1,0 +1,109 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Capability-Class Delegation And Handoff Posture",
+  "goal": [],
+  "non_goals": [],
+  "intent_continuity": {
+    "larger intended outcome": "let bounded work express weak, medium, strong, local, or external execution posture directly in the planning/workflow contract so runtime resolution stops depending on ambient local config alone.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "capability-class-delegation-and-handoff-posture"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": ""
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {
+    "literal request": "Implement the next lane in full, and commit after each milestone.",
+    "inferred intended outcome": "close the next open roadmap lane with real shipped capability-class handoff behavior, not just more doctrine.",
+    "chosen concrete what": "add a compact capability posture section to active planning work, project it through the handoff contract, resolve it against local target hints in workspace reporting, and retire the lane honestly.",
+    "interpretation distance": "low",
+    "review guidance": "reject the closeout if the new posture is still prose-only, cannot be queried compactly, or effectively behaves like runtime-specific scheduler policy."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/docs/, .agentic-workspace/planning/, src/agentic_workspace/, packages/planning/src/repo_planning_bootstrap/, tests/, packages/planning/tests/",
+    "max changed files": "30",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q -k capability; uv run pytest tests/test_workspace_cli.py -q -k delegation; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json",
+    "ask-before-refactor threshold": "stop before introducing a new runtime target registry, scheduler policy engine, or broad planning-storage redesign.",
+    "stop before touching": "unrelated graceful-compliance work, machine-first planning-chain persistence refactors, or vendor-specific runtime integrations."
+  },
+  "stop_conditions": {
+    "stop when": "the slice would require choosing exact execution targets in durable planning by default.",
+    "escalate when boundary reached": "the work needs a broader workflow engine or a second config authority to express the posture safely.",
+    "escalate on scope drift": "the lane spreads into machine-first planning-chain extraction or unrelated planning closure work.",
+    "escalate on proof failure": "the planning handoff and workspace report cannot expose the same capability posture compactly after the new fields land."
+  },
+  "context_budget": {
+    "live working set": "the current roadmap lane, planning handoff projection, workspace mixed-agent target profile reporting, local override schema, and focused CLI/planning tests for those surfaces.",
+    "recoverable later": "older delegation doctrine, archived lane history, and broad architecture prose can be reloaded from compact summary plus the active plan.",
+    "externalize before shift": "the typed capability posture shape, the runtime-resolution rule, milestone proof state, and lane-closeout decision.",
+    "tiny resumability note": "keep the posture typed, advisory, and shared across planning handoff plus workspace resolution.",
+    "context-shift triggers": "shift after a milestone commit, after proof passes or fails, or when the lane-closeout residue has been mirrored into planning."
+  },
+  "delegated_judgment": {
+    "requested outcome": "close the capability-class delegation and handoff posture lane in full.",
+    "hard constraints": "keep the contract vendor-generic, portable, compact, and advisory; preserve checked-in planning as authority; avoid turning config into a scheduler.",
+    "agent may decide locally": "the minimum capability posture field set, the narrowest local target-profile additions needed for resolution, the exact milestone split, and the smallest doc/test refresh that keeps the lane honest.",
+    "escalate when": "the requested outcome would require hard target binding, scheduler-like orchestration, or a second durable execution authority."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {},
+  "immediate_next_action": [],
+  "blockers": [],
+  "touched_paths": [],
+  "invariants": [],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [],
+  "required_tools": [],
+  "completion_criteria": [],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning-bootstrap handoff --format json",
+    "what happened": "activated the lane in checked-in planning, added typed capability posture to the planning handoff contract, extended local target profiles plus execution-shape reporting to resolve that posture, and refreshed the shipped local config example plus delegation docs.",
+    "scope touched": "planning state and handoff surfaces, workspace config/schema/reporting code, shipped local target profiles, compact delegation docs, and focused planning/workspace tests.",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k handoff; uv run pytest tests/test_workspace_cli.py -q -k \"delegation or execution_shape or config_command_reports_local_delegation_target_profiles\"; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; live gh issue view and gh issue close for #283 and #284",
+    "result for continuation": "no further continuation is required for this lane after archive.",
+    "next step": "archive the plan."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest packages/planning/tests/test_installer.py -q -k handoff; uv run pytest tests/test_workspace_cli.py -q -k \"delegation or execution_shape or config_command_reports_local_delegation_target_profiles\"; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json",
+    "proof achieved now": "bounded work can now express typed capability posture in the checked-in planning contract, the derived handoff preserves that posture, and workspace mixed-agent reporting resolves it against configured local targets without hard-binding one runtime.",
+    "evidence for \"proof achieved\" state": "the active summary exposes capability_posture in planning and handoff views, the workspace local override schema now carries location plus capability classes for target profiles, execution-shape reporting resolves those profiles, and the focused planning/workspace proof commands stayed clean."
+  },
+  "intent_satisfaction": {
+    "original intent": "make planning and workflow contracts carry soft execution-class guidance so bounded work can prefer weak, strong, local, or external execution without binding to one runtime.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "the lane now has a compact typed posture packet in planning-backed work, queryable mixed-agent target resolution in the workspace layer, and refreshed docs/config examples that keep the posture advisory and vendor-generic.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "the checked-in planning contract, derived handoff, workspace resolution layer, and focused proof set now cover the whole lane without leaving a required follow-on owner.",
+    "evidence carried forward": "milestone commits, the archived closeout record, the updated workspace/planning code and docs, and the closed GitHub issues #283 and #284.",
+    "reopen trigger": "reopen only if future mixed-agent work needs a richer execution taxonomy, hard target binding, or scheduler-like policy that the compact posture cannot express cleanly."
+  },
+  "execution_summary": {
+    "outcome delivered": "closed the capability-class delegation and handoff posture lane by making typed capability posture part of the active planning contract and resolving it against local target hints in workspace reporting.",
+    "validation confirmed": "uv run pytest packages/planning/tests/test_installer.py -q -k handoff; uv run pytest tests/test_workspace_cli.py -q -k \"delegation or execution_shape or config_command_reports_local_delegation_target_profiles\"; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json",
+    "follow-on routed to": "none; the lane closes here",
+    "post-work posterity capture": "keep capability posture typed, advisory, and portable; leave exact target choice in the local/runtime layer rather than checked-in planning.",
+    "knowledge promoted (memory/docs/config)": "promoted the capability posture packet into active planning, workspace local target profiles, mixed-agent reporting, the shipped local config example, and compact delegation docs.",
+    "resume from": "the next roadmap lane only if it is intentionally promoted"
+  },
+  "drift_log": []
+}

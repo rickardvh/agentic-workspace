@@ -1,0 +1,40 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Planning Surface Review",
+  "goal": [
+    "Check whether `TODO.md`, `ROADMAP.md`, and archived execplans still form a coherent execution contract after the recent skill-system follow-through."
+  ],
+  "scope": [
+    "`TODO.md`",
+    "`ROADMAP.md`",
+    "`.agentic-workspace/planning/execplans/archive/`",
+    "planning surface checks"
+  ],
+  "non_goals": [
+    "Do not activate new work from this review alone.",
+    "Do not re-review individual archived execplan content beyond queue integrity."
+  ],
+  "review_mode": {
+    "mode": "`planning-surface`",
+    "review question": "Are the planning surfaces coherent and idle rather than silently retaining stale active-work residue?",
+    "default finding cap": "3",
+    "inputs inspected first": "`TODO.md`, `ROADMAP.md`, archived execplans from the latest tranche, planning-surface checks"
+  },
+  "review_method": {
+    "commands used": "",
+    "evidence sources": ""
+  },
+  "references": [],
+  "findings": [],
+  "recommendation": {
+    "promote": "none",
+    "defer": "none",
+    "dismiss": "planning-surface coherence concerns in this scope"
+  },
+  "validation_commands": [
+    "`uv run python scripts/check/check_planning_surfaces.py`"
+  ],
+  "drift_log": [
+    "2026-04-09: Review created as part of the full review-matrix pass."
+  ]
+}

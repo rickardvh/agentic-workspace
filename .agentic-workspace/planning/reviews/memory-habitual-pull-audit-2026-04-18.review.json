@@ -1,0 +1,81 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Memory Habitual Pull Audit",
+  "goal": [
+    "Classify recent ordinary-work evidence for whether Memory is actually being pulled directly, surfaced indirectly, bypassed, or merely hypothetically useful.",
+    "Name one dominant remaining practical-pull gap, if any, before broader follow-through is considered."
+  ],
+  "scope": [
+    "`.agentic-workspace/planning/execplans/archive/memory-trust-and-usefulness-first-slice-2026-04-17.md`",
+    "`.agentic-workspace/planning/execplans/archive/memory-routing-capture-cheap-path-2026-04-17.md`",
+    "`.agentic-workspace/planning/execplans/archive/module-reporting-first-slice-2026-04-17.md`",
+    "`.agentic-workspace/planning/reviews/ordinary-use-pull-audit-2026-04-16.md`",
+    "`.agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md`",
+    "`.agentic-workspace/memory/repo/current/routing-feedback.md`",
+    "`ROADMAP.md`"
+  ],
+  "non_goals": [
+    "Build telemetry or a broad usage analytics system.",
+    "Reopen Memory routing or trust-state work that already has healthy fixture-backed proof.",
+    "Treat one isolated skip as evidence of a broad Memory redesign need."
+  ],
+  "review_mode": {
+    "mode": "`ordinary-use-pull`",
+    "review question": "In recent ordinary repo work, was Memory a cheap habitual pull, a surfaced-but-still-indirect aid, a bypassed layer, or only hypothetically useful?",
+    "default finding cap": "3 findings",
+    "inputs inspected first": "recent Memory archived execplans, the prior ordinary-use pull review, the usage ledger contract, and current routing-feedback residue"
+  },
+  "review_method": {
+    "commands used": "",
+    "evidence sources": ""
+  },
+  "references": [],
+  "findings": [
+    {
+      "title": "Recent direct consultation is real, but mostly confined to Memory-focused work",
+      "summary": "Recent slices prove that Memory routing, capture, and trust reporting are being exercised, but the strongest direct pulls are still inside Memory-specific maintenance or package work rather than broad ordinary repo tasks.",
+      "risk if unchanged": "Memory remains easy to describe as healthy while still feeling like a specialist tool rather than a habitual first pull during normal work.",
+      "suggested action": "preserve the ordinary-work answer in a compact report view instead of requiring contributors to infer it from separate route, report, and ownership surfaces.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "`TODO.md` plus active execplan",
+      "promotion trigger": "immediate; this is the current active lane",
+      "post-remediation note shape": "retain as bounded audit evidence"
+    },
+    {
+      "title": "Ordinary work usually saw Memory indirectly through reporting and route proof, not as an explicit first-pull answer",
+      "summary": "The recent combined-report and trust-state slices made Memory more visible and more trustworthy, but they still left ordinary work to reconstruct the actual cheap path from several surfaces.",
+      "risk if unchanged": "agents can keep bypassing Memory out of familiarity or inference cost even when routing and trust-state machinery are already good.",
+      "suggested action": "add one compact Memory report view that states the baseline ordinary-work bundle, the owner boundary, and the current proof signals.",
+      "confidence": "high",
+      "source": "friction-confirmed",
+      "promotion target": "`TODO.md` plus active execplan",
+      "promotion trigger": "immediate; it is one bounded shipped-contract fix",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "The dominant remaining bypass reason is missing first-pull legibility, not raw routing accuracy",
+      "summary": "Current live routing evidence is already healthy; the missing piece is a compact ordinary-work answer that tells an agent what Memory to load first and what Memory does not own.",
+      "risk if unchanged": "the repo keeps treating practical-pull doubt as an open product concern even though the remaining gap is now narrow and contract-shaped.",
+      "suggested action": "finish the lane by shipping the compact first-pull view and explicit owner boundary, then retire the remaining issue cluster if validation stays healthy.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "active execplan",
+      "promotion trigger": "immediate; this is the explicit current closure decision",
+      "post-remediation note shape": "archive alongside the completed lane"
+    }
+  ],
+  "recommendation": {
+    "promote": "the compact `habitual_pull` report view and explicit ordinary-work first-pull guidance.",
+    "defer": "any broader Memory redesign unless future ordinary work surfaces a new repeated bypass cause.",
+    "dismiss": "pressure to add telemetry or force Memory usage."
+  },
+  "validation_commands": [
+    "`uv run agentic-memory-bootstrap report --target . --format json`",
+    "`uv run agentic-memory-bootstrap route-report --target . --format json`",
+    "`rg -n \"habitual|ordinary work|Memory owns|would have helped|bypass|route-report\" docs memory packages/memory tests`"
+  ],
+  "drift_log": [
+    "2026-04-18: Review created while implementing the `memory-trust-habitual-pull` lane to keep the recent-case audit and dominant remaining gap in checked-in form."
+  ]
+}

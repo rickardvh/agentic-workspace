@@ -1,0 +1,111 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Repo-Owned Structured Agent Configuration System",
+  "goal": [],
+  "non_goals": [],
+  "intent_continuity": {
+    "larger intended outcome": "build a repo-owned, vendor-independent structured agent configuration substrate that planning, memory, and future behavior modules can attach to while prose startup surfaces remain compatibility adapters instead of primary authority.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "`repo-owned-structured-agent-configuration-system`"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "reopen only if future repo-custom workflow needs require a new workflow engine, a second authority system, or stronger system-intent/adapter hooks than the current substrate can express compactly."
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {
+    "literal request": "implement the next lane end-to-end, committing after each milestone",
+    "inferred intended outcome": "close the first roadmap lane through real shipped milestones and checked-in proof rather than leaving it as a loose parent-issue cluster.",
+    "chosen concrete what": "finish milestone 3 by formalizing repo-custom workflow obligations in workspace config, making adapter surfaces explicitly compatibility-shaped, making system intent a means-shaping and review-shaping layer in the substrate contract, closing issues `#269` through `#274`, and retiring the roadmap lane.",
+    "interpretation distance": "low",
+    "review guidance": "reject the closeout if repo-custom workflow steps still live only in prose, if adapter surfaces still read like primary authority, or if system intent still acts only as high-level doctrine rather than shaping slice review and tradeoffs."
+  },
+  "execution_bounds": {
+    "allowed paths": "`.agentic-workspace/docs/`, `.agentic-workspace/planning/`, `src/agentic_workspace/`, `tests/`, `packages/planning/`, `README.md`, `AGENTS.md`, `llms.txt`, `.agentic-workspace/config.toml`",
+    "max changed files": "45",
+    "required validation commands": "`uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py tests/test_maintainer_surfaces.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_contract_tooling_surfaces.py`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`; `uv run agentic-workspace summary --format json`",
+    "ask-before-refactor threshold": "stop before introducing a new top-level package, a new persistent runtime artifact family, or cross-module mutation machinery.",
+    "stop before touching": "unrelated recurring-friction work, machine-first planning-chain internals beyond the current lane boundary, or graceful-compliance work outside this lane."
+  },
+  "stop_conditions": {
+    "stop when": "the next improvement would require turning workspace defaults/config into a scheduler-like workflow engine.",
+    "escalate when boundary reached": "closing the lane would require moving planning or memory domain ownership into workspace.",
+    "escalate on scope drift": "the work spreads into unrelated roadmap lanes or needs a new module family.",
+    "escalate on proof failure": "the substrate still cannot answer the main startup, authority, workflow-extension, and review-shaping questions through compact workspace surfaces."
+  },
+  "context_budget": {
+    "live working set": "issues `#269` through `#274`, workspace defaults/config/report outputs, the canonical substrate doc, root adapter surfaces, workflow-obligation config, and package/root contract checks.",
+    "recoverable later": "older architecture discussion and broader doctrine can be reloaded from summary plus the canonical workspace-config contract.",
+    "externalize before shift": "the workflow-obligation schema, the adapter-surface boundary, the system-intent means-shaping rule, and the fact that the lane is fully closed.",
+    "tiny resumability note": "the lane now closes because workspace owns structured substrate truth, compact queries, repo-custom workflow obligations, and prose adapters, while system intent stays a compact means-shaping layer.",
+    "context-shift triggers": "shift after proof passes and the issue/roadmap residue is retired."
+  },
+  "delegated_judgment": {
+    "requested outcome": "finish the lane by landing the remaining workflow-obligation, adapter-surface, and system-intent operationalization tranche, then retire the roadmap lane honestly.",
+    "hard constraints": "preserve selective adoption; keep prose as adapters; keep system intent directional rather than scheduler-like; keep planning and memory as consumers rather than workspace-owned workflow state.",
+    "agent may decide locally": "the minimal workflow-obligation schema, the smallest adapter wording that keeps prose non-authoritative, and the narrowest report/review hooks needed to make system intent and repo-custom obligations operational.",
+    "escalate when": "lane closure would require a general workflow engine, a second config authority, or moving planning or memory domain ownership into workspace config."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {},
+  "immediate_next_action": [],
+  "blockers": [],
+  "touched_paths": [],
+  "invariants": [],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [],
+  "required_tools": [],
+  "completion_criteria": [],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "roadmap lane plus live GitHub issues `#269` through `#274`",
+    "what happened": "milestone 1 established the canonical workspace-config contract and authority map; milestone 2 added selective-loading query classes and current-work report routing; milestone 3 added repo-custom `workflow_obligations` in workspace config and schema/report/defaults/config surfaces, updated the canonical contract docs so system intent now shapes implementation/review/follow-on means rather than acting only as doctrine, and made `AGENTS.md`, `README.md`, and `llms.txt` explicitly adapter-shaped over structured config.",
+    "scope touched": "workspace config/schema/report/defaults/CLI/output code, canonical substrate docs in root and planning payload, root adapter surfaces, planning residue/evidence, and focused workspace/planning tests.",
+    "changed surfaces": "`.agentic-workspace/config.toml`, `.agentic-workspace/docs/workspace-config-contract.md`, `packages/planning/bootstrap/.agentic-workspace/docs/workspace-config-contract.md`, `AGENTS.md`, `README.md`, `llms.txt`, `src/agentic_workspace/config.py`, `src/agentic_workspace/cli.py`, `src/agentic_workspace/workspace_output.py`, `src/agentic_workspace/contracts/report_contract.json`, `src/agentic_workspace/contracts/schemas/workspace_config.schema.json`, `src/agentic_workspace/contracts/schemas/workspace_report.schema.json`, `scripts/check/check_contract_tooling_surfaces.py`, and `tests/test_workspace_cli.py`.",
+    "validations run": "`uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py tests/test_maintainer_surfaces.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_contract_tooling_surfaces.py`; `uv run python scripts/check/check_planning_surfaces.py`; `make maintainer-surfaces`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`; `uv run agentic-workspace summary --format json`; live `gh issue view` plus `gh issue close` for `#269` through `#274`",
+    "result for continuation": "the lane no longer needs an open roadmap owner because the authority map, selective loading, workflow obligations, adapter surfaces, and system-intent shaping hooks now exist in the shipped substrate and the whole GitHub issue cluster is closed.",
+    "next step": "none; resume from the next roadmap lane only if a new lane is intentionally promoted."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "respected the workspace-owned substrate boundary by keeping repo-custom obligations declarative and compact rather than building a workflow engine",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "focused workspace and planning tests passed, contract-tooling and planning-surface checks stayed clean, maintainer surfaces were refreshed successfully, source/payload/root-install boundaries stayed clean, both root upgrades succeeded, and the planning summary remained clean after retiring the lane.",
+    "proof achieved now": "the workspace substrate can now answer authority, selective-loading, workflow-obligation, and adapter-boundary questions directly, while system intent is queryable as a compact means-shaping/review-shaping layer.",
+    "evidence for \"proof achieved\" state": "`workflow_obligations` now exist in config/schema/defaults/config/report surfaces; root adapter docs explicitly point back to structured config authority; the workspace-config contract now treats system intent as a compass that shapes means and review; and issues `#269` through `#274` are closed."
+  },
+  "intent_satisfaction": {
+    "original intent": "build a repo-owned, vendor-independent, structured agent configuration system that planning, memory, and future behavior modules can plug into while reducing ambient prose authority",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "the lane now has a canonical workspace-owned substrate contract, compact query/report surfaces, declarative repo-custom workflow obligations, compatibility-shaped startup adapters, and a compact operational role for system intent.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "the parent issue and all child issues for the lane now map to shipped substrate behavior and checked-in residue rather than open chat intent or prose-only reminders.",
+    "evidence carried forward": "commits `a640893` and `fd67e73`, this closeout archive, the updated workspace package contracts/tests, the refreshed adapter surfaces, and the closed GitHub issues `#269` through `#274`.",
+    "reopen trigger": "reopen only if future work shows that repo-custom workflow obligations, adapter compatibility, or system-intent shaping cannot stay compact without a new substrate shape."
+  },
+  "execution_summary": {
+    "outcome delivered": "closed the structured agent configuration lane by landing workflow obligations, compact query/report wiring, adapter-surface authority boundaries, and system-intent means-shaping guidance in the workspace substrate.",
+    "validation confirmed": "`uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py tests/test_maintainer_surfaces.py -q`; `uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q`; `uv run python scripts/check/check_contract_tooling_surfaces.py`; `uv run python scripts/check/check_planning_surfaces.py`; `make maintainer-surfaces`; `uv run python scripts/check/check_source_payload_operational_install.py`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`; `uv run agentic-workspace summary --format json`",
+    "follow-on routed to": "none; the larger lane is closed",
+    "post-work posterity capture": "keep the rule that structured workspace config owns repo-custom workflow obligations and adapter authority, while prose startup surfaces remain compact compatibility routers.",
+    "knowledge promoted (memory/docs/config)": "promoted the workflow-obligation and adapter-boundary rules into canonical docs, workspace config/schema/report/defaults/config surfaces, and the root startup adapters.",
+    "resume from": "the next roadmap lane only if a new lane is intentionally promoted"
+  },
+  "drift_log": []
+}

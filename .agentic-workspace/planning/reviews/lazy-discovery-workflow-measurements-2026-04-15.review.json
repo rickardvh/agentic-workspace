@@ -1,0 +1,16 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Lazy Discovery Workflow Measurements",
+  "goal": [],
+  "scope": [
+    "Run the expanded lazy-discovery measurement framework against a bounded set of current workflow classes instead of only the original three selector questions."
+  ],
+  "non_goals": [],
+  "review_mode": {},
+  "review_method": {},
+  "references": [],
+  "findings": [],
+  "recommendation": {},
+  "validation_commands": [],
+  "drift_log": []
+}

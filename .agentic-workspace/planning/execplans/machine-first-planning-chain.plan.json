@@ -1,0 +1,95 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Machine-first planning chain",
+  "goal": [
+    "Finalize the transition to a machine-first planning infrastructure by enforcing a canonical JSON sidecar model and purging derived Markdown artifacts."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Finalize the transition to a machine-first planning infrastructure by enforcing a canonical JSON sidecar model and purging derived Markdown artifacts.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "machine-first-planning-chain",
+      "status": "in-progress",
+      "next_step": "Perform an upgrade_bootstrap on the repository root to trigger the new backfill and cleanup logic.",
+      "proof": "Fill in the narrowest command that proves the promoted work."
+    },
+    "scope": {
+      "touched": [
+        "Fill in the concrete files before implementation starts."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Finalize the transition to a machine-first planning infrastructure by enforcing a canonical JSON sidecar model and purging derived Markdown artifacts.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Finalize the transition to a machine-first planning infrastructure by enforcing a canonical JSON sidecar model and purging derived Markdown artifacts.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "machine-first-planning-chain",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Perform an upgrade_bootstrap on the repository root to trigger the new backfill and cleanup logic."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "Fill in the concrete files before implementation starts."
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "Fill in the narrowest command that proves the promoted work."
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "All legacy Markdown plans are migrated to JSON sidecars, redundant Markdown views are purged, and the system is hardened against Markdown-only assumptions."
+  ],
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "resume from": "current milestone"
+  },
+  "drift_log": [
+    "2026-04-23: Promoted from TODO direct-task shape into an execplan."
+  ]
+}

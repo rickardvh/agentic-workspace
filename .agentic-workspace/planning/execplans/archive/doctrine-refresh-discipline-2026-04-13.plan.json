@@ -1,0 +1,79 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Doctrine Refresh Discipline",
+  "goal": [
+    "Define an explicit maintenance contract for long-horizon doctrine so `docs/agent-os-capabilities.md`, `docs/ecosystem-roadmap.md`, and `docs/maturity-model.md` stay synchronized instead of drifting into overlapping shadow backlogs."
+  ],
+  "non_goals": [
+    "Rewriting the product doctrine in `docs/design-principles.md`.",
+    "Promoting new roadmap candidates beyond this slice.",
+    "Expanding the long-horizon docs into broader strategy essays."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Keep the long-horizon doctrine surfaces synchronized and explicitly bounded so future roadmap promotions do not have to rediscover which page owns what.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "doctrine role boundaries, refresh triggers, and consistency rules across the long-horizon docs plus the roadmap queue entry.",
+    "ready": "ready",
+    "blocked": "false",
+    "optional_deps": "None."
+  },
+  "immediate_next_action": [
+    "Archive this completed doctrine-refresh slice and remove its active TODO entry."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "[ROADMAP.md](ROADMAP.md)",
+    "[docs/agent-os-capabilities.md](docs/agent-os-capabilities.md)",
+    "[docs/ecosystem-roadmap.md](docs/ecosystem-roadmap.md)",
+    "[docs/maturity-model.md](docs/maturity-model.md)"
+  ],
+  "invariants": [
+    "Keep `ROADMAP.md` as a bounded queue rather than a doctrine home.",
+    "Keep the capability map, ecosystem stance, and maturity framing distinct.",
+    "Prefer explicit refresh rules over adding more long-horizon narrative."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run python scripts/check/check_planning_surfaces.py`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Each long-horizon doctrine page states its role, refresh triggers, and anti-drift rule clearly.",
+    "The docs describe when to update doctrine directly versus when to route concrete next work back into `ROADMAP.md`.",
+    "`ROADMAP.md` no longer lists doctrine refresh discipline as an open candidate."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "Added explicit role boundaries and refresh triggers to the long-horizon doctrine pages and removed the doctrine-refresh candidate from `ROADMAP.md`.",
+    "validation confirmed": "`uv run python scripts/check/check_planning_surfaces.py`",
+    "follow-on routed to": "none",
+    "resume from": "No further action in this slice; promote the next roadmap candidate when long-horizon work is reopened."
+  },
+  "drift_log": [
+    "2026-04-13: Initial plan created from the roadmap doctrine-refresh candidate."
+  ]
+}

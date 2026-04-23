@@ -1,0 +1,84 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Required Follow-On Routing Follow-Through",
+  "goal": [
+    "Make required follow-on routing part of the normal Planning contract surfaces so maintainers and agents can rely on it going forward without re-deriving the rule from archived execplans or tests."
+  ],
+  "non_goals": [
+    "Do not add new planning mechanics if the current contract is already sufficient.",
+    "Do not reopen the broader bounded delegated judgment capability model.",
+    "Do not leave another continuation candidate behind for this same capability unless validation exposes a fresh defect."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "the planning system should preserve parent intent and required continuation as standard behavior during normal use, not as a one-off dogfood fix.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "required-follow-on-routing-follow-through",
+    "status": "completed",
+    "scope": "update the main planning-facing docs and startup guidance so required follow-on routing is part of the discoverable everyday contract, then validate and archive the capability tranche.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed slice now that required follow-on routing is part of the normal planning-facing contract and no roadmap candidate remains for this capability."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`packages/planning/README.md`",
+    "`docs/contributor-playbook.md`",
+    "`packages/planning/bootstrap/AGENTS.md`",
+    "`packages/planning/tests/test_installer.py`",
+    "`ROADMAP.md`",
+    "`TODO.md`"
+  ],
+  "invariants": [
+    "Required follow-on remains a planning concern, not chat residue.",
+    "The front-door contract stays compact and bounded.",
+    "This slice should end with no remaining roadmap candidate for the same capability unless validation finds a fresh gap."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run pytest packages/planning/tests/test_installer.py`",
+    "`uv run python scripts/check/check_planning_surfaces.py`",
+    "`make maintainer-surfaces`",
+    "`uv run agentic-planning-bootstrap upgrade --target .`",
+    "`uv run agentic-memory-bootstrap upgrade --target .`",
+    "`make check`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "Normal planning-facing docs describe required follow-on routing as part of the default contract.",
+    "Bootstrap guidance tells agents not to close a bounded slice with required continuation only in prose or chat.",
+    "The remaining roadmap candidate for this capability is removed.",
+    "The slice archives cleanly and the active queue returns to empty."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-09: Promoted to finish the capability as a normal discoverable contract rather than leaving the last piece implied by archived dogfood slices.",
+    "2026-04-09: Updated the standard planning-facing docs and bootstrap guidance so required follow-on routing is discoverable without re-deriving it from archived slices or tests."
+  ]
+}

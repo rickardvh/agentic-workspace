@@ -1,0 +1,117 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Native Candidate Lanes First Slice",
+  "goal": [
+    "Add one thin native candidate-lane shape to `ROADMAP.md` so grouped, ordered, promotable future work no longer has to live as ad hoc queue prose."
+  ],
+  "non_goals": [
+    "Do not turn Planning into a backlog system or external tracker clone.",
+    "Do not replace `ROADMAP.md`, `TODO.md`, or execplans with one unified artifact.",
+    "Do not widen this slice into the broader Memory trust/usefulness lane.",
+    "Do not require GitHub issues for the native shape."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "deferred grouped work should stay repo-native, ordered, and promotable without forcing agents to invent new roadmap structures each time.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "a thin native candidate-lane shape can carry grouped deferred work in `ROADMAP.md` and expose it through planning summary/reporting instead of ad hoc queue prose.",
+    "intentionally deferred": "the Memory lane itself, plus any broader roadmap or review-system redesign.",
+    "discovered implications": "archive cleanup and planning checks have to understand the lane shape immediately or the new contract would just create a second stale queue path.",
+    "proof achieved now": "this repo's remaining Memory lane is expressed as a native candidate lane rather than ad hoc queue prose.",
+    "validation still needed": "dogfood the lane shape through ordinary roadmap promotion and future archive cleanup.",
+    "next likely slice": "return to the remaining Memory lane once the native lane shape is installed and the roadmap is quiet again."
+  },
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "land the smallest native candidate-lane contract that replaces the current ad hoc roadmap queue structure.",
+    "hard constraints": "keep the shape file-native, compact, tool-agnostic, and subordinate to `TODO.md` and execplans for active work.",
+    "agent may decide locally": "the exact lane fields, how summary/report surfaces project them, and the minimum docs/checker coverage needed.",
+    "escalate when": "the smallest implementation would require a new planning file, a heavyweight tracker abstraction, or a broad redesign of the planning hierarchy."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "define the lane shape, parse it in planning summary/reporting, update roadmap/checker/docs, translate the remaining Memory lane into the native form, and archive the slice.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed slice, close issue `#135`, and leave the remaining Memory lane as the only roadmap candidate."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "TODO.md",
+    "ROADMAP.md",
+    ".agentic-workspace/planning/execplans/native-candidate-lanes-first-slice-2026-04-17.md",
+    "packages/planning/README.md",
+    "packages/planning/src/repo_planning_bootstrap/cli.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    "packages/planning/bootstrap/ROADMAP.md",
+    "packages/planning/bootstrap/.agentic-workspace/planning/execplans/README.md",
+    "packages/planning/bootstrap/.agentic-workspace/docs/candidate-lanes-contract.md",
+    "packages/planning/bootstrap/.agentic-workspace/planning/scripts/check/check_planning_surfaces.py",
+    ".agentic-workspace/docs/candidate-lanes-contract.md"
+  ],
+  "invariants": [
+    "`ROADMAP.md` remains the single inactive future-candidate surface.",
+    "The lane shape stays lighter than `TODO.md` plus execplans and does not carry active execution state.",
+    "The planning summary remains the preferred compact inspection surface over raw roadmap prose."
+  ],
+  "contract_decisions_to_freeze": [
+    "Native candidate lanes belong inside `ROADMAP.md`, not in a new planning file.",
+    "A lane needs only compact identity, grouped intent, ordering, promotion, and first-slice fields.",
+    "The planning package should keep a flattened candidate view for compatibility while exposing the richer lane view directly."
+  ],
+  "open_questions_to_close": [
+    "None for this first slice."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-planning-bootstrap summary --format json",
+    "uv run agentic-planning-bootstrap report --format json",
+    "uv run agentic-planning-bootstrap upgrade --target .",
+    "uv run agentic-memory-bootstrap upgrade --target .",
+    "uv run python scripts/check/check_source_payload_operational_install.py"
+  ],
+  "required_tools": [
+    "uv",
+    "gh"
+  ],
+  "completion_criteria": [
+    "Planning defines one native `Candidate Lanes` shape inside `ROADMAP.md`.",
+    "Planning summary/reporting expose that lane shape in machine-readable form.",
+    "The checker accepts and validates the lane shape.",
+    "This repo's remaining Memory lane is translated into the native shape."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "added a native `Candidate Lanes` shape inside `ROADMAP.md`, exposed it through planning summary/reporting, taught archive cleanup and planning checks to understand it, and translated the remaining Memory roadmap work into that lane format.",
+    "validation confirmed": "`uv run pytest packages/planning/tests/test_installer.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-planning-bootstrap summary --format json`; `uv run agentic-planning-bootstrap report --format json`; `uv run agentic-planning-bootstrap upgrade --target .`; `uv run agentic-memory-bootstrap upgrade --target .`; `uv run python scripts/check/check_source_payload_operational_install.py`.",
+    "follow-on routed to": "`ROADMAP.md` candidate lane `Memory trust, usefulness, and cleanup ergonomics`.",
+    "resume from": "no further action in this plan; promote the remaining Memory lane when ready."
+  },
+  "drift_log": [
+    "2026-04-17: Promoted from roadmap issue `#135` after the workspace CLI hotspot slice left the roadmap itself as the next repeated planning friction.",
+    "2026-04-17: Added the native lane shape, updated planning summary/reporting plus archive cleanup to understand it, refreshed the root install, and translated the live roadmap to the new contract."
+  ]
+}

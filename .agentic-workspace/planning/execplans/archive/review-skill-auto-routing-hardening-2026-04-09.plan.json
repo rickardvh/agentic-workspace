@@ -1,0 +1,78 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Review-Skill Auto-Routing Hardening",
+  "goal": [
+    "Make review-shaped requests naturally route through the bundled planning review skill without requiring the user to know the skill id or explicitly ask for skill discovery first."
+  ],
+  "non_goals": [
+    "Do not redesign the whole skill system.",
+    "Do not implement every deferred skill-review finding in this slice.",
+    "Do not force skills onto unstable or one-off workflows."
+  ],
+  "intent_continuity": {},
+  "required_continuation": {},
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {},
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "review-skill-auto-routing-hardening",
+    "status": "completed",
+    "scope": "harden the skill-discovery contract and planning startup guidance for review-shaped tasks, strengthen review-skill activation hints, and add regression coverage proving the workspace recommends the review skill for natural review requests.",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "immediate_next_action": [
+    "Archive this execplan and promote the next queued skill-system finding once the planning surfaces are refreshed cleanly."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`TODO.md`",
+    "`ROADMAP.md`",
+    "`.agentic-workspace/planning/execplans/review-skill-auto-routing-hardening-2026-04-09.md`",
+    "`docs/skill-discovery-contract.md`",
+    "`packages/planning/skills/REGISTRY.json`",
+    "`packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json`",
+    "`.agentic-workspace/planning/agent-manifest.json`",
+    "`tools/AGENT_QUICKSTART.md`",
+    "`tools/AGENT_ROUTING.md`",
+    "`tests/test_workspace_cli.py`",
+    "`packages/planning/tests/test_skills_catalog.py`"
+  ],
+  "invariants": [
+    "Users should not need to know skill ids.",
+    "Skills should be used aggressively for stable, repeatable workflows, not forced onto every task.",
+    "Package-managed contract changes must update payload and root install together before the repo relies on them."
+  ],
+  "contract_decisions_to_freeze": [],
+  "open_questions_to_close": [],
+  "validation_commands": [
+    "`uv run pytest tests/test_workspace_cli.py`",
+    "`cd packages/planning && uv run pytest tests/test_skills_catalog.py tests/test_installer.py`",
+    "`make maintainer-surfaces`",
+    "`uv run agentic-planning-bootstrap upgrade --target .`"
+  ],
+  "required_tools": [],
+  "completion_criteria": [
+    "The skill-discovery contract says review-shaped requests should consult the skill layer before generic reasoning.",
+    "Review-skill activation hints cover natural review requests better than before.",
+    "Workspace CLI tests prove review-shaped requests recommend `planning-review-pass`.",
+    "Root installed planning surfaces reflect the updated contract."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {},
+  "drift_log": [
+    "2026-04-09: Promoted from the skill-system review after dogfooding showed that review skills were still not being selected automatically enough in normal repo work.",
+    "2026-04-09: Completed by tightening the skill-discovery consultation contract, expanding review-skill activation hints, and proving natural review requests recommend `planning-review-pass`."
+  ]
+}

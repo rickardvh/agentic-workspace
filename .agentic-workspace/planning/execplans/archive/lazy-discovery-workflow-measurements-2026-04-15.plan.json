@@ -1,0 +1,101 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Lazy Discovery Workflow Measurements",
+  "goal": [
+    "Expand the existing lazy-discovery measurement framework so the repo has workflow-class evidence that compact/query-first surfaces reduce reading cost in more than the original three selector cases."
+  ],
+  "non_goals": [
+    "Do not add telemetry, runtime logging, or provider-specific token accounting.",
+    "Do not redesign the compact-contract profile or reporting hierarchy in the same slice.",
+    "Do not turn the measurement lane into generic product analytics."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "close GitHub issue `#87` with a broader but still cheap proof bar for query-first and report-first workflow claims.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {},
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "extend the current measurement script and audit so startup, planning inspection, jumpstart/setup, proof selection, ownership lookup, and restart/handoff questions are all measured with the same cheap framework.",
+    "hard constraints": "keep the method reproducible and cheap; prefer explicit proxies over fake exactness; keep the workflow set bounded.",
+    "agent may decide locally": "exact workflow questions, the baseline read bundles, the compact/query-first command set, and whether the final evidence lives in one review artifact or a paired doc plus review.",
+    "escalate when": "the tranche would require live telemetry, scenario harnesses, or a new benchmark system instead of an extension of the checked-in measurement contract."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "id": "lazy-discovery-workflow-measurements",
+    "status": "completed",
+    "scope": "extended the measurement script and docs, ran one broader audit over a small workflow set, and prepared GitHub issue `#87` for closure.",
+    "ready": "complete",
+    "blocked": "none",
+    "optional_deps": "GitHub issue `#87`"
+  },
+  "immediate_next_action": [
+    "None. Slice completed; clear the final GitHub issue and leave the roadmap empty."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "`ROADMAP.md`",
+    "`TODO.md`",
+    "`.agentic-workspace/planning/execplans/lazy-discovery-workflow-measurements-2026-04-15.md`",
+    "`docs/lazy-discovery-measurements.md`",
+    "`.agentic-workspace/planning/reviews/`",
+    "`scripts/check/measure_lazy_discovery.py`",
+    "`tests/`"
+  ],
+  "invariants": [
+    "The framework stays cheap enough to run as a normal checked-in proof lane.",
+    "Measurements stay explicit about what is proxy versus qualitative interpretation.",
+    "Workflow-class measurement should compare the preferred compact/query-first route against the plausible broader route a contributor would otherwise use."
+  ],
+  "contract_decisions_to_freeze": [
+    "The expanded tranche should keep one small reusable script rather than adding a second measurement tool.",
+    "File-bundle baselines are acceptable when the real fallback path is prose-first or file-first rather than a broader machine-readable command."
+  ],
+  "open_questions_to_close": [
+    "Which workflow classes are broad enough to matter for `#87` but still bounded enough to keep the audit cheap?",
+    "Which manual/qualitative notes belong beside the numeric proxies so the audit says something about restart and curation cost rather than only byte counts?"
+  ],
+  "validation_commands": [
+    "`uv run pytest tests/test_lazy_discovery_measurements.py -q`",
+    "`uv run python scripts/check/measure_lazy_discovery.py --target .`",
+    "`uv run python scripts/check/check_planning_surfaces.py`",
+    "`uv run ruff check scripts/check/measure_lazy_discovery.py tests/test_lazy_discovery_measurements.py`"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "The measurement script covers a broader workflow set than the original three selector cases.",
+    "The canonical measurement doc explains the expanded method and its limits.",
+    "A new audit artifact records the measured savings and qualitative workflow takeaways for the broader tranche.",
+    "GitHub issue `#87` can close on the resulting evidence."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "expanded `scripts/check/measure_lazy_discovery.py` from three selector-only questions to five workflow classes, added focused regression coverage, updated the canonical measurement doc, and recorded the broader audit in `.agentic-workspace/planning/reviews/lazy-discovery-workflow-measurements-2026-04-15.md`; the resulting steady-state audit shows five compact routes replacing sixteen fallback file reads while cutting retrieval payload by about 86% overall.",
+    "validation confirmed": "`uv run pytest tests/test_lazy_discovery_measurements.py -q`; `uv run ruff check scripts/check/measure_lazy_discovery.py tests/test_lazy_discovery_measurements.py`; `uv run python scripts/check/measure_lazy_discovery.py --target .`; `uv run python scripts/check/check_planning_surfaces.py`",
+    "follow-on routed to": "none",
+    "resume from": "no remaining roadmap candidate; next work starts from new GitHub intake or new dogfooding friction."
+  },
+  "drift_log": [
+    "2026-04-15: Promoted GitHub issue `#87` into the final active measurement tranche after the smaller discoverability fixes landed and the roadmap narrowed to this one evidence pass.",
+    "2026-04-15: Completed the broader workflow-class audit and confirmed the compact/query-first route replaces 16 fallback file reads and reduces retrieval payload by about 86% across the measured tranche."
+  ]
+}

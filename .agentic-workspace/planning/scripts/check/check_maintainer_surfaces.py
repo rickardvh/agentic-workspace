@@ -81,11 +81,6 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Advisory maintainer-surface health checker.")
     parser.add_argument("--format", choices=("text", "json"), default="text", help="Output format.")
     parser.add_argument("--strict", action="store_true", help="Return non-zero exit status when warnings are present.")
-    parser.add_argument(
-        "--quiet-success",
-        action="store_true",
-        help="Emit a compact one-line success message when no warnings are present.",
-    )
     return parser.parse_args(argv)
 
 
@@ -97,10 +92,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.format == "json":
         print(json.dumps(summary, ensure_ascii=False, indent=2))
     else:
-        if args.quiet_success and not warnings:
-            print("[ok] maintainer surfaces")
-        else:
-            _print_warnings(warnings)
+        _print_warnings(warnings)
 
     return 1 if args.strict and warnings else 0
 

@@ -1,0 +1,124 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Module Reporting First Slice",
+  "goal": [
+    "Ship canonical compact module reporting surfaces so planning and memory state can be summarized without reading raw module files first."
+  ],
+  "non_goals": [
+    "Replace canonical planning or memory state with report output.",
+    "Turn reporting into a second editable workflow layer.",
+    "Redesign memory trust/usefulness policy in the same slice just because the new report exposes existing weaknesses.",
+    "Rewrite the shared workspace CLI while landing the reporting contract."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Each installed module exposes one compact derived state report with shared reporting vocabulary, and the workspace report can consume those module views instead of forcing raw-file inspection.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Planning and Memory now expose module-owned compact report commands, and the workspace report can surface those module reports directly.",
+    "intentionally deferred": "bounded workspace CLI hotspot reduction and the broader memory trust/usefulness lane that the new memory report makes more visible.",
+    "discovered implications": "Module reporting stays useful only if it remains stricter and quieter than the lower-level doctor/routing/promotion surfaces it derives from.",
+    "proof achieved now": "`agentic-planning-bootstrap report`, `agentic-memory-bootstrap report`, and `agentic-workspace report` all expose compact module-state views with shared field vocabulary and no second state store.",
+    "validation still needed": "ordinary-work dogfooding on the new memory report during the later memory lane.",
+    "next likely slice": "Return to the roadmap queue and take the bounded workspace CLI hotspot lane before widening memory follow-through."
+  },
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "implement the remaining roadmap milestone for canonical module reporting surfaces and keep the follow-on queue bounded.",
+    "hard constraints": "reports must stay derived, compact, machine-readable first, and subordinate to canonical planning/memory state.",
+    "agent may decide locally": "exact report field shape, whether planning needs a thin report wrapper over summary, and how much workspace aggregation is justified.",
+    "escalate when": "the smallest implementation would require a new editable state surface, a broad CLI rewrite, or mixing memory cleanup policy into the reporting tranche."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "add module report commands for planning and memory, wire them into the workspace report, update the shared reporting contract, and cover the new surfaces with focused tests and contract checks.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed slice, close issue `#40`, and advance the roadmap to `#134`."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "ROADMAP.md",
+    ".agentic-workspace/planning/execplans/archive/module-reporting-first-slice-2026-04-17.md",
+    ".agentic-workspace/docs/reporting-contract.md",
+    "packages/planning/README.md",
+    "packages/planning/src/repo_planning_bootstrap/cli.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    "packages/memory/README.md",
+    "packages/memory/src/repo_memory_bootstrap/cli.py",
+    "packages/memory/src/repo_memory_bootstrap/installer.py",
+    "packages/memory/tests/test_installer.py",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/report_contract.json",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "src/agentic_workspace/workspace_output.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Planning summary and memory doctor/routing/promotion remain the authoritative underlying surfaces.",
+    "Module reports may compress or prioritize derived state, but they must not change canonical truth or execution posture.",
+    "The workspace report remains a combined view, not a second planning or memory schema."
+  ],
+  "contract_decisions_to_freeze": [
+    "`agentic-planning-bootstrap report --format json` is a compact module report derived from planning summary, not a new planner state file.",
+    "`agentic-memory-bootstrap report --target ./repo --format json` is a compact module report derived from existing doctor/current/routing/promotion surfaces.",
+    "`agentic-workspace report --target ./repo --format json` now carries `module_reports` alongside lifecycle `reports`."
+  ],
+  "open_questions_to_close": [
+    "How much additional memory trust/usefulness signal should move into the compact memory report versus stay in lower-level audit surfaces?",
+    "Which single workspace CLI concern should be extracted next to reduce reread pressure without widening the workspace layer?"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py packages/planning/tests/test_installer.py packages/memory/tests/test_installer.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run python scripts/check/check_source_payload_operational_install.py",
+    "uv run agentic-planning-bootstrap report --format json",
+    "uv run agentic-memory-bootstrap report --target . --format json",
+    "uv run agentic-workspace report --target . --format json",
+    "uv run agentic-planning-bootstrap upgrade --target .",
+    "uv run agentic-memory-bootstrap upgrade --target ."
+  ],
+  "required_tools": [
+    "uv",
+    "gh"
+  ],
+  "completion_criteria": [
+    "Planning exposes a compact module report derived from summary.",
+    "Memory exposes a compact module report derived from existing canonical surfaces.",
+    "Workspace reporting can surface module reports directly without creating a second state store.",
+    "The reporting contract and schema checks accept the new module report aggregation field."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "added compact planning and memory module report commands, updated the shared workspace reporting contract and schema to carry `module_reports`, wired the workspace report to consume those module views, and covered the new reporting layer with focused package/workspace tests plus contract drift checks.",
+    "validation confirmed": "`uv run pytest tests/test_workspace_cli.py packages/planning/tests/test_installer.py packages/memory/tests/test_installer.py -q`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run python scripts/check/check_contract_tooling_surfaces.py`; `uv run python scripts/check/check_source_payload_operational_install.py`; live dogfood via `uv run agentic-planning-bootstrap report --format json`, `uv run agentic-memory-bootstrap report --target . --format json`, and `uv run agentic-workspace report --target . --format json`; final root refresh via both package upgrade commands.",
+    "follow-on routed to": "`ROADMAP.md` next candidate `Shared workspace CLI hotspot reduction`, with the memory trust/usefulness lane remaining behind it.",
+    "resume from": "No further action in this plan; promote `#134` when starting the next bounded slice."
+  },
+  "drift_log": [
+    "2026-04-17: Promoted roadmap issue `#40` into a bounded reporting tranche.",
+    "2026-04-17: Landed module reports for planning and memory, updated the workspace report contract, and prepared the slice for archive."
+  ]
+}

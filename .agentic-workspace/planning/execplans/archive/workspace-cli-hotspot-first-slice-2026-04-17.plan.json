@@ -1,0 +1,103 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Workspace CLI Hotspot First Slice",
+  "goal": [
+    "Reduce one repeated shared-workspace CLI hotspot by extracting a coherent report/setup shaping concern from `src/agentic_workspace/cli.py` without widening the workspace layer."
+  ],
+  "non_goals": [
+    "Do not broadly rewrite the workspace CLI.",
+    "Do not create a new module or change workspace/package ownership.",
+    "Do not change the public report or setup contract while reducing the hotspot.",
+    "Do not widen this slice into the Memory follow-through lane."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "repeated repo-friction evidence against the shared workspace CLI should be reduced through bounded ownership tightening rather than tolerated indefinitely.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "the workspace CLI now delegates report/setup discovery, output-contract shaping, and repo-friction payload construction to one dedicated helper surface.",
+    "intentionally deferred": "any broader CLI decomposition beyond this one coherent concern, plus the remaining Memory trust/usefulness lane.",
+    "discovered implications": "hotspot-reduction slices are more reliable when they target one derived shared concern and preserve the root CLI as an orchestrator rather than a second policy surface.",
+    "proof achieved now": "the extracted helper owns the shared report/setup shaping logic and the focused workspace report/setup tests still pass unchanged.",
+    "validation still needed": "ordinary-work dogfooding after later slices to confirm the hotspot actually rereads less often in practice.",
+    "next likely slice": "reprioritize the remaining roadmap between the new native candidate-lane issue and the Memory lane, then promote the next bounded tranche."
+  },
+  "intent_interpretation": {},
+  "execution_bounds": {},
+  "stop_conditions": {},
+  "context_budget": {},
+  "delegated_judgment": {
+    "requested outcome": "close the bounded workspace CLI hotspot lane without turning it into a broad cleanup campaign.",
+    "hard constraints": "preserve current report/setup behavior, keep the workspace layer thin, and avoid introducing a new state owner.",
+    "agent may decide locally": "which coherent concern to extract, whether the extracted helper should stay workspace-local, and the minimum planning updates needed after closure.",
+    "escalate when": "the smallest clean cut would require a public contract change, a new module, or a broad rewrite of unrelated CLI concerns."
+  },
+  "references": [],
+  "capability_posture": {},
+  "active_milestone": {
+    "status": "completed",
+    "scope": "extract the shared report/setup shaping concern into one helper module, validate the unchanged contract, archive the slice, and close issue `#134`.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed slice, close issue `#134`, and reprioritize the remaining roadmap with issue `#135` against the Memory lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "ROADMAP.md",
+    ".agentic-workspace/planning/execplans/archive/workspace-cli-hotspot-first-slice-2026-04-17.md",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/reporting_support.py"
+  ],
+  "invariants": [
+    "`src/agentic_workspace/cli.py` remains the orchestration entrypoint for workspace commands.",
+    "The extracted helper remains a workspace-local implementation detail, not a new product module.",
+    "Report/setup payloads remain derived from canonical config, lifecycle state, and existing helper inputs."
+  ],
+  "contract_decisions_to_freeze": [
+    "Shared report/setup shaping logic is a coherent enough concern to extract without changing the public workspace contract.",
+    "Reducing workspace CLI reread pressure should prefer helper-boundary extraction over broad structural churn."
+  ],
+  "open_questions_to_close": [
+    "Should future hotspot slices continue targeting report/setup shaping, or is another concern now the next reread hotspot?",
+    "Does the new planning issue about native candidate lanes belong ahead of the Memory lane once this hotspot slice is complete?"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"report_real_init_summarizes_combined_workspace_state or report_surfaces_large_file_hotspots_as_repo_friction_evidence or report_consumes_external_codebase_map_when_present or setup_command_reports_no_new_seed_surfaces_for_mature_repo\"",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py"
+  ],
+  "required_tools": [
+    "uv",
+    "gh"
+  ],
+  "completion_criteria": [
+    "One coherent workspace CLI concern is extracted to a helper boundary.",
+    "The workspace report/setup behavior remains unchanged under focused tests.",
+    "The roadmap no longer carries `#134` as an open lane after closure."
+  ],
+  "execution_run": {},
+  "finished_run_review": {},
+  "proof_report": {},
+  "intent_satisfaction": {},
+  "closure_check": {},
+  "execution_summary": {
+    "outcome delivered": "extracted the shared report/setup shaping concern from `src/agentic_workspace/cli.py` into `src/agentic_workspace/reporting_support.py`, leaving the CLI as the caller and preserving the existing workspace report/setup contract.",
+    "validation confirmed": "`uv run pytest tests/test_workspace_cli.py -q -k \"report_real_init_summarizes_combined_workspace_state or report_surfaces_large_file_hotspots_as_repo_friction_evidence or report_consumes_external_codebase_map_when_present or setup_command_reports_no_new_seed_surfaces_for_mature_repo\"`; `uv run python scripts/check/check_contract_tooling_surfaces.py`.",
+    "follow-on routed to": "`ROADMAP.md`, where the remaining queue must now be reprioritized between planning issue `#135` and the Memory lane.",
+    "resume from": "no further action in this plan; start from the reprioritized roadmap queue."
+  },
+  "drift_log": [
+    "2026-04-17: Promoted the bounded workspace CLI hotspot lane after module reporting surfaced repeated report/setup reread pressure.",
+    "2026-04-17: Extracted the report/setup shaping concern into `reporting_support.py` and prepared the lane for closure."
+  ]
+}

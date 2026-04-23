@@ -1,0 +1,16 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Local Delegation Target Profiles Dogfood",
+  "goal": [
+    "Check whether the new local-only delegation target profile surface is actually enough to reduce orchestrator guesswork without turning local config into a scheduler."
+  ],
+  "scope": [],
+  "non_goals": [],
+  "review_mode": {},
+  "review_method": {},
+  "references": [],
+  "findings": [],
+  "recommendation": {},
+  "validation_commands": [],
+  "drift_log": []
+}
