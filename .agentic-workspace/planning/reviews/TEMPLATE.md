@@ -3,6 +3,7 @@
 Use this template for a bounded review artifact in `.agentic-workspace/planning/reviews/`.
 Keep the file focused on one review question or one narrow repo area.
 Promote only the findings that justify future work; do not treat this file as an active execution plan.
+When `TEMPLATE.review.json` is used, that sidecar is the canonical review artifact and this Markdown file is the rendered human view.
 
 ## Goal
 
@@ -27,6 +28,10 @@ Promote only the findings that justify future work; do not treat this file as an
 
 - Commands used:
 - Evidence sources:
+
+## References
+
+- kind: issue | target: #123 | role: context | label: Related issue
 
 ## Findings
 

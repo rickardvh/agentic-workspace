@@ -59,6 +59,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
     Path(".agentic-workspace/planning/reviews/README.md"),
     Path(".agentic-workspace/planning/reviews/TEMPLATE.md"),
+    Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json"),
     Path(".agentic-workspace/planning/upstream-task-intake.md"),
     ROOT_RENDER_SCRIPT_PATH,
     ROOT_CHECKER_SCRIPT_PATH,
@@ -99,6 +100,7 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
     Path(".agentic-workspace/planning/reviews/README.md"),
     Path(".agentic-workspace/planning/reviews/TEMPLATE.md"),
+    Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json"),
     Path(".agentic-workspace/planning/upstream-task-intake.md"),
     PLANNING_MANIFEST_PATH,
 )
@@ -130,6 +132,7 @@ PAYLOAD_GUIDANCE_FRAGMENTS = {
 TODO_EMPTY_STATE_LINE = "- No active work right now."
 _COMPATIBILITY_VIEW_NOTICE = "<!-- GENERATED COMPATIBILITY VIEW: authoritative source is .agentic-workspace/planning/state.toml -->"
 EXECPLAN_RECORD_KIND = "planning-execplan/v1"
+REVIEW_RECORD_KIND = "planning-review/v1"
 PLANNING_REFERENCE_KIND_DEFAULT = "artifact"
 PLANNING_REFERENCE_ROLE_DEFAULT = "context"
 
@@ -165,6 +168,19 @@ EXECPLAN_SECTION_ORDER: tuple[tuple[str, str, str], ...] = (
     ("Intent Satisfaction", "intent_satisfaction", "dict"),
     ("Closure Check", "closure_check", "dict"),
     ("Execution Summary", "execution_summary", "dict"),
+    ("Drift Log", "drift_log", "list"),
+)
+
+REVIEW_SECTION_ORDER: tuple[tuple[str, str, str], ...] = (
+    ("Goal", "goal", "list"),
+    ("Scope", "scope", "list"),
+    ("Non-Goals", "non_goals", "list"),
+    ("Review Mode", "review_mode", "dict"),
+    ("Review Method", "review_method", "dict"),
+    ("References", "references", "references"),
+    ("Findings", "findings", "findings"),
+    ("Recommendation", "recommendation", "dict"),
+    ("Validation / Inspection Commands", "validation_commands", "list"),
     ("Drift Log", "drift_log", "list"),
 )
 
@@ -496,6 +512,191 @@ def _write_execplan_record(*, record_path: Path, record: dict[str, Any], render_
         markdown_path.write_text(_render_execplan_markdown_from_record(record), encoding="utf-8")
 
 
+def _canonical_review_record_path(review_path: Path) -> Path:
+    if review_path.name.endswith(".review.json"):
+        return review_path
+    return review_path.with_suffix(".review.json")
+
+
+def _derived_review_markdown_path(record_path: Path) -> Path:
+    if record_path.name.endswith(".review.json"):
+        return record_path.with_name(record_path.name[: -len(".review.json")] + ".md")
+    return record_path.with_suffix(".md")
+
+
+def _load_review_record(review_path: Path) -> dict[str, Any] | None:
+    record_path = _canonical_review_record_path(review_path)
+    if not record_path.exists():
+        return None
+    try:
+        payload = json.loads(record_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict) or payload.get("kind") != REVIEW_RECORD_KIND:
+        return None
+    return payload
+
+
+def _normalize_review_finding(raw: Any) -> dict[str, str] | None:
+    if not isinstance(raw, dict):
+        return None
+    title = str(raw.get("title", "")).strip()
+    if not title:
+        return None
+    finding = {
+        "title": title,
+        "summary": str(raw.get("summary", "")).strip(),
+        "evidence": str(raw.get("evidence", "")).strip(),
+        "risk if unchanged": str(raw.get("risk if unchanged", "")).strip(),
+        "suggested action": str(raw.get("suggested action", "")).strip(),
+        "confidence": str(raw.get("confidence", "")).strip(),
+        "source": str(raw.get("source", "")).strip(),
+        "promotion target": str(raw.get("promotion target", "")).strip(),
+        "promotion trigger": str(raw.get("promotion trigger", "")).strip(),
+        "post-remediation note shape": str(raw.get("post-remediation note shape", "")).strip(),
+    }
+    return {key: value for key, value in finding.items() if value}
+
+
+def _render_review_markdown_from_record(record: dict[str, Any]) -> str:
+    lines = [f"# {str(record.get('title', 'Review Title')).strip() or 'Review Title'}", ""]
+    for heading, key, value_kind in REVIEW_SECTION_ORDER:
+        value = record.get(key)
+        lines.extend([f"## {heading}", ""])
+        if value_kind == "dict":
+            if not isinstance(value, dict):
+                continue
+            for field, field_value in value.items():
+                if isinstance(field_value, list):
+                    rendered_value = ", ".join(str(item).strip() for item in field_value if str(item).strip())
+                else:
+                    rendered_value = str(field_value).strip()
+                lines.append(f"- {str(field).strip().capitalize()}: {rendered_value}")
+        elif value_kind == "references":
+            if not isinstance(value, list):
+                continue
+            rendered_references = [_normalize_reference_record(item) for item in value]
+            rendered_references = [item for item in rendered_references if item is not None]
+            if not rendered_references:
+                rendered_references = [{"kind": "artifact", "target": "none", "role": "context"}]
+            for reference in rendered_references:
+                lines.append(_render_reference_line(reference))
+        elif value_kind == "findings":
+            if not isinstance(value, list):
+                continue
+            normalized_findings = [_normalize_review_finding(item) for item in value]
+            normalized_findings = [item for item in normalized_findings if item is not None]
+            if not normalized_findings:
+                lines.append("- None.")
+            for finding in normalized_findings:
+                lines.extend([f"### Finding: {finding['title']}", ""])
+                for field, field_value in finding.items():
+                    if field == "title":
+                        continue
+                    lines.append(f"- {field.capitalize()}: {field_value}")
+                lines.append("")
+        else:
+            if not isinstance(value, list):
+                continue
+            rendered_items = [str(item).strip() for item in value if str(item).strip()]
+            if not rendered_items:
+                rendered_items = ["None."]
+            for item in rendered_items:
+                lines.append(f"- {item}")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _write_review_record(*, record_path: Path, record: dict[str, Any], render_markdown: bool = True) -> None:
+    record_path.parent.mkdir(parents=True, exist_ok=True)
+    record_path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if render_markdown:
+        markdown_path = _derived_review_markdown_path(record_path)
+        markdown_path.write_text(_render_review_markdown_from_record(record), encoding="utf-8")
+
+
+def _review_title(path: Path) -> str:
+    record = _load_review_record(path)
+    if isinstance(record, dict):
+        title = str(record.get("title", "")).strip()
+        if title:
+            return title
+    for line in _read_lines(path):
+        if line.startswith("# "):
+            return line[2:].strip()
+    return path.stem.replace("-", " ").title()
+
+
+def _review_findings(path: Path) -> list[dict[str, str]]:
+    record = _load_review_record(path)
+    if isinstance(record, dict) and isinstance(record.get("findings"), list):
+        findings = [_normalize_review_finding(item) for item in record.get("findings", [])]
+        return [item for item in findings if item is not None]
+
+    findings_section = _section_lines(_read_lines(path), "Findings")
+    findings: list[dict[str, str]] = []
+    current_title = ""
+    current_lines: list[str] = []
+    for line in findings_section:
+        if line.startswith("### Finding:"):
+            if current_title:
+                finding = _extract_kv_fields(current_lines)
+                finding["title"] = current_title
+                normalized = _normalize_review_finding(finding)
+                if normalized is not None:
+                    findings.append(normalized)
+            current_title = line.split(":", 1)[1].strip()
+            current_lines = []
+            continue
+        if current_title:
+            current_lines.append(line)
+    if current_title:
+        finding = _extract_kv_fields(current_lines)
+        finding["title"] = current_title
+        normalized = _normalize_review_finding(finding)
+        if normalized is not None:
+            findings.append(normalized)
+    return findings
+
+
+def _build_review_record_from_markdown(review_path: Path) -> dict[str, Any]:
+    lines = _read_lines(review_path)
+    review_mode = _extract_kv_fields(_section_lines(lines, "Review Mode"))
+    review_method = _extract_kv_fields(_section_lines(lines, "Review Method"))
+    recommendation = _extract_kv_fields(_section_lines(lines, "Recommendation"))
+    return {
+        "kind": REVIEW_RECORD_KIND,
+        "title": _review_title(review_path),
+        "goal": _extract_section_bullets(review_path, "Goal"),
+        "scope": _extract_section_bullets(review_path, "Scope"),
+        "non_goals": _extract_section_bullets(review_path, "Non-Goals"),
+        "review_mode": review_mode,
+        "review_method": review_method,
+        "references": _extract_reference_section(review_path, "References"),
+        "findings": _review_findings(review_path),
+        "recommendation": recommendation,
+        "validation_commands": _extract_section_bullets(review_path, "Validation / Inspection Commands"),
+        "drift_log": _extract_section_bullets(review_path, "Drift Log"),
+    }
+
+
+def _backfill_review_records(target_root: Path) -> None:
+    review_dir = target_root / ".agentic-workspace" / "planning" / "reviews"
+    if not review_dir.exists():
+        return
+    for review_path in sorted(review_dir.glob("*.md")):
+        if review_path.name in {"README.md", "TEMPLATE.md"}:
+            continue
+        record_path = _canonical_review_record_path(review_path)
+        record = _load_review_record(review_path)
+        if record is None:
+            record = _build_review_record_from_markdown(review_path)
+            _write_review_record(record_path=record_path, record=record)
+            continue
+        if not _derived_review_markdown_path(record_path).exists():
+            _write_review_record(record_path=record_path, record=record)
+
+
 def list_payload_files() -> list[str]:
     root = payload_root()
     return [path.relative_to(root).as_posix() for path in sorted(root.rglob("*")) if _should_include_payload_path(path, root)]
@@ -517,6 +718,7 @@ def install_bootstrap(
         _migrate_legacy_planning_surfaces(target_root, force=force)
         _ensure_state_toml_exists(target_root, overwrite=force)
         _remove_generated_planning_views(target_root, result=result)
+        _backfill_review_records(target_root)
     if local_only and not dry_run:
         _ensure_local_ignored(target or Path.cwd())
     return result
@@ -542,6 +744,7 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) 
         _migrate_legacy_planning_surfaces(target_root)
         _ensure_state_toml_exists(target_root)
         _remove_generated_planning_views(target_root, result=result)
+        _backfill_review_records(target_root)
     return result
 
 
@@ -562,6 +765,7 @@ def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False
         _migrate_legacy_planning_surfaces(target_root)
         _ensure_state_toml_exists(target_root)
         _remove_generated_planning_views(target_root, result=result)
+        _backfill_review_records(target_root)
     return result
 
 

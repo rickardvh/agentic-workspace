@@ -1,6 +1,7 @@
 # Review Artifacts
 
 Checked-in review artifacts for bounded future-work discovery live in this directory.
+When a review has a sibling `.review.json` file, that sidecar is the canonical review record and the `.md` file is the derived human view.
 
 Use this lane when an agent or maintainer is doing deliberate analysis of a repo area to surface concrete risks, opportunities, or weaknesses that may deserve future work, but should not automatically become active execution.
 
@@ -52,6 +53,7 @@ Each review artifact should stay compact and include:
 - validation or inspection commands used
 
 Use the template in this directory and prefer one bounded review question per file.
+Prefer `TEMPLATE.review.json` plus a rendered Markdown view when you want the review to stay queryable and machine-usable.
 
 ## Canonical Review Portfolio
 

@@ -1,0 +1,57 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Review Title",
+  "goal": [
+    ""
+  ],
+  "scope": [
+    ""
+  ],
+  "non_goals": [
+    ""
+  ],
+  "review_mode": {
+    "mode": "",
+    "review question": "",
+    "default finding cap": "",
+    "inputs inspected first": ""
+  },
+  "review_method": {
+    "commands used": "",
+    "evidence sources": ""
+  },
+  "references": [
+    {
+      "kind": "",
+      "target": "",
+      "label": "",
+      "role": "",
+      "locator": ""
+    }
+  ],
+  "findings": [
+    {
+      "title": "",
+      "summary": "",
+      "evidence": "",
+      "risk if unchanged": "",
+      "suggested action": "",
+      "confidence": "",
+      "source": "",
+      "promotion target": "",
+      "promotion trigger": "",
+      "post-remediation note shape": ""
+    }
+  ],
+  "recommendation": {
+    "promote": "",
+    "defer": "",
+    "dismiss": ""
+  },
+  "validation_commands": [
+    ""
+  ],
+  "drift_log": [
+    "2026-01-01: Review created."
+  ]
+}

@@ -416,6 +416,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     intake_skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-intake-upstream-task" / "SKILL.md"
     review_readme_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "README.md"
     review_template_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.md"
+    review_record_template_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.review.json"
     intake_doc_path = tmp_path / ".agentic-workspace" / "planning" / "upstream-task-intake.md"
 
     assert (tmp_path / "AGENTS.md").exists()
@@ -431,6 +432,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert extraction_doc_path.exists()
     assert review_readme_path.exists()
     assert review_template_path.exists()
+    assert review_record_template_path.exists()
     assert intake_doc_path.exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "TEMPLATE.plan.json").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
@@ -458,6 +460,7 @@ def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path(".agentic-workspace/docs/minimum-operating-model.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/execplans/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/reviews/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/upstream-task-intake.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/docs/routing-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path("tools/AGENT_QUICKSTART.md") in PLANNING_LOWER_STABILITY_HELPER_FILES
@@ -1374,6 +1377,80 @@ def test_planning_summary_and_handoff_expose_structured_execplan_references(tmp_
     assert "packages/planning/src/repo_planning_bootstrap/installer.py" in summary["active_contract"]["minimal_refs"]
     assert handoff["handoff_contract"]["references"][0]["target"] == "#280"
     assert handoff["handoff_contract"]["references"][1]["role"] == "implementation-target"
+
+
+def test_upgrade_backfills_canonical_review_records(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    review_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "review-alpha.md"
+    review_path.write_text(
+        """
+# Review Alpha
+
+## Goal
+
+- Check one narrow planning boundary.
+
+## Scope
+
+- `.agentic-workspace/planning/reviews/`
+
+## Non-Goals
+
+- No implementation work.
+
+## Review Mode
+
+- Mode: review-promotion
+- Review question: should this review stay live?
+- Default finding cap: 2
+- Inputs inspected first: reviews README
+
+## Review Method
+
+- Commands used: uv run pytest packages/planning/tests/test_installer.py -q
+- Evidence sources: local review artifact
+
+## Findings
+
+### Finding: stale residue
+
+- Summary: the review should shrink after promotion.
+- Evidence: the artifact is no longer the only durable owner.
+- Risk if unchanged: review residue grows into a parallel archive.
+- Suggested action: move durable residue into a structured record.
+- Confidence: high
+- Source: static-analysis
+- Promotion target: `.agentic-workspace/planning/state.toml (roadmap)`
+- Promotion trigger: when the finding is confirmed
+- Post-remediation note shape: shrink
+
+## Recommendation
+
+- Promote: yes
+- Defer: no
+- Dismiss: no
+
+## Validation / Inspection Commands
+
+- uv run pytest packages/planning/tests/test_installer.py -q
+
+## Drift Log
+
+- 2026-04-23: Review created.
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    upgrade_bootstrap(target=tmp_path)
+
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "review-alpha.review.json"
+    assert record_path.exists()
+    payload = json.loads(record_path.read_text(encoding="utf-8"))
+    assert payload["kind"] == "planning-review/v1"
+    assert payload["title"] == "Review Alpha"
+    assert payload["review_mode"]["mode"] == "review-promotion"
+    assert payload["findings"][0]["title"] == "stale residue"
 
 
 def test_archive_execplan_blocks_unfinished_larger_intent_without_continuation_surface(tmp_path: Path) -> None:
