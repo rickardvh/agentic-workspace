@@ -97,6 +97,7 @@ Use git history for superseded active-step detail; keep only the closure, contin
 - Larger-intent status: closed
 - Closure decision: archive-and-close
 - Why this decision is honest: the bounded lane outcome and its linked issue cluster are fully implemented with green proof and no required continuation.
+- Reopen evidence: later GitHub follow-on work reopened related review gaps in `#259` and `#260`, so archived trust should be read as lower even though the slice itself landed.
 - Evidence carried forward: archived execplan residue, source/payload/install changes, and the closed issue cluster preserve the delivered contract.
 - Reopen trigger: reopen if delegated-work handoff or finished-run review stops resolving cleanly from summary/report/handoff or if a linked issue is reopened for a substantive gap.
 

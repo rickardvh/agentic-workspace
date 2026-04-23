@@ -156,6 +156,7 @@ scope:
 - Original intent: Fully implement `system-intent-and-planning-trust`.
 - Was original intent fully satisfied?: yes
 - Evidence of intent satisfaction: the lane now preserves one durable system-intent layer, one explicit closure/gap contract, evidence-based archive semantics, one checked-in rule for when execplans are mandatory durable residue, and earlier report/check surfacing for closure blockers.
+- Archive trust note: later follow-on work reopened `#261`, so this archive should be read as a successful trust tranche with lower closeout confidence than a cleanly landed closed lane.
 - Unsolved intent passed to: none
 
 ## Closure Check

@@ -110,6 +110,7 @@ slice:
 
 - Outcome delivered: install/adopt/upgrade now treat `.agentic-workspace/planning/state.toml` as the authoritative planning state and regenerate root `TODO.md` and `ROADMAP.md` as compatibility views.
 - Validation confirmed: `make check`; `cd packages/planning && uv run pytest -q`; `uv run agentic-workspace summary --format json`.
+- Archive trust note: later follow-on work reopened `#260`, so this archive is still valid but should be read as a lower-trust closeout record.
 - Follow-on routed to: continue the ownership-boundary lane only if future slices require broader authority-surface simplification beyond compatibility views.
 - Knowledge promoted (Memory/Docs/Config): .agentic-workspace/docs/installer-behavior.md, packages/planning/bootstrap/.agentic-workspace/docs/installer-behavior.md
 - Resume from: verify lane-level follow-ons only when product-shape decisions require additional boundary tightening.
