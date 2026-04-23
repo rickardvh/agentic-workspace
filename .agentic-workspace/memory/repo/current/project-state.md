@@ -36,6 +36,7 @@
 
 - Keep current-memory notes subordinate to `.agentic-workspace/planning/state.toml` and active execplans.
 - Keep this note concise and weak-authority.
+- Do not restate durable routing guidance here; use durable memory notes as the primary home instead of expanding this overview.
 - Prefer replacing stale bullets instead of appending timeline-style progress logs.
 
 ## Failure signals

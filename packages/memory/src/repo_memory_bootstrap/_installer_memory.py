@@ -7,7 +7,7 @@ import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, TypedDict
 
 from repo_memory_bootstrap._installer_output import _current_note_structure_findings
 from repo_memory_bootstrap._installer_shared import (
@@ -38,6 +38,20 @@ from repo_memory_bootstrap._installer_shared import (
 )
 
 H2_RE = re.compile(r"^\s{0,3}##\s+(.+?)\s*$")
+
+
+RecurringFrictionEntry = TypedDict(
+    "RecurringFrictionEntry",
+    {
+        "label": str,
+        "observed recurrences": int,
+        "keep now": int,
+        "promote when": int,
+        "most likely remediation": int,
+        "config treatment": int,
+        "last seen": int,
+    },
+)
 H3_RE = re.compile(r"^\s{0,3}###\s+(?:Case:\s*)?(.+?)\s*$")
 RECURRING_FRICTION_ENTRY_RE = re.compile(r"^\s{0,3}###\s+Friction:\s*(.+?)\s*$")
 INVARIANT_SIGNAL_RE = re.compile(r"\b(?:must|must not|never|always|cannot|do not|invariant)\b", re.IGNORECASE)
@@ -1677,8 +1691,8 @@ def _audit_routing_feedback_note(*, target_root: Path, result) -> None:
             )
 
 
-def _parse_recurring_friction_entries(text: str) -> list[dict[str, object]]:
-    entries: list[dict[str, object]] = []
+def _parse_recurring_friction_entries(text: str) -> list[RecurringFrictionEntry]:
+    entries: list[RecurringFrictionEntry] = []
     lines = text.splitlines()
     idx = 0
     while idx < len(lines):
@@ -1707,7 +1721,16 @@ def _parse_recurring_friction_entries(text: str) -> list[dict[str, object]]:
             elif current_section and stripped:
                 sections[current_section] += 1
             idx += 1
-        entries.append({"label": label, **sections})
+        entry: RecurringFrictionEntry = {
+            "label": label,
+            "observed recurrences": sections["observed recurrences"],
+            "keep now": sections["keep now"],
+            "promote when": sections["promote when"],
+            "most likely remediation": sections["most likely remediation"],
+            "config treatment": sections["config treatment"],
+            "last seen": sections["last seen"],
+        }
+        entries.append(entry)
     return entries
 
 

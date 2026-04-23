@@ -396,15 +396,15 @@ def _render_execplan_markdown_from_record(record: dict[str, Any]) -> str:
         )
     for heading, key, value_kind in EXECPLAN_SECTION_ORDER:
         value = record.get(key)
-        if value_kind == "dict" and not isinstance(value, dict):
-            continue
-        if value_kind == "list" and not isinstance(value, list):
-            continue
         lines.extend([f"## {heading}", ""])
         if value_kind == "dict":
+            if not isinstance(value, dict):
+                continue
             for field, field_value in value.items():
                 lines.append(f"- {str(field).strip().capitalize()}: {str(field_value).strip()}")
         else:
+            if not isinstance(value, list):
+                continue
             rendered_items = [str(item).strip() for item in value if str(item).strip()]
             if not rendered_items:
                 rendered_items = ["None."]
