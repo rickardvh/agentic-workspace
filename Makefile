@@ -3,6 +3,7 @@
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache-root
 export UV_CACHE_DIR
 PYTEST_PARALLEL_ARGS ?= -n auto
+COMPACT_RUN = uv run python scripts/check/run_compact_command.py
 
 .PHONY: help sync-all sync-memory sync-planning \
 	setup install-hooks \
@@ -44,7 +45,7 @@ help:
 	@echo "  check-all            Run checks for both imported packages."
 
 sync-all:
-	uv sync --all-packages --all-groups
+	@$(COMPACT_RUN) --label "sync-all" -- uv sync --all-packages --all-groups
 
 install-hooks:
 	uv run python scripts/install_git_hooks.py
@@ -52,115 +53,115 @@ install-hooks:
 setup: sync-all install-hooks
 
 sync-memory:
-	uv sync --all-packages --group dev
+	@$(COMPACT_RUN) --label "sync-memory" -- uv sync --all-packages --group dev
 
 sync-planning:
-	uv sync --all-packages --group dev
+	@$(COMPACT_RUN) --label "sync-planning" -- uv sync --all-packages --group dev
 
 test-workspace:
-	uv run pytest $(PYTEST_PARALLEL_ARGS) tests
+	@$(COMPACT_RUN) --label "workspace tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) tests
 
 test-memory:
-	cd packages/memory && uv run pytest $(PYTEST_PARALLEL_ARGS)
+	@$(COMPACT_RUN) --label "memory tests" --cwd packages/memory -- uv run pytest $(PYTEST_PARALLEL_ARGS)
 
 test-planning:
-	cd packages/planning && uv run pytest $(PYTEST_PARALLEL_ARGS)
+	@$(COMPACT_RUN) --label "planning tests" --cwd packages/planning -- uv run pytest $(PYTEST_PARALLEL_ARGS)
 
 test: sync-all test-workspace test-memory test-planning
 
 lint-workspace:
-	uv run ruff check src tests
+	@$(COMPACT_RUN) --label "workspace lint" -- uv run ruff check src tests
 
 lint-memory:
-	cd packages/memory && uv run ruff check .
-	cd packages/memory && uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap skills
+	@$(COMPACT_RUN) --label "memory lint" --cwd packages/memory -- uv run ruff check .
+	@$(COMPACT_RUN) --label "memory markdownlint" --cwd packages/memory -- uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap skills
 
 lint-planning:
-	cd packages/planning && uv run ruff check .
+	@$(COMPACT_RUN) --label "planning lint" --cwd packages/planning -- uv run ruff check .
 
 lint: sync-all lint-workspace lint-memory lint-planning
 
 markdownlint-memory:
-	cd packages/memory && uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap skills
+	@$(COMPACT_RUN) --label "memory markdownlint" --cwd packages/memory -- uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap skills
 
 markdownlint: sync-all markdownlint-memory
 
 typecheck-workspace:
-	uv run ty check src
+	@$(COMPACT_RUN) --label "workspace typecheck" -- uv run ty check src
 
 typecheck-memory:
-	cd packages/memory && uv run ty check src
+	@$(COMPACT_RUN) --label "memory typecheck" --cwd packages/memory -- uv run ty check src
 
 typecheck-planning:
-	cd packages/planning && uv run ty check src
+	@$(COMPACT_RUN) --label "planning typecheck" --cwd packages/planning -- uv run ty check src
 
 typecheck: sync-all typecheck-workspace typecheck-memory typecheck-planning
 
 format-workspace:
-	uv run ruff format src tests
+	@$(COMPACT_RUN) --label "workspace format" -- uv run ruff format src tests
 
 format-memory:
-	cd packages/memory && uv run ruff format .
+	@$(COMPACT_RUN) --label "memory format" --cwd packages/memory -- uv run ruff format .
 
 format-planning:
-	cd packages/planning && uv run ruff format .
+	@$(COMPACT_RUN) --label "planning format" --cwd packages/planning -- uv run ruff format .
 
 format: sync-all format-workspace format-memory format-planning
 
 format-check-workspace:
-	uv run ruff format --check src tests
+	@$(COMPACT_RUN) --label "workspace format-check" -- uv run ruff format --check src tests
 
 format-check-memory:
-	cd packages/memory && uv run ruff format --check .
+	@$(COMPACT_RUN) --label "memory format-check" --cwd packages/memory -- uv run ruff format --check .
 
 format-check-planning:
-	cd packages/planning && uv run ruff format --check .
+	@$(COMPACT_RUN) --label "planning format-check" --cwd packages/planning -- uv run ruff format --check .
 
 format-check: sync-all format-check-workspace format-check-memory format-check-planning
 
 verify-workspace:
-	uv run agentic-workspace modules --format json
+	@$(COMPACT_RUN) --label "workspace verify" -- uv run agentic-workspace modules --format json
 
 verify-memory:
-	cd packages/memory && uv run agentic-memory-bootstrap verify-payload --target .
+	@$(COMPACT_RUN) --label "memory verify-payload" --cwd packages/memory -- uv run agentic-memory-bootstrap verify-payload --target .
 
 verify-planning:
-	cd packages/planning && uv run agentic-planning-bootstrap verify-payload
+	@$(COMPACT_RUN) --label "planning verify-payload" --cwd packages/planning -- uv run agentic-planning-bootstrap verify-payload
 
 verify: sync-all verify-workspace verify-memory verify-planning
 
 memory-freshness:
-	uv run python scripts/check/check_memory_freshness.py
+	@$(COMPACT_RUN) --label "memory freshness" -- uv run python scripts/check/check_memory_freshness.py
 
 memory-freshness-strict:
-	uv run python scripts/check/check_memory_freshness.py --strict
+	@$(COMPACT_RUN) --label "memory freshness strict" -- uv run python scripts/check/check_memory_freshness.py --strict
 
 recurring-friction-ledger:
-	uv run python scripts/check/check_recurring_friction_ledger.py
+	@$(COMPACT_RUN) --label "recurring friction ledger" -- uv run python scripts/check/check_recurring_friction_ledger.py
 
 planning-surfaces:
-	uv run python scripts/check/check_planning_surfaces.py
+	@$(COMPACT_RUN) --label "planning surfaces" -- uv run python scripts/check/check_planning_surfaces.py
 
 planning-surfaces-strict:
-	uv run python scripts/check/check_planning_surfaces.py --strict
+	@$(COMPACT_RUN) --label "planning surfaces strict" -- uv run python scripts/check/check_planning_surfaces.py --strict
 
 source-payload-operational-install:
-	uv run python scripts/check/check_source_payload_operational_install.py
+	@$(COMPACT_RUN) --label "source-payload boundary" -- uv run python scripts/check/check_source_payload_operational_install.py
 
 source-payload-operational-install-strict:
-	uv run python scripts/check/check_source_payload_operational_install.py --strict
+	@$(COMPACT_RUN) --label "source-payload boundary strict" -- uv run python scripts/check/check_source_payload_operational_install.py --strict
 
 maintainer-surfaces: render-agent-docs planning-surfaces source-payload-operational-install verify-memory verify-planning
-	uv run python scripts/check/check_maintainer_surfaces.py
+	@$(COMPACT_RUN) --label "maintainer surfaces" -- uv run python scripts/check/check_maintainer_surfaces.py
 
 maintainer-surfaces-strict: render-agent-docs planning-surfaces-strict source-payload-operational-install-strict verify-memory verify-planning
-	uv run python scripts/check/check_maintainer_surfaces.py --strict
+	@$(COMPACT_RUN) --label "maintainer surfaces strict" -- uv run python scripts/check/check_maintainer_surfaces.py --strict
 
 render-agent-docs:
-	uv run python scripts/render_agent_docs.py
+	@$(COMPACT_RUN) --label "render agent docs" -- uv run python scripts/render_agent_docs.py
 
 absolute-paths:
-	uv run python scripts/check/check_no_absolute_paths.py
+	@$(COMPACT_RUN) --label "absolute paths" -- uv run python scripts/check/check_no_absolute_paths.py
 
 check-memory: sync-all test-memory lint-memory typecheck-memory verify-memory memory-freshness-strict recurring-friction-ledger
 
