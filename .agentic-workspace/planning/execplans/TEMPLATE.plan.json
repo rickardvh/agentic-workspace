@@ -1,0 +1,167 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Plan Title",
+  "goal": [
+    ""
+  ],
+  "non_goals": [
+    ""
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "",
+      "constraints": "",
+      "latitude": "",
+      "escalation": ""
+    },
+    "execution": {
+      "milestone": "",
+      "status": "",
+      "next_step": "",
+      "proof": ""
+    },
+    "scope": {
+      "touched": [],
+      "invariants": []
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "",
+    "this slice completes the larger intended outcome": "",
+    "continuation surface": "",
+    "parent lane": ""
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "",
+    "owner surface": "",
+    "activation trigger": ""
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "",
+    "intentionally deferred": "",
+    "discovered implications": "",
+    "proof achieved now": "",
+    "validation still needed": "",
+    "next likely slice": ""
+  },
+  "intent_interpretation": {
+    "literal request": "",
+    "inferred intended outcome": "",
+    "chosen concrete what": "",
+    "interpretation distance": "",
+    "review guidance": ""
+  },
+  "execution_bounds": {
+    "allowed paths": "",
+    "max changed files": "",
+    "required validation commands": "",
+    "ask-before-refactor threshold": "",
+    "stop before touching": ""
+  },
+  "stop_conditions": {
+    "stop when": "",
+    "escalate when boundary reached": "",
+    "escalate on scope drift": "",
+    "escalate on proof failure": ""
+  },
+  "context_budget": {
+    "live working set": "",
+    "recoverable later": "",
+    "externalize before shift": "",
+    "pre-work config pull": "",
+    "pre-work memory pull": "",
+    "tiny resumability note": "",
+    "context-shift triggers": ""
+  },
+  "delegated_judgment": {
+    "requested outcome": "",
+    "hard constraints": "",
+    "agent may decide locally": "",
+    "escalate when": ""
+  },
+  "active_milestone": {
+    "id": "",
+    "status": "",
+    "scope": "",
+    "ready": "",
+    "blocked": "",
+    "optional_deps": ""
+  },
+  "immediate_next_action": [
+    ""
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ""
+  ],
+  "invariants": [
+    ""
+  ],
+  "contract_decisions_to_freeze": [
+    ""
+  ],
+  "open_questions_to_close": [
+    ""
+  ],
+  "validation_commands": [
+    ""
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    ""
+  ],
+  "execution_run": {
+    "run status": "",
+    "executor": "",
+    "handoff source": "",
+    "what happened": "",
+    "scope touched": "",
+    "changed surfaces": "",
+    "validations run": "",
+    "result for continuation": "",
+    "next step": ""
+  },
+  "finished_run_review": {
+    "review status": "",
+    "scope respected": "",
+    "proof status": "",
+    "intent served": "",
+    "config compliance": "",
+    "misinterpretation risk": "",
+    "follow-on decision": ""
+  },
+  "proof_report": {
+    "validation proof": "",
+    "proof achieved now": "",
+    "evidence for \"proof achieved\" state": ""
+  },
+  "intent_satisfaction": {
+    "original intent": "",
+    "was original intent fully satisfied?": "",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": ""
+  },
+  "closure_check": {
+    "slice status": "",
+    "larger-intent status": "",
+    "closure decision": "",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "execution_summary": {
+    "outcome delivered": "",
+    "validation confirmed": "",
+    "follow-on routed to": "",
+    "post-work posterity capture": "",
+    "knowledge promoted (Memory/Docs/Config)": "",
+    "resume from": ""
+  },
+  "drift_log": [
+    "2026-01-01: Initial plan created."
+  ]
+}

@@ -9,7 +9,7 @@ Choose this package when you want active work in a repository to stay bounded, r
 Use it for:
 
 - keeping active queue and candidate-lane state in `.agentic-workspace/planning/state.toml`
-- attaching bounded execution contracts to active work in `.agentic-workspace/planning/execplans/`
+- attaching bounded execution contracts to active work in `.agentic-workspace/planning/execplans/`, with optional machine-first `.plan.json` canonical sidecars plus derived `.md` views
 - capturing analysis-derived future-work findings in `.agentic-workspace/planning/reviews/` before promotion
 - helping agents restart from checked-in execution state instead of chat-only context
 
@@ -147,6 +147,7 @@ It also defines the bounded-initiative rule: improve means locally, but do not s
 `docs/planning-routing-contract.md` defines the hierarchy and routing rules between `.agentic-workspace/planning/state.toml`, execplans, and reviews.
 
 For active planning, `agentic-planning-bootstrap summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. `active_contract`, `resumable_contract`, `follow_through_contract`, `context_budget_contract`, `hierarchy_contract`, and `handoff_contract` remain thinner views over that record. `context_budget_contract` now also carries the explicit pre-work retrieval prompt so ordinary work can ask what durable understanding should be recovered before execution and which area it concerns, while leaving Memory optional rather than required.
+When an execplan has a sibling `.plan.json` file, that sidecar is the canonical execplan artifact and the `.md` file is treated as a derived human-readable view.
 For delegated execution, `agentic-planning-bootstrap handoff --format json` is the compact worker handoff derived from that same active planning state. It now carries intent interpretation, execution bounds, stop conditions, and explicit return-with residue fields for a bounded execution run plus finished-run review, including a compact `changed surfaces` answer for what actually changed.
 For cheap delegated-work inspection, `intent_interpretation_contract`, `execution_run_contract`, `finished_run_review_contract`, `intent_validation_contract`, and `finished_work_inspection_contract` remain thin projections over the same active plan and surrounding planning state instead of becoming a second orchestration ledger. `execution_run_contract` keeps intended scope (`scope_touched`) separate from actual changed surfaces (`changed_surfaces`) so returned-run review does not depend on broad diff reconstruction.
 
@@ -447,6 +448,7 @@ The package installs the checked-in planning contract and its supporting surface
 - `.agentic-workspace/planning/state.toml`
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.md`
+- `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/planning/execplans/archive/README.md`
 - `.agentic-workspace/planning/upstream-task-intake.md`
 - `docs/environment-recovery-contract.md`

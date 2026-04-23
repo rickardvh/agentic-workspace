@@ -6,6 +6,7 @@ Before archiving, set `## Active Milestone` `Status` to `completed` and fill the
 Prefer a feature-scoped file over expanding a shared hot plan, and keep headings stable so concurrent edits merge cleanly.
 Prefer replacing resolved status lines instead of appending pass-by-pass history, and do not add retrospective sections such as `Added In This Pass`.
 This file is a thin human view over the canonical `planning_record` surfaced by `agentic-workspace summary --format json`; use the summary first when you need the compact active state.
+When `TEMPLATE.plan.json` is used, that sidecar is the canonical execplan artifact and this Markdown file is the rendered human view.
 
 ## Goal
 

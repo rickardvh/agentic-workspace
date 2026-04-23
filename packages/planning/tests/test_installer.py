@@ -71,6 +71,76 @@ def _write_finished_work_evidence(path: Path, *, items: list[dict[str, object]])
     )
 
 
+def _write_execplan_record(path: Path, *, item_id: str = "plan-alpha", status: str = "in-progress") -> None:
+    record = installer_mod._build_execplan_record_from_todo_item(
+        title="Plan Alpha",
+        item_id=item_id,
+        status=status,
+        why_now="this item needs a bounded execution contract.",
+        next_action="add one checker.",
+        done_when="the bounded change is implemented and validated.",
+    )
+    if status in {"completed", "done", "closed"}:
+        record["iterative_follow_through"] = {
+            "what this slice enabled": "one bounded planning improvement landed",
+            "intentionally deferred": "none",
+            "discovered implications": "none yet",
+            "proof achieved now": "validation and closure checks passed for the bounded slice.",
+            "validation still needed": "none",
+            "next likely slice": "none",
+        }
+        record["execution_run"] = {
+            "run status": "completed",
+            "executor": "bounded external executor",
+            "handoff source": "agentic-planning-bootstrap handoff --format json",
+            "what happened": "implemented the bounded checker update and returned compact residue.",
+            "scope touched": "scripts/check/check_planning_surfaces.py",
+            "changed surfaces": "scripts/check/check_planning_surfaces.py",
+            "validations run": "uv run pytest tests/test_check_planning_surfaces.py",
+            "result for continuation": "no further delegated execution needed for this bounded slice.",
+            "next step": "archive the plan.",
+        }
+        record["finished_run_review"] = {
+            "review status": "completed",
+            "scope respected": "yes",
+            "proof status": "satisfied",
+            "intent served": "yes",
+            "config compliance": "respected checked-in and local config for the bounded slice.",
+            "misinterpretation risk": "low",
+            "follow-on decision": "archive-and-close",
+        }
+        record["execution_summary"] = {
+            "outcome delivered": "Added one bounded planning improvement.",
+            "validation confirmed": "uv run pytest tests/test_check_planning_surfaces.py",
+            "follow-on routed to": "none; slice complete",
+            "post-work posterity capture": (
+                "preserve the checker-boundary reminder in planning docs and route any durable subsystem learning "
+                "to canonical docs or Memory only when that module is installed and is the right owner."
+            ),
+            "resume from": "no further action in this plan",
+        }
+        record["proof_report"] = {
+            "validation proof": "uv run pytest tests/test_check_planning_surfaces.py",
+            "proof achieved now": "validation and closure checks passed for the bounded slice.",
+            'evidence for "proof achieved" state': "archive gate and planning checks were satisfied.",
+        }
+        record["intent_satisfaction"] = {
+            "original intent": "Keep scope clear.",
+            "was original intent fully satisfied?": "yes",
+            "evidence of intent satisfaction": "the bounded slice landed and the lane-level evidence was recorded.",
+            "unsolved intent passed to": "none",
+        }
+        record["closure_check"] = {
+            "slice status": "bounded slice complete",
+            "larger-intent status": "closed",
+            "closure decision": "archive-and-close",
+            "why this decision is honest": "the bounded slice and larger intent are both complete.",
+            "evidence carried forward": "proof and intent satisfaction both show the lane is closed.",
+            "reopen trigger": "none",
+        }
+    installer_mod._write_execplan_record(record_path=path, record=record)
+
+
 def _minimal_execplan(status: str = "in-progress") -> str:
     execution_run = (
         "- Run status: completed\n"
@@ -345,6 +415,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert review_readme_path.exists()
     assert review_template_path.exists()
     assert intake_doc_path.exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "TEMPLATE.plan.json").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "render_agent_docs.py").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_planning_surfaces.py").exists()
@@ -1127,13 +1198,18 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
 
     result = promote_todo_item_to_execplan("direct-item", target=tmp_path)
     plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "direct-item.md"
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "direct-item.plan.json"
 
     assert plan_path.exists()
+    assert record_path.exists()
     plan_text = plan_path.read_text(encoding="utf-8")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
     todo_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     assert "## Intent Continuity" in plan_text
     assert "## Required Continuation" in plan_text
     assert "## Delegated Judgment" in plan_text
+    assert record["kind"] == "planning-execplan/v1"
+    assert record["active_milestone"]["id"] == "direct-item"
     assert "- This slice completes the larger intended outcome: yes" in plan_text
     assert "- Continuation surface: none" in plan_text
     assert "- Required follow-on for the larger intended outcome: no" in plan_text
@@ -1142,6 +1218,7 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
     assert "Next Action:" not in todo_text
     assert "Done When:" not in todo_text
     assert any(action.kind == "created" and action.path == plan_path for action in result.actions)
+    assert any(action.kind == "created" and action.path == record_path for action in result.actions)
 
 
 def test_promote_todo_item_to_execplan_refuses_existing_execplan_surface(tmp_path: Path) -> None:
@@ -1178,19 +1255,53 @@ def test_archive_execplan_moves_completed_plan(tmp_path: Path) -> None:
 """,
     )
     plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
-    _write(plan_path, _minimal_execplan(status="completed"))
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
 
     result = archive_execplan("plan-alpha", target=tmp_path)
     archived_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.md"
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
 
     assert archived_path.exists()
+    assert archived_record_path.exists()
     assert not plan_path.exists()
+    assert not record_path.exists()
     assert any(action.kind == "moved" and action.path == archived_path for action in result.actions)
+    assert any(action.kind == "moved" and action.path == archived_record_path for action in result.actions)
     archived_text = archived_path.read_text(encoding="utf-8")
     assert "Compact inactive-plan residue generated at archive time." in archived_text
-    assert "## Context Budget" in archived_text
+    assert "## Proof Report" in archived_text
     assert "## Active Milestone" not in archived_text
     assert "## Drift Log" not in archived_text
+
+
+def test_planning_summary_prefers_canonical_execplan_record_when_markdown_stales(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: .agentic-workspace/planning/execplans/plan-alpha.md
+  Why now: keep the canonical sidecar authoritative.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="in-progress")
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
+    stale_markdown = plan_path.read_text(encoding="utf-8").replace("Plan Alpha", "Stale Markdown Title")
+    _write(plan_path, stale_markdown)
+
+    summary = planning_summary(target=tmp_path)
+
+    assert summary["planning_record"]["requested_outcome"] == "this item needs a bounded execution contract."
+    assert summary["planning_record"]["next_action"] == "add one checker."
+    assert summary["planning_record"]["task"]["surface"] == ".agentic-workspace/planning/execplans/plan-alpha.md"
 
 
 def test_archive_execplan_blocks_unfinished_larger_intent_without_continuation_surface(tmp_path: Path) -> None:

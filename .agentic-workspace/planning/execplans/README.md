@@ -5,6 +5,7 @@ Checked-in execution plans for multi-milestone or multi-thread work live in this
 Use `agentic-workspace summary --format json` first when the question is active planning state.
 Use raw `TODO.md` and execplan prose after that only when the compact summary is insufficient or when you are maintaining the human-readable plan directly.
 Use raw `.agentic-workspace/planning/state.toml` when you need direct maintenance access to canonical machine-readable planning state.
+Use `.agentic-workspace/planning/execplans/*.plan.json` as the canonical execplan state when a machine-first plan sidecar is present; the adjacent `.md` file is the derived human view.
 Use `.agentic-workspace/docs/candidate-lanes-contract.md` for the native `roadmap` lane shape in `.agentic-workspace/planning/state.toml` when grouped deferred work needs more structure than a flat candidate bullet.
 Use `docs/planning-routing-contract.md` when deciding whether newly discovered work belongs in `roadmap`, `todo.active_items`, `.agentic-workspace/planning/execplans/`, or `.agentic-workspace/planning/reviews/`.
 Use `python scripts/check/check_planning_surfaces.py` for advisory shape and drift warnings across `todo.active_items`, active execplans, and `roadmap`.
@@ -20,7 +21,7 @@ This planning system is for execution. It is not intended to become a generic tr
 ## Layout
 
 - Keep active plans at the top level of `.agentic-workspace/planning/execplans/`.
-- Keep only active plans plus `README.md` and `TEMPLATE.md` at the top level.
+- Keep only active plans plus `README.md`, `TEMPLATE.md`, and `TEMPLATE.plan.json` at the top level.
 - Move completed plans into `.agentic-workspace/planning/execplans/archive/`.
 - Mark the active milestone `Status` as `completed` before archiving a finished plan.
 - Before archive, fill `## Proof Report`, `## Intent Satisfaction`, and `## Closure Check` so the lane-level closure evidence is explicit.
@@ -158,6 +159,7 @@ Use `none` only when the slice is so local that delegated-judgment framing would
 `agentic-workspace summary --format json` exposes a typed `planning-summary/v1` payload. Inside that payload, `planning_record` is the canonical active planning record when planning has one active TODO item and one active execplan. `active_contract` is the narrower intent projection over that record.
 `intent_validation_contract` is the compact inspection view for dangling larger intent, lower-trust closeout, and optional external evidence reconciliation when no active execplan is present.
 Treat `planning_record` as canonical active state when it is available; raw `.agentic-workspace/planning/state.toml` and execplan prose remain the thin human maintenance layer and semantic fallback.
+When an execplan also has a `.plan.json` sidecar, that sidecar is the canonical plan record and the `.md` file becomes a rendered compatibility view.
 
 Intent interpretation belongs under `## Intent Interpretation` when the slice should preserve how it moved from the literal request to the bounded intended outcome:
 

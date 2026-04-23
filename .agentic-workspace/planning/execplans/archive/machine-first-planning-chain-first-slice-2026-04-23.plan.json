@@ -1,0 +1,160 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Machine First Planning Chain First Slice 2026 04 23",
+  "goal": [
+    "Prove a canonical machine-first execplan record can own promotion, summary, archive, and shipped planning payload surfaces."
+  ],
+  "non_goals": [
+    "Do not close the full machine-first planning lane in one slice.",
+    "Do not introduce a hidden second planning store outside checked-in execplan surfaces."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Land the first bounded machine-first execplan slice without widening into a full planning-chain rewrite.",
+      "constraints": "Keep canonical state in checked-in execplan sidecars and keep Markdown reviewable as the derived human view.",
+      "latitude": "Adjust installer, tests, and package docs where needed to make the canonical sidecar path durable.",
+      "escalation": "Escalate if the slice would need a second hidden store or break git-friendly reviewability."
+    },
+    "execution": {
+      "milestone": "machine-first-planning-chain-first-slice",
+      "status": "completed",
+      "next_step": "Keep the lane active and continue converting remaining Markdown-authored planning truth into canonical records.",
+      "proof": "Focused planning package tests, package install refresh, planning surface checks, and boundary validation pass."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        "packages/planning/README.md",
+        "packages/planning/bootstrap/.agentic-workspace/planning/execplans/README.md",
+        "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.md",
+        "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+        "packages/planning/bootstrap/.agentic-workspace/planning/execplans/archive/README.md"
+      ],
+      "invariants": [
+        "Canonical machine-first state stays checked in beside the human view rather than in a separate hidden store.",
+        "Active and archived execplans remain git-reviewable."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Replace prose-first authored execplans with a genuinely machine-first canonical planning state and derived human-readable views.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "machine-first-planning-chain"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "Continue when any remaining planning truth still depends on Markdown-authored or Markdown-only state."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Canonical `.plan.json` sidecars now drive promote, summary, archive, and installed planning surfaces.",
+    "intentionally deferred": "Wider machine-first adoption across remaining planning artifacts and any archive/report surfaces not yet backed by canonical records.",
+    "discovered implications": "The renderer needed an explicit derived-path rule so the human view stays at `*.md` instead of drifting to `*.plan.md`.",
+    "proof achieved now": "Focused planning tests and repo-level planning checks passed with the canonical sidecar path enabled.",
+    "validation still needed": "Real repo dogfooding across more than one slice and any additional extraction of Markdown-authored planning truth.",
+    "next likely slice": "Promote another bounded planning surface that still authors truth in Markdown and move it behind canonical machine-first data."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the first machine-first planning-chain slice and keep the larger lane honest.",
+    "hard constraints": "Do not add a hidden planning store and do not break the current human-readable planning review path.",
+    "agent may decide locally": "Package docs/tests/install refresh and the exact bounded canonical execplan shape.",
+    "escalate when": "The slice would need a broader planning storage rewrite or would invalidate current archive/report routing."
+  },
+  "active_milestone": {
+    "id": "machine-first-planning-chain-first-slice",
+    "status": "completed",
+    "scope": "Canonical execplan sidecars for active and archived planning state, with derived Markdown views.",
+    "ready": "false",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Use the new canonical execplan sidecar path on the next real planning slice and keep extracting remaining Markdown-authored planning truth."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    "packages/planning/README.md",
+    "packages/planning/bootstrap/.agentic-workspace/planning/execplans/README.md",
+    "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.md",
+    "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/execplans/archive/README.md"
+  ],
+  "invariants": [
+    "Canonical planning state stays checked in.",
+    "Markdown remains the derived human-readable view when a canonical sidecar exists."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q",
+    "uv run pytest packages/planning/tests/test_packaging.py -q",
+    "uv run pytest packages/planning/tests/test_check_planning_surfaces.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run python scripts/check/check_source_payload_operational_install.py",
+    "uv run agentic-planning-bootstrap upgrade --target .",
+    "uv run agentic-memory-bootstrap upgrade --target ."
+  ],
+  "required_tools": [
+    "uv"
+  ],
+  "completion_criteria": [
+    "Canonical execplan sidecars are part of the shipped planning contract.",
+    "Promotion and archive flows create and preserve the canonical record alongside the human-readable view.",
+    "Planning summary prefers the canonical sidecar when present."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "codex",
+    "handoff source": "direct repo implementation",
+    "what happened": "Added canonical execplan sidecars, rendered human views from them, updated planning docs, fixed derived-path rendering, and extended test coverage.",
+    "scope touched": "planning package source, tests, and payload docs",
+    "changed surfaces": "packages/planning source, tests, payload docs, and installed planning templates",
+    "validations run": "Focused planning tests, packaging test, planning-surface check, source/payload/install boundary check, and both root upgrades.",
+    "result for continuation": "The first slice is complete; keep the lane active for broader machine-first adoption.",
+    "next step": "Continue with the next bounded planning surface still authored in Markdown."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "No special config changes were required for this bounded slice.",
+    "config trust": "direct",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-continue"
+  },
+  "proof_report": {
+    "validation proof": "Focused planning package tests plus repo-level planning checks passed after the canonical sidecar path shipped.",
+    "proof achieved now": "The planning package can now treat `.plan.json` as canonical execplan state with derived `.md` views.",
+    "evidence for \"proof achieved\" state": "Promotion, summary, archive, packaging, and root-install surfaces all accepted the canonical sidecar path."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement and commit `machine-first-planning-chain` as the next lane.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "A real shipped first slice landed, but the larger machine-first lane remains open by design.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-and-continue",
+    "why this decision is honest": "The first canonical execplan slice is done, but the lane still has remaining machine-first planning work.",
+    "evidence carried forward": "Roadmap priority now keeps `machine-first-planning-chain` as the front candidate lane.",
+    "reopen trigger": "Any remaining planning truth still authored primarily in Markdown."
+  },
+  "execution_summary": {
+    "outcome delivered": "Shipped the first canonical execplan sidecar path and refreshed the installed planning payload to match.",
+    "validation confirmed": "Focused planning tests, package packaging test, planning-surface check, source/payload/install boundary check, and both root upgrades passed.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml (`machine-first-planning-chain` remains first lane)",
+    "post-work posterity capture": "Keep using canonical execplan sidecars as the proving path before widening the machine-first chain further.",
+    "knowledge promoted (memory/docs/config)": "Planning docs and templates now encode the canonical-sidecar contract.",
+    "resume from": "Promote the next bounded planning surface still relying on Markdown-authored state."
+  },
+  "drift_log": [
+    "2026-04-23: Added canonical execplan sidecars, derived Markdown rendering, shipped template/docs updates, and first-slice planning residue."
+  ]
+}

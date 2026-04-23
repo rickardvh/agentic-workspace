@@ -55,6 +55,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path(".agentic-workspace/docs/installer-behavior.md"),
     Path(".agentic-workspace/planning/execplans/README.md"),
     Path(".agentic-workspace/planning/execplans/TEMPLATE.md"),
+    Path(".agentic-workspace/planning/execplans/TEMPLATE.plan.json"),
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
     Path(".agentic-workspace/planning/reviews/README.md"),
     Path(".agentic-workspace/planning/reviews/TEMPLATE.md"),
@@ -94,6 +95,7 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path(".agentic-workspace/docs/installer-behavior.md"),
     Path(".agentic-workspace/planning/execplans/README.md"),
     Path(".agentic-workspace/planning/execplans/TEMPLATE.md"),
+    Path(".agentic-workspace/planning/execplans/TEMPLATE.plan.json"),
     Path(".agentic-workspace/planning/execplans/archive/README.md"),
     Path(".agentic-workspace/planning/reviews/README.md"),
     Path(".agentic-workspace/planning/reviews/TEMPLATE.md"),
@@ -127,9 +129,40 @@ PAYLOAD_GUIDANCE_FRAGMENTS = {
 
 TODO_EMPTY_STATE_LINE = "- No active work right now."
 _COMPATIBILITY_VIEW_NOTICE = "<!-- GENERATED COMPATIBILITY VIEW: authoritative source is .agentic-workspace/planning/state.toml -->"
+EXECPLAN_RECORD_KIND = "planning-execplan/v1"
 
 PACKAGE_MANAGED_FILES = tuple(
     relative for relative in REQUIRED_PAYLOAD_FILES if relative not in ROOT_SURFACE_FILES and relative not in GENERATED_PAYLOAD_FILES
+)
+
+EXECPLAN_SECTION_ORDER: tuple[tuple[str, str, str], ...] = (
+    ("Goal", "goal", "list"),
+    ("Non-Goals", "non_goals", "list"),
+    ("Intent Continuity", "intent_continuity", "dict"),
+    ("Required Continuation", "required_continuation", "dict"),
+    ("Iterative Follow-Through", "iterative_follow_through", "dict"),
+    ("Intent Interpretation", "intent_interpretation", "dict"),
+    ("Execution Bounds", "execution_bounds", "dict"),
+    ("Stop Conditions", "stop_conditions", "dict"),
+    ("Context Budget", "context_budget", "dict"),
+    ("Delegated Judgment", "delegated_judgment", "dict"),
+    ("Active Milestone", "active_milestone", "dict"),
+    ("Immediate Next Action", "immediate_next_action", "list"),
+    ("Blockers", "blockers", "list"),
+    ("Touched Paths", "touched_paths", "list"),
+    ("Invariants", "invariants", "list"),
+    ("Contract Decisions To Freeze", "contract_decisions_to_freeze", "list"),
+    ("Open Questions To Close", "open_questions_to_close", "list"),
+    ("Validation Commands", "validation_commands", "list"),
+    ("Required Tools", "required_tools", "list"),
+    ("Completion Criteria", "completion_criteria", "list"),
+    ("Execution Run", "execution_run", "dict"),
+    ("Finished-Run Review", "finished_run_review", "dict"),
+    ("Proof Report", "proof_report", "dict"),
+    ("Intent Satisfaction", "intent_satisfaction", "dict"),
+    ("Closure Check", "closure_check", "dict"),
+    ("Execution Summary", "execution_summary", "dict"),
+    ("Drift Log", "drift_log", "list"),
 )
 
 
@@ -302,6 +335,91 @@ def resolve_target_root(target: str | Path | None, *, local_only: bool = False) 
         resolved = resolved / ".gemini" / "agentic-workspace"
     resolved.mkdir(parents=True, exist_ok=True)
     return resolved
+
+
+def _canonical_execplan_record_path(plan_path: Path) -> Path:
+    if plan_path.name.endswith(".plan.json"):
+        return plan_path
+    return plan_path.with_suffix(".plan.json")
+
+
+def _derived_execplan_markdown_path(record_path: Path) -> Path:
+    if record_path.name.endswith(".plan.json"):
+        return record_path.with_name(record_path.name[: -len(".plan.json")] + ".md")
+    return record_path.with_suffix(".md")
+
+
+def _load_execplan_record(plan_path: Path) -> dict[str, Any] | None:
+    record_path = _canonical_execplan_record_path(plan_path)
+    if not record_path.exists():
+        return None
+    try:
+        payload = json.loads(record_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict) or payload.get("kind") != EXECPLAN_RECORD_KIND:
+        return None
+    return payload
+
+
+def _record_section_dict(record: dict[str, Any] | None, key: str) -> dict[str, str] | None:
+    if not isinstance(record, dict):
+        return None
+    raw = record.get(key)
+    if not isinstance(raw, dict):
+        return None
+    return {str(field).strip().lower(): str(value).strip() for field, value in raw.items() if str(field).strip()}
+
+
+def _record_section_list(record: dict[str, Any] | None, key: str) -> list[str] | None:
+    if not isinstance(record, dict):
+        return None
+    raw = record.get(key)
+    if not isinstance(raw, list):
+        return None
+    return [str(item).strip() for item in raw if str(item).strip()]
+
+
+def _render_execplan_markdown_from_record(record: dict[str, Any]) -> str:
+    lines = [f"# {str(record.get('title', 'Plan Title')).strip() or 'Plan Title'}", ""]
+    machine_contract = record.get("machine_readable_contract", {})
+    if isinstance(machine_contract, dict):
+        lines.extend(
+            [
+                "## Machine-Readable Contract",
+                "",
+                "```json",
+                json.dumps(machine_contract, ensure_ascii=False, indent=2),
+                "```",
+                "",
+            ]
+        )
+    for heading, key, value_kind in EXECPLAN_SECTION_ORDER:
+        value = record.get(key)
+        if value_kind == "dict" and not isinstance(value, dict):
+            continue
+        if value_kind == "list" and not isinstance(value, list):
+            continue
+        lines.extend([f"## {heading}", ""])
+        if value_kind == "dict":
+            for field, field_value in value.items():
+                lines.append(f"- {str(field).strip().capitalize()}: {str(field_value).strip()}")
+        else:
+            rendered_items = [str(item).strip() for item in value if str(item).strip()]
+            if not rendered_items:
+                rendered_items = ["None."]
+            for item in rendered_items:
+                lines.append(f"- {item}")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _write_execplan_record(*, record_path: Path, record: dict[str, Any], render_markdown: bool = True) -> None:
+    record_path.parent.mkdir(parents=True, exist_ok=True)
+    record_path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if render_markdown:
+        markdown_path = _derived_execplan_markdown_path(record_path)
+        markdown_path.write_text(_render_execplan_markdown_from_record(record), encoding="utf-8")
 
 
 def list_payload_files() -> list[str]:
@@ -2742,15 +2860,19 @@ def promote_todo_item_to_execplan(
     slug = _slugify(plan_slug or item_id)
     execplan_relative = Path(".agentic-workspace") / "planning" / "execplans" / f"{slug}.md"
     execplan_path = target_root / execplan_relative
+    execplan_record_path = _canonical_execplan_record_path(execplan_path)
     if execplan_path.exists():
         result.add("manual review", execplan_path, "target execplan already exists")
+        return result
+    if execplan_record_path.exists():
+        result.add("manual review", execplan_record_path, "target canonical execplan record already exists")
         return result
 
     next_action = item.fields.get("next action", "").strip()
     done_when = item.fields.get("done when", "").strip()
     why_now = item.fields.get("why now", "").strip()
     status = _normalize_status(item.fields.get("status", "planned"))
-    plan_text = _render_execplan_from_todo_item(
+    plan_record = _build_execplan_record_from_todo_item(
         title=_title_from_slug(slug),
         item_id=item_id,
         status=status,
@@ -2766,14 +2888,15 @@ def promote_todo_item_to_execplan(
     new_todo_lines = _rewrite_todo_item(todo_lines, item, updated_fields)
 
     if dry_run:
-        result.add("would create", execplan_path, "scaffold execplan from TODO item")
+        result.add("would create", execplan_record_path, "scaffold canonical execplan record from TODO item")
+        result.add("would create", execplan_path, "render derived execplan view from canonical record")
         result.add("would update", todo_path, f"point '{item_id}' at {execplan_relative.as_posix()} and remove direct-task fields")
         return result
 
-    execplan_path.parent.mkdir(parents=True, exist_ok=True)
-    execplan_path.write_text(plan_text, encoding="utf-8")
+    _write_execplan_record(record_path=execplan_record_path, record=plan_record)
     todo_path.write_text("\n".join(new_todo_lines).rstrip() + "\n", encoding="utf-8")
-    result.add("created", execplan_path, "scaffolded execplan from TODO item")
+    result.add("created", execplan_record_path, "scaffolded canonical execplan record from TODO item")
+    result.add("created", execplan_path, "rendered derived execplan view from canonical record")
     result.add("updated", todo_path, f"pointed '{item_id}' at {execplan_relative.as_posix()} and removed direct-task fields")
     return result
 
@@ -3285,8 +3408,14 @@ def archive_execplan(
         return result
 
     destination = archive_dir / plan_path.name
+    record_path = _canonical_execplan_record_path(plan_path)
+    destination_record = _canonical_execplan_record_path(destination)
+    has_record = record_path.exists()
     if destination.exists():
         result.add("manual review", destination, "archive destination already exists")
+        return result
+    if has_record and destination_record.exists():
+        result.add("manual review", destination_record, "archive destination for canonical execplan record already exists")
         return result
 
     cleanup_roadmap_state = _cleanup_state_roadmap_followup(target_root, plan_path)
@@ -3327,12 +3456,16 @@ def archive_execplan(
 
     if dry_run:
         result.add("would move", destination, f"archive {plan_path.relative_to(target_root).as_posix()}")
+        if has_record:
+            result.add("would move", destination_record, f"archive {record_path.relative_to(target_root).as_posix()}")
         return result
 
     rendered_archive = _render_inactive_execplan_residue(plan_path=plan_path, target_root=target_root)
     archive_dir.mkdir(parents=True, exist_ok=True)
     destination.write_text(rendered_archive, encoding="utf-8")
     plan_path.unlink()
+    if has_record:
+        shutil.move(str(record_path), str(destination_record))
     if cleanup_todo_lines is not None:
         (target_root / ".agentic-workspace/planning/state.toml").write_text("\n".join(cleanup_todo_lines).rstrip() + "\n", encoding="utf-8")
     if cleanup_roadmap_state["changed"] and apply_cleanup:
@@ -3340,6 +3473,8 @@ def archive_execplan(
     if cleanup_legacy_roadmap["changed"] and apply_cleanup and cleanup_legacy_roadmap["text"] is not None:
         legacy_roadmap_path.write_text(cleanup_legacy_roadmap["text"], encoding="utf-8")
     result.add("moved", destination, f"archived {plan_path.relative_to(target_root).as_posix()}")
+    if has_record:
+        result.add("moved", destination_record, f"archived {record_path.relative_to(target_root).as_posix()}")
     return result
 
 
@@ -3777,7 +3912,7 @@ def _normalize_status(status: str) -> str:
     return "planned"
 
 
-def _render_execplan_from_todo_item(
+def _build_execplan_record_from_todo_item(
     *,
     title: str,
     item_id: str,
@@ -3785,69 +3920,82 @@ def _render_execplan_from_todo_item(
     why_now: str,
     next_action: str,
     done_when: str,
-) -> str:
+) -> dict[str, Any]:
     goal = why_now or f"Complete the bounded work for TODO item `{item_id}`."
     immediate = next_action or "Fill the execution contract and begin the first bounded implementation step."
     completion = done_when or f"TODO item `{item_id}` is implemented, validated, and can leave the active queue."
     blocked = "none" if status != "completed" else "n/a"
     ready = "ready" if status != "completed" else "false"
-    return (
-        f"# {title}\n\n"
-        "## Goal\n\n"
-        f"- {goal}\n\n"
-        "## Non-Goals\n\n"
-        "- Leave adjacent backlog or follow-on work out of this plan.\n\n"
-        "## Intent Continuity\n\n"
-        f"- Larger intended outcome: {goal}\n"
-        "- This slice completes the larger intended outcome: yes\n"
-        "- Continuation surface: none\n\n"
-        "## Required Continuation\n\n"
-        "- Required follow-on for the larger intended outcome: no\n"
-        "- Owner surface: none\n"
-        "- Activation trigger: none\n\n"
-        "## Iterative Follow-Through\n\n"
-        "- What this slice enabled: none yet\n"
-        "- Intentionally deferred: none\n"
-        "- Discovered implications: none yet\n"
-        "- Proof achieved now: pending\n"
-        "- Validation still needed: current milestone validation remains pending\n"
-        "- Next likely slice: continue the current milestone until the completion criteria are met\n\n"
-        "## Delegated Judgment\n\n"
-        f"- Requested outcome: {goal}\n"
-        "- Hard constraints: Keep scope bounded to the promoted TODO item and its stated touched paths.\n"
-        "- Agent may decide locally: Bounded decomposition, touched-path narrowing, "
-        "validation tightening, and plan-local residue routing.\n"
-        "- Escalate when: A better-looking fix changes the requested outcome, owned "
-        "surface, time horizon, or meaningful validation story.\n\n"
-        "## Active Milestone\n\n"
-        f"- ID: {item_id}\n"
-        f"- Status: {status}\n"
-        "- Scope: Keep this execution thread bounded to the promoted TODO item.\n"
-        f"- Ready: {ready}\n"
-        f"- Blocked: {blocked}\n"
-        "- optional_deps: none\n\n"
-        "## Immediate Next Action\n\n"
-        f"- {immediate}\n\n"
-        "## Blockers\n\n"
-        "- None.\n\n"
-        "## Touched Paths\n\n"
-        "- Fill in the concrete files before implementation starts.\n\n"
-        "## Invariants\n\n"
-        "- Preserve the planning contract and keep the work bounded to this plan.\n\n"
-        "## Validation Commands\n\n"
-        "- Fill in the narrowest command that proves the promoted work.\n\n"
-        "## Required Tools\n\n"
-        "- None.\n\n"
-        "## Completion Criteria\n\n"
-        f"- {completion}\n\n"
-        "## Execution Summary\n\n"
-        "- Outcome delivered: not completed yet\n"
-        "- Validation confirmed: pending\n"
-        "- Follow-on routed to: none yet\n"
-        "- Resume from: current milestone\n\n"
-        "## Drift Log\n\n"
-        f"- {date.today().isoformat()}: Promoted from TODO direct-task shape into an execplan.\n"
-    )
+    return {
+        "kind": EXECPLAN_RECORD_KIND,
+        "title": title,
+        "goal": [goal],
+        "non_goals": ["Leave adjacent backlog or follow-on work out of this plan."],
+        "machine_readable_contract": {
+            "intent": {
+                "outcome": goal,
+                "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+                "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+                "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+            },
+            "execution": {
+                "milestone": item_id,
+                "status": status,
+                "next_step": immediate,
+                "proof": "Fill in the narrowest command that proves the promoted work.",
+            },
+            "scope": {
+                "touched": ["Fill in the concrete files before implementation starts."],
+                "invariants": ["Preserve the planning contract and keep the work bounded to this plan."],
+            },
+        },
+        "intent_continuity": {
+            "larger intended outcome": goal,
+            "this slice completes the larger intended outcome": "yes",
+            "continuation surface": "none",
+        },
+        "required_continuation": {
+            "required follow-on for the larger intended outcome": "no",
+            "owner surface": "none",
+            "activation trigger": "none",
+        },
+        "iterative_follow_through": {
+            "what this slice enabled": "none yet",
+            "intentionally deferred": "none",
+            "discovered implications": "none yet",
+            "proof achieved now": "pending",
+            "validation still needed": "current milestone validation remains pending",
+            "next likely slice": "continue the current milestone until the completion criteria are met",
+        },
+        "delegated_judgment": {
+            "requested outcome": goal,
+            "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+            "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+            "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+        },
+        "active_milestone": {
+            "id": item_id,
+            "status": status,
+            "scope": "Keep this execution thread bounded to the promoted TODO item.",
+            "ready": ready,
+            "blocked": blocked,
+            "optional_deps": "none",
+        },
+        "immediate_next_action": [immediate],
+        "blockers": ["None."],
+        "touched_paths": ["Fill in the concrete files before implementation starts."],
+        "invariants": ["Preserve the planning contract and keep the work bounded to this plan."],
+        "validation_commands": ["Fill in the narrowest command that proves the promoted work."],
+        "required_tools": ["None."],
+        "completion_criteria": [completion],
+        "execution_summary": {
+            "outcome delivered": "not completed yet",
+            "validation confirmed": "pending",
+            "follow-on routed to": "none yet",
+            "resume from": "current milestone",
+        },
+        "drift_log": [f"{date.today().isoformat()}: Promoted from TODO direct-task shape into an execplan."],
+    }
 
 
 def _surface_execplan_reference(surface_value: str) -> str | None:
@@ -3879,6 +4027,10 @@ def _resolve_execplan_path(target_root: Path, plan: str) -> Path | None:
 
 
 def _execplan_status(path: Path) -> str:
+    record = _load_execplan_record(path)
+    milestone = _record_section_dict(record, "active_milestone")
+    if milestone is not None:
+        return milestone.get("status", "").strip().lower()
     lines = _read_lines(path)
     for line in _section_lines(lines, "Active Milestone"):
         match = re.match(r"^\s*-\s*Status\s*:\s*(.*)\s*$", line, re.IGNORECASE)
@@ -3888,6 +4040,10 @@ def _execplan_status(path: Path) -> str:
 
 
 def _execplan_item_id(path: Path) -> str:
+    record = _load_execplan_record(path)
+    milestone = _record_section_dict(record, "active_milestone")
+    if milestone is not None:
+        return milestone.get("id", "").strip().lower()
     lines = _read_lines(path)
     for line in _section_lines(lines, "Active Milestone"):
         match = re.match(r"^\s*-\s*ID\s*:\s*(.*)\s*$", line, re.IGNORECASE)
@@ -3897,81 +4053,131 @@ def _execplan_item_id(path: Path) -> str:
 
 
 def _execplan_intent_continuity(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "intent_continuity")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Intent Continuity"))
 
 
 def _execplan_required_continuation(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "required_continuation")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Required Continuation"))
 
 
 def _execplan_iterative_follow_through(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "iterative_follow_through")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Iterative Follow-Through"))
 
 
 def _execplan_delegated_judgment(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "delegated_judgment")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Delegated Judgment"))
 
 
 def _execplan_intent_interpretation(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "intent_interpretation")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Intent Interpretation"))
 
 
 def _execplan_execution_bounds(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "execution_bounds")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Execution Bounds"))
 
 
 def _execplan_stop_conditions(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "stop_conditions")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Stop Conditions"))
 
 
 def _execplan_context_budget(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "context_budget")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Context Budget"))
 
 
 def _execplan_execution_run(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "execution_run")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Execution Run"))
 
 
 def _execplan_finished_run_review(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "finished_run_review")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Finished-Run Review"))
 
 
 def _execplan_active_milestone(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "active_milestone")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Active Milestone"))
 
 
 def _execplan_execution_summary(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "execution_summary")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Execution Summary"))
 
 
 def _execplan_proof_report(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "proof_report")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Proof Report"))
 
 
 def _execplan_intent_satisfaction(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "intent_satisfaction")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Intent Satisfaction"))
 
 
 def _execplan_closure_check(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "closure_check")
+    if record is not None:
+        return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Closure Check"))
 
 
 def _execplan_title(path: Path) -> str:
+    record = _load_execplan_record(path)
+    if isinstance(record, dict):
+        title = str(record.get("title", "")).strip()
+        if title:
+            return title
     for line in _read_lines(path):
         if line.startswith("# "):
             return line[2:].strip()
@@ -3984,6 +4190,9 @@ def _execplan_issue_refs(path: Path) -> set[str]:
 
 
 def _execplan_validation_commands(path: Path) -> list[str]:
+    record = _record_section_list(_load_execplan_record(path), "validation_commands")
+    if record is not None:
+        return record
     return _extract_section_bullets(path, "Validation Commands")
 
 
