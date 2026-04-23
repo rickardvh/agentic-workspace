@@ -58,7 +58,7 @@ Repeated workaround residue is pressure to improve the repo or the product. New 
 
 ### 9. Favor explicit seams over hidden coupling
 
-Prefer explicit ownership rules, manifests, schemas, generated artifacts from canonical sources, and stable adapters over private cross-module convenience.
+Prefer explicit ownership rules, manifests, schemas, stable contracts, and narrow adapters over private cross-module convenience.
 
 ### 10. Selective adoption must remain valid
 
@@ -70,30 +70,78 @@ The workspace layer may centralize lifecycle entrypoints, presets, orchestration
 
 Workspace self-improvement should also stay distinct from repo-directed improvement: the workspace may improve its own routing, reporting, recovery, or contract surfaces without using that as cover for repo-specific product drift.
 
-### 12. Generated surfaces must stay trustworthy
+### 12. Do not preserve both the old and new model by default
 
-Generated docs are useful only when they derive from canonical sources, stay easy to regenerate, are clearly marked, and are validated for freshness.
+Compatibility layers, shims, transitional helper surfaces, and generated adapter artefacts should not be the automatic response to change.
 
-### 13. Collaboration safety matters
+They are justified only when they protect a specific real boundary or user of the system. Otherwise they usually:
+
+- preserve ambiguity instead of resolving it
+- multiply visible surfaces
+- delay convergence on the intended product shape
+- convert temporary uncertainty into durable residue
+
+Prefer direct convergence when the system already knows which shape it wants.
+
+### 13. Compatibility layers must earn their keep
+
+Do not add or preserve a compatibility layer unless all three are true:
+
+1. it protects a named consumer or boundary
+2. it exists for a concrete transition reason
+3. it has a credible path to removal, narrowing, or demotion
+
+If those are missing, the layer is probably clutter wearing the language of caution.
+
+### 14. Static routing aids are different from mutable compatibility shims
+
+A small, obviously named, stable routing surface may be justified when it only helps weaker agents find the canonical next workflow.
+
+Such a surface should:
+
+- be static or slow-changing
+- remain clearly non-authoritative
+- point toward canonical config, query, planning, or ownership surfaces
+- avoid restating changing operational truth
+- stay narrow enough that it does not become a second operating layer
+
+Do not confuse a routing aid with a prose mirror of live state.
+
+### 15. Generated surfaces are suspect by default
+
+Generated docs are only useful when they derive from canonical sources, stay easy to regenerate, and remove more cost than they create.
+
+Do not keep generated checked-in prose merely because it is possible to generate it.
+
+Generated surfaces are a poor fit when they:
+
+- restate changing state
+- duplicate canonical routing or authority
+- ask maintainers to preserve both a structured source and a prose byproduct
+- create more agent-facing surfaces than weak-agent discoverability actually requires
+
+Prefer on-demand prose generation in chat or tooling over checked-in generated prose when the prose is explanatory rather than authoritative.
+
+### 16. Collaboration safety matters
 
 The product must degrade gracefully under normal git pressure:
 
 - keep shared hot files small
 - archive completed active surfaces promptly
 - prefer bounded feature-scoped files over giant mutable dashboards
-- keep generated surfaces reproducible
+- keep generated or derived surfaces reproducible when they must exist
 
-### 14. Help the agent do the job, do not script the job
+### 17. Help the agent do the job, do not script the job
 
 The product should be opinionated about what boundary must remain true, not about the exact local choreography used to get there.
 
 Prefer thin guidance, capability-shaped contracts, and explicit escalation cues over scheduler-like repo policy.
 
-### 15. Portability matters more than local cleverness
+### 18. Portability matters more than local cleverness
 
 Prefer narrow assumptions, conservative adoption, and plain checked-in surfaces over solutions that only feel elegant inside one well-understood monorepo.
 
-### 16. Checked-in leverage should complement runtime leverage
+### 19. Checked-in leverage should complement runtime leverage
 
 Assume a capable runtime may already be better at delegation, model choice, or execution shaping than the repo should prescribe.
 
@@ -105,11 +153,11 @@ The repo should therefore focus on:
 - machine-readable proof expectations
 - clear escalation boundaries
 
-### 17. Proof should beat preference
+### 20. Proof should beat preference
 
 Features that claim to reduce restart cost, token cost, or handoff burden should earn their place through repeated ordinary work, bounded review, or other real evidence.
 
-### 18. Optimize total operating cost
+### 21. Optimize total operating cost
 
 Do not optimize for single-run cheapness if it raises total cost across planning, execution, interruption, handoff, review, or restart.
 
@@ -128,6 +176,9 @@ A change is moving in the right direction when it helps answer yes to questions 
 - Can it remain quiet in normal use?
 - Can it be adopted selectively and removed cleanly?
 - Would it still make sense outside this monorepo?
+- Does it replace, merge, demote, or remove an older surface rather than merely adding another one?
+- If it is a compatibility layer, does it name the consumer, transition reason, and likely removal path?
+- If it is a routing surface, is it clearly just routing rather than a second source of changing truth?
 
 A change is suspicious when it tends to:
 
@@ -138,6 +189,9 @@ A change is suspicious when it tends to:
 - add ceremony to simple work
 - save tokens mainly by shifting work onto humans
 - add a new contract surface without naming what older path it replaces, merges, or demotes
+- preserve both an old and new model without a named beneficiary
+- leave behind generated helper artefacts because removal feels riskier than commitment
+- turn temporary compatibility into a durable product layer
 
 ## Tactical Policy Lives Elsewhere
 
@@ -157,5 +211,7 @@ Agentic Workspace should make repositories quietly well-run for agents and human
 - explicit seams
 - selective adoption
 - quiet leverage over visible ceremony
+- direct convergence over compatibility sprawl
+- static routing help only when it clearly earns its keep
 
 That is the bar.
