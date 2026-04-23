@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import hashlib
 import json
 import re
 import shutil
@@ -44,6 +45,8 @@ from agentic_workspace.config import (
     WORKSPACE_EXTERNAL_AGENT_PATH,
     WORKSPACE_LOCAL_CONFIG_PATH,
     WORKSPACE_POINTER_BLOCK,
+    WORKSPACE_SYSTEM_INTENT_MIRROR_PATH,
+    WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH,
     WORKSPACE_WORKFLOW_MARKER_END,
     WORKSPACE_WORKFLOW_MARKER_START,
     DelegationOutcomeRecord,
@@ -97,7 +100,9 @@ MIXED_AGENT_LOCAL_OVERRIDE_FIELDS = (
 WORKSPACE_PAYLOAD_FILES = (
     Path(".agentic-workspace/WORKFLOW.md"),
     Path(".agentic-workspace/OWNERSHIP.toml"),
+    WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH,
 )
+SYSTEM_INTENT_MIRROR_KIND = "agentic-workspace/system-intent/v1"
 WORKSPACE_AGENTS_PATH = Path(DEFAULT_AGENT_INSTRUCTIONS_FILE)
 WORKSPACE_HANDOFF_SURFACES = (
     WORKSPACE_EXTERNAL_AGENT_PATH,
@@ -261,6 +266,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     config_parser.add_argument("--target", help="Optional repository path used to resolve repo-owned config.")
     _add_format_argument(config_parser)
+
+    system_intent_parser = subparsers.add_parser(
+        "system-intent",
+        help="Show or refresh the workspace-owned mirrored system-intent contract.",
+    )
+    system_intent_parser.add_argument("--target", help="Optional repository path used to inspect system intent.")
+    system_intent_parser.add_argument(
+        "--sync",
+        action="store_true",
+        help="Refresh source metadata and create the mirrored system-intent contract if it is missing.",
+    )
+    _add_format_argument(system_intent_parser)
 
     delegation_outcome_parser = subparsers.add_parser(
         "note-delegation-outcome",
@@ -1039,6 +1056,16 @@ def main(argv: list[str] | None = None) -> int:
             _validate_target_root(command_name="skills", target_root=target_root)
         _emit_skills(format_name=args.format, target_root=target_root, task_text=args.task)
         return 0
+
+    if args.command == "system-intent":
+        try:
+            target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+            _validate_target_root(command_name="system-intent", target_root=target_root)
+            config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
+            _emit_system_intent(format_name=args.format, target_root=target_root, config=config, sync=bool(args.sync))
+            return 0
+        except (ModuleSelectionError, WorkspaceUsageError) as exc:
+            parser.error(str(exc))
 
     if args.command in {"install", "init"}:
         try:
@@ -2777,6 +2804,10 @@ def _run_report_command(
             installed_modules=installed_modules,
             active_direction=_effective_active_direction_payload(module_reports=module_reports),
         ),
+        "system_intent_mirror": _system_intent_report_payload(
+            target_root=target_root,
+            config=config,
+        ),
         "workflow_obligations": _workflow_obligations_report_payload(
             config=config,
             active_planning_record=_active_planning_record(module_reports=module_reports),
@@ -2846,7 +2877,7 @@ def _agent_configuration_report_payload(*, config: WorkspaceConfig, installed_mo
         ],
         "adapter_surfaces": substrate["adapter_surfaces"],
         "selective_loading": substrate["selective_loading"],
-        "current_system_intent_role": "compass for shaping means and review, not active execution authority",
+        "current_system_intent_role": "workspace-owned mirrored intent contract consumed operationally, with repo-owned prose sources remaining directional inputs",
     }
 
 
@@ -2945,6 +2976,222 @@ def _workflow_obligations_report_payload(
         "current_scope_tags": current_tags,
         "configured": configured,
         "relevant_to_current_work": relevant,
+    }
+
+
+def _system_intent_source_payload(config: WorkspaceConfig) -> dict[str, Any]:
+    return {
+        "sources": list(config.system_intent.sources),
+        "sources_source": config.system_intent.sources_source,
+        "preferred_source": config.system_intent.preferred_source,
+        "preferred_source_source": config.system_intent.preferred_source_source,
+    }
+
+
+def _system_intent_record_from_path(*, target_root: Path, relative: str) -> dict[str, Any]:
+    path = target_root / relative
+    if not path.exists():
+        return {"path": relative, "present": False}
+    text = path.read_text(encoding="utf-8")
+    first_heading = ""
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if line.startswith("#"):
+            first_heading = line.lstrip("#").strip()
+            break
+    return {
+        "path": relative,
+        "present": True,
+        "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        "first_heading": first_heading,
+        "line_count": len(text.splitlines()),
+    }
+
+
+def _empty_system_intent_interpretation(*, config: WorkspaceConfig) -> dict[str, Any]:
+    return {
+        "summary": "",
+        "governing_intents": [],
+        "anti_intents": [],
+        "decision_tests": [],
+        "open_questions": [],
+        "interpretation_notes": "",
+        "confidence": "low",
+        "needs_review": True,
+        "preferred_source": config.system_intent.preferred_source or "",
+    }
+
+
+def _load_system_intent_mirror(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
+    mirror_path = target_root / WORKSPACE_SYSTEM_INTENT_MIRROR_PATH
+    if not mirror_path.exists():
+        return {
+            "status": "missing",
+            "path": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
+            "kind": SYSTEM_INTENT_MIRROR_KIND,
+            "source_declaration": _system_intent_source_payload(config),
+            "workflow_surface": WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(),
+            "sync_command": "agentic-workspace system-intent --target ./repo --sync --format json",
+        }
+    payload = config_lib.load_toml_payload(path=mirror_path, surface_name=WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix())
+    source_records = payload.get("source_records", [])
+    if not isinstance(source_records, list):
+        raise WorkspaceUsageError(f"{WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix()} source_records must be an array of tables.")
+    normalized_records: list[dict[str, Any]] = []
+    for item in source_records:
+        if not isinstance(item, dict):
+            raise WorkspaceUsageError(f"{WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix()} source_records entries must be tables.")
+        normalized_records.append(
+            {
+                "path": str(item.get("path", "")),
+                "present": bool(item.get("present", False)),
+                "sha256": str(item.get("sha256", "")),
+                "first_heading": str(item.get("first_heading", "")),
+                "line_count": int(item.get("line_count", 0)) if str(item.get("line_count", "0")).strip() else 0,
+            }
+        )
+    summary = str(payload.get("summary", ""))
+    governing_intents = payload.get("governing_intents", [])
+    anti_intents = payload.get("anti_intents", [])
+    decision_tests = payload.get("decision_tests", [])
+    open_questions = payload.get("open_questions", [])
+    return {
+        "status": "present",
+        "path": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
+        "kind": str(payload.get("kind", SYSTEM_INTENT_MIRROR_KIND)),
+        "schema_version": int(payload.get("schema_version", 1)),
+        "summary": summary,
+        "governing_intents": list(governing_intents) if isinstance(governing_intents, list) else [],
+        "anti_intents": list(anti_intents) if isinstance(anti_intents, list) else [],
+        "decision_tests": list(decision_tests) if isinstance(decision_tests, list) else [],
+        "open_questions": list(open_questions) if isinstance(open_questions, list) else [],
+        "interpretation_notes": str(payload.get("interpretation_notes", "")),
+        "confidence": str(payload.get("confidence", "low")),
+        "needs_review": bool(payload.get("needs_review", True)),
+        "preferred_source": str(payload.get("preferred_source", "")),
+        "last_synced_at": str(payload.get("last_synced_at", "")),
+        "source_records": normalized_records,
+        "source_declaration": _system_intent_source_payload(config),
+        "workflow_surface": WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(),
+        "sync_command": "agentic-workspace system-intent --target ./repo --sync --format json",
+    }
+
+
+def _render_system_intent_mirror_text(*, interpretation: dict[str, Any], source_records: list[dict[str, Any]]) -> str:
+    lines = [
+        "schema_version = 1",
+        f'kind = "{SYSTEM_INTENT_MIRROR_KIND}"',
+        f"summary = {json.dumps(str(interpretation.get('summary', '')))}",
+        f"governing_intents = {json.dumps(list(interpretation.get('governing_intents', [])))}",
+        f"anti_intents = {json.dumps(list(interpretation.get('anti_intents', [])))}",
+        f"decision_tests = {json.dumps(list(interpretation.get('decision_tests', [])))}",
+        f"open_questions = {json.dumps(list(interpretation.get('open_questions', [])))}",
+        f"interpretation_notes = {json.dumps(str(interpretation.get('interpretation_notes', '')))}",
+        f"confidence = {json.dumps(str(interpretation.get('confidence', 'low')))}",
+        f"needs_review = {'true' if bool(interpretation.get('needs_review', True)) else 'false'}",
+        f"preferred_source = {json.dumps(str(interpretation.get('preferred_source', '')))}",
+        f"last_synced_at = {json.dumps(date.today().isoformat())}",
+    ]
+    for record in source_records:
+        lines.extend(
+            [
+                "",
+                "[[source_records]]",
+                f"path = {json.dumps(str(record.get('path', '')))}",
+                f"present = {'true' if bool(record.get('present', False)) else 'false'}",
+                f"sha256 = {json.dumps(str(record.get('sha256', '')))}",
+                f"first_heading = {json.dumps(str(record.get('first_heading', '')))}",
+                f"line_count = {int(record.get('line_count', 0))}",
+            ]
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _sync_system_intent_mirror(*, target_root: Path, config: WorkspaceConfig, dry_run: bool) -> tuple[list[dict[str, str]], dict[str, Any]]:
+    actions: list[dict[str, str]] = []
+    workflow_destination = target_root / WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH
+    workflow_bytes = _workspace_payload_bytes(WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH)
+    existing_workflow = workflow_destination.exists()
+    if not existing_workflow or workflow_destination.read_bytes() != workflow_bytes:
+        if not dry_run:
+            workflow_destination.parent.mkdir(parents=True, exist_ok=True)
+            workflow_destination.write_bytes(workflow_bytes)
+        actions.append(
+            {
+                "kind": _write_action_kind(
+                    dry_run=dry_run, existing=workflow_destination.read_text(encoding="utf-8") if existing_workflow else None
+                ),
+                "path": WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(),
+                "detail": "refresh system-intent extraction workflow guidance",
+            }
+        )
+    else:
+        actions.append(
+            {
+                "kind": "current",
+                "path": WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(),
+                "detail": "system-intent workflow guidance already current",
+            }
+        )
+
+    existing = _load_system_intent_mirror(target_root=target_root, config=config)
+    interpretation = (
+        {
+            "summary": existing.get("summary", ""),
+            "governing_intents": existing.get("governing_intents", []),
+            "anti_intents": existing.get("anti_intents", []),
+            "decision_tests": existing.get("decision_tests", []),
+            "open_questions": existing.get("open_questions", []),
+            "interpretation_notes": existing.get("interpretation_notes", ""),
+            "confidence": existing.get("confidence", "low"),
+            "needs_review": existing.get("needs_review", True),
+            "preferred_source": config.system_intent.preferred_source or existing.get("preferred_source", ""),
+        }
+        if existing.get("status") == "present"
+        else _empty_system_intent_interpretation(config=config)
+    )
+    source_records = [
+        _system_intent_record_from_path(target_root=target_root, relative=relative) for relative in config.system_intent.sources
+    ]
+    mirror_text = _render_system_intent_mirror_text(interpretation=interpretation, source_records=source_records)
+    mirror_path = target_root / WORKSPACE_SYSTEM_INTENT_MIRROR_PATH
+    existing_text = mirror_path.read_text(encoding="utf-8") if mirror_path.exists() else None
+    if existing_text != mirror_text:
+        if not dry_run:
+            mirror_path.parent.mkdir(parents=True, exist_ok=True)
+            mirror_path.write_text(mirror_text, encoding="utf-8")
+        actions.append(
+            {
+                "kind": _write_action_kind(dry_run=dry_run, existing=existing_text),
+                "path": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
+                "detail": "refresh system-intent source metadata while preserving the interpreted mirror fields",
+            }
+        )
+    else:
+        actions.append(
+            {
+                "kind": "current",
+                "path": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
+                "detail": "system-intent mirror already current for the declared sources",
+            }
+        )
+    return actions, _load_system_intent_mirror(target_root=target_root, config=config)
+
+
+def _system_intent_report_payload(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
+    mirror = _load_system_intent_mirror(target_root=target_root, config=config)
+    return {
+        "canonical_doc": ".agentic-workspace/docs/system-intent-contract.md",
+        "rule": (
+            "Keep a workspace-owned mirrored intent contract inside `.agentic-workspace/` so package operations can consume "
+            "normalized system intent without imposing a host-repo source-file format."
+        ),
+        "source_declaration_surface": ".agentic-workspace/config.toml [system_intent]",
+        "mirror_surface": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
+        "workflow_surface": WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(),
+        "source_declaration": _system_intent_source_payload(config),
+        "mirror": mirror,
     }
 
 
@@ -3166,6 +3413,21 @@ def _system_intent_payload() -> dict[str, Any]:
         "rule": (
             "Keep the larger requested outcome explicit even when the active slice is narrower, and make closure decisions name that difference honestly."
         ),
+        "source_declaration_surface": ".agentic-workspace/config.toml [system_intent]",
+        "mirror_surface": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
+        "workflow_surface": WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(),
+        "sync_command": "agentic-workspace system-intent --target ./repo --sync --format json",
+        "mirror_fields": [
+            "summary",
+            "governing_intents",
+            "anti_intents",
+            "decision_tests",
+            "open_questions",
+            "interpretation_notes",
+            "confidence",
+            "needs_review",
+            "source_records",
+        ],
         "authority_ladder": [
             {
                 "layer": "confirmed request or live issue cluster",
@@ -4521,6 +4783,8 @@ def _defaults_payload() -> dict[str, Any]:
                 "workspace.workflow_artifact_profile",
                 "workspace.improvement_latitude",
                 "workspace.optimization_bias",
+                "system_intent.sources",
+                "system_intent.preferred_source",
                 "workflow_obligations.<name>.summary",
                 "workflow_obligations.<name>.stage",
                 "workflow_obligations.<name>.scope_tags",
@@ -6006,6 +6270,11 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "owner_surface": _agent_configuration_system_payload()["owner_surface"],
                 "rule": _agent_configuration_system_payload()["rule"],
             },
+            "system_intent": {
+                **_system_intent_source_payload(config),
+                "mirror_path": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
+                "workflow_path": WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(),
+            },
             "workflow_obligations": _workflow_obligation_payloads(config),
             "detected_agent_instructions_files": list(config.detected_agent_instructions_files),
             "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
@@ -6049,6 +6318,11 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
         f"{payload['workspace']['agent_configuration_substrate']['canonical_doc']} "
         f"({payload['workspace']['agent_configuration_substrate']['owner_surface']})"
     )
+    print(
+        "System-intent sources: "
+        f"{', '.join(payload['workspace']['system_intent']['sources']) or 'none'} "
+        f"({payload['workspace']['system_intent']['sources_source']})"
+    )
     print(f"Workflow obligations: {len(payload['workspace']['workflow_obligations'])} configured")
     print(f"Improvement latitude: {payload['workspace']['improvement_latitude']} ({payload['workspace']['improvement_latitude_source']})")
     print(f"Optimization bias: {payload['workspace']['optimization_bias']} ({payload['workspace']['optimization_bias_source']})")
@@ -6073,6 +6347,69 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
         f"- delegation outcome evidence: {payload['mixed_agent']['delegation_targets']['outcome_artifact']['path']} "
         f"({payload['mixed_agent']['delegation_targets']['outcome_artifact']['status']})"
     )
+
+
+def _system_intent_command_payload(*, target_root: Path, config: WorkspaceConfig, sync: bool, dry_run: bool = False) -> dict[str, Any]:
+    actions: list[dict[str, str]] = []
+    if sync:
+        actions, mirror = _sync_system_intent_mirror(target_root=target_root, config=config, dry_run=dry_run)
+    else:
+        mirror = _load_system_intent_mirror(target_root=target_root, config=config)
+    return {
+        "kind": "workspace-system-intent/v1",
+        "command": "system-intent",
+        "target": target_root.as_posix(),
+        "sync_requested": sync,
+        "source_declaration_surface": ".agentic-workspace/config.toml [system_intent]",
+        "mirror_surface": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
+        "workflow_surface": WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(),
+        "source_declaration": _system_intent_source_payload(config),
+        "mirror": mirror,
+        "actions": actions,
+        "next_action": (
+            {
+                "summary": "Refresh or refine the mirrored system-intent declaration",
+                "commands": [
+                    "agentic-workspace system-intent --target ./repo --sync --format json",
+                    f"open {WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix()} and {WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix()}",
+                ],
+            }
+            if mirror.get("status") != "present" or mirror.get("needs_review", True)
+            else {
+                "summary": "Mirrored system intent is present; refine it only when repo direction changed materially",
+                "commands": [
+                    "agentic-workspace system-intent --target ./repo --sync --format json",
+                ],
+            }
+        ),
+    }
+
+
+def _emit_system_intent(*, format_name: str, target_root: Path, config: WorkspaceConfig, sync: bool) -> None:
+    payload = _system_intent_command_payload(target_root=target_root, config=config, sync=sync)
+    if format_name == "json":
+        print(json.dumps(serialise_value(payload), indent=2))
+        return
+    print(f"Target: {payload['target']}")
+    print(f"Command: {payload['command']}")
+    print(f"Sync requested: {payload['sync_requested']}")
+    print(f"Source declaration surface: {payload['source_declaration_surface']}")
+    print(f"Mirror surface: {payload['mirror_surface']}")
+    print(f"Workflow surface: {payload['workflow_surface']}")
+    declaration = payload["source_declaration"]
+    print(f"Sources: {', '.join(declaration['sources']) or 'none'} ({declaration['sources_source']})")
+    print(f"Preferred source: {declaration['preferred_source'] or 'none'} ({declaration['preferred_source_source']})")
+    mirror = payload["mirror"]
+    print(f"Mirror status: {mirror.get('status', 'unknown')}")
+    if mirror.get("summary"):
+        print(f"Mirror summary: {mirror['summary']}")
+    if payload["actions"]:
+        print("Actions:")
+        for action in payload["actions"]:
+            print(f"- {action['kind']}: {action['path']} ({action['detail']})")
+    print(f"Next action: {payload['next_action']['summary']}")
+    for command in payload["next_action"]["commands"]:
+        print(f"- {command}")
 
 
 def _current_module_upgrade_source_state(

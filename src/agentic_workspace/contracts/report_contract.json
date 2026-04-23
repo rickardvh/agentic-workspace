@@ -13,6 +13,7 @@
     "output_contract",
     "agent_configuration_system",
     "agent_configuration_queries",
+    "system_intent_mirror",
     "workflow_obligations",
     "execution_shape",
     "findings",

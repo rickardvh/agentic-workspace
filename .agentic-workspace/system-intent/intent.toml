@@ -1,0 +1,19 @@
+schema_version = 1
+kind = "agentic-workspace/system-intent/v1"
+summary = "Agentic Workspace should stay a quiet, repo-native continuity and execution layer that preserves human intent, keeps bounded work cheap to continue and verify, and lowers total operating cost without turning into a visible framework or a second source of truth."
+governing_intents = ["Preserve only the context that is expensive to rediscover and necessary for safe continuation.", "Keep human-owned why separate from system-shaped what and implementation-level how.", "Prefer compact queryable state over prose-first operation whenever one structured answer is enough.", "Reduce total successful-completion cost across restart, handoff, review, and proof loops.", "Stay quiet, repo-native, low-residue, and sharply bounded in ownership."]
+anti_intents = ["Do not become a visible workflow framework the user must consciously operate.", "Do not grow a surface maze where every good idea becomes another durable file or command.", "Do not optimize one local step while making the overall loop heavier.", "Do not let package-owned and repo-owned artifacts blur into ambiguous authority."]
+decision_tests = ["Favor work that preserves human intent more faithfully across time.", "Favor work that makes bounded execution cheaper to start, continue, hand off, review, or finish.", "Favor work that removes, compresses, or backgrounds visible residue instead of adding new first-line surfaces.", "Question work that mainly adds framework feel, narrative residue, or new visible concepts without replacing older ones."]
+open_questions = []
+interpretation_notes = "Mirrored from SYSTEM_INTENT.md as a normalized operational declaration. Keep refining this mirror when the repo's higher-level direction changes materially, but do not treat it as a scheduler or as active task state."
+confidence = "high"
+needs_review = false
+preferred_source = "SYSTEM_INTENT.md"
+last_synced_at = "2026-04-23"
+
+[[source_records]]
+path = "SYSTEM_INTENT.md"
+present = true
+sha256 = "c40c8ed07e85fdeb5cf777cca5ff92ae4a739438e042425e260455e005c9a2b5"
+first_heading = "System Intent"
+line_count = 166

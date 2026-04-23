@@ -121,6 +121,9 @@ Do not use this mechanism to create a scheduler, a giant static workflow catalog
 It is not itself the configuration substrate, active planning state, or enforcement layer.
 
 Use the substrate to make relevant system-intent hooks queryable and operational.
+Declare repo-owned intent sources in `.agentic-workspace/config.toml [system_intent]`, then let the workspace-owned mirrored declaration at `.agentic-workspace/system-intent/intent.toml` carry the normalized system-intent view consumed by package operations.
+Refresh source metadata with `agentic-workspace system-intent --target ./repo --sync --format json`, then refine the mirrored declaration through `.agentic-workspace/system-intent/WORKFLOW.md`.
+
 System intent should shape:
 
 - which compact query or workflow obligation is worth surfacing for the current slice

@@ -5,6 +5,10 @@ default_preset = "full"
 improvement_latitude = "proactive"
 optimization_bias = "agent-efficiency"
 
+[system_intent]
+sources = ["SYSTEM_INTENT.md"]
+preferred_source = "SYSTEM_INTENT.md"
+
 [update.modules.planning]
 source_type = "git"
 source_ref = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning"

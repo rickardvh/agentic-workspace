@@ -3,6 +3,17 @@
 This contract keeps the larger intended outcome visible even when work is executed in smaller bounded slices.
 `SYSTEM_INTENT.md` is the repo's directional compass for that larger outcome; checked-in planning still owns active execution state, bounded slices, and continuation routing.
 
+## Workspace-Owned Mirror
+
+The host repo does not need to author system intent in a package-owned schema.
+Instead:
+
+- repo-owned intent sources are declared in `.agentic-workspace/config.toml [system_intent]`
+- workspace stores the consumed mirrored declaration in `.agentic-workspace/system-intent/intent.toml`
+- `.agentic-workspace/system-intent/WORKFLOW.md` tells agents how to refresh and refine that mirror
+
+This keeps the consumed declaration inside the workspace home while leaving host-repo source authoring unconstrained.
+
 ## Core Rule
 
 - Confirmed higher-level intent must stay recoverable separately from the currently active slice.
@@ -38,6 +49,7 @@ Use:
 - `agentic-workspace defaults --section system_intent --format json`
 - `agentic-workspace summary --format json`
 - `agentic-planning-bootstrap report --format json`
+- `agentic-workspace system-intent --target ./repo --sync --format json`
 
 ## Checked-In Residue Rule
 

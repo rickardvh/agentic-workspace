@@ -158,6 +158,15 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
                 if not isinstance(item, dict):
                     continue
                 print(f"  obligation: {item.get('id', '')} ({item.get('stage', '')})")
+    system_intent_mirror = payload.get("system_intent_mirror", {})
+    if isinstance(system_intent_mirror, dict):
+        mirror = system_intent_mirror.get("mirror", {})
+        if isinstance(mirror, dict):
+            print("System intent mirror:")
+            print(f"- surface: {system_intent_mirror.get('mirror_surface', '')}")
+            print(f"- status: {mirror.get('status', '')}")
+            if mirror.get("summary"):
+                print(f"- summary: {mirror.get('summary', '')}")
     standing_intent = payload.get("standing_intent", {})
     if isinstance(standing_intent, dict):
         effective_view = standing_intent.get("effective_view", {})

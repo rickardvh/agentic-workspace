@@ -93,6 +93,9 @@
     "agent_configuration_queries": {
       "type": "object"
     },
+    "system_intent_mirror": {
+      "type": "object"
+    },
     "workflow_obligations": {
       "type": "object"
     },

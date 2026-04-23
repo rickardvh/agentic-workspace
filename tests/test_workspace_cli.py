@@ -332,6 +332,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "workspace.improvement_latitude" in payload["config"]["supported_fields"]
     assert "workspace.optimization_bias" in payload["config"]["supported_fields"]
     assert "workspace.workflow_artifact_profile" in payload["config"]["supported_fields"]
+    assert "system_intent.sources" in payload["config"]["supported_fields"]
     assert "workflow_obligations.<name>.summary" in payload["config"]["supported_fields"]
     assert payload["agent_configuration_system"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert (
@@ -597,6 +598,25 @@ def test_config_command_reports_workflow_obligations_from_repo_config(tmp_path: 
     assert payload["workspace"]["workflow_obligations"][0]["id"] == "adapter_surface_refresh"
     assert payload["workspace"]["workflow_obligations"][0]["stage"] == "before-claiming-completion"
     assert payload["workspace"]["workflow_obligations"][0]["commands"] == ["make maintainer-surfaces"]
+
+
+def test_config_command_reports_system_intent_source_declaration(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".agentic-workspace").mkdir(exist_ok=True)
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        "schema_version = 1\n\n"
+        "[system_intent]\n"
+        'sources = ["SYSTEM_INTENT.md", "docs/product-direction.md"]\n'
+        'preferred_source = "docs/product-direction.md"\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workspace"]["system_intent"]["sources"] == ["SYSTEM_INTENT.md", "docs/product-direction.md"]
+    assert payload["workspace"]["system_intent"]["preferred_source"] == "docs/product-direction.md"
+    assert payload["workspace"]["system_intent"]["mirror_path"] == ".agentic-workspace/system-intent/intent.toml"
 
 
 def test_config_command_autodetects_existing_supported_agent_instructions_file(tmp_path: Path, capsys) -> None:
@@ -935,9 +955,31 @@ def test_defaults_system_intent_section_selector_returns_compact_contract_answer
     assert payload["selector"] == {"section": "system_intent"}
     assert payload["matched"] is True
     assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/system-intent-contract.md"
+    assert payload["answer"]["source_declaration_surface"] == ".agentic-workspace/config.toml [system_intent]"
+    assert payload["answer"]["mirror_surface"] == ".agentic-workspace/system-intent/intent.toml"
     assert payload["answer"]["authority_ladder"][1]["layer"] == "delegated judgment and intent continuity"
     assert "agentic-workspace summary --format json" in payload["answer"]["recoverability"]["ask_first"]
     assert ".agentic-workspace/docs/system-intent-contract.md" in payload["refs"]
+
+
+def test_system_intent_command_sync_creates_workspace_owned_mirror(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".agentic-workspace").mkdir(exist_ok=True)
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        'schema_version = 1\n\n[system_intent]\nsources = ["SYSTEM_INTENT.md"]\npreferred_source = "SYSTEM_INTENT.md"\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "SYSTEM_INTENT.md").write_text("# System Intent\n\nKeep the system quiet.\n", encoding="utf-8")
+
+    assert cli.main(["system-intent", "--target", str(tmp_path), "--sync", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "workspace-system-intent/v1"
+    assert payload["mirror"]["status"] == "present"
+    assert (tmp_path / ".agentic-workspace/system-intent/intent.toml").exists()
+    mirror_text = (tmp_path / ".agentic-workspace/system-intent/intent.toml").read_text(encoding="utf-8")
+    assert 'preferred_source = "SYSTEM_INTENT.md"' in mirror_text
+    assert "[[source_records]]" in mirror_text
 
 
 def test_setup_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Path, capsys) -> None:
@@ -2382,6 +2424,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "repo_friction" in payload["schema"]["shared_fields"]
     assert "output_contract" in payload["schema"]["shared_fields"]
     assert "agent_configuration_queries" in payload["schema"]["shared_fields"]
+    assert "system_intent_mirror" in payload["schema"]["shared_fields"]
     assert "workflow_obligations" in payload["schema"]["shared_fields"]
     assert "execution_shape" in payload["schema"]["shared_fields"]
     assert "module_reports" in payload["schema"]["shared_fields"]
@@ -2401,6 +2444,8 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["agent_configuration_queries"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["agent_configuration_queries"]["current_work_status"] == "no-active-direction"
     assert payload["agent_configuration_queries"]["current_queries"][0]["id"] == "startup_path"
+    assert payload["system_intent_mirror"]["mirror_surface"] == ".agentic-workspace/system-intent/intent.toml"
+    assert payload["system_intent_mirror"]["mirror"]["status"] in {"missing", "present"}
     assert payload["workflow_obligations"]["configured_count"] == 0
     assert payload["workflow_obligations"]["relevant_to_current_work"] == []
     assert payload["execution_shape"]["status"] == "present"
@@ -3007,6 +3052,7 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
     (tmp_path / ".agentic-workspace").mkdir(parents=True)
     _write((tmp_path / ".agentic-workspace" / "WORKFLOW.md"), "# Workflow\n")
     _write((tmp_path / ".agentic-workspace" / "OWNERSHIP.toml"), "schema_version = 1\n")
+    _write((tmp_path / ".agentic-workspace" / "system-intent" / "WORKFLOW.md"), "# System Intent Workflow\n")
     _write(
         (tmp_path / "AGENTS.md"),
         "# Agent Instructions\n\n"

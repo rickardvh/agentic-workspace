@@ -47,6 +47,13 @@ ownership = "module_managed"
 uninstall_policy = "remove-if-owned"
 
 [[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/system-intent/WORKFLOW.md"
+kind = "system-intent-workflow"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
 module = "memory"
 path = ".agentic-workspace/memory/**"
 kind = "module-root"
@@ -108,6 +115,14 @@ owner = "workspace"
 ownership = "module_managed"
 authority = "primary"
 summary = "Ownership ledger for managed paths, fences, and authority surfaces."
+
+[[authority_surfaces]]
+concern = "system-intent-mirror"
+surface = ".agentic-workspace/system-intent/intent.toml"
+owner = "workspace"
+ownership = "module_managed"
+authority = "primary"
+summary = "Workspace-owned mirrored system-intent contract consumed by package operations."
 
 [[authority_surfaces]]
 concern = "planning-install-tree"
