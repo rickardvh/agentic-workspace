@@ -16,13 +16,16 @@
     },
     "execution": {
       "milestone": "machine-first-planning-chain",
-      "status": "in-progress",
-      "next_step": "Perform an upgrade_bootstrap on the repository root to trigger the new backfill and cleanup logic.",
-      "proof": "Fill in the narrowest command that proves the promoted work."
+      "status": "completed",
+      "next_step": "Archived.",
+      "proof": "uv run pytest packages/planning/tests/test_installer.py"
     },
     "scope": {
       "touched": [
-        "Fill in the concrete files before implementation starts."
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/scripts/check/check_planning_surfaces.py",
+        "packages/planning/bootstrap/AGENTS.template.md",
+        "packages/planning/tests/test_installer.py"
       ],
       "invariants": [
         "Preserve the planning contract and keep the work bounded to this plan."
@@ -40,12 +43,12 @@
     "activation trigger": "none"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
+    "what this slice enabled": "Cleaner machine-authoritative planning state.",
     "intentionally deferred": "none",
-    "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "discovered implications": "Synchronizing multiple check scripts is required due to repo-local redundancy.",
+    "proof achieved now": "yes",
+    "validation still needed": "none",
+    "next likely slice": "none"
   },
   "delegated_judgment": {
     "requested outcome": "Finalize the transition to a machine-first planning infrastructure by enforcing a canonical JSON sidecar model and purging derived Markdown artifacts.",
@@ -56,26 +59,29 @@
   "references": [],
   "active_milestone": {
     "id": "machine-first-planning-chain",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "Keep this execution thread bounded to the promoted TODO item.",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Perform an upgrade_bootstrap on the repository root to trigger the new backfill and cleanup logic."
+    "Archived."
   ],
   "blockers": [
     "None."
   ],
   "touched_paths": [
-    "Fill in the concrete files before implementation starts."
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/scripts/check/check_planning_surfaces.py",
+    "packages/planning/bootstrap/AGENTS.template.md",
+    "packages/planning/tests/test_installer.py"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
   ],
   "validation_commands": [
-    "Fill in the narrowest command that proves the promoted work."
+    "uv run pytest packages/planning/tests/test_installer.py"
   ],
   "required_tools": [
     "None."
@@ -84,12 +90,33 @@
     "All legacy Markdown plans are migrated to JSON sidecars, redundant Markdown views are purged, and the system is hardened against Markdown-only assumptions."
   ],
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "resume from": "current milestone"
+    "outcome delivered": "Machine-first planning infrastructure finalized.",
+    "validation confirmed": "uv run pytest packages/planning/tests/test_installer.py",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "The new canonical JSON-only model is now enforced by the planning package.",
+    "resume from": "none"
+  },
+  "proof_report": {
+    "validation proof": "All installer and checker tests pass.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "See commit history and test results in walkthrough.md"
+  },
+  "intent_satisfaction": {
+    "original intent": "Enforce .plan.json and purge redundant .md files.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Markdown files purged, JSON sidecars created, and installer hardened.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The goal of the lane was fully achieved.",
+    "evidence carried forward": "Walkthrough.md and commit history.",
+    "reopen trigger": "If Markdown drift is detected in future."
   },
   "drift_log": [
-    "2026-04-23: Promoted from TODO direct-task shape into an execplan."
+    "2026-04-23: Promoted from TODO direct-task shape into an execplan.",
+    "2026-04-23: Work completed and verified."
   ]
 }
