@@ -546,6 +546,15 @@ def _print_handoff(handoff: dict) -> None:
     print(f"- Read first: {', '.join(contract.get('read_first', []))}")
     print(f"- Write scope: {', '.join(contract.get('owned_write_scope', []))}")
     print(f"- Proof: {', '.join(contract.get('proof_expectations', []))}")
+    capability_posture = contract.get("capability_posture", {})
+    if isinstance(capability_posture, dict) and capability_posture:
+        print(
+            "- Capability posture: "
+            f"{capability_posture.get('execution class', '')} / "
+            f"{capability_posture.get('recommended strength', '')} / "
+            f"{capability_posture.get('preferred location', '')}"
+        )
+        print(f"- Capability why: {capability_posture.get('why', '')}")
     intent_interpretation = contract.get("intent_interpretation", {})
     if isinstance(intent_interpretation, dict) and intent_interpretation.get("status") == "present":
         print(f"- Literal request: {intent_interpretation.get('literal_request', '')}")

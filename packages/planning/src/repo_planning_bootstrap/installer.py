@@ -1089,6 +1089,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "requested_outcome",
                 "hard_constraints",
                 "agent_may_decide",
+                "capability_posture",
                 "next_action",
                 "proof_expectations",
                 "proof_report",
@@ -1218,6 +1219,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "requested_outcome",
                 "hard_constraints",
                 "agent_may_decide",
+                "capability_posture",
                 "next_action",
                 "completion_criteria",
                 "read_first",
@@ -1312,6 +1314,7 @@ def _planning_handoff_schema() -> dict[str, Any]:
         "rules": [
             "derive delegated worker handoff from the active planning record instead of authoring a second durable plan",
             "treat runtime delegation method as tool-owned and agent-agnostic",
+            "keep capability posture typed and advisory so runtime resolution stays portable",
             "keep worker closure bounded; lane shaping and roadmap routing stay orchestrator-owned",
             "use the handoff packet to preserve execution bounds, stop conditions, and return-with residue instead of reconstructing them from chat",
         ],
@@ -2031,6 +2034,7 @@ def _active_intent_contract(
             "agent_may_decide": agent_may_decide,
             "escalate_when": escalate_when,
         },
+        "capability_posture": _execplan_capability_posture(plan_path),
         "touched_scope": touched_scope,
         "proof_expectations": proof_expectations,
         "tool_verification": {
@@ -2141,6 +2145,7 @@ def _canonical_planning_record(
         "requested_outcome": str(active_contract["intent"]["requested_outcome"]).strip(),
         "hard_constraints": str(active_contract["intent"]["hard_constraints"]).strip(),
         "agent_may_decide": str(active_contract["intent"]["agent_may_decide"]).strip(),
+        "capability_posture": dict(active_contract.get("capability_posture", {})),
         "next_action": str(resumable_contract["current_next_action"]).strip(),
         "proof_expectations": list(resumable_contract.get("proof_expectations", [])),
         "proof_report": proof_report,
@@ -2648,6 +2653,7 @@ def _active_handoff_contract(
         "requested_outcome": str(planning_record.get("requested_outcome", "")).strip(),
         "hard_constraints": str(planning_record.get("hard_constraints", "")).strip(),
         "agent_may_decide": str(planning_record.get("agent_may_decide", "")).strip(),
+        "capability_posture": dict(planning_record.get("capability_posture", {})),
         "next_action": str(planning_record.get("next_action", "")).strip(),
         "completion_criteria": list(planning_record.get("completion_criteria", [])),
         "read_first": list(planning_record.get("minimal_refs", [])),
@@ -3858,6 +3864,21 @@ def _extract_section_bullets(path: Path, heading: str) -> list[str]:
         if match:
             values.append(match.group(1).strip())
     return values
+
+
+def _execplan_capability_posture(path: Path) -> dict[str, str]:
+    fields = _extract_kv_fields(_section_lines(_read_lines(path), "Capability Posture"))
+    required_fields = (
+        "execution class",
+        "recommended strength",
+        "preferred location",
+        "delegation friendly",
+        "strong external reasoning",
+        "why",
+    )
+    if not any(fields.get(field, "").strip() for field in required_fields):
+        return {}
+    return {field: fields.get(field, "").strip() for field in required_fields if fields.get(field, "").strip()}
 
 
 def _dedupe(items: list[str]) -> list[str]:

@@ -1,5 +1,7 @@
 [todo]
-active_items = []
+active_items = [
+  { id = "capability-class-delegation-and-handoff-posture", surface = ".agentic-workspace/planning/execplans/capability-class-delegation-and-handoff-posture-2026-04-23.md", why_now = "The first roadmap lane is already archived, and the next open lane has a small high-leverage contract slice that should reduce delegation waste quickly." },
+]
 queued_items = []
 
 [roadmap]

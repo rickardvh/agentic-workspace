@@ -300,6 +300,15 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 - Agent may decide locally: Bounded decomposition, validation tightening, and plan-local residue routing.
 - Escalate when: The requested outcome, owned surface, time horizon, or meaningful validation story would change.
 
+## Capability Posture
+
+- Execution class: mechanical-follow-through
+- Recommended strength: weak
+- Preferred location: either
+- Delegation friendly: yes
+- Strong external reasoning: avoid
+- Why: the slice is bounded enough for cheaper follow-through once the contract is clear.
+
 ## Active Milestone
 
 - ID: plan-alpha
@@ -2625,6 +2634,8 @@ def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> Non
     assert handoff["schema"]["canonical_doc"] == ".agentic-workspace/docs/execution-flow-contract.md"
     assert handoff["handoff_contract"]["status"] == "present"
     assert handoff["handoff_contract"]["next_action"] == "Add one checker."
+    assert handoff["handoff_contract"]["capability_posture"]["execution class"] == "mechanical-follow-through"
+    assert handoff["handoff_contract"]["capability_posture"]["recommended strength"] == "weak"
     assert handoff["handoff_contract"]["context_budget"]["status"] == "present"
     assert handoff["handoff_contract"]["intent_interpretation"]["status"] == "present"
     assert handoff["handoff_contract"]["execution_bounds"]["allowed paths"] == "scripts/check/check_planning_surfaces.py"
