@@ -514,6 +514,36 @@ def _load_review_record(review_path: Path) -> dict[str, Any] | None:
     return payload
 
 
+def _resolve_review_path(target_root: Path, review: str) -> Path | None:
+    candidate = Path(review)
+    if candidate.is_absolute():
+        return candidate
+    if candidate.name.endswith(".review.json") and (target_root / candidate).exists():
+        return (target_root / candidate).resolve()
+    if candidate.suffix == ".md" and (target_root / candidate).exists():
+        return (target_root / candidate).resolve()
+    if candidate.name.endswith(".review.json"):
+        direct_json = target_root / ".agentic-workspace" / "planning" / "reviews" / candidate.name
+        if direct_json.exists():
+            return direct_json.resolve()
+    if candidate.suffix == ".md":
+        direct_md = target_root / ".agentic-workspace" / "planning" / "reviews" / candidate.name
+        if direct_md.exists():
+            return direct_md.resolve()
+        json_sibling = direct_md.with_suffix(".review.json")
+        if json_sibling.exists():
+            return json_sibling.resolve()
+    normalized_json = review if review.endswith(".review.json") else f"{review}.review.json"
+    direct_json = target_root / ".agentic-workspace" / "planning" / "reviews" / normalized_json
+    if direct_json.exists():
+        return direct_json.resolve()
+    normalized_md = review if review.endswith(".md") else f"{review}.md"
+    direct_md = target_root / ".agentic-workspace" / "planning" / "reviews" / normalized_md
+    if direct_md.exists():
+        return direct_md.resolve()
+    return None
+
+
 def _normalize_review_finding(raw: Any) -> dict[str, str] | None:
     if not isinstance(raw, dict):
         return None
@@ -634,6 +664,60 @@ def _review_findings(path: Path) -> list[dict[str, str]]:
         if normalized is not None:
             findings.append(normalized)
     return findings
+
+
+def _review_references(references: list[dict[str, str]]) -> list[dict[str, str]]:
+    review_references: list[dict[str, str]] = []
+    for reference in references:
+        if not isinstance(reference, dict):
+            continue
+        target = str(reference.get("target", "")).strip()
+        if not target:
+            continue
+        kind = str(reference.get("kind", "")).strip().lower()
+        if kind == "review" or ".agentic-workspace/planning/reviews/" in target or target.endswith(".review.json"):
+            normalized = _normalize_reference_record(reference)
+            if normalized is not None and normalized not in review_references:
+                review_references.append(normalized)
+    return review_references
+
+
+def _review_residue_from_references(*, target_root: Path, references: list[dict[str, str]]) -> list[dict[str, Any]]:
+    residue: list[dict[str, Any]] = []
+    for reference in _review_references(references):
+        target = str(reference.get("target", "")).strip()
+        review_path = _resolve_review_path(target_root, target)
+        if review_path is None or not review_path.exists():
+            continue
+        record = _load_review_record(review_path)
+        title = _review_title(review_path)
+        findings = _review_findings(review_path)
+        recommendation = {}
+        if isinstance(record, dict) and isinstance(record.get("recommendation"), dict):
+            recommendation = {
+                str(key).strip(): str(value).strip()
+                for key, value in record.get("recommendation", {}).items()
+                if str(key).strip() and str(value).strip()
+            }
+        promotion_targets = _dedupe(
+            [
+                str(finding.get("promotion target", "")).strip()
+                for finding in findings
+                if str(finding.get("promotion target", "")).strip() and str(finding.get("promotion target", "")).strip().lower() != "none"
+            ]
+        )
+        residue.append(
+            {
+                **reference,
+                "target": review_path.relative_to(target_root).as_posix(),
+                "title": title,
+                "finding_count": len(findings),
+                "finding_titles": [str(finding.get("title", "")).strip() for finding in findings if str(finding.get("title", "")).strip()],
+                "promotion_targets": promotion_targets,
+                "recommendation": recommendation,
+            }
+        )
+    return residue
 
 
 def _build_review_record_from_markdown(review_path: Path) -> dict[str, Any]:
@@ -1456,6 +1540,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "agent_may_decide",
                 "capability_posture",
                 "references",
+                "review_residue",
                 "next_action",
                 "proof_expectations",
                 "proof_report",
@@ -1588,6 +1673,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "agent_may_decide",
                 "capability_posture",
                 "references",
+                "review_residue",
                 "next_action",
                 "completion_criteria",
                 "read_first",
@@ -1712,6 +1798,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "task",
                 "requested_outcome",
                 "next_action",
+                "review_residue",
                 "proof_expectations",
                 "tool_verification",
                 "continuation_owner",
@@ -1757,6 +1844,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "task",
                 "parent_lane",
                 "requested_outcome",
+                "review_residue",
                 "next_action",
                 "completion_criteria",
                 "read_first",
@@ -2664,6 +2752,7 @@ def _canonical_planning_record(
     stop_conditions: dict[str, str] = {}
     execution_run: dict[str, str] = {}
     finished_run_review: dict[str, str] = {}
+    review_residue: list[dict[str, Any]] = []
     if plan_path is not None:
         proof_report = _execplan_proof_report(plan_path)
         intent_satisfaction = _execplan_intent_satisfaction(plan_path)
@@ -2673,6 +2762,10 @@ def _canonical_planning_record(
         stop_conditions = _execplan_stop_conditions(plan_path)
         execution_run = _execplan_execution_run(plan_path)
         finished_run_review = _execplan_finished_run_review(plan_path)
+        review_residue = _review_residue_from_references(
+            target_root=target_root,
+            references=list(active_contract.get("references", [])),
+        )
     continuation_owner = str(todo_item.get("surface", "")).strip()
     if not continuation_owner and minimal_refs:
         continuation_owner = minimal_refs[-1]
@@ -2688,6 +2781,7 @@ def _canonical_planning_record(
         "agent_may_decide": str(active_contract["intent"]["agent_may_decide"]).strip(),
         "capability_posture": dict(active_contract.get("capability_posture", {})),
         "references": list(active_contract.get("references", [])),
+        "review_residue": review_residue,
         "next_action": str(resumable_contract["current_next_action"]).strip(),
         "proof_expectations": list(resumable_contract.get("proof_expectations", [])),
         "proof_report": proof_report,
@@ -3197,6 +3291,7 @@ def _active_handoff_contract(
         "agent_may_decide": str(planning_record.get("agent_may_decide", "")).strip(),
         "capability_posture": dict(planning_record.get("capability_posture", {})),
         "references": list(planning_record.get("references", [])),
+        "review_residue": list(planning_record.get("review_residue", [])),
         "next_action": str(planning_record.get("next_action", "")).strip(),
         "completion_criteria": list(planning_record.get("completion_criteria", [])),
         "read_first": list(planning_record.get("minimal_refs", [])),

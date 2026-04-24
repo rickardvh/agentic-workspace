@@ -563,6 +563,20 @@ def _print_handoff(handoff: dict) -> None:
             )
         if rendered:
             print(f"- References: {', '.join(rendered)}")
+    review_residue = contract.get("review_residue", [])
+    if review_residue:
+        rendered_reviews = []
+        for review in review_residue:
+            if not isinstance(review, dict):
+                continue
+            title = str(review.get("title", "")).strip()
+            target = str(review.get("target", "")).strip()
+            finding_count = review.get("finding_count", 0)
+            if not title and not target:
+                continue
+            rendered_reviews.append(f"{title or target} ({finding_count} findings)")
+        if rendered_reviews:
+            print(f"- Review residue: {', '.join(rendered_reviews)}")
     capability_posture = contract.get("capability_posture", {})
     if isinstance(capability_posture, dict) and capability_posture:
         print(

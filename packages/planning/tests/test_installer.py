@@ -149,6 +149,51 @@ def _write_execplan_record(
     installer_mod._write_execplan_record(record_path=path, record=record)
 
 
+def _write_review_record(path: Path) -> None:
+    installer_mod._write_review_record(
+        record_path=path,
+        record={
+            "kind": "planning-review/v1",
+            "title": "Review Alpha",
+            "goal": ["Check one narrow planning boundary."],
+            "scope": [".agentic-workspace/planning/reviews/"],
+            "non_goals": ["No implementation work."],
+            "review_mode": {
+                "mode": "review-promotion",
+                "review question": "should this review stay live?",
+                "default finding cap": "2",
+                "inputs inspected first": "reviews README",
+            },
+            "review_method": {
+                "commands used": "uv run pytest packages/planning/tests/test_installer.py -q",
+                "evidence sources": "local review artifact",
+            },
+            "references": [],
+            "findings": [
+                {
+                    "title": "stale residue",
+                    "summary": "the review should shrink after promotion.",
+                    "evidence": "the artifact is no longer the only durable owner.",
+                    "risk if unchanged": "review residue grows into a parallel archive.",
+                    "suggested action": "move durable residue into a structured record.",
+                    "confidence": "high",
+                    "source": "static-analysis",
+                    "promotion target": ".agentic-workspace/planning/state.toml (roadmap)",
+                    "promotion trigger": "when the finding is confirmed",
+                    "post-remediation note shape": "shrink",
+                }
+            ],
+            "recommendation": {
+                "promote": "yes",
+                "defer": "no",
+                "dismiss": "no",
+            },
+            "validation_commands": ["uv run pytest packages/planning/tests/test_installer.py -q"],
+            "drift_log": ["2026-04-23: Review created."],
+        },
+    )
+
+
 def _minimal_execplan(status: str = "in-progress") -> str:
     execution_run = (
         "- Run status: completed\n"
@@ -1337,6 +1382,59 @@ def test_planning_summary_and_handoff_expose_structured_execplan_references(tmp_
     assert "packages/planning/src/repo_planning_bootstrap/installer.py" in summary["active_contract"]["minimal_refs"]
     assert handoff["handoff_contract"]["references"][0]["target"] == "#280"
     assert handoff["handoff_contract"]["references"][1]["role"] == "implementation-target"
+
+
+def test_planning_summary_and_handoff_project_review_residue_from_structured_references(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+# TODO
+
+## Next
+
+- ID: plan-alpha
+  Status: in-progress
+  Surface: .agentic-workspace/planning/execplans/plan-alpha.md
+  Why now: keep review residue queryable without rereading full review artifacts.
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write_execplan_record(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json",
+        references=[
+            {
+                "kind": "review",
+                "target": ".agentic-workspace/planning/reviews/review-alpha.review.json",
+                "role": "review-target",
+                "label": "Review Alpha",
+            }
+        ],
+    )
+    _write_review_record(tmp_path / ".agentic-workspace" / "planning" / "reviews" / "review-alpha.review.json")
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    handoff = planning_handoff(target=tmp_path)
+
+    assert summary["planning_record"]["review_residue"] == [
+        {
+            "kind": "review",
+            "target": ".agentic-workspace/planning/reviews/review-alpha.review.json",
+            "role": "review-target",
+            "label": "Review Alpha",
+            "title": "Review Alpha",
+            "finding_count": 1,
+            "finding_titles": ["stale residue"],
+            "promotion_targets": [".agentic-workspace/planning/state.toml (roadmap)"],
+            "recommendation": {
+                "promote": "yes",
+                "defer": "no",
+                "dismiss": "no",
+            },
+        }
+    ]
+    assert handoff["handoff_contract"]["review_residue"][0]["target"] == ".agentic-workspace/planning/reviews/review-alpha.review.json"
+    assert handoff["handoff_contract"]["review_residue"][0]["finding_titles"] == ["stale residue"]
 
 
 def test_upgrade_backfills_canonical_review_records(tmp_path: Path) -> None:

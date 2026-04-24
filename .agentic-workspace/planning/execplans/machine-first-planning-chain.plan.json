@@ -129,18 +129,25 @@
       "label": "first canonical sidecar slice",
       "role": "prior-proof",
       "locator": "archived plan"
+    },
+    {
+      "kind": "review",
+      "target": ".agentic-workspace/planning/reviews/product-feature-self-hosting-review-2026-04-23.review.json",
+      "label": "closeout trust evidence",
+      "role": "review-target",
+      "locator": "finding on delegated handoff and likely premature closeout signals"
     }
   ],
   "active_milestone": {
     "id": "structured-references-and-review-residue-follow-through",
-    "status": "planned",
+    "status": "in-progress",
     "scope": "Use one real active planning slice to canonicalize structured references and bounded review residue on top of the already-shipped sidecar path.",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "gh issue refresh before implementation if #261/#280/#282 moved materially"
   },
   "immediate_next_action": [
-    "Choose one currently active or next-up slice as the proving ground for canonical structured references and proportional review residue."
+    "Use the shipped review-residue projection on the next machine-first follow-on slice and decide whether this proof should archive as its own bounded tranche."
   ],
   "blockers": [
     "None."
@@ -187,29 +194,29 @@
     "Lane continuation remains explicit, preventing another premature closeout."
   ],
   "execution_run": {
-    "run status": "not-started",
-    "executor": "none yet",
-    "handoff source": "this prepared execplan",
-    "what happened": "not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet",
-    "validations run": "none yet",
-    "result for continuation": "implementation still required",
-    "next step": "pick the next canonicalization target"
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "this execplan",
+    "what happened": "Added compact machine-readable review residue to planning summary and handoff by resolving typed review references from the canonical execplan record, added regression coverage, and activated this execplan-backed slice in checked-in planning state.",
+    "scope touched": "packages/planning/src/repo_planning_bootstrap/; packages/planning/tests/; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/machine-first-planning-chain.plan.json",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/src/repo_planning_bootstrap/cli.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/machine-first-planning-chain.plan.json",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"planning_summary or execplan or review\"; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_planning_surfaces.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace summary --format json --profile full",
+    "result for continuation": "The lane now has one real execplan-backed slice with typed review references and compact queryable review residue, while the larger machine-first lane remains open.",
+    "next step": "Decide whether to archive this proof as its own bounded tranche or keep the lane active for the next remaining Markdown-authored planning truth."
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "unknown",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "moderate until a real slice proves the lane can continue without contradictory closeout residue",
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied for this bounded slice",
+    "intent served": "yes",
+    "config compliance": "respected checked-in planning, workflow, and issue-state requirements for the bounded slice",
+    "misinterpretation risk": "low for the shipped review-residue slice; moderate if later follow-through again leaves review context only in prose",
     "follow-on decision": "keep-lane-open"
   },
   "proof_report": {
-    "validation proof": "planned: focused planning package tests, contract checks, and full-profile summary inspection",
-    "proof achieved now": "none yet; plan prepared only",
-    "evidence for \"proof achieved\" state": "pending implementation"
+    "validation proof": "focused planning package tests, contract checks, and full-profile summary inspection",
+    "proof achieved now": "Planning summary and handoff now project compact review residue from typed review references on this active machine-first slice without inflating the compact surfaces.",
+    "evidence for \"proof achieved\" state": "The planning package tests and contract checks passed, and the live full-profile summary now reports one active execplan with canonical references plus bounded review residue."
   },
   "intent_satisfaction": {
     "original intent": "prepare a full execplan that reopens and bounds the machine-first planning chain lane honestly",
@@ -218,22 +225,23 @@
     "unsolved intent passed to": ".agentic-workspace/planning/state.toml lane machine-first-planning-chain"
   },
   "closure_check": {
-    "slice status": "planned but not started",
+    "slice status": "implemented and validated",
     "larger-intent status": "open",
     "closure decision": "keep-active",
-    "why this decision is honest": "the lane is explicitly not complete; only the planner artifact is prepared",
-    "evidence carried forward": "this execplan, the reopened lane in state.toml, and the archived first-slice proof",
+    "why this decision is honest": "this bounded proof landed, but the larger machine-first lane still has remaining Markdown-authored planning truth beyond review residue projection.",
+    "evidence carried forward": "this execplan, the reopened lane in state.toml, the shipped review-residue projection, and the archived first-slice proof",
     "reopen trigger": "revisit if the next canonicalization target turns out to belong under a narrower new lane instead"
   },
   "execution_summary": {
-    "outcome delivered": "prepared a full machine-first execplan for the reopened machine-first planning chain lane",
-    "validation confirmed": "planning preparation only",
+    "outcome delivered": "shipped compact queryable review residue for typed review references in the active machine-first planning slice and activated the lane through its checked-in execplan.",
+    "validation confirmed": "focused planning tests, contract checks, and live summary inspection",
     "follow-on routed to": ".agentic-workspace/planning/state.toml and this execplan",
-    "post-work posterity capture": "none yet beyond the plan",
-    "knowledge promoted (memory/docs/config)": "execplan only",
+    "post-work posterity capture": "the active execplan now records the proof, linked review artifact, and follow-on boundary for the next machine-first slice.",
+    "knowledge promoted (memory/docs/config)": "planning package summary/handoff projections and the active machine-first execplan",
     "resume from": "structured-references-and-review-residue-follow-through"
   },
   "drift_log": [
-    "2026-04-24: Initial full-lane execplan created from the reopened lane and live follow-on issues."
+    "2026-04-24: Initial full-lane execplan created from the reopened lane and live follow-on issues.",
+    "2026-04-24: Landed compact review-residue projection from typed review references and activated the machine-first execplan-backed slice in checked-in planning state."
   ]
 }
