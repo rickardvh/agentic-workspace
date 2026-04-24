@@ -18,10 +18,10 @@
       "escalation": "Escalate if the slice would require replacing the current startup model wholesale or widening into unrelated planning-chain work."
     },
     "execution": {
-      "milestone": "startup-discoverability-and-lower-trust-audit",
-      "status": "planned",
-      "next_step": "Run the intent-validation audit over startup discoverability, core-surface compactness, preflight takeover robustness, and lower-trust closeout signaling, then convert the highest-signal failures into bounded fixes.",
-      "proof": "Startup/defaults/config/summary/report surfaces answer first-contact questions cheaply, lower-trust review signals appear when package routing is bypassed, and focused workflow tests plus planning checks pass."
+      "milestone": "lower-trust-closeout-visibility",
+      "status": "in-progress",
+      "next_step": "Choose the default compact owner for lower-trust visibility, land the smallest report/summary signal for likely bypass or weak compliance, and add focused tests.",
+      "proof": "Preflight-first takeover recovery now works in compact form even without an active execplan, strict preflight gating exists for high-risk commands, and the next proof is compact lower-trust signaling in report and-or summary plus focused workflow tests."
     },
     "scope": {
       "touched": [
@@ -53,12 +53,12 @@
     "activation trigger": "continue until a generic agent can follow startup routing cheaply and bypass/weak-closeout incidents reliably surface in review state"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "planned: a current-state audit can separate startup discoverability failures from trust-signal failures, so later fixes stay bounded and evidence-led.",
+    "what this slice enabled": "The takeover-robustness slice for issue #277 is now landed: preflight bundles startup defaults, resolved config, and compact active planning state; active-only polling survives active TODO state without an active execplan; and high-risk commands can require a fresh preflight token.",
     "intentionally deferred": "broad doctrine compression beyond the audit findings, machine-first planning-chain extraction, and local-only integration-area work.",
-    "discovered implications": "the Gemini incident indicates that discoverability and trust signaling are coupled: when startup routing is weak, lower-trust behavior is harder to spot before damage lands.",
-    "proof achieved now": "none yet; this is a prepared plan.",
-    "validation still needed": "prove that generic-agent startup cost falls and that lower-trust closeout becomes inspectable from compact surfaces.",
-    "next likely slice": "turn the audit result into the smallest startup/trust fix set, likely one startup routing cut and one lower-trust reporting cut."
+    "discovered implications": "The preflight work confirmed that takeover recovery cannot rely on planning_record alone; compact recovery also needs TODO-level state when no execplan is active. With startup recovery now materially better, the main remaining trust gap in this lane is lower-trust visibility rather than first-contact recovery.",
+    "proof achieved now": "`agentic-workspace preflight --format json` and `--active-only` return takeover-safe context with active TODO visibility, strict preflight gate errors on missing or stale tokens for high-risk commands, and focused workspace CLI tests pass.",
+    "validation still needed": "prove that report and-or summary surfaces show lower-trust or likely-bypass state cheaply enough for review without broad rereads.",
+    "next likely slice": "land the smallest lower-trust reporting cut under issue #256, likely centered on report first and only widening to summary if the signal still feels too hidden."
   },
   "intent_interpretation": {
     "literal request": "prepare a full execplan for the second roadmap lane to reduce weak-agent implementation failures",
@@ -132,6 +132,13 @@
       "locator": "github issue #277"
     },
     {
+      "kind": "issue",
+      "target": "#256",
+      "label": "surface lower-trust signals when package use was likely bypassed",
+      "role": "next-active-slice",
+      "locator": "github issue #256"
+    },
+    {
       "kind": "doc",
       "target": ".agentic-workspace/WORKFLOW.md",
       "label": "workspace workflow contract",
@@ -140,15 +147,15 @@
     }
   ],
   "active_milestone": {
-    "id": "startup-discoverability-and-lower-trust-audit",
-    "status": "planned",
-    "scope": "Use current compact surfaces to audit startup discoverability, takeover robustness, and lower-trust closeout visibility before implementation fixes.",
+    "id": "lower-trust-closeout-visibility",
+    "status": "in-progress",
+    "scope": "Use compact review surfaces to make likely package bypass or weak compliance visible enough for cheap review after the preflight recovery slice closed.",
     "ready": "ready",
     "blocked": "none",
-    "optional_deps": "gh issue refresh before implementation if #251/#255/#256/#277 changed materially"
+    "optional_deps": "gh issue refresh before implementation if #251/#255/#256 changed materially"
   },
   "immediate_next_action": [
-    "Perform the intent-validation audit and capture the highest-signal startup and lower-trust failures as the next bounded implementation targets."
+    "Choose whether report, summary, or both should own lower-trust visibility by default, then implement the smallest signal surface and focused tests for issue #256."
   ],
   "blockers": [
     "None."
@@ -174,9 +181,9 @@
     "Audit-first is the default first step for this lane, because recent failures show hidden trust gaps as much as startup gaps."
   ],
   "open_questions_to_close": [
-    "Which startup question is currently the highest-frequency failure: entrypoint routing, active planning recovery, or workflow obligation discovery?",
     "Which compact surface should own lower-trust closeout visibility by default: report, summary, or both?",
-    "Is a dedicated audit artifact needed, or can the first slice encode findings directly in planning state and tests?"
+    "Which missing-residue signals are strong enough to reduce trust without creating noisy false positives?",
+    "Should lower-trust state stay report-only first, or should summary also surface a compact version once the signal shape is proven?"
   ],
   "validation_commands": [
     "uv run agentic-workspace defaults --section startup --format json",
@@ -197,29 +204,29 @@
     "The lane leaves a reusable audit-first pattern for future compliance incidents."
   ],
   "execution_run": {
-    "run status": "not-started",
-    "executor": "none yet",
+    "run status": "completed",
+    "executor": "workspace CLI",
     "handoff source": "this prepared execplan",
-    "what happened": "not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet",
-    "validations run": "none yet",
-    "result for continuation": "implementation still required",
-    "next step": "run the startup and lower-trust audit"
+    "what happened": "Completed the preflight-first takeover robustness slice: fixed bundled takeover context, active-only polling, strict preflight gating, and the active-TODO-without-execplan recovery gap.",
+    "scope touched": "src/agentic_workspace/cli.py; tests/test_workspace_cli.py",
+    "changed surfaces": "src/agentic_workspace/cli.py; tests/test_workspace_cli.py",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k preflight; uv run pytest tests/test_workspace_cli.py -q",
+    "result for continuation": "issue #277 is ready to close; the lane should continue with lower-trust review visibility under issue #256.",
+    "next step": "implement the smallest lower-trust reporting slice"
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "unknown",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "moderate until the audit proves which failures are discoverability vs. trust-signal problems",
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied for the preflight slice",
+    "intent served": "yes",
+    "config compliance": "respected checked-in and local config for the bounded preflight slice",
+    "misinterpretation risk": "low for the closed preflight slice; remaining risk sits in unresolved lower-trust visibility",
     "follow-on decision": "keep-lane-open"
   },
   "proof_report": {
-    "validation proof": "planned: compact startup/report queries plus focused workflow tests and planning-surface checks",
-    "proof achieved now": "none yet; plan prepared only",
-    "evidence for \"proof achieved\" state": "pending implementation"
+    "validation proof": "`uv run pytest tests/test_workspace_cli.py -q -k preflight`; `uv run pytest tests/test_workspace_cli.py -q`",
+    "proof achieved now": "The repo now has one-command takeover-safe context, active-state-only polling, strict preflight gating for selected high-risk commands, and recovery that still surfaces live TODO state when no execplan is active.",
+    "evidence for \"proof achieved\" state": "Focused preflight tests pass, the broader workspace CLI suite passes, and issue #277 acceptance criteria are satisfied by the shipped command behavior."
   },
   "intent_satisfaction": {
     "original intent": "prepare a full execplan that lets a strong planner steer the graceful-partial-compliance lane safely",
@@ -228,22 +235,23 @@
     "unsolved intent passed to": ".agentic-workspace/planning/state.toml lane graceful-partial-compliance"
   },
   "closure_check": {
-    "slice status": "planned but not started",
+    "slice status": "preflight-first takeover slice complete; lane remains active",
     "larger-intent status": "open",
     "closure decision": "keep-active",
-    "why this decision is honest": "the lane has not yet shipped discoverability or lower-trust improvements; only the planning artifact exists",
-    "evidence carried forward": "this execplan plus the lane record in state.toml",
-    "reopen trigger": "revisit if live issue evidence suggests a narrower startup or trust slice should be prioritized first"
+    "why this decision is honest": "issue #277 is complete, but the broader graceful-partial-compliance lane still lacks compact lower-trust visibility and other follow-on slices.",
+    "evidence carried forward": "this execplan, the lane record in state.toml, and the next active slice under issue #256",
+    "reopen trigger": "revisit if the lower-trust slice exposes a narrower startup failure or if live issue evidence reorders the lane"
   },
   "execution_summary": {
-    "outcome delivered": "prepared a full machine-first execplan for the graceful partial compliance lane",
-    "validation confirmed": "planning preparation only",
+    "outcome delivered": "Landed the preflight-first takeover robustness slice and selected lower-trust visibility as the next bounded lane step.",
+    "validation confirmed": "focused preflight workspace CLI tests and the full workspace CLI suite",
     "follow-on routed to": ".agentic-workspace/planning/state.toml and this execplan",
-    "post-work posterity capture": "none yet beyond the plan",
-    "knowledge promoted (memory/docs/config)": "execplan only",
-    "resume from": "startup-discoverability-and-lower-trust-audit"
+    "post-work posterity capture": "Issue #277 can now close against the shipped preflight command behavior and test proof.",
+    "knowledge promoted (memory/docs/config)": "execplan and active planning state",
+    "resume from": "lower-trust-closeout-visibility"
   },
   "drift_log": [
-    "2026-04-24: Initial full-lane execplan created from current roadmap order and live issue set."
+    "2026-04-24: Initial full-lane execplan created from current roadmap order and live issue set.",
+    "2026-04-24: Completed the preflight-first takeover robustness slice for issue #277 and advanced the active lane to lower-trust closeout visibility under issue #256."
   ]
 }

@@ -2978,13 +2978,12 @@ def _run_preflight_command(
     issued_at = datetime.fromtimestamp(issued_epoch, tz=timezone.utc).replace(microsecond=0).isoformat()
     preflight_token = _build_preflight_token(issued_at_epoch=issued_epoch)
 
-    if active_only:
-        # Return only active state for polling/monitoring
-        from repo_planning_bootstrap.installer import planning_report
+    active_state = _preflight_active_state_payload(target_root=target_root)
+    planning_record = active_state.get("planning_record", {"status": "unavailable"})
 
-        planning_report_data = planning_report(target=target_root)
-        active = planning_report_data.get("active", {})
-        planning_record = active.get("planning_record", {})
+    if active_only:
+        # Return only compact active state for polling/monitoring.
+        # This remains useful even when the repo has active TODO state but no active execplan.
 
         return {
             "kind": "preflight-response/v1",
@@ -2993,22 +2992,16 @@ def _run_preflight_command(
             "issued_at": issued_at,
             "preflight_token": preflight_token,
             "timestamp_hint": "Run this periodically to poll current active state without startup overhead.",
+            "active_planning_state": active_state,
             "planning_record": planning_record if isinstance(planning_record, dict) else {"status": "unavailable"},
         }
 
     # Full preflight: startup + config + active state for takeover recovery
-    from repo_planning_bootstrap.installer import planning_report
-
     # Get startup guidance
     startup_payload = _defaults_payload().get("startup", {})
 
     # Get config
     config_payload = _config_payload(config=config)
-
-    # Get active planning state
-    planning_report_data = planning_report(target=target_root)
-    active = planning_report_data.get("active", {})
-    planning_record = active.get("planning_record", {})
 
     return {
         "kind": "preflight-response/v1",
@@ -3027,9 +3020,25 @@ def _run_preflight_command(
             "optimization_bias": config_payload.get("optimization_bias"),
             "agent_instructions_file": config_payload.get("workspace", {}).get("agent_instructions_file", "AGENTS.md"),
         },
-        "active_planning_state": planning_record
-        if isinstance(planning_record, dict)
-        else {"status": "unavailable", "reason": "No active execplan"},
+        "active_planning_state": active_state,
+    }
+
+
+def _preflight_active_state_payload(*, target_root: Path) -> dict[str, Any]:
+    from repo_planning_bootstrap.installer import planning_summary
+
+    summary = planning_summary(target=target_root, profile="compact")
+    warnings = summary.get("warnings", [])
+    return {
+        "todo": summary.get("todo", {}),
+        "execplans": summary.get("execplans", {}),
+        "planning_surface_health": summary.get("planning_surface_health", {}),
+        "planning_record": summary.get("planning_record", {"status": "unavailable"}),
+        "active_contract": summary.get("active_contract", {"status": "unavailable"}),
+        "resumable_contract": summary.get("resumable_contract", {"status": "unavailable"}),
+        "handoff_contract": summary.get("handoff_contract", {"status": "unavailable"}),
+        "warnings": warnings if isinstance(warnings, list) else [],
+        "warning_count": int(summary.get("warning_count", 0) or 0),
     }
 
 

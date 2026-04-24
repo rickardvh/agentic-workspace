@@ -3478,6 +3478,57 @@ def test_preflight_command_emits_gate_token(capsys) -> None:
     assert payload["preflight_token"].startswith("preflight-v1:")
 
 
+def test_preflight_active_only_includes_active_todo_without_execplan(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "    { id = 'preflight-recovery-slice', status = 'in-progress', surface = '.agentic-workspace/planning/execplans/preflight-recovery.plan.json', why_now = 'takeover recovery should still surface the active lane.', next_action = 'land the preflight fix.', done_when = 'active state remains visible without an execplan.' }\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\n"
+        "lanes = []\n"
+        "candidates = []\n",
+    )
+
+    assert cli.main(["preflight", "--target", str(target), "--active-only", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["planning_record"]["status"] == "unavailable"
+    active_state = payload["active_planning_state"]
+    assert active_state["todo"]["active_count"] == 1
+    assert active_state["todo"]["active_items"][0]["id"] == "preflight-recovery-slice"
+    assert active_state["execplans"]["active_count"] == 0
+
+
+def test_preflight_full_includes_active_todo_without_execplan(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "    { id = 'preflight-recovery-slice', status = 'in-progress', surface = '.agentic-workspace/planning/execplans/preflight-recovery.plan.json', why_now = 'takeover recovery should still surface the active lane.', next_action = 'land the preflight fix.', done_when = 'active state remains visible without an execplan.' }\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\n"
+        "lanes = []\n"
+        "candidates = []\n",
+    )
+
+    assert cli.main(["preflight", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    active_state = payload["active_planning_state"]
+    assert active_state["planning_record"]["status"] == "unavailable"
+    assert active_state["todo"]["active_count"] == 1
+    assert active_state["todo"]["active_items"][0]["next_action"] == "land the preflight fix."
+
+
 def test_upgrade_strict_preflight_requires_token(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
