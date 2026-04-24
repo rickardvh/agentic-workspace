@@ -336,6 +336,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Return the high-signal orientation block for fresh agents.",
     )
 
+    preflight_parser = subparsers.add_parser(
+        "preflight",
+        help="Get compact takeover-safe context: startup defaults + resolved config + active planning state in one call.",
+    )
+    preflight_parser.add_argument("--target", help="Optional repository path for preflight context (defaults to current workspace).")
+    preflight_parser.add_argument(
+        "--active-only",
+        action="store_true",
+        help="Return only active planning state without startup defaults and config.",
+    )
+    _add_format_argument(preflight_parser)
+
     install_parser = subparsers.add_parser("install", help="Bootstrap selected modules into a target repository.")
     _add_init_arguments(install_parser)
     init_parser = subparsers.add_parser("init", help="Bootstrap selected modules into a target repository.")
@@ -988,6 +1000,16 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         except ImportError:
             parser.error("The planning module must be installed to use the summary command.")
+
+    if args.command == "preflight":
+        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+        _validate_target_root(command_name="preflight", target_root=target_root)
+        payload = _run_preflight_command(
+            target_root=target_root,
+            active_only=getattr(args, "active_only", False),
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
 
     if args.command in {"proof", "ownership", "config", "note-delegation-outcome"}:
         try:
@@ -2829,6 +2851,71 @@ def _run_report_command(
         "config": status_payload["config"],
         "reports": status_payload["reports"],
         "module_reports": module_reports,
+    }
+
+
+def _run_preflight_command(
+    *,
+    target_root: Path,
+    active_only: bool = False,
+) -> dict[str, Any]:
+    """Get compact takeover-safe context: startup + config + active state.
+
+    If active_only=True, returns only active planning state without startup/config.
+    This supports two use cases:
+    1. First-contact preflight: bundle startup guidance + config + active state
+    2. Active state polling: query current state without startup overhead
+    """
+    config = _load_workspace_config(target_root=target_root)
+
+    if active_only:
+        # Return only active state for polling/monitoring
+        from repo_planning_bootstrap.installer import planning_report
+
+        planning_report_data = planning_report(target=target_root)
+        active = planning_report_data.get("active", {})
+        planning_record = active.get("planning_record", {})
+
+        return {
+            "kind": "preflight-response/v1",
+            "mode": "active-state-only",
+            "target": target_root.as_posix(),
+            "timestamp_hint": "Run this periodically to poll current active state without startup overhead.",
+            "planning_record": planning_record if isinstance(planning_record, dict) else {"status": "unavailable"},
+        }
+
+    # Full preflight: startup + config + active state for takeover recovery
+    from repo_planning_bootstrap.installer import planning_report
+
+    # Get startup guidance
+    startup_payload = _defaults_payload().get("startup", {})
+
+    # Get config
+    config_payload = _config_payload(config=config)
+
+    # Get active planning state
+    planning_report_data = planning_report(target=target_root)
+    active = planning_report_data.get("active", {})
+    planning_record = active.get("planning_record", {})
+
+    return {
+        "kind": "preflight-response/v1",
+        "mode": "full-takeover-context",
+        "target": target_root.as_posix(),
+        "timestamp_hint": "Use this to bootstrap into an interrupted or takeover recovery.",
+        "startup_guidance": {
+            "entrypoint": startup_payload.get("default_canonical_agent_instructions_file", "AGENTS.md"),
+            "first_compact_queries": startup_payload.get("tiny_safe_model", {}).get("first_compact_queries", []),
+            "escalation_rules": startup_payload.get("escalation_cues", [])[:2],  # Top 2 most common
+        },
+        "resolved_config": {
+            "workspace_config": config_payload.get("workspace", {}),
+            "optimization_bias": config_payload.get("optimization_bias"),
+            "agent_instructions_file": config_payload.get("workspace", {}).get("agent_instructions_file", "AGENTS.md"),
+        },
+        "active_planning_state": planning_record
+        if isinstance(planning_record, dict)
+        else {"status": "unavailable", "reason": "No active execplan"},
     }
 
 

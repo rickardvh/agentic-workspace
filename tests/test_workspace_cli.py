@@ -3413,6 +3413,55 @@ def test_doctor_real_init_reports_stale_planning_generated_residue(tmp_path: Pat
     )
 
 
+def test_preflight_command_active_only_returns_compact_planning_state(capsys) -> None:
+    """Test that preflight --active-only returns only active planning state for efficient polling."""
+    assert cli.main(["preflight", "--active-only", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "preflight-response/v1"
+    assert payload["mode"] == "active-state-only"
+    assert "planning_record" in payload
+    assert "timestamp_hint" in payload
+
+
+def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None:
+    """Test that preflight returns bundled startup + config + active state for takeover recovery."""
+    assert cli.main(["preflight", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "preflight-response/v1"
+    assert payload["mode"] == "full-takeover-context"
+    assert "startup_guidance" in payload
+    assert "resolved_config" in payload
+    assert "active_planning_state" in payload
+    assert "timestamp_hint" in payload
+
+    # Verify startup guidance is present and correct
+    startup = payload["startup_guidance"]
+    assert startup["entrypoint"] == "AGENTS.md"
+    assert "first_compact_queries" in startup
+    assert any("agentic-workspace" in q for q in startup["first_compact_queries"])
+
+    # Verify config is present
+    config = payload["resolved_config"]
+    assert "workspace_config" in config
+    assert "agent_instructions_file" in config
+    assert config["agent_instructions_file"] == "AGENTS.md"
+
+
+def test_preflight_command_with_target_argument(tmp_path: Path, capsys) -> None:
+    """Test that preflight --target works to specify a target repository."""
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["preflight", "--target", str(target), "--active-only", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "preflight-response/v1"
+    assert target.as_posix() in payload["target"]
+
+
 def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))
