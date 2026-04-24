@@ -125,7 +125,7 @@
   ],
   "active_milestone": {
     "id": "choose-root-and-boundary-rules",
-    "status": "planned",
+    "status": "in-progress",
     "scope": "Pick the local-only root name, vendor/runtime subfolder convention, and explicit boundary rules that keep the area outside shared workflow authority.",
     "ready": "ready",
     "blocked": "none",
@@ -225,6 +225,7 @@
     "resume from": "choose-root-and-boundary-rules"
   },
   "drift_log": [
-    "2026-04-24: Initial full-lane execplan created from current roadmap order and live issue set."
+    "2026-04-24: Initial full-lane execplan created from current roadmap order and live issue set.",
+    "2026-04-24: Activated as the next unfinished roadmap lane after machine-first planning-chain closeout."
   ]
 }

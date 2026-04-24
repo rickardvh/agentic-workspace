@@ -42,14 +42,14 @@
   },
   "intent_continuity": {
     "larger intended outcome": "replace prose-first authored execplans with machine-first canonical planning state, explicit structured references, and proportional review residue with derived human-readable views",
-    "this slice completes the larger intended outcome": "no",
-    "continuation surface": ".agentic-workspace/planning/state.toml lane machine-first-planning-chain",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
     "parent lane": "machine-first-planning-chain"
   },
   "required_continuation": {
-    "required follow-on for the larger intended outcome": "yes",
-    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane machine-first-planning-chain",
-    "activation trigger": "continue until remaining restart-critical planning truth no longer depends on Markdown-authored or Markdown-only surfaces"
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
   },
   "iterative_follow_through": {
     "what this slice enabled": "planned: the reopened lane can move from the first sidecar proof to the unfinished typed-reference and review-residue follow-through instead of leaving the lane in contradictory archive state.",
@@ -140,7 +140,7 @@
   ],
   "active_milestone": {
     "id": "structured-references-and-review-residue-follow-through",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "Use one real active planning slice to canonicalize structured references and bounded review residue on top of the already-shipped sidecar path.",
     "ready": "ready",
     "blocked": "none",
@@ -179,6 +179,7 @@
   "validation_commands": [
     "uv run pytest packages/planning/tests/test_installer.py -q -k \"planning_summary or execplan or review\"",
     "uv run pytest tests/test_contract_tooling.py -q",
+    "rg -n \"machine-first-planning-chain|review_residue|review-target|closeout shape|roadmap lane\" .agentic-workspace packages tests",
     "uv run python scripts/check/check_planning_surfaces.py",
     "uv run python scripts/check/check_contract_tooling_surfaces.py",
     "uv run agentic-workspace summary --format json --profile full"
@@ -220,14 +221,14 @@
   },
   "intent_satisfaction": {
     "original intent": "prepare a full execplan that reopens and bounds the machine-first planning chain lane honestly",
-    "was original intent fully satisfied?": "yes for planning preparation, no for lane implementation",
-    "evidence of intent satisfaction": "the lane now has a continuation-honest machine-first execplan centered on the unfinished follow-through instead of the already-proved first slice",
-    "unsolved intent passed to": ".agentic-workspace/planning/state.toml lane machine-first-planning-chain"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "the lane finished with canonical execplan state, typed references on execution and roadmap surfaces, and explicit proportional review-retention policy carried in canonical review records.",
+    "unsolved intent passed to": "none"
   },
   "closure_check": {
-    "slice status": "implemented and validated",
+    "slice status": "completed",
     "larger-intent status": "completed",
-    "closure decision": "close-lane",
+    "closure decision": "archive-and-close",
     "why this decision is honest": "the active machine-first lane now satisfies its stated outcome: canonical execplan state is authoritative, typed references span execution and roadmap surfaces, and proportional review residue is explicit in canonical review records instead of living only in prose.",
     "evidence carried forward": "this execplan, the reopened lane in state.toml, the shipped review-residue projection, the lane-level structured references, the explicit review-retention blocks, and the archived first-slice proof",
     "reopen trigger": "reopen only if later planning work again depends on Markdown-authored or Markdown-only state for durable active or archived truth"
