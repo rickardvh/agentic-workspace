@@ -200,42 +200,43 @@
     "next step": "run full validation suite, then close issues #285, #286, #289 and archive this plan"
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "unknown",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "moderate until the first worker packet is exercised",
-    "follow-on decision": "keep-lane-open"
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
   },
   "proof_report": {
-    "validation proof": "planned: focused workspace CLI tests plus defaults/config/report checks and planning-surface health check",
-    "proof achieved now": "none yet; plan prepared only",
-    "evidence for \"proof achieved\" state": "pending implementation"
+    "validation proof": "uv run pytest tests/test_workspace_cli.py -q (128 passed); uv run python scripts/check/check_planning_surfaces.py (clean); pre-commit gate (all hooks green)",
+    "proof achieved now": "agentic-workspace config --format json exposes mixed_agent.runtime_resolution with recommendation, confidence, reasons, alternatives, profile_recommendations, guidance, and resolution_categories; mixed_agent.strong_handoff_packet exposes required_fields, optional_fields, size_guidance, when_to_use, and after_receiving_answer; both surfaces are also present in defaults --format json.",
+    "evidence for \"proof achieved\" state": "8 new tests: test_defaults_command_reports_runtime_resolution_policy, test_defaults_command_reports_strong_handoff_packet_template, test_config_command_reports_runtime_resolution_for_no_posture, test_config_command_runtime_resolution_recommends_external_delegation_when_strong_external_preferred, test_config_command_runtime_resolution_recommends_stronger_reasoning_for_boundary_shaping_with_strong_planner, test_config_command_runtime_resolution_recommends_stay_local_for_mechanical_work, test_config_command_runtime_resolution_recommends_manual_handoff_when_strong_external_preferred_and_no_external_targets; all 128 workspace CLI tests passed."
   },
   "intent_satisfaction": {
-    "original intent": "prepare a full execplan that lets a strong planner shape and bound implementation for the runtime-posture-selective-handoff lane",
-    "was original intent fully satisfied?": "yes for planning preparation, no for lane implementation",
-    "evidence of intent satisfaction": "the lane now has a bounded machine-first execplan with explicit slice order, validation, stop conditions, and delegation rails",
-    "unsolved intent passed to": ".agentic-workspace/planning/state.toml lane runtime-posture-selective-handoff"
+    "original intent": "make local execution posture and selective strong-reasoning handoff cheap enough to use in ordinary work",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "runtime_resolution is queryable from ordinary workspace surfaces and combines work semantics with local posture to guide stay-local/stronger-reasoning/external-delegation/manual-handoff; strong_handoff_packet template makes selective escalation structured and compact; delegated_run_guardrail (from prior slice) makes lower-trust delegation visibly lower-trust; all three linked issues closed.",
+    "unsolved intent passed to": "none"
   },
   "closure_check": {
-    "slice status": "planned but not started",
-    "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "the plan is prepared, but the lane's implementation and proof have not started",
-    "evidence carried forward": "this execplan plus lane references in state.toml",
-    "reopen trigger": "revisit if issue scope changes or the first runtime-resolution slice proves too wide for one bounded pass"
+    "slice status": "bounded slice complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "all acceptance criteria from issue #285 are satisfied; issues #285, #286, and #289 are closed; the runtime_resolution and strong_handoff_packet surfaces are queryable and the delegated_run_guardrail ships trust classification; the lane's outcome is achieved",
+    "evidence carried forward": "commits f28f747, 857861a, 02bff44, 1719d1c; archived execplan; closed GitHub issues #285, #286, #289",
+    "reopen trigger": "reopen if the runtime_resolution vocabulary needs richer work-semantics fields from portable execplans, or if the strong_handoff_packet template proves insufficient for real escalation usage"
   },
   "execution_summary": {
-    "outcome delivered": "prepared a full machine-first execplan for the runtime posture lane",
-    "validation confirmed": "planning preparation only",
-    "follow-on routed to": ".agentic-workspace/planning/state.toml and this execplan",
-    "post-work posterity capture": "none yet beyond the plan",
-    "knowledge promoted (memory/docs/config)": "execplan only",
-    "resume from": "issue #286 compact runtime-resolution answer"
+    "outcome delivered": "closed the runtime-posture-selective-handoff lane by shipping: (1) delegated_run_guardrail with per-target closeout trust classification; (2) compact summary profile for planning consumers; (3) runtime_resolution that combines portable work semantics with local execution posture across four resolution paths; (4) strong_handoff_packet template for cheap selective escalation to strong general-purpose reasoning.",
+    "validation confirmed": "uv run pytest tests/test_workspace_cli.py -q (128 passed); pre-commit gate (all hooks green); planning-surface health clean",
+    "follow-on routed to": "none; the lane closes here",
+    "post-work posterity capture": "keep runtime_resolution advisory and posture-driven; keep strong_handoff_packet compact (one question, under 500 tokens); do not let delegated workers own lane closure",
+    "knowledge promoted (memory/docs/config)": "runtime_resolution and strong_handoff_packet surfaced in workspace CLI defaults and config payloads; delegated_run_guardrail surfaced in mixed-agent defaults",
+    "resume from": "the next roadmap lane (graceful-partial-compliance) when promoted"
   },
   "drift_log": [
-    "2026-04-24: Initial full-lane execplan created from current roadmap order and live issue set."
+    "2026-04-24: Initial full-lane execplan created from current roadmap order and live issue set.",
+    "2026-04-24: Lane implemented across two sessions. First slice (delegated_run_guardrail + compact summary profile) was incorrectly treated as a direct task; retroactive execplan filed separately. Second slice (runtime_resolution + strong_handoff_packet) shipped in this plan. All three linked issues closed. Lane archived."
   ]
 }
