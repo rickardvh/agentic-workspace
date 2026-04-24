@@ -2882,6 +2882,79 @@ def test_report_surfaces_finished_work_inspection_findings(tmp_path: Path, capsy
     assert planning_report["finished_work_inspection"]["counts"]["likely_premature_closeout_count"] == 1
 
 
+def test_report_surfaces_compact_lower_trust_closeout_summary(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    (target / ".agentic-workspace" / "planning" / "external-intent-evidence.json").write_text(
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "system": "manual",
+                        "id": "#closed-without-residue",
+                        "title": "Closed without planning residue",
+                        "status": "closed",
+                        "kind": "lane",
+                        "parent_id": "",
+                        "planning_residue_expected": "required",
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["closeout_trust"]["status"] == "present"
+    assert payload["closeout_trust"]["trust"] == "lower-trust"
+    assert payload["closeout_trust"]["lower_trust_closeout_count"] == 1
+    assert any("Closed external planning item #closed-without-residue" in item for item in payload["closeout_trust"]["sample_signals"])
+
+
+def test_report_text_surfaces_compact_lower_trust_closeout_summary(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    (target / ".agentic-workspace" / "planning" / "external-intent-evidence.json").write_text(
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "system": "manual",
+                        "id": "#closed-without-residue",
+                        "title": "Closed without planning residue",
+                        "status": "closed",
+                        "kind": "lane",
+                        "parent_id": "",
+                        "planning_residue_expected": "required",
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target)]) == 0
+
+    text = capsys.readouterr().out
+    assert "Closeout trust:" in text
+    assert "lower-trust (1 lower-trust closeout signal(s))" in text
+    assert "Closed external planning item #closed-without-residue" in text
+
+
 def test_report_surfaces_active_planning_in_standing_intent_view(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

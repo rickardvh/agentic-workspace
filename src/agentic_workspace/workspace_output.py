@@ -192,6 +192,20 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
                     if not isinstance(example, dict):
                         continue
                     print(f"- {example.get('concern', '')}: {example.get('current_owner', '')}")
+    closeout_trust = payload.get("closeout_trust", {})
+    if isinstance(closeout_trust, dict) and closeout_trust.get("status") == "present":
+        print("Closeout trust:")
+        trust = closeout_trust.get("trust", "normal")
+        signal_count = int(closeout_trust.get("lower_trust_closeout_count", 0) or 0)
+        print(f"- {trust} ({signal_count} lower-trust closeout signal(s))")
+        summary = closeout_trust.get("summary")
+        if summary:
+            print(f"  summary: {summary}")
+        for message in closeout_trust.get("sample_signals", [])[:2]:
+            print(f"  signal: {message}")
+        next_action = closeout_trust.get("recommended_next_action")
+        if next_action:
+            print(f"  next: {next_action}")
     findings = payload.get("findings", [])
     if isinstance(findings, list) and findings:
         print("Findings:")

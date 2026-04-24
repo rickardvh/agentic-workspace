@@ -16,6 +16,7 @@
     "system_intent_mirror",
     "workflow_obligations",
     "execution_shape",
+    "closeout_trust",
     "findings",
     "next_action",
     "discovery",

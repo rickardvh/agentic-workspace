@@ -15,6 +15,7 @@
     "agent_configuration_system",
     "agent_configuration_queries",
     "workflow_obligations",
+    "closeout_trust",
     "findings",
     "next_action",
     "discovery",
@@ -97,6 +98,9 @@
       "type": "object"
     },
     "workflow_obligations": {
+      "type": "object"
+    },
+    "closeout_trust": {
       "type": "object"
     },
     "findings": {

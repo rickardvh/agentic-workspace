@@ -2918,6 +2918,7 @@ def _run_report_command(
         memory_installed="memory" in installed_modules,
     )
     execution_shape = _execution_shape_payload(config=config, module_reports=module_reports)
+    closeout_trust = _report_closeout_trust_payload(module_reports=module_reports)
     return {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -2950,6 +2951,7 @@ def _run_report_command(
             active_planning_record=_active_planning_record(module_reports=module_reports),
         ),
         "findings": aggregated_findings,
+        "closeout_trust": closeout_trust,
         "next_action": next_action,
         "discovery": discovery,
         "standing_intent": standing_intent,
@@ -2958,6 +2960,58 @@ def _run_report_command(
         "config": status_payload["config"],
         "reports": status_payload["reports"],
         "module_reports": module_reports,
+    }
+
+
+def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> dict[str, Any]:
+    planning_report = next(
+        (report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"),
+        None,
+    )
+    if not isinstance(planning_report, dict):
+        return {
+            "status": "unavailable",
+            "reason": "planning module is not installed",
+        }
+
+    intent_validation = planning_report.get("intent_validation", {})
+    if not isinstance(intent_validation, dict):
+        return {
+            "status": "unavailable",
+            "reason": "planning intent validation is unavailable",
+        }
+
+    counts = intent_validation.get("counts", {})
+    signals = intent_validation.get("signals", [])
+    lower_trust_closeout_count = 0
+    if isinstance(counts, dict):
+        lower_trust_closeout_count = int(counts.get("lower_trust_closeout_count", 0) or 0)
+    sample_signals = [
+        str(signal.get("message", "")).strip()
+        for signal in signals
+        if isinstance(signal, dict) and signal.get("kind") == "closed_without_planning_residue"
+    ]
+    sample_signals = [message for message in sample_signals if message][:3]
+    trust = "lower-trust" if lower_trust_closeout_count > 0 else "normal"
+    if trust == "lower-trust":
+        summary = (
+            f"{lower_trust_closeout_count} closeout signal(s) suggest package bypass or missing planning residue; "
+            "treat closeout trust as lower until checked-in residue is visible."
+        )
+        recommended_next_action = str(
+            intent_validation.get("recommended_next_action")
+            or "Review the lower-trust closeout signals before treating planning closeout as normal."
+        )
+    else:
+        summary = "No lower-trust closeout signals are currently detected from planning evidence."
+        recommended_next_action = "No extra closeout trust review is needed beyond normal report inspection."
+    return {
+        "status": "present",
+        "trust": trust,
+        "lower_trust_closeout_count": lower_trust_closeout_count,
+        "summary": summary,
+        "sample_signals": sample_signals,
+        "recommended_next_action": recommended_next_action,
     }
 
 
