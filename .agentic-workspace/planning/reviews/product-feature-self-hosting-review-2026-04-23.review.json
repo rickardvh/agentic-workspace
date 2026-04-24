@@ -66,6 +66,11 @@
     "defer": "revisit this review after another mixed-agent and closeout-heavy tranche, especially if registry or delegation evidence remains thin.",
     "dismiss": "any conclusion that the product is only doctrinal. The core loop is already strongly self-hosted; the weaker evidence is concentrated in a smaller set of supporting capabilities."
   },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "after another mixed-agent and closeout-heavy tranche either refreshes or supersedes the current evidence",
+    "proof surface": "canonical review record plus the linked machine-first planning lane and later mixed-agent evidence"
+  },
   "validation_commands": [
     "`uv run agentic-workspace summary --format json`",
     "`uv run agentic-workspace config --target . --format json`",

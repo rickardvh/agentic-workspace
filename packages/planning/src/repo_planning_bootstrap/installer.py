@@ -159,6 +159,7 @@ REVIEW_SECTION_ORDER: tuple[tuple[str, str, str], ...] = (
     ("References", "references", "references"),
     ("Findings", "findings", "findings"),
     ("Recommendation", "recommendation", "dict"),
+    ("Retention", "retention", "dict"),
     ("Validation / Inspection Commands", "validation_commands", "list"),
     ("Drift Log", "drift_log", "list"),
 )
@@ -595,6 +596,55 @@ def _normalize_review_finding(raw: Any) -> dict[str, str] | None:
     return {key: value for key, value in finding.items() if value}
 
 
+def _normalize_review_retention(raw: Any) -> dict[str, str] | None:
+    if not isinstance(raw, dict):
+        return None
+    retention = {
+        "closeout shape": str(raw.get("closeout shape", "")).strip(),
+        "trigger": str(raw.get("trigger", "")).strip(),
+        "proof surface": str(raw.get("proof surface", "")).strip(),
+    }
+    normalized = {key: value for key, value in retention.items() if value}
+    return normalized or None
+
+
+def _derive_review_retention(*, findings: list[dict[str, str]], recommendation: dict[str, str]) -> dict[str, str]:
+    shapes = [
+        str(finding.get("post-remediation note shape", "")).strip().lower()
+        for finding in findings
+        if str(finding.get("post-remediation note shape", "")).strip()
+    ]
+    if any(shape == "retain" for shape in shapes):
+        closeout_shape = "retain"
+    elif any(shape == "shrink" for shape in shapes):
+        closeout_shape = "shrink"
+    elif any(shape == "stub" for shape in shapes):
+        closeout_shape = "stub"
+    elif shapes and all(shape == "delete" for shape in shapes):
+        closeout_shape = "delete"
+    else:
+        closeout_shape = "shrink" if findings else "delete"
+
+    defer = str(recommendation.get("defer", "")).strip()
+    promote = str(recommendation.get("promote", "")).strip()
+    dismiss = str(recommendation.get("dismiss", "")).strip()
+    if defer and defer.lower() not in {"no", "none", "n/a"}:
+        trigger = defer
+    elif promote and promote.lower() not in {"no", "none", "n/a"}:
+        trigger = "until promoted follow-on work or docs/memory residue carry the durable outcome"
+    elif dismiss and dismiss.lower() not in {"no", "none", "n/a"}:
+        trigger = "until dismissal is explicit and no live planning surface still depends on the review"
+    else:
+        trigger = "until follow-on routing or dismissal makes the live review artifact unnecessary"
+
+    proof_surface = "canonical review record plus any referenced planning or proof artifacts"
+    return {
+        "closeout shape": closeout_shape,
+        "trigger": trigger,
+        "proof surface": proof_surface,
+    }
+
+
 def _render_review_markdown_from_record(record: dict[str, Any]) -> str:
     lines = [f"# {str(record.get('title', 'Review Title')).strip() or 'Review Title'}", ""]
     for heading, key, value_kind in REVIEW_SECTION_ORDER:
@@ -696,6 +746,29 @@ def _review_findings(path: Path) -> list[dict[str, str]]:
     return findings
 
 
+def _review_recommendation(path: Path) -> dict[str, str]:
+    record = _load_review_record(path)
+    if isinstance(record, dict) and isinstance(record.get("recommendation"), dict):
+        return {
+            str(key).strip(): str(value).strip()
+            for key, value in record.get("recommendation", {}).items()
+            if str(key).strip() and str(value).strip()
+        }
+    return _extract_kv_fields(_section_lines(_read_lines(path), "Recommendation"))
+
+
+def _review_retention(path: Path) -> dict[str, str]:
+    record = _load_review_record(path)
+    if isinstance(record, dict):
+        explicit = _normalize_review_retention(record.get("retention"))
+        if explicit is not None:
+            return explicit
+    explicit = _normalize_review_retention(_extract_kv_fields(_section_lines(_read_lines(path), "Retention")))
+    if explicit is not None:
+        return explicit
+    return _derive_review_retention(findings=_review_findings(path), recommendation=_review_recommendation(path))
+
+
 def _review_references(references: list[dict[str, str]]) -> list[dict[str, str]]:
     review_references: list[dict[str, str]] = []
     for reference in references:
@@ -719,16 +792,10 @@ def _review_residue_from_references(*, target_root: Path, references: list[dict[
         review_path = _resolve_review_path(target_root, target)
         if review_path is None or not review_path.exists():
             continue
-        record = _load_review_record(review_path)
         title = _review_title(review_path)
         findings = _review_findings(review_path)
-        recommendation = {}
-        if isinstance(record, dict) and isinstance(record.get("recommendation"), dict):
-            recommendation = {
-                str(key).strip(): str(value).strip()
-                for key, value in record.get("recommendation", {}).items()
-                if str(key).strip() and str(value).strip()
-            }
+        recommendation = _review_recommendation(review_path)
+        retention = _review_retention(review_path)
         promotion_targets = _dedupe(
             [
                 str(finding.get("promotion target", "")).strip()
@@ -745,6 +812,7 @@ def _review_residue_from_references(*, target_root: Path, references: list[dict[
                 "finding_titles": [str(finding.get("title", "")).strip() for finding in findings if str(finding.get("title", "")).strip()],
                 "promotion_targets": promotion_targets,
                 "recommendation": recommendation,
+                "retention": retention,
             }
         )
     return residue
@@ -755,6 +823,7 @@ def _build_review_record_from_markdown(review_path: Path) -> dict[str, Any]:
     review_mode = _extract_kv_fields(_section_lines(lines, "Review Mode"))
     review_method = _extract_kv_fields(_section_lines(lines, "Review Method"))
     recommendation = _extract_kv_fields(_section_lines(lines, "Recommendation"))
+    findings = _review_findings(review_path)
     return {
         "kind": REVIEW_RECORD_KIND,
         "title": _review_title(review_path),
@@ -764,8 +833,10 @@ def _build_review_record_from_markdown(review_path: Path) -> dict[str, Any]:
         "review_mode": review_mode,
         "review_method": review_method,
         "references": _extract_reference_section(review_path, "References"),
-        "findings": _review_findings(review_path),
+        "findings": findings,
         "recommendation": recommendation,
+        "retention": _normalize_review_retention(_extract_kv_fields(_section_lines(lines, "Retention")))
+        or _derive_review_retention(findings=findings, recommendation=recommendation),
         "validation_commands": _extract_section_bullets(review_path, "Validation / Inspection Commands"),
         "drift_log": _extract_section_bullets(review_path, "Drift Log"),
     }

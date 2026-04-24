@@ -188,6 +188,11 @@ def _write_review_record(path: Path) -> None:
                 "defer": "no",
                 "dismiss": "no",
             },
+            "retention": {
+                "closeout shape": "shrink",
+                "trigger": "after the finding is promoted into planning state",
+                "proof surface": "canonical review record plus promoted planning residue",
+            },
             "validation_commands": ["uv run pytest packages/planning/tests/test_installer.py -q"],
             "drift_log": ["2026-04-23: Review created."],
         },
@@ -1431,10 +1436,16 @@ def test_planning_summary_and_handoff_project_review_residue_from_structured_ref
                 "defer": "no",
                 "dismiss": "no",
             },
+            "retention": {
+                "closeout shape": "shrink",
+                "trigger": "after the finding is promoted into planning state",
+                "proof surface": "canonical review record plus promoted planning residue",
+            },
         }
     ]
     assert handoff["handoff_contract"]["review_residue"][0]["target"] == ".agentic-workspace/planning/reviews/review-alpha.review.json"
     assert handoff["handoff_contract"]["review_residue"][0]["finding_titles"] == ["stale residue"]
+    assert handoff["handoff_contract"]["review_residue"][0]["retention"]["closeout shape"] == "shrink"
 
 
 def test_upgrade_backfills_canonical_review_records(tmp_path: Path) -> None:
@@ -1509,6 +1520,7 @@ def test_upgrade_backfills_canonical_review_records(tmp_path: Path) -> None:
     assert payload["title"] == "Review Alpha"
     assert payload["review_mode"]["mode"] == "review-promotion"
     assert payload["findings"][0]["title"] == "stale residue"
+    assert payload["retention"]["closeout shape"] == "shrink"
 
 
 def test_archive_execplan_blocks_unfinished_larger_intent_without_continuation_surface(tmp_path: Path) -> None:

@@ -50,6 +50,7 @@ Each review artifact should stay compact and include:
 - confidence and risk if unchanged
 - suggested action
 - promotion target and trigger
+- explicit retention / closeout shape for what should survive after the review is no longer active
 - validation or inspection commands used
 
 Use the template in this directory and prefer one bounded review question per file.
@@ -100,6 +101,17 @@ Every review artifact should state:
 - the specific review question being answered
 - the main inputs inspected first
 - the default finding cap for that mode
+- the intended retention shape after active use ends
+
+## Retention
+
+Record a compact `Retention` block in the canonical review record.
+
+- `Closeout shape` should be one of `retain`, `shrink`, `stub`, or `delete`.
+- `Trigger` should say what event makes that shape appropriate.
+- `Proof surface` should name where later trust should come from after the live review artifact shrinks or disappears.
+
+Keep this block short. It exists to prevent review artifacts from becoming a parallel archive once their findings have been promoted, deferred, or dismissed.
 
 If the review needs materially more findings than the default cap, split the work or justify the exception explicitly.
 

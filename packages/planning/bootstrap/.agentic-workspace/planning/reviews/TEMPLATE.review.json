@@ -48,6 +48,11 @@
     "defer": "",
     "dismiss": ""
   },
+  "retention": {
+    "closeout shape": "",
+    "trigger": "",
+    "proof surface": ""
+  },
   "validation_commands": [
     ""
   ],
