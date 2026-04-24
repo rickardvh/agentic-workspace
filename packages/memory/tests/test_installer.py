@@ -36,6 +36,13 @@ def _mkdir_before_write_text(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(Path, "write_text", _write)
 
 
+def _memory_freshness_script_path() -> Path:
+    root_checker = WORKSPACE_ROOT / "scripts" / "check" / "check_memory_freshness.py"
+    if root_checker.exists():
+        return root_checker
+    return PACKAGE_ROOT / "scripts" / "check" / "check_memory_freshness.py"
+
+
 def test_ownership_module_root_matches_workspace_ledger() -> None:
     assert memory_module_root("memory") == Path(".agentic-workspace/memory")
 
@@ -44,7 +51,7 @@ def test_memory_contract_file_shortlist_is_explicit() -> None:
     assert Path("AGENTS.md") in MEMORY_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/memory/repo/index.md") in MEMORY_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/memory/repo/manifest.toml") in MEMORY_COMPATIBILITY_CONTRACT_FILES
-    assert Path("scripts/check/check_memory_freshness.py") in MEMORY_LOWER_STABILITY_HELPER_FILES
+    assert Path(".agentic-workspace/memory/UPGRADE-SOURCE.toml") in MEMORY_LOWER_STABILITY_HELPER_FILES
     assert Path(".agentic-workspace/memory/bootstrap/README.md") in MEMORY_LOWER_STABILITY_HELPER_FILES
     assert set(MEMORY_COMPATIBILITY_CONTRACT_FILES).isdisjoint(MEMORY_LOWER_STABILITY_HELPER_FILES)
     assert set(MEMORY_COMPATIBILITY_CONTRACT_FILES) | set(MEMORY_LOWER_STABILITY_HELPER_FILES) == set(PAYLOAD_REQUIRED_FILES)
@@ -444,7 +451,8 @@ def test_extract_make_targets_ignores_assignments_and_recipes() -> None:
     \t$(PYTHON) -m pytest
 
     check-memory:
-    \tpython scripts/check/check_memory_freshness.py
+    \tuv run agentic-workspace doctor --target . --format json
+    \tuv run agentic-workspace report --target . --format json
     """
 
     assert installer._extract_make_targets(text) == {
@@ -458,11 +466,13 @@ def test_extract_make_targets_ignores_assignments_and_recipes() -> None:
 def test_equivalent_optional_fragment_detail_detects_existing_makefile_target() -> None:
     existing = """
     check-memory:
-    \t$(PYTHON) scripts/check/check_memory_freshness.py
+    \tuv run agentic-workspace doctor --target . --format json
+    \tuv run agentic-workspace report --target . --format json
     """
     fragment = """
     check-memory:
-    \tpython scripts/check/check_memory_freshness.py
+    \tuv run agentic-workspace doctor --target . --format json
+    \tuv run agentic-workspace report --target . --format json
     """
 
     detail = installer._equivalent_optional_fragment_detail(
@@ -478,7 +488,7 @@ def test_equivalent_optional_fragment_detail_requires_matching_targets() -> None
     detail = installer._equivalent_optional_fragment_detail(
         target_file=Path("Makefile"),
         existing="lint:\n\tpython -m ruff check .\n",
-        fragment="check-memory:\n\tpython scripts/check/check_memory_freshness.py\n",
+        fragment="check-memory:\n\tuv run agentic-workspace doctor --target . --format json\n\tuv run agentic-workspace report --target . --format json\n",
     )
 
     assert detail is None
@@ -490,8 +500,8 @@ def test_plan_optional_appends_skips_equivalent_makefile_target(tmp_path: Path) 
     (source_root / "optional").mkdir(parents=True, exist_ok=True)
     target_root.mkdir()
 
-    fragment = "check-memory:\n\tpython scripts/check/check_memory_freshness.py\n"
-    makefile = "check-memory:\n\t$(PYTHON) scripts/check/check_memory_freshness.py\n"
+    fragment = "check-memory:\n\tuv run agentic-workspace doctor --target . --format json\n\tuv run agentic-workspace report --target . --format json\n"
+    makefile = fragment
 
     (source_root / "optional" / "Makefile.fragment.mk").write_text(fragment, encoding="utf-8")
     (source_root / "optional" / "CONTRIBUTING.fragment.md").write_text("Contributing fragment\n", encoding="utf-8")
@@ -511,7 +521,7 @@ def test_plan_optional_appends_skips_equivalent_makefile_target(tmp_path: Path) 
     makefile_actions = [action for action in result.actions if action.path == target_root / "Makefile"]
     assert len(makefile_actions) == 1
     assert makefile_actions[0].kind == "skipped"
-    assert makefile_actions[0].detail == "equivalent optional Makefile convenience target already present (check-memory)"
+    assert makefile_actions[0].detail == "fragment already present"
 
 
 def test_install_does_not_duplicate_existing_optional_fragment(tmp_path: Path) -> None:
@@ -519,7 +529,7 @@ def test_install_does_not_duplicate_existing_optional_fragment(tmp_path: Path) -
     (target / ".git").mkdir(parents=True, exist_ok=True)
     makefile = target / "Makefile"
     makefile.write_text(
-        "check-memory:\n\tpython scripts/check/check_memory_freshness.py\n",
+        "check-memory:\n\tuv run agentic-workspace doctor --target . --format json\n\tuv run agentic-workspace report --target . --format json\n",
         encoding="utf-8",
     )
 
@@ -1802,7 +1812,7 @@ def test_verify_payload_reports_contract_surface_shortlists(tmp_path: Path) -> N
         and action.kind == "current"
         and action.role == "payload-contract"
         and "lower-stability helper files:" in action.detail
-        and "scripts/check/check_memory_freshness.py" in action.detail
+        and ".agentic-workspace/memory/UPGRADE-SOURCE.toml" in action.detail
         and ".agentic-workspace/memory/bootstrap/README.md" in action.detail
         for action in result.actions
     )
@@ -1830,7 +1840,7 @@ def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
         and action.role == "payload-contract"
         and "lower-stability helper files:" in action.detail
         and ".agentic-workspace/memory/skills/README.md" in action.detail
-        and "scripts/check/check_memory_freshness.py" in action.detail
+        and ".agentic-workspace/memory/UPGRADE-SOURCE.toml" in action.detail
         for action in result.actions
     )
 
@@ -1844,7 +1854,7 @@ def test_memory_freshness_audit_ignores_bootstrap_workspace(tmp_path: Path) -> N
     completed = subprocess.run(
         [
             sys.executable,
-            str(installer.payload_root() / "scripts" / "check" / "check_memory_freshness.py"),
+            str(_memory_freshness_script_path()),
         ],
         cwd=target,
         check=True,
@@ -2169,7 +2179,7 @@ def test_memory_freshness_strict_default_does_not_fail_on_bootstrap_placeholders
     installer.install_bootstrap(target=target)
 
     result = subprocess.run(
-        [sys.executable, "scripts/check/check_memory_freshness.py", "--strict"],
+        [sys.executable, str(_memory_freshness_script_path()), "--strict"],
         cwd=target,
         capture_output=True,
         text=True,
@@ -2198,7 +2208,7 @@ def test_memory_freshness_strict_can_fail_on_bootstrap_placeholders_when_request
     result = subprocess.run(
         [
             sys.executable,
-            "scripts/check/check_memory_freshness.py",
+            str(_memory_freshness_script_path()),
             "--strict",
             "--strict-categories",
             "uncustomised_index_placeholders",
@@ -2238,7 +2248,7 @@ def test_memory_freshness_reports_current_planning_state_residue(tmp_path: Path)
     )
 
     result = subprocess.run(
-        [sys.executable, "scripts/check/check_memory_freshness.py"],
+        [sys.executable, str(_memory_freshness_script_path())],
         cwd=target,
         capture_output=True,
         text=True,

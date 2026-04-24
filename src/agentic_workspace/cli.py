@@ -12,7 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, NoReturn, cast
 
 from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
@@ -226,7 +226,7 @@ class ModuleSelectionError(ValueError):
 class WorkspaceArgumentParser(argparse.ArgumentParser):
     """Parser with startup-oriented fallback guidance for invalid commands."""
 
-    def error(self, message: str) -> None:
+    def error(self, message: str) -> NoReturn:
         if "invalid choice" in message and "command" in message:
             unknown_command = _extract_unknown_command(message)
             suggestions = _command_suggestions(unknown_command)
@@ -479,7 +479,7 @@ def build_parser() -> argparse.ArgumentParser:
     uninstall_parser.add_argument(
         "--local-only",
         action="store_true",
-        help="Remove the local-only workspace install from `.gemini/agentic-workspace/` instead of the repository root.",
+        help="Remove the local-only workspace install from `.agentic-workspace/` instead of the repository root.",
     )
 
     return parser
@@ -503,7 +503,7 @@ def _add_init_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--local-only",
         action="store_true",
-        help="Install into `.gemini/agentic-workspace/` instead of the repository root.",
+        help="Install into `.agentic-workspace/` instead of the repository root.",
     )
     parser.add_argument(
         "--agent-instructions-file",
@@ -1216,7 +1216,7 @@ def main(argv: list[str] | None = None) -> int:
             repo_root = _resolve_target_root(args.target)
             _validate_target_root(command_name=args.command, target_root=repo_root, local_only=bool(args.local_only))
             _enforce_preflight_gate(parser=parser, args=args, command_name=args.command)
-            target_root = repo_root / ".gemini" / "agentic-workspace" if args.local_only else repo_root
+            target_root = repo_root / LOCAL_ONLY_INSTALL_ROOT if args.local_only else repo_root
             config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
             explicit_agent_instructions_file = getattr(args, "agent_instructions_file", None)
             if explicit_agent_instructions_file:
@@ -1259,7 +1259,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "uninstall" and bool(getattr(args, "local_only", False)):
             local_only_repo_root = _resolve_target_root(args.target)
             _validate_target_root(command_name=args.command, target_root=local_only_repo_root, local_only=True)
-            target_root = local_only_repo_root / ".gemini" / "agentic-workspace"
+            target_root = local_only_repo_root / LOCAL_ONLY_INSTALL_ROOT
         else:
             target_root = _resolve_target_root(args.target)
             _validate_target_root(command_name=args.command, target_root=target_root)
@@ -1904,7 +1904,8 @@ def _write_generated_text(*, destination: Path, text: str, dry_run: bool) -> Non
     destination.write_text(text, encoding="utf-8")
 
 
-LOCAL_ONLY_IGNORE_BLOCK = "# Agentic Workspace local-only storage\n.gemini/\n"
+LOCAL_ONLY_INSTALL_ROOT = Path(".agentic-workspace") / "local-only"
+LOCAL_ONLY_IGNORE_BLOCK = "# Agentic Workspace local-only storage\n.agentic-workspace/\n"
 LOCAL_ONLY_STATE_FILE = Path("LOCAL-ONLY.toml")
 
 
@@ -1996,7 +1997,7 @@ def _append_local_only_git_exclude(*, repo_root: Path, dry_run: bool) -> dict[st
     return {
         "kind": "would create" if dry_run and not exclude_path.exists() else "would update" if dry_run else "created",
         "path": ".git/info/exclude",
-        "detail": "record .gemini/ in git-local exclude metadata for local-only workspace storage",
+        "detail": "record .agentic-workspace/ in git-local exclude metadata for local-only workspace storage",
     }
 
 
@@ -2291,12 +2292,6 @@ def _workspace_uninstall_report(*, target_root: Path, dry_run: bool, local_only_
         if local_only_repo_root is not None and target_root.exists():
             actions.append(_remove_local_only_state(target_root=target_root, dry_run=dry_run))
             shutil.rmtree(target_root)
-            gemini_dir = local_only_repo_root / ".gemini"
-            if gemini_dir.exists():
-                try:
-                    gemini_dir.rmdir()
-                except OSError:
-                    pass
     if local_only_repo_root is not None:
         if dry_run and target_root.exists():
             actions.append(

@@ -2183,7 +2183,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
     elif recurring_friction["promotion_pressure_count"]:
         next_action_summary = "Recurring friction has repeated enough times that it should promote into stronger remediation instead of staying note-only evidence."
         next_action_commands = [
-            "python scripts/check/check_recurring_friction_ledger.py",
+            "agentic-workspace report --target ./repo --format json",
             "agentic-memory-bootstrap promotion-report --target ./repo --mode remediation",
         ]
     elif remediation_counts.get("candidate", 0):

@@ -1,7 +1,3 @@
-MEMORY_CHECK_SCRIPT := scripts/check/check_memory_freshness.py
-ifeq (,$(wildcard $(MEMORY_CHECK_SCRIPT)))
-MEMORY_CHECK_SCRIPT := ../../scripts/check/check_memory_freshness.py
-endif
 PYTEST_PARALLEL_ARGS ?= -n auto
 
 help:
@@ -11,8 +7,8 @@ help:
 	@echo "  doctor          Run doctor against this repo."
 	@echo "  verify-payload  Verify the packaged payload contract."
 	@echo "  prompt-upgrade  Print the upgrade prompt for this repo."
-	@echo "  check-memory    Run the memory freshness audit."
-	@echo "  check-memory-strict  Run freshness audit in strict mode."
+	@echo "  check-memory    Run workspace doctor and report for memory health."
+	@echo "  check-memory-strict  Alias for check-memory."
 	@echo "  lint            Run Ruff and Markdown lint checks."
 	@echo "  markdownlint    Run Markdown lint checks."
 	@echo "  format          Run Ruff formatting."
@@ -34,10 +30,11 @@ prompt-upgrade:
 	uv run agentic-memory-bootstrap prompt upgrade --target .
 
 check-memory:
-	uv run python $(MEMORY_CHECK_SCRIPT)
+	uv run agentic-workspace doctor --target ../.. --format json
+	uv run agentic-workspace report --target ../.. --format json
 
 check-memory-strict:
-	uv run python $(MEMORY_CHECK_SCRIPT) --strict
+	$(MAKE) check-memory
 
 lint:
 	uv run ruff check . --fix

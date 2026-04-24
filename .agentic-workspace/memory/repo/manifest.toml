@@ -382,7 +382,7 @@ subsystems = ["memory-system"]
 surfaces = []
 routes_from = ["AGENTS.md", ".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/manifest.toml", ".agentic-workspace/memory/**/*.md"]
 stale_when = ["AGENTS.md", ".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/manifest.toml", "bootstrap/AGENTS.md"]
-related_validations = ["python scripts/check/check_memory_freshness.py"]
+related_validations = ["agentic-workspace doctor --target ./repo --format json"]
 memory_role = "durable_truth"
 
 [notes.".agentic-workspace/memory/VERSION.md"]
@@ -408,7 +408,7 @@ subsystems = ["memory-system"]
 surfaces = ["tests", "architecture"]
 routes_from = ["tests/**/*.py", "scripts/check/**/*.py"]
 stale_when = ["tests/**/*.py", "scripts/check/**/*.py"]
-related_validations = ["python scripts/check/check_memory_freshness.py"]
+related_validations = ["agentic-workspace doctor --target ./repo --format json"]
 memory_role = "improvement_signal"
 symptom_of = "missing_guardrail"
 preferred_remediation = "test"

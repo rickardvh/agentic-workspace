@@ -2126,7 +2126,7 @@ def test_init_uses_explicit_modules_csv(monkeypatch, tmp_path: Path, capsys) -> 
     assert calls == [("memory", "install", {"target": str(tmp_path), "dry_run": False, "force": False})]
 
 
-def test_install_local_only_uses_gemini_workspace_root_and_updates_git_exclude(tmp_path: Path, capsys) -> None:
+def test_install_local_only_uses_agentic_workspace_local_only_root_and_updates_git_exclude(tmp_path: Path, capsys) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     _init_git_repo(repo_root)
@@ -2134,7 +2134,7 @@ def test_install_local_only_uses_gemini_workspace_root_and_updates_git_exclude(t
     assert cli.main(["install", "--modules", "planning", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    install_root = repo_root / ".gemini" / "agentic-workspace"
+    install_root = repo_root / ".agentic-workspace" / "local-only"
     assert payload["command"] == "install"
     assert payload["target"] == install_root.as_posix()
     assert (install_root / "AGENTS.md").exists()
@@ -2142,7 +2142,7 @@ def test_install_local_only_uses_gemini_workspace_root_and_updates_git_exclude(t
     assert (install_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert (install_root / "LOCAL-ONLY.toml").read_text(encoding="utf-8").startswith('schema_version = 1\nmode = "local-only"')
     git_exclude_text = (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
-    assert ".gemini/" in git_exclude_text
+    assert ".agentic-workspace/" in git_exclude_text
     assert not (repo_root / ".gitignore").exists()
 
 
@@ -2150,20 +2150,20 @@ def test_install_local_only_migrates_legacy_gitignore_residue(tmp_path: Path, ca
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     _init_git_repo(repo_root)
-    (repo_root / ".gitignore").write_text("# Agentic Workspace local-only storage\n.gemini/\n")
+    (repo_root / ".gitignore").write_text("# Agentic Workspace local-only storage\n.agentic-workspace/\n")
 
     assert cli.main(["install", "--modules", "planning", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    install_root = repo_root / ".gemini" / "agentic-workspace"
+    install_root = repo_root / ".agentic-workspace" / "local-only"
     assert payload["command"] == "install"
     assert payload["target"] == install_root.as_posix()
     assert not (repo_root / ".gitignore").exists()
     assert (install_root / "LOCAL-ONLY.toml").exists()
-    assert ".gemini/" in (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+    assert ".agentic-workspace/" in (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
 
 
-def test_uninstall_local_only_removes_gemini_workspace_root_and_git_exclude(tmp_path: Path, capsys) -> None:
+def test_uninstall_local_only_removes_agentic_workspace_local_only_root_and_git_exclude(tmp_path: Path, capsys) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     _init_git_repo(repo_root)
@@ -2174,13 +2174,12 @@ def test_uninstall_local_only_removes_gemini_workspace_root_and_git_exclude(tmp_
     assert cli.main(["uninstall", "--modules", "planning", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    install_root = repo_root / ".gemini" / "agentic-workspace"
+    install_root = repo_root / ".agentic-workspace" / "local-only"
     assert payload["command"] == "uninstall"
     assert payload["target"] == install_root.as_posix()
     assert not install_root.exists()
-    assert not (repo_root / ".gemini").exists()
     assert not (install_root / "LOCAL-ONLY.toml").exists()
-    assert ".gemini/" not in (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+    assert ".agentic-workspace/" not in (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
 
 
 def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_path: Path, capsys) -> None:
@@ -3504,7 +3503,7 @@ def test_doctor_real_init_preserves_package_contract_shortlists_in_reports(tmp_p
     assert any(
         action["path"] == ".agentic-workspace/memory/UPGRADE-SOURCE.toml"
         and "lower-stability helper files:" in action["detail"]
-        and "scripts/check/check_memory_freshness.py" in action["detail"]
+        and ".agentic-workspace/memory/UPGRADE-SOURCE.toml" in action["detail"]
         for action in memory_report["actions"]
     )
 

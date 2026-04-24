@@ -2241,7 +2241,7 @@ def _infer_test_target(note: MemoryNoteRecord | None, note_path: Path) -> str:
 
 def _infer_validation_target(note: MemoryNoteRecord | None, note_path: Path) -> str:
     if (note.path if note is not None else note_path).as_posix() == ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md":
-        return "scripts/check/check_recurring_friction_ledger.py"
+        return "agentic-workspace report --target ./repo --format json"
     patterns = ()
     if note is not None:
         patterns = note.stale_when or note.routes_from

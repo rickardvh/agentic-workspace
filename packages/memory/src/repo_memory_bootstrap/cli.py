@@ -676,10 +676,9 @@ def _print_install_summary(result) -> None:
             f"- If current-memory files were created, use the `populate` skill under "
             f"{bootstrap_skills_path} to fill them conservatively before cleanup."
         )
-    print("- Run agentic-memory-bootstrap doctor --target <repo> before upgrading an older install.")
-    print("- Run python scripts/check/check_memory_freshness.py after customising memory notes.")
+    print("- Run `agentic-workspace doctor --target <repo> --format json` before upgrading an older install.")
     print(
-        "- Run python scripts/check/check_recurring_friction_ledger.py when repeated friction should stay visible without opening a new issue yet."
+        "- Run `agentic-workspace report --target <repo> --format json` after customising memory notes or when recurring friction should stay visible."
     )
 
 

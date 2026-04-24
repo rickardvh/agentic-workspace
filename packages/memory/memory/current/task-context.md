@@ -19,7 +19,7 @@ Active
 - `packages/memory/src/repo_memory_bootstrap/`
 - `packages/memory/bootstrap/`
 - `packages/memory/tests/`
-- `scripts/check/check_memory_freshness.py`
+- `agentic-workspace doctor --target . --format json`
 - `.agentic-workspace/memory/repo/current/`
 
 ## Blocking assumptions
@@ -28,7 +28,7 @@ Active
 
 ## Next validation
 
-- `uv run python scripts/check/check_memory_freshness.py`
+- `uv run agentic-workspace doctor --target . --format json`
 - `uv run agentic-memory-bootstrap current check --target .`
 - focused `packages/memory` pytest coverage for the tightened freshness behavior
 

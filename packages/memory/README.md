@@ -122,10 +122,10 @@ When both modules are installed, the combined install should be cheaper than eit
 - **Clear ownership boundary.** Memory owns durable repo knowledge that is expensive to reconstruct from code alone: invariants, authority boundaries, recurring failure modes, operator sequences, and routing hints. The repository's active planning surface (`.agentic-workspace/planning/state.toml`, issue trackers, and similar systems) keeps ownership of active intent and sequencing. Memory complements planning; it never competes with it.
 - **Cheap ordinary-work pull.** The compact module report exposes a `habitual_pull` view that answers the ordinary-work question directly: start from `.agentic-workspace/memory/repo/index.md`, route only into the smallest durable note bundle that matches touched files or explicit surfaces, and keep current-context notes optional unless re-orientation is genuinely needed.
 - **Combined-install leverage.** When planning is installed too, memory should help execplans stay smaller and restart cheaper: plans borrow durable context instead of restating it, and repeated plan prose becomes a signal that memory or canonical docs should improve.
-- **Improvement pressure without memory dependence.** Each note can declare whether it is *durable truth* or an *improvement signal* - something that exists because the repo still needs better tests, docs, validation, or design. Manifest fields like `preferred_remediation` and `elimination_target` let the `doctor` command, the freshness audit, and the sync workflow surface actionable suggestions that drive improvements into the codebase without assuming memory volume should follow one universal trend.
-- **Recurring-friction pressure that survives upgrades.** The recurring-friction ledger is seeded as repo-local evidence rather than treated as replaceable payload, and the shipped `scripts/check/check_recurring_friction_ledger.py` audit makes repeated weak signals visible before they deserve a dedicated issue.
+- **Improvement pressure without memory dependence.** Each note can declare whether it is *durable truth* or an *improvement signal* - something that exists because the repo still needs better tests, docs, validation, or design. Manifest fields like `preferred_remediation` and `elimination_target` let the `doctor` and `report` command surfaces project actionable suggestions without assuming memory volume should follow one universal trend.
+- **Recurring-friction pressure that survives upgrades.** The recurring-friction ledger is seeded as repo-local evidence rather than treated as replaceable payload, and the common CLI projects its pressure through workspace `doctor` and `report` output instead of shipping repo-executable helpers.
 - **Explicit improvement-targeting workflow.** Symptomatic notes should move through a concrete path: symptom captured -> remediation target chosen -> follow-up routed -> remediation lands -> note retained, shrunk, stubbed, or deleted. The workflow distinguishes when a signal should stay in memory, become a review artifact, enter issue intake, or promote into roadmap or active planning.
-- **Freshness and hygiene tooling.** A bundled audit script checks for missing metadata, stale confirmations, oversized notes, explicit planning-state spillover in `.agentic-workspace/memory/repo/current/*`, and manifest/note mismatches. `stale_when` globs catch semantic drift from code changes, not just calendar age, and the compact memory report now projects those existing anchors into note trust states such as `supported`, `questionable`, `stale`, and `elimination_candidate`.
+- **Freshness and hygiene tooling.** The common CLI surfaces memory freshness, stale confirmations, oversized notes, explicit planning-state spillover in `.agentic-workspace/memory/repo/current/*`, manifest/note mismatches, and recurring-friction pressure without shipping executable repo helpers. `stale_when` globs catch semantic drift from code changes, not just calendar age, and the compact memory report projects those anchors into note trust states such as `supported`, `questionable`, `stale`, and `elimination_candidate`.
 - **Skills layer.** Repeatable memory operations such as capture, hygiene, refresh, routing, and upgrade ship as upgrade-replaceable skills under `.agentic-workspace/memory/skills/`. Repos can add their own memory-specific skills under `.agentic-workspace/memory/repo/skills/` without modifying the core set.
 - **Language-agnostic.** The installed memory system is plain Markdown and TOML. It works in any repository regardless of language or framework. Only the bootstrap CLI itself requires Python; once installed, the memory layer has no runtime dependencies.
 
@@ -207,7 +207,7 @@ Running `install` or `adopt` adds the following to your repository:
 | `.agentic-workspace/memory/repo/templates/` | Starter note templates for the first repo-specific memory notes you replace or add |
 | `.agentic-workspace/memory/skills/` | Bootstrap-managed shared memory skills, upgrade-replaceable |
 | `.agentic-workspace/memory/repo/skills/` | Optional repo-specific memory skills |
-| `scripts/check/` | Advisory freshness and recurring-friction audit scripts |
+| `agentic-workspace doctor/report` | Common-CLI health and recurring-friction visibility for installed memory |
 
 Install and adopt flows may create a temporary `.agentic-workspace/memory/bootstrap/` workspace so the agent can finish lifecycle work from local skills and then remove that workspace. Upgrade should normally route through the checked-in `memory-upgrade` skill and no longer depends on that workspace as part of the primary model.
 
@@ -390,7 +390,7 @@ Main commands:
 - `report` to surface compact module-state, note trust states, usefulness/cleanup guidance, and next-action guidance derived from doctor/current/routing/promotion surfaces
 - `sync-memory` to surface the cheapest useful note-update path first, so changed files map quickly to one bounded note review instead of broad memory browsing
 - `verify-payload` to validate the packaged bootstrap contract
-- `scripts/check/check_memory_freshness.py --strict` to fail CI on selected freshness contract violations
+- `agentic-workspace doctor --target ./repo --format json` to surface memory drift and remediation through the common CLI
 
 Common arguments:
 

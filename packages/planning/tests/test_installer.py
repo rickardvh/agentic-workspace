@@ -3220,17 +3220,17 @@ def test_planning_summary_tracks_near_term_todo_queue(tmp_path: Path) -> None:
 def test_resolve_target_root_keeps_explicit_repo_target_when_local_tree_exists(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir(parents=True)
-    (repo_root / ".gemini" / "agentic-workspace").mkdir(parents=True)
+    (repo_root / ".agentic-workspace" / "local-only").mkdir(parents=True)
 
     resolved = installer_mod.resolve_target_root(repo_root)
 
     assert resolved == repo_root
 
 
-def test_resolve_target_root_local_only_uses_gemini_subtree(tmp_path: Path) -> None:
+def test_resolve_target_root_local_only_uses_agentic_workspace_local_only_subtree(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir(parents=True)
 
     resolved = installer_mod.resolve_target_root(repo_root, local_only=True)
 
-    assert resolved == repo_root / ".gemini" / "agentic-workspace"
+    assert resolved == repo_root / ".agentic-workspace" / "local-only"

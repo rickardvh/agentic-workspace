@@ -1,3 +1,3 @@
 check-memory:
-	python scripts/check/check_memory_freshness.py
-	python scripts/check/check_recurring_friction_ledger.py
+	uv run agentic-workspace doctor --target . --format json
+	uv run agentic-workspace report --target . --format json

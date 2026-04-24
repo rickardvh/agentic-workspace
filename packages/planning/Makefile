@@ -6,11 +6,6 @@ ifeq (,$(wildcard $(PLANNING_CHECK_SCRIPT)))
 PLANNING_CHECK_SCRIPT := ../../scripts/check/check_planning_surfaces.py
 endif
 
-MEMORY_CHECK_SCRIPT := scripts/check/check_memory_freshness.py
-ifeq (,$(wildcard $(MEMORY_CHECK_SCRIPT)))
-MEMORY_CHECK_SCRIPT := ../../scripts/check/check_memory_freshness.py
-endif
-
 RENDER_AGENT_DOCS_SCRIPT := scripts/render_agent_docs.py
 ifeq (,$(wildcard $(RENDER_AGENT_DOCS_SCRIPT)))
 RENDER_AGENT_DOCS_SCRIPT := ../../scripts/render_agent_docs.py
@@ -47,4 +42,5 @@ render-agent-docs:
 	uv run python $(RENDER_AGENT_DOCS_SCRIPT)
 
 check-memory:
-	uv run python $(MEMORY_CHECK_SCRIPT)
+	uv run agentic-workspace doctor --target ../.. --format json
+	uv run agentic-workspace report --target ../.. --format json

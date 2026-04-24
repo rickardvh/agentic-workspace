@@ -100,7 +100,7 @@ Use `agentic-workspace defaults --format json` first when you need the structure
 - Maintainer-surface, generated-doc, or installed-contract payload changes: `make maintainer-surfaces`
 - Planning-surface changes only: `make planning-surfaces`; rerun `make render-agent-docs` when the planning manifest or generated routing docs change
 - Declarative contract manifests or schemas for workspace proof/report/selectors: `uv run python scripts/check/check_contract_tooling_surfaces.py`
-- Memory note/current-state changes: `uv run python scripts/check/check_memory_freshness.py`
+- Memory note/current-state changes: `uv run agentic-workspace doctor --target . --format json` and `uv run agentic-workspace report --target . --format json`
 - Absolute-path hygiene across tracked files: `make absolute-paths`
 
 Escalate to `make check-memory`, `make check-planning`, or `make check-all` only when the change crosses package or root orchestration boundaries.

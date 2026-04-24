@@ -131,13 +131,13 @@ verify-planning:
 verify: sync-all verify-workspace verify-memory verify-planning
 
 memory-freshness:
-	@$(COMPACT_RUN) --label "memory freshness" -- uv run python scripts/check/check_memory_freshness.py
+	@$(COMPACT_RUN) --label "memory doctor" -- uv run agentic-workspace doctor --target . --format json
 
 memory-freshness-strict:
-	@$(COMPACT_RUN) --label "memory freshness strict" -- uv run python scripts/check/check_memory_freshness.py --strict
+	@$(COMPACT_RUN) --label "memory report" -- uv run agentic-workspace report --target . --format json
 
 recurring-friction-ledger:
-	@$(COMPACT_RUN) --label "recurring friction ledger" -- uv run python scripts/check/check_recurring_friction_ledger.py
+	@$(COMPACT_RUN) --label "memory report" -- uv run agentic-workspace report --target . --format json
 
 planning-surfaces:
 	@$(COMPACT_RUN) --label "planning surfaces" -- uv run python scripts/check/check_planning_surfaces.py

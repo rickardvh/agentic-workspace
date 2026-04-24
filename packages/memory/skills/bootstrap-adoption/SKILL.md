@@ -13,7 +13,7 @@ It is an execution layer for applying the memory system. The installed files rem
 
 1. Inspect the target repository first:
    - read `AGENTS.md` if it exists
-   - check whether `.agentic-workspace/memory/repo/` and `scripts/check/check_memory_freshness.py` already exist
+   - check whether `.agentic-workspace/memory/repo/` already exists
    - note any existing repo-local task system without trying to replace it
 2. Run `agentic-memory-bootstrap doctor --target <repo>` to see the current state.
 3. Decide which path fits:
@@ -28,7 +28,7 @@ It is an execution layer for applying the memory system. The installed files rem
    - slim `AGENTS.md` back to the local contract
    - keep the task system external to the installed memory contract
    - preserve repo-specific scope and commands
-7. Run the memory freshness audit if the repo includes it.
+7. Run `agentic-workspace doctor --target <repo> --format json` and `agentic-workspace report --target <repo> --format json` when you need post-install memory health or recurring-friction visibility.
 8. If adoption created fresh current-memory files, offer `bootstrap-populate` as the next conservative step so those files are populated from existing repo docs and visible repo state instead of being left as starter notes.
 9. When the CLI can help, prefer the installed `agentic-memory-bootstrap` command. Otherwise use the runner source recorded in `.agentic-workspace/memory/UPGRADE-SOURCE.toml` to print the follow-up `prompt populate` command.
 

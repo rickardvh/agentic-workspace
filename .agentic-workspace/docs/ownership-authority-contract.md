@@ -90,7 +90,7 @@ Do not treat them as settled repo-owned authority surfaces merely because they a
 The full ownership payload includes a `boundary_review` section that groups the current surface set into:
 
 - package-owned module roots and managed surfaces under `.agentic-workspace/`
-- explicit package-owned local-only state inside `.gemini/agentic-workspace/`
+- explicit package-owned local-only state inside `.agentic-workspace/`
 - repo-owned authority surfaces such as `AGENTS.md` and `docs/design-principles.md`
 - module-managed memory support surfaces such as `.agentic-workspace/memory/`
 - module-managed planning authority such as `.agentic-workspace/planning/state.toml`

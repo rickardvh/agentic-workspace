@@ -15,7 +15,6 @@ from repo_memory_bootstrap._installer_output import (
 )
 from repo_memory_bootstrap._installer_shared import (
     AGENTS_PATH,
-    AUDIT_SCRIPT_PATH,
     BOOTSTRAP_WORKSPACE_ROOT,
     LEGACY_BOOTSTRAP_WORKSPACE_ROOT,
     LEGACY_SHIPPED_SKILLS_ROOT,
@@ -24,7 +23,6 @@ from repo_memory_bootstrap._installer_shared import (
     OBSOLETE_SHARED_FILES,
     OPTIONAL_APPEND_DESCRIPTIONS,
     OPTIONAL_APPEND_TARGETS,
-    RECURRING_FRICTION_AUDIT_SCRIPT_PATH,
     SHIPPED_SKILLS_ROOT,
     UPGRADE_SOURCE_PATH,
     WORKSPACE_WORKFLOW_PATH,
@@ -39,8 +37,6 @@ def _payload_entries(
     seen_relative_paths: set[Path] = set()
     file_roots = [
         AGENTS_PATH,
-        AUDIT_SCRIPT_PATH,
-        RECURRING_FRICTION_AUDIT_SCRIPT_PATH,
         Path(".agentic-workspace"),
         Path("memory"),
         Path("docs"),
@@ -128,8 +124,6 @@ def _classify_role(relative_path: Path) -> str:
     path_str = relative_path.as_posix()
     if relative_path == AGENTS_PATH:
         return "local-entrypoint"
-    if relative_path in {AUDIT_SCRIPT_PATH, RECURRING_FRICTION_AUDIT_SCRIPT_PATH}:
-        return "shared-replaceable"
     if path_str.startswith(".agentic-workspace/memory/repo/templates/"):
         return "shared-template"
     if path_str == ".agentic-workspace/memory/repo/index.md":

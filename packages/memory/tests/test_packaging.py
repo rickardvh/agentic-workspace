@@ -21,8 +21,6 @@ REQUIRED_MANAGED_PATHS = {
     "bootstrap/.agentic-workspace/memory/repo/mistakes/recurring-failures.md",
     "bootstrap/.agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md",
     "bootstrap/.agentic-workspace/memory/repo/skills/README.md",
-    "bootstrap/scripts/check/check_memory_freshness.py",
-    "bootstrap/scripts/check/check_recurring_friction_ledger.py",
     "skills/README.md",
     "skills/bootstrap-adoption/SKILL.md",
     "skills/bootstrap-populate/SKILL.md",

@@ -16,8 +16,8 @@ Treat `status` as the fast "what is wrong / what next" view, and `doctor` as the
 
 ## Freshness and staleness
 
-- Fast audit: `uv run python scripts/check/check_memory_freshness.py`
-- Strict audit (CI posture): `uv run python scripts/check/check_memory_freshness.py --strict`
+- Fast audit: `uv run agentic-workspace doctor --target . --format json`
+- Recurring-friction and trust report: `uv run agentic-workspace report --target . --format json`
 
 If you need to check current-memory note shape and staleness specifically:
 
@@ -41,8 +41,8 @@ If you need "what should I load for this task" without guessing:
 Prefer cleanup signals surfaced via `status`/`doctor` first.
 When work touched the memory system, re-run:
 
-- `uv run python scripts/check/check_memory_freshness.py`
-- `uv run agentic-memory-bootstrap status --target . --format json`
+- `uv run agentic-workspace doctor --target . --format json`
+- `uv run agentic-workspace report --target . --format json`
 
 ## Output expectations (for handoff)
 
@@ -50,4 +50,3 @@ When reporting memory state to another agent or a human:
 
 - paste the `status --format json` result (or the minimal relevant fields)
 - if action is required, include `doctor --format json` and name the specific remediation step you are taking
-

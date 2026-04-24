@@ -329,7 +329,7 @@ def _installed_surface_files() -> tuple[Path, ...]:
 def resolve_target_root(target: str | Path | None, *, local_only: bool = False) -> Path:
     resolved = Path(target).resolve() if target else Path.cwd().resolve()
     if local_only:
-        resolved = resolved / ".gemini" / "agentic-workspace"
+        resolved = resolved / ".agentic-workspace" / "local-only"
     resolved.mkdir(parents=True, exist_ok=True)
     return resolved
 
@@ -979,9 +979,9 @@ def _ensure_local_ignored(repo_root: str | Path) -> None:
     if not gitignore.exists():
         return
     text = gitignore.read_text(encoding="utf-8")
-    if ".gemini/" not in text:
+    if ".agentic-workspace/" not in text:
         with gitignore.open("a", encoding="utf-8") as f:
-            f.write("\n# Agentic Workspace local-only storage\n.gemini/\n")
+            f.write("\n# Agentic Workspace local-only storage\n.agentic-workspace/\n")
 
 
 def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) -> InstallResult:
@@ -3544,7 +3544,7 @@ def summary_todo_queue(*, target_root: Path) -> list[dict[str, str]]:
     return queue
 
 
-def _resolve_parent_lane(*, parent_lane_ref: str, roadmap_lanes: list[dict[str, Any]]) -> dict[str, str]:
+def _resolve_parent_lane(*, parent_lane_ref: str, roadmap_lanes: list[dict[str, Any]]) -> dict[str, Any]:
     if parent_lane_ref:
         for lane in roadmap_lanes:
             if parent_lane_ref == lane.get("id", "") or parent_lane_ref == lane.get("title", ""):

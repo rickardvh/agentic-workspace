@@ -81,8 +81,6 @@ PAYLOAD_REQUIRED_FILES = (
     Path(".agentic-workspace/memory/repo/decisions/README.md"),
     Path(".agentic-workspace/docs/memory-metadata-contract.md"),
     Path(".agentic-workspace/docs/installer-behavior.md"),
-    AUDIT_SCRIPT_PATH,
-    RECURRING_FRICTION_AUDIT_SCRIPT_PATH,
     *BOOTSTRAP_WORKSPACE_FILES,
     *CORE_PAYLOAD_SKILL_FILES,
 )
@@ -290,7 +288,7 @@ OPTIONAL_APPEND_TARGETS = {
     Path(".github/pull_request_template.md"): Path("optional/pull_request_template.fragment.md"),
 }
 OPTIONAL_APPEND_DESCRIPTIONS = {
-    Path("Makefile"): "optional convenience target for running the memory freshness and recurring-friction audits locally or in CI",
+    Path("Makefile"): "optional convenience target for running workspace doctor and report for memory health locally or in CI",
     Path("CONTRIBUTING.md"): "optional contributor guidance fragment",
     Path(".github/pull_request_template.md"): "optional pull request checklist fragment",
 }
