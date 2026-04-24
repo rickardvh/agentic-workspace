@@ -1734,7 +1734,6 @@ def _external_agent_handoff_text(
     lines.extend(
         [
             "- `agentic-workspace config --target ./repo --format json`",
-            "- `agentic-planning-bootstrap summary --format json`",
             "- `agentic-workspace summary --format json`",
             "- `agentic-workspace report --target ./repo --format json`",
             "",
@@ -4486,7 +4485,7 @@ def _defaults_payload() -> dict[str, Any]:
                 },
                 {
                     "question": "What is active right now?",
-                    "command": "agentic-planning-bootstrap summary --format json",
+                    "command": "agentic-workspace summary --format json",
                     "field": "planning_record",
                     "why": "active-state recovery should come from the compact planning summary before raw planning prose",
                 },
@@ -4598,7 +4597,7 @@ def _defaults_payload() -> dict[str, Any]:
                 ),
                 (
                     "If the question is active planning recovery rather than startup order, "
-                    "prefer `agentic-planning-bootstrap summary --format json` before raw "
+                    "prefer `agentic-workspace summary --format json` before raw "
                     "planning state or execplan prose."
                 ),
             ],
@@ -4607,7 +4606,7 @@ def _defaults_payload() -> dict[str, Any]:
                     "When startup, first-contact routing, or recovery is unclear, prefer "
                     "`agentic-workspace defaults --section startup --format json`, "
                     "`agentic-workspace config --target ./repo --format json`, and "
-                    "`agentic-planning-bootstrap summary --format json` before broader "
+                    "`agentic-workspace summary --format json` before broader "
                     "prose or repo-local workaround guidance."
                 ),
             ],

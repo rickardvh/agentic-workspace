@@ -439,7 +439,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
             "When startup, first-contact routing, or recovery is unclear, prefer "
             "`agentic-workspace defaults --section startup --format json`, "
             "`agentic-workspace config --target ./repo --format json`, and "
-            "`agentic-planning-bootstrap summary --format json` before broader "
+            "`agentic-workspace summary --format json` before broader "
             "prose or repo-local workaround guidance."
         ),
     ]
@@ -509,7 +509,7 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
     assert "Target repository:" in text
     assert "Do not assume agentic-workspace is already installed" in text
     assert "agentic-workspace config --target ./repo --format json" in text
-    assert "agentic-planning-bootstrap summary --format json" in text
+    assert "agentic-workspace summary --format json" in text
     assert ".agentic-workspace/config.local.toml is present" in text
     assert "tools/AGENT_QUICKSTART.md" in text
     assert "tools/AGENT_ROUTING.md" in text
