@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import fnmatch
 import hashlib
 import json
 import re
 import shutil
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
@@ -87,6 +89,9 @@ MODULE_COMMAND_ARGS: dict[str, tuple[str, ...]] = {
     "doctor": ("target",),
     "status": ("target",),
 }
+HIGH_RISK_COMMANDS = frozenset({"install", "init", "upgrade", "uninstall"})
+PREFLIGHT_TOKEN_PREFIX = "preflight-v1:"
+DEFAULT_PREFLIGHT_MAX_AGE_SECONDS = 900
 PLACEHOLDER_RE = re.compile(r"<[A-Z][A-Z0-9_]+>")
 MIXED_AGENT_LOCAL_OVERRIDE_FIELDS = (
     "runtime.supports_internal_delegation",
@@ -218,8 +223,97 @@ class ModuleSelectionError(ValueError):
     """Raised when the orchestrator cannot resolve a safe module set."""
 
 
+class WorkspaceArgumentParser(argparse.ArgumentParser):
+    """Parser with startup-oriented fallback guidance for invalid commands."""
+
+    def error(self, message: str) -> None:
+        if "invalid choice" in message and "command" in message:
+            unknown_command = _extract_unknown_command(message)
+            suggestions = _command_suggestions(unknown_command)
+            if suggestions:
+                suggestion_text = ", ".join(suggestions)
+                message = f"{message}\nDid you mean: {suggestion_text}?"
+            message = f"{message}\nStartup tip: run 'agentic-workspace preflight --format json' to recover a compact takeover context."
+        super().error(message)
+
+
+def _extract_unknown_command(message: str) -> str:
+    match = re.search(r"invalid choice: '([^']+)'", message)
+    if not match:
+        return ""
+    return match.group(1)
+
+
+def _command_suggestions(unknown_command: str) -> list[str]:
+    if not unknown_command:
+        return []
+    known_commands = [
+        "modules",
+        "summary",
+        "defaults",
+        "proof",
+        "setup",
+        "ownership",
+        "config",
+        "system-intent",
+        "note-delegation-outcome",
+        "skills",
+        "report",
+        "preflight",
+        "install",
+        "init",
+        "prompt",
+        "status",
+        "doctor",
+        "upgrade",
+        "uninstall",
+    ]
+    return difflib.get_close_matches(unknown_command, known_commands, n=2, cutoff=0.55)
+
+
+def _build_preflight_token(*, issued_at_epoch: int) -> str:
+    return f"{PREFLIGHT_TOKEN_PREFIX}{issued_at_epoch}"
+
+
+def _parse_preflight_token(token: str) -> int | None:
+    if not token.startswith(PREFLIGHT_TOKEN_PREFIX):
+        return None
+    epoch_text = token[len(PREFLIGHT_TOKEN_PREFIX) :]
+    if not epoch_text.isdigit():
+        return None
+    return int(epoch_text)
+
+
+def _enforce_preflight_gate(*, parser: argparse.ArgumentParser, args: argparse.Namespace, command_name: str) -> None:
+    if command_name not in HIGH_RISK_COMMANDS:
+        return
+    if not bool(getattr(args, "strict_preflight", False)):
+        return
+
+    token = str(getattr(args, "preflight_token", "") or "")
+    if not token:
+        parser.error("Strict preflight gate is enabled. Provide --preflight-token from 'agentic-workspace preflight --format json'.")
+
+    issued_at_epoch = _parse_preflight_token(token)
+    if issued_at_epoch is None:
+        parser.error("Invalid --preflight-token format. Expected token from 'agentic-workspace preflight --format json'.")
+
+    max_age_seconds = int(getattr(args, "preflight_max_age_seconds", DEFAULT_PREFLIGHT_MAX_AGE_SECONDS))
+    if max_age_seconds <= 0:
+        parser.error("--preflight-max-age-seconds must be a positive integer.")
+    now_epoch = int(time.time())
+    age_seconds = now_epoch - issued_at_epoch
+    if age_seconds < 0:
+        parser.error("Preflight token timestamp is in the future. Regenerate it with 'agentic-workspace preflight --format json'.")
+    if age_seconds > max_age_seconds:
+        parser.error(
+            f"Stale preflight token ({age_seconds}s old; max {max_age_seconds}s). "
+            "Regenerate it with 'agentic-workspace preflight --format json'."
+        )
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+    parser = WorkspaceArgumentParser(
         prog="agentic-workspace",
         description="Workspace-level lifecycle orchestrator for selected agentic-workspace modules.",
     )
@@ -375,10 +469,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     upgrade_parser = subparsers.add_parser("upgrade", help="Refresh managed surfaces for selected installed modules.")
     _add_selection_arguments(upgrade_parser)
+    _add_preflight_gate_arguments(upgrade_parser)
     upgrade_parser.add_argument("--dry-run", action="store_true", help="Show planned changes without mutating files.")
 
     uninstall_parser = subparsers.add_parser("uninstall", help="Remove managed surfaces conservatively for selected installed modules.")
     _add_selection_arguments(uninstall_parser)
+    _add_preflight_gate_arguments(uninstall_parser)
     uninstall_parser.add_argument("--dry-run", action="store_true", help="Show planned changes without mutating files.")
     uninstall_parser.add_argument(
         "--local-only",
@@ -403,6 +499,7 @@ def _add_selection_arguments(parser: argparse.ArgumentParser) -> None:
 
 def _add_init_arguments(parser: argparse.ArgumentParser) -> None:
     _add_selection_arguments(parser)
+    _add_preflight_gate_arguments(parser)
     parser.add_argument(
         "--local-only",
         action="store_true",
@@ -416,6 +513,24 @@ def _add_init_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--dry-run", action="store_true", help="Show planned changes without mutating files.")
     parser.add_argument("--print-prompt", action="store_true", help="Print the generated handoff prompt.")
     parser.add_argument("--write-prompt", help="Write the generated handoff prompt to a file.")
+
+
+def _add_preflight_gate_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--strict-preflight",
+        action="store_true",
+        help="Require a fresh --preflight-token before running high-risk mutating commands.",
+    )
+    parser.add_argument(
+        "--preflight-token",
+        help="Token emitted by 'agentic-workspace preflight --format json'.",
+    )
+    parser.add_argument(
+        "--preflight-max-age-seconds",
+        type=int,
+        default=DEFAULT_PREFLIGHT_MAX_AGE_SECONDS,
+        help=f"Maximum token age when --strict-preflight is enabled (default: {DEFAULT_PREFLIGHT_MAX_AGE_SECONDS}).",
+    )
 
 
 def _add_format_argument(parser: argparse.ArgumentParser) -> None:
@@ -1100,6 +1215,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             repo_root = _resolve_target_root(args.target)
             _validate_target_root(command_name=args.command, target_root=repo_root, local_only=bool(args.local_only))
+            _enforce_preflight_gate(parser=parser, args=args, command_name=args.command)
             target_root = repo_root / ".gemini" / "agentic-workspace" if args.local_only else repo_root
             config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
             explicit_agent_instructions_file = getattr(args, "agent_instructions_file", None)
@@ -1147,6 +1263,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             target_root = _resolve_target_root(args.target)
             _validate_target_root(command_name=args.command, target_root=target_root)
+        _enforce_preflight_gate(parser=parser, args=args, command_name=args.command)
         config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
         explicit_agent_instructions_file = getattr(args, "agent_instructions_file", None)
         if explicit_agent_instructions_file:
@@ -2867,6 +2984,9 @@ def _run_preflight_command(
     2. Active state polling: query current state without startup overhead
     """
     config = _load_workspace_config(target_root=target_root)
+    issued_epoch = int(time.time())
+    issued_at = datetime.fromtimestamp(issued_epoch, tz=timezone.utc).replace(microsecond=0).isoformat()
+    preflight_token = _build_preflight_token(issued_at_epoch=issued_epoch)
 
     if active_only:
         # Return only active state for polling/monitoring
@@ -2880,6 +3000,8 @@ def _run_preflight_command(
             "kind": "preflight-response/v1",
             "mode": "active-state-only",
             "target": target_root.as_posix(),
+            "issued_at": issued_at,
+            "preflight_token": preflight_token,
             "timestamp_hint": "Run this periodically to poll current active state without startup overhead.",
             "planning_record": planning_record if isinstance(planning_record, dict) else {"status": "unavailable"},
         }
@@ -2902,6 +3024,8 @@ def _run_preflight_command(
         "kind": "preflight-response/v1",
         "mode": "full-takeover-context",
         "target": target_root.as_posix(),
+        "issued_at": issued_at,
+        "preflight_token": preflight_token,
         "timestamp_hint": "Use this to bootstrap into an interrupted or takeover recovery.",
         "startup_guidance": {
             "entrypoint": startup_payload.get("default_canonical_agent_instructions_file", "AGENTS.md"),

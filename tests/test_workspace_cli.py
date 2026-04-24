@@ -3462,6 +3462,64 @@ def test_preflight_command_with_target_argument(tmp_path: Path, capsys) -> None:
     assert target.as_posix() in payload["target"]
 
 
+def test_preflight_command_emits_gate_token(capsys) -> None:
+    assert cli.main(["preflight", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["issued_at"]
+    assert payload["preflight_token"].startswith("preflight-v1:")
+
+
+def test_upgrade_strict_preflight_requires_token(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(
+            [
+                "upgrade",
+                "--target",
+                str(tmp_path),
+                "--strict-preflight",
+                "--dry-run",
+            ]
+        )
+
+    assert excinfo.value.code == 2
+    assert "Strict preflight gate is enabled" in capsys.readouterr().err
+
+
+def test_upgrade_strict_preflight_rejects_stale_token(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(
+            [
+                "upgrade",
+                "--target",
+                str(tmp_path),
+                "--strict-preflight",
+                "--preflight-token",
+                "preflight-v1:1",
+                "--preflight-max-age-seconds",
+                "60",
+                "--dry-run",
+            ]
+        )
+
+    assert excinfo.value.code == 2
+    assert "Stale preflight token" in capsys.readouterr().err
+
+
+def test_invalid_command_shows_preflight_fallback_hint(capsys) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["prefliht"])
+
+    assert excinfo.value.code == 2
+    stderr = capsys.readouterr().err
+    assert "Did you mean: preflight?" in stderr
+    assert "agentic-workspace preflight --format json" in stderr
+
+
 def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))
