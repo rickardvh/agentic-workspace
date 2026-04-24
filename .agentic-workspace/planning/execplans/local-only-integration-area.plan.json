@@ -1,0 +1,230 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Local Only Integration Area",
+  "goal": [
+    "Create a sanctioned local-only integration area for vendor-specific or runtime-specific bridges without turning it into shared workflow state.",
+    "Give local experimentation a safe boundary so ad hoc integrations stop leaking into repo-owned contracts."
+  ],
+  "non_goals": [
+    "Do not create a shared plugin or extension framework in this lane.",
+    "Do not make local-only bridges part of checked-in required workflow state.",
+    "Do not widen the lane into runtime posture policy that belongs elsewhere."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Define the local-only integration root, vendor/runtime subfolder convention, and boundary rules that allow disposable local bridges without contaminating shared repo contracts.",
+      "constraints": "The area must stay local-only, non-authoritative for shared workflow, easy to ignore by other contributors, and explicit about not carrying canonical planning or startup truth.",
+      "latitude": "Choose the smallest root name and folder convention that is clear, low-residue, and compatible with existing local config and ignore rules.",
+      "escalation": "Escalate if the work starts requiring shared checked-in integration code, cross-vendor abstraction layers, or changes to canonical startup/planning authority."
+    },
+    "execution": {
+      "milestone": "choose-root-and-boundary-rules",
+      "status": "planned",
+      "next_step": "Choose the local-only root name and vendor/runtime subfolder convention, then codify the boundary and ignore rules in the smallest durable surfaces needed.",
+      "proof": "A local-only root and subfolder convention exist, boundary docs/config make its non-authoritative status explicit, and tests or checks prove shared surfaces do not start depending on it."
+    },
+    "scope": {
+      "touched": [
+        ".gitignore",
+        ".agentic-workspace/config.local.toml",
+        ".agentic-workspace/docs/",
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+        "tests/"
+      ],
+      "invariants": [
+        "The integration area stays local-only and optional.",
+        "Shared repo contracts and startup surfaces do not depend on the area existing.",
+        "Vendor-specific bridges remain disposable and clearly outside canonical planning authority."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "create a sanctioned local-only integration area for vendor or runtime bridges without turning it into shared workflow state",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml lane local-only-integration-area",
+    "parent lane": "local-only-integration-area"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane local-only-integration-area",
+    "activation trigger": "continue until a local-only root and boundary rules exist and local experiments no longer need to piggyback on shared workflow state"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "planned: local integration shortcuts can gain a sanctioned home without expanding the shared product surface.",
+    "intentionally deferred": "runtime posture selection, broad plugin architecture, and any shared vendor abstraction work.",
+    "discovered implications": "explicit local-only boundaries can reduce pressure to misuse checked-in docs or config for disposable experiments, which in turn lowers trust confusion in the shared workflow.",
+    "proof achieved now": "none yet; this is a prepared plan.",
+    "validation still needed": "prove that the chosen local-only root is discoverable enough for the local user but ignorable for everyone else, and that shared surfaces remain independent from it.",
+    "next likely slice": "land the root name, subfolder convention, and ignore/boundary rules first; only then consider any helper discovery or reporting."
+  },
+  "intent_interpretation": {
+    "literal request": "prepare a full execplan for the fourth roadmap lane",
+    "inferred intended outcome": "shape the local-only integration lane into a safe, bounded planning artifact so later implementation does not accidentally turn local bridges into shared workflow authority",
+    "chosen concrete what": "plan the lane around the smallest boundary-setting slice: root name, vendor/runtime subfolder convention, and explicit non-authority rules",
+    "interpretation distance": "low",
+    "review guidance": "reject work that introduces checked-in shared dependence on the local-only area or that treats vendor-specific bridges as canonical workflow surfaces"
+  },
+  "execution_bounds": {
+    "allowed paths": ".gitignore; .agentic-workspace/config.local.toml; .agentic-workspace/docs/; src/agentic_workspace/config.py; src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json; tests/",
+    "max changed files": "10",
+    "required validation commands": "uv run agentic-workspace config --target . --format json; uv run agentic-workspace doctor --format json; uv run pytest tests/test_workspace_cli.py -q -k \"config or local or integration\"; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_planning_surfaces.py",
+    "ask-before-refactor threshold": "stop before adding shared runtime adapters, plugin registries, or broad config-system changes beyond the local-only boundary needed for this lane",
+    "stop before touching": "packages/planning/ storage work, AGENTS.md startup routing, or runtime posture/handoff policy beyond local-only boundaries"
+  },
+  "stop_conditions": {
+    "stop when": "the lane would need a shared checked-in integration system rather than a local-only boundary and root convention",
+    "escalate when boundary reached": "the chosen root cannot stay local-only without modifying canonical startup or planning authority",
+    "escalate on scope drift": "the work becomes vendor feature development instead of local-only boundary setting",
+    "escalate on proof failure": "config/doctor/tests cannot prove that shared surfaces remain independent from the local-only area"
+  },
+  "context_budget": {
+    "live working set": "local config override shape, ignore/boundary rules, local-only docs, focused config/doctor tests, lane issues",
+    "recoverable later": "older local-residue archive history and unrelated runtime posture work",
+    "externalize before shift": "the chosen root name, what belongs there, what must never live there, and how shared surfaces will ignore it",
+    "pre-work config pull": "agentic-workspace config --target . --format json; agentic-workspace doctor --format json",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "keep this lane local-only and non-authoritative; root name and boundary rules come first",
+    "context-shift triggers": "after root naming, after ignore-rule decisions, or before any proposal to expose the area in shared startup surfaces"
+  },
+  "delegated_judgment": {
+    "requested outcome": "create a sanctioned but local-only home for disposable vendor/runtime bridges",
+    "hard constraints": "the area is optional, local-only, non-authoritative, and must not become required shared workflow state",
+    "agent may decide locally": "root name, vendor/runtime subfolder convention, and the minimum config/doc/test surfaces needed to prove the boundary",
+    "escalate when": "a worker needs to introduce shared checked-in dependencies or broaden into a generic plugin architecture"
+  },
+  "references": [
+    {
+      "kind": "planning-state",
+      "target": ".agentic-workspace/planning/state.toml",
+      "label": "local-only-integration-area lane",
+      "role": "parent-lane",
+      "locator": "roadmap.lanes[id=local-only-integration-area]"
+    },
+    {
+      "kind": "issue",
+      "target": "#287",
+      "label": "local-only integration area parent lane",
+      "role": "parent-issue",
+      "locator": "github issue #287"
+    },
+    {
+      "kind": "issue",
+      "target": "#288",
+      "label": "choose local-only root and subfolder convention",
+      "role": "first-slice",
+      "locator": "github issue #288"
+    },
+    {
+      "kind": "plan",
+      "target": ".agentic-workspace/planning/execplans/archive/local-only-residue-via-git-exclude-2026-04-21.plan.json",
+      "label": "prior local-only residue boundary work",
+      "role": "related-proof",
+      "locator": "archived plan"
+    }
+  ],
+  "active_milestone": {
+    "id": "choose-root-and-boundary-rules",
+    "status": "planned",
+    "scope": "Pick the local-only root name, vendor/runtime subfolder convention, and explicit boundary rules that keep the area outside shared workflow authority.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "gh issue refresh before implementation if #287/#288 wording changed materially"
+  },
+  "immediate_next_action": [
+    "Decide the local-only root name and folder convention, then encode the non-authority boundary in the smallest config/doc/test surfaces required."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".gitignore",
+    ".agentic-workspace/config.local.toml",
+    ".agentic-workspace/docs/",
+    "src/agentic_workspace/config.py",
+    "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+    "tests/"
+  ],
+  "invariants": [
+    "Local-only integration surfaces remain optional and disposable.",
+    "Shared repo workflow does not depend on the local-only area.",
+    "Vendor-specific bridges do not become canonical planning or startup truth."
+  ],
+  "contract_decisions_to_freeze": [
+    "The local-only area must never become a required checked-in dependency for normal workflow.",
+    "Boundary docs and config should make the non-authority rule explicit from the first slice.",
+    "The first slice is only root and boundary setting, not bridge implementation."
+  ],
+  "open_questions_to_close": [
+    "What root name is most explicit without adding cognitive residue to shared startup surfaces?",
+    "Should the local-only area be discoverable from config output, docs only, or a minimal optional report field?",
+    "Which ignore rule is safest: git ignore, local config only, or both?"
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace config --target . --format json",
+    "uv run agentic-workspace doctor --format json",
+    "uv run pytest tests/test_workspace_cli.py -q -k \"config or local or integration\"",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "uv",
+    "gh"
+  ],
+  "completion_criteria": [
+    "A local-only root and vendor/runtime subfolder convention are defined.",
+    "Boundary rules make clear that the area is optional and non-authoritative for shared workflow.",
+    "Config/doctor/tests prove shared surfaces remain independent from the local-only area.",
+    "The lane leaves a safe place for disposable local bridges without expanding the shared repo contract."
+  ],
+  "execution_run": {
+    "run status": "not-started",
+    "executor": "none yet",
+    "handoff source": "this prepared execplan",
+    "what happened": "not started",
+    "scope touched": "none yet",
+    "changed surfaces": "none yet",
+    "validations run": "none yet",
+    "result for continuation": "implementation still required",
+    "next step": "choose the root and boundary rules"
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "unknown",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "moderate until the local-only boundary is explicit enough that workers stop treating it as shared workflow state",
+    "follow-on decision": "keep-lane-open"
+  },
+  "proof_report": {
+    "validation proof": "planned: config/doctor queries, focused local-config tests, and contract/planning checks",
+    "proof achieved now": "none yet; plan prepared only",
+    "evidence for \"proof achieved\" state": "pending implementation"
+  },
+  "intent_satisfaction": {
+    "original intent": "prepare a full execplan that safely bounds the local-only integration-area lane",
+    "was original intent fully satisfied?": "yes for planning preparation, no for lane implementation",
+    "evidence of intent satisfaction": "the lane now has an explicit local-only boundary plan with path, validation, and non-authority constraints",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml lane local-only-integration-area"
+  },
+  "closure_check": {
+    "slice status": "planned but not started",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "the planning artifact exists, but the lane's root convention and boundary proof do not",
+    "evidence carried forward": "this execplan plus the lane record in state.toml",
+    "reopen trigger": "revisit if local-only boundary work turns out to fit under an even narrower direct task instead"
+  },
+  "execution_summary": {
+    "outcome delivered": "prepared a full machine-first execplan for the local-only integration-area lane",
+    "validation confirmed": "planning preparation only",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml and this execplan",
+    "post-work posterity capture": "none yet beyond the plan",
+    "knowledge promoted (memory/docs/config)": "execplan only",
+    "resume from": "choose-root-and-boundary-rules"
+  },
+  "drift_log": [
+    "2026-04-24: Initial full-lane execplan created from current roadmap order and live issue set."
+  ]
+}

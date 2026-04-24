@@ -1,0 +1,249 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Graceful Partial Compliance",
+  "goal": [
+    "Make startup and compact operating surfaces easier for generic agents to discover and cheaper to use.",
+    "Make package bypass, missing planning residue, and lower-trust closeout visible enough that reviewers can detect weak compliance quickly."
+  ],
+  "non_goals": [
+    "Do not require full package adoption before any value appears.",
+    "Do not turn partial-compliance signals into a punitive workflow engine.",
+    "Do not bury startup routing under more prose or a second front door."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Harden startup discoverability, compact core-surface cost, preflight takeover robustness, and lower-trust closeout visibility so generic agents can use the package without full doctrine reconstruction.",
+      "constraints": "Keep startup cheap, keep core surfaces compact, preserve repo-owned boundaries, and make likely bypass visible rather than silently acceptable.",
+      "latitude": "Sequence the lane through an audit-first slice that proves where startup/compliance still fails before broadening implementation.",
+      "escalation": "Escalate if the slice would require replacing the current startup model wholesale or widening into unrelated planning-chain work."
+    },
+    "execution": {
+      "milestone": "startup-discoverability-and-lower-trust-audit",
+      "status": "planned",
+      "next_step": "Run the intent-validation audit over startup discoverability, core-surface compactness, preflight takeover robustness, and lower-trust closeout signaling, then convert the highest-signal failures into bounded fixes.",
+      "proof": "Startup/defaults/config/summary/report surfaces answer first-contact questions cheaply, lower-trust review signals appear when package routing is bypassed, and focused workflow tests plus planning checks pass."
+    },
+    "scope": {
+      "touched": [
+        "AGENTS.md",
+        "SYSTEM_INTENT.md",
+        ".agentic-workspace/config.toml",
+        ".agentic-workspace/docs/",
+        "src/agentic_workspace/cli.py",
+        "packages/planning/src/repo_planning_bootstrap/",
+        "tests/",
+        "packages/planning/tests/"
+      ],
+      "invariants": [
+        "AGENTS.md remains a thin repo-owned router into compact workspace surfaces.",
+        "Startup guidance stays cheaper than broad rereads.",
+        "Likely bypass or weak compliance remains visible as trust and review state, not hidden as normal operation."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "make package startup and compact operating surfaces easy enough for generic agents to discover and use, while making bypass and low-trust closeout visible to stronger reviewers",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml lane graceful-partial-compliance",
+    "parent lane": "graceful-partial-compliance"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane graceful-partial-compliance",
+    "activation trigger": "continue until a generic agent can follow startup routing cheaply and bypass/weak-closeout incidents reliably surface in review state"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "planned: a current-state audit can separate startup discoverability failures from trust-signal failures, so later fixes stay bounded and evidence-led.",
+    "intentionally deferred": "broad doctrine compression beyond the audit findings, machine-first planning-chain extraction, and local-only integration-area work.",
+    "discovered implications": "the Gemini incident indicates that discoverability and trust signaling are coupled: when startup routing is weak, lower-trust behavior is harder to spot before damage lands.",
+    "proof achieved now": "none yet; this is a prepared plan.",
+    "validation still needed": "prove that generic-agent startup cost falls and that lower-trust closeout becomes inspectable from compact surfaces.",
+    "next likely slice": "turn the audit result into the smallest startup/trust fix set, likely one startup routing cut and one lower-trust reporting cut."
+  },
+  "intent_interpretation": {
+    "literal request": "prepare a full execplan for the second roadmap lane to reduce weak-agent implementation failures",
+    "inferred intended outcome": "bound the graceful-partial-compliance lane into a planner-owned sequence that makes generic-agent startup and trust failures visible before they cause misleading implementation residue",
+    "chosen concrete what": "start with an audit-first slice anchored in current startup and trust surfaces, then route the top failures into bounded fixes rather than attempting a broad compliance rewrite immediately",
+    "interpretation distance": "low",
+    "review guidance": "reject work that claims compliance improvement without reducing startup cost or without making lower-trust/bypass state more visible in compact review surfaces"
+  },
+  "execution_bounds": {
+    "allowed paths": "AGENTS.md; SYSTEM_INTENT.md; .agentic-workspace/; src/agentic_workspace/; packages/planning/src/repo_planning_bootstrap/; tests/; packages/planning/tests/",
+    "max changed files": "14",
+    "required validation commands": "uv run agentic-workspace defaults --section startup --format json; uv run agentic-workspace config --target . --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace report --target . --format json; uv run pytest tests/test_workspace_cli.py packages/planning/tests/test_installer.py -q -k \"startup or summary or report or trust\"; uv run python scripts/check/check_planning_surfaces.py",
+    "ask-before-refactor threshold": "stop before replacing the startup contract, rewriting broad planning storage, or redesigning unrelated package command structure",
+    "stop before touching": "vendor-specific integrations, machine-first sidecar storage internals, or runtime-posture execution policy outside compliance signaling"
+  },
+  "stop_conditions": {
+    "stop when": "the audit findings stop being bounded and start implying a broad workflow-substrate redesign",
+    "escalate when boundary reached": "fixes require changing the repo-owned startup adapter contract beyond thin routing",
+    "escalate on scope drift": "the work becomes generic docs cleanup or global UX polish without concrete startup/trust proof",
+    "escalate on proof failure": "compact surfaces still cannot expose bypass or lower-trust closeout after targeted changes"
+  },
+  "context_budget": {
+    "live working set": "startup defaults/config/summary/report outputs, AGENTS.md router contract, trust/lower-trust reporting surfaces, focused CLI tests, current lane issues",
+    "recoverable later": "older product-compression history and archived startup lanes unless a specific prior proof is needed",
+    "externalize before shift": "the audit findings, the ranked failure list, and the exact compact proof surfaces that should show lower-trust state",
+    "pre-work config pull": "agentic-workspace defaults --section startup --format json; agentic-workspace report --target . --format json",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "start with an intent-validation audit, not with broad docs edits; prove cheap startup and visible lower-trust state",
+    "context-shift triggers": "after the audit artifact is written, after any startup contract tweak, or before handing a fix slice to a weaker worker"
+  },
+  "delegated_judgment": {
+    "requested outcome": "make generic-agent startup easier and weak compliance easier to detect",
+    "hard constraints": "startup stays thin; compact surfaces remain primary; lower-trust state must become more visible, not more inferential",
+    "agent may decide locally": "the audit format, the smallest proof queries, and whether one or two bounded fix slices follow first",
+    "escalate when": "a worker needs to redefine the startup contract, claim full compliance without evidence, or widen into planning-chain redesign"
+  },
+  "references": [
+    {
+      "kind": "planning-state",
+      "target": ".agentic-workspace/planning/state.toml",
+      "label": "graceful-partial-compliance lane",
+      "role": "parent-lane",
+      "locator": "roadmap.lanes[id=graceful-partial-compliance]"
+    },
+    {
+      "kind": "issue",
+      "target": "#251",
+      "label": "graceful partial compliance parent lane",
+      "role": "parent-issue",
+      "locator": "github issue #251"
+    },
+    {
+      "kind": "issue",
+      "target": "#255",
+      "label": "make core package surfaces easier for generic agents",
+      "role": "startup-discoverability",
+      "locator": "github issue #255"
+    },
+    {
+      "kind": "issue",
+      "target": "#256",
+      "label": "surface lower-trust signals when package use was likely bypassed",
+      "role": "trust-signals",
+      "locator": "github issue #256"
+    },
+    {
+      "kind": "issue",
+      "target": "#277",
+      "label": "preflight-first takeover robustness",
+      "role": "takeover-robustness",
+      "locator": "github issue #277"
+    },
+    {
+      "kind": "doc",
+      "target": ".agentic-workspace/WORKFLOW.md",
+      "label": "workspace workflow contract",
+      "role": "startup-governance",
+      "locator": "local doc"
+    }
+  ],
+  "active_milestone": {
+    "id": "startup-discoverability-and-lower-trust-audit",
+    "status": "planned",
+    "scope": "Use current compact surfaces to audit startup discoverability, takeover robustness, and lower-trust closeout visibility before implementation fixes.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "gh issue refresh before implementation if #251/#255/#256/#277 changed materially"
+  },
+  "immediate_next_action": [
+    "Perform the intent-validation audit and capture the highest-signal startup and lower-trust failures as the next bounded implementation targets."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "AGENTS.md",
+    "SYSTEM_INTENT.md",
+    ".agentic-workspace/config.toml",
+    ".agentic-workspace/docs/",
+    "src/agentic_workspace/cli.py",
+    "packages/planning/src/repo_planning_bootstrap/",
+    "tests/",
+    "packages/planning/tests/"
+  ],
+  "invariants": [
+    "AGENTS.md stays a thin startup adapter.",
+    "Compact startup and planning surfaces remain cheaper than raw rereads.",
+    "Lower-trust and bypass behavior must remain visible to reviewers."
+  ],
+  "contract_decisions_to_freeze": [
+    "Startup questions should be answerable from defaults/config/summary/report before deeper docs are opened.",
+    "Lower-trust closeout must be visible in compact review surfaces, not only in long-form logs.",
+    "Audit-first is the default first step for this lane, because recent failures show hidden trust gaps as much as startup gaps."
+  ],
+  "open_questions_to_close": [
+    "Which startup question is currently the highest-frequency failure: entrypoint routing, active planning recovery, or workflow obligation discovery?",
+    "Which compact surface should own lower-trust closeout visibility by default: report, summary, or both?",
+    "Is a dedicated audit artifact needed, or can the first slice encode findings directly in planning state and tests?"
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace defaults --section startup --format json",
+    "uv run agentic-workspace config --target . --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace report --target . --format json",
+    "uv run pytest tests/test_workspace_cli.py packages/planning/tests/test_installer.py -q -k \"startup or summary or report or trust\"",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "uv",
+    "gh"
+  ],
+  "completion_criteria": [
+    "The highest-signal startup discoverability failure is fixed or explicitly bounded for the next slice.",
+    "Compact surfaces show lower-trust or likely-bypass state clearly enough for a strong reviewer to detect it cheaply.",
+    "Focused tests cover both startup routing and lower-trust reporting.",
+    "The lane leaves a reusable audit-first pattern for future compliance incidents."
+  ],
+  "execution_run": {
+    "run status": "not-started",
+    "executor": "none yet",
+    "handoff source": "this prepared execplan",
+    "what happened": "not started",
+    "scope touched": "none yet",
+    "changed surfaces": "none yet",
+    "validations run": "none yet",
+    "result for continuation": "implementation still required",
+    "next step": "run the startup and lower-trust audit"
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "unknown",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "moderate until the audit proves which failures are discoverability vs. trust-signal problems",
+    "follow-on decision": "keep-lane-open"
+  },
+  "proof_report": {
+    "validation proof": "planned: compact startup/report queries plus focused workflow tests and planning-surface checks",
+    "proof achieved now": "none yet; plan prepared only",
+    "evidence for \"proof achieved\" state": "pending implementation"
+  },
+  "intent_satisfaction": {
+    "original intent": "prepare a full execplan that lets a strong planner steer the graceful-partial-compliance lane safely",
+    "was original intent fully satisfied?": "yes for planning preparation, no for lane implementation",
+    "evidence of intent satisfaction": "the lane now has an explicit audit-first plan with bounded validation and trust-signaling criteria",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml lane graceful-partial-compliance"
+  },
+  "closure_check": {
+    "slice status": "planned but not started",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "the lane has not yet shipped discoverability or lower-trust improvements; only the planning artifact exists",
+    "evidence carried forward": "this execplan plus the lane record in state.toml",
+    "reopen trigger": "revisit if live issue evidence suggests a narrower startup or trust slice should be prioritized first"
+  },
+  "execution_summary": {
+    "outcome delivered": "prepared a full machine-first execplan for the graceful partial compliance lane",
+    "validation confirmed": "planning preparation only",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml and this execplan",
+    "post-work posterity capture": "none yet beyond the plan",
+    "knowledge promoted (memory/docs/config)": "execplan only",
+    "resume from": "startup-discoverability-and-lower-trust-audit"
+  },
+  "drift_log": [
+    "2026-04-24: Initial full-lane execplan created from current roadmap order and live issue set."
+  ]
+}

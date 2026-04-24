@@ -1,0 +1,241 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Runtime Posture Selective Handoff",
+  "goal": [
+    "Make local execution posture and selective strong-reasoning handoff cheap enough to use in ordinary work.",
+    "Give weaker implementers a compact, posture-aware handoff contract that reduces planning drift and dishonest closeout."
+  ],
+  "non_goals": [
+    "Do not hard-bind the workflow to one external vendor or model.",
+    "Do not widen this lane into a full runtime scheduler or a second planning authority.",
+    "Do not allow delegated workers to decide lane closure or larger-intent completion on their own."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Ship the runtime posture loop that combines portable planning semantics, local execution posture, and compact strong-reasoning handoff guidance.",
+      "constraints": "Keep portable planning state runtime-agnostic, keep local posture repo-local, and make low-trust delegation visibly lower trust instead of silently equivalent to stronger execution.",
+      "latitude": "Shape the first implementation slice around the smallest compact runtime-resolution answer that materially changes day-to-day execution behavior.",
+      "escalation": "Escalate if the work would require a hidden planning store, vendor-specific orchestration lock-in, or broad rewrites across unrelated startup/compliance surfaces."
+    },
+    "execution": {
+      "milestone": "runtime-resolution-answer-and-strong-handoff-packet",
+      "status": "planned",
+      "next_step": "Implement the compact runtime-resolution answer from the lane's suggested first slice, then layer the strong-reasoning handoff packet on top of that resolved posture.",
+      "proof": "Defaults/config/report surfaces expose a compact runtime-resolution answer that clearly distinguishes stay-local, stronger-reasoning, and manual external delegation paths, and focused CLI tests plus planning checks pass."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/config.toml",
+        ".agentic-workspace/config.local.toml",
+        ".agentic-workspace/docs/delegation-posture-contract.md",
+        ".agentic-workspace/docs/orchestrator-workflow-contract.md"
+      ],
+      "invariants": [
+        "Portable execplans stay portable and do not embed machine-specific execution requirements.",
+        "Local posture and delegation-target truth stay in repo-local config or derived runtime payloads.",
+        "Delegated workers may receive bounded task packets but not lane-level closure authority."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "make local execution posture and selective strong-reasoning handoff cheap enough to use in ordinary work, especially when weaker agents must implement bounded work under rate-limit pressure",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml lane runtime-posture-selective-handoff",
+    "parent lane": "runtime-posture-selective-handoff"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane runtime-posture-selective-handoff",
+    "activation trigger": "continue until defaults/config/report surfaces can answer posture selection cheaply and strong handoff packets no longer require planner-written reconstruction"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "planned: a compact runtime-resolution answer and stronger handoff artifact can become the default planner-to-worker bridge instead of ad hoc prose.",
+    "intentionally deferred": "full automation or scheduling behavior, broader graceful-compliance cleanup, and any machine-first planning-store redesign outside the lane's direct runtime posture needs.",
+    "discovered implications": "recent weaker-agent failures show that trust classification, preflight guidance, and handoff compactness need to be treated as one operational loop rather than separate convenience features.",
+    "proof achieved now": "none yet; this is a prepared plan.",
+    "validation still needed": "prove that the runtime-resolution answer changes ordinary startup behavior and that weaker agents can use the packet without widening scope or falsely closing lanes.",
+    "next likely slice": "implement issue #286's compact runtime-resolution answer, then issue #289's compact strong general-purpose reasoning handoff packet against that resolved posture."
+  },
+  "intent_interpretation": {
+    "literal request": "prepare a full execplan for the first roadmap lane so a strong planner can bound implementation for weaker agents",
+    "inferred intended outcome": "turn the runtime-posture lane into an implementation-safe, machine-first plan that weaker agents can execute in bounded slices without reinterpreting the lane",
+    "chosen concrete what": "plan the lane around the compact runtime-resolution answer first, with explicit handoff and closeout constraints that preserve planner authority over shaping and closure",
+    "interpretation distance": "low",
+    "review guidance": "reject implementations that add posture fields without changing the actionable answer to stay-local vs. stronger-reasoning vs. manual external delegation, or that let delegated execution masquerade as high-trust closure"
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/; tests/; .agentic-workspace/config*.toml; .agentic-workspace/docs/",
+    "max changed files": "12",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q -k \"delegation or runtime or summary or config\"; uv run agentic-workspace defaults --section startup --format json; uv run agentic-workspace config --target . --format json; uv run agentic-workspace report --target . --format json; uv run python scripts/check/check_planning_surfaces.py",
+    "ask-before-refactor threshold": "stop before changing planning storage contracts, repo bootstrap packaging, or broad startup/front-door doctrine unrelated to runtime posture selection",
+    "stop before touching": "packages/planning/ machine-first storage work, non-runtime roadmap prioritization, or local-only integration-area path creation"
+  },
+  "stop_conditions": {
+    "stop when": "the slice would need a broader planning-schema redesign or cannot produce a compact actionable answer from existing planning and config surfaces",
+    "escalate when boundary reached": "portable execplan semantics need new canonical fields before posture resolution can be expressed honestly",
+    "escalate on scope drift": "the work starts solving generic startup discoverability or local-only integration storage instead of runtime posture and handoff",
+    "escalate on proof failure": "focused CLI tests cannot prove that runtime resolution and trust classification are queryable and actionable"
+  },
+  "context_budget": {
+    "live working set": "state.toml lane contract, local config posture fields, workspace CLI defaults/config/report payload shaping, focused workspace CLI tests, delegation docs",
+    "recoverable later": "older archived delegation and posture slices, broad product-compression history, unrelated planning-package internals",
+    "externalize before shift": "the minimum runtime-resolution vocabulary, the trust-classification rule, and the exact worker packet shape expected from the lane",
+    "pre-work config pull": "agentic-workspace config --target . --format json",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "start from issue #286 compact answer, not from a broad delegation rewrite; preserve planner-only closure authority",
+    "context-shift triggers": "after the first runtime-resolution implementation milestone, after any config-shape decision, or before handing work to a weaker executor"
+  },
+  "delegated_judgment": {
+    "requested outcome": "make runtime posture selection and strong handoff cheap enough that ordinary tasks can be routed safely without planner reconstruction each time",
+    "hard constraints": "portable planning truth stays portable; weaker executors do not own lane closure; lower-trust outcomes remain visible; local execution posture stays local",
+    "agent may decide locally": "field names, exact compact payload shape, minimum runtime-resolution categories, and whether one or two focused tests best prove the answer",
+    "escalate when": "the worker would need to redefine lane scope, add new planning authorities, or decide that lower-trust execution should count as full closeout"
+  },
+  "references": [
+    {
+      "kind": "planning-state",
+      "target": ".agentic-workspace/planning/state.toml",
+      "label": "runtime-posture-selective-handoff lane",
+      "role": "parent-lane",
+      "locator": "roadmap.lanes[id=runtime-posture-selective-handoff]"
+    },
+    {
+      "kind": "issue",
+      "target": "#285",
+      "label": "portable execplan semantics vs local execution posture",
+      "role": "parent-issue",
+      "locator": "github issue #285"
+    },
+    {
+      "kind": "issue",
+      "target": "#286",
+      "label": "compact runtime-resolution answer",
+      "role": "first-slice",
+      "locator": "github issue #286"
+    },
+    {
+      "kind": "issue",
+      "target": "#289",
+      "label": "compact strong reasoning handoff packet",
+      "role": "follow-on",
+      "locator": "github issue #289"
+    },
+    {
+      "kind": "doc",
+      "target": ".agentic-workspace/docs/delegation-posture-contract.md",
+      "label": "delegation posture contract",
+      "role": "governing-doc",
+      "locator": "local doc"
+    }
+  ],
+  "active_milestone": {
+    "id": "runtime-resolution-answer-and-strong-handoff-packet",
+    "status": "planned",
+    "scope": "Implement the compact runtime-resolution answer first, then use it to shape the compact strong-reasoning handoff packet and lower-trust delegation closeout guidance.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "gh issue refresh before implementation if #285/#286/#289 wording changes materially"
+  },
+  "immediate_next_action": [
+    "Translate issue #286 into a single compact runtime-resolution output contract, then mark one bounded implementation slice active against that contract."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/config.py",
+    "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/config.toml",
+    ".agentic-workspace/config.local.toml",
+    ".agentic-workspace/docs/delegation-posture-contract.md",
+    ".agentic-workspace/docs/orchestrator-workflow-contract.md"
+  ],
+  "invariants": [
+    "Portable planning truth must remain portable.",
+    "Local posture truth must remain local.",
+    "Delegated implementation and lane closure are not the same authority."
+  ],
+  "contract_decisions_to_freeze": [
+    "The runtime-resolution answer must be queryable from compact workspace surfaces before implementation is considered complete.",
+    "Manual external targets such as ChatGPT remain represented as explicit lower-trust execution methods unless proven otherwise.",
+    "Planner-authored handoff packets remain bounded artifacts, not open-ended worker journals."
+  ],
+  "open_questions_to_close": [
+    "Which minimum posture categories are sufficient for the compact runtime-resolution answer: local, stronger-reasoning, manual external, or a slightly richer set?",
+    "Should the strong handoff packet live in defaults/config/report output or be a dedicated focused command projection?",
+    "What proof is sufficient to call a delegated result normal-trust rather than lower-trust?"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"delegation or runtime or summary or config\"",
+    "uv run agentic-workspace defaults --section startup --format json",
+    "uv run agentic-workspace config --target . --format json",
+    "uv run agentic-workspace report --target . --format json",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "uv",
+    "gh"
+  ],
+  "completion_criteria": [
+    "A compact runtime-resolution answer is available from ordinary workspace surfaces and combines planning semantics with local execution posture.",
+    "The answer clearly distinguishes stay-local, stronger-reasoning, and manual external paths without silent fallback.",
+    "A compact strong-reasoning handoff packet can be generated from the same bounded contract.",
+    "Focused tests prove lower-trust delegation remains visibly lower trust at closeout."
+  ],
+  "execution_run": {
+    "run status": "not-started",
+    "executor": "none yet",
+    "handoff source": "this prepared execplan",
+    "what happened": "not started",
+    "scope touched": "none yet",
+    "changed surfaces": "none yet",
+    "validations run": "none yet",
+    "result for continuation": "implementation still required",
+    "next step": "activate the first bounded implementation slice under issue #286"
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "unknown",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "moderate until the first worker packet is exercised",
+    "follow-on decision": "keep-lane-open"
+  },
+  "proof_report": {
+    "validation proof": "planned: focused workspace CLI tests plus defaults/config/report checks and planning-surface health check",
+    "proof achieved now": "none yet; plan prepared only",
+    "evidence for \"proof achieved\" state": "pending implementation"
+  },
+  "intent_satisfaction": {
+    "original intent": "prepare a full execplan that lets a strong planner shape and bound implementation for the runtime-posture-selective-handoff lane",
+    "was original intent fully satisfied?": "yes for planning preparation, no for lane implementation",
+    "evidence of intent satisfaction": "the lane now has a bounded machine-first execplan with explicit slice order, validation, stop conditions, and delegation rails",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml lane runtime-posture-selective-handoff"
+  },
+  "closure_check": {
+    "slice status": "planned but not started",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "the plan is prepared, but the lane's implementation and proof have not started",
+    "evidence carried forward": "this execplan plus lane references in state.toml",
+    "reopen trigger": "revisit if issue scope changes or the first runtime-resolution slice proves too wide for one bounded pass"
+  },
+  "execution_summary": {
+    "outcome delivered": "prepared a full machine-first execplan for the runtime posture lane",
+    "validation confirmed": "planning preparation only",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml and this execplan",
+    "post-work posterity capture": "none yet beyond the plan",
+    "knowledge promoted (memory/docs/config)": "execplan only",
+    "resume from": "issue #286 compact runtime-resolution answer"
+  },
+  "drift_log": [
+    "2026-04-24: Initial full-lane execplan created from current roadmap order and live issue set."
+  ]
+}

@@ -1,0 +1,239 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Machine First Planning Chain",
+  "goal": [
+    "Replace prose-first authored execplans with genuinely machine-first canonical planning state and derived human-readable views.",
+    "Move structured references and proportional review residue into durable, queryable planning records."
+  ],
+  "non_goals": [
+    "Do not create a hidden second planning store.",
+    "Do not close the full lane based on a single proving slice.",
+    "Do not force every planning surface into heavy structure when compact prose still suffices."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Continue the reopened machine-first lane beyond the first canonical sidecar proof by extracting remaining Markdown-authored planning truth, structured references, and proportional review residue into canonical records.",
+      "constraints": "Canonical machine-first state stays checked in beside human-readable views, remains git-reviewable, and does not replace compact planning outputs with heavier defaults.",
+      "latitude": "Use a real repo slice as the proving path for the next extraction step and choose the smallest remaining Markdown-authored truth that still creates restart or review cost.",
+      "escalation": "Escalate if the work would require a hidden planning database, break compact planning surfaces, or collapse bounded review residue into broad archival prose."
+    },
+    "execution": {
+      "milestone": "structured-references-and-review-residue-follow-through",
+      "status": "planned",
+      "next_step": "Pick the next real planning slice that still depends on Markdown-authored truth, then extract structured references and proportional review residue through the canonical sidecar path.",
+      "proof": "A real active planning slice uses canonical machine-first records for structured references and bounded review residue, with planning summary/report/check surfaces all staying honest and compact."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/",
+        "packages/planning/tests/",
+        "packages/planning/README.md",
+        "packages/planning/bootstrap/.agentic-workspace/planning/",
+        ".agentic-workspace/planning/execplans/",
+        ".agentic-workspace/planning/reviews/",
+        "scripts/check/"
+      ],
+      "invariants": [
+        "Canonical state stays checked in beside the human view.",
+        "Structured references are explicit and typed enough to be queryable.",
+        "Review residue stays proportional and does not turn every execplan into a long notebook."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "replace prose-first authored execplans with machine-first canonical planning state, explicit structured references, and proportional review residue with derived human-readable views",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml lane machine-first-planning-chain",
+    "parent lane": "machine-first-planning-chain"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane machine-first-planning-chain",
+    "activation trigger": "continue until remaining restart-critical planning truth no longer depends on Markdown-authored or Markdown-only surfaces"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "planned: the reopened lane can move from the first sidecar proof to the unfinished typed-reference and review-residue follow-through instead of leaving the lane in contradictory archive state.",
+    "intentionally deferred": "broad workflow-substrate redesign, unrelated startup discoverability fixes, and local-only integration boundaries.",
+    "discovered implications": "premature closeout showed that honest continuation and structured residue are not optional polish; they are central to keeping weaker-agent planning from drifting.",
+    "proof achieved now": "none yet; this is a prepared plan.",
+    "validation still needed": "prove that structured references and proportional review residue are canonical enough to reduce restart and review cost on a real slice.",
+    "next likely slice": "use one active slice to canonicalize structured references and bounded review residue against the current sidecar path."
+  },
+  "intent_interpretation": {
+    "literal request": "prepare a full execplan for the machine-first planning chain lane",
+    "inferred intended outcome": "restore the lane as a real continuing plan, shaped around the unfinished follow-through after the first sidecar slice rather than pretending the machine-first migration is complete",
+    "chosen concrete what": "plan the lane around the next real extraction step: structured references and proportional review residue on top of the already-shipped canonical sidecar path",
+    "interpretation distance": "low",
+    "review guidance": "reject work that only adds more canonical files without reducing remaining Markdown-authored planning truth or without keeping review residue proportional"
+  },
+  "execution_bounds": {
+    "allowed paths": "packages/planning/src/repo_planning_bootstrap/; packages/planning/tests/; packages/planning/bootstrap/.agentic-workspace/planning/; .agentic-workspace/planning/; scripts/check/",
+    "max changed files": "14",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q -k \"planning_summary or execplan or review\"; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_planning_surfaces.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace summary --format json --profile full",
+    "ask-before-refactor threshold": "stop before introducing new planning storage backends, replacing compact planning outputs, or rewriting archive flows beyond the bounded canonicalization needed for the active slice",
+    "stop before touching": "workspace runtime posture surfaces, AGENTS.md startup routing, or local-only integration roots"
+  },
+  "stop_conditions": {
+    "stop when": "the next extraction step cannot be expressed as a bounded canonicalization of one remaining Markdown-authored truth surface",
+    "escalate when boundary reached": "the work would require redesigning the whole planning package rather than finishing the next machine-first follow-through slice",
+    "escalate on scope drift": "the effort starts becoming broad planning cleanup instead of structured references and proportional review residue",
+    "escalate on proof failure": "summary/report/check surfaces become less compact or less honest after the new canonical data lands"
+  },
+  "context_budget": {
+    "live working set": "current sidecar contract, reopened lane evidence, typed references expectations, review residue contract, planning package tests and checks",
+    "recoverable later": "older archive history and broader packaging context unless a specific regression appears",
+    "externalize before shift": "which planning truths still live mainly in Markdown, the exact next canonicalization target, and the proof that compact surfaces remain adequate afterward",
+    "pre-work config pull": "agentic-workspace summary --format json --profile full",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "do not redo the first sidecar proof; target the unfinished typed-reference and review-residue follow-through on one real slice",
+    "context-shift triggers": "after picking the next canonicalization target, after changing schema/checker expectations, or before archive/closeout decisions"
+  },
+  "delegated_judgment": {
+    "requested outcome": "finish the machine-first follow-through that remained after the first sidecar slice",
+    "hard constraints": "no hidden store; compact outputs stay compact; review residue remains proportional; lane closure requires explicit larger-intent proof",
+    "agent may decide locally": "which remaining Markdown-authored truth to extract first, exact typed-reference shape, and the narrowest review-residue schema that still reduces ambiguity",
+    "escalate when": "the worker would need to broaden into storage redesign, replace human-readable views, or claim the full lane is complete without follow-through proof"
+  },
+  "references": [
+    {
+      "kind": "planning-state",
+      "target": ".agentic-workspace/planning/state.toml",
+      "label": "machine-first-planning-chain lane",
+      "role": "parent-lane",
+      "locator": "roadmap.lanes[id=machine-first-planning-chain]"
+    },
+    {
+      "kind": "issue",
+      "target": "#261",
+      "label": "reopen machine-first planning chain",
+      "role": "parent-issue",
+      "locator": "github issue #261"
+    },
+    {
+      "kind": "issue",
+      "target": "#280",
+      "label": "multi-level structured reference model",
+      "role": "structured-references",
+      "locator": "github issue #280"
+    },
+    {
+      "kind": "issue",
+      "target": "#282",
+      "label": "proportional planning review residue",
+      "role": "review-residue",
+      "locator": "github issue #282"
+    },
+    {
+      "kind": "plan",
+      "target": ".agentic-workspace/planning/execplans/archive/machine-first-planning-chain-first-slice-2026-04-23.plan.json",
+      "label": "first canonical sidecar slice",
+      "role": "prior-proof",
+      "locator": "archived plan"
+    }
+  ],
+  "active_milestone": {
+    "id": "structured-references-and-review-residue-follow-through",
+    "status": "planned",
+    "scope": "Use one real active planning slice to canonicalize structured references and bounded review residue on top of the already-shipped sidecar path.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "gh issue refresh before implementation if #261/#280/#282 moved materially"
+  },
+  "immediate_next_action": [
+    "Choose one currently active or next-up slice as the proving ground for canonical structured references and proportional review residue."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/",
+    "packages/planning/tests/",
+    "packages/planning/README.md",
+    "packages/planning/bootstrap/.agentic-workspace/planning/",
+    ".agentic-workspace/planning/execplans/",
+    ".agentic-workspace/planning/reviews/",
+    "scripts/check/"
+  ],
+  "invariants": [
+    "Canonical planning state stays checked in.",
+    "Human-readable planning views remain derived and reviewable.",
+    "Bounded slice completion and lane completion remain explicitly distinct."
+  ],
+  "contract_decisions_to_freeze": [
+    "Structured references should be typed and queryable from canonical plan records.",
+    "Review residue should be proportional and purpose-shaped, not open-ended journals.",
+    "A slice archive cannot silently imply lane completion when required follow-on remains."
+  ],
+  "open_questions_to_close": [
+    "Which remaining Markdown-authored truth imposes the highest restart or review cost right now?",
+    "Should proportional review residue live inside the canonical execplan, in bounded review artifacts, or in a tighter split between the two?",
+    "How much typed-reference detail is enough to reduce ambiguity without making planning payloads too heavy?"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"planning_summary or execplan or review\"",
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run agentic-workspace summary --format json --profile full"
+  ],
+  "required_tools": [
+    "uv",
+    "gh"
+  ],
+  "completion_criteria": [
+    "One real planning slice uses canonical structured references instead of Markdown-authored reference truth.",
+    "Bounded review residue becomes machine-first enough to reduce ambiguity without inflating compact planning surfaces.",
+    "Planning checks and summaries stay honest and compact after the new canonical data lands.",
+    "Lane continuation remains explicit, preventing another premature closeout."
+  ],
+  "execution_run": {
+    "run status": "not-started",
+    "executor": "none yet",
+    "handoff source": "this prepared execplan",
+    "what happened": "not started",
+    "scope touched": "none yet",
+    "changed surfaces": "none yet",
+    "validations run": "none yet",
+    "result for continuation": "implementation still required",
+    "next step": "pick the next canonicalization target"
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "unknown",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "moderate until a real slice proves the lane can continue without contradictory closeout residue",
+    "follow-on decision": "keep-lane-open"
+  },
+  "proof_report": {
+    "validation proof": "planned: focused planning package tests, contract checks, and full-profile summary inspection",
+    "proof achieved now": "none yet; plan prepared only",
+    "evidence for \"proof achieved\" state": "pending implementation"
+  },
+  "intent_satisfaction": {
+    "original intent": "prepare a full execplan that reopens and bounds the machine-first planning chain lane honestly",
+    "was original intent fully satisfied?": "yes for planning preparation, no for lane implementation",
+    "evidence of intent satisfaction": "the lane now has a continuation-honest machine-first execplan centered on the unfinished follow-through instead of the already-proved first slice",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml lane machine-first-planning-chain"
+  },
+  "closure_check": {
+    "slice status": "planned but not started",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "the lane is explicitly not complete; only the planner artifact is prepared",
+    "evidence carried forward": "this execplan, the reopened lane in state.toml, and the archived first-slice proof",
+    "reopen trigger": "revisit if the next canonicalization target turns out to belong under a narrower new lane instead"
+  },
+  "execution_summary": {
+    "outcome delivered": "prepared a full machine-first execplan for the reopened machine-first planning chain lane",
+    "validation confirmed": "planning preparation only",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml and this execplan",
+    "post-work posterity capture": "none yet beyond the plan",
+    "knowledge promoted (memory/docs/config)": "execplan only",
+    "resume from": "structured-references-and-review-residue-follow-through"
+  },
+  "drift_log": [
+    "2026-04-24: Initial full-lane execplan created from the reopened lane and live follow-on issues."
+  ]
+}
