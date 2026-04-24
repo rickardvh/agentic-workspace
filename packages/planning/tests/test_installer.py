@@ -2115,7 +2115,7 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
 
     assert summary["kind"] == "planning-summary/v1"
     assert summary["schema"]["schema_version"] == "planning-summary-schema/v1"
-    assert summary["schema"]["command"] == "agentic-workspace summary --format json"
+    assert summary["schema"]["command"] == "agentic-workspace summary --format json --profile full"
     assert "planning_record" in summary["schema"]["shared_fields"]
     assert "planning_surface_health" in summary["schema"]["shared_fields"]
     assert summary["todo"]["active_count"] == 1
@@ -2225,6 +2225,57 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     if summary["warning_count"] != 0:
         print(f"DEBUG: warnings found: {summary['warnings']}")
     assert summary["warning_count"] == 0
+
+
+def test_planning_summary_compact_profile_trims_heavy_sections(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "in-progress", surface = ".agentic-workspace/planning/execplans/plan-alpha.md", why_now = "keep compact startup cheap." }
+]
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "tracked-lane", title = "Tracked lane", priority = "first", issues = ["EXT-1"], outcome = "Keep tracked.", reason = "Needed.", promotion_signal = "Promote when needed.", suggested_first_slice = "Do the thing." },
+]
+candidates = [
+  { priority = "first", summary = "Tracked lane" },
+]
+""",
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "EXT-1",
+                "title": "Tracked lane",
+                "status": "open",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            }
+        ],
+    )
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _minimal_execplan())
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    assert summary["profile"] == "compact"
+    assert summary["schema"]["schema_version"] == "planning-summary-compact-schema/v1"
+    assert summary["schema"]["command"] == "agentic-workspace summary --format json"
+    assert summary["schema"]["full_profile_command"] == "agentic-workspace summary --format json --profile full"
+    assert "candidate_lanes" not in summary["roadmap"]
+    assert summary["roadmap"]["candidates"] == [{"priority": "first", "summary": "Tracked lane"}]
+    assert "signals" not in summary["intent_validation_contract"]
+    assert "external_evidence" not in summary["intent_validation_contract"]
+    assert summary["ownership_review"]["repo_owned_surface_count"] >= 1
+    assert "repo_owned_surfaces" not in summary["ownership_review"]
+    assert "shared_fields" in summary["schema"]
 
 
 def test_planning_summary_reports_candidate_lanes(tmp_path: Path) -> None:
@@ -2736,6 +2787,45 @@ def test_planning_summary_exposes_ownership_review(tmp_path: Path, capsys) -> No
     assert ownership_review["minimal_repo_hook"] == "AGENTS.md#agentic-workspace:workflow"
     assert "ownership_review" in summary["schema"]["shared_fields"]
     assert "Ownership review:" in out
+
+
+def test_summary_command_defaults_to_compact_json_and_accepts_full_profile(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "in-progress", surface = ".agentic-workspace/planning/execplans/plan-alpha.md", why_now = "keep compact startup cheap." }
+]
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "tracked-lane", title = "Tracked lane", priority = "first", issues = ["EXT-1"], outcome = "Keep tracked.", reason = "Needed.", promotion_signal = "Promote when needed.", suggested_first_slice = "Do the thing." },
+]
+candidates = [
+  { priority = "first", summary = "Tracked lane" },
+]
+""",
+    )
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _minimal_execplan())
+
+    exit_code = planning_cli.main(["summary", "--target", str(tmp_path), "--format", "json"])
+    default_payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert default_payload["profile"] == "compact"
+    assert default_payload["schema"]["schema_version"] == "planning-summary-compact-schema/v1"
+
+    exit_code = planning_cli.main(["summary", "--target", str(tmp_path), "--format", "json", "--profile", "full"])
+    full_payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert full_payload["profile"] == "full"
+    assert full_payload["schema"]["schema_version"] == "planning-summary-schema/v1"
+    assert full_payload["schema"]["command"] == "agentic-workspace summary --format json --profile full"
+    assert "candidate_lanes" in full_payload["roadmap"]
 
 
 def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> None:

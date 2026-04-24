@@ -320,6 +320,14 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "proof expectations",
         "immediate next action",
     ]
+    assert payload["mixed_agent"]["delegated_run_guardrail"]["rule"].startswith("Before delegating bounded implementation")
+    assert payload["mixed_agent"]["delegated_run_guardrail"]["required_preflight_checks"][0] == (
+        "recover handoff-quality must_recover fields from checked-in state"
+    )
+    assert payload["mixed_agent"]["delegated_run_guardrail"]["closeout_gate"]["default_trust"] == "normal"
+    assert payload["mixed_agent"]["delegated_run_guardrail"]["closeout_gate"]["lower_trust_when"][0] == (
+        "target advisory review burden is high"
+    )
     assert payload["delegation_posture"]["canonical_doc"] == ".agentic-workspace/docs/delegation-posture-contract.md"
     assert payload["delegation_posture"]["command"] == "agentic-workspace defaults --section delegation_posture --format json"
     assert payload["delegation_posture"]["rule"] == (
@@ -564,6 +572,8 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["mixed_agent"]["runtime_inference"]["reported_here"] is False
     assert payload["mixed_agent"]["effective_posture"]["supports_internal_delegation"] == {"value": None, "source": "unset"}
     assert payload["mixed_agent"]["effective_posture"]["strong_planner_available"] == {"value": None, "source": "unset"}
+    assert payload["mixed_agent"]["delegated_run_guardrail"]["status"] == "present"
+    assert payload["mixed_agent"]["delegated_run_guardrail"]["closeout_gate"]["lower_trust_profiles"] == []
     assert payload["mixed_agent"]["success_measures"] == [
         "lower long-run token cost",
         "lower restart and handoff cost",
@@ -1472,6 +1482,8 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
         "handoff_detail": "high",
         "review_burden": "high",
     }
+    assert fast_docs["closeout_gate"]["trust"] == "lower-trust"
+    assert "target strength is weak" in fast_docs["closeout_gate"]["reasons"]
     planner = next(item for item in targets["profiles"] if item["name"] == "primary_planner")
     assert planner["location"] == "local"
     assert planner["capability_classes"] == ["boundary-shaping", "reasoning-heavy"]
@@ -1480,6 +1492,8 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
         "handoff_detail": "compact",
         "review_burden": "light",
     }
+    assert planner["closeout_gate"]["trust"] == "normal"
+    assert payload["mixed_agent"]["delegated_run_guardrail"]["closeout_gate"]["lower_trust_profiles"] == ["fast_docs"]
 
 
 def test_config_command_accepts_manual_external_delegation_target(tmp_path: Path, capsys) -> None:

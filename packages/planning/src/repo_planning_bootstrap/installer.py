@@ -1011,7 +1011,7 @@ def verify_payload() -> InstallResult:
     return result
 
 
-def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
+def planning_summary(*, target: str | Path | None = None, profile: str = "full") -> dict[str, Any]:
     target_root = resolve_target_root(target)
     todo_path = target_root / "TODO.md"
     legacy_todo_path = target_root / PLANNING_STATE_PATH
@@ -1177,8 +1177,9 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         context_budget_contract=context_budget_contract,
         intent_interpretation_contract=intent_interpretation_contract,
     )
-    return {
+    full_summary = {
         "kind": "planning-summary/v1",
+        "profile": "full",
         "schema": _planning_summary_schema(),
         "target_root": str(target_root),
         "adoption_mode": _detect_adoption_mode(target_root),
@@ -1233,6 +1234,11 @@ def planning_summary(*, target: str | Path | None = None) -> dict[str, Any]:
         "warnings": [warning.copy() for warning in warnings],
         "warning_count": len(warnings),
     }
+    if profile == "compact":
+        return _planning_summary_compact_projection(full_summary)
+    if profile != "full":
+        raise ValueError(f"Unsupported planning summary profile: {profile}")
+    return full_summary
 
 
 def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
@@ -1430,7 +1436,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             ".agentic-workspace/docs/finished-work-inspection-contract.md",
             ".agentic-workspace/planning/execplans/README.md",
         ],
-        "command": "agentic-workspace summary --format json",
+        "command": "agentic-workspace summary --format json --profile full",
         "shared_fields": [
             "kind",
             "schema",
@@ -1641,6 +1647,176 @@ def _planning_summary_schema() -> dict[str, Any]:
             "prefer the summary schema over raw TODO or execplan parsing when one structured answer is enough",
         ],
     }
+
+
+def _planning_summary_compact_schema() -> dict[str, Any]:
+    return {
+        "schema_version": "planning-summary-compact-schema/v1",
+        "command": "agentic-workspace summary --format json",
+        "full_profile_command": "agentic-workspace summary --format json --profile full",
+        "shared_fields": [
+            "kind",
+            "profile",
+            "schema",
+            "target_root",
+            "adoption_mode",
+            "todo",
+            "execplans",
+            "planning_surface_health",
+            "planning_record",
+            "active_contract",
+            "resumable_contract",
+            "hierarchy_contract",
+            "handoff_contract",
+            "intent_validation_contract",
+            "finished_work_inspection_contract",
+            "system_intent",
+            "roadmap",
+            "ownership_review",
+            "warnings",
+            "warning_count",
+        ],
+    }
+
+
+def _compact_projection(payload: dict[str, Any], *, fields: tuple[str, ...]) -> dict[str, Any]:
+    projected: dict[str, Any] = {}
+    for key in ("status", "reason", "view_role", "view", "view_of"):
+        if key in payload:
+            projected[key] = payload[key]
+    if payload.get("status") == "present":
+        for field in fields:
+            if field in payload:
+                projected[field] = payload[field]
+    return projected
+
+
+def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, Any]:
+    todo = dict(summary.get("todo", {}))
+    execplans = dict(summary.get("execplans", {}))
+    roadmap = dict(summary.get("roadmap", {}))
+    planning_surface_health = dict(summary.get("planning_surface_health", {}))
+    ownership_review = dict(summary.get("ownership_review", {}))
+    intent_validation_contract = dict(summary.get("intent_validation_contract", {}))
+    finished_work_inspection_contract = dict(summary.get("finished_work_inspection_contract", {}))
+    system_intent = dict(summary.get("system_intent", {}))
+
+    compact_summary: dict[str, Any] = {
+        "kind": summary.get("kind", "planning-summary/v1"),
+        "profile": "compact",
+        "schema": _planning_summary_compact_schema(),
+        "target_root": summary.get("target_root", ""),
+        "adoption_mode": summary.get("adoption_mode", ""),
+        "todo": {
+            "line_count": todo.get("line_count", 0),
+            "item_count": todo.get("item_count", 0),
+            "active_count": todo.get("active_count", 0),
+            "active_items": todo.get("active_items", []),
+            "queued_count": todo.get("queued_count", 0),
+            "queued_items": todo.get("queued_items", []),
+        },
+        "execplans": {
+            "active_count": execplans.get("active_count", 0),
+            "active_execplans": execplans.get("active_execplans", []),
+            "completed_count": execplans.get("completed_count", 0),
+            "archived_count": execplans.get("archived_count", 0),
+        },
+        "planning_surface_health": {
+            "status": planning_surface_health.get("status", "unknown"),
+            "warning_count": planning_surface_health.get("warning_count", 0),
+            "recommended_next_action": planning_surface_health.get("recommended_next_action", ""),
+            "warnings": planning_surface_health.get("warnings", []),
+        },
+        "planning_record": _compact_projection(
+            dict(summary.get("planning_record", {})),
+            fields=(
+                "task",
+                "requested_outcome",
+                "next_action",
+                "proof_expectations",
+                "tool_verification",
+                "continuation_owner",
+                "execution_bounds",
+                "stop_conditions",
+                "minimal_refs",
+            ),
+        ),
+        "active_contract": _compact_projection(
+            dict(summary.get("active_contract", {})),
+            fields=("todo_item", "intent", "touched_scope", "proof_expectations", "tool_verification", "minimal_refs"),
+        ),
+        "resumable_contract": _compact_projection(
+            dict(summary.get("resumable_contract", {})),
+            fields=(
+                "current_next_action",
+                "active_milestone",
+                "completion_criteria",
+                "proof_expectations",
+                "tool_verification",
+                "escalate_when",
+                "blockers",
+                "minimal_refs",
+            ),
+        ),
+        "hierarchy_contract": _compact_projection(
+            dict(summary.get("hierarchy_contract", {})),
+            fields=(
+                "current_layer",
+                "parent_lane",
+                "active_chunk",
+                "near_term_queue",
+                "next_likely_chunk",
+                "proof_state",
+                "required_continuation",
+                "closure_check",
+                "minimal_refs",
+            ),
+        ),
+        "handoff_contract": _compact_projection(
+            dict(summary.get("handoff_contract", {})),
+            fields=(
+                "task",
+                "parent_lane",
+                "requested_outcome",
+                "next_action",
+                "completion_criteria",
+                "read_first",
+                "owned_write_scope",
+                "proof_expectations",
+                "execution_bounds",
+                "stop_conditions",
+                "tool_verification",
+                "continuation_owner",
+                "return_with",
+                "worker_contract",
+            ),
+        ),
+        "intent_validation_contract": _compact_projection(
+            intent_validation_contract,
+            fields=("counts", "recommended_next_action"),
+        ),
+        "finished_work_inspection_contract": _compact_projection(
+            finished_work_inspection_contract,
+            fields=("counts", "recommended_next_action"),
+        ),
+        "system_intent": {
+            key: system_intent[key] for key in ("status", "canonical_doc", "rule", "checked_in_execplan_rule") if key in system_intent
+        },
+        "roadmap": {
+            "lane_count": roadmap.get("lane_count", 0),
+            "candidate_count": roadmap.get("candidate_count", 0),
+            "candidates": roadmap.get("candidates", []),
+        },
+        "ownership_review": {
+            "status": ownership_review.get("status", "unknown"),
+            "minimal_repo_hook": ownership_review.get("minimal_repo_hook", ""),
+            "repo_owned_surface_count": len(ownership_review.get("repo_owned_surfaces", [])),
+            "package_owned_root_count": len(ownership_review.get("package_owned_roots", [])),
+        },
+        "warnings": summary.get("warnings", []),
+        "warning_count": summary.get("warning_count", 0),
+    }
+    return compact_summary
 
 
 def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:

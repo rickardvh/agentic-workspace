@@ -232,6 +232,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     summary_parser = subparsers.add_parser("summary", help="Show the active execution summary from the planning module.")
     summary_parser.add_argument("--target", help="Optional repository path to read summary from.")
+    summary_parser.add_argument("--profile", choices=("compact", "full"), default="compact")
     _add_format_argument(summary_parser)
 
     defaults_parser = subparsers.add_parser(
@@ -978,7 +979,8 @@ def main(argv: list[str] | None = None) -> int:
             from repo_planning_bootstrap.cli import _print_summary
             from repo_planning_bootstrap.installer import format_summary_json, planning_summary
 
-            summary = planning_summary(target=target_root.as_posix())
+            summary_profile = args.profile if args.format == "json" else "full"
+            summary = planning_summary(target=target_root.as_posix(), profile=summary_profile)
             if args.format == "json":
                 print(format_summary_json(summary))
             else:
@@ -4973,6 +4975,30 @@ def _defaults_payload() -> dict[str, Any]:
                     "immediate next action",
                 ],
             },
+            "delegated_run_guardrail": {
+                "rule": (
+                    "Before delegating bounded implementation, emit one compact preflight answer "
+                    "and set closeout trust to lower-trust when weak-target signals are present."
+                ),
+                "required_preflight_checks": [
+                    "recover handoff-quality must_recover fields from checked-in state",
+                    "confirm bounded owned-write scope and stop conditions are explicit",
+                    "select a local delegation target profile or stay direct",
+                    "declare whether closeout starts as normal or lower-trust",
+                ],
+                "closeout_gate": {
+                    "default_trust": "normal",
+                    "lower_trust_when": [
+                        "target advisory review burden is high",
+                        "target strength is weak",
+                        "delegation outcome evidence trends negative",
+                    ],
+                    "required_when_lower_trust": [
+                        "human review before closeout",
+                        "explicit execution residue proving bounded scope and validations",
+                    ],
+                },
+            },
             "success_measures": [
                 "lower long-run token cost",
                 "lower restart and handoff cost",
@@ -6120,6 +6146,65 @@ def _delegation_target_advisory(profile: DelegationTargetProfile) -> dict[str, s
     }
 
 
+def _delegation_target_closeout_gate(
+    *,
+    profile: DelegationTargetProfile,
+    advisory: dict[str, Any],
+    outcome_evidence: dict[str, Any],
+) -> dict[str, Any]:
+    lower_trust_reasons: list[str] = []
+    if str(advisory.get("review_burden", "")).strip() == "high":
+        lower_trust_reasons.append("target advisory review burden is high")
+    if profile.strength == "weak":
+        lower_trust_reasons.append("target strength is weak")
+    if isinstance(outcome_evidence.get("average_signal"), (int, float)) and float(outcome_evidence["average_signal"]) < 0:
+        lower_trust_reasons.append("delegation outcome evidence trends negative")
+    confidence = outcome_evidence.get("confidence")
+    if isinstance(confidence, dict) and str(confidence.get("action", "")).strip() == "lower":
+        lower_trust_reasons.append("delegation outcome evidence suggests lowering confidence")
+
+    trust = "lower-trust" if lower_trust_reasons else "normal"
+    if trust == "lower-trust":
+        recommended_next_action = (
+            "Treat delegated closeout as lower-trust: require human review and explicit execution residue before archive-and-close."
+        )
+    else:
+        recommended_next_action = "No extra closeout gate beyond normal bounded review is required."
+    return {
+        "trust": trust,
+        "reasons": lower_trust_reasons,
+        "required_when_lower_trust": [
+            "human review before closeout",
+            "explicit execution residue proving bounded scope and validations",
+        ],
+        "recommended_next_action": recommended_next_action,
+    }
+
+
+def _delegated_run_guardrail_payload(
+    *,
+    defaults: dict[str, Any],
+    profile_payloads: list[dict[str, Any]],
+) -> dict[str, Any]:
+    lower_trust_profiles = [
+        profile.get("name", "")
+        for profile in profile_payloads
+        if isinstance(profile, dict)
+        and isinstance(profile.get("closeout_gate"), dict)
+        and profile["closeout_gate"].get("trust") == "lower-trust"
+    ]
+    guardrail_defaults = defaults.get("delegated_run_guardrail", {})
+    return {
+        "status": "present",
+        "rule": guardrail_defaults.get("rule", ""),
+        "required_preflight_checks": list(guardrail_defaults.get("required_preflight_checks", [])),
+        "closeout_gate": {
+            **dict(guardrail_defaults.get("closeout_gate", {})),
+            "lower_trust_profiles": sorted([name for name in lower_trust_profiles if name]),
+        },
+    }
+
+
 def _strength_rank(strength: str) -> int:
     return {
         "weak": 1,
@@ -6285,6 +6370,31 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     handoff_preference = "unspecified"
     if local_override.supports_internal_delegation and local_override.prefer_internal_delegation_when_available:
         handoff_preference = "prefer-internal-when-safe"
+    profile_payloads: list[dict[str, Any]] = []
+    for profile in local_override.delegation_targets:
+        advisory = _delegation_target_advisory(profile)
+        outcome_evidence = _delegation_outcome_advisory(
+            profile=profile,
+            records=records_by_target.get(profile.name, ()),
+        )
+        profile_payloads.append(
+            {
+                "name": profile.name,
+                "strength": profile.strength,
+                "location": profile.location,
+                "confidence": profile.confidence,
+                "task_fit": list(profile.task_fit),
+                "capability_classes": list(profile.capability_classes),
+                "execution_methods": list(profile.execution_methods),
+                "advisory": advisory,
+                "outcome_evidence": outcome_evidence,
+                "closeout_gate": _delegation_target_closeout_gate(
+                    profile=profile,
+                    advisory=advisory,
+                    outcome_evidence=outcome_evidence,
+                ),
+            }
+        )
     return {
         "status": "reporting-only",
         "rule": defaults["rule"],
@@ -6322,23 +6432,7 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "supported_locations": list(SUPPORTED_CAPABILITY_LOCATIONS),
             "supported_capability_classes": list(SUPPORTED_CAPABILITY_EXECUTION_CLASSES),
             "supported_execution_methods": list(SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS),
-            "profiles": [
-                {
-                    "name": profile.name,
-                    "strength": profile.strength,
-                    "location": profile.location,
-                    "confidence": profile.confidence,
-                    "task_fit": list(profile.task_fit),
-                    "capability_classes": list(profile.capability_classes),
-                    "execution_methods": list(profile.execution_methods),
-                    "advisory": _delegation_target_advisory(profile),
-                    "outcome_evidence": _delegation_outcome_advisory(
-                        profile=profile,
-                        records=records_by_target.get(profile.name, ()),
-                    ),
-                }
-                for profile in local_override.delegation_targets
-            ],
+            "profiles": profile_payloads,
             "outcome_artifact": {
                 "path": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
                 "status": outcome_status,
@@ -6387,6 +6481,10 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "handoff_preference": handoff_preference,
         },
         "handoff_quality": defaults["handoff_quality"],
+        "delegated_run_guardrail": _delegated_run_guardrail_payload(
+            defaults=defaults,
+            profile_payloads=profile_payloads,
+        ),
         "success_measures": defaults["success_measures"],
     }
 
