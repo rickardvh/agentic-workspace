@@ -1496,6 +1496,154 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
     assert payload["mixed_agent"]["delegated_run_guardrail"]["closeout_gate"]["lower_trust_profiles"] == ["fast_docs"]
 
 
+def test_defaults_command_reports_runtime_resolution_policy(capsys) -> None:
+    assert cli.main(["defaults", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    rr = payload["mixed_agent"]["runtime_resolution"]
+    assert rr["rule"].startswith("Query runtime_resolution before delegating")
+    assert rr["resolution_categories"] == [
+        "stay-local",
+        "stronger-reasoning",
+        "external-delegation",
+        "manual-handoff",
+    ]
+    assert "execution class" in rr["posture_source_fields"]
+    assert "recommended strength" in rr["posture_source_fields"]
+    assert "strong external reasoning" in rr["posture_source_fields"]
+    assert len(rr["resolution_algorithm"]) >= 4
+    assert rr["confidence_levels"] == ["high", "medium", "low"]
+
+
+def test_defaults_command_reports_strong_handoff_packet_template(capsys) -> None:
+    assert cli.main(["defaults", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    shp = payload["mixed_agent"]["strong_handoff_packet"]
+    assert "manual-handoff" in shp["rule"]
+    assert any("context:" in f for f in shp["required_fields"])
+    assert any("question:" in f for f in shp["required_fields"])
+    assert any("constraints:" in f for f in shp["required_fields"])
+    assert any("expected_output:" in f for f in shp["required_fields"])
+    assert any("return_to:" in f for f in shp["required_fields"])
+    assert "500 tokens" in shp["size_guidance"]
+    assert any("manual-handoff" in w for w in shp["when_to_use"])
+
+
+def test_config_command_reports_runtime_resolution_for_no_posture(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    rr = payload["mixed_agent"]["runtime_resolution"]
+    assert rr["recommendation"] in ("stay-local", "stronger-reasoning", "external-delegation", "manual-handoff")
+    assert rr["posture_source"] == "none"
+    assert rr["confidence"] in ("high", "medium", "low")
+    assert "guidance" in rr
+    assert rr["resolution_categories"] == [
+        "stay-local",
+        "stronger-reasoning",
+        "external-delegation",
+        "manual-handoff",
+    ]
+
+
+def test_config_command_runtime_resolution_recommends_external_delegation_when_strong_external_preferred(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation_targets.chatgpt]",
+                'strength = "strong"',
+                'location = "external"',
+                "confidence = 0.9",
+                'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
+                'execution_methods = ["cli"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    # Without posture the default resolution is generated; just confirm structure is valid
+    rr = payload["mixed_agent"]["runtime_resolution"]
+    assert rr["recommendation"] in ("stay-local", "stronger-reasoning", "external-delegation", "manual-handoff")
+    assert rr["profile_recommendations"][0]["name"] == "chatgpt"
+    assert rr["profile_recommendations"][0]["recommendation"] in ("recommended", "acceptable", "poor-fit")
+    assert "strong_handoff_packet" in payload["mixed_agent"]
+
+
+def test_config_command_runtime_resolution_recommends_stronger_reasoning_for_boundary_shaping_with_strong_planner(
+    tmp_path: Path, capsys
+) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[runtime]",
+                "strong_planner_available = true",
+                "cheap_bounded_executor_available = true",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    config = cli._load_workspace_config(target_root=target)
+    rr = cli._runtime_resolution_payload(
+        config=config,
+        capability_posture={"execution class": "boundary-shaping", "recommended strength": "strong"},
+    )
+    assert rr["recommendation"] == "stronger-reasoning"
+    assert rr["confidence"] == "high"
+    assert any("boundary-shaping" in r for r in rr["reasons"])
+    assert rr["posture_source"] == "provided"
+
+
+def test_config_command_runtime_resolution_recommends_stay_local_for_mechanical_work(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    config = cli._load_workspace_config(target_root=target)
+    rr = cli._runtime_resolution_payload(
+        config=config,
+        capability_posture={"execution class": "mechanical-follow-through", "recommended strength": "weak"},
+    )
+    assert rr["recommendation"] == "stay-local"
+    assert rr["confidence"] == "high"
+    assert any("mechanical-follow-through" in r for r in rr["reasons"])
+
+
+def test_config_command_runtime_resolution_recommends_manual_handoff_when_strong_external_preferred_and_no_external_targets(
+    tmp_path: Path, capsys
+) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    config = cli._load_workspace_config(target_root=target)
+    rr = cli._runtime_resolution_payload(
+        config=config,
+        capability_posture={"strong external reasoning": "preferred"},
+    )
+    assert rr["recommendation"] == "manual-handoff"
+    assert rr["confidence"] == "high"
+    assert any("no automated external path" in r for r in rr["reasons"])
+
+
 def test_config_command_accepts_manual_external_delegation_target(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

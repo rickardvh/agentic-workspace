@@ -1,5 +1,7 @@
 [todo]
-active_items = []
+active_items = [
+  { id = "runtime-posture-selective-handoff", status = "in-progress", surface = ".agentic-workspace/planning/execplans/runtime-posture-selective-handoff.plan.json", why_now = "The lane has a prepared execplan and the suggested_first_slice points at the #286 compact runtime-resolution answer. The delegated_run_guardrail slice shipped; next slice is the full runtime-resolution answer that combines work semantics with local posture.", next_action = "Implement the compact runtime-resolution answer from issue #286, then the compact strong-reasoning handoff packet from issue #289.", done_when = "defaults/config surfaces expose a compact runtime-resolution answer that clearly distinguishes stay-local, stronger-reasoning, external-delegation, and manual-handoff paths; a compact strong-reasoning handoff packet can be generated; focused tests pass; issues #285, #286, and #289 can be closed honestly." }
+]
 queued_items = []
 
 [roadmap]

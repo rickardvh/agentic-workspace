@@ -5005,6 +5005,58 @@ def _defaults_payload() -> dict[str, Any]:
                 "cheap switching across agents and subscriptions",
                 "persisted shared knowledge beats rediscovery",
             ],
+            "runtime_resolution": {
+                "rule": (
+                    "Query runtime_resolution before delegating or escalating to get a compact answer "
+                    "that combines work semantics with local execution posture."
+                ),
+                "resolution_categories": list(_RUNTIME_RESOLUTION_CATEGORIES),
+                "posture_source_fields": [
+                    "execution class",
+                    "recommended strength",
+                    "preferred location",
+                    "delegation friendly",
+                    "strong external reasoning",
+                ],
+                "resolution_algorithm": [
+                    "strong_external_reasoning='preferred' → external-delegation if external targets exist, else stronger-reasoning, else manual-handoff",
+                    "execution_class in (boundary-shaping, reasoning-heavy) or recommended_strength=strong → stronger-reasoning if available, else external-delegation, else manual-handoff",
+                    "execution_class=mixed → stay-local if local profiles acceptable, else stronger-reasoning",
+                    "execution_class=mechanical-follow-through or recommended_strength in (weak, medium) → stay-local",
+                    "no posture → stay-local with confidence derived from cheap_bounded_executor_available",
+                ],
+                "confidence_levels": ["high", "medium", "low"],
+            },
+            "strong_handoff_packet": {
+                "rule": (
+                    "Use the strong_handoff_packet template when manual-handoff is the runtime recommendation "
+                    "or when a bounded high-judgment question should be escalated to a strong general-purpose reasoning model. "
+                    "Keep the packet compact: one question, bounded constraints, no full context dump."
+                ),
+                "required_fields": [
+                    "context: one-paragraph summary of the current work and its bounded scope",
+                    "question: the specific high-judgment question the strong model should answer",
+                    "constraints: the hard constraints the answer must satisfy",
+                    "expected_output: what a useful answer looks like (format and scope)",
+                    "return_to: what the current executor should do with the answer once received",
+                ],
+                "optional_fields": [
+                    "background: additional context that would materially help the strong model but is not strictly required",
+                    "avoid: specific patterns or approaches the answer must not use",
+                ],
+                "size_guidance": "Target under 500 tokens for the full packet. Escalate one question at a time.",
+                "after_receiving_answer": [
+                    "Apply the answer to the current bounded task.",
+                    "Do not reopen the full execplan or lane scope based on the answer alone.",
+                    "Record the answer as a checked-in decision residue if it changes durable state.",
+                ],
+                "when_to_use": [
+                    "runtime_resolution recommendation is 'manual-handoff'",
+                    "a boundary decision requires judgment beyond the current executor's reliable range",
+                    "an architectural or domain question would benefit from a strong external perspective",
+                    "review uncertainty is high enough that stronger reasoning would change the closeout decision",
+                ],
+            },
         },
         "delegation_posture": {
             "canonical_doc": ".agentic-workspace/docs/delegation-posture-contract.md",
@@ -6353,6 +6405,211 @@ def _record_delegation_outcome(
     }
 
 
+_RUNTIME_RESOLUTION_CATEGORIES = (
+    "stay-local",
+    "stronger-reasoning",
+    "external-delegation",
+    "manual-handoff",
+)
+
+_RUNTIME_RESOLUTION_GUIDANCE: dict[str, str] = {
+    "stay-local": ("Proceed with the current executor. Keep scope bounded and defer judgment-heavy questions to a stronger path."),
+    "stronger-reasoning": ("Escalate the current question or bounded task to the stronger in-session planner before proceeding."),
+    "external-delegation": ("Delegate the bounded task to an external target using the configured CLI or API execution method."),
+    "manual-handoff": (
+        "Pause and hand the bounded question to a strong general-purpose reasoning model. "
+        "Use the strong_handoff_packet template to structure the escalation compactly."
+    ),
+}
+
+
+def _runtime_resolution_payload(
+    *,
+    config: WorkspaceConfig,
+    capability_posture: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Compact runtime-resolution answer combining work semantics and local execution posture."""
+    local_override = config.local_override
+    posture = capability_posture or {}
+
+    execution_class = str(posture.get("execution class", "")).strip()
+    recommended_strength = str(posture.get("recommended strength", "")).strip()
+    preferred_location = str(posture.get("preferred location", "")).strip() or "either"
+    delegation_friendly = str(posture.get("delegation friendly", "")).strip()
+    strong_external = str(posture.get("strong external reasoning", "")).strip()
+
+    reasons: list[str] = []
+    alternatives: list[str] = []
+
+    profile_recommendations: list[dict[str, Any]] = []
+    for profile in local_override.delegation_targets:
+        rec = _capability_resolution_for_profile(
+            profile=profile,
+            capability_posture=posture,
+        )
+        profile_recommendations.append(
+            {
+                "name": profile.name,
+                "strength": profile.strength,
+                "location": profile.location,
+                "execution_methods": list(profile.execution_methods),
+                "recommendation": rec["status"],
+                "score": rec["score"],
+                "reasons": rec["reasons"],
+            }
+        )
+
+    has_strong_planner = bool(local_override.strong_planner_available)
+    has_cheap_executor = bool(local_override.cheap_bounded_executor_available)
+
+    recommended_external_profiles = [
+        p
+        for p in profile_recommendations
+        if p["recommendation"] in ("recommended", "acceptable")
+        and p["location"] == "external"
+        and any(m in p["execution_methods"] for m in ("cli", "api"))
+    ]
+    recommended_local_profiles = [
+        p for p in profile_recommendations if p["recommendation"] in ("recommended", "acceptable") and p["location"] in ("local", "either")
+    ]
+
+    recommendation: str
+    confidence: str
+
+    if strong_external == "preferred":
+        if recommended_external_profiles:
+            recommendation = "external-delegation"
+            confidence = "high"
+            reasons.append("capability posture prefers strong external reasoning and external delegation targets are available")
+        elif has_strong_planner:
+            recommendation = "stronger-reasoning"
+            confidence = "medium"
+            reasons.append("capability posture prefers strong external reasoning; in-session stronger planner is the fallback")
+            alternatives.append("external-delegation when external targets are configured")
+        else:
+            recommendation = "manual-handoff"
+            confidence = "high"
+            reasons.append("capability posture prefers strong external reasoning but no automated external path is available")
+            alternatives.append("external-delegation when external targets are configured")
+
+    elif execution_class in ("boundary-shaping", "reasoning-heavy") or recommended_strength == "strong":
+        if has_strong_planner:
+            recommendation = "stronger-reasoning"
+            confidence = "high"
+            if execution_class:
+                reasons.append(f"execution class '{execution_class}' requires stronger reasoning")
+            if recommended_strength == "strong":
+                reasons.append("capability posture recommends strong execution strength")
+            reasons.append("stronger planner is available in this session")
+        elif recommended_external_profiles:
+            recommendation = "external-delegation"
+            confidence = "medium"
+            reasons.append("stronger reasoning needed but no in-session strong planner; external delegation is available")
+            alternatives.append("stronger-reasoning when a strong in-session planner is available")
+        else:
+            recommendation = "manual-handoff"
+            confidence = "medium"
+            reasons.append("stronger reasoning needed but no automated path is available")
+            alternatives.append("stronger-reasoning when a strong in-session planner is available")
+            alternatives.append("external-delegation when external targets are configured")
+
+    elif execution_class == "mixed":
+        if recommended_local_profiles:
+            recommendation = "stay-local"
+            confidence = "medium"
+            reasons.append("execution class is 'mixed'; local profiles are acceptable")
+            if has_strong_planner:
+                alternatives.append("stronger-reasoning for the reasoning-heavy portions")
+        elif has_strong_planner:
+            recommendation = "stronger-reasoning"
+            confidence = "low"
+            reasons.append("execution class is 'mixed' with no suitable local profile; escalating to stronger reasoning")
+        else:
+            recommendation = "stay-local"
+            confidence = "low"
+            reasons.append("execution class is 'mixed'; no clear escalation path is available")
+
+    elif execution_class == "mechanical-follow-through" or recommended_strength in ("weak", "medium"):
+        recommendation = "stay-local"
+        confidence = "high" if execution_class == "mechanical-follow-through" else "medium"
+        if execution_class == "mechanical-follow-through":
+            reasons.append("execution class 'mechanical-follow-through' is well-suited for local bounded execution")
+        if recommended_strength in ("weak", "medium"):
+            reasons.append(f"capability posture recommends '{recommended_strength}' execution strength")
+
+    elif not posture:
+        if has_cheap_executor:
+            recommendation = "stay-local"
+            confidence = "medium"
+            reasons.append("cheap bounded executor is available; defaulting to stay-local without explicit capability posture")
+            if has_strong_planner:
+                alternatives.append("stronger-reasoning when the work requires higher judgment")
+        elif has_strong_planner:
+            recommendation = "stronger-reasoning"
+            confidence = "low"
+            reasons.append("no capability posture provided; strong planner available as fallback")
+            alternatives.append("stay-local when the work is clearly bounded")
+        else:
+            recommendation = "stay-local"
+            confidence = "low"
+            reasons.append("no capability posture and no special local config; defaulting to stay-local")
+
+    else:
+        recommendation = "stay-local"
+        confidence = "low"
+        reasons.append("capability posture signals do not map to a clear escalation path; defaulting to stay-local")
+        if has_strong_planner:
+            alternatives.append("stronger-reasoning if the work turns out to be judgment-heavy")
+
+    _ = preferred_location  # consumed indirectly via _capability_resolution_for_profile
+    _ = delegation_friendly  # advisory only; scoring is in _capability_resolution_for_profile
+
+    return {
+        "recommendation": recommendation,
+        "confidence": confidence,
+        "reasons": reasons,
+        "alternatives": alternatives,
+        "profile_recommendations": profile_recommendations,
+        "guidance": _RUNTIME_RESOLUTION_GUIDANCE[recommendation],
+        "posture_source": "provided" if posture else "none",
+        "resolution_categories": list(_RUNTIME_RESOLUTION_CATEGORIES),
+    }
+
+
+def _strong_handoff_packet_template() -> dict[str, Any]:
+    """Template for a compact bounded escalation packet for strong general-purpose reasoning."""
+    return {
+        "rule": (
+            "Use the strong_handoff_packet template when manual-handoff is the runtime recommendation "
+            "or when a bounded high-judgment question should be escalated to a strong general-purpose reasoning model. "
+            "Keep the packet compact: one question, bounded constraints, no full context dump."
+        ),
+        "required_fields": [
+            "context: one-paragraph summary of the current work and its bounded scope",
+            "question: the specific high-judgment question the strong model should answer",
+            "constraints: the hard constraints the answer must satisfy",
+            "expected_output: what a useful answer looks like (format and scope)",
+            "return_to: what the current executor should do with the answer once received",
+        ],
+        "optional_fields": [
+            "background: additional context that would materially help the strong model but is not strictly required",
+            "avoid: specific patterns or approaches the answer must not use",
+        ],
+        "size_guidance": "Target under 500 tokens for the full packet. Escalate one question at a time.",
+        "after_receiving_answer": [
+            "Apply the answer to the current bounded task.",
+            "Do not reopen the full execplan or lane scope based on the answer alone.",
+            "Record the answer as a checked-in decision residue if it changes durable state.",
+        ],
+        "when_to_use": [
+            "runtime_resolution recommendation is 'manual-handoff'",
+            "a boundary decision requires judgment beyond the current executor's reliable range",
+            "an architectural or domain question would benefit from a strong external perspective",
+            "review uncertainty is high enough that stronger reasoning would change the closeout decision",
+        ],
+    }
+
+
 def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     defaults = _defaults_payload()["mixed_agent"]
     local_override = config.local_override
@@ -6485,6 +6742,8 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             defaults=defaults,
             profile_payloads=profile_payloads,
         ),
+        "runtime_resolution": _runtime_resolution_payload(config=config),
+        "strong_handoff_packet": _strong_handoff_packet_template(),
         "success_measures": defaults["success_measures"],
     }
 

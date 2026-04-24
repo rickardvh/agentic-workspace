@@ -189,15 +189,15 @@
     "Focused tests prove lower-trust delegation remains visibly lower trust at closeout."
   ],
   "execution_run": {
-    "run status": "not-started",
-    "executor": "none yet",
+    "run status": "in-progress",
+    "executor": "GitHub Copilot (Claude Sonnet 4.6)",
     "handoff source": "this prepared execplan",
-    "what happened": "not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet",
-    "validations run": "none yet",
-    "result for continuation": "implementation still required",
-    "next step": "activate the first bounded implementation slice under issue #286"
+    "what happened": "Implemented _runtime_resolution_payload and _strong_handoff_packet_template helpers in workspace CLI; surfaced runtime_resolution and strong_handoff_packet in _mixed_agent_payload output and in _defaults_payload mixed_agent defaults block; added 8 focused tests covering defaults policy, config payload structure, and unit-level posture resolution scenarios.",
+    "scope touched": "src/agentic_workspace/cli.py, tests/test_workspace_cli.py, .agentic-workspace/planning/state.toml, .agentic-workspace/planning/execplans/runtime-posture-selective-handoff.plan.json",
+    "changed surfaces": "cli.py (two new helpers + payload additions), test_workspace_cli.py (8 new tests)",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q (128 passed); new tests cover stay-local/stronger-reasoning/external-delegation/manual-handoff resolution paths and strong_handoff_packet template structure",
+    "result for continuation": "runtime_resolution and strong_handoff_packet are queryable from ordinary workspace surfaces; issues #286 and #289 done boundaries are satisfied; issue #285 parent intent requires verifying the full acceptance criteria before closing",
+    "next step": "run full validation suite, then close issues #285, #286, #289 and archive this plan"
   },
   "finished_run_review": {
     "review status": "pending",
