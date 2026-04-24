@@ -174,6 +174,32 @@ def _sample_setup_findings_payload() -> dict[str, object]:
     }
 
 
+def _sample_module_capability_payload() -> dict[str, object]:
+    descriptor = cli._module_operations()["planning"]  # type: ignore[attr-defined]
+    return {
+        "name": descriptor.name,
+        "description": descriptor.description,
+        "selection_rank": descriptor.selection_rank,
+        "include_in_full_preset": descriptor.include_in_full_preset,
+        "capabilities": list(descriptor.capabilities),
+        "commands": list(descriptor.commands),
+        "command_args": {name: list(args) for name, args in descriptor.command_args.items()},
+        "install_signals": [path.as_posix() for path in descriptor.install_signals],
+        "workflow_surfaces": [path.as_posix() for path in descriptor.workflow_surfaces],
+        "generated_artifacts": [path.as_posix() for path in descriptor.generated_artifacts],
+        "dependencies": list(descriptor.dependencies),
+        "conflicts": list(descriptor.conflicts),
+        "startup_steps": list(descriptor.startup_steps),
+        "sources_of_truth": list(descriptor.sources_of_truth),
+        "result_contract": {
+            "schema_version": descriptor.result_contract.schema_version,
+            "guaranteed_fields": list(descriptor.result_contract.guaranteed_fields),
+            "action_fields": list(descriptor.result_contract.action_fields),
+            "warning_fields": list(descriptor.result_contract.warning_fields),
+        },
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     checks: list[tuple[str, list[str]]] = [
@@ -195,6 +221,10 @@ def main(argv: list[str] | None = None) -> int:
         (
             "setup findings sample",
             _validate(_sample_setup_findings_payload(), "setup_findings.schema.json"),
+        ),
+        (
+            "module capability sample",
+            _validate(_sample_module_capability_payload(), "module_capability.schema.json"),
         ),
     ]
 
@@ -268,6 +298,48 @@ def main(argv: list[str] | None = None) -> int:
     finding_schema = setup_findings_schema["properties"]["findings"]["items"]
     if finding_schema["properties"]["class"]["enum"] != list(cli.SUPPORTED_SETUP_FINDING_CLASSES):
         checks.append(("setup findings schema parity", ["setup findings classes drifted from cli supported values"]))
+    module_capability_schema = contract_schema("module_capability.schema.json")
+    module_capability_properties = module_capability_schema["properties"]
+    descriptor = cli._module_operations()["planning"]  # type: ignore[attr-defined]
+    expected_module_capability_properties = {
+        "name",
+        "description",
+        "selection_rank",
+        "include_in_full_preset",
+        "capabilities",
+        "commands",
+        "command_args",
+        "install_signals",
+        "workflow_surfaces",
+        "generated_artifacts",
+        "dependencies",
+        "conflicts",
+        "startup_steps",
+        "sources_of_truth",
+        "result_contract",
+    }
+    if set(module_capability_properties) != expected_module_capability_properties:
+        checks.append(("module capability schema parity", ["module capability properties drifted from supported descriptor fields"]))
+    if set(module_capability_schema["required"]) != {
+        "name",
+        "description",
+        "capabilities",
+        "commands",
+        "install_signals",
+        "workflow_surfaces",
+        "result_contract",
+    }:
+        checks.append(("module capability schema parity", ["required module capability fields drifted from the supported contract"]))
+    if set(module_capability_properties["command_args"]["patternProperties"]["^.+$"]["items"]["enum"]) != {
+        "target",
+        "dry_run",
+        "force",
+    }:
+        checks.append(("module capability schema parity", ["command arg names drifted from supported module invocation args"]))
+    if set(_sample_module_capability_payload()) != expected_module_capability_properties:
+        checks.append(("module capability schema parity", ["sample module capability payload drifted from the supported descriptor fields"]))
+    if set(_sample_module_capability_payload()["commands"]) != set(descriptor.commands):
+        checks.append(("module capability schema parity", ["sample module capability commands drifted from the live module descriptor"]))
 
     failures = [(name, errors) for name, errors in checks if errors]
     if failures:

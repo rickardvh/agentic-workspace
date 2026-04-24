@@ -9,11 +9,11 @@ interpretation_notes = "Mirrored from SYSTEM_INTENT.md as a normalized operation
 confidence = "high"
 needs_review = false
 preferred_source = "SYSTEM_INTENT.md"
-last_synced_at = "2026-04-23"
+last_synced_at = "2026-04-24"
 
 [[source_records]]
 path = "SYSTEM_INTENT.md"
 present = true
-sha256 = "8fde3d608bd04d6cbbbc689888189e1b7e9ebf0138680248b4785e3fb4d180a3"
+sha256 = "8f286c844ea069be253d8ef4f7e7345f71bda140a305161a346abcecc7701874"
 first_heading = "System Intent"
-line_count = 212
+line_count = 223

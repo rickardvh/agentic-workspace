@@ -10,4 +10,4 @@ def test_contract_tooling_check_passes() -> None:
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    assert module.main() == 0
+    assert module.main([]) == 0

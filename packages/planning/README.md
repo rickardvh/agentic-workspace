@@ -124,7 +124,8 @@ Treat these files as the current planning compatibility contract surfaces that s
 - `.agentic-workspace/planning/reviews/README.md`
 - `.agentic-workspace/planning/reviews/TEMPLATE.md`
 - `.agentic-workspace/planning/upstream-task-intake.md`
-- `docs/environment-recovery-contract.md`
+- `.agentic-workspace/docs/lifecycle-and-config-contract.md`
+- `.agentic-workspace/docs/orchestrator-workflow-contract.md`
 - `.agentic-workspace/planning/agent-manifest.json`
 
 Treat helper scripts and generated mirrors as lower-stability support surfaces unless a stricter promise is stated later. That lower-stability set currently includes the render and check scripts under `scripts/` and `.agentic-workspace/planning/scripts/`, plus generated mirrors such as `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, and `tools/AGENT_ROUTING.md`.
@@ -135,16 +136,15 @@ Generated mirrors inherit stability from their canonical source relationships, n
 
 `.agentic-workspace/docs/capability-aware-execution.md` is the canonical contract for capability fit: when cheap direct execution is still safe, when medium reasoning is enough, when stronger planning should come first, when bounded autopilot is appropriate, when delegation may save cost, when silent shaping should replace noisy executor-prompting, and when the agent should stop and escalate.
 It also defines the bounded-initiative rule: improve means locally, but do not silently widen the requested outcome, owned surface, or time horizon.
-`docs/delegated-judgment-contract.md` is the front-door companion: what the human should specify, what the agent may decide locally, and what should become an explicit promotion or escalation decision.
-`docs/intent-contract.md` defines the compact machine-readable active intent contract exposed through `agentic-planning-bootstrap summary --format json` as a view over the canonical `planning_record`.
-`docs/orchestrator-workflow-contract.md` defines the delegated planner-to-worker workflow and `agentic-planning-bootstrap handoff --format json` surface for agent-agnostic bounded handoff.
+`.agentic-workspace/docs/execution-flow-contract.md` is the front-door companion for delegated judgment, active intent continuity, resumability, and execution summaries.
+`.agentic-workspace/docs/orchestrator-workflow-contract.md` defines the delegated planner-to-worker workflow and `agentic-planning-bootstrap handoff --format json` surface for agent-agnostic bounded handoff.
 `.agentic-workspace/docs/standing-intent-contract.md` defines the standing-intent classification and promotion contract used by the workspace report to route durable repo-wide guidance into the right owner surface.
 `.agentic-workspace/docs/system-intent-contract.md` defines how a bounded slice preserves the larger intended outcome and how closure decisions stay honest when the slice completes before the broader lane or issue does.
-`docs/resumable-execution-contract.md` defines the smaller machine-readable restart contract as a view over the same canonical `planning_record`.
-`docs/environment-recovery-contract.md` defines both how task-local environment assumptions and recovery paths should be expressed without growing a second plan schema, and the ordered recovery path when lifecycle work, repo-state inspection, or validation restart becomes ambiguous.
-`docs/execution-summary-contract.md` defines the compact completion summary that archived slices should leave behind.
+`.agentic-workspace/docs/execution-flow-contract.md` also defines the restart and execution-summary expectations carried by the canonical `planning_record`.
+`.agentic-workspace/docs/lifecycle-and-config-contract.md` defines the ordered environment-recovery path when lifecycle work, repo-state inspection, or validation restart becomes ambiguous.
+`.agentic-workspace/docs/execution-flow-contract.md` defines the compact completion summary that archived slices should leave behind.
 `.agentic-workspace/docs/context-budget-contract.md` defines the live-working-set versus recoverable-later distinction, the minimum residue that must be externalized before a context shift, the compact pre-work retrieval prompt, the tiny resumability-note form, and the main context-switch triggers.
-`docs/planning-routing-contract.md` defines the hierarchy and routing rules between `.agentic-workspace/planning/state.toml`, execplans, and reviews.
+`.agentic-workspace/docs/routing-contract.md` defines the hierarchy and routing rules between `.agentic-workspace/planning/state.toml`, execplans, and reviews.
 
 For active planning, `agentic-planning-bootstrap summary --format json` is the primary compact inspection path and `planning_record` is the canonical machine-readable active state. `active_contract`, `resumable_contract`, `follow_through_contract`, `context_budget_contract`, `hierarchy_contract`, and `handoff_contract` remain thinner views over that record. `context_budget_contract` now also carries the explicit pre-work retrieval prompt so ordinary work can ask what durable understanding should be recovered before execution and which area it concerns, while leaving Memory optional rather than required.
 When an execplan has a sibling `.plan.json` file, that sidecar is the canonical execplan artifact and the `.md` file is treated as a derived human-readable view.
@@ -225,7 +225,7 @@ Promote into an execplan when any of these cases appears:
 - a compact checked-in plan would let a smaller or less capable agent implement safely without re-deriving the whole task
 
 The practical test is simple: if safe continuation depends on more than `Why now`, `Next action`, and `Done when`, the work is no longer a direct task.
-Use `docs/environment-recovery-contract.md` to keep that recovery guidance compact and in existing planning fields instead of inventing ad hoc restart prose.
+Use `.agentic-workspace/docs/lifecycle-and-config-contract.md` to keep that recovery guidance compact and in existing planning fields instead of inventing ad hoc restart prose.
 
 Good fits:
 
@@ -451,7 +451,7 @@ The package installs the checked-in planning contract and its supporting surface
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/planning/execplans/archive/README.md`
 - `.agentic-workspace/planning/upstream-task-intake.md`
-- `docs/environment-recovery-contract.md`
+- `.agentic-workspace/docs/lifecycle-and-config-contract.md`
 - `.agentic-workspace/planning/UPGRADE-SOURCE.toml`
 - `.agentic-workspace/planning/agent-manifest.json`
 - `.agentic-workspace/planning/scripts/render_agent_docs.py`
@@ -471,7 +471,7 @@ It packages:
 - generated mirrors and thin root wrappers for repo ergonomics
 - review-artifact contract surfaces under `.agentic-workspace/planning/reviews/`
 - upstream-task intake contract surfaces under `.agentic-workspace/planning/upstream-task-intake.md`
-- environment and recovery contract surfaces under `docs/environment-recovery-contract.md`
+- environment and recovery contract surfaces under `.agentic-workspace/docs/lifecycle-and-config-contract.md`
 - file-native helper commands for promotion, archiving, and summary
 - starter surfaces
 - startup docs and manifest wiring

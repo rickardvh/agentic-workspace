@@ -108,6 +108,16 @@
         "setup/report live state"
       ],
       "notes": "Reconciliation and drift decisions still depend on live repo state and remain procedural."
+    },
+    {
+      "area": "module_capability_contract",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/schemas/module_capability.schema.json",
+      "consumers": [
+        "docs/module-capability-contract.md",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "The internal module capability contract is now formalized as a schema to reduce prose dependency."
     }
   ]
 }

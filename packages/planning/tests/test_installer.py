@@ -457,6 +457,7 @@ def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path("AGENTS.template.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/docs/capability-aware-execution.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path(".agentic-workspace/docs/orchestrator-workflow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/docs/minimum-operating-model.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/execplans/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/reviews/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES

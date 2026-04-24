@@ -13,6 +13,17 @@ It is the compact answer to:
 - what should the system resist becoming?
 - what should planning and validation test when judging whether a change really helped?
 
+## Planning and Roadmap Authority
+
+While this file defines the long-term intent, the active execution queue and medium-term roadmap are managed in `.agentic-workspace/planning/state.toml`.
+
+- **Roadmap**: Use `state.toml` to view candidate lanes and prioritised tranches.
+- **Active Queue**: Use `state.toml` to see what is currently being implemented.
+- **Execution Details**: Use `.agentic-workspace/planning/execplans/` for the detailed "how" and "done when" of active work.
+- **First Recovery Path**: Use `agentic-workspace summary --format json` before reading raw planning files.
+
+Treat `state.toml` as the machine-readable execution state for queue and roadmap management, not as a replacement for this durable intent or the compact summary/report surfaces.
+
 ## Purpose
 
 Agentic Workspace should be a quiet, repo-native continuity and execution layer that preserves human intent, keeps bounded work cheap to continue and verify, and reduces total operating cost for agents without becoming a visible framework or a second source of truth.

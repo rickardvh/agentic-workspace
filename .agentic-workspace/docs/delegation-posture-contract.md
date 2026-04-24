@@ -76,7 +76,7 @@ Keep this posture advisory. The runtime or local layer may resolve it against co
 
 ## Relationship To Other Docs
 
-- Use [`docs/delegated-judgment-contract.md`](docs/delegated-judgment-contract.md) for the boundary between human-set outcomes and agent-local means.
+- Use [`execution-flow-contract.md`](execution-flow-contract.md) for the delegated-judgment boundary between human-set outcomes and agent-local means.
 - Use [`.agentic-workspace/docs/lifecycle-and-config-contract.md`](lifecycle-and-config-contract.md) for the repo-owned config and local override posture that influence delegation preference.
 - Use [`.agentic-workspace/docs/capability-aware-execution.md`](.agentic-workspace/docs/capability-aware-execution.md) for the broader capability-fit decision tree.
-- Use [`docs/orchestrator-workflow-contract.md`](docs/orchestrator-workflow-contract.md) for the delegated planner-to-worker workflow and the active handoff surface.
+- Use [`orchestrator-workflow-contract.md`](orchestrator-workflow-contract.md) for the delegated planner-to-worker workflow and the active handoff surface.
