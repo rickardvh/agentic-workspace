@@ -2388,8 +2388,56 @@ def test_planning_summary_reports_candidate_lanes(tmp_path: Path) -> None:
     ]
     assert summary["roadmap"]["candidate_lanes"][0]["id"] == "native-candidate-lanes"
     assert summary["roadmap"]["candidate_lanes"][0]["issues"] == ["#135"]
+    assert summary["roadmap"]["candidate_lanes"][0]["references"] == [{"kind": "issue", "target": "#135", "role": "related-work"}]
     assert summary["roadmap"]["candidate_lanes"][1]["issues"] == ["#96", "#97", "#98", "#99", "#100"]
     assert summary["roadmap"]["candidate_lanes"][1]["promotion_signal"] == "promote when the candidate-lane slice lands."
+
+
+def test_planning_summary_normalizes_structured_lane_references_from_state_toml(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "in-progress", surface = ".agentic-workspace/planning/execplans/plan-alpha.md", why_now = "keep lane references queryable above the execplan layer." }
+]
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "machine-first-planning-chain", title = "Machine-first planning chain", priority = "second", issues = ["#261", "#280"], references = [{ kind = "plan", target = ".agentic-workspace/planning/execplans/archive/machine-first-planning-chain-first-slice-2026-04-23.plan.json", role = "prior-proof", label = "First sidecar proof" }] }
+]
+candidates = [
+  { priority = "second", summary = "Machine-first planning chain" }
+]
+""",
+    )
+    _write_execplan_record(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json",
+        item_id="plan-alpha",
+    )
+
+    summary = planning_summary(target=tmp_path)
+
+    assert summary["roadmap"]["candidate_lanes"][0]["references"] == [
+        {
+            "kind": "plan",
+            "target": ".agentic-workspace/planning/execplans/archive/machine-first-planning-chain-first-slice-2026-04-23.plan.json",
+            "role": "prior-proof",
+            "label": "First sidecar proof",
+        },
+        {
+            "kind": "issue",
+            "target": "#261",
+            "role": "related-work",
+        },
+        {
+            "kind": "issue",
+            "target": "#280",
+            "role": "related-work",
+        },
+    ]
 
 
 def test_planning_summary_reports_required_tools_when_execplan_declares_them(tmp_path: Path) -> None:

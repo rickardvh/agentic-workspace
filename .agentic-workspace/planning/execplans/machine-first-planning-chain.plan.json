@@ -147,7 +147,7 @@
     "optional_deps": "gh issue refresh before implementation if #261/#280/#282 moved materially"
   },
   "immediate_next_action": [
-    "Use the shipped review-residue projection on the next machine-first follow-on slice and decide whether this proof should archive as its own bounded tranche."
+    "Define the next bounded review-retention slice now that typed references span both the active execplan and the higher-level roadmap lane."
   ],
   "blockers": [
     "None."
@@ -172,9 +172,9 @@
     "A slice archive cannot silently imply lane completion when required follow-on remains."
   ],
   "open_questions_to_close": [
-    "Which remaining Markdown-authored truth imposes the highest restart or review cost right now?",
-    "Should proportional review residue live inside the canonical execplan, in bounded review artifacts, or in a tighter split between the two?",
-    "How much typed-reference detail is enough to reduce ambiguity without making planning payloads too heavy?"
+    "Which review-artifact fields should remain as durable residue after active validation ends?",
+    "Should proportional review residue stay in live review records only, or also surface through a tighter compact closeout projection?",
+    "What is the smallest retention rule that reduces parallel-archive pressure without weakening review trust?"
   ],
   "validation_commands": [
     "uv run pytest packages/planning/tests/test_installer.py -q -k \"planning_summary or execplan or review\"",
@@ -197,12 +197,12 @@
     "run status": "completed",
     "executor": "Codex",
     "handoff source": "this execplan",
-    "what happened": "Added compact machine-readable review residue to planning summary and handoff by resolving typed review references from the canonical execplan record, added regression coverage, and activated this execplan-backed slice in checked-in planning state.",
+    "what happened": "Extended the structured reference model upward into roadmap lanes by normalizing lane-level references in planning summary output, threading parent-lane references into hierarchy context, adding regression coverage, and updating the live machine-first lane to use structured higher-level references in checked-in planning state.",
     "scope touched": "packages/planning/src/repo_planning_bootstrap/; packages/planning/tests/; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/machine-first-planning-chain.plan.json",
-    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/src/repo_planning_bootstrap/cli.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/machine-first-planning-chain.plan.json",
-    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"planning_summary or execplan or review\"; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_planning_surfaces.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace summary --format json --profile full",
-    "result for continuation": "The lane now has one real execplan-backed slice with typed review references and compact queryable review residue, while the larger machine-first lane remains open.",
-    "next step": "Decide whether to archive this proof as its own bounded tranche or keep the lane active for the next remaining Markdown-authored planning truth."
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/machine-first-planning-chain.plan.json",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"candidate_lanes or planning_summary\"; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_planning_surfaces.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace summary --format json --profile full",
+    "result for continuation": "The lane now proves typed references on both the active execplan and the higher-level roadmap lane, while proportional review-retention policy remains the next unfinished machine-first follow-through.",
+    "next step": "Implement the proportional review-retention slice and decide what compact review residue must survive closeout."
   },
   "finished_run_review": {
     "review status": "completed",
@@ -215,8 +215,8 @@
   },
   "proof_report": {
     "validation proof": "focused planning package tests, contract checks, and full-profile summary inspection",
-    "proof achieved now": "Planning summary and handoff now project compact review residue from typed review references on this active machine-first slice without inflating the compact surfaces.",
-    "evidence for \"proof achieved\" state": "The planning package tests and contract checks passed, and the live full-profile summary now reports one active execplan with canonical references plus bounded review residue."
+    "proof achieved now": "Typed references are now canonical and queryable on both the active execplan and the higher-level roadmap lane, and the live planning summary remains compact while carrying those references forward.",
+    "evidence for \"proof achieved\" state": "The planning package tests and contract checks passed, and the live full-profile summary now reports structured `references` on roadmap candidate lanes plus the active machine-first lane."
   },
   "intent_satisfaction": {
     "original intent": "prepare a full execplan that reopens and bounds the machine-first planning chain lane honestly",
@@ -228,20 +228,21 @@
     "slice status": "implemented and validated",
     "larger-intent status": "open",
     "closure decision": "keep-active",
-    "why this decision is honest": "this bounded proof landed, but the larger machine-first lane still has remaining Markdown-authored planning truth beyond review residue projection.",
-    "evidence carried forward": "this execplan, the reopened lane in state.toml, the shipped review-residue projection, and the archived first-slice proof",
+    "why this decision is honest": "the structured-reference follow-through now covers both execplans and the roadmap lane, but the larger machine-first lane still has unfinished review-retention policy and closeout-residue work.",
+    "evidence carried forward": "this execplan, the reopened lane in state.toml, the shipped review-residue projection, the new lane-level structured references, and the archived first-slice proof",
     "reopen trigger": "revisit if the next canonicalization target turns out to belong under a narrower new lane instead"
   },
   "execution_summary": {
-    "outcome delivered": "shipped compact queryable review residue for typed review references in the active machine-first planning slice and activated the lane through its checked-in execplan.",
+    "outcome delivered": "shipped typed references across both the active execplan and the higher-level roadmap lane, with compact review residue still projected from referenced review artifacts.",
     "validation confirmed": "focused planning tests, contract checks, and live summary inspection",
     "follow-on routed to": ".agentic-workspace/planning/state.toml and this execplan",
-    "post-work posterity capture": "the active execplan now records the proof, linked review artifact, and follow-on boundary for the next machine-first slice.",
-    "knowledge promoted (memory/docs/config)": "planning package summary/handoff projections and the active machine-first execplan",
+    "post-work posterity capture": "the active execplan now records both the review-residue proof and the higher-level lane-reference proof, leaving review-retention policy as the next bounded slice.",
+    "knowledge promoted (memory/docs/config)": "planning package summary projections for roadmap-lane references and the active machine-first execplan",
     "resume from": "structured-references-and-review-residue-follow-through"
   },
   "drift_log": [
     "2026-04-24: Initial full-lane execplan created from the reopened lane and live follow-on issues.",
-    "2026-04-24: Landed compact review-residue projection from typed review references and activated the machine-first execplan-backed slice in checked-in planning state."
+    "2026-04-24: Landed compact review-residue projection from typed review references and activated the machine-first execplan-backed slice in checked-in planning state.",
+    "2026-04-24: Extended the structured reference model into roadmap lanes so higher-level planning state carries canonical typed references too."
   ]
 }

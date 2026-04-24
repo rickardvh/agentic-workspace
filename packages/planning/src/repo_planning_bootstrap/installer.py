@@ -392,6 +392,16 @@ def _normalize_reference_record(raw: Any) -> dict[str, str] | None:
     return {key: value for key, value in reference.items() if value}
 
 
+def _merge_references(*references_groups: list[dict[str, str]]) -> list[dict[str, str]]:
+    merged: list[dict[str, str]] = []
+    for group in references_groups:
+        for item in group:
+            normalized = _normalize_reference_record(item)
+            if normalized is not None and normalized not in merged:
+                merged.append(normalized)
+    return merged
+
+
 def _record_section_references(record: dict[str, Any] | None, key: str) -> list[dict[str, str]] | None:
     if not isinstance(record, dict):
         return None
@@ -404,6 +414,26 @@ def _record_section_references(record: dict[str, Any] | None, key: str) -> list[
         if reference is not None and reference not in references:
             references.append(reference)
     return references
+
+
+def _roadmap_lane_references(lane: dict[str, Any]) -> list[dict[str, str]]:
+    explicit = _record_section_references({"references": lane.get("references", [])}, "references") or []
+    issue_refs = [
+        {
+            "kind": "issue",
+            "target": issue,
+            "role": "related-work",
+        }
+        for issue in lane.get("issues", [])
+        if str(issue).strip()
+    ]
+    return _merge_references(explicit, issue_refs)
+
+
+def _normalize_roadmap_lane_record(raw: dict[str, Any]) -> dict[str, Any]:
+    lane = {str(key): value for key, value in raw.items()}
+    lane["references"] = _roadmap_lane_references(lane)
+    return lane
 
 
 def _render_reference_line(reference: dict[str, str]) -> str:
@@ -1087,7 +1117,7 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
         active_items = todo_data.get("active_items", [])
         queued_items = todo_data.get("queued_items", [])
         roadmap_data = state.get("roadmap", {})
-        roadmap_lanes = roadmap_data.get("lanes", [])
+        roadmap_lanes = [_normalize_roadmap_lane_record(item) for item in roadmap_data.get("lanes", []) if isinstance(item, dict)]
         roadmap_candidates = roadmap_data.get("candidates", [])
         if not roadmap_candidates and roadmap_lanes:
             roadmap_candidates = [{"priority": lane.get("priority", ""), "summary": lane.get("title", "")} for lane in roadmap_lanes]
@@ -2525,7 +2555,7 @@ def _roadmap_candidate_lanes(roadmap_path: Path) -> list[dict[str, Any]]:
         lane = _parse_candidate_lane_block(current_block)
         if lane is not None:
             lanes.append(lane)
-    return lanes
+    return [_normalize_roadmap_lane_record(lane) for lane in lanes]
 
 
 def _parse_candidate_lane_block(lines: list[str]) -> dict[str, Any] | None:
@@ -3218,6 +3248,7 @@ def _active_hierarchy_contract(
         [
             *follow_through_contract.get("minimal_refs", []),
             *([".agentic-workspace/planning/state.toml"] if parent_lane.get("id") or roadmap_lanes else []),
+            *(reference.get("target", "") for reference in parent_lane.get("references", []) if isinstance(reference, dict)),
         ]
     )
     return {
@@ -3451,6 +3482,7 @@ def _resolve_parent_lane(*, parent_lane_ref: str, roadmap_lanes: list[dict[str, 
                     "title": str(lane.get("title", "")).strip(),
                     "priority": str(lane.get("priority", "")).strip(),
                     "issues": ", ".join(lane.get("issues", [])),
+                    "references": list(lane.get("references", [])),
                     "source": "roadmap",
                 }
         return {
@@ -3458,6 +3490,7 @@ def _resolve_parent_lane(*, parent_lane_ref: str, roadmap_lanes: list[dict[str, 
             "title": "",
             "priority": "",
             "issues": "",
+            "references": [],
             "source": "execplan",
         }
     return {
@@ -3465,6 +3498,7 @@ def _resolve_parent_lane(*, parent_lane_ref: str, roadmap_lanes: list[dict[str, 
         "title": "",
         "priority": "",
         "issues": "",
+        "references": [],
         "source": "unspecified",
     }
 
