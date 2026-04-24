@@ -156,7 +156,7 @@ The first reportable examples in this repo are:
 
 - `improvement_latitude` promoted into `.agentic-workspace/config.toml` as machine-readable standing policy
 - `optimization_bias` promoted into `.agentic-workspace/config.toml` as machine-readable output policy
-- planning-surface integrity promoted into `scripts/check/check_planning_surfaces.py`
+- planning-surface integrity promoted into planner-owned doctor/report checks
 - source/payload/root-install boundary protection promoted into `scripts/check/check_source_payload_operational_install.py`
 
 These examples show the intended path:

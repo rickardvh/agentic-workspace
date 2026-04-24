@@ -35,7 +35,13 @@ agentic-planning-bootstrap = "repo_planning_bootstrap.cli:main"
 packages = ["src/repo_planning_bootstrap"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"bootstrap" = "src/repo_planning_bootstrap/_payload"
+"bootstrap/AGENTS.template.md" = "src/repo_planning_bootstrap/_payload/AGENTS.template.md"
+"bootstrap/.agentic-workspace/docs" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/docs"
+"bootstrap/.agentic-workspace/planning/execplans" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/execplans"
+"bootstrap/.agentic-workspace/planning/reviews" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/reviews"
+"bootstrap/.agentic-workspace/planning/upstream-task-intake.md" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/upstream-task-intake.md"
+"bootstrap/.agentic-workspace/planning/UPGRADE-SOURCE.toml" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/UPGRADE-SOURCE.toml"
+"bootstrap/.agentic-workspace/planning/agent-manifest.json" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/agent-manifest.json"
 "skills" = "src/repo_planning_bootstrap/_skills"
 "src/repo_planning_bootstrap/_ownership.toml" = "src/repo_planning_bootstrap/_ownership.toml"
 
@@ -46,6 +52,11 @@ include = [
   "/skills",
   "/src/repo_planning_bootstrap",
   "/tests",
+]
+exclude = [
+  "/bootstrap/scripts/**",
+  "/bootstrap/tools/**",
+  "/bootstrap/.agentic-workspace/planning/scripts/**",
 ]
 
 [tool.pytest.ini_options]

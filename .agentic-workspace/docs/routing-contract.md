@@ -35,7 +35,8 @@ Use [minimum-operating-model.md](minimum-operating-model.md) for the compact mod
 ### External Install/Adopt Handoff
 When an external agent is installing or adopting this repo:
 - **Primary Command**: `agentic-workspace init --target ./repo --preset full`.
-- **Guest-Mode Command**: `agentic-workspace install --target ./repo --preset full --local-only`.
+- **Guest-Mode Command**: `agentic-workspace install --target ./repo --preset full`.
+- **Optional Local Sandbox Command**: `agentic-workspace install --target ./repo --preset full --local-only`.
 - **Handoff Artifacts**: Check for `.agentic-workspace/bootstrap-handoff.md` after bootstrap.
 - **Orientation**: Return to the configured startup file (default `AGENTS.md`) after bootstrap is complete.
 

@@ -8,7 +8,7 @@ Use raw `.agentic-workspace/planning/state.toml` when you need direct maintenanc
 Use `.agentic-workspace/planning/execplans/*.plan.json` as the canonical execplan state when a machine-first plan sidecar is present; the adjacent `.md` file is the derived human view.
 Use `.agentic-workspace/docs/candidate-lanes-contract.md` for the native `roadmap` lane shape in `.agentic-workspace/planning/state.toml` when grouped deferred work needs more structure than a flat candidate bullet.
 Use `docs/planning-routing-contract.md` when deciding whether newly discovered work belongs in `roadmap`, `todo.active_items`, `.agentic-workspace/planning/execplans/`, or `.agentic-workspace/planning/reviews/`.
-Use `python scripts/check/check_planning_surfaces.py` for advisory shape and drift warnings across `todo.active_items`, active execplans, and `roadmap`.
+Use `agentic-workspace doctor --target ./repo --format json` for advisory shape and drift warnings across `todo.active_items`, active execplans, and `roadmap`.
 Use `promote-to-plan` and `archive-plan` as thin file-native helpers around the same checked-in contract.
 Use `docs/environment-recovery-contract.md` for task-local recovery and environment assumptions.
 Use `.agentic-workspace/docs/system-intent-contract.md` for the durable larger-intent and honest-reinterpretation rule.

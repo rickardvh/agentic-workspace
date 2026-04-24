@@ -60,17 +60,8 @@ REQUIRED_PAYLOAD_FILES = (
     Path(".agentic-workspace/planning/reviews/README.md"),
     Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json"),
     Path(".agentic-workspace/planning/upstream-task-intake.md"),
-    ROOT_RENDER_SCRIPT_PATH,
-    ROOT_CHECKER_SCRIPT_PATH,
-    ROOT_MAINTAINER_CHECKER_PATH,
     UPGRADE_SOURCE_PATH,
     PLANNING_MANIFEST_PATH,
-    PLANNING_RENDER_SCRIPT_PATH,
-    PLANNING_CHECKER_SCRIPT_PATH,
-    PLANNING_MAINTAINER_CHECKER_SCRIPT_PATH,
-    ROOT_MANIFEST_MIRROR_PATH,
-    Path("tools/AGENT_QUICKSTART.md"),
-    Path("tools/AGENT_ROUTING.md"),
 )
 
 PLANNING_COMPATIBILITY_CONTRACT_FILES = (
@@ -109,11 +100,7 @@ PLANNING_LOWER_STABILITY_HELPER_FILES = tuple(
 
 ROOT_SURFACE_FILES = (Path("AGENTS.template.md"),)
 
-GENERATED_PAYLOAD_FILES = (
-    ROOT_MANIFEST_MIRROR_PATH,
-    Path("tools/AGENT_QUICKSTART.md"),
-    Path("tools/AGENT_ROUTING.md"),
-)
+GENERATED_PAYLOAD_FILES = ()
 
 PAYLOAD_GUIDANCE_FRAGMENTS = {
     Path(".agentic-workspace/planning/execplans/TEMPLATE.md"): (
@@ -206,7 +193,7 @@ def _add_contract_surface_summary(result: InstallResult, root: Path) -> None:
     )
     result.add(
         "current",
-        root / PLANNING_RENDER_SCRIPT_PATH,
+        root / PLANNING_MANIFEST_PATH,
         f"lower-stability helper files: {helpers}",
     )
 
@@ -347,8 +334,6 @@ def _installed_surface_files() -> tuple[Path, ...]:
 def resolve_target_root(target: str | Path | None, *, local_only: bool = False) -> Path:
     resolved = Path(target).resolve() if target else Path.cwd().resolve()
     if local_only:
-        resolved = resolved / ".gemini" / "agentic-workspace"
-    elif not (resolved / ".agentic-workspace").exists() and (resolved / ".gemini" / "agentic-workspace").exists():
         resolved = resolved / ".gemini" / "agentic-workspace"
     resolved.mkdir(parents=True, exist_ok=True)
     return resolved
@@ -4080,10 +4065,16 @@ def format_summary_json(summary: dict[str, Any]) -> str:
 
 def _copy_payload(*, target_root: Path, result: InstallResult, conservative: bool, force: bool) -> None:
     root = payload_root()
-    for source in sorted(root.rglob("*")):
-        if not _should_include_payload_path(source, root):
+    for relative in sorted(REQUIRED_PAYLOAD_FILES, key=lambda path: path.as_posix()):
+        if relative in GENERATED_PAYLOAD_FILES:
             continue
-        relative = source.relative_to(root)
+        source = root / relative
+        if not source.exists() or not source.is_file():
+            target_relative = relative
+            if target_relative.name.endswith(".template.md"):
+                target_relative = target_relative.with_name(target_relative.name[:-12] + ".md")
+            result.add("manual review", target_root / target_relative, "payload source file is missing")
+            continue
         target_relative = relative
         if target_relative.name.endswith(".template.md"):
             target_relative = target_relative.with_name(target_relative.name[:-12] + ".md")
@@ -4196,7 +4187,7 @@ def _render_generated_agent_files(*, target_root: Path, result: InstallResult, a
 
 
 def _run_planning_checker(target_root: Path) -> list[dict[str, str]]:
-    checker_path = target_root / ROOT_CHECKER_SCRIPT_PATH
+    checker_path = payload_root() / ROOT_CHECKER_SCRIPT_PATH
     if not checker_path.exists():
         return []
     spec = importlib.util.spec_from_file_location("planning_checker", checker_path)
@@ -4243,11 +4234,7 @@ def _generated_agent_file_expectations(target_root: Path) -> list[tuple[Path, st
     manifest_path = target_root / PLANNING_MANIFEST_PATH
     if not manifest_path.exists():
         return []
-    return [
-        (ROOT_MANIFEST_MIRROR_PATH, json.dumps(load_manifest(manifest_path), ensure_ascii=False, indent=2) + "\n", "manifest mirror"),
-        (Path("tools/AGENT_QUICKSTART.md"), _render_quickstart_for_repo(target_root), "quickstart"),
-        (Path("tools/AGENT_ROUTING.md"), _render_routing_for_repo(target_root), "routing guide"),
-    ]
+    return []
 
 
 def _has_unresolved_placeholders(text: str) -> bool:

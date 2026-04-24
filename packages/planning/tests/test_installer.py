@@ -436,16 +436,13 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert intake_doc_path.exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "TEMPLATE.plan.json").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
-    assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "render_agent_docs.py").exists()
-    assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_planning_surfaces.py").exists()
-    assert (tmp_path / ".agentic-workspace" / "planning" / "scripts" / "check" / "check_maintainer_surfaces.py").exists()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "scripts").exists()
     assert skill_readme_path.exists()
     assert skill_registry_path.exists()
     assert skill_path.exists()
     assert intake_skill_path.exists()
-    assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
-    assert (tmp_path / "tools" / "AGENT_ROUTING.md").exists()
-    assert (tmp_path / "scripts" / "check" / "check_maintainer_surfaces.py").exists()
+    assert not (tmp_path / "tools").exists()
+    assert not (tmp_path / "scripts").exists()
     assert any(action.kind in {"copied", "created", "updated"} for action in result.actions)
 
 
@@ -464,8 +461,10 @@ def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/upstream-task-intake.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/docs/routing-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert Path("tools/AGENT_QUICKSTART.md") in PLANNING_LOWER_STABILITY_HELPER_FILES
-    assert Path("scripts/render_agent_docs.py") in PLANNING_LOWER_STABILITY_HELPER_FILES
+    assert Path(".agentic-workspace/planning/UPGRADE-SOURCE.toml") in PLANNING_LOWER_STABILITY_HELPER_FILES
+    assert Path("tools/AGENT_QUICKSTART.md") not in REQUIRED_PAYLOAD_FILES
+    assert Path("scripts/render_agent_docs.py") not in REQUIRED_PAYLOAD_FILES
+    assert Path(".agentic-workspace/planning/scripts/render_agent_docs.py") not in REQUIRED_PAYLOAD_FILES
     assert set(PLANNING_COMPATIBILITY_CONTRACT_FILES).isdisjoint(PLANNING_LOWER_STABILITY_HELPER_FILES)
     assert set(PLANNING_COMPATIBILITY_CONTRACT_FILES) | set(PLANNING_LOWER_STABILITY_HELPER_FILES) == set(REQUIRED_PAYLOAD_FILES)
 
@@ -503,8 +502,6 @@ def test_adopt_bootstrap_docs_heavy_repo_preserves_root_surfaces_and_installs_he
     assert maintainer_commands_path.read_text(encoding="utf-8") == "# Existing commands\n"
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md").exists()
-    assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
-    assert (tmp_path / "tools" / "AGENT_ROUTING.md").exists()
     assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
     assert any(action.kind == "skipped" and action.path == execplan_readme_path for action in result.actions)
     assert any(
@@ -512,19 +509,12 @@ def test_adopt_bootstrap_docs_heavy_repo_preserves_root_surfaces_and_installs_he
         and action.path == tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
         for action in result.actions
     )
-    assert any(
-        action.kind in {"copied", "created", "updated"} and action.path == tmp_path / "tools" / "AGENT_QUICKSTART.md"
-        for action in result.actions
-    )
+    assert not (tmp_path / "tools").exists()
 
 
-def test_render_wrapper_install_keeps_backward_compatible_entrypoint_alias(tmp_path: Path) -> None:
+def test_render_wrapper_install_does_not_ship_root_script_entrypoint(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
-
-    mod = _load_module(tmp_path / "scripts" / "render_agent_docs.py", "planning_render_alias")
-
-    assert mod.REPO_ROOT == tmp_path
-    assert mod.render_readme_entrypoints is mod.render_quickstart
+    assert not (tmp_path / "scripts" / "render_agent_docs.py").exists()
 
 
 def test_adopt_bootstrap_preserves_existing_manifest_in_partial_managed_state(tmp_path: Path) -> None:
@@ -535,12 +525,8 @@ def test_adopt_bootstrap_preserves_existing_manifest_in_partial_managed_state(tm
     result = adopt_bootstrap(target=tmp_path)
 
     assert manifest_path.read_text(encoding="utf-8") == manifest_text
-    assert (tmp_path / "tools" / "agent-manifest.json").exists()
-    assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
     assert any(action.kind == "skipped" and action.path == manifest_path for action in result.actions)
-    assert any(
-        action.kind in {"created", "updated"} and action.path == tmp_path / "tools" / "agent-manifest.json" for action in result.actions
-    )
+    assert not (tmp_path / "tools").exists()
 
 
 def test_adopt_bootstrap_leaves_memory_owned_surfaces_untouched(tmp_path: Path) -> None:
@@ -592,14 +578,8 @@ def test_payload_filters_generated_artifacts(tmp_path: Path, monkeypatch) -> Non
 def test_verify_payload_generated_docs_match_manifest() -> None:
     result = verify_payload()
     manifest_actions = [action for action in result.actions if action.path.name == "agent-manifest.json"]
-    quickstart_actions = [action for action in result.actions if action.path.name == "AGENT_QUICKSTART.md"]
-    routing_actions = [action for action in result.actions if action.path.name == "AGENT_ROUTING.md"]
     assert manifest_actions
-    assert quickstart_actions
-    assert routing_actions
     assert any(action.kind == "current" for action in manifest_actions)
-    assert any(action.kind == "current" for action in quickstart_actions)
-    assert any(action.kind == "current" for action in routing_actions)
 
 
 def test_verify_payload_reports_contract_surface_shortlists() -> None:
@@ -614,11 +594,10 @@ def test_verify_payload_reports_contract_surface_shortlists() -> None:
         for action in result.actions
     )
     assert any(
-        action.path.name == "render_agent_docs.py"
+        action.path.name == "agent-manifest.json"
         and action.kind == "current"
         and "lower-stability helper files:" in action.detail
-        and "scripts/render_agent_docs.py" in action.detail
-        and "tools/AGENT_QUICKSTART.md" in action.detail
+        and ".agentic-workspace/planning/UPGRADE-SOURCE.toml" in action.detail
         for action in result.actions
     )
 
@@ -836,11 +815,10 @@ def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
         for action in result.actions
     )
     assert any(
-        action.path == tmp_path / ".agentic-workspace" / "planning" / "scripts" / "render_agent_docs.py"
+        action.path == tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
         and action.kind == "current"
         and "lower-stability helper files:" in action.detail
-        and "scripts/check/check_planning_surfaces.py" in action.detail
-        and "tools/AGENT_ROUTING.md" in action.detail
+        and ".agentic-workspace/planning/UPGRADE-SOURCE.toml" in action.detail
         for action in result.actions
     )
 
@@ -863,7 +841,7 @@ def test_doctor_flags_partial_readme_startup_guidance(tmp_path: Path) -> None:
 
     result = doctor_bootstrap(target=tmp_path)
 
-    assert any(action.path == tmp_path / "README.md" and "agent-startup guidance" in action.detail for action in result.actions)
+    assert not any(action.path == tmp_path / "README.md" and "agent-startup guidance" in action.detail for action in result.actions)
 
 
 def test_doctor_does_not_flag_starter_todo_for_milestone_word_in_hygiene_rules(tmp_path: Path) -> None:
@@ -1047,7 +1025,7 @@ def test_verify_payload_flags_missing_collaboration_safe_template_guidance(tmp_p
 def test_upgrade_bootstrap_overwrites_managed_files_but_preserves_root_surfaces(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     agents_path = tmp_path / "AGENTS.md"
-    checker_path = tmp_path / "scripts" / "check" / "check_planning_surfaces.py"
+    checker_path = tmp_path / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml"
     skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
 
     agents_path.write_text("repo-owned agents\n", encoding="utf-8")
@@ -1091,8 +1069,7 @@ def test_upgrade_bootstrap_legacy_standalone_install_adds_managed_helpers_withou
     result = upgrade_bootstrap(target=tmp_path)
 
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
-    assert (tmp_path / "tools" / "AGENT_QUICKSTART.md").exists()
-    assert (tmp_path / "tools" / "AGENT_ROUTING.md").exists()
+    assert not (tmp_path / "tools").exists()
     assert (tmp_path / "AGENTS.md").read_text(encoding="utf-8") == "legacy repo-owned agents\n"
     assert any(action.kind == "skipped" and action.path == tmp_path / "AGENTS.md" for action in result.actions)
     assert any(
@@ -1105,7 +1082,7 @@ def test_upgrade_bootstrap_recovers_partial_managed_state_without_overwriting_ro
     install_bootstrap(target=tmp_path)
     agents_path = tmp_path / "AGENTS.md"
     manifest_path = tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
-    routing_path = tmp_path / "tools" / "AGENT_ROUTING.md"
+    routing_path = tmp_path / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml"
 
     agents_path.write_text("repo-owned agents\n", encoding="utf-8")
     manifest_path.unlink()
@@ -1117,7 +1094,7 @@ def test_upgrade_bootstrap_recovers_partial_managed_state_without_overwriting_ro
     assert routing_path.exists()
     assert agents_path.read_text(encoding="utf-8") == "repo-owned agents\n"
     assert any(action.kind == "copied" and action.path == manifest_path for action in result.actions)
-    assert any(action.kind == "created" and action.path == routing_path for action in result.actions)
+    assert any(action.kind == "copied" and action.path == routing_path for action in result.actions)
     assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
 
 
@@ -1165,22 +1142,18 @@ def test_upgrade_bootstrap_flags_managed_compatibility_views_for_manual_review(t
 def test_doctor_reports_stale_generated_routing_residue_for_partial_managed_state(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     routing_path = tmp_path / "tools" / "AGENT_ROUTING.md"
+    routing_path.parent.mkdir(parents=True, exist_ok=True)
     routing_path.write_text("stale generated routing\n", encoding="utf-8")
 
     result = doctor_bootstrap(target=tmp_path)
 
-    assert any(
-        action.kind == "manual review"
-        and action.path == routing_path
-        and "out of sync with .agentic-workspace/planning/agent-manifest.json" in action.detail
-        for action in result.actions
-    )
+    assert not any(action.path == routing_path for action in result.actions)
 
 
 def test_uninstall_bootstrap_removes_pristine_files_and_keeps_modified_surfaces(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     agents_path = tmp_path / "AGENTS.md"
-    checker_path = tmp_path / "scripts" / "check" / "check_planning_surfaces.py"
+    checker_path = tmp_path / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml"
     quickstart_path = tmp_path / "tools" / "AGENT_QUICKSTART.md"
     skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
 
@@ -3084,3 +3057,22 @@ def test_planning_summary_tracks_near_term_todo_queue(tmp_path: Path) -> None:
     assert summary["todo"]["queued_items"][0]["id"] == "plan-beta"
     assert summary["hierarchy_contract"]["near_term_queue"][0]["id"] == "plan-beta"
     assert report["status"]["queued_todo_count"] == 1
+
+
+def test_resolve_target_root_keeps_explicit_repo_target_when_local_tree_exists(tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir(parents=True)
+    (repo_root / ".gemini" / "agentic-workspace").mkdir(parents=True)
+
+    resolved = installer_mod.resolve_target_root(repo_root)
+
+    assert resolved == repo_root
+
+
+def test_resolve_target_root_local_only_uses_gemini_subtree(tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir(parents=True)
+
+    resolved = installer_mod.resolve_target_root(repo_root, local_only=True)
+
+    assert resolved == repo_root / ".gemini" / "agentic-workspace"

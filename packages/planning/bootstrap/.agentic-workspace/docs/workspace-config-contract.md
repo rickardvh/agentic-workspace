@@ -90,7 +90,7 @@ The following prose surfaces are compatibility adapters and routing bridges:
 
 - `AGENTS.md`
 - `llms.txt`
-- generated helper surfaces such as `tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md`
+- generated helper guidance exposed through compact report/default surfaces
 
 They should:
 

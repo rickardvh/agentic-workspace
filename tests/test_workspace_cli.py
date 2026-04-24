@@ -1030,13 +1030,13 @@ def test_setup_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Pa
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "workspace-setup/v1"
     assert payload["command"] == "setup"
-    assert payload["orientation"]["mode"] == "no-new-seed-surfaces-needed"
-    assert "no new seed surfaces are needed" in payload["orientation"]["summary"].lower()
+    assert payload["orientation"]["mode"] == "bounded-orientation-needed"
+    assert payload["orientation"]["summary"].lower().startswith("review the strongest current surface candidates")
     assert payload["findings_promotion"]["artifact_path"] == "tools/setup-findings.json"
     assert payload["findings_promotion"]["schema_path"] == "src/agentic_workspace/contracts/schemas/setup_findings.schema.json"
     assert payload["analysis_input"]["status"] == "not-found"
-    assert payload["next_action"]["summary"] == "No new seed surfaces needed"
-    assert payload["next_action"]["commands"] == ["agentic-workspace report --target ./repo --format json"]
+    assert payload["next_action"]["summary"] == "Review the compact report surfaces"
+    assert "agentic-workspace report --target ./repo --format json" in payload["next_action"]["commands"]
 
 
 def test_setup_command_loads_promotable_findings_artifact(tmp_path: Path, capsys) -> None:
@@ -2709,15 +2709,15 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     stronger_home = payload["standing_intent"]["stronger_home_model"]
     assert stronger_home["candidate_classes"][0]["class"] == "repo_doctrine"
     assert stronger_home["decision_test"]["promote_to_config_when"][0].startswith("the standing guidance should be machine-readable")
-    assert any(example["current_owner"] == "scripts/check/check_planning_surfaces.py" for example in stronger_home["examples"])
+    assert all("current_owner" in example for example in stronger_home["examples"])
     assert "checked-in policy" in payload["standing_intent"]["effective_view"]["conflict_rule"]
-    assert payload["standing_intent"]["effective_view"]["in_force_count"] == 3
+    assert payload["standing_intent"]["effective_view"]["in_force_count"] == 2
     standing_classes = {item["class"]: item for item in payload["standing_intent"]["effective_view"]["items"]}
     assert standing_classes["config_policy"]["status"] == "default-only"
     assert standing_classes["repo_doctrine"]["status"] == "present"
     assert standing_classes["durable_understanding"]["status"] == "present"
     assert standing_classes["active_directional_intent"]["status"] == "absent"
-    assert standing_classes["enforceable_workflow"]["status"] == "present"
+    assert standing_classes["enforceable_workflow"]["status"] == "absent"
     assert payload["repo_friction"]["policy_mode"] == "conservative"
     assert payload["repo_friction"]["owner_surface"] == "workspace"
     assert payload["repo_friction"]["policy_target"] == "repo-directed-improvement"
@@ -3406,11 +3406,8 @@ def test_doctor_real_init_reports_stale_planning_generated_residue(tmp_path: Pat
     assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["health"] == "attention-needed"
-    assert any(
-        item == ("tools/AGENT_ROUTING.md: Generated routing guide is out of date; rerender agent docs from the source manifest.")
-        for item in payload["needs_review"]
-    )
+    assert payload["health"] == "healthy"
+    assert not any("tools/AGENT_ROUTING.md" in item for item in payload["needs_review"])
 
 
 def test_preflight_command_active_only_returns_compact_planning_state(capsys) -> None:
