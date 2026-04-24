@@ -1,0 +1,125 @@
+{
+  "schema_version": "agentic-workspace/improvement-latitude-policy/v1",
+  "default_mode": "conservative",
+  "owner_surface": "workspace",
+  "policy_target": "repo-directed-improvement",
+  "mode_interpretation": {
+    "none": "Repo-directed initiative stays off, but bounded workspace self-adaptation remains allowed.",
+    "reporting": "Repo-directed follow-through stays reporting-only, but bounded workspace self-adaptation remains allowed.",
+    "proactive": "Prefer workspace adaptation first; use repo-directed action only when the root problem is genuinely external and the work stays bounded."
+  },
+  "examples": {
+    "workspace_adaptation_first": [
+      "tighten a selector, recovery hint, or report field so the workspace points agents at the right repo surface without asking the repo to restructure itself"
+    ],
+    "repo_directed_improvement_next": [
+      "after the workspace already routes correctly, repeated shared friction still comes from unclear repo seams, tranche boundaries, or ownership and should be promoted as repo-directed follow-on work",
+      "when validation keeps bouncing across unclear seams or proof expectations, keep that visible as validation-friction evidence instead of treating it as just another one-off failure"
+    ]
+  },
+  "evidence_source": "agentic-workspace report --target ./repo --format json",
+  "evidence_classes": [
+    "large_file_hotspots",
+    "concept_surface_hotspots",
+    "planning_friction",
+    "validation_friction"
+  ],
+  "modes": [
+    {
+      "mode": "none",
+      "initiative_posture": "no-opportunistic-action",
+      "summary": "Do not perform opportunistic repo-friction reduction outside the explicitly requested work.",
+      "allows": [
+        "only the cleanup necessary to complete the requested work safely",
+        "ignoring incidental friction that does not block the current slice"
+      ],
+      "forbids": [
+        "agent-initiated cleanup prompted only by repo-friction evidence",
+        "turning incidental hotspots into side work during the current slice"
+      ],
+      "reporting_destinations": [
+        "agentic-workspace report --target ./repo --format json"
+      ],
+      "reporting_rule": "Surface friction passively through derived reporting only; do not create follow-on work on your own."
+    },
+    {
+      "mode": "reporting",
+      "initiative_posture": "reporting-only",
+      "summary": "Notice and surface notable repo friction, but do not reduce it on the agent's own initiative.",
+      "allows": [
+        "recording notable friction in bounded reporting or review outputs",
+        "capturing durable follow-through in planning residue when the current slice already owns planning state",
+        "surfacing evidence-backed hotspots for later human-directed action"
+      ],
+      "forbids": [
+        "opportunistic cleanup outside the explicitly requested work",
+        "promoting friction into active work without a bounded promotion step"
+      ],
+      "reporting_destinations": [
+        "agentic-workspace report --target ./repo --format json",
+        "review outputs",
+        ".agentic-workspace/planning/state.toml or the active execplan when the current slice already owns planning residue"
+      ],
+      "reporting_rule": "Surface notable friction through bounded reporting or residue; do not act on it without explicit direction."
+    },
+    {
+      "mode": "conservative",
+      "initiative_posture": "local-touched-scope-only",
+      "summary": "Only reduce repo friction opportunistically inside already-touched scope; do not create standalone cleanup work from one hotspot alone.",
+      "allows": [
+        "small local simplifications inside already-touched files",
+        "narrow helper extraction when proof and ownership stay unchanged",
+        "recording repeated friction as durable follow-on instead of widening the current slice"
+      ],
+      "forbids": [
+        "standalone cleanup work triggered by one hotspot alone",
+        "broad refactors or concept-pruning without explicit promotion"
+      ],
+      "reporting_destinations": [
+        "agentic-workspace report --target ./repo --format json",
+        ".agentic-workspace/planning/state.toml or the active execplan when repeated friction deserves promotion"
+      ],
+      "reporting_rule": "Use reporting to justify or defer bounded follow-on; do not treat one hotspot as permission for standalone cleanup."
+    },
+    {
+      "mode": "balanced",
+      "initiative_posture": "bounded-evidence-backed-action",
+      "summary": "Allow bounded friction reduction when evidence is clear and the extra work stays inside the current proof and ownership boundary.",
+      "allows": [
+        "simplifying a touched hotspot during the current slice",
+        "small repo-friction reductions when repeated shared evidence is present and proof stays narrow",
+        "turning repeated friction into a bounded follow-on candidate"
+      ],
+      "forbids": [
+        "rewriting requested ends in the name of cleanup",
+        "treating one-off agent discomfort or local taste as enough evidence for repo-directed change",
+        "broad cross-owner refactors without promotion"
+      ],
+      "reporting_destinations": [
+        "agentic-workspace report --target ./repo --format json",
+        ".agentic-workspace/planning/state.toml or the active execplan when friction should become bounded follow-on work"
+      ],
+      "reporting_rule": "Use reporting to preserve evidence and deferred cleanup residue whenever the current slice intentionally stops short."
+    },
+    {
+      "mode": "proactive",
+      "initiative_posture": "bounded-standalone-action-allowed",
+      "summary": "Allow bounded standalone friction reduction when evidence is strong and the work can still stay inside clear ownership and proof lanes.",
+      "allows": [
+        "small standalone cleanup slices backed by repeated shared friction evidence",
+        "collapsing low-value local complexity before it grows further",
+        "promoting repeated friction into planning earlier"
+      ],
+      "forbids": [
+        "unsignaled broad redesign under a cleanup label",
+        "using one-off preference or single-agent discomfort as the proof threshold for repo-directed cleanup",
+        "using proactive mode as a scheduler or blanket refactor permission"
+      ],
+      "reporting_destinations": [
+        "agentic-workspace report --target ./repo --format json",
+        ".agentic-workspace/planning/state.toml or the active execplan when proactive cleanup stops before the larger opportunity is complete"
+      ],
+      "reporting_rule": "Use reporting to preserve evidence and unfinished bounded cleanup residue, not to justify hidden widening."
+    }
+  ]
+}

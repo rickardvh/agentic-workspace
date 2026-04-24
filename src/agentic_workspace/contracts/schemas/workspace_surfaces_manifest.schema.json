@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/workspace-surfaces-manifest.schema.json",
+  "title": "Workspace Surfaces Manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "payload_files",
+    "system_intent_mirror_kind",
+    "default_agents_path",
+    "handoff_surfaces",
+    "module_upgrade_source_paths",
+    "setup_findings_path",
+    "mixed_agent_local_override_fields"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "workspace-surfaces-manifest/v1"
+    },
+    "payload_files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "system_intent_mirror_kind": {
+      "type": "string"
+    },
+    "default_agents_path": {
+      "type": "string"
+    },
+    "handoff_surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "module_upgrade_source_paths": {
+      "type": "object",
+      "required": [
+        "planning",
+        "memory"
+      ],
+      "properties": {
+        "planning": {
+          "type": "string"
+        },
+        "memory": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "setup_findings_path": {
+      "type": "string"
+    },
+    "mixed_agent_local_override_fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}

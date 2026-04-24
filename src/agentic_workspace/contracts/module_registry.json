@@ -1,0 +1,145 @@
+{
+  "schema_version": "agentic-workspace/module-registry/v1",
+  "module_command_args": {
+    "install": [
+      "target",
+      "dry_run",
+      "force"
+    ],
+    "adopt": [
+      "target",
+      "dry_run"
+    ],
+    "upgrade": [
+      "target",
+      "dry_run"
+    ],
+    "uninstall": [
+      "target",
+      "dry_run"
+    ],
+    "doctor": [
+      "target"
+    ],
+    "status": [
+      "target"
+    ]
+  },
+  "modules": [
+    {
+      "name": "planning",
+      "description": "Repo-native execution planning bootstrap and maintenance.",
+      "selection_rank": 10,
+      "include_in_full_preset": true,
+      "install_signals": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans"
+      ],
+      "workflow_surfaces": [
+        "AGENTS.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans",
+        "docs/contributor-playbook.md",
+        "docs/maintainer-commands.md"
+      ],
+      "generated_artifacts": [],
+      "startup_steps": [
+        "Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary`.",
+        "Read the active feature plan in `.agentic-workspace/planning/execplans/` when the TODO surface points there.",
+        "Check the roadmap in `state.toml` (authoritative) only when promoting work."
+      ],
+      "sources_of_truth": [
+        "Active queue: `.agentic-workspace/planning/state.toml` (authoritative)",
+        "Roadmap: `.agentic-workspace/planning/state.toml` (authoritative)"
+      ],
+      "root_agents_cleanup_blocks": [],
+      "capabilities": [
+        "active-execution-state",
+        "execplan-routing",
+        "generated-maintainer-guidance"
+      ],
+      "dependencies": [],
+      "conflicts": [],
+      "result_contract": {
+        "schema_version": "workspace-module-report/v1",
+        "guaranteed_fields": [
+          "module",
+          "message",
+          "target_root",
+          "dry_run",
+          "actions",
+          "warnings"
+        ],
+        "action_fields": [
+          "kind",
+          "path",
+          "detail"
+        ],
+        "warning_fields": [
+          "path",
+          "message"
+        ]
+      }
+    },
+    {
+      "name": "memory",
+      "description": "Durable repository knowledge bootstrap and maintenance.",
+      "selection_rank": 20,
+      "include_in_full_preset": true,
+      "install_signals": [
+        ".agentic-workspace/memory/repo/index.md",
+        ".agentic-workspace/memory/repo/current",
+        ".agentic-workspace/memory"
+      ],
+      "workflow_surfaces": [
+        "AGENTS.md",
+        ".agentic-workspace/memory/repo/index.md",
+        ".agentic-workspace/memory/repo/current",
+        ".agentic-workspace/memory"
+      ],
+      "generated_artifacts": [],
+      "startup_steps": [
+        "Read `.agentic-workspace/memory/repo/index.md` only when memory is installed and the task is not already well-routed.",
+        "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself."
+      ],
+      "sources_of_truth": [
+        "Durable routed knowledge, when installed: `.agentic-workspace/memory/repo/index.md`"
+      ],
+      "root_agents_cleanup_blocks": [
+        {
+          "block": "<!-- agentic-memory:workflow:start -->\nRead `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n<!-- agentic-memory:workflow:end -->",
+          "start_marker": "<!-- agentic-memory:workflow:start -->",
+          "end_marker": "<!-- agentic-memory:workflow:end -->",
+          "label": "memory workflow pointer block"
+        }
+      ],
+      "capabilities": [
+        "durable-repo-knowledge",
+        "anti-rediscovery-memory",
+        "runbook-routing"
+      ],
+      "dependencies": [],
+      "conflicts": [],
+      "result_contract": {
+        "schema_version": "workspace-module-report/v1",
+        "guaranteed_fields": [
+          "module",
+          "message",
+          "target_root",
+          "dry_run",
+          "actions",
+          "warnings"
+        ],
+        "action_fields": [
+          "kind",
+          "path",
+          "detail"
+        ],
+        "warning_fields": [
+          "path",
+          "message"
+        ]
+      }
+    }
+  ]
+}

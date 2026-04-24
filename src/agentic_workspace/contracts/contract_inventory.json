@@ -118,6 +118,107 @@
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "The internal module capability contract is now formalized as a schema to reduce prose dependency."
+    },
+    {
+      "area": "workspace_surfaces_manifest",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/workspace_surfaces.json",
+      "consumers": [
+        "agentic_workspace.cli",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Stable workspace-owned path tables and setup artifact locations are manifest-backed instead of duplicated in cli.py."
+    },
+    {
+      "area": "setup_findings_policy",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/setup_findings_policy.json",
+      "consumers": [
+        "agentic_workspace.cli:_setup_findings_input_payload",
+        "agentic_workspace.cli:_setup_finding_class_payload",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Setup findings promotion thresholds and accepted class policy are manifest-backed instead of duplicated in cli.py."
+    },
+    {
+      "area": "workflow_artifact_profiles",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/workflow_artifact_profiles.json",
+      "consumers": [
+        "agentic_workspace.cli:_workflow_artifact_profile_payload",
+        "agentic_workspace.cli:_defaults_payload",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Workflow artifact adapter profiles now come from checked-in contract JSON instead of inline Python tables."
+    },
+    {
+      "area": "improvement_latitude_policy",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/improvement_latitude_policy.json",
+      "consumers": [
+        "agentic_workspace.cli:_improvement_latitude_payload",
+        "agentic_workspace.cli:_defaults_payload",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Improvement latitude mode policy text and evidence metadata are manifest-backed instead of inline Python tables."
+    },
+    {
+      "area": "optimization_bias_policy",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/optimization_bias_policy.json",
+      "consumers": [
+        "agentic_workspace.cli:_optimization_bias_payload",
+        "agentic_workspace.cli:_defaults_payload",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Optimization bias mode policy text and surface-boundary metadata are manifest-backed instead of inline Python tables."
+    },
+    {
+      "area": "repo_friction_policy",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/repo_friction_policy.json",
+      "consumers": [
+        "agentic_workspace.cli:_workspace_self_adaptation_payload",
+        "agentic_workspace.cli:_friction_response_order_payload",
+        "agentic_workspace.cli:_workspace_self_adaptation_guardrail_payload",
+        "agentic_workspace.cli:_repo_directed_improvement_evidence_threshold_payload",
+        "agentic_workspace.cli:_validation_friction_payload",
+        "agentic_workspace.cli:_improvement_boundary_test_payload",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Repo-friction policy payloads and boundary tests are manifest-backed instead of inline Python tables."
+    },
+    {
+      "area": "module_registry",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/module_registry.json",
+      "consumers": [
+        "agentic_workspace.cli:_module_operations",
+        "agentic_workspace.cli:_module_registry",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Module metadata, command args, and result-contract fields are manifest-backed while lifecycle handlers and detectors remain procedural."
+    },
+    {
+      "area": "cli_command_manifests",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/cli_commands.json",
+      "consumers": [
+        "agentic_workspace.cli:build_parser",
+        "agentic_workspace.cli:_command_suggestions",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Command names, parser help text, and command-local options are manifest-backed instead of duplicated in argparse construction."
+    },
+    {
+      "area": "cli_option_groups",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/cli_option_groups.json",
+      "consumers": [
+        "agentic_workspace.cli:build_parser",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Shared parser option groups are manifest-backed instead of duplicated in helper functions."
     }
   ]
 }

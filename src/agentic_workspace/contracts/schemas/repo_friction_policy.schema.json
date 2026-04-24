@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/repo-friction-policy.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "workspace_self_adaptation",
+    "friction_response_order",
+    "workspace_self_adaptation_guardrail",
+    "repo_directed_improvement_threshold",
+    "validation_friction",
+    "improvement_boundary_test"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/repo-friction-policy/v1"
+    },
+    "workspace_self_adaptation": {
+      "type": "object",
+      "required": [
+        "status",
+        "summary",
+        "rule",
+        "applies_to",
+        "bounded_by"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "rule": {
+          "type": "string"
+        },
+        "applies_to": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "bounded_by": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "friction_response_order": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "step",
+          "action",
+          "rule"
+        ],
+        "properties": {
+          "step": {
+            "type": "integer"
+          },
+          "action": {
+            "type": "string"
+          },
+          "rule": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "workspace_self_adaptation_guardrail": {
+      "type": "object",
+      "required": [
+        "adapt_when",
+        "surface_repo_friction_when",
+        "keep_true",
+        "prefer"
+      ],
+      "properties": {
+        "adapt_when": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "surface_repo_friction_when": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "keep_true": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "prefer": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "repo_directed_improvement_threshold": {
+      "type": "object",
+      "required": [
+        "status",
+        "summary",
+        "minimum_threshold",
+        "not_enough",
+        "promote_when",
+        "collaboration_bias"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "minimum_threshold": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "not_enough": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "promote_when": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "collaboration_bias": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "validation_friction": {
+      "type": "object",
+      "required": [
+        "status",
+        "rule",
+        "distinguish_from",
+        "subtypes",
+        "reporting_destinations"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "rule": {
+          "type": "string"
+        },
+        "distinguish_from": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "subtypes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "reporting_destinations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "improvement_boundary_test": {
+      "type": "object",
+      "required": [
+        "stays_local_when",
+        "changed_task_when",
+        "broaden_proof_when",
+        "escalate_when"
+      ],
+      "properties": {
+        "stays_local_when": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "changed_task_when": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "broaden_proof_when": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "escalate_when": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
