@@ -501,11 +501,30 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
 
     assert "repository that contains this file" in text
     assert "Target repository:" in text
+    assert "Default startup path:" in text
+    assert "agentic-workspace defaults --section startup --format json" in text
     assert "Do not assume agentic-workspace is already installed" in text
     assert "agentic-workspace config --target ./repo --format json" in text
     assert "agentic-workspace summary --format json" in text
     assert ".agentic-workspace/config.local.toml is present" in text
     assert "Compact routing docs when present" not in text
+
+
+def test_external_agent_handoff_text_demotes_broad_routing_until_compact_startup_fails() -> None:
+    text = cli._external_agent_handoff_text(selected_modules=["planning"])
+
+    startup_index = text.index("agentic-workspace defaults --section startup --format json")
+    config_index = text.index("agentic-workspace config --target ./repo --format json")
+    summary_index = text.index("agentic-workspace summary --format json")
+    routing_index = text.index(".agentic-workspace/docs/routing-contract.md")
+    planning_index = text.index(".agentic-workspace/planning/state.toml")
+
+    assert startup_index < routing_index
+    assert config_index < routing_index
+    assert summary_index < planning_index
+    assert "When needed:" in text
+    assert "only when lifecycle or install/adopt routing is still ambiguous after the compact startup path" in text
+    assert "only when `agentic-workspace summary --format json` points there" in text
 
 
 def test_external_agent_handoff_text_uses_configured_agent_instructions_filename() -> None:
@@ -2633,6 +2652,26 @@ def test_install_real_init_can_use_gemini_as_root_startup_entrypoint(tmp_path: P
     assert "Read `GEMINI.md`." in gemini_text
     assert "Keep this file thin." in gemini_text
     assert "Read GEMINI.md first." in (target / "llms.txt").read_text(encoding="utf-8")
+
+
+def test_install_real_init_generates_llms_with_compact_startup_path_first(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+
+    llms_text = (target / "llms.txt").read_text(encoding="utf-8")
+    startup_index = llms_text.index("agentic-workspace defaults --section startup --format json")
+    config_index = llms_text.index("agentic-workspace config --target ./repo --format json")
+    summary_index = llms_text.index("agentic-workspace summary --format json")
+    routing_index = llms_text.index(".agentic-workspace/docs/routing-contract.md")
+    planning_index = llms_text.index(".agentic-workspace/planning/state.toml")
+
+    assert "Default startup path:" in llms_text
+    assert startup_index < routing_index
+    assert config_index < routing_index
+    assert summary_index < planning_index
 
 
 def test_status_real_init_reports_workspace_shared_layer_surfaces(tmp_path: Path, capsys) -> None:

@@ -18,10 +18,10 @@
       "escalation": "Escalate if the slice would require replacing the current startup model wholesale or widening into unrelated planning-chain work."
     },
     "execution": {
-      "milestone": "default-entry-path-discoverability",
+      "milestone": "compact-takeover-surface-cheaper-than-ad-hoc-reading",
       "status": "in-progress",
-      "next_step": "Identify the highest-friction default startup ambiguity, tighten the cheapest startup entry surface around it, and add focused startup-discoverability tests.",
-      "proof": "Preflight-first takeover recovery and compact lower-trust visibility are both landed. The next proof is that a generic agent can notice and follow the default startup path more cheaply from the repo front door without broad repo scavenging."
+      "next_step": "Identify the single compact surface that should replace the next most common ad hoc reread, make that surface cheaper or more obvious, and add focused tests.",
+      "proof": "Preflight-first takeover recovery, compact lower-trust visibility, and startup-front-door ordering are all landed. The next proof is that the cheapest compact takeover surface feels easier than ad hoc repo reading for the next common startup-or-state question."
     },
     "scope": {
       "touched": [
@@ -53,12 +53,12 @@
     "activation trigger": "continue until a generic agent can follow startup routing cheaply and bypass/weak-closeout incidents reliably surface in review state"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "The takeover-robustness slice for issue #277 is landed, and the lower-trust visibility slice for issue #256 is now landed too: report exposes a compact closeout-trust summary and the default text report surfaces lower-trust state without requiring a full scan of generic findings.",
+    "what this slice enabled": "The takeover-robustness slice for issue #277, the lower-trust visibility slice for issue #256, and the startup discoverability slice for issue #254 are all landed: the front-door llms router now points generic agents at the compact startup path before broader routing prose or raw planning files.",
     "intentionally deferred": "broad doctrine compression beyond the audit findings, machine-first planning-chain extraction, and local-only integration-area work.",
-    "discovered implications": "Lower-trust visibility is now much cheaper in report, which removes one major blind spot. The next remaining graceful-compliance gap is at the front door: generic agents still need the default startup entry path to feel more obvious and decisive than ad hoc repo reading.",
-    "proof achieved now": "`agentic-workspace report` now exposes top-level closeout trust, the default text report shows lower-trust state directly, and focused workspace CLI tests pass for both JSON and text reporting.",
-    "validation still needed": "prove that the default entry path is easier to notice and follow without deep product-specific knowledge.",
-    "next likely slice": "tighten the cheapest startup/front-door surface under issue #254, then retest generic-agent discoverability before widening to broader package-surface cost work."
+    "discovered implications": "The front door is now clearer, which removes one major startup ambiguity. The next remaining graceful-compliance gap is cost: generic agents still need one compact takeover surface to feel clearly cheaper than the next ad hoc reread they would otherwise make.",
+    "proof achieved now": "`llms.txt` now presents a compact ordered startup path first, broader routing prose and raw planning files are explicitly conditional, and focused workspace CLI tests pass for both the text generator and generated install surfaces.",
+    "validation still needed": "prove that one compact takeover surface is easier and cheaper to use than the next common ad hoc repo reread.",
+    "next likely slice": "promote or tighten the cheapest one-shot takeover surface under issue #255 so generic agents can answer the next startup-or-state question without broad repo reading."
   },
   "intent_interpretation": {
     "literal request": "prepare a full execplan for the second roadmap lane to reduce weak-agent implementation failures",
@@ -142,8 +142,15 @@
       "kind": "issue",
       "target": "#254",
       "label": "make the default entry path easier for generic agents to discover and follow",
-      "role": "next-active-slice",
+      "role": "completed-slice",
       "locator": "github issue #254"
+    },
+    {
+      "kind": "issue",
+      "target": "#255",
+      "label": "make core package surfaces easier for generic agents to use",
+      "role": "next-active-slice",
+      "locator": "github issue #255"
     },
     {
       "kind": "doc",
@@ -154,15 +161,15 @@
     }
   ],
   "active_milestone": {
-    "id": "default-entry-path-discoverability",
+    "id": "compact-takeover-surface-cheaper-than-ad-hoc-reading",
     "status": "in-progress",
-    "scope": "Use the cheapest startup/front-door surfaces to make the default entry path more obvious and easier to follow after the trust-visibility slice closed.",
+    "scope": "Use the cheapest compact startup-or-state surface to make package takeover feel cheaper than the next ad hoc reread after the front-door startup slice closed.",
     "ready": "ready",
     "blocked": "none",
-    "optional_deps": "gh issue refresh before implementation if #251/#253/#254 changed materially"
+    "optional_deps": "gh issue refresh before implementation if #251/#253/#255 changed materially"
   },
   "immediate_next_action": [
-    "Identify the highest-friction default startup ambiguity, tighten the cheapest entry surface around it, and add focused startup-discoverability tests for issue #254."
+    "Identify the single compact surface that should replace the next most common ad hoc reread, make that surface cheaper or more obvious, and add focused tests for issue #255."
   ],
   "blockers": [
     "None."
@@ -188,9 +195,9 @@
     "Audit-first is the default first step for this lane, because recent failures show hidden trust gaps as much as startup gaps."
   ],
   "open_questions_to_close": [
-    "Which startup question is still easiest for a generic agent to miss from the repo front door: the entrypoint file, the first compact query, or the active-work routing step?",
-    "Which startup surface should carry the cheapest stronger ordering signal: AGENTS.md, startup report, or startup defaults?",
-    "Can the entry-path improvement stay bounded to one front-door surface and one focused test cut, or does it need a paired compact-query tweak too?"
+    "Which next question still most often triggers ad hoc rereading after startup: combined takeover state, output posture, or active planning state?",
+    "Should the next cheaper surface be preflight, summary, or a tighter report answer?",
+    "Can the next cost reduction stay bounded to one compact surface and one focused test cut, or does it need paired startup/report wording changes too?"
   ],
   "validation_commands": [
     "uv run agentic-workspace defaults --section startup --format json",
@@ -214,26 +221,26 @@
     "run status": "completed",
     "executor": "workspace CLI",
     "handoff source": "this prepared execplan",
-    "what happened": "Completed the lower-trust closeout visibility slice: added a compact report closeout-trust summary, surfaced it in the default text report, and kept the signal bounded to existing planning evidence.",
-    "scope touched": "src/agentic_workspace/cli.py; src/agentic_workspace/workspace_output.py; src/agentic_workspace/contracts/report_contract.json; tests/test_workspace_cli.py",
-    "changed surfaces": "src/agentic_workspace/cli.py; src/agentic_workspace/workspace_output.py; src/agentic_workspace/contracts/report_contract.json; tests/test_workspace_cli.py",
-    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"report_surfaces_compact_lower_trust_closeout_summary or report_text_surfaces_compact_lower_trust_closeout_summary or report_surfaces_planning_intent_validation_findings or report_surfaces_finished_work_inspection_findings\"; uv run pytest tests/test_workspace_cli.py -q",
-    "result for continuation": "issue #256 is ready to close; the lane should continue with default entry-path discoverability under issue #254.",
-    "next step": "implement the cheapest startup/front-door discoverability cut"
+    "what happened": "Completed the startup discoverability slice: tightened the llms front-door router so the compact startup path is explicit and ordered ahead of broader routing prose or raw planning files, and verified the generated install surfaces follow the same order.",
+    "scope touched": "src/agentic_workspace/cli.py; llms.txt; tests/test_workspace_cli.py",
+    "changed surfaces": "src/agentic_workspace/cli.py; llms.txt; tests/test_workspace_cli.py",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"external_agent_handoff_text or install_real_init_generates_llms_with_compact_startup_path_first or install_real_init_can_use_gemini_as_root_startup_entrypoint or startup_discovery_sequence_for_generic_agents\"; uv run pytest tests/test_workspace_cli.py -q",
+    "result for continuation": "issue #254 is ready to close; the lane should continue with a cheaper compact takeover surface under issue #255.",
+    "next step": "make the next compact startup-or-state surface cheaper than ad hoc rereading"
   },
   "finished_run_review": {
     "review status": "completed",
     "scope respected": "yes",
-    "proof status": "satisfied for the lower-trust report slice",
+    "proof status": "satisfied for the startup discoverability slice",
     "intent served": "yes",
-    "config compliance": "respected checked-in and local config for the bounded lower-trust report slice",
-    "misinterpretation risk": "low for the closed lower-trust slice; remaining risk sits in startup discoverability",
+    "config compliance": "respected checked-in and local config for the bounded startup discoverability slice",
+    "misinterpretation risk": "low for the closed startup slice; remaining risk sits in compact-surface cost",
     "follow-on decision": "keep-lane-open"
   },
   "proof_report": {
-    "validation proof": "`uv run pytest tests/test_workspace_cli.py -q -k \"report_surfaces_compact_lower_trust_closeout_summary or report_text_surfaces_compact_lower_trust_closeout_summary or report_surfaces_planning_intent_validation_findings or report_surfaces_finished_work_inspection_findings\"`; `uv run pytest tests/test_workspace_cli.py -q`",
-    "proof achieved now": "The repo now exposes compact lower-trust closeout state directly in report JSON and in the default human-readable report, making likely package bypass or missing planning residue visibly less trustworthy by default.",
-    "evidence for \"proof achieved\" state": "Focused report tests pass, the broader workspace CLI suite passes, and issue #256 acceptance criteria are satisfied by the shipped closeout-trust summary behavior."
+    "validation proof": "`uv run pytest tests/test_workspace_cli.py -q -k \"external_agent_handoff_text or install_real_init_generates_llms_with_compact_startup_path_first or install_real_init_can_use_gemini_as_root_startup_entrypoint or startup_discovery_sequence_for_generic_agents\"`; `uv run pytest tests/test_workspace_cli.py -q`",
+    "proof achieved now": "The repo now presents the compact startup route first from the llms front door, and the generated install surfaces keep broader routing prose and raw planning reads behind that compact ordered path.",
+    "evidence for \"proof achieved\" state": "Focused startup-discoverability tests pass, the broader workspace CLI suite passes, and issue #254 acceptance criteria are satisfied by the shipped front-door router behavior."
   },
   "intent_satisfaction": {
     "original intent": "prepare a full execplan that lets a strong planner steer the graceful-partial-compliance lane safely",
@@ -242,24 +249,25 @@
     "unsolved intent passed to": ".agentic-workspace/planning/state.toml lane graceful-partial-compliance"
   },
   "closure_check": {
-    "slice status": "preflight and lower-trust slices complete; lane remains active",
+    "slice status": "preflight, lower-trust, and startup-discoverability slices complete; lane remains active",
     "larger-intent status": "open",
     "closure decision": "keep-active",
-    "why this decision is honest": "issues #277 and #256 are complete, but the broader graceful-partial-compliance lane still lacks a cheaper, more obvious default startup entry path and cheaper front-door package consumption.",
-    "evidence carried forward": "this execplan, the lane record in state.toml, and the next active slice under issue #254",
-    "reopen trigger": "revisit if the startup discoverability slice exposes a still-cheaper front-door cut or if live issue evidence reorders the lane"
+    "why this decision is honest": "issues #277, #256, and #254 are complete, but the broader graceful-partial-compliance lane still lacks a compact takeover surface that is obviously cheaper than ad hoc repo reading and follow-on core-surface cost work.",
+    "evidence carried forward": "this execplan, the lane record in state.toml, and the next active slice under issue #255",
+    "reopen trigger": "revisit if the next compact-surface cost slice exposes a still cheaper takeover cut or if live issue evidence reorders the lane"
   },
   "execution_summary": {
-    "outcome delivered": "Landed the lower-trust report visibility slice and selected default entry-path discoverability as the next bounded lane step.",
-    "validation confirmed": "focused lower-trust report tests and the full workspace CLI suite",
+    "outcome delivered": "Landed the startup discoverability slice and selected compact takeover-surface cost as the next bounded lane step.",
+    "validation confirmed": "focused startup-discoverability tests and the full workspace CLI suite",
     "follow-on routed to": ".agentic-workspace/planning/state.toml and this execplan",
-    "post-work posterity capture": "Issue #256 can now close against the shipped closeout-trust report behavior and test proof.",
+    "post-work posterity capture": "Issue #254 can now close against the shipped llms startup-router behavior and test proof.",
     "knowledge promoted (memory/docs/config)": "execplan and active planning state",
-    "resume from": "default-entry-path-discoverability"
+    "resume from": "compact-takeover-surface-cheaper-than-ad-hoc-reading"
   },
   "drift_log": [
     "2026-04-24: Initial full-lane execplan created from current roadmap order and live issue set.",
     "2026-04-24: Completed the preflight-first takeover robustness slice for issue #277 and advanced the active lane to lower-trust closeout visibility under issue #256.",
-    "2026-04-24: Completed the lower-trust closeout visibility slice for issue #256 and advanced the active lane to default entry-path discoverability under issue #254."
+    "2026-04-24: Completed the lower-trust closeout visibility slice for issue #256 and advanced the active lane to default entry-path discoverability under issue #254.",
+    "2026-04-24: Completed the startup discoverability slice for issue #254 and advanced the active lane to compact takeover-surface cost under issue #255."
   ]
 }
