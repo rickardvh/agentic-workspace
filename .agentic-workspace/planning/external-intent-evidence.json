@@ -14,7 +14,7 @@
       "system": "github",
       "id": "#230",
       "title": "[Workspace]: Strip away visible product residue that is no longer earning its keep so the system becomes easier to enter, recover, and trust without losing real leverage",
-      "status": "closed",
+      "status": "open",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -23,7 +23,7 @@
       "system": "github",
       "id": "#251",
       "title": "[Workspace]: Design for graceful partial compliance so generic agents still get value from the package, and bypassing it becomes visible and harder to trust",
-      "status": "closed",
+      "status": "open",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -32,7 +32,7 @@
       "system": "github",
       "id": "#253",
       "title": "[Workspace]: Make core package surfaces cheaper for generic agents to consume so using the package is easier than broad repo scavenging or private reinvention",
-      "status": "closed",
+      "status": "open",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -41,7 +41,7 @@
       "system": "github",
       "id": "#254",
       "title": "[Workspace]: Make the default entry path easier for generic agents to discover and follow so startup compliance does not depend on deep product awareness",
-      "status": "closed",
+      "status": "open",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -224,6 +224,132 @@
       "status": "closed",
       "kind": "issue",
       "parent_id": "#270",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#275",
+      "title": "[Workspace]: Slim the shipped root AGENTS entrypoint so installs converge on the thin startup contract",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#276",
+      "title": "[Workspace]: Add a package-owned mirrored system-intent contract with source declaration and sync",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#277",
+      "title": "Improve takeover robustness with preflight-first workflow gates",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#251",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#278",
+      "title": "[Workspace]: Replace markdown-first workflow contracts with a stricter, composable workflow definition format that stays flexible inside each component step",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#270",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#279",
+      "title": "[Planning]: Take relevant system intent into explicit account when shaping slices and validating intent satisfaction for broader lanes",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#270",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#280",
+      "title": "[Planning]: Add a multi-level structured reference model so execplans and higher-level planning surfaces can point explicitly to relevant issues, files, ranges, URLs, images, and other artifacts",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#261",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#281",
+      "title": "[Workspace]: Replace generated compatibility artefacts with minimal static routing tables so canonical workflows stay discoverable without creating extra mutable surfaces",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#273",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#282",
+      "title": "[Planning]: Define proportional retention for planning review artifacts so review history stays useful without becoming a parallel archive",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#261",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#285",
+      "title": "[Workspace]: Resolve portable execplan semantics against local execution posture so the current environment can optimize quality, cost, and delegation behavior",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#286",
+      "title": "[Workspace]: Add a first preflight/runtime-resolution slice that turns portable work semantics plus local config into actionable delegation and handoff guidance",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#285",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#287",
+      "title": "[Workspace]: Add a local-only agent integration area for vendor/runtime-specific shortcuts, bridge files, and shims that help agents reach canonical repo-native outcomes without becoming shared workflow state",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#288",
+      "title": "[Workspace]: Define the first local integration root, vendor subfolder convention, and boundary rules for local-only agent/runtime bridges",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#287",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#289",
+      "title": "[Workspace]: Add a compact handoff/prompt-generation slice for strong general-purpose reasoning so high-judgment questions can be escalated cheaply without moving the whole tranche",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#285",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#290",
+      "title": "[Workspace]: Add preparatory refinement templates for strong general-purpose reasoning so issues and candidate work can be clarified before coding-agent ingestion",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
       "planning_residue_expected": "required"
     }
   ]
