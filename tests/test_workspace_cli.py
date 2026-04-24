@@ -3901,6 +3901,59 @@ def _descriptors_with_install_signals(
     }
 
 
+def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -> None:
+    """Verify that generic agents can follow the startup discovery sequence without errors.
+
+    This test validates issue #255 (startup discoverability) by simulating the path
+    a generic agent would take:
+    1. Read AGENTS.md router
+    2. Run agentic-workspace defaults --section startup
+    3. Run agentic-workspace config to get resolved posture
+    4. Run agentic-workspace summary to get active state
+    """
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    # Step 1: defaults command should provide startup guidance with correct commands
+    assert cli.main(["defaults", "--section", "startup", "--format", "json"]) == 0
+    defaults_output = capsys.readouterr().out
+    defaults_payload = json.loads(defaults_output)
+
+    startup_answer = defaults_payload.get("answer", {})
+    assert startup_answer.get("default_canonical_agent_instructions_file") == "AGENTS.md"
+
+    # Verify the first_compact_queries are correct and use agentic-workspace (not stale bootstrap)
+    tiny_safe = startup_answer.get("tiny_safe_model", {})
+    assert tiny_safe.get("entrypoint") == "AGENTS.md"
+    queries = tiny_safe.get("first_compact_queries", [])
+    assert any("agentic-workspace defaults --section startup" in q for q in queries)
+    assert any("agentic-workspace config --target" in q for q in queries)
+    assert any("agentic-workspace summary" in q for q in queries)
+    # Ensure NO stale bootstrap references in startup queries (most critical part)
+    assert not any("agentic-planning-bootstrap summary" in q for q in queries)
+
+    # Step 2: config command should work and be reasonably compact
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+    config_output = capsys.readouterr().out
+    config_payload = json.loads(config_output)
+    assert "workspace" in config_payload
+    assert "mixed_agent" in config_payload
+
+    # Step 3: summary command should work
+    assert cli.main(["summary", "--format", "json"]) == 0
+    summary_output = capsys.readouterr().out
+    summary_payload = json.loads(summary_output)
+    assert summary_payload.get("kind") == "planning-summary/v1"
+    assert summary_payload.get("profile") == "compact"
+
+    # Step 4: report command should work (though larger output)
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+    report_output = capsys.readouterr().out
+    # Don't parse full report, just verify it produces output
+    assert report_output  # Report should produce output
+
+
 def _init_git_repo(target: Path) -> None:
     (target / ".git").mkdir(exist_ok=True)
 
