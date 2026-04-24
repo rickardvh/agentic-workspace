@@ -3221,7 +3221,7 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
             "reason": "planning module report is unavailable",
             "sources": [
                 "agentic-workspace config --target ./repo --format json",
-                "agentic-planning-bootstrap summary --format json",
+                "agentic-workspace summary --format json",
             ],
         }
 
@@ -3236,10 +3236,10 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
     prefer_internal = bool(mixed_agent["effective_posture"]["prefer_internal_delegation_when_available"]["value"])
     sources = [
         "agentic-workspace config --target ./repo --format json",
-        "agentic-planning-bootstrap summary --format json",
+        "agentic-workspace summary --format json",
     ]
     if isinstance(handoff_contract, dict) and handoff_contract.get("status") == "present":
-        sources.append("agentic-planning-bootstrap handoff --format json")
+        sources.append("agentic-workspace prompt --format json")
 
     payload: dict[str, Any] = {
         "owner_surface": "workspace-report",
@@ -3324,7 +3324,7 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
                     "The active slice is broad enough to benefit from a compact plan.",
                     "The effective local posture does not currently report the strong-planner/cheap-executor pattern needed for a clear default split.",
                 ],
-                "consult": ["agentic-planning-bootstrap summary --format json"],
+                "consult": ["agentic-workspace summary --format json"],
                 "allowed_execution_methods": ["single-agent fallback"],
                 "deviation_visibility": (
                     "If you later delegate anyway, derive the handoff from checked-in planning and note why the exception beat the direct default."
