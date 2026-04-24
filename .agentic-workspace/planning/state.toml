@@ -1,7 +1,5 @@
 [todo]
-active_items = [
-  { id = "low-trust-delegated-run-preflight-and-closeout-gating", status = "in-progress", surface = ".agentic-workspace/planning/state.toml", why_now = "The recent Gemini incident showed that weaker or undisciplined agents still have too much room to misread planning state, fabricate residue, and close lanes dishonestly. The package needs a first runtime-side guardrail that lets bounded implementation happen without trusting delegated agents to interpret or close planning correctly.", next_action = "Define the compact preflight answer and low-trust closeout rule set for delegated runs under the runtime-posture lane, then decide whether the slice should stay a direct task or promote into an execplan.", done_when = "Checked-in planning state names the low-trust delegated-run slice explicitly, and the next implementation pass can start from a bounded contract for preflight checks, required return residue, and lower-trust closeout gating." }
-]
+active_items = []
 queued_items = []
 
 [roadmap]
