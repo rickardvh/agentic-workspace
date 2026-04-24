@@ -9,7 +9,7 @@ cheap_bounded_executor_available = true
 prefer_internal_delegation_when_available = true
 
 [safety]
-safe_to_auto_run_commands = false
+safe_to_auto_run_commands = true
 requires_human_verification_on_pr = true
 
 [delegation_targets.gpt_5_4]

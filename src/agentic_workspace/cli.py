@@ -21,6 +21,7 @@ from agentic_workspace._schema import (
 )
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
+    DEFAULT_CLI_INVOKE,
     DEFAULT_IMPROVEMENT_LATITUDE,
     DEFAULT_OPTIMIZATION_BIAS,
     DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
@@ -1453,6 +1454,7 @@ def _workspace_agents_template(
     descriptors: dict[str, ModuleDescriptor],
     agent_instructions_file: str = DEFAULT_AGENT_INSTRUCTIONS_FILE,
     workflow_artifact_profile: str = DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> str:
     _ = workflow_artifact_profile
     startup_steps: list[str] = []
@@ -1473,9 +1475,9 @@ def _workspace_agents_template(
         "## Startup",
         "",
         f"1. Read `{agent_instructions_file}`.",
-        "2. Use `agentic-workspace defaults --section startup --format json` when startup order or first-contact routing is the question.",
-        "3. Use `agentic-workspace config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.",
-        "4. Use `agentic-workspace summary --format json` when active planning or ownership state is the question.",
+        f"2. Use `{cli_invoke} defaults --section startup --format json` when startup order or first-contact routing is the question.",
+        f"3. Use `{cli_invoke} config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.",
+        f"4. Use `{cli_invoke} summary --format json` when active planning or ownership state is the question.",
         "5. Open raw planning state, an active execplan, or deeper routing docs only when those compact answers point there.",
         "6. Read package-local `AGENTS.md` only for the package being edited.",
     ]
@@ -1984,6 +1986,7 @@ def _workspace_init_or_upgrade_report(
         descriptors=descriptors,
         agent_instructions_file=config.agent_instructions_file,
         workflow_artifact_profile=config.workflow_artifact_profile,
+        cli_invoke=config.cli_invoke,
     )
     existing_agents = agents_path.read_text(encoding="utf-8") if agents_path.exists() else None
     if inspection_mode == "install":
@@ -4209,11 +4212,17 @@ def _emit_startup_report(
         except Exception:
             pass
 
+    tiny_safe_model = _defaults_payload()["startup"]["tiny_safe_model"].copy()
+    tiny_safe_model["cli_invoke"] = config.cli_invoke
+    tiny_safe_model["first_compact_queries"] = [
+        query.replace("agentic-workspace", config.cli_invoke) for query in tiny_safe_model["first_compact_queries"]
+    ]
+
     payload = {
         "kind": "startup-report/v1",
         "active_intent": active_record.get("requested_outcome") or "No active intent",
         "immediate_next_action": active_record.get("next_action") or "No next action",
-        "tiny_safe_model": _defaults_payload()["startup"]["tiny_safe_model"],
+        "tiny_safe_model": tiny_safe_model,
         "module_boundaries": _defaults_payload()["startup"]["top_level_capabilities"],
         "critical_invariants": manifest.get("invariants") or [],
         "escalation_boundaries": active_record.get("escalate_when") or [],
@@ -4438,6 +4447,7 @@ def _defaults_payload() -> dict[str, Any]:
     ]
     return {
         "startup": {
+            "default_cli_invoke": DEFAULT_CLI_INVOKE,
             "canonical_doc": ".agentic-workspace/docs/minimum-operating-model.md",
             "primary": [
                 "Read the configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`).",
@@ -6398,6 +6408,8 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "improvement_latitude_source": config.improvement_latitude_source,
             "optimization_bias": config.optimization_bias,
             "optimization_bias_source": config.optimization_bias_source,
+            "cli_invoke": config.cli_invoke,
+            "cli_invoke_source": config.cli_invoke_source,
             "workflow_artifact_adapter": _workflow_artifact_profile_payload(config.workflow_artifact_profile),
             "agent_configuration_substrate": {
                 "canonical_doc": _agent_configuration_system_payload()["canonical_doc"],
@@ -6461,6 +6473,7 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
     print(f"Workflow obligations: {len(payload['workspace']['workflow_obligations'])} configured")
     print(f"Improvement latitude: {payload['workspace']['improvement_latitude']} ({payload['workspace']['improvement_latitude_source']})")
     print(f"Optimization bias: {payload['workspace']['optimization_bias']} ({payload['workspace']['optimization_bias_source']})")
+    print(f"CLI invoke: {payload['workspace']['cli_invoke']} ({payload['workspace']['cli_invoke_source']})")
     print(f"Wrapper rule: {payload['update']['wrapper_rule']}")
     print("Update modules:")
     for module in payload["update"]["modules"]:

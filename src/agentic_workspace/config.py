@@ -44,6 +44,7 @@ SUPPORTED_OPTIMIZATION_BIASES = (
     "balanced",
     "human-legibility",
 )
+DEFAULT_CLI_INVOKE = "agentic-workspace"
 SUPPORTED_WORKFLOW_OBLIGATION_STAGES = (
     "pre-work",
     "before-claiming-completion",
@@ -173,6 +174,8 @@ class WorkspaceConfig:
     improvement_latitude_source: str
     optimization_bias: str
     optimization_bias_source: str
+    cli_invoke: str
+    cli_invoke_source: str
     detected_agent_instructions_files: tuple[str, ...]
     update_modules: dict[str, ModuleUpdatePolicy]
     workflow_obligations: tuple[WorkflowObligation, ...]
@@ -717,6 +720,8 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     improvement_latitude_source = "product-default"
     optimization_bias = DEFAULT_OPTIMIZATION_BIAS
     optimization_bias_source = "product-default"
+    cli_invoke = DEFAULT_CLI_INVOKE
+    cli_invoke_source = "product-default"
 
     if not config_path.exists():
         agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = resolve_effective_agent_instructions_file(
@@ -737,6 +742,8 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             improvement_latitude_source=improvement_latitude_source,
             optimization_bias=optimization_bias,
             optimization_bias_source=optimization_bias_source,
+            cli_invoke=cli_invoke,
+            cli_invoke_source=cli_invoke_source,
             detected_agent_instructions_files=detected_agent_instruction_files,
             update_modules=defaults,
             workflow_obligations=(),
@@ -767,7 +774,14 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     # Relaxed: Warn about unknown workspace fields
     unknown_workspace = sorted(
         set(raw_workspace)
-        - {"default_preset", "agent_instructions_file", "workflow_artifact_profile", "improvement_latitude", "optimization_bias"}
+        - {
+            "default_preset",
+            "agent_instructions_file",
+            "workflow_artifact_profile",
+            "improvement_latitude",
+            "optimization_bias",
+            "cli_invoke",
+        }
     )
     if unknown_workspace:
         unknown_text = ", ".join(unknown_workspace)
@@ -793,6 +807,12 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     if raw_optimization_bias is not None:
         optimization_bias = validate_optimization_bias(str(raw_optimization_bias))
         optimization_bias_source = "repo-config"
+    raw_cli_invoke = raw_workspace.get("cli_invoke")
+    if raw_cli_invoke is not None:
+        if not isinstance(raw_cli_invoke, str) or not raw_cli_invoke.strip():
+            raise WorkspaceUsageError(f"{config_path.as_posix()} workspace.cli_invoke must be a non-empty string.")
+        cli_invoke = raw_cli_invoke.strip()
+        cli_invoke_source = "repo-config"
 
     update_modules = dict(defaults)
     raw_update = payload.get("update", {})
@@ -896,6 +916,8 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         improvement_latitude_source=improvement_latitude_source,
         optimization_bias=optimization_bias,
         optimization_bias_source=optimization_bias_source,
+        cli_invoke=cli_invoke,
+        cli_invoke_source=cli_invoke_source,
         detected_agent_instructions_files=detected_agent_instruction_files,
         update_modules=update_modules,
         workflow_obligations=workflow_obligations,
