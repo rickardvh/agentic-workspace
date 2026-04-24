@@ -17,6 +17,8 @@ Use `agentic-workspace defaults --section operating_questions --format json` for
 
 That query surface now owns the first-line answers for routine questions such as startup path, active state, combined workspace state, proof or ownership lookup, setup or handoff home, and mixed-agent posture.
 
+For the common combined-state question, prefer `agentic-workspace preflight --target ./repo --format json` before the broader workspace report.
+
 Use broader docs or raw files only when that compact surface says you still need them.
 
 ## What Stays Secondary

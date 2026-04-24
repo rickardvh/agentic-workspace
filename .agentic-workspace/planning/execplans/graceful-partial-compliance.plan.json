@@ -19,9 +19,9 @@
     },
     "execution": {
       "milestone": "core-surface-cost-and-machine-ergonomics",
-      "status": "in-progress",
-      "next_step": "Identify one remaining high-frequency question where a compact package surface still loses to ad hoc rereading, tighten that surface's machine ergonomics, and add focused tests.",
-      "proof": "Preflight-first takeover recovery, compact lower-trust visibility, startup-front-door ordering, and the one-call takeover path are all landed. The next proof is that another high-frequency package question is cheaper to answer through a compact package surface than through ad hoc repo rereading."
+      "status": "completed",
+      "next_step": "Hand off to the next roadmap lane after closing issue #253 and the parent graceful-partial-compliance lane issue #251.",
+      "proof": "Preflight-first takeover recovery, compact lower-trust visibility, startup-front-door ordering, the one-call takeover path, and the cheaper compact operating-map route for combined workspace state are all landed. The graceful-partial-compliance lane is now complete."
     },
     "scope": {
       "touched": [
@@ -53,12 +53,12 @@
     "activation trigger": "continue until a generic agent can follow startup routing cheaply and bypass/weak-closeout incidents reliably surface in review state"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "The takeover-robustness slice for issue #277, the lower-trust visibility slice for issue #256, the startup discoverability slice for issue #254, and the compact takeover surface slice for issue #255 are all landed: startup adapters now advertise `preflight` as the one-call takeover surface before broader repo rereading.",
+    "what this slice enabled": "The takeover-robustness slice for issue #277, the lower-trust visibility slice for issue #256, the startup discoverability slice for issue #254, the compact takeover surface slice for issue #255, and the final compact operating-map ergonomics slice for issue #253 are all landed.",
     "intentionally deferred": "broad doctrine compression beyond the audit findings, machine-first planning-chain extraction, and local-only integration-area work.",
-    "discovered implications": "The front door and cheapest takeover path are now clearer, which removes another major reason to reread repo prose. The next remaining graceful-compliance gap is broader core-surface ergonomics: at least one more high-frequency package question still needs a compact answer that beats ad hoc repo scavenging locally.",
-    "proof achieved now": "Startup defaults and adapters now advertise `preflight` as the one-call compact takeover path, and focused workspace CLI tests pass for startup defaults, generated startup adapters, and bundled preflight context.",
-    "validation still needed": "prove that another high-frequency package question is cheaper to answer through a compact package surface than through ad hoc rereading.",
-    "next likely slice": "tighten one remaining compact package surface under issue #253 so generic agents have an easier path than broad repo scavenging or private reinvention."
+    "discovered implications": "The remaining broad-cost gap was not another missing feature but a routing choice: the compact operating map still sent a common combined-state question straight to full report instead of the cheaper bundled preflight surface.",
+    "proof achieved now": "The compact operating map now routes the common combined workspace state question to `preflight` first and keeps `report` as the broader follow-on only when needed.",
+    "validation still needed": "none for this lane",
+    "next likely slice": "hand off to the machine-first-planning-chain roadmap lane."
   },
   "intent_interpretation": {
     "literal request": "prepare a full execplan for the second roadmap lane to reduce weak-agent implementation failures",
@@ -156,7 +156,7 @@
       "kind": "issue",
       "target": "#253",
       "label": "make core package surfaces cheaper for generic agents to consume",
-      "role": "next-active-slice",
+      "role": "completed-slice",
       "locator": "github issue #253"
     },
     {
@@ -169,14 +169,14 @@
   ],
   "active_milestone": {
     "id": "core-surface-cost-and-machine-ergonomics",
-    "status": "in-progress",
-    "scope": "Use one remaining compact package surface to make a high-frequency package question cheaper than ad hoc repo rereading after the one-call takeover slice closed.",
-    "ready": "ready",
+    "status": "completed",
+    "scope": "Made the compact operating map route the common combined workspace state question to the cheaper bundled preflight surface before broader report output.",
+    "ready": "completed",
     "blocked": "none",
-    "optional_deps": "gh issue refresh before implementation if #251/#253 changed materially"
+    "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Identify one remaining high-frequency question where a compact package surface still loses to ad hoc rereading, tighten that surface's machine ergonomics, and add focused tests for issue #253."
+    "Close issue #253 and the parent graceful-partial-compliance lane issue #251, then hand planning focus to the next roadmap lane."
   ],
   "blockers": [
     "None."
@@ -202,9 +202,7 @@
     "Audit-first is the default first step for this lane, because recent failures show hidden trust gaps as much as startup gaps."
   ],
   "open_questions_to_close": [
-    "Which remaining high-frequency question still most often triggers ad hoc rereading after startup and takeover: output posture, install/report routing, or capability ownership?",
-    "Which existing compact surface should answer that question more cheaply: defaults, report, config, or summary?",
-    "Can the next ergonomics improvement stay bounded to one compact surface and one focused test cut, or does it need paired wording changes in startup adapters too?"
+    "none"
   ],
   "validation_commands": [
     "uv run agentic-workspace defaults --section startup --format json",
@@ -228,26 +226,26 @@
     "run status": "completed",
     "executor": "workspace CLI",
     "handoff source": "this prepared execplan",
-    "what happened": "Completed the compact takeover surface slice: promoted `preflight` as the one-call startup-and-state path in startup defaults and startup adapters, and verified the generated surfaces and bundled preflight response stay aligned.",
-    "scope touched": "src/agentic_workspace/cli.py; AGENTS.md; llms.txt; tests/test_workspace_cli.py",
-    "changed surfaces": "src/agentic_workspace/cli.py; AGENTS.md; llms.txt; tests/test_workspace_cli.py",
-    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"defaults_command_reports_machine_readable_default_routes_as_json or defaults_command_text_emphasises_primary_and_secondary_routes or external_agent_handoff_text or install_real_init_creates_combined_memory_and_planning_surfaces or install_real_init_generates_llms_with_compact_startup_path_first or startup_discovery_sequence_for_generic_agents or preflight_command_full_returns_bundled_takeover_context\"; uv run pytest tests/test_workspace_cli.py -q",
-    "result for continuation": "issue #255 is ready to close; the lane should continue with one remaining core-surface ergonomics cut under issue #253.",
-    "next step": "make one remaining compact package surface cheaper than ad hoc rereading"
+    "what happened": "Completed the final graceful-compliance slice: changed the compact operating map so the common combined workspace state question uses `agentic-workspace preflight --target ./repo --format json` before the broader workspace report.",
+    "scope touched": "src/agentic_workspace/cli.py; docs/which-package.md; tests/test_workspace_cli.py",
+    "changed surfaces": "src/agentic_workspace/cli.py; docs/which-package.md; tests/test_workspace_cli.py",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"defaults_command_reports_machine_readable_default_routes_as_json or defaults_command_text_emphasises_primary_and_secondary_routes or operating_questions\"; uv run pytest tests/test_workspace_cli.py -q",
+    "result for continuation": "issue #253 is ready to close, and the graceful-partial-compliance lane can now close honestly against the shipped behavior.",
+    "next step": "close the remaining graceful-compliance issues and hand off to the next roadmap lane"
   },
   "finished_run_review": {
     "review status": "completed",
     "scope respected": "yes",
-    "proof status": "satisfied for the compact takeover surface slice",
+    "proof status": "satisfied for the final core-surface ergonomics slice and the full lane",
     "intent served": "yes",
-    "config compliance": "respected checked-in and local config for the bounded compact takeover surface slice",
-    "misinterpretation risk": "low for the closed preflight-promotion slice; remaining risk sits in one remaining core-surface ergonomics cut",
-    "follow-on decision": "keep-lane-open"
+    "config compliance": "respected checked-in and local config for the bounded final ergonomics slice",
+    "misinterpretation risk": "low for the closed lane; remaining risk moves to future roadmap lanes rather than this one",
+    "follow-on decision": "close-lane"
   },
   "proof_report": {
-    "validation proof": "`uv run pytest tests/test_workspace_cli.py -q -k \"defaults_command_reports_machine_readable_default_routes_as_json or defaults_command_text_emphasises_primary_and_secondary_routes or external_agent_handoff_text or install_real_init_creates_combined_memory_and_planning_surfaces or install_real_init_generates_llms_with_compact_startup_path_first or startup_discovery_sequence_for_generic_agents or preflight_command_full_returns_bundled_takeover_context\"`; `uv run pytest tests/test_workspace_cli.py -q`",
-    "proof achieved now": "The repo now advertises `preflight` as the one-call compact takeover path across startup defaults and startup adapters, making combined startup guidance, resolved config, and active state cheaper to reach than a multi-surface repo reread.",
-    "evidence for \"proof achieved\" state": "Focused startup/defaults/preflight tests pass, the broader workspace CLI suite passes, and issue #255 acceptance criteria are satisfied by the shipped one-call takeover routing behavior."
+    "validation proof": "`uv run pytest tests/test_workspace_cli.py -q -k \"defaults_command_reports_machine_readable_default_routes_as_json or defaults_command_text_emphasises_primary_and_secondary_routes or operating_questions\"`; `uv run pytest tests/test_workspace_cli.py -q`",
+    "proof achieved now": "The repo's compact operating map now routes the common combined workspace state question to the cheaper bundled preflight surface, which makes another high-frequency package question cheaper to answer through package surfaces than through broader rereading.",
+    "evidence for \"proof achieved\" state": "Focused operating-question tests pass, the broader workspace CLI suite passes, and issue #253 acceptance criteria are satisfied by the shipped compact route change."
   },
   "intent_satisfaction": {
     "original intent": "prepare a full execplan that lets a strong planner steer the graceful-partial-compliance lane safely",
@@ -256,26 +254,27 @@
     "unsolved intent passed to": ".agentic-workspace/planning/state.toml lane graceful-partial-compliance"
   },
   "closure_check": {
-    "slice status": "preflight, lower-trust, startup-discoverability, and compact-takeover-surface slices complete; lane remains active",
-    "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "issues #277, #256, #254, and #255 are complete, but the broader graceful-partial-compliance lane still needs one remaining core-surface ergonomics cut so compact package answers beat ad hoc repo scavenging more often.",
-    "evidence carried forward": "this execplan, the lane record in state.toml, and the next active slice under issue #253",
-    "reopen trigger": "revisit if the next ergonomics slice exposes a narrower remaining gap or if live issue evidence reorders the lane"
+    "slice status": "all bounded slices complete",
+    "larger-intent status": "completed",
+    "closure decision": "close-lane",
+    "why this decision is honest": "issues #277, #256, #254, #255, and #253 are complete, and together they satisfy the parent graceful-partial-compliance acceptance: startup is easier to discover, compact surfaces are cheaper to use, and likely bypass is now visibly lower-trust rather than silently accepted.",
+    "evidence carried forward": "this execplan, the closed child issues, and the final checked-in startup/preflight/report routing behavior",
+    "reopen trigger": "reopen only if new generic-agent evidence shows startup, compact-surface cost, or lower-trust review still failing materially"
   },
   "execution_summary": {
-    "outcome delivered": "Landed the compact takeover surface slice and selected one remaining core-surface ergonomics cut as the next bounded lane step.",
-    "validation confirmed": "focused startup/defaults/preflight tests and the full workspace CLI suite",
-    "follow-on routed to": ".agentic-workspace/planning/state.toml and this execplan",
-    "post-work posterity capture": "Issue #255 can now close against the shipped one-call preflight takeover behavior and test proof.",
+    "outcome delivered": "Completed the graceful-partial-compliance lane end to end: stronger startup discoverability, one-call takeover context, cheaper compact operating routes, and visible lower-trust closeout state are all landed.",
+    "validation confirmed": "the focused slice tests for each child issue plus repeated full workspace CLI suite passes",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml next-roadmap handoff",
+    "post-work posterity capture": "Issues #253 and #251 can now close against the shipped compact-surface and trust behavior.",
     "knowledge promoted (memory/docs/config)": "execplan and active planning state",
-    "resume from": "core-surface-cost-and-machine-ergonomics"
+    "resume from": "machine-first-planning-chain"
   },
   "drift_log": [
     "2026-04-24: Initial full-lane execplan created from current roadmap order and live issue set.",
     "2026-04-24: Completed the preflight-first takeover robustness slice for issue #277 and advanced the active lane to lower-trust closeout visibility under issue #256.",
     "2026-04-24: Completed the lower-trust closeout visibility slice for issue #256 and advanced the active lane to default entry-path discoverability under issue #254.",
     "2026-04-24: Completed the startup discoverability slice for issue #254 and advanced the active lane to compact takeover-surface cost under issue #255.",
-    "2026-04-24: Completed the compact takeover surface slice for issue #255 and advanced the active lane to one remaining core-surface ergonomics cut under issue #253."
+    "2026-04-24: Completed the compact takeover surface slice for issue #255 and advanced the active lane to one remaining core-surface ergonomics cut under issue #253.",
+    "2026-04-24: Completed the final core-surface ergonomics slice for issue #253 and closed the graceful-partial-compliance lane."
   ]
 }

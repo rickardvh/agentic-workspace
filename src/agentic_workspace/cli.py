@@ -4921,8 +4921,9 @@ def _defaults_payload() -> dict[str, Any]:
                 {
                     "id": "combined_workspace_state",
                     "question": "What does the combined workspace state look like?",
-                    "ask_first": "agentic-workspace report --target ./repo --format json",
+                    "ask_first": "agentic-workspace preflight --target ./repo --format json",
                     "then_if_needed": [
+                        "agentic-workspace report --target ./repo --format json",
                         ".agentic-workspace/docs/reporting-contract.md",
                         "raw module files only when the report is insufficient",
                     ],
