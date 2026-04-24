@@ -1,5 +1,7 @@
 [todo]
-active_items = []
+active_items = [
+  { id = "graceful-partial-compliance", status = "in-progress", surface = ".agentic-workspace/planning/execplans/graceful-partial-compliance.plan.json", why_now = "The runtime-posture-selective-handoff lane shipped (delegated_run_guardrail + runtime_resolution + strong_handoff_packet). The graceful-partial-compliance lane is now the first roadmap priority and has a prepared execplan. Starting with the startup-discoverability-and-lower-trust-audit slice.", next_action = "Run intent-validation audit over startup discoverability, core-surface cost, preflight takeover robustness, and lower-trust closeout signals; convert the highest-signal failures into bounded fixes.", done_when = "Startup surfaces (AGENTS.md, defaults, config, summary, report) answer first-contact questions cheaply; lower-trust review signals appear when package routing is bypassed; focused workflow tests and planning checks pass; issues #251, #255, #256, #277 can be addressed honestly." }
+]
 queued_items = []
 
 [roadmap]
