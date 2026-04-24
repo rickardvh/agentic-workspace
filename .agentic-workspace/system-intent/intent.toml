@@ -1,11 +1,11 @@
 schema_version = 1
 kind = "agentic-workspace/system-intent/v1"
-summary = "Agentic Workspace should stay a quiet, repo-native continuity and execution layer that preserves human intent, keeps bounded work cheap to continue and verify, and lowers total operating cost without turning into a visible framework or a second source of truth."
-governing_intents = ["Preserve only the context that is expensive to rediscover and necessary for safe continuation.", "Keep human-owned why separate from system-shaped what and implementation-level how.", "Prefer compact queryable state over prose-first operation whenever one structured answer is enough.", "Reduce total successful-completion cost across restart, handoff, review, and proof loops.", "Stay quiet, repo-native, low-residue, and sharply bounded in ownership."]
+summary = "Agentic Workspace should stay a quiet, repo-native continuity and execution layer that preserves human intent, keeps bounded work cheap to continue and verify, makes weaker agents safer and stronger reasoning more reusable, and lowers total operating cost without becoming a visible framework or a second source of truth."
+governing_intents = ["Preserve only the context that is expensive to rediscover and necessary for safe continuation.", "Keep human-owned why separate from system-shaped what and implementation-level how.", "Make weaker agents safer and spend stronger reasoning on judgment, shaping, review, and recovery rather than orchestration waste.", "Prefer compact queryable state over prose-first operation whenever one structured answer is enough.", "Reduce total successful-completion cost across restart, handoff, review, and proof loops.", "Stay quiet, repo-native, low-residue, and sharply bounded in ownership."]
 anti_intents = ["Do not become a visible workflow framework the user must consciously operate.", "Do not grow a surface maze where every good idea becomes another durable file or command.", "Do not optimize one local step while making the overall loop heavier.", "Do not let package-owned and repo-owned artifacts blur into ambiguous authority."]
 decision_tests = ["Favor work that preserves human intent more faithfully across time.", "Favor work that makes bounded execution cheaper to start, continue, hand off, review, or finish.", "Favor work that removes, compresses, or backgrounds visible residue instead of adding new first-line surfaces.", "Question work that mainly adds framework feel, narrative residue, or new visible concepts without replacing older ones."]
 open_questions = []
-interpretation_notes = "Compiled from repo-owned directional evidence into a normalized operational declaration. Keep refining this declaration when the repo's higher-level direction changes materially, but do not treat it as a scheduler, a source-file mirror, or active task state."
+interpretation_notes = "Manually extracted on 2026-04-24 from the declared source hints in `.agentic-workspace/config.toml`: `SYSTEM_INTENT.md` as the primary directional source and `README.md` as corroborating public-facing orientation. This declaration is a normalized operating compass, not a scheduler, a source-file mirror, or active task state."
 confidence = "high"
 needs_review = false
 preferred_source = "SYSTEM_INTENT.md"
@@ -17,3 +17,10 @@ present = true
 sha256 = "8f286c844ea069be253d8ef4f7e7345f71bda140a305161a346abcecc7701874"
 first_heading = "System Intent"
 line_count = 223
+
+[[source_records]]
+path = "README.md"
+present = true
+sha256 = "22943aed87e838750393e567bbe041add2caefd46f20464fda84653eb6b6114a"
+first_heading = "agentic-workspace"
+line_count = 66

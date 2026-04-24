@@ -239,7 +239,7 @@
       "system": "github",
       "id": "#276",
       "title": "[Workspace]: Add a package-owned mirrored system-intent contract with source declaration and sync",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -356,7 +356,7 @@
       "system": "github",
       "id": "#291",
       "title": "[Workspace]: Delegate system-intent extraction to agents",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"

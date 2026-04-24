@@ -7,7 +7,7 @@ optimization_bias = "agent-efficiency"
 cli_invoke = "uv run agentic-workspace"
 
 [system_intent]
-sources = ["SYSTEM_INTENT.md"]
+sources = ["SYSTEM_INTENT.md", "README.md"]
 preferred_source = "SYSTEM_INTENT.md"
 
 [update.modules.planning]
