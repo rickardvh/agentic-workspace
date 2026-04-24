@@ -25,13 +25,7 @@ PLANNING_MANIFEST_PATH = PLANNING_MANAGED_ROOT / "agent-manifest.json"
 PLANNING_STATE_PATH = PLANNING_MANAGED_ROOT / "state.toml"
 PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "external-intent-evidence.json"
 PLANNING_FINISHED_WORK_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "finished-work-evidence.json"
-PLANNING_RENDER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "render_agent_docs.py"
 PLANNING_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_planning_surfaces.py"
-PLANNING_MAINTAINER_CHECKER_SCRIPT_PATH = PLANNING_MANAGED_ROOT / "scripts" / "check" / "check_maintainer_surfaces.py"
-ROOT_RENDER_SCRIPT_PATH = Path("scripts/render_agent_docs.py")
-ROOT_CHECKER_SCRIPT_PATH = Path("scripts/check/check_planning_surfaces.py")
-ROOT_MAINTAINER_CHECKER_PATH = Path("scripts/check/check_maintainer_surfaces.py")
-ROOT_MANIFEST_MIRROR_PATH = Path("tools/agent-manifest.json")
 
 REQUIRED_PAYLOAD_FILES = (
     Path("AGENTS.template.md"),
@@ -952,7 +946,7 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
             result.add(
                 "manual review",
                 destination,
-                f"{label} is out of sync with .agentic-workspace/planning/agent-manifest.json; run python scripts/render_agent_docs.py",
+                f"{label} is out of sync with .agentic-workspace/planning/agent-manifest.json; run agentic-workspace doctor --target ./repo --modules planning --format json",
             )
     return result
 
@@ -4187,7 +4181,7 @@ def _render_generated_agent_files(*, target_root: Path, result: InstallResult, a
 
 
 def _run_planning_checker(target_root: Path) -> list[dict[str, str]]:
-    checker_path = payload_root() / ROOT_CHECKER_SCRIPT_PATH
+    checker_path = payload_root() / PLANNING_CHECKER_SCRIPT_PATH
     if not checker_path.exists():
         return []
     spec = importlib.util.spec_from_file_location("planning_checker", checker_path)
@@ -4195,7 +4189,7 @@ def _run_planning_checker(target_root: Path) -> list[dict[str, str]]:
         return [
             {
                 "warning_class": "planning_checker_load_failure",
-                "path": "scripts/check/check_planning_surfaces.py",
+                "path": PLANNING_CHECKER_SCRIPT_PATH.as_posix(),
                 "message": "Unable to load planning checker.",
             }
         ]
@@ -4205,29 +4199,17 @@ def _run_planning_checker(target_root: Path) -> list[dict[str, str]]:
 
 
 def _render_quickstart_for_repo(target_root: Path) -> str:
-    script_path = target_root / ROOT_RENDER_SCRIPT_PATH
     manifest_path = target_root / PLANNING_MANIFEST_PATH
-    if not script_path.exists() or not manifest_path.exists():
+    if not manifest_path.exists():
         return render_quickstart(load_manifest(manifest_path))
-    spec = importlib.util.spec_from_file_location("render_agent_docs", script_path)
-    if spec is None or spec.loader is None:
-        return render_quickstart(load_manifest(manifest_path))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.render_quickstart(module.load_manifest())
+    return render_quickstart(load_manifest(manifest_path))
 
 
 def _render_routing_for_repo(target_root: Path) -> str:
-    script_path = target_root / ROOT_RENDER_SCRIPT_PATH
     manifest_path = target_root / PLANNING_MANIFEST_PATH
-    if not script_path.exists() or not manifest_path.exists():
+    if not manifest_path.exists():
         return render_routing(load_manifest(manifest_path))
-    spec = importlib.util.spec_from_file_location("render_agent_docs", script_path)
-    if spec is None or spec.loader is None:
-        return render_routing(load_manifest(manifest_path))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.render_routing(module.load_manifest())
+    return render_routing(load_manifest(manifest_path))
 
 
 def _generated_agent_file_expectations(target_root: Path) -> list[tuple[Path, str, str]]:

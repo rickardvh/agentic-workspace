@@ -73,14 +73,8 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
         "docs/contributor-playbook.md",
         "docs/maintainer-commands.md",
         ".agentic-workspace/planning",
-        "tools/AGENT_QUICKSTART.md",
-        "tools/AGENT_ROUTING.md",
     ]
-    assert planning_module["generated_artifacts"] == [
-        "tools/agent-manifest.json",
-        "tools/AGENT_QUICKSTART.md",
-        "tools/AGENT_ROUTING.md",
-    ]
+    assert planning_module["generated_artifacts"] == [".agentic-workspace/planning/agent-manifest.json"]
     assert planning_module["autodetects_installation"] is True
     assert planning_module["installed"] is None
     assert planning_module["dry_run_commands"] == ["adopt", "install", "uninstall", "upgrade"]
@@ -123,7 +117,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         role.get("surface") == "llms.txt" and role.get("role") == "external install/adopt handoff only"
         for role in payload["startup"]["surface_roles"]
     )
-    assert payload["startup"]["surface_roles"][3]["kind"] == "generated-helper"
+    assert payload["startup"]["surface_roles"][3]["kind"] == "managed"
     assert payload["startup"]["escalation_cues"][0]["boundary"] == "workspace"
     assert payload["startup"]["escalation_cues"][1]["boundary"] == "planning"
     assert payload["startup"]["top_level_capabilities"][2]["module"] == "memory"
@@ -223,7 +217,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "the change also touches generated maintainer docs" in workspace_lane["broaden_when"]
     assert "the narrow lane cannot prove the change on its own" in workspace_lane["escalate_when"]
     planning_surface_lane = next(lane for lane in payload["validation"]["lanes"] if lane["id"] == "planning_surfaces")
-    assert planning_surface_lane["enough_proof"] == ["uv run python scripts/check/check_planning_surfaces.py"]
+    assert planning_surface_lane["enough_proof"] == ["agentic-workspace doctor --target ./repo --modules planning --format json"]
     assert payload["validation"]["escalation_rule"] == (
         "Broaden validation only when the narrower lane stops proving the touched contract or the change crosses boundaries."
     )
@@ -511,8 +505,7 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
     assert "agentic-workspace config --target ./repo --format json" in text
     assert "agentic-workspace summary --format json" in text
     assert ".agentic-workspace/config.local.toml is present" in text
-    assert "tools/AGENT_QUICKSTART.md" in text
-    assert "tools/AGENT_ROUTING.md" in text
+    assert "Compact routing docs when present" not in text
 
 
 def test_external_agent_handoff_text_uses_configured_agent_instructions_filename() -> None:
@@ -1130,7 +1123,7 @@ def test_proof_command_reports_routes_and_current_health(tmp_path: Path, monkeyp
     payload = json.loads(capsys.readouterr().out)
     assert payload["canonical_doc"] == ".agentic-workspace/docs/proof-surfaces-contract.md"
     assert payload["command"] == "agentic-workspace proof --target ./repo --format json"
-    assert payload["default_routes"]["planning_surfaces"] == "uv run python scripts/check/check_planning_surfaces.py"
+    assert payload["default_routes"]["planning_surfaces"] == "agentic-workspace doctor --target ./repo --modules planning --format json"
     assert payload["current"]["installed_modules"] == ["planning"]
     assert payload["current"]["status_health"] == "healthy"
     assert payload["current"]["doctor_health"] == "healthy"
@@ -3407,7 +3400,7 @@ def test_doctor_real_init_reports_stale_planning_generated_residue(tmp_path: Pat
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["health"] == "healthy"
-    assert not any("tools/AGENT_ROUTING.md" in item for item in payload["needs_review"])
+    assert not any(".agentic-workspace/planning/agent-manifest.json" in item for item in payload["needs_review"])
 
 
 def test_preflight_command_active_only_returns_compact_planning_state(capsys) -> None:
@@ -3525,12 +3518,12 @@ def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, c
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["command"] == "upgrade"
-    assert payload["updated_managed"] == ["tools/AGENT_QUICKSTART.md"]
+    assert payload["updated_managed"] == [".agentic-workspace/planning/agent-manifest.json"]
     assert payload["preserved_existing"] == ["AGENTS.md"]
-    assert payload["generated_artifacts"] == ["tools/AGENT_QUICKSTART.md"]
+    assert payload["generated_artifacts"] == [".agentic-workspace/planning/agent-manifest.json"]
     assert payload["needs_review"] == ["README.md: inspect manually"]
     assert payload["warnings"] == []
-    assert payload["stale_generated_surfaces"] == ["tools/AGENT_QUICKSTART.md"]
+    assert payload["stale_generated_surfaces"] == [".agentic-workspace/planning/agent-manifest.json"]
 
 
 def test_upgrade_preserves_repo_owned_agents_content_outside_workspace_fence(tmp_path: Path, capsys) -> None:
@@ -3838,8 +3831,6 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
                     Path("docs/contributor-playbook.md"),
                     Path("docs/maintainer-commands.md"),
                     Path(".agentic-workspace/planning"),
-                    Path("tools/AGENT_QUICKSTART.md"),
-                    Path("tools/AGENT_ROUTING.md"),
                 )
                 if module_name == "planning"
                 else (
@@ -3849,11 +3840,7 @@ def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, o
                     Path(".agentic-workspace/memory"),
                 )
             ),
-            generated_artifacts=(
-                (Path("tools/agent-manifest.json"), Path("tools/AGENT_QUICKSTART.md"), Path("tools/AGENT_ROUTING.md"))
-                if module_name == "planning"
-                else ()
-            ),
+            generated_artifacts=((Path(".agentic-workspace/planning/agent-manifest.json"),) if module_name == "planning" else ()),
             command_args={
                 "install": ("target", "dry_run", "force"),
                 "adopt": ("target", "dry_run"),
@@ -3903,8 +3890,8 @@ def _descriptors_with_mixed_actions(target_root: Path) -> dict[str, cli.ModuleDe
             actions=[
                 FakeAction(
                     kind="would update",
-                    path=target_root / "tools" / "AGENT_QUICKSTART.md",
-                    detail="render quickstart from manifest",
+                    path=target_root / ".agentic-workspace" / "planning" / "agent-manifest.json",
+                    detail="refresh planning manifest from managed payload",
                 ),
                 FakeAction(kind="skipped", path=target_root / "AGENTS.md", detail="repo-owned surface left unchanged"),
                 FakeAction(kind="manual review", path=target_root / "README.md", detail="inspect manually"),
@@ -3928,8 +3915,8 @@ def _descriptors_with_mixed_actions(target_root: Path) -> dict[str, cli.ModuleDe
             selection_rank=10,
             include_in_full_preset=True,
             install_signals=(Path("TODO.md"), Path(".agentic-workspace/planning/execplans"), Path(".agentic-workspace/planning")),
-            workflow_surfaces=(Path("AGENTS.md"), Path("tools/AGENT_QUICKSTART.md")),
-            generated_artifacts=(Path("tools/AGENT_QUICKSTART.md"),),
+            workflow_surfaces=(Path("AGENTS.md"), Path(".agentic-workspace/planning/agent-manifest.json")),
+            generated_artifacts=(Path(".agentic-workspace/planning/agent-manifest.json"),),
             command_args={
                 "install": ("target", "dry_run", "force"),
                 "adopt": ("target", "dry_run"),

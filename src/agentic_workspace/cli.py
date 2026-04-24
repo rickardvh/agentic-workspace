@@ -1418,14 +1418,8 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 Path(".agentic-workspace/planning/execplans"),
                 Path("docs/contributor-playbook.md"),
                 Path("docs/maintainer-commands.md"),
-                Path("tools/AGENT_QUICKSTART.md"),
-                Path("tools/AGENT_ROUTING.md"),
             ),
-            generated_artifacts=(
-                Path("tools/agent-manifest.json"),
-                Path("tools/AGENT_QUICKSTART.md"),
-                Path("tools/AGENT_ROUTING.md"),
-            ),
+            generated_artifacts=(),
             startup_steps=(
                 "Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary`.",
                 "Read the active feature plan in `.agentic-workspace/planning/execplans/` when the TODO surface points there.",
@@ -1879,10 +1873,6 @@ def _external_agent_handoff_text(
             "Quick state check:",
             "- If .agentic-workspace/config.local.toml is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.",
             "- If `.agentic-workspace/config.local.toml` is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.",
-            "",
-            "Compact routing docs when present:",
-            "- `tools/AGENT_QUICKSTART.md`",
-            "- `tools/AGENT_ROUTING.md`",
             "",
             "Rules:",
             "- Keep this file lightweight.",
@@ -4285,8 +4275,8 @@ def _agent_configuration_system_payload() -> dict[str, Any]:
             {"surface": "AGENTS.md", "role": "ordinary startup adapter over structured substrate"},
             {"surface": "llms.txt", "role": "external install/adopt adapter over structured substrate"},
             {
-                "surface": "tools/AGENT_QUICKSTART.md and tools/AGENT_ROUTING.md",
-                "role": "generated helper adapters over structured substrate",
+                "surface": ".agentic-workspace/planning/agent-manifest.json",
+                "role": "planning package-owned generation source over structured substrate",
             },
         ],
         "selective_loading": {
@@ -4631,7 +4621,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "the trust question is planning-surface shape or drift only",
             ],
             "enough_proof": [
-                "uv run python scripts/check/check_planning_surfaces.py",
+                "agentic-workspace doctor --target ./repo --modules planning --format json",
             ],
             "broaden_when": [
                 "the same change also edits generated maintainer docs or workspace CLI behavior",
@@ -4724,18 +4714,11 @@ def _defaults_payload() -> dict[str, Any]:
                     "edit_rule": "keep bounded to external bootstrap and adopt flow",
                 },
                 {
-                    "surface": "tools/AGENT_QUICKSTART.md",
-                    "role": "generated compact helper",
-                    "owner": ".agentic-workspace/planning/agent-manifest.json",
-                    "kind": "generated-helper",
-                    "edit_rule": "rerender, do not edit manually",
-                },
-                {
-                    "surface": "tools/AGENT_ROUTING.md",
-                    "role": "generated routing helper",
-                    "owner": ".agentic-workspace/planning/agent-manifest.json",
-                    "kind": "generated-helper",
-                    "edit_rule": "rerender, do not edit manually",
+                    "surface": ".agentic-workspace/planning/agent-manifest.json",
+                    "role": "planning package-owned generation source",
+                    "owner": "planning package",
+                    "kind": "managed",
+                    "edit_rule": "update through the common CLI and package-managed installers",
                 },
             ],
             "external_handoff": {
@@ -5722,7 +5705,7 @@ def _setup_payload(
         orientation: dict[str, Any] = {
             "mode": "no-new-seed-surfaces-needed",
             "summary": "No new seed surfaces are needed; the repo already has the core setup orientation surfaces.",
-            "reason": "AGENTS.md, .agentic-workspace/planning/state.toml, tools/AGENT_QUICKSTART.md, tools/AGENT_ROUTING.md, and .agentic-workspace/memory/repo/index.md are already present.",
+            "reason": "AGENTS.md, .agentic-workspace/planning/state.toml, .agentic-workspace/planning/agent-manifest.json, and .agentic-workspace/memory/repo/index.md are already present.",
         }
         next_action = {
             "summary": "No new seed surfaces needed",

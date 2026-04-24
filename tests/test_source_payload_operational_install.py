@@ -31,9 +31,6 @@ def _write_root_surfaces(tmp_path: Path) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "README.md", "# Execplans\n")
     _write(tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json", "{}\n")
-    _write(tmp_path / "tools" / "agent-manifest.json", "{}\n")
-    _write(tmp_path / "tools" / "AGENT_QUICKSTART.md", "# Quickstart\n")
-    _write(tmp_path / "tools" / "AGENT_ROUTING.md", "# Routing\n")
 
 
 def test_boundary_checker_passes_for_clean_root_install(tmp_path: Path) -> None:

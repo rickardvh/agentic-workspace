@@ -374,7 +374,7 @@ def test_maintainer_surface_checker_includes_boundary_warnings(tmp_path: Path) -
     _write_planning_surfaces(tmp_path)
     _write_generated_agent_surfaces(tmp_path)
     _write_docs_surfaces(tmp_path)
-    _write(tmp_path / "packages" / "planning" / "tools" / "agent-manifest.json", "{}")
+    _write(tmp_path / "packages" / "planning" / ".agentic-workspace" / "planning" / "state.toml", "# cloned planning state")
 
     warnings = mod.gather_maintainer_warnings(repo_root=tmp_path)
 

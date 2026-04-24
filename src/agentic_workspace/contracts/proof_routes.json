@@ -6,7 +6,7 @@
     "workspace_proof": "agentic-workspace proof --target ./repo --format json",
     "workspace_status": "agentic-workspace status --target ./repo",
     "workspace_doctor": "agentic-workspace doctor --target ./repo",
-    "planning_surfaces": "uv run python scripts/check/check_planning_surfaces.py",
+    "planning_surfaces": "agentic-workspace doctor --target ./repo --modules planning --format json",
     "maintainer_surfaces": "make maintainer-surfaces",
     "source_payload_install": "uv run pytest tests/test_source_payload_operational_install.py",
     "planning_payload": "uv run agentic-planning-bootstrap upgrade --target .",
