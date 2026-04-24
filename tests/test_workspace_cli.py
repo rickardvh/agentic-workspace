@@ -107,11 +107,14 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["startup"]["default_canonical_agent_instructions_file"] == "AGENTS.md"
     assert payload["startup"]["supported_agent_instructions_files"] == ["AGENTS.md", "GEMINI.md"]
     assert payload["startup"]["tiny_safe_model"]["entrypoint"] == "AGENTS.md"
-    assert payload["startup"]["tiny_safe_model"]["first_compact_queries"][0] == "agentic-workspace defaults --section startup --format json"
+    assert payload["startup"]["tiny_safe_model"]["first_compact_queries"][0] == "agentic-workspace preflight --format json"
+    assert payload["startup"]["tiny_safe_model"]["first_compact_queries"][1] == "agentic-workspace defaults --section startup --format json"
     assert payload["startup"]["tiny_safe_model"]["deeper_reads_become_valid_when"][0].startswith("the active summary points")
-    assert payload["startup"]["first_queries"][0]["command"] == "agentic-workspace defaults --section startup --format json"
-    assert payload["startup"]["first_queries"][1]["field"] == "workspace.agent_instructions_file"
-    assert payload["startup"]["first_queries"][2]["field"] == "planning_record"
+    assert payload["startup"]["first_queries"][0]["command"] == "agentic-workspace preflight --format json"
+    assert payload["startup"]["first_queries"][0]["field"] == "startup_guidance"
+    assert payload["startup"]["first_queries"][1]["command"] == "agentic-workspace defaults --section startup --format json"
+    assert payload["startup"]["first_queries"][2]["field"] == "workspace.agent_instructions_file"
+    assert payload["startup"]["first_queries"][3]["field"] == "planning_record"
     assert payload["startup"]["surface_roles"][0]["surface"] == "AGENTS.md"
     assert any(
         role.get("surface") == "llms.txt" and role.get("role") == "external install/adopt handoff only"
@@ -431,6 +434,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["startup"]["workflow_recovery"] == [
         (
             "When startup, first-contact routing, or recovery is unclear, prefer "
+            "`agentic-workspace preflight --format json`, "
             "`agentic-workspace defaults --section startup --format json`, "
             "`agentic-workspace config --target ./repo --format json`, and "
             "`agentic-workspace summary --format json` before broader "
@@ -502,6 +506,7 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
     assert "repository that contains this file" in text
     assert "Target repository:" in text
     assert "Default startup path:" in text
+    assert "agentic-workspace preflight --format json" in text
     assert "agentic-workspace defaults --section startup --format json" in text
     assert "Do not assume agentic-workspace is already installed" in text
     assert "agentic-workspace config --target ./repo --format json" in text
@@ -513,12 +518,14 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
 def test_external_agent_handoff_text_demotes_broad_routing_until_compact_startup_fails() -> None:
     text = cli._external_agent_handoff_text(selected_modules=["planning"])
 
+    preflight_index = text.index("agentic-workspace preflight --format json")
     startup_index = text.index("agentic-workspace defaults --section startup --format json")
     config_index = text.index("agentic-workspace config --target ./repo --format json")
     summary_index = text.index("agentic-workspace summary --format json")
     routing_index = text.index(".agentic-workspace/docs/routing-contract.md")
     planning_index = text.index(".agentic-workspace/planning/state.toml")
 
+    assert preflight_index < routing_index
     assert startup_index < routing_index
     assert config_index < routing_index
     assert summary_index < planning_index
@@ -2634,6 +2641,7 @@ def test_install_real_init_creates_combined_memory_and_planning_surfaces(tmp_pat
     agents_text = (target / "AGENTS.md").read_text(encoding="utf-8")
     assert "<!-- agentic-workspace:workflow:start -->" in agents_text
     assert "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules." in agents_text
+    assert "agentic-workspace preflight --format json" in agents_text
     assert "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself." in agents_text
     assert "<!-- agentic-memory:workflow:start -->" not in agents_text
     assert "<PROJECT_NAME>" not in agents_text
@@ -4179,9 +4187,10 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     This test validates issue #255 (startup discoverability) by simulating the path
     a generic agent would take:
     1. Read AGENTS.md router
-    2. Run agentic-workspace defaults --section startup
-    3. Run agentic-workspace config to get resolved posture
-    4. Run agentic-workspace summary to get active state
+    2. Run agentic-workspace preflight for combined compact takeover context
+    3. Run agentic-workspace defaults --section startup for ordered startup routing
+    4. Run agentic-workspace config to get resolved posture
+    5. Run agentic-workspace summary to get active state
     """
     target = tmp_path / "repo"
     target.mkdir()
@@ -4199,27 +4208,37 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     tiny_safe = startup_answer.get("tiny_safe_model", {})
     assert tiny_safe.get("entrypoint") == "AGENTS.md"
     queries = tiny_safe.get("first_compact_queries", [])
+    assert any("agentic-workspace preflight --format json" in q for q in queries)
     assert any("agentic-workspace defaults --section startup" in q for q in queries)
     assert any("agentic-workspace config --target" in q for q in queries)
     assert any("agentic-workspace summary" in q for q in queries)
     # Ensure NO stale bootstrap references in startup queries (most critical part)
     assert not any("agentic-planning-bootstrap summary" in q for q in queries)
 
-    # Step 2: config command should work and be reasonably compact
+    # Step 2: preflight should provide the bundled compact takeover context
+    assert cli.main(["preflight", "--target", str(target), "--format", "json"]) == 0
+    preflight_output = capsys.readouterr().out
+    preflight_payload = json.loads(preflight_output)
+    assert preflight_payload.get("kind") == "preflight-response/v1"
+    assert "startup_guidance" in preflight_payload
+    assert "resolved_config" in preflight_payload
+    assert "active_planning_state" in preflight_payload
+
+    # Step 3: config command should work and be reasonably compact
     assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
     config_output = capsys.readouterr().out
     config_payload = json.loads(config_output)
     assert "workspace" in config_payload
     assert "mixed_agent" in config_payload
 
-    # Step 3: summary command should work
+    # Step 4: summary command should work
     assert cli.main(["summary", "--format", "json"]) == 0
     summary_output = capsys.readouterr().out
     summary_payload = json.loads(summary_output)
     assert summary_payload.get("kind") == "planning-summary/v1"
     assert summary_payload.get("profile") == "compact"
 
-    # Step 4: report command should work (though larger output)
+    # Step 5: report command should work (though larger output)
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
     report_output = capsys.readouterr().out
     # Don't parse full report, just verify it produces output

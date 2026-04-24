@@ -11,6 +11,7 @@ Target repository:
 Default startup path:
 - Read AGENTS.md first.
 - Read `AGENTS.md` first.
+- Then run `agentic-workspace preflight --format json` when you want startup guidance, resolved config, and active state in one compact answer.
 - Then run `agentic-workspace defaults --section startup --format json` for the ordered compact startup route.
 - Run `agentic-workspace config --target ./repo --format json` when the configured startup entrypoint, posture, or workflow obligations matter.
 - Run `agentic-workspace summary --format json` when active planning or ownership state matters.

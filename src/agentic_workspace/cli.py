@@ -1610,11 +1610,12 @@ def _workspace_agents_template(
         "## Startup",
         "",
         f"1. Read `{agent_instructions_file}`.",
-        f"2. Use `{cli_invoke} defaults --section startup --format json` when startup order or first-contact routing is the question.",
-        f"3. Use `{cli_invoke} config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.",
-        f"4. Use `{cli_invoke} summary --format json` when active planning or ownership state is the question.",
-        "5. Open raw planning state, an active execplan, or deeper routing docs only when those compact answers point there.",
-        "6. Read package-local `AGENTS.md` only for the package being edited.",
+        f"2. Use `{cli_invoke} preflight --format json` when you want startup guidance, resolved config, and active state in one compact answer.",
+        f"3. Use `{cli_invoke} defaults --section startup --format json` when startup order or first-contact routing is the question.",
+        f"4. Use `{cli_invoke} config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.",
+        f"5. Use `{cli_invoke} summary --format json` when only active planning or ownership state is the question.",
+        "6. Open raw planning state, an active execplan, or deeper routing docs only when those compact answers point there.",
+        "7. Read package-local `AGENTS.md` only for the package being edited.",
     ]
     if startup_steps or sources_of_truth:
         lines.extend(["", "## Module Notes", ""])
@@ -1850,6 +1851,7 @@ def _external_agent_handoff_text(
         "Default startup path:",
         f"- Read {agent_instructions_file} first.",
         f"- Read `{agent_instructions_file}` first.",
+        "- Then run `agentic-workspace preflight --format json` when you want startup guidance, resolved config, and active state in one compact answer.",
         "- Then run `agentic-workspace defaults --section startup --format json` for the ordered compact startup route.",
         "- Run `agentic-workspace config --target ./repo --format json` when the configured startup entrypoint, posture, or workflow obligations matter.",
         "- Run `agentic-workspace summary --format json` when active planning or ownership state matters.",
@@ -4721,14 +4723,16 @@ def _defaults_payload() -> dict[str, Any]:
             "default_cli_invoke": DEFAULT_CLI_INVOKE,
             "canonical_doc": ".agentic-workspace/docs/minimum-operating-model.md",
             "primary": [
+                "For one-call takeover context, run `agentic-workspace preflight --format json`.",
                 "Read the configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`).",
                 "Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary`.",
                 "Read the active execplan only when `state.toml` points to one.",
             ],
             "tiny_safe_model": {
-                "summary": "Start from one repo entrypoint, one compact state query path, and conditional deeper reads.",
+                "summary": "Start from one repo entrypoint, one cheap takeover query, and conditional deeper reads.",
                 "entrypoint": "AGENTS.md",
                 "first_compact_queries": [
+                    "agentic-workspace preflight --format json",
                     "agentic-workspace defaults --section startup --format json",
                     "agentic-workspace config --target ./repo --format json",
                     "agentic-workspace summary --format json",
@@ -4742,6 +4746,12 @@ def _defaults_payload() -> dict[str, Any]:
             "default_canonical_agent_instructions_file": DEFAULT_AGENT_INSTRUCTIONS_FILE,
             "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
             "first_queries": [
+                {
+                    "question": "What is the cheapest one-call takeover path?",
+                    "command": "agentic-workspace preflight --format json",
+                    "field": "startup_guidance",
+                    "why": "preflight bundles startup guidance, resolved config, and active state into one compact answer",
+                },
                 {
                     "question": "What is the ordinary repo startup path?",
                     "command": "agentic-workspace defaults --section startup --format json",
@@ -4859,6 +4869,10 @@ def _defaults_payload() -> dict[str, Any]:
                     "`AGENTS.md` or another supported startup file already present."
                 ),
                 (
+                    "If you need startup guidance plus live state together, prefer "
+                    "`agentic-workspace preflight --format json` before running multiple compact queries or rereading repo prose."
+                ),
+                (
                     "If the question is active planning recovery rather than startup order, "
                     "prefer `agentic-workspace summary --format json` before raw "
                     "planning state or execplan prose."
@@ -4867,6 +4881,7 @@ def _defaults_payload() -> dict[str, Any]:
             "workflow_recovery": [
                 (
                     "When startup, first-contact routing, or recovery is unclear, prefer "
+                    "`agentic-workspace preflight --format json`, "
                     "`agentic-workspace defaults --section startup --format json`, "
                     "`agentic-workspace config --target ./repo --format json`, and "
                     "`agentic-workspace summary --format json` before broader "
