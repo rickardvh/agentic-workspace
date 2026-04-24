@@ -351,6 +351,15 @@
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#291",
+      "title": "[Workspace]: Delegate system-intent extraction to agents",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
     }
   ]
 }

@@ -369,13 +369,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     system_intent_parser = subparsers.add_parser(
         "system-intent",
-        help="Show or refresh the workspace-owned mirrored system-intent contract.",
+        help="Show or refresh the workspace-owned compiled system-intent declaration.",
     )
     system_intent_parser.add_argument("--target", help="Optional repository path used to inspect system intent.")
     system_intent_parser.add_argument(
         "--sync",
         action="store_true",
-        help="Refresh source metadata and create the mirrored system-intent contract if it is missing.",
+        help="Refresh source discovery metadata and create the compiled system-intent declaration if it is missing.",
     )
     _add_format_argument(system_intent_parser)
 
@@ -3086,7 +3086,7 @@ def _agent_configuration_report_payload(*, config: WorkspaceConfig, installed_mo
         ],
         "adapter_surfaces": substrate["adapter_surfaces"],
         "selective_loading": substrate["selective_loading"],
-        "current_system_intent_role": "workspace-owned mirrored intent contract consumed operationally, with repo-owned prose sources remaining directional inputs",
+        "current_system_intent_role": "workspace-owned compiled intent declaration consumed operationally, with repo-owned prose remaining unconstrained directional evidence",
     }
 
 
@@ -3374,7 +3374,7 @@ def _sync_system_intent_mirror(*, target_root: Path, config: WorkspaceConfig, dr
             {
                 "kind": _write_action_kind(dry_run=dry_run, existing=existing_text),
                 "path": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
-                "detail": "refresh system-intent source metadata while preserving the interpreted mirror fields",
+                "detail": "refresh system-intent source metadata while preserving the interpreted declaration fields",
             }
         )
     else:
@@ -3382,7 +3382,7 @@ def _sync_system_intent_mirror(*, target_root: Path, config: WorkspaceConfig, dr
             {
                 "kind": "current",
                 "path": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
-                "detail": "system-intent mirror already current for the declared sources",
+                "detail": "system-intent declaration metadata already current for the declared sources",
             }
         )
     return actions, _load_system_intent_mirror(target_root=target_root, config=config)
@@ -3393,8 +3393,8 @@ def _system_intent_report_payload(*, target_root: Path, config: WorkspaceConfig)
     return {
         "canonical_doc": ".agentic-workspace/docs/system-intent-contract.md",
         "rule": (
-            "Keep a workspace-owned mirrored intent contract inside `.agentic-workspace/` so package operations can consume "
-            "normalized system intent without imposing a host-repo source-file format."
+            "Keep a workspace-owned compiled intent declaration inside `.agentic-workspace/` so package operations can consume "
+            "normalized system intent without imposing a host-repo source-file format or pretending source prose maps mechanically into schema."
         ),
         "source_declaration_surface": ".agentic-workspace/config.toml [system_intent]",
         "mirror_surface": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
@@ -3649,6 +3649,7 @@ def _system_intent_payload() -> dict[str, Any]:
         "mirror_surface": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
         "workflow_surface": WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(),
         "sync_command": "agentic-workspace system-intent --target ./repo --sync --format json",
+        "sync_behavior": "Refresh source hints and source-record metadata only; interpreted intent fields remain agent-owned and human-correctable.",
         "mirror_fields": [
             "summary",
             "governing_intents",
@@ -7066,7 +7067,7 @@ def _system_intent_command_payload(*, target_root: Path, config: WorkspaceConfig
         "actions": actions,
         "next_action": (
             {
-                "summary": "Refresh or refine the mirrored system-intent declaration",
+                "summary": "Refresh source discovery metadata or refine the compiled system-intent declaration",
                 "commands": [
                     "agentic-workspace system-intent --target ./repo --sync --format json",
                     f"open {WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix()} and {WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix()}",
@@ -7074,7 +7075,7 @@ def _system_intent_command_payload(*, target_root: Path, config: WorkspaceConfig
             }
             if mirror.get("status") != "present" or mirror.get("needs_review", True)
             else {
-                "summary": "Mirrored system intent is present; refine it only when repo direction changed materially",
+                "summary": "Compiled system intent is present; refresh metadata on source changes and refine interpretation only when repo direction changed materially",
                 "commands": [
                     "agentic-workspace system-intent --target ./repo --sync --format json",
                 ],
@@ -7092,15 +7093,15 @@ def _emit_system_intent(*, format_name: str, target_root: Path, config: Workspac
     print(f"Command: {payload['command']}")
     print(f"Sync requested: {payload['sync_requested']}")
     print(f"Source declaration surface: {payload['source_declaration_surface']}")
-    print(f"Mirror surface: {payload['mirror_surface']}")
+    print(f"Compiled declaration surface: {payload['mirror_surface']}")
     print(f"Workflow surface: {payload['workflow_surface']}")
     declaration = payload["source_declaration"]
     print(f"Sources: {', '.join(declaration['sources']) or 'none'} ({declaration['sources_source']})")
     print(f"Preferred source: {declaration['preferred_source'] or 'none'} ({declaration['preferred_source_source']})")
     mirror = payload["mirror"]
-    print(f"Mirror status: {mirror.get('status', 'unknown')}")
+    print(f"Compiled declaration status: {mirror.get('status', 'unknown')}")
     if mirror.get("summary"):
-        print(f"Mirror summary: {mirror['summary']}")
+        print(f"Compiled declaration summary: {mirror['summary']}")
     if payload["actions"]:
         print("Actions:")
         for action in payload["actions"]:

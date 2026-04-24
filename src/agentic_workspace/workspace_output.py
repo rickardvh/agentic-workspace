@@ -162,7 +162,7 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
     if isinstance(system_intent_mirror, dict):
         mirror = system_intent_mirror.get("mirror", {})
         if isinstance(mirror, dict):
-            print("System intent mirror:")
+            print("System intent declaration:")
             print(f"- surface: {system_intent_mirror.get('mirror_surface', '')}")
             print(f"- status: {mirror.get('status', '')}")
             if mirror.get("summary"):

@@ -122,7 +122,7 @@ surface = ".agentic-workspace/system-intent/intent.toml"
 owner = "workspace"
 ownership = "module_managed"
 authority = "primary"
-summary = "Workspace-owned mirrored system-intent contract consumed by package operations."
+summary = "Workspace-owned compiled system-intent declaration consumed by package operations."
 
 [[authority_surfaces]]
 concern = "planning-install-tree"

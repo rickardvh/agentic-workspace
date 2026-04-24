@@ -55,8 +55,8 @@ commands = [
 review_hint = "Open raw planning state, an active execplan, or deeper routing docs only when the compact answers point there."
 
 [workflow_obligations.system_intent_refresh]
-summary = "Refresh the declared system-intent source and mirrored interpretation when higher-level direction changes materially."
+summary = "Refresh declared system-intent sources and the compiled interpretation when higher-level direction changes materially."
 stage = "review"
 scope_tags = ["workspace", "system-intent"]
 commands = ["uv run agentic-workspace system-intent --target . --sync --format json"]
-review_hint = "Treat system intent as directional input and keep the mirror aligned without turning it into active task state."
+review_hint = "Treat system intent as directional input and keep the compiled declaration aligned without turning it into active task state."

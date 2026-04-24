@@ -1,18 +1,28 @@
 # System Intent Contract
 
 This contract keeps the larger intended outcome visible even when work is executed in smaller bounded slices.
-`SYSTEM_INTENT.md` is the repo's directional compass for that larger outcome; checked-in planning still owns active execution state, bounded slices, and continuation routing.
+Repo-owned prose such as `SYSTEM_INTENT.md`, `README.md`, `AGENTS.md`, `llms.txt`, design docs, or issue context may provide evidence for that direction; checked-in planning still owns active execution state, bounded slices, and continuation routing.
 
-## Workspace-Owned Mirror
+## Workspace-Owned Declaration
 
-The host repo does not need to author system intent in a package-owned schema.
+The host repo does not need to author system intent in a package-owned schema, and the workspace does not assume one authoritative source file format.
 Instead:
 
 - repo-owned intent sources are declared in `.agentic-workspace/config.toml [system_intent]`
-- workspace stores the consumed mirrored declaration in `.agentic-workspace/system-intent/intent.toml`
-- `.agentic-workspace/system-intent/WORKFLOW.md` tells agents how to refresh and refine that mirror
+- workspace stores the consumed compiled declaration in `.agentic-workspace/system-intent/intent.toml`
+- `.agentic-workspace/system-intent/WORKFLOW.md` tells agents how to refresh source metadata and refine that declaration
 
 This keeps the consumed declaration inside the workspace home while leaving host-repo source authoring unconstrained.
+`agentic-workspace system-intent --target ./repo --sync --format json` refreshes source discovery and metadata only. It does not mechanically rewrite interpreted fields from repo prose.
+
+## Interpretation Boundary
+
+- repo-owned prose remains unconstrained evidence
+- `.agentic-workspace/system-intent/intent.toml` remains a normalized, reviewable, human-correctable declaration
+- agents perform conservative interpretation
+- humans retain easy inspection and correction authority
+
+Low-confidence interpretation should remain visible through `confidence`, `needs_review`, and `open_questions`.
 
 ## Core Rule
 

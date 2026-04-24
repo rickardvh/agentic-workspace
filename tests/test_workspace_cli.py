@@ -644,6 +644,20 @@ def test_config_command_reports_system_intent_source_declaration(tmp_path: Path,
     assert payload["workspace"]["system_intent"]["mirror_path"] == ".agentic-workspace/system-intent/intent.toml"
 
 
+def test_config_command_autodetects_conservative_system_intent_sources_when_no_explicit_source_declared(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "README.md").write_text("# README\n", encoding="utf-8")
+    (tmp_path / "AGENTS.md").write_text("# Repo Instructions\n", encoding="utf-8")
+    (tmp_path / "llms.txt").write_text("Repo direction hint\n", encoding="utf-8")
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workspace"]["system_intent"]["sources"] == ["README.md", "AGENTS.md", "llms.txt"]
+    assert payload["workspace"]["system_intent"]["sources_source"] == "autodetected-existing"
+    assert payload["workspace"]["system_intent"]["preferred_source"] == "README.md"
+
+
 def test_config_command_autodetects_existing_supported_agent_instructions_file(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / "GEMINI.md").write_text("# Gemini\n")
@@ -983,19 +997,20 @@ def test_defaults_system_intent_section_selector_returns_compact_contract_answer
     assert payload["answer"]["canonical_doc"] == ".agentic-workspace/docs/system-intent-contract.md"
     assert payload["answer"]["source_declaration_surface"] == ".agentic-workspace/config.toml [system_intent]"
     assert payload["answer"]["mirror_surface"] == ".agentic-workspace/system-intent/intent.toml"
+    assert payload["answer"]["sync_behavior"].startswith("Refresh source hints and source-record metadata only")
     assert payload["answer"]["authority_ladder"][1]["layer"] == "delegated judgment and intent continuity"
     assert "agentic-workspace summary --format json" in payload["answer"]["recoverability"]["ask_first"]
     assert ".agentic-workspace/docs/system-intent-contract.md" in payload["refs"]
 
 
-def test_system_intent_command_sync_creates_workspace_owned_mirror(tmp_path: Path, capsys) -> None:
+def test_system_intent_command_sync_refreshes_source_metadata_without_mechanical_extraction(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace").mkdir(exist_ok=True)
     (tmp_path / ".agentic-workspace/config.toml").write_text(
-        'schema_version = 1\n\n[system_intent]\nsources = ["SYSTEM_INTENT.md"]\npreferred_source = "SYSTEM_INTENT.md"\n',
+        'schema_version = 1\n\n[system_intent]\nsources = ["README.md"]\npreferred_source = "README.md"\n',
         encoding="utf-8",
     )
-    (tmp_path / "SYSTEM_INTENT.md").write_text("# System Intent\n\nKeep the system quiet.\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text("# Product Direction\n\nKeep the system quiet.\n", encoding="utf-8")
 
     assert cli.main(["system-intent", "--target", str(tmp_path), "--sync", "--format", "json"]) == 0
 
@@ -1004,8 +1019,11 @@ def test_system_intent_command_sync_creates_workspace_owned_mirror(tmp_path: Pat
     assert payload["mirror"]["status"] == "present"
     assert (tmp_path / ".agentic-workspace/system-intent/intent.toml").exists()
     mirror_text = (tmp_path / ".agentic-workspace/system-intent/intent.toml").read_text(encoding="utf-8")
-    assert 'preferred_source = "SYSTEM_INTENT.md"' in mirror_text
+    assert 'preferred_source = "README.md"' in mirror_text
+    assert 'summary = ""' in mirror_text
+    assert "needs_review = true" in mirror_text
     assert "[[source_records]]" in mirror_text
+    assert 'path = "README.md"' in mirror_text
 
 
 def test_setup_command_reports_no_new_seed_surfaces_for_mature_repo(tmp_path: Path, capsys) -> None:

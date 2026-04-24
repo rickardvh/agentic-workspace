@@ -17,6 +17,14 @@ LEGACY_WORKSPACE_DELEGATION_OUTCOMES_PATH = Path("agentic-workspace.delegation-o
 WORKSPACE_SYSTEM_INTENT_ROOT = Path(".agentic-workspace/system-intent")
 WORKSPACE_SYSTEM_INTENT_MIRROR_PATH = WORKSPACE_SYSTEM_INTENT_ROOT / "intent.toml"
 WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH = WORKSPACE_SYSTEM_INTENT_ROOT / "WORKFLOW.md"
+SYSTEM_INTENT_SOURCE_DISCOVERY_CANDIDATES = (
+    Path("SYSTEM_INTENT.md"),
+    Path("README.md"),
+    Path("AGENTS.md"),
+    Path("llms.txt"),
+    Path("docs/system-intent.md"),
+    Path("docs/product-direction.md"),
+)
 WORKSPACE_EXTERNAL_AGENT_PATH = Path("llms.txt")
 WORKSPACE_BOOTSTRAP_HANDOFF_PATH = Path(".agentic-workspace/bootstrap-handoff.md")
 WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH = Path(".agentic-workspace/bootstrap-handoff.json")
@@ -379,15 +387,7 @@ def resolve_system_intent_declaration(
         sources = configured_sources
         sources_source = "repo-config"
     else:
-        detected_sources = tuple(
-            path.as_posix()
-            for path in (
-                Path("SYSTEM_INTENT.md"),
-                Path("docs/system-intent.md"),
-                Path("docs/product-direction.md"),
-            )
-            if (target_root / path).exists()
-        )
+        detected_sources = tuple(path.as_posix() for path in SYSTEM_INTENT_SOURCE_DISCOVERY_CANDIDATES if (target_root / path).exists())
         sources = detected_sources
         sources_source = "autodetected-existing" if detected_sources else "product-default"
 
@@ -748,10 +748,21 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             update_modules=defaults,
             workflow_obligations=(),
             system_intent=SystemIntentDeclaration(
-                sources=tuple(path.as_posix() for path in (Path("SYSTEM_INTENT.md"),) if (effective_root / path).exists()),
-                sources_source="autodetected-existing" if (effective_root / "SYSTEM_INTENT.md").exists() else "product-default",
-                preferred_source="SYSTEM_INTENT.md" if (effective_root / "SYSTEM_INTENT.md").exists() else None,
-                preferred_source_source="autodetected-existing" if (effective_root / "SYSTEM_INTENT.md").exists() else "product-default",
+                sources=tuple(path.as_posix() for path in SYSTEM_INTENT_SOURCE_DISCOVERY_CANDIDATES if (effective_root / path).exists()),
+                sources_source=(
+                    "autodetected-existing"
+                    if any((effective_root / path).exists() for path in SYSTEM_INTENT_SOURCE_DISCOVERY_CANDIDATES)
+                    else "product-default"
+                ),
+                preferred_source=next(
+                    (path.as_posix() for path in SYSTEM_INTENT_SOURCE_DISCOVERY_CANDIDATES if (effective_root / path).exists()),
+                    None,
+                ),
+                preferred_source_source=(
+                    "autodetected-existing"
+                    if any((effective_root / path).exists() for path in SYSTEM_INTENT_SOURCE_DISCOVERY_CANDIDATES)
+                    else "product-default"
+                ),
             ),
             local_override=local_override,
             warnings=tuple(warnings),
