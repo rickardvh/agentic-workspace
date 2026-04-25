@@ -468,6 +468,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     review_template_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.md"
     review_record_template_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.review.json"
     intake_doc_path = tmp_path / ".agentic-workspace" / "planning" / "upstream-task-intake.md"
+    refinement_doc_path = tmp_path / ".agentic-workspace" / "planning" / "pre-ingestion-refinement.md"
 
     assert (tmp_path / "AGENTS.md").exists()
     assert (tmp_path / ".agentic-workspace/planning/state.toml").exists()
@@ -484,6 +485,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert review_record_template_path.exists()
     assert not review_template_path.exists()
     assert intake_doc_path.exists()
+    assert refinement_doc_path.exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "TEMPLATE.plan.json").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert not (tmp_path / ".agentic-workspace" / "planning" / "scripts").exists()
@@ -510,6 +512,7 @@ def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path(".agentic-workspace/planning/reviews/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/upstream-task-intake.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path(".agentic-workspace/planning/pre-ingestion-refinement.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/docs/routing-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/UPGRADE-SOURCE.toml") in PLANNING_LOWER_STABILITY_HELPER_FILES
     assert Path("tools/AGENT_QUICKSTART.md") not in REQUIRED_PAYLOAD_FILES
