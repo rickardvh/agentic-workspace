@@ -661,6 +661,16 @@ def main(argv: list[str] | None = None) -> int:
         _emit_payload(payload=payload, format_name=args.format)
         return 0
 
+    if args.command == "implement":
+        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+        _validate_target_root(command_name="implement", target_root=target_root)
+        payload = _implement_payload(
+            target_root=target_root,
+            changed_paths=list(getattr(args, "changed", []) or []),
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
+
     if args.command == "preflight":
         target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
         _validate_target_root(command_name="preflight", target_root=target_root)
@@ -1085,6 +1095,13 @@ def _workspace_agents_template(
     lines = [
         "# Agent Instructions",
         "",
+        "Authority marker:",
+        "",
+        "- authority: adapter",
+        "- canonical_source: `.agentic-workspace/config.toml` and `agentic-workspace start --target . --format json`",
+        "- safe_to_edit: true",
+        "- refresh_command: null",
+        "",
         WORKSPACE_POINTER_BLOCK,
         "",
         "Keep this file thin. Treat it as the repo-owned startup adapter over the structured workspace surfaces under `.agentic-workspace/`.",
@@ -1321,6 +1338,13 @@ def _external_agent_handoff_text(
     artifact_profile = _workflow_artifact_profile_payload(workflow_artifact_profile)
     lines = [
         "# Agent Entrypoint Router",
+        "",
+        "Authority marker:",
+        "",
+        "- authority: generated-adapter",
+        "- canonical_source: `src/agentic_workspace/cli.py:_external_agent_handoff_text`",
+        "- safe_to_edit: false",
+        "- refresh_command: `make maintainer-surfaces`",
         "",
         "This file is the agent entrypoint router.",
         "Treat it as a lightweight compatibility adapter over the structured workspace config, not as the primary authority.",
@@ -2588,6 +2612,103 @@ def _package_boundary_payload(*, target_root: Path) -> dict[str, Any]:
     }
 
 
+def _authority_marker_for_path(path_text: str) -> dict[str, Any]:
+    normalized = _normalize_changed_paths([path_text])[0] if _normalize_changed_paths([path_text]) else path_text
+    if normalized == "AGENTS.md":
+        return {
+            "path": normalized,
+            "authority": "adapter",
+            "canonical_source": ".agentic-workspace/config.toml + agentic-workspace start --format json",
+            "safe_to_edit": True,
+            "refresh_command": None,
+        }
+    if normalized == "llms.txt":
+        return {
+            "path": normalized,
+            "authority": "generated-adapter",
+            "canonical_source": "src/agentic_workspace/cli.py:_external_agent_handoff_text",
+            "safe_to_edit": False,
+            "refresh_command": "make maintainer-surfaces",
+        }
+    if normalized.startswith(".agentic-workspace/planning/"):
+        return {
+            "path": normalized,
+            "authority": "canonical",
+            "canonical_source": normalized,
+            "safe_to_edit": True,
+            "refresh_command": "uv run python scripts/check/check_planning_surfaces.py",
+        }
+    if normalized.startswith(".agentic-workspace/memory/"):
+        return {
+            "path": normalized,
+            "authority": "canonical",
+            "canonical_source": normalized,
+            "safe_to_edit": True,
+            "refresh_command": None,
+        }
+    if "/bootstrap/" in normalized or normalized.endswith("/bootstrap"):
+        package_root = "/".join(normalized.split("/")[:2]) if normalized.startswith("packages/") else "package"
+        return {
+            "path": normalized,
+            "authority": "payload",
+            "canonical_source": f"{package_root}/src/",
+            "safe_to_edit": False,
+            "refresh_command": "sync package payload from source before claiming completion",
+        }
+    if normalized.startswith("src/agentic_workspace/") or normalized.startswith("packages/"):
+        return {
+            "path": normalized,
+            "authority": "source",
+            "canonical_source": normalized,
+            "safe_to_edit": True,
+            "refresh_command": None,
+        }
+    if normalized.startswith(".agentic-workspace/"):
+        return {
+            "path": normalized,
+            "authority": "managed",
+            "canonical_source": ".agentic-workspace/OWNERSHIP.toml",
+            "safe_to_edit": True,
+            "refresh_command": "agentic-workspace ownership --target . --path <path> --format json",
+        }
+    return {
+        "path": normalized,
+        "authority": "repo-owned",
+        "canonical_source": normalized,
+        "safe_to_edit": True,
+        "refresh_command": None,
+    }
+
+
+def _boundary_warning_for_path(path_text: str) -> dict[str, Any]:
+    marker = _authority_marker_for_path(path_text)
+    normalized = str(marker["path"])
+    warning: str | None = None
+    if marker["authority"] == "payload":
+        warning = (
+            "Package bootstrap payload is not live authority; reflect durable behavior in package source and sync payload before closeout."
+        )
+    elif normalized.startswith(".agentic-workspace/") and marker["authority"] not in {"canonical", "managed"}:
+        warning = "Installed workspace surfaces are shared operational state; verify ownership before editing."
+    elif normalized.startswith("packages/") and "/src/" in normalized:
+        warning = "Package source edits may need matching payload or installed-surface proof before closeout."
+    elif marker["authority"] == "generated-adapter":
+        warning = "Generated adapter content should be refreshed from its canonical source rather than hand-edited."
+    return {
+        "path": normalized,
+        "authority": marker["authority"],
+        "warning": warning,
+        "requires_attention": warning is not None,
+    }
+
+
+def _authority_markers_for_startup(*, active_execplan: str | None = None) -> list[dict[str, Any]]:
+    paths = ["AGENTS.md", "llms.txt", ".agentic-workspace/WORKFLOW.md", ".agentic-workspace/OWNERSHIP.toml"]
+    if active_execplan:
+        paths.append(active_execplan)
+    return [_authority_marker_for_path(path) for path in paths]
+
+
 def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
     preflight = _run_preflight_command(target_root=target_root)
     active_state = preflight.get("active_planning_state", {})
@@ -2636,6 +2757,7 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
             "planning_status": planning_record.get("status", "unavailable") if isinstance(planning_record, dict) else "unavailable",
         },
         "package_boundary": _package_boundary_payload(target_root=target_root),
+        "authority_markers": _authority_markers_for_startup(active_execplan=active_execplan),
         "immediate_next_allowed_action": {
             "summary": next_action,
             "read_first": preflight.get("startup_guidance", {}).get("first_compact_queries", []),
@@ -2645,7 +2767,61 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths:
         payload["proof"] = _proof_selection_for_changed_paths(changed_paths=normalized_paths)
+        payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     return payload
+
+
+def _implement_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
+    normalized_paths = _normalize_changed_paths(changed_paths)
+    proof = (
+        _proof_selection_for_changed_paths(changed_paths=normalized_paths)
+        if normalized_paths
+        else {
+            "kind": "proof-selection/v1",
+            "changed_paths": [],
+            "selected_lanes": [],
+            "required_commands": [],
+            "optional_commands": ["agentic-workspace start --target ./repo --format json"],
+            "broaden_when": ["changed paths are unknown"],
+            "escalate_when": ["no changed paths were provided; ask for scope before implementing"],
+        }
+    )
+    path_boundaries = [_boundary_warning_for_path(path) for path in normalized_paths]
+    attention_paths = [item["path"] for item in path_boundaries if item["requires_attention"]]
+    inspect_files = normalized_paths or ["agentic-workspace start --target ./repo --format json"]
+    return {
+        "kind": "implementer-context/v1",
+        "target": target_root.as_posix(),
+        "changed_paths": normalized_paths,
+        "inspect_files": inspect_files,
+        "files_to_avoid": [
+            "broad planning archives unless the compact summary points there",
+            "package bootstrap payloads unless the task is explicitly payload sync",
+            "generated adapters such as llms.txt unless refreshing from source",
+        ],
+        "package_boundary": _package_boundary_payload(target_root=target_root),
+        "path_boundaries": path_boundaries,
+        "authority_markers": [_authority_marker_for_path(path) for path in (normalized_paths or ["AGENTS.md", "llms.txt"])],
+        "proof": proof,
+        "required_validation_commands": proof["required_commands"],
+        "handoff_requirements": {
+            "before_handoff": [
+                "summarize changed files and proof commands run",
+                "call out any path_boundaries with requires_attention=true",
+                "leave active planning state clean or explicitly routed",
+            ],
+            "stop_when": [
+                "changed paths are missing or too broad",
+                "a payload/source boundary warning cannot be resolved inside the assigned scope",
+                "required validation cannot prove the touched contract",
+            ],
+        },
+        "next_allowed_action": (
+            "Resolve boundary warnings before editing."
+            if attention_paths
+            else "Inspect only the listed files and run the required validation commands."
+        ),
+    }
 
 
 def _preflight_active_state_payload(*, target_root: Path) -> dict[str, Any]:
@@ -5891,6 +6067,8 @@ def _select_ownership_payload(
         )
     if repo_path:
         answer, matched = _ownership_answer_for_path(payload, repo_path=repo_path)
+        answer["authority_marker"] = _authority_marker_for_path(repo_path)
+        answer["boundary_warning"] = _boundary_warning_for_path(repo_path)
         return _compact_contract_answer(
             surface="ownership",
             selector={"path": _normalize_repo_path(repo_path)},

@@ -1,5 +1,12 @@
 # Agent Instructions
 
+Authority marker:
+
+- authority: adapter
+- canonical_source: `.agentic-workspace/config.toml` and `agentic-workspace start --target . --format json`
+- safe_to_edit: true
+- refresh_command: null
+
 <!-- agentic-workspace:workflow:start -->
 Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules.
 <!-- agentic-workspace:workflow:end -->

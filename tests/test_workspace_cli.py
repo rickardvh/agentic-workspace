@@ -510,6 +510,9 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
 def test_external_agent_handoff_text_names_target_repository_and_no_install_assumption() -> None:
     text = cli._external_agent_handoff_text(selected_modules=["planning"])
 
+    assert "Authority marker:" in text
+    assert "- authority: generated-adapter" in text
+    assert "- safe_to_edit: false" in text
     assert "repository that contains this file" in text
     assert "Target repository:" in text
     assert "Default startup path:" in text
@@ -3703,11 +3706,74 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["kind"] == "startup-context/v1"
     assert payload["startup_sequence"][0]["surface"] == "AGENTS.md"
     assert payload["active_state_summary"]["todo_active_count"] == 1
+    assert payload["authority_markers"][0] == {
+        "path": "AGENTS.md",
+        "authority": "adapter",
+        "canonical_source": ".agentic-workspace/config.toml + agentic-workspace start --format json",
+        "safe_to_edit": True,
+        "refresh_command": None,
+    }
     assert payload["immediate_next_allowed_action"]["summary"] == "run the compact startup path."
     assert payload["proof"]["required_commands"] == [
         "uv run pytest tests/test_workspace_cli.py -q",
         "uv run ruff check src tests",
     ]
+    assert payload["path_boundaries"] == [
+        {
+            "path": "src/agentic_workspace/cli.py",
+            "authority": "source",
+            "warning": None,
+            "requires_attention": False,
+        }
+    ]
+
+
+def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--changed",
+                "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
+                "src/agentic_workspace/cli.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "implementer-context/v1"
+    assert payload["inspect_files"] == [
+        "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
+        "src/agentic_workspace/cli.py",
+    ]
+    assert payload["required_validation_commands"] == [
+        "cd packages/planning && uv run pytest tests/test_installer.py",
+        "cd packages/planning && uv run ruff check .",
+        "uv run pytest tests/test_workspace_cli.py -q",
+        "uv run ruff check src tests",
+    ]
+    assert payload["path_boundaries"][0]["authority"] == "payload"
+    assert payload["path_boundaries"][0]["requires_attention"] is True
+    assert payload["authority_markers"][0]["safe_to_edit"] is False
+    assert payload["next_allowed_action"] == "Resolve boundary warnings before editing."
+
+
+def test_ownership_path_answer_includes_authority_marker_and_boundary_warning(capsys) -> None:
+    assert cli.main(["ownership", "--path", "llms.txt", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert answer["authority_marker"] == {
+        "path": "llms.txt",
+        "authority": "generated-adapter",
+        "canonical_source": "src/agentic_workspace/cli.py:_external_agent_handoff_text",
+        "safe_to_edit": False,
+        "refresh_command": "make maintainer-surfaces",
+    }
+    assert answer["boundary_warning"]["requires_attention"] is True
 
 
 def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> None:
