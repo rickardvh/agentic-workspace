@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/operation.schema.json",
+  "title": "Agentic Workspace Operation Contract",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "summary",
+    "classification",
+    "inputs",
+    "output",
+    "effects",
+    "locality",
+    "steps",
+    "guards",
+    "proof"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/operation/v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+    },
+    "command_surface": {
+      "type": "object",
+      "required": ["command"],
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subcommand": {
+          "type": "string",
+          "minLength": 1
+        },
+        "format_option": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "intent": {
+      "type": "string"
+    },
+    "classification": {
+      "type": "string",
+      "enum": [
+        "read-only-report",
+        "metadata-refresh",
+        "lifecycle-mutation",
+        "local-record-append",
+        "derived-output"
+      ]
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "enum": ["cli-option", "default", "derived"]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "schema_ref": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "output": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["text-or-json", "json", "text", "module-result"]
+        },
+        "schema_ref": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "effects": {
+      "type": "object",
+      "required": ["read_only", "destructive", "idempotent", "writes_repo_state"],
+      "properties": {
+        "read_only": {
+          "type": "boolean"
+        },
+        "destructive": {
+          "type": "boolean"
+        },
+        "idempotent": {
+          "type": "boolean"
+        },
+        "writes_repo_state": {
+          "type": "boolean"
+        },
+        "requires_preflight_gate": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "locality": {
+      "type": "object",
+      "required": ["requires_repo", "network"],
+      "properties": {
+        "requires_repo": {
+          "type": "boolean"
+        },
+        "network": {
+          "type": "string",
+          "enum": ["forbidden", "not-required", "allowed"]
+        },
+        "outside_repo_writes": {
+          "type": "string",
+          "enum": ["forbidden", "allowed"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "reads": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/surface_access"
+      }
+    },
+    "writes": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/surface_access" },
+          {
+            "type": "object",
+            "properties": {
+              "when": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "uses", "description"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$"
+          },
+          "uses": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "when": {
+            "type": "string"
+          },
+          "inputs": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "outputs": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "guards": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "proof": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "projections": {
+      "type": "object",
+      "properties": {
+        "cli": {
+          "type": "object",
+          "properties": {
+            "command_ref": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "mcp": {
+          "type": "object",
+          "properties": {
+            "tool_name": { "type": "string" },
+            "read_only_hint": { "type": "boolean" },
+            "destructive_hint": { "type": "boolean" },
+            "idempotent_hint": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "skill": {
+          "type": "object",
+          "properties": {
+            "activation": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "instruction_summary": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "migration_status": {
+      "type": "string",
+      "enum": ["draft-contract-only", "validated-contract", "runtime-consumed"]
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "surface_access": {
+      "type": "object",
+      "required": ["surface"],
+      "properties": {
+        "surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
