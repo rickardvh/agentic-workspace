@@ -2683,7 +2683,11 @@ def test_install_real_init_creates_combined_memory_and_planning_surfaces(tmp_pat
     assert "<!-- agentic-workspace:workflow:start -->" in agents_text
     assert "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules." in agents_text
     assert "agentic-workspace preflight --format json" in agents_text
-    assert "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself." in agents_text
+    assert (
+        "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself." not in agents_text
+    )
+    assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." in agents_text
+    assert "## Module Notes" not in agents_text
     assert "<!-- agentic-memory:workflow:start -->" not in agents_text
     assert "<PROJECT_NAME>" not in agents_text
 
@@ -2698,8 +2702,8 @@ def test_install_real_init_can_use_gemini_as_root_startup_entrypoint(tmp_path: P
     assert (target / "GEMINI.md").exists()
     assert not (target / "AGENTS.md").exists()
     gemini_text = (target / "GEMINI.md").read_text(encoding="utf-8")
-    assert "Read `GEMINI.md`." in gemini_text
     assert "Keep this file thin." in gemini_text
+    assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." in gemini_text
     assert "Read GEMINI.md first." in (target / "llms.txt").read_text(encoding="utf-8")
 
 
@@ -4117,7 +4121,7 @@ def test_selected_modules_rejects_declared_conflict(tmp_path: Path) -> None:
         cli._validate_selected_module_contract(selected_modules=["planning", "memory"], descriptors=descriptors)
 
 
-def test_workspace_agents_template_uses_descriptor_guidance(tmp_path: Path) -> None:
+def test_workspace_agents_template_keeps_descriptor_guidance_out_of_root_entrypoint(tmp_path: Path) -> None:
     descriptor = cli.ModuleDescriptor(
         name="signals",
         description="signals module",
@@ -4145,8 +4149,10 @@ def test_workspace_agents_template_uses_descriptor_guidance(tmp_path: Path) -> N
 
     rendered = cli._workspace_agents_template(selected_modules=["signals"], descriptors={"signals": descriptor})
 
-    assert "Read `signals.md` when the signals module is installed." in rendered
-    assert "- Signal routing: `signals.md`" in rendered
+    assert "Read `signals.md` when the signals module is installed." not in rendered
+    assert "Signal routing: `signals.md`" not in rendered
+    assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." in rendered
+    assert "## Module Notes" not in rendered
 
 
 def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, object]]]) -> dict[str, cli.ModuleDescriptor]:

@@ -768,6 +768,7 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "`Execution Summary`" in readme_text
     assert "Required continuation for an unfinished larger intended outcome" in readme_text
     assert "Keep this file thin." in bootstrap_agents_text
+    assert "agentic-workspace preflight --format json" in bootstrap_agents_text
     assert "agentic-workspace summary --format json" in bootstrap_agents_text
     assert "agentic-workspace defaults --section startup --format json" in bootstrap_agents_text
     assert (
@@ -775,6 +776,7 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
         in bootstrap_agents_text
     )
     assert "Read package-local `AGENTS.md` only for the package being edited." in bootstrap_agents_text
+    assert "## When Needed" not in bootstrap_agents_text
     assert "remove or archive the matched queue residue in the same pass" in execplans_readme_text
     assert "Iterative carry-forward belongs under `## Iterative Follow-Through`" in execplans_readme_text
     assert any(

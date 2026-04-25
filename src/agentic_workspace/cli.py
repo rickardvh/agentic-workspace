@@ -1090,13 +1090,8 @@ def _workspace_agents_template(
     cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> str:
     _ = workflow_artifact_profile
-    startup_steps: list[str] = []
-    sources_of_truth: list[str] = []
-
-    for module_name in selected_modules:
-        descriptor = descriptors[module_name]
-        startup_steps.extend(descriptor.startup_steps)
-        sources_of_truth.extend(descriptor.sources_of_truth)
+    _ = selected_modules
+    _ = descriptors
 
     lines = [
         "# Agent Instructions",
@@ -1114,18 +1109,13 @@ def _workspace_agents_template(
         "",
         "## Startup",
         "",
-        f"1. Read `{agent_instructions_file}`.",
-        f"2. Use `{cli_invoke} preflight --format json` when you want startup guidance, resolved config, and active state in one compact answer.",
-        f"3. Use `{cli_invoke} defaults --section startup --format json` when startup order or first-contact routing is the question.",
-        f"4. Use `{cli_invoke} config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.",
-        f"5. Use `{cli_invoke} summary --format json` when only active planning or ownership state is the question.",
-        "6. Open raw planning state, an active execplan, or deeper routing docs only when those compact answers point there.",
-        "7. Read package-local `AGENTS.md` only for the package being edited.",
+        f"- Use `{cli_invoke} preflight --format json` when you want startup guidance, resolved config, and active state in one compact answer.",
+        f"- Use `{cli_invoke} defaults --section startup --format json` when startup order or first-contact routing is the question.",
+        f"- Use `{cli_invoke} config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.",
+        f"- Use `{cli_invoke} summary --format json` when only active planning or ownership state is the question.",
+        "- Open module, planning, memory, or deeper routing files only when the compact answers point there.",
+        "- Read package-local `AGENTS.md` only for the package being edited.",
     ]
-    if startup_steps or sources_of_truth:
-        lines.extend(["", "## Module Notes", ""])
-        lines.extend(f"- {step}" for step in startup_steps)
-        lines.extend(f"- {item}" for item in sources_of_truth)
     lines.extend(
         [
             "",
@@ -1135,6 +1125,7 @@ def _workspace_agents_template(
             "Do not bulk-read all planning surfaces.",
             "Keep package boundaries explicit.",
             "Preserve independent package versioning and CLI entry points.",
+            "Keep repo-custom workflow obligations in `.agentic-workspace/config.toml`; let `AGENTS.md` stay a compact router.",
         ]
     )
     return "\n".join(lines) + "\n"
