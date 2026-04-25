@@ -210,6 +210,16 @@
       "notes": "Draft operation contracts describe behavior, effects, guards, proof expectations, and primitive sequencing without replacing current runtime logic yet."
     },
     {
+      "area": "python_extraction_map",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/python_extraction_map.json",
+      "consumers": [
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "future extraction slices"
+      ],
+      "notes": "The remaining Python-owned extractable content is classified by future owner, authority status, readiness, and follow-on slice before more extraction work proceeds."
+    },
+    {
       "area": "module_registry",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/module_registry.json",

@@ -84,5 +84,9 @@ def operation_manifest(relative_path: str) -> dict[str, Any]:
     return load_contract_json(relative_path)
 
 
+def python_extraction_map_manifest() -> dict[str, Any]:
+    return load_contract_json("python_extraction_map.json")
+
+
 def contract_schema(relative_path: str) -> dict[str, Any]:
     return load_contract_json(f"schemas/{relative_path}")

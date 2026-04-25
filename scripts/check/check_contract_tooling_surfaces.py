@@ -21,6 +21,7 @@ from agentic_workspace.contract_tooling import (
     optimization_bias_policy_manifest,
     preflight_policy_manifest,
     proof_routes_manifest,
+    python_extraction_map_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
     setup_findings_policy_manifest,
@@ -420,6 +421,10 @@ def main(argv: list[str] | None = None) -> int:
         (
             "operation primitives registry",
             _validate_operation_primitives(operation_primitives_manifest()),
+        ),
+        (
+            "python extraction map",
+            _validate(python_extraction_map_manifest(), "python_extraction_map.schema.json"),
         ),
     ]
 

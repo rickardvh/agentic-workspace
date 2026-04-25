@@ -1,0 +1,217 @@
+{
+  "schema_version": "agentic-workspace/python-extraction-map/v1",
+  "parent_issue": "#309",
+  "purpose": "Classify remaining Python-owned static, contract, template, procedural, and live-inspection content before extracting more surfaces.",
+  "authority_statuses": [
+    "authoritative",
+    "derived",
+    "adapter",
+    "procedural-owned"
+  ],
+  "extraction_readiness": [
+    "extract now",
+    "extract after schema exists",
+    "operation-contract candidate",
+    "template candidate",
+    "procedural-owned for now",
+    "live-inspection-owned for now",
+    "defer with reason"
+  ],
+  "candidates": [
+    {
+      "id": "authority-marker-policy",
+      "source": "src/agentic_workspace/cli.py:_authority_marker_for_path",
+      "candidate_content": [
+        "authority labels",
+        "canonical source mapping",
+        "safe_to_edit defaults",
+        "refresh command mapping"
+      ],
+      "proposed_owner_surface": "src/agentic_workspace/contracts/authority_markers.json",
+      "future_owner": "JSON contract data",
+      "authority_status": "authoritative",
+      "extraction_readiness": "extract after schema exists",
+      "rationale": "The marker table is stable policy data introduced to reduce adapter/source ambiguity; matching rules still need Python runtime path normalization.",
+      "issue_hint": "#295"
+    },
+    {
+      "id": "changed-path-proof-rules",
+      "source": "src/agentic_workspace/cli.py:_proof_selection_for_changed_paths",
+      "candidate_content": [
+        "path prefix to validation lane mapping",
+        "cross-lane escalation rule",
+        "fallback workspace_cli lane"
+      ],
+      "proposed_owner_surface": "src/agentic_workspace/contracts/proof_selection_rules.json",
+      "future_owner": "JSON contract data",
+      "authority_status": "authoritative",
+      "extraction_readiness": "extract now",
+      "rationale": "Validation lane payloads are already contract-backed; the remaining path classifier is simple declarative mapping plus one procedural de-duplication step.",
+      "issue_hint": "#315"
+    },
+    {
+      "id": "implementer-context-template",
+      "source": "src/agentic_workspace/cli.py:_implement_payload",
+      "candidate_content": [
+        "files_to_avoid text",
+        "handoff requirements",
+        "stop conditions",
+        "next action wording"
+      ],
+      "proposed_owner_surface": "src/agentic_workspace/contracts/templates/implementer_context.json",
+      "future_owner": "render templates",
+      "authority_status": "adapter",
+      "extraction_readiness": "template candidate",
+      "rationale": "The command is a derived bounded view over proof and authority data; stable text can move to templates after the command shape settles.",
+      "issue_hint": "#312"
+    },
+    {
+      "id": "startup-context-template",
+      "source": "src/agentic_workspace/cli.py:_start_payload",
+      "candidate_content": [
+        "startup sequence labels",
+        "fallback next-action wording",
+        "open execplan rule"
+      ],
+      "proposed_owner_surface": "src/agentic_workspace/contracts/templates/start_context.json",
+      "future_owner": "render templates",
+      "authority_status": "adapter",
+      "extraction_readiness": "template candidate",
+      "rationale": "Startup context combines live planning state with stable adapter text; the text can be extracted while active-state assembly remains runtime-owned.",
+      "issue_hint": "#312"
+    },
+    {
+      "id": "ownership-path-classifier",
+      "source": "src/agentic_workspace/cli.py:_ownership_answer_for_path",
+      "candidate_content": [
+        "authority surface matching order",
+        "module root matching",
+        "managed surface glob matching",
+        "fence file matching"
+      ],
+      "proposed_owner_surface": "src/agentic_workspace/contracts/operations/ownership.path-answer.json",
+      "future_owner": "procedural execution",
+      "authority_status": "procedural-owned",
+      "extraction_readiness": "operation-contract candidate",
+      "rationale": "Matching behavior is inspectable and stable enough for an operation contract, but the actual fnmatch/path normalization should remain Python-owned for now.",
+      "issue_hint": "#313"
+    },
+    {
+      "id": "workspace-agent-template",
+      "source": "src/agentic_workspace/cli.py:_workspace_agents_template",
+      "candidate_content": [
+        "root AGENTS.md template",
+        "startup command text",
+        "repo rules text"
+      ],
+      "proposed_owner_surface": "src/agentic_workspace/contracts/templates/workspace_agents.md",
+      "future_owner": "render templates",
+      "authority_status": "adapter",
+      "extraction_readiness": "template candidate",
+      "rationale": "The template is adapter text over manifest-backed command/config data; extracting it would reduce Python-owned prose without changing install behavior.",
+      "issue_hint": "#312"
+    },
+    {
+      "id": "external-agent-handoff-template",
+      "source": "src/agentic_workspace/cli.py:_external_agent_handoff_text",
+      "candidate_content": [
+        "llms.txt template",
+        "authority marker text",
+        "startup routing text"
+      ],
+      "proposed_owner_surface": "src/agentic_workspace/contracts/templates/external_agent_handoff.md",
+      "future_owner": "render templates",
+      "authority_status": "adapter",
+      "extraction_readiness": "template candidate",
+      "rationale": "The template is generated adapter prose; the refresh friction captured in #319 makes this a good extraction and conformance target.",
+      "issue_hint": "#319"
+    },
+    {
+      "id": "config-local-override-model",
+      "source": "src/agentic_workspace/config.py:MixedAgentLocalOverride and load_mixed_agent_local_override",
+      "candidate_content": [
+        "dataclass fields",
+        "supported target enums",
+        "local override parser shape"
+      ],
+      "proposed_owner_surface": "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+      "future_owner": "generated or schema-derived Python model",
+      "authority_status": "derived",
+      "extraction_readiness": "extract after schema exists",
+      "rationale": "The schema exists; a generated or schema-derived model can remove duplicate field shape, but parser diagnostics and BOM handling should stay Python-owned.",
+      "issue_hint": "#314"
+    },
+    {
+      "id": "report-assembly",
+      "source": "src/agentic_workspace/cli.py:_run_report_command and workspace_output.py",
+      "candidate_content": [
+        "combined report assembly",
+        "module status/doctor composition",
+        "rendered report text"
+      ],
+      "proposed_owner_surface": "src/agentic_workspace/contracts/operations/report.run.json",
+      "future_owner": "live repo inspection",
+      "authority_status": "procedural-owned",
+      "extraction_readiness": "live-inspection-owned for now",
+      "rationale": "Report behavior is dominated by live module inspection and runtime reconciliation; operation-contract coverage is useful before any data extraction.",
+      "issue_hint": "#316"
+    },
+    {
+      "id": "preflight-token-validation",
+      "source": "src/agentic_workspace/cli.py:_enforce_preflight_gate",
+      "candidate_content": [
+        "token parsing",
+        "freshness checks",
+        "strict gate enforcement"
+      ],
+      "proposed_owner_surface": "src/agentic_workspace/contracts/preflight_policy.json",
+      "future_owner": "procedural execution",
+      "authority_status": "procedural-owned",
+      "extraction_readiness": "procedural-owned for now",
+      "rationale": "The policy values are extracted; validation and time-sensitive enforcement should remain runtime logic.",
+      "issue_hint": "#316"
+    }
+  ],
+  "next_slices": [
+    {
+      "issue": "#311",
+      "summary": "Use existing schemas and this map to decide which output/result shapes should become schema-derived Python models first.",
+      "candidate_ids": [
+        "config-local-override-model"
+      ]
+    },
+    {
+      "issue": "#312",
+      "summary": "Extract stable adapter/render text after choosing one template format.",
+      "candidate_ids": [
+        "implementer-context-template",
+        "startup-context-template",
+        "workspace-agent-template",
+        "external-agent-handoff-template"
+      ]
+    },
+    {
+      "issue": "#313",
+      "summary": "Extend operation contracts for remaining stable read-only commands before modeling behavior-heavy commands.",
+      "candidate_ids": [
+        "ownership-path-classifier",
+        "report-assembly"
+      ]
+    },
+    {
+      "issue": "#315",
+      "summary": "Move path-based proof classification into contract data and add parity checks.",
+      "candidate_ids": [
+        "changed-path-proof-rules"
+      ]
+    },
+    {
+      "issue": "#316",
+      "summary": "Document intentionally retained runtime logic so extraction does not turn live decisions into brittle data.",
+      "candidate_ids": [
+        "report-assembly",
+        "preflight-token-validation"
+      ]
+    }
+  ]
+}
