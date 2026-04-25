@@ -106,6 +106,17 @@
       "notes": "The bounded implementer context payload emitted by the CLI is schema-backed so changed-path handoffs and proof requirements can be validated by non-Python adapters."
     },
     {
+      "area": "context_templates",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/context_templates.json",
+      "consumers": [
+        "agentic_workspace.cli:_start_payload",
+        "agentic_workspace.cli:_implement_payload",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Stable startup and implementer context text fragments are contract-backed so cli.py remains the renderer instead of the wording authority."
+    },
+    {
       "area": "report_payload_derivation",
       "classification": "derived",
       "owner_surface": "src/agentic_workspace/cli.py",

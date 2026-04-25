@@ -69,6 +69,7 @@ from agentic_workspace.contract_tooling import (
     cli_commands_manifest,
     cli_option_groups_manifest,
     compact_contract_manifest,
+    context_templates_manifest,
     improvement_latitude_policy_manifest,
     module_registry_manifest,
     optimization_bias_policy_manifest,
@@ -107,6 +108,7 @@ _OPTIMIZATION_BIAS_POLICY = optimization_bias_policy_manifest()
 _REPO_FRICTION_POLICY = repo_friction_policy_manifest()
 _PREFLIGHT_POLICY = preflight_policy_manifest()
 _PROOF_SELECTION_RULES = proof_selection_rules_manifest()
+_CONTEXT_TEMPLATES = context_templates_manifest()
 HIGH_RISK_COMMANDS = frozenset(str(command) for command in _PREFLIGHT_POLICY["high_risk_commands"])
 PREFLIGHT_TOKEN_PREFIX = str(_PREFLIGHT_POLICY["token"]["prefix"])
 DEFAULT_PREFLIGHT_MAX_AGE_SECONDS = int(_PREFLIGHT_POLICY["default_max_age_seconds"])
@@ -2712,6 +2714,7 @@ def _authority_markers_for_startup(*, active_execplan: str | None = None) -> lis
 
 
 def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
+    startup_template = _CONTEXT_TEMPLATES["startup_context"]
     preflight = _run_preflight_command(target_root=target_root)
     active_state = preflight.get("active_planning_state", {})
     planning_record = active_state.get("planning_record", {})
@@ -2728,31 +2731,18 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
         if active_items:
             next_action = str(active_items[0].get("next_action", "") or active_items[0].get("why_now", "") or "")
     if not next_action:
-        next_action = "Use the startup sequence and compact planning summary before opening deeper planning surfaces."
+        next_action = str(startup_template["fallback_next_action"])
+    startup_sequence = copy.deepcopy(startup_template["startup_sequence"])
+    for step in startup_sequence:
+        if step["id"] == "entrypoint":
+            step["surface"] = str(step["surface"]).format(
+                agent_instructions_file=preflight.get("resolved_config", {}).get("agent_instructions_file", "AGENTS.md")
+            )
 
     payload: dict[str, Any] = {
         "kind": "startup-context/v1",
         "target": target_root.as_posix(),
-        "startup_sequence": [
-            {
-                "id": "entrypoint",
-                "command": None,
-                "surface": preflight.get("resolved_config", {}).get("agent_instructions_file", "AGENTS.md"),
-                "why": "configured ordinary repo startup entrypoint",
-            },
-            {
-                "id": "preflight",
-                "command": "agentic-workspace preflight --format json",
-                "surface": "startup_guidance + resolved_config + active_planning_state",
-                "why": "one-call takeover context",
-            },
-            {
-                "id": "summary",
-                "command": "agentic-workspace summary --format json",
-                "surface": "planning_record",
-                "why": "active planning state before raw planning reads",
-            },
-        ],
+        "startup_sequence": startup_sequence,
         "active_state_summary": {
             "todo_active_count": active_state.get("todo", {}).get("active_count", 0),
             "active_execplan": active_execplan,
@@ -2763,7 +2753,7 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
         "immediate_next_allowed_action": {
             "summary": next_action,
             "read_first": preflight.get("startup_guidance", {}).get("first_compact_queries", []),
-            "open_execplan_only_when": "the compact summary points to an active execplan or the task needs active sequencing detail",
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
         },
     }
     normalized_paths = _normalize_changed_paths(changed_paths)
@@ -2774,54 +2764,32 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
 
 
 def _implement_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
+    implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
     proof = (
         _proof_selection_for_changed_paths(changed_paths=normalized_paths)
         if normalized_paths
-        else {
-            "kind": "proof-selection/v1",
-            "changed_paths": [],
-            "selected_lanes": [],
-            "required_commands": [],
-            "optional_commands": ["agentic-workspace start --target ./repo --format json"],
-            "broaden_when": ["changed paths are unknown"],
-            "escalate_when": ["no changed paths were provided; ask for scope before implementing"],
-        }
+        else copy.deepcopy(implementer_template["unknown_scope_proof"])
     )
     path_boundaries = [_boundary_warning_for_path(path) for path in normalized_paths]
     attention_paths = [item["path"] for item in path_boundaries if item["requires_attention"]]
-    inspect_files = normalized_paths or ["agentic-workspace start --target ./repo --format json"]
+    inspect_files = normalized_paths or list(implementer_template["default_inspect_files"])
     return {
         "kind": "implementer-context/v1",
         "target": target_root.as_posix(),
         "changed_paths": normalized_paths,
         "inspect_files": inspect_files,
-        "files_to_avoid": [
-            "broad planning archives unless the compact summary points there",
-            "package bootstrap payloads unless the task is explicitly payload sync",
-            "generated adapters such as llms.txt unless refreshing from source",
-        ],
+        "files_to_avoid": list(implementer_template["files_to_avoid"]),
         "package_boundary": _package_boundary_payload(target_root=target_root),
         "path_boundaries": path_boundaries,
         "authority_markers": [_authority_marker_for_path(path) for path in (normalized_paths or ["AGENTS.md", "llms.txt"])],
         "proof": proof,
         "required_validation_commands": proof["required_commands"],
-        "handoff_requirements": {
-            "before_handoff": [
-                "summarize changed files and proof commands run",
-                "call out any path_boundaries with requires_attention=true",
-                "leave active planning state clean or explicitly routed",
-            ],
-            "stop_when": [
-                "changed paths are missing or too broad",
-                "a payload/source boundary warning cannot be resolved inside the assigned scope",
-                "required validation cannot prove the touched contract",
-            ],
-        },
+        "handoff_requirements": copy.deepcopy(implementer_template["handoff_requirements"]),
         "next_allowed_action": (
-            "Resolve boundary warnings before editing."
+            implementer_template["next_allowed_action"]["attention"]
             if attention_paths
-            else "Inspect only the listed files and run the required validation commands."
+            else implementer_template["next_allowed_action"]["default"]
         ),
     }
 

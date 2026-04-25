@@ -63,7 +63,7 @@
       "future_owner": "render templates",
       "authority_status": "adapter",
       "extraction_readiness": "template candidate",
-      "rationale": "The command is a derived bounded view over proof and authority data; the emitted result shape is now schema-backed, and stable text can move to templates after the command shape settles.",
+      "rationale": "The command is a derived bounded view over proof and authority data; the emitted result shape is schema-backed, and the stable context fragments now live in context_templates.json. Markdown rendering extraction can wait for a larger template pass.",
       "issue_hint": "#312"
     },
     {
@@ -79,7 +79,7 @@
       "future_owner": "render templates",
       "authority_status": "adapter",
       "extraction_readiness": "template candidate",
-      "rationale": "Startup context combines live planning state with stable adapter text; the emitted result shape is now schema-backed, and the text can be extracted while active-state assembly remains runtime-owned.",
+      "rationale": "Startup context combines live planning state with stable adapter text; the emitted result shape is schema-backed, and the stable context fragments now live in context_templates.json. Markdown rendering extraction can wait for a larger template pass.",
       "issue_hint": "#312"
     },
     {

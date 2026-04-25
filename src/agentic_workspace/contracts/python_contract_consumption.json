@@ -11,6 +11,16 @@
       "contract": "proof_selection_rules.json",
       "schema": "proof_selection_rules.schema.json",
       "consumer": "agentic_workspace.cli:_proof_selection_for_changed_paths"
+    },
+    {
+      "contract": "context_templates.json",
+      "schema": "context_templates.schema.json",
+      "consumer": "agentic_workspace.cli:_start_payload"
+    },
+    {
+      "contract": "context_templates.json",
+      "schema": "context_templates.schema.json",
+      "consumer": "agentic_workspace.cli:_implement_payload"
     }
   ],
   "model_derivation_policy": {

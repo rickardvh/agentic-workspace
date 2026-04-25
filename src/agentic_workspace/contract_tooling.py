@@ -116,5 +116,9 @@ def python_contract_consumption_manifest() -> dict[str, Any]:
     return load_validated_contract_json("python_contract_consumption.json", "python_contract_consumption.schema.json")
 
 
+def context_templates_manifest() -> dict[str, Any]:
+    return load_validated_contract_json("context_templates.json", "context_templates.schema.json")
+
+
 def contract_schema(relative_path: str) -> dict[str, Any]:
     return load_contract_json(f"schemas/{relative_path}")

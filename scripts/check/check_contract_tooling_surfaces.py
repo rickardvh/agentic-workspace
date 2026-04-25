@@ -11,6 +11,7 @@ from agentic_workspace.contract_tooling import (
     cli_commands_manifest,
     cli_option_groups_manifest,
     compact_contract_manifest,
+    context_templates_manifest,
     contract_inventory_manifest,
     contract_schema,
     improvement_latitude_policy_manifest,
@@ -381,6 +382,7 @@ def main(argv: list[str] | None = None) -> int:
         ("compact_contract_profile.json", _validate(compact_contract_manifest(), "selector_contracts_manifest.schema.json")),
         ("proof_routes.json", _validate(proof_routes_manifest(), "proof_routes_manifest.schema.json")),
         ("proof_selection_rules.json", _validate(proof_selection_rules_manifest(), "proof_selection_rules.schema.json")),
+        ("context_templates.json", _validate(context_templates_manifest(), "context_templates.schema.json")),
         ("report_contract.json", _validate(report_contract_manifest(), "report_contract_manifest.schema.json")),
         ("contract_inventory.json", _validate(contract_inventory_manifest(), "contract_inventory.schema.json")),
         ("compact answer sample", _validate(_sample_compact_answer(), "compact_contract_answer.schema.json")),
@@ -513,13 +515,21 @@ def main(argv: list[str] | None = None) -> int:
     if unknown_rule_lanes:
         checks.append(("proof selection rules parity", [f"unknown validation lane(s): {', '.join(unknown_rule_lanes)}"]))
     expected_validated_contracts = {
-        ("proof_selection_rules.json", "proof_selection_rules.schema.json", "agentic_workspace.cli:_proof_selection_for_changed_paths")
+        ("proof_selection_rules.json", "proof_selection_rules.schema.json", "agentic_workspace.cli:_proof_selection_for_changed_paths"),
+        ("context_templates.json", "context_templates.schema.json", "agentic_workspace.cli:_start_payload"),
+        ("context_templates.json", "context_templates.schema.json", "agentic_workspace.cli:_implement_payload"),
     }
     actual_validated_contracts = {
         (entry["contract"], entry["schema"], entry["consumer"]) for entry in consumption_policy["validated_at_consumption"]
     }
     if expected_validated_contracts - actual_validated_contracts:
-        checks.append(("python contract consumption parity", ["proof selection rules are not recorded as validated at consumption"]))
+        missing_consumers = sorted(consumer for _, _, consumer in expected_validated_contracts - actual_validated_contracts)
+        checks.append(
+            (
+                "python contract consumption parity",
+                [f"validated contract consumers are not recorded: {', '.join(missing_consumers)}"],
+            )
+        )
     if cli._reporting_schema_payload() != report_contract_manifest():  # type: ignore[attr-defined]
         checks.append(("report contract parity", ["reporting schema payload drifted from report_contract.json"]))
     workspace_surfaces = workspace_surfaces_manifest()
