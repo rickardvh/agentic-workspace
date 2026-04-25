@@ -1,0 +1,121 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "system-intent.sync",
+  "command_surface": {
+    "command": "system-intent",
+    "format_option": "format"
+  },
+  "summary": "Show or refresh the workspace-owned compiled system-intent declaration metadata.",
+  "classification": "metadata-refresh",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "sync",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": ".agentic-workspace/config.toml",
+      "required": false
+    },
+    {
+      "surface": "declared system-intent source hints",
+      "required": false
+    },
+    {
+      "surface": ".agentic-workspace/system-intent/intent.toml",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/system-intent/intent.toml",
+      "required": false,
+      "when": "sync requested or compiled declaration missing"
+    }
+  ],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve",
+      "description": "Resolve the effective target root."
+    },
+    {
+      "id": "resolve_sources",
+      "uses": "system_intent.config.resolve",
+      "description": "Resolve configured or conservatively autodetected source hints."
+    },
+    {
+      "id": "refresh_metadata",
+      "uses": "system_intent.source_metadata.refresh",
+      "description": "Refresh source metadata without interpreting source prose.",
+      "when": "sync is true"
+    },
+    {
+      "id": "read_or_create_mirror",
+      "uses": "system_intent.mirror.read_or_create",
+      "description": "Read the compiled declaration or create a conservative missing shell."
+    },
+    {
+      "id": "emit_status",
+      "uses": "system_intent.result.emit",
+      "description": "Emit declaration status, source metadata, and review flags."
+    }
+  ],
+  "guards": [
+    "Do not mechanically infer structured intent from source prose.",
+    "Do not overwrite human-interpreted fields during metadata refresh.",
+    "Keep weak interpretation visible through needs_review, confidence, or open questions."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "sync refresh preserves interpreted fields unless the declaration is missing",
+    "missing source format does not produce fabricated high-confidence intent"
+  ],
+  "projections": {
+    "cli": {
+      "command_ref": "system-intent"
+    },
+    "mcp": {
+      "tool_name": "agentic_workspace_system_intent_sync",
+      "read_only_hint": false,
+      "destructive_hint": false,
+      "idempotent_hint": true
+    },
+    "skill": {
+      "activation": [
+        "system intent",
+        "intent metadata",
+        "refresh system intent"
+      ],
+      "instruction_summary": "Use this operation to refresh source metadata while leaving interpretation to the agent and human review."
+    }
+  },
+  "migration_status": "draft-contract-only"
+}

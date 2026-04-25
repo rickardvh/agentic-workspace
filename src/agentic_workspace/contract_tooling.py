@@ -72,5 +72,17 @@ def cli_option_groups_manifest() -> dict[str, Any]:
     return load_contract_json("cli_option_groups.json")
 
 
+def operation_contracts_manifest() -> dict[str, Any]:
+    return load_contract_json("operation_contracts.json")
+
+
+def operation_primitives_manifest() -> dict[str, Any]:
+    return load_contract_json("operation_primitives.json")
+
+
+def operation_manifest(relative_path: str) -> dict[str, Any]:
+    return load_contract_json(relative_path)
+
+
 def contract_schema(relative_path: str) -> dict[str, Any]:
     return load_contract_json(f"schemas/{relative_path}")

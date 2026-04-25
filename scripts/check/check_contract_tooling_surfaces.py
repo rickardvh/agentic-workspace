@@ -15,6 +15,9 @@ from agentic_workspace.contract_tooling import (
     contract_schema,
     improvement_latitude_policy_manifest,
     module_registry_manifest,
+    operation_contracts_manifest,
+    operation_manifest,
+    operation_primitives_manifest,
     optimization_bias_policy_manifest,
     preflight_policy_manifest,
     proof_routes_manifest,
@@ -210,6 +213,54 @@ def _sample_module_capability_payload() -> dict[str, object]:
     }
 
 
+def _validate_operation_registry(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    if payload.get("schema_version") != "agentic-workspace/operation-contracts/v1":
+        errors.append("operation_contracts.json has unexpected schema_version")
+    operations = payload.get("operations")
+    if not isinstance(operations, list) or not operations:
+        errors.append("operation_contracts.json must contain at least one operation")
+        return errors
+    seen_ids: set[str] = set()
+    for index, operation_ref in enumerate(operations):
+        if not isinstance(operation_ref, dict):
+            errors.append(f"operation registry entry {index} must be an object")
+            continue
+        for field in ("id", "path", "command", "migration_status"):
+            if not isinstance(operation_ref.get(field), str) or not str(operation_ref.get(field)).strip():
+                errors.append(f"operation registry entry {index} missing string field {field}")
+        operation_id = str(operation_ref.get("id", ""))
+        if operation_id in seen_ids:
+            errors.append(f"duplicate operation id {operation_id}")
+        seen_ids.add(operation_id)
+    return errors
+
+
+def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    if payload.get("schema_version") != "agentic-workspace/operation-primitives/v1":
+        errors.append("operation_primitives.json has unexpected schema_version")
+    primitives = payload.get("primitives")
+    if not isinstance(primitives, list) or not primitives:
+        errors.append("operation_primitives.json must contain at least one primitive")
+        return errors
+    seen_ids: set[str] = set()
+    for index, primitive in enumerate(primitives):
+        if not isinstance(primitive, dict):
+            errors.append(f"primitive entry {index} must be an object")
+            continue
+        primitive_id = primitive.get("id")
+        if not isinstance(primitive_id, str) or not primitive_id.strip():
+            errors.append(f"primitive entry {index} missing id")
+            continue
+        if primitive_id in seen_ids:
+            errors.append(f"duplicate primitive id {primitive_id}")
+        seen_ids.add(primitive_id)
+        if not isinstance(primitive.get("summary"), str) or not str(primitive.get("summary")).strip():
+            errors.append(f"primitive {primitive_id} missing summary")
+    return errors
+
+
 def _parser_snapshot(parser) -> list[dict[str, object]]:
     subparsers_action = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
     return [_command_parser_snapshot(subparsers_action.choices[name]) for name in subparsers_action.choices]
@@ -362,7 +413,47 @@ def main(argv: list[str] | None = None) -> int:
             "cli option groups manifest",
             _validate(cli_option_groups_manifest(), "cli_option_groups.schema.json"),
         ),
+        (
+            "operation contracts registry",
+            _validate_operation_registry(operation_contracts_manifest()),
+        ),
+        (
+            "operation primitives registry",
+            _validate_operation_primitives(operation_primitives_manifest()),
+        ),
     ]
+
+    operation_contracts = operation_contracts_manifest()
+    operation_primitives = operation_primitives_manifest()
+    known_commands = {command["name"] for command in cli_commands_manifest()["commands"]}
+    known_primitives = {primitive["id"] for primitive in operation_primitives["primitives"]}
+    for operation_ref in operation_contracts["operations"]:
+        operation = operation_manifest(operation_ref["path"])
+        checks.append(
+            (
+                f"operation contract {operation_ref['id']}",
+                _validate(operation, "operation.schema.json"),
+            )
+        )
+        if operation_ref["command"] not in known_commands:
+            checks.append(("operation command parity", [f"unknown command for operation {operation_ref['id']}"]))
+        registry_errors: list[str] = []
+        if operation["id"] != operation_ref["id"]:
+            registry_errors.append(f"operation id mismatch for {operation_ref['path']}")
+        if operation["command_surface"]["command"] != operation_ref["command"]:
+            registry_errors.append(f"operation command mismatch for {operation_ref['id']}")
+        if operation.get("migration_status") != operation_ref["migration_status"]:
+            registry_errors.append(f"operation migration status mismatch for {operation_ref['id']}")
+        if registry_errors:
+            checks.append(("operation registry parity", registry_errors))
+        missing_primitives = [step["uses"] for step in operation["steps"] if step["uses"] not in known_primitives]
+        if missing_primitives:
+            checks.append(
+                (
+                    "operation primitive parity",
+                    [f"{operation_ref['id']} uses unknown primitive(s): {', '.join(missing_primitives)}"],
+                )
+            )
 
     defaults_payload = cli._defaults_payload()  # type: ignore[attr-defined]
     if defaults_payload["compact_contract_profile"]["answer_shape"] != compact_contract_manifest()["answer_shape"]:

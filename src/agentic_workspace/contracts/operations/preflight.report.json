@@ -1,0 +1,126 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "preflight.report",
+  "command_surface": {
+    "command": "preflight",
+    "format_option": "format"
+  },
+  "summary": "Get compact takeover-safe context: startup defaults, resolved config, and active planning state in one call.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "active_only",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": false,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": ".agentic-workspace/config.toml",
+      "required": false
+    },
+    {
+      "surface": ".agentic-workspace/planning/state.toml",
+      "required": false
+    },
+    {
+      "surface": "preflight_policy.json",
+      "required": true
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve",
+      "description": "Resolve the effective target root."
+    },
+    {
+      "id": "load_defaults",
+      "uses": "workspace.defaults.load",
+      "description": "Load compact startup defaults unless active-only output was requested.",
+      "when": "active_only is false"
+    },
+    {
+      "id": "load_config",
+      "uses": "workspace.config.load",
+      "description": "Load resolved workspace config unless active-only output was requested.",
+      "when": "active_only is false"
+    },
+    {
+      "id": "load_planning_summary",
+      "uses": "planning.summary.load",
+      "description": "Load active planning state when available."
+    },
+    {
+      "id": "create_token",
+      "uses": "preflight.token.create",
+      "description": "Create a fresh token suitable for strict preflight gates."
+    },
+    {
+      "id": "assemble_context",
+      "uses": "preflight.context.assemble",
+      "description": "Assemble takeover-safe context and token metadata."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit preflight context in the requested format."
+    }
+  ],
+  "guards": [
+    "Do not mutate repo state while producing preflight context.",
+    "Token creation is time-dependent, so byte-for-byte output is not idempotent.",
+    "Use preflight_policy.json as the source of token format and age policy."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated token format matches preflight_policy.json",
+    "existing preflight command tests remain unchanged"
+  ],
+  "projections": {
+    "cli": {
+      "command_ref": "preflight"
+    },
+    "mcp": {
+      "tool_name": "agentic_workspace_preflight_report",
+      "read_only_hint": true,
+      "destructive_hint": false,
+      "idempotent_hint": false
+    },
+    "skill": {
+      "activation": [
+        "preflight",
+        "takeover context",
+        "startup context"
+      ],
+      "instruction_summary": "Use this operation to collect compact restart or takeover context before lifecycle work."
+    }
+  },
+  "migration_status": "draft-contract-only"
+}
