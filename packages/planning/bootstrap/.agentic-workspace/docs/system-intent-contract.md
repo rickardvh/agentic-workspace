@@ -18,6 +18,7 @@ This keeps the consumed declaration inside the workspace home while leaving host
 
 - Confirmed higher-level intent must stay recoverable separately from the currently active slice.
 - Bounded slicing may narrow means, decomposition, and immediate proof, but it must not silently replace the larger requested outcome.
+- Active execplans should use `system_intent_alignment` to name the materially relevant system intent, the slice-shaping bias it creates, and the broader-lane validation question that remains after local task proof.
 
 ## Authority Ladder
 
