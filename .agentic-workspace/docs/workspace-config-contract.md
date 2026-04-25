@@ -103,6 +103,9 @@ They should:
 
 ## Repo-Custom Workflow Obligations
 
+The formal workflow component format is schema-backed at `src/agentic_workspace/contracts/workflow_definition_format.json` and exposed through `agentic-workspace defaults --section agent_configuration_workflow_extensions --format json`.
+Use that compact payload when the question is how workflow components compose, attach, migrate from Markdown, or preserve flexible step internals.
+
 Repo-custom workflow additions should be declared in `.agentic-workspace/config.toml` under `workflow_obligations`, not invented first in `AGENTS.md` or active planning.
 
 Each obligation stays small and reviewable:

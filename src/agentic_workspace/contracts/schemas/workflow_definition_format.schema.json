@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/workflow-definition-format.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "canonical_doc",
+    "rule",
+    "primary_component_family",
+    "composition",
+    "flexibility_boundary",
+    "migration_posture"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/workflow-definition-format/v1"
+    },
+    "canonical_doc": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rule": {
+      "type": "string",
+      "minLength": 1
+    },
+    "primary_component_family": {
+      "type": "object",
+      "required": [
+        "id",
+        "owner_surface",
+        "attachment_points",
+        "fields"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attachment_points": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "field",
+              "required",
+              "purpose"
+            ],
+            "properties": {
+              "field": {
+                "type": "string",
+                "minLength": 1
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "purpose": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "composition": {
+      "$ref": "#/$defs/string_map"
+    },
+    "flexibility_boundary": {
+      "type": "object",
+      "required": [
+        "formalize",
+        "leave_flexible",
+        "must_not"
+      ],
+      "properties": {
+        "formalize": {
+          "$ref": "#/$defs/non_empty_strings"
+        },
+        "leave_flexible": {
+          "$ref": "#/$defs/non_empty_strings"
+        },
+        "must_not": {
+          "$ref": "#/$defs/non_empty_strings"
+        }
+      },
+      "additionalProperties": false
+    },
+    "migration_posture": {
+      "$ref": "#/$defs/string_map"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "non_empty_strings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "string_map": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

@@ -995,6 +995,12 @@ def test_defaults_section_selector_returns_agent_configuration_workflow_extensio
     assert payload["selector"] == {"section": "agent_configuration_workflow_extensions"}
     assert payload["matched"] is True
     assert payload["answer"]["owner_surface"] == ".agentic-workspace/config.toml [workflow_obligations]"
+    assert payload["answer"]["definition_format"]["schema_version"] == "agentic-workspace/workflow-definition-format/v1"
+    assert payload["answer"]["definition_format"]["primary_component_family"]["id"] == "workflow_obligation"
+    assert (
+        payload["answer"]["definition_format"]["flexibility_boundary"]["leave_flexible"][0]
+        == "local implementation steps inside the bounded component"
+    )
     assert payload["answer"]["supported_stages"][0] == "pre-work"
     assert payload["answer"]["consumption_rule"][0].startswith("workspace owns declaration")
 

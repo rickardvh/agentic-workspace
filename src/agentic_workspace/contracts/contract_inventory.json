@@ -196,6 +196,16 @@
       "notes": "Workflow artifact adapter profiles now come from checked-in contract JSON instead of inline Python tables."
     },
     {
+      "area": "workflow_definition_format",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/workflow_definition_format.json",
+      "consumers": [
+        "agentic_workspace.cli:_agent_configuration_workflow_extensions_payload",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Workflow component structure, composition, attachment, and migration posture are schema-backed so workflow docs can stay adapters over a machine-usable format."
+    },
+    {
       "area": "improvement_latitude_policy",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/improvement_latitude_policy.json",

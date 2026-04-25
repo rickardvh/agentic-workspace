@@ -68,6 +68,10 @@ def workflow_artifact_profiles_manifest() -> dict[str, Any]:
     return load_contract_json("workflow_artifact_profiles.json")
 
 
+def workflow_definition_format_manifest() -> dict[str, Any]:
+    return load_validated_contract_json("workflow_definition_format.json", "workflow_definition_format.schema.json")
+
+
 def improvement_latitude_policy_manifest() -> dict[str, Any]:
     return load_contract_json("improvement_latitude_policy.json")
 

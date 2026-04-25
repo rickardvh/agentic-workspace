@@ -80,6 +80,7 @@ from agentic_workspace.contract_tooling import (
     report_contract_manifest,
     setup_findings_policy_manifest,
     workflow_artifact_profiles_manifest,
+    workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
 from agentic_workspace.reporting_support import (
@@ -103,6 +104,7 @@ _CLI_OPTION_GROUPS_MANIFEST = cli_option_groups_manifest()
 _MODULE_REGISTRY_MANIFEST = module_registry_manifest()
 _WORKSPACE_SURFACES_MANIFEST = workspace_surfaces_manifest()
 _WORKFLOW_ARTIFACT_PROFILES_MANIFEST = workflow_artifact_profiles_manifest()
+_WORKFLOW_DEFINITION_FORMAT = workflow_definition_format_manifest()
 _IMPROVEMENT_LATITUDE_POLICY = improvement_latitude_policy_manifest()
 _OPTIMIZATION_BIAS_POLICY = optimization_bias_policy_manifest()
 _REPO_FRICTION_POLICY = repo_friction_policy_manifest()
@@ -4152,6 +4154,7 @@ def _agent_configuration_workflow_extensions_payload() -> dict[str, Any]:
             "Declare small repo-custom workflow obligations in `.agentic-workspace/config.toml` so workspace owns the "
             "extension mechanism and planning only consumes relevant obligations."
         ),
+        "definition_format": copy.deepcopy(_WORKFLOW_DEFINITION_FORMAT),
         "owner_surface": ".agentic-workspace/config.toml [workflow_obligations]",
         "fields": [
             {"field": "summary", "purpose": "bounded repo-local expectation worth surfacing into active work"},

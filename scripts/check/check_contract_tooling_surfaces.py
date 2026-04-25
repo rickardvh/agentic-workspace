@@ -30,6 +30,7 @@ from agentic_workspace.contract_tooling import (
     report_contract_manifest,
     setup_findings_policy_manifest,
     workflow_artifact_profiles_manifest,
+    workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
 
@@ -437,6 +438,10 @@ def main(argv: list[str] | None = None) -> int:
         (
             "workflow artifact profiles manifest",
             _validate(workflow_artifact_profiles_manifest(), "workflow_artifact_profiles.schema.json"),
+        ),
+        (
+            "workflow definition format manifest",
+            _validate(workflow_definition_format_manifest(), "workflow_definition_format.schema.json"),
         ),
         (
             "improvement latitude policy manifest",
