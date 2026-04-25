@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/python-runtime-boundary.schema.json",
+  "title": "Python Runtime Boundary",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "parent_issue",
+    "purpose",
+    "classification_values",
+    "boundaries"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/python-runtime-boundary/v1"
+    },
+    "parent_issue": {
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "classification_values": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "procedural-owned",
+          "live-inspection-owned",
+          "operation-contract-covered",
+          "deferred-extractable"
+        ]
+      },
+      "minItems": 4,
+      "uniqueItems": true
+    },
+    "boundaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "classification",
+          "owner_modules",
+          "runtime_surfaces",
+          "why_python_owned",
+          "contract_surfaces",
+          "remaining_extractable_content"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "classification": {
+            "enum": [
+              "procedural-owned",
+              "live-inspection-owned",
+              "operation-contract-covered",
+              "deferred-extractable"
+            ]
+          },
+          "owner_modules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "runtime_surfaces": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "why_python_owned": {
+            "type": "string"
+          },
+          "contract_surfaces": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "remaining_extractable_content": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "summary",
+                "tracking_issue",
+                "status"
+              ],
+              "properties": {
+                "summary": {
+                  "type": "string"
+                },
+                "tracking_issue": {
+                  "type": "string",
+                  "pattern": "^#[0-9]+$"
+                },
+                "status": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}

@@ -204,7 +204,7 @@
     },
     {
       "issue": "#316",
-      "summary": "Document intentionally retained runtime logic so extraction does not turn live decisions into brittle data.",
+      "summary": "Remaining Python-owned runtime behavior is classified in python_runtime_boundary.json so live decisions stay procedural without hiding contract authority in cli.py.",
       "candidate_ids": [
         "report-assembly",
         "preflight-token-validation"

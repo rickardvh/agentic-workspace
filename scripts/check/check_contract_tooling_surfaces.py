@@ -25,6 +25,7 @@ from agentic_workspace.contract_tooling import (
     proof_selection_rules_manifest,
     python_contract_consumption_manifest,
     python_extraction_map_manifest,
+    python_runtime_boundary_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
     setup_findings_policy_manifest,
@@ -480,6 +481,10 @@ def main(argv: list[str] | None = None) -> int:
         (
             "python contract consumption policy",
             _validate(python_contract_consumption_manifest(), "python_contract_consumption.schema.json"),
+        ),
+        (
+            "python runtime boundary",
+            _validate(python_runtime_boundary_manifest(), "python_runtime_boundary.schema.json"),
         ),
     ]
 
