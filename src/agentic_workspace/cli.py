@@ -68,6 +68,7 @@ from agentic_workspace.contract_tooling import (
     improvement_latitude_policy_manifest,
     module_registry_manifest,
     optimization_bias_policy_manifest,
+    preflight_policy_manifest,
     proof_routes_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
@@ -91,10 +92,6 @@ from agentic_workspace.workspace_output import (
     _emit_setup_text,
 )
 
-HIGH_RISK_COMMANDS = frozenset({"install", "init", "upgrade", "uninstall"})
-PREFLIGHT_TOKEN_PREFIX = "preflight-v1:"
-DEFAULT_PREFLIGHT_MAX_AGE_SECONDS = 900
-PLACEHOLDER_RE = re.compile(r"<[A-Z][A-Z0-9_]+>")
 _CLI_COMMANDS_MANIFEST = cli_commands_manifest()
 _CLI_OPTION_GROUPS_MANIFEST = cli_option_groups_manifest()
 _MODULE_REGISTRY_MANIFEST = module_registry_manifest()
@@ -103,6 +100,12 @@ _WORKFLOW_ARTIFACT_PROFILES_MANIFEST = workflow_artifact_profiles_manifest()
 _IMPROVEMENT_LATITUDE_POLICY = improvement_latitude_policy_manifest()
 _OPTIMIZATION_BIAS_POLICY = optimization_bias_policy_manifest()
 _REPO_FRICTION_POLICY = repo_friction_policy_manifest()
+_PREFLIGHT_POLICY = preflight_policy_manifest()
+HIGH_RISK_COMMANDS = frozenset(str(command) for command in _PREFLIGHT_POLICY["high_risk_commands"])
+PREFLIGHT_TOKEN_PREFIX = str(_PREFLIGHT_POLICY["token"]["prefix"])
+DEFAULT_PREFLIGHT_MAX_AGE_SECONDS = int(_PREFLIGHT_POLICY["default_max_age_seconds"])
+_PREFLIGHT_STRICT_GATE_POLICY = _PREFLIGHT_POLICY["strict_gate"]
+PLACEHOLDER_RE = re.compile(r"<[A-Z][A-Z0-9_]+>")
 MODULE_COMMAND_ARGS = {command_name: tuple(args) for command_name, args in _MODULE_REGISTRY_MANIFEST["module_command_args"].items()}
 MIXED_AGENT_LOCAL_OVERRIDE_FIELDS = tuple(_WORKSPACE_SURFACES_MANIFEST["mixed_agent_local_override_fields"])
 WORKSPACE_PAYLOAD_FILES = tuple(Path(relative) for relative in _WORKSPACE_SURFACES_MANIFEST["payload_files"])
@@ -283,23 +286,25 @@ def _enforce_preflight_gate(*, parser: argparse.ArgumentParser, args: argparse.N
 
     token = str(getattr(args, "preflight_token", "") or "")
     if not token:
-        parser.error("Strict preflight gate is enabled. Provide --preflight-token from 'agentic-workspace preflight --format json'.")
+        parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["missing_token_error"]))
 
     issued_at_epoch = _parse_preflight_token(token)
     if issued_at_epoch is None:
-        parser.error("Invalid --preflight-token format. Expected token from 'agentic-workspace preflight --format json'.")
+        parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["invalid_token_error"]))
 
     max_age_seconds = int(getattr(args, "preflight_max_age_seconds", DEFAULT_PREFLIGHT_MAX_AGE_SECONDS))
     if max_age_seconds <= 0:
-        parser.error("--preflight-max-age-seconds must be a positive integer.")
+        parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["non_positive_max_age_error"]))
     now_epoch = int(time.time())
     age_seconds = now_epoch - issued_at_epoch
     if age_seconds < 0:
-        parser.error("Preflight token timestamp is in the future. Regenerate it with 'agentic-workspace preflight --format json'.")
+        parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["future_token_error"]))
     if age_seconds > max_age_seconds:
         parser.error(
-            f"Stale preflight token ({age_seconds}s old; max {max_age_seconds}s). "
-            "Regenerate it with 'agentic-workspace preflight --format json'."
+            str(_PREFLIGHT_STRICT_GATE_POLICY["stale_token_error_template"]).format(
+                age_seconds=age_seconds,
+                max_age_seconds=max_age_seconds,
+            )
         )
 
 
@@ -380,6 +385,8 @@ def _add_manifest_option(parser: argparse.ArgumentParser, option_spec: dict[str,
         kwargs["choices"] = choices
     if "default" in option_spec or "default_ref" in option_spec:
         kwargs["default"] = _resolve_option_default(option_spec)
+    if "nargs" in option_spec:
+        kwargs["nargs"] = option_spec["nargs"]
     option_type = _resolve_option_type(option_spec)
     if option_type is not None:
         kwargs["type"] = option_type
@@ -620,6 +627,16 @@ def main(argv: list[str] | None = None) -> int:
         except ImportError:
             parser.error("The planning module must be installed to use the summary command.")
 
+    if args.command == "start":
+        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+        _validate_target_root(command_name="start", target_root=target_root)
+        payload = _start_payload(
+            target_root=target_root,
+            changed_paths=list(getattr(args, "changed", []) or []),
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
+
     if args.command == "preflight":
         target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
         _validate_target_root(command_name="preflight", target_root=target_root)
@@ -641,6 +658,7 @@ def main(argv: list[str] | None = None) -> int:
                     descriptors=descriptors,
                     route=getattr(args, "route", None),
                     current_only=bool(getattr(args, "current", False)),
+                    changed_paths=list(getattr(args, "changed", []) or []),
                 )
             elif args.command == "ownership":
                 _emit_ownership(
@@ -2518,6 +2536,92 @@ def _run_preflight_command(
         },
         "active_planning_state": active_state,
     }
+
+
+def _package_boundary_payload(*, target_root: Path) -> dict[str, Any]:
+    cwd = Path.cwd().resolve()
+    try:
+        relative_cwd = cwd.relative_to(target_root)
+    except ValueError:
+        return {
+            "status": "outside-target",
+            "cwd": cwd.as_posix(),
+            "warning": "Current working directory is outside the target root.",
+        }
+    parts = relative_cwd.parts
+    if len(parts) >= 2 and parts[0] == "packages":
+        package_root = Path(parts[0]) / parts[1]
+        return {
+            "status": "inside-package",
+            "cwd": relative_cwd.as_posix() or ".",
+            "package_root": package_root.as_posix(),
+            "warning": "Read package-local AGENTS.md before editing inside this package boundary.",
+        }
+    return {
+        "status": "repo-root-or-subdir",
+        "cwd": relative_cwd.as_posix() or ".",
+        "warning": None,
+    }
+
+
+def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
+    preflight = _run_preflight_command(target_root=target_root)
+    active_state = preflight.get("active_planning_state", {})
+    planning_record = active_state.get("planning_record", {})
+    active_contract = active_state.get("active_contract", {})
+    active_execplans = active_state.get("execplans", {}).get("active_execplans", [])
+    active_execplan = active_execplans[0].get("path") if active_execplans else None
+    next_action = ""
+    if isinstance(planning_record, dict):
+        next_action = str(planning_record.get("next_action", "") or "")
+    if not next_action and isinstance(active_contract, dict):
+        next_action = str(active_contract.get("todo_item", {}).get("why_now", "") or "")
+    if not next_action:
+        active_items = active_state.get("todo", {}).get("active_items", [])
+        if active_items:
+            next_action = str(active_items[0].get("next_action", "") or active_items[0].get("why_now", "") or "")
+    if not next_action:
+        next_action = "Use the startup sequence and compact planning summary before opening deeper planning surfaces."
+
+    payload: dict[str, Any] = {
+        "kind": "startup-context/v1",
+        "target": target_root.as_posix(),
+        "startup_sequence": [
+            {
+                "id": "entrypoint",
+                "command": None,
+                "surface": preflight.get("resolved_config", {}).get("agent_instructions_file", "AGENTS.md"),
+                "why": "configured ordinary repo startup entrypoint",
+            },
+            {
+                "id": "preflight",
+                "command": "agentic-workspace preflight --format json",
+                "surface": "startup_guidance + resolved_config + active_planning_state",
+                "why": "one-call takeover context",
+            },
+            {
+                "id": "summary",
+                "command": "agentic-workspace summary --format json",
+                "surface": "planning_record",
+                "why": "active planning state before raw planning reads",
+            },
+        ],
+        "active_state_summary": {
+            "todo_active_count": active_state.get("todo", {}).get("active_count", 0),
+            "active_execplan": active_execplan,
+            "planning_status": planning_record.get("status", "unavailable") if isinstance(planning_record, dict) else "unavailable",
+        },
+        "package_boundary": _package_boundary_payload(target_root=target_root),
+        "immediate_next_allowed_action": {
+            "summary": next_action,
+            "read_first": preflight.get("startup_guidance", {}).get("first_compact_queries", []),
+            "open_execplan_only_when": "the compact summary points to an active execplan or the task needs active sequencing detail",
+        },
+    }
+    normalized_paths = _normalize_changed_paths(changed_paths)
+    if normalized_paths:
+        payload["proof"] = _proof_selection_for_changed_paths(changed_paths=normalized_paths)
+    return payload
 
 
 def _preflight_active_state_payload(*, target_root: Path) -> dict[str, Any]:
@@ -5301,9 +5405,22 @@ def _select_proof_payload(
     *,
     route: str | None,
     current_only: bool,
+    changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
-    if route and current_only:
-        raise WorkspaceUsageError("proof selectors are mutually exclusive; use either --route or --current.")
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    selector_count = sum(1 for selected in (bool(route), current_only, bool(normalized_paths)) if selected)
+    if selector_count > 1:
+        raise WorkspaceUsageError("proof selectors are mutually exclusive; use only one of --route, --current, or --changed.")
+    if normalized_paths:
+        answer = _proof_selection_for_changed_paths(changed_paths=normalized_paths)
+        refs = [compact_contract_manifest()["canonical_doc"], payload["command"], payload["canonical_doc"]]
+        return _compact_contract_answer(
+            surface="proof",
+            selector={"changed": normalized_paths},
+            answer=answer,
+            refs=refs,
+            target=payload["target"],
+        )
     if route:
         answer = {
             "id": route,
@@ -5339,13 +5456,14 @@ def _emit_proof(
     descriptors: dict[str, ModuleDescriptor],
     route: str | None = None,
     current_only: bool = False,
+    changed_paths: list[str] | None = None,
 ) -> None:
     payload = _proof_payload(target_root=target_root, descriptors=descriptors)
-    payload = _select_proof_payload(payload, route=route, current_only=current_only)
+    payload = _select_proof_payload(payload, route=route, current_only=current_only, changed_paths=changed_paths)
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
         return
-    if route or current_only:
+    if route or current_only or changed_paths:
         _emit_compact_answer_text(payload)
         return
     print(f"Target: {payload['target']}")
@@ -5428,6 +5546,99 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
         "rule": defaults["rule"],
         "default_routes": defaults["default_routes"],
         "current": current,
+    }
+
+
+def _normalize_changed_paths(paths: list[str]) -> list[str]:
+    normalized: list[str] = []
+    for path_text in paths:
+        stripped = str(path_text).strip()
+        if not stripped:
+            continue
+        path = Path(stripped)
+        try:
+            if path.is_absolute():
+                stripped = path.resolve().as_posix()
+            else:
+                stripped = path.as_posix()
+        except OSError:
+            stripped = path.as_posix()
+        while stripped.startswith("./"):
+            stripped = stripped[2:]
+        stripped = stripped.rstrip("/")
+        if stripped and stripped not in normalized:
+            normalized.append(stripped)
+    return normalized
+
+
+def _proof_selection_for_changed_paths(*, changed_paths: list[str]) -> dict[str, Any]:
+    defaults = _defaults_payload()
+    validation_lanes = defaults["validation"]["lanes"]
+
+    def _lane(lane_id: str) -> dict[str, Any]:
+        return next(lane for lane in validation_lanes if lane["id"] == lane_id)
+
+    selected_ids: list[str] = []
+
+    def _select(lane_id: str) -> None:
+        if lane_id not in selected_ids:
+            selected_ids.append(lane_id)
+
+    for changed_path in changed_paths:
+        if changed_path.startswith("packages/planning/"):
+            _select("planning_package")
+        elif changed_path.startswith("packages/memory/"):
+            _select("memory_package")
+        elif changed_path.startswith(".agentic-workspace/planning/"):
+            _select("planning_surfaces")
+        elif changed_path in {"AGENTS.md", "llms.txt"} or changed_path.startswith("docs/"):
+            _select("maintainer_surfaces")
+        elif (
+            changed_path.startswith("src/agentic_workspace/")
+            or changed_path.startswith("tests/")
+            or changed_path.startswith("scripts/check/")
+            or changed_path == "pyproject.toml"
+        ):
+            _select("workspace_cli")
+        else:
+            _select("workspace_cli")
+
+    selected_lanes = [_lane(lane_id) for lane_id in selected_ids]
+    required_commands: list[str] = []
+    broaden_when: list[str] = []
+    escalate_when: list[str] = []
+    for lane in selected_lanes:
+        for command in lane.get("enough_proof", []):
+            if command not in required_commands:
+                required_commands.append(command)
+        for condition in lane.get("broaden_when", []):
+            if condition not in broaden_when:
+                broaden_when.append(condition)
+        for condition in lane.get("escalate_when", []):
+            if condition not in escalate_when:
+                escalate_when.append(condition)
+
+    if len(selected_lanes) > 1:
+        escalate_when.insert(0, "changed paths span multiple validation lanes; run all selected commands or split the work")
+
+    return {
+        "kind": "proof-selection/v1",
+        "changed_paths": changed_paths,
+        "selected_lanes": [
+            {
+                "id": lane["id"],
+                "when": lane["when"],
+                "required_commands": lane["enough_proof"],
+            }
+            for lane in selected_lanes
+        ],
+        "required_commands": required_commands,
+        "optional_commands": [
+            "agentic-workspace proof --target ./repo --current --format json",
+            "agentic-workspace summary --format json",
+        ],
+        "broaden_when": broaden_when,
+        "escalate_when": escalate_when,
     }
 
 

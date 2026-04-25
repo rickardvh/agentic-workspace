@@ -189,6 +189,17 @@
       "notes": "Repo-friction policy payloads and boundary tests are manifest-backed instead of inline Python tables."
     },
     {
+      "area": "preflight_policy",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/preflight_policy.json",
+      "consumers": [
+        "agentic_workspace.cli:_enforce_preflight_gate",
+        "agentic_workspace.cli:build_parser",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "High-risk command gating, preflight token format, token freshness defaults, and strict-gate messages are manifest-backed instead of inline Python constants."
+    },
+    {
       "area": "module_registry",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/module_registry.json",

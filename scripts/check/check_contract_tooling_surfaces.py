@@ -16,9 +16,10 @@ from agentic_workspace.contract_tooling import (
     improvement_latitude_policy_manifest,
     module_registry_manifest,
     optimization_bias_policy_manifest,
+    preflight_policy_manifest,
     proof_routes_manifest,
-    report_contract_manifest,
     repo_friction_policy_manifest,
+    report_contract_manifest,
     setup_findings_policy_manifest,
     workflow_artifact_profiles_manifest,
     workspace_surfaces_manifest,
@@ -346,6 +347,10 @@ def main(argv: list[str] | None = None) -> int:
             _validate(repo_friction_policy_manifest(), "repo_friction_policy.schema.json"),
         ),
         (
+            "preflight policy manifest",
+            _validate(preflight_policy_manifest(), "preflight_policy.schema.json"),
+        ),
+        (
             "module registry manifest",
             _validate(module_registry_manifest(), "module_registry.schema.json"),
         ),
@@ -460,6 +465,15 @@ def main(argv: list[str] | None = None) -> int:
         checks.append(("repo friction policy parity", ["defaults payload validation_friction drifted from repo_friction_policy.json"]))
     if improvement_defaults["decision_test"] != repo_friction_policy["improvement_boundary_test"]:
         checks.append(("repo friction policy parity", ["defaults payload decision_test drifted from repo_friction_policy.json"]))
+    preflight_policy = preflight_policy_manifest()
+    if sorted(cli.HIGH_RISK_COMMANDS) != sorted(preflight_policy["high_risk_commands"]):
+        checks.append(("preflight policy parity", ["high-risk command set drifted from preflight_policy.json"]))
+    if cli.PREFLIGHT_TOKEN_PREFIX != preflight_policy["token"]["prefix"]:
+        checks.append(("preflight policy parity", ["preflight token prefix drifted from preflight_policy.json"]))
+    if cli.DEFAULT_PREFLIGHT_MAX_AGE_SECONDS != preflight_policy["default_max_age_seconds"]:
+        checks.append(("preflight policy parity", ["default preflight max age drifted from preflight_policy.json"]))
+    if cli._PREFLIGHT_STRICT_GATE_POLICY != preflight_policy["strict_gate"]:  # type: ignore[attr-defined]
+        checks.append(("preflight policy parity", ["strict-gate policy drifted from preflight_policy.json"]))
     module_registry = module_registry_manifest()
     if {name: list(args) for name, args in cli.MODULE_COMMAND_ARGS.items()} != module_registry["module_command_args"]:
         checks.append(("module registry parity", ["module command args drifted from module_registry.json"]))

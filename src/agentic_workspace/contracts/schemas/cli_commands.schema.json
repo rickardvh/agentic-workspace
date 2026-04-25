@@ -84,6 +84,12 @@
         "action": {
           "type": "string"
         },
+        "nargs": {
+          "type": [
+            "string",
+            "integer"
+          ]
+        },
         "choices": {
           "type": "array",
           "items": {

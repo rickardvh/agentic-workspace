@@ -4,7 +4,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 CHECK_DIR = Path(__file__).resolve().parent
 
 
