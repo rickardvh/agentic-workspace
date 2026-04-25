@@ -24,6 +24,10 @@ def proof_routes_manifest() -> dict[str, Any]:
     return load_contract_json("proof_routes.json")
 
 
+def proof_selection_rules_manifest() -> dict[str, Any]:
+    return load_contract_json("proof_selection_rules.json")
+
+
 def report_contract_manifest() -> dict[str, Any]:
     return load_contract_json("report_contract.json")
 

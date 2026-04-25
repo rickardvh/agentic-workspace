@@ -46,7 +46,7 @@
       "future_owner": "JSON contract data",
       "authority_status": "authoritative",
       "extraction_readiness": "extract now",
-      "rationale": "Validation lane payloads are already contract-backed; the remaining path classifier is simple declarative mapping plus one procedural de-duplication step.",
+      "rationale": "Validation lane payloads are already contract-backed; the path classifier is now simple declarative mapping plus one procedural de-duplication step.",
       "issue_hint": "#315"
     },
     {
@@ -196,13 +196,6 @@
       "candidate_ids": [
         "ownership-path-classifier",
         "report-assembly"
-      ]
-    },
-    {
-      "issue": "#315",
-      "summary": "Move path-based proof classification into contract data and add parity checks.",
-      "candidate_ids": [
-        "changed-path-proof-rules"
       ]
     },
     {

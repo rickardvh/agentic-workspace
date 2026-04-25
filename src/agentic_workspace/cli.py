@@ -74,6 +74,7 @@ from agentic_workspace.contract_tooling import (
     optimization_bias_policy_manifest,
     preflight_policy_manifest,
     proof_routes_manifest,
+    proof_selection_rules_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
     setup_findings_policy_manifest,
@@ -105,6 +106,7 @@ _IMPROVEMENT_LATITUDE_POLICY = improvement_latitude_policy_manifest()
 _OPTIMIZATION_BIAS_POLICY = optimization_bias_policy_manifest()
 _REPO_FRICTION_POLICY = repo_friction_policy_manifest()
 _PREFLIGHT_POLICY = preflight_policy_manifest()
+_PROOF_SELECTION_RULES = proof_selection_rules_manifest()
 HIGH_RISK_COMMANDS = frozenset(str(command) for command in _PREFLIGHT_POLICY["high_risk_commands"])
 PREFLIGHT_TOKEN_PREFIX = str(_PREFLIGHT_POLICY["token"]["prefix"])
 DEFAULT_PREFLIGHT_MAX_AGE_SECONDS = int(_PREFLIGHT_POLICY["default_max_age_seconds"])
@@ -5793,23 +5795,16 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str]) -> dict[str,
             selected_ids.append(lane_id)
 
     for changed_path in changed_paths:
-        if changed_path.startswith("packages/planning/"):
-            _select("planning_package")
-        elif changed_path.startswith("packages/memory/"):
-            _select("memory_package")
-        elif changed_path.startswith(".agentic-workspace/planning/"):
-            _select("planning_surfaces")
-        elif changed_path in {"AGENTS.md", "llms.txt"} or changed_path.startswith("docs/"):
-            _select("maintainer_surfaces")
-        elif (
-            changed_path.startswith("src/agentic_workspace/")
-            or changed_path.startswith("tests/")
-            or changed_path.startswith("scripts/check/")
-            or changed_path == "pyproject.toml"
-        ):
-            _select("workspace_cli")
-        else:
-            _select("workspace_cli")
+        matched_rule = False
+        for rule in _PROOF_SELECTION_RULES["rules"]:
+            exact_matches = set(rule.get("exact", []))
+            prefixes = tuple(rule.get("prefixes", []))
+            if changed_path in exact_matches or changed_path.startswith(prefixes):
+                _select(str(rule["lane"]))
+                matched_rule = True
+                break
+        if not matched_rule:
+            _select(str(_PROOF_SELECTION_RULES["fallback_lane"]))
 
     selected_lanes = [_lane(lane_id) for lane_id in selected_ids]
     required_commands: list[str] = []
@@ -5827,7 +5822,7 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str]) -> dict[str,
                 escalate_when.append(condition)
 
     if len(selected_lanes) > 1:
-        escalate_when.insert(0, "changed paths span multiple validation lanes; run all selected commands or split the work")
+        escalate_when.insert(0, str(_PROOF_SELECTION_RULES["cross_lane_escalation"]))
 
     return {
         "kind": "proof-selection/v1",

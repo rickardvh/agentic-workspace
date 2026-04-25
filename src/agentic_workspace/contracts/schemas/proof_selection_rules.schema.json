@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/proof-selection-rules.schema.json",
+  "title": "Proof Selection Rules",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "rules",
+    "fallback_lane",
+    "cross_lane_escalation"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/proof-selection-rules/v1"
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "lane"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "lane": {
+            "type": "string"
+          },
+          "prefixes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "exact": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "prefixes"
+            ]
+          },
+          {
+            "required": [
+              "exact"
+            ]
+          }
+        ],
+        "additionalProperties": false
+      }
+    },
+    "fallback_lane": {
+      "type": "string"
+    },
+    "cross_lane_escalation": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

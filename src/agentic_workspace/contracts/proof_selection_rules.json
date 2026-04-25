@@ -1,0 +1,51 @@
+{
+  "schema_version": "agentic-workspace/proof-selection-rules/v1",
+  "rules": [
+    {
+      "id": "planning-package",
+      "lane": "planning_package",
+      "prefixes": [
+        "packages/planning/"
+      ]
+    },
+    {
+      "id": "memory-package",
+      "lane": "memory_package",
+      "prefixes": [
+        "packages/memory/"
+      ]
+    },
+    {
+      "id": "planning-installed-surfaces",
+      "lane": "planning_surfaces",
+      "prefixes": [
+        ".agentic-workspace/planning/"
+      ]
+    },
+    {
+      "id": "maintainer-surfaces",
+      "lane": "maintainer_surfaces",
+      "exact": [
+        "AGENTS.md",
+        "llms.txt"
+      ],
+      "prefixes": [
+        "docs/"
+      ]
+    },
+    {
+      "id": "workspace-cli",
+      "lane": "workspace_cli",
+      "exact": [
+        "pyproject.toml"
+      ],
+      "prefixes": [
+        "src/agentic_workspace/",
+        "tests/",
+        "scripts/check/"
+      ]
+    }
+  ],
+  "fallback_lane": "workspace_cli",
+  "cross_lane_escalation": "changed paths span multiple validation lanes; run all selected commands or split the work"
+}

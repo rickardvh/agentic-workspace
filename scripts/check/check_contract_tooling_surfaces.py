@@ -21,6 +21,7 @@ from agentic_workspace.contract_tooling import (
     optimization_bias_policy_manifest,
     preflight_policy_manifest,
     proof_routes_manifest,
+    proof_selection_rules_manifest,
     python_extraction_map_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
@@ -353,6 +354,7 @@ def main(argv: list[str] | None = None) -> int:
     checks: list[tuple[str, list[str]]] = [
         ("compact_contract_profile.json", _validate(compact_contract_manifest(), "selector_contracts_manifest.schema.json")),
         ("proof_routes.json", _validate(proof_routes_manifest(), "proof_routes_manifest.schema.json")),
+        ("proof_selection_rules.json", _validate(proof_selection_rules_manifest(), "proof_selection_rules.schema.json")),
         ("report_contract.json", _validate(report_contract_manifest(), "report_contract_manifest.schema.json")),
         ("contract_inventory.json", _validate(contract_inventory_manifest(), "contract_inventory.schema.json")),
         ("compact answer sample", _validate(_sample_compact_answer(), "compact_contract_answer.schema.json")),
@@ -465,6 +467,12 @@ def main(argv: list[str] | None = None) -> int:
         checks.append(("defaults compact profile parity", ["defaults payload answer_shape drifted from compact_contract_profile.json"]))
     if defaults_payload["proof_surfaces"]["default_routes"] != proof_routes_manifest()["default_routes"]:
         checks.append(("proof routes parity", ["defaults payload proof routes drifted from proof_routes.json"]))
+    proof_rules = proof_selection_rules_manifest()
+    validation_lane_ids = {lane["id"] for lane in defaults_payload["validation"]["lanes"]}
+    proof_rule_lanes = {rule["lane"] for rule in proof_rules["rules"]} | {proof_rules["fallback_lane"]}
+    unknown_rule_lanes = sorted(proof_rule_lanes - validation_lane_ids)
+    if unknown_rule_lanes:
+        checks.append(("proof selection rules parity", [f"unknown validation lane(s): {', '.join(unknown_rule_lanes)}"]))
     if cli._reporting_schema_payload() != report_contract_manifest():  # type: ignore[attr-defined]
         checks.append(("report contract parity", ["reporting schema payload drifted from report_contract.json"]))
     workspace_surfaces = workspace_surfaces_manifest()
