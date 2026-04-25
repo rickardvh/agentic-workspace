@@ -1,0 +1,25 @@
+{
+  "schema_version": "agentic-workspace/preflight-policy/v1",
+  "summary": "Policy for high-risk command preflight gating and token validation.",
+  "high_risk_commands": [
+    "install",
+    "init",
+    "upgrade",
+    "uninstall"
+  ],
+  "token": {
+    "prefix": "preflight-v1:",
+    "issued_at_epoch_encoding": "decimal_unix_epoch_seconds"
+  },
+  "default_max_age_seconds": 900,
+  "strict_gate": {
+    "enabled_by_option": "strict_preflight",
+    "token_option": "preflight_token",
+    "max_age_option": "preflight_max_age_seconds",
+    "missing_token_error": "Strict preflight gate is enabled. Provide --preflight-token from 'agentic-workspace preflight --format json'.",
+    "invalid_token_error": "Invalid --preflight-token format. Expected token from 'agentic-workspace preflight --format json'.",
+    "non_positive_max_age_error": "--preflight-max-age-seconds must be a positive integer.",
+    "future_token_error": "Preflight token timestamp is in the future. Regenerate it with 'agentic-workspace preflight --format json'.",
+    "stale_token_error_template": "Stale preflight token ({age_seconds}s old; max {max_age_seconds}s). Regenerate it with 'agentic-workspace preflight --format json'."
+  }
+}
