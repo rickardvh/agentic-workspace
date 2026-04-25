@@ -50,6 +50,10 @@ from agentic_workspace.config import (
     WORKSPACE_DELEGATION_OUTCOMES_PATH,
     WORKSPACE_EXTERNAL_AGENT_PATH,
     WORKSPACE_LOCAL_CONFIG_PATH,
+    WORKSPACE_LOCAL_INTEGRATION_ALLOWED_AID_KINDS,
+    WORKSPACE_LOCAL_INTEGRATION_BOUNDARY_RULES,
+    WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH,
+    WORKSPACE_LOCAL_INTEGRATION_SUBFOLDER_CONVENTION,
     WORKSPACE_POINTER_BLOCK,
     WORKSPACE_SYSTEM_INTENT_MIRROR_PATH,
     WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH,
@@ -148,6 +152,26 @@ if str(_IMPROVEMENT_LATITUDE_POLICY["default_mode"]) != DEFAULT_IMPROVEMENT_LATI
     raise RuntimeError("improvement_latitude_policy.json drifted from config defaults")
 if str(_OPTIMIZATION_BIAS_POLICY["default_mode"]) != DEFAULT_OPTIMIZATION_BIAS:
     raise RuntimeError("optimization_bias_policy.json drifted from config defaults")
+
+
+def _local_integration_area_payload(*, target_root: Path | None = None) -> dict[str, Any]:
+    exists = False
+    if target_root is not None:
+        exists = (target_root / WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH).exists()
+    return {
+        "root": WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH.as_posix(),
+        "subfolder_convention": WORKSPACE_LOCAL_INTEGRATION_SUBFOLDER_CONVENTION,
+        "example_subfolder": (WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH / "codex").as_posix(),
+        "status": "available-local-only",
+        "exists": exists,
+        "authoritative": False,
+        "git_ignored": True,
+        "canonical_doc": ".agentic-workspace/docs/local-integration-area.md",
+        "allowed_aid_kinds": list(WORKSPACE_LOCAL_INTEGRATION_ALLOWED_AID_KINDS),
+        "boundary_rules": list(WORKSPACE_LOCAL_INTEGRATION_BOUNDARY_RULES),
+    }
+
+
 _memory_cleanup_blocks = _MODULE_REGISTRY_ENTRIES["memory"]["root_agents_cleanup_blocks"]
 if _memory_cleanup_blocks:
     first_memory_cleanup_block = _memory_cleanup_blocks[0]
@@ -4744,6 +4768,13 @@ def _defaults_payload() -> dict[str, Any]:
                 "kind": DELEGATION_OUTCOMES_KIND,
                 "rule": "local-only delegation outcome evidence used to derive advisory tuning suggestions over time",
             },
+            "local_integration_area": {
+                **_local_integration_area_payload(),
+                "rule": (
+                    "Vendor/runtime integration aids may live here to make local compliance cheaper, "
+                    "but shared workflow truth must stay in repo-owned workspace, planning, and memory surfaces."
+                ),
+            },
             "runtime_inference": {
                 "tool_owned": True,
                 "report_when_behavior_changes": True,
@@ -5210,6 +5241,7 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print("Mixed-agent:")
     print(f"- rule: {payload['mixed_agent']['rule']}")
     print(f"- local override: {payload['mixed_agent']['local_override']['path']} ({payload['mixed_agent']['local_override']['status']})")
+    print(f"- local integration area: {payload['mixed_agent']['local_integration_area']['root']}")
     print("Delegation posture:")
     print(f"- doc: {payload['delegation_posture']['canonical_doc']}")
     print(f"- command: {payload['delegation_posture']['command']}")
@@ -6596,6 +6628,10 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 if target_name not in {profile.name for profile in local_override.delegation_targets}
             ),
         },
+        "local_integration_area": {
+            **_local_integration_area_payload(target_root=config.target_root),
+            "rule": ("local-only vendor/runtime aids; may reduce local operating cost, but must not become shared workflow authority"),
+        },
         "runtime_inference": {
             "tool_owned": defaults["runtime_inference"]["tool_owned"],
             "reported_here": False,
@@ -6736,6 +6772,11 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
     print(f"- rule: {payload['mixed_agent']['rule']}")
     print(f"- repo policy: {payload['mixed_agent']['repo_policy']['path']} ({payload['mixed_agent']['repo_policy']['source']})")
     print(f"- local override: {payload['mixed_agent']['local_override']['path']} ({payload['mixed_agent']['local_override']['status']})")
+    print(
+        "- local integration area: "
+        f"{payload['mixed_agent']['local_integration_area']['root']} "
+        f"({payload['mixed_agent']['local_integration_area']['status']})"
+    )
     print(
         "- effective posture: "
         f"internal delegation={payload['mixed_agent']['effective_posture']['supports_internal_delegation']['value']}, "

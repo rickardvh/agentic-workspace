@@ -1,8 +1,11 @@
 # Local Python environment
 .venv/
 .env.local
+.agentic-workspace/config.local.toml
 agentic-workspace.local.toml
+.agentic-workspace/delegation-outcomes.json
 agentic-workspace.delegation-outcomes.json
+.agentic-workspace/local/
 
 # Python caches
 **/__pycache__/

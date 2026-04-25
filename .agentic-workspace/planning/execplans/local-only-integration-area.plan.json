@@ -19,9 +19,9 @@
     },
     "execution": {
       "milestone": "choose-root-and-boundary-rules",
-      "status": "planned",
-      "next_step": "Choose the local-only root name and vendor/runtime subfolder convention, then codify the boundary and ignore rules in the smallest durable surfaces needed.",
-      "proof": "A local-only root and subfolder convention exist, boundary docs/config make its non-authoritative status explicit, and tests or checks prove shared surfaces do not start depending on it."
+      "status": "completed",
+      "next_step": "Push the completed local-only integration-area milestone, then close or route #287/#288 after review.",
+      "proof": "The local-only root is `.agentic-workspace/local/integrations/`, vendor/runtime aids live under direct `<vendor-or-runtime>/` subfolders, the root and prior local-only files are git-ignored, config/defaults report the area as optional and non-authoritative, and focused tests plus contract/planning checks prove shared surfaces do not depend on it."
     },
     "scope": {
       "touched": [
@@ -51,12 +51,12 @@
     "activation trigger": "continue until a local-only root and boundary rules exist and local experiments no longer need to piggyback on shared workflow state"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "planned: local integration shortcuts can gain a sanctioned home without expanding the shared product surface.",
+    "what this slice enabled": "Local integration shortcuts now have a sanctioned ignored root, `.agentic-workspace/local/integrations/`, with direct vendor/runtime subfolders and config/defaults reporting that keeps the area non-authoritative.",
     "intentionally deferred": "runtime posture selection, broad plugin architecture, and any shared vendor abstraction work.",
-    "discovered implications": "explicit local-only boundaries can reduce pressure to misuse checked-in docs or config for disposable experiments, which in turn lowers trust confusion in the shared workflow.",
-    "proof achieved now": "none yet; this is a prepared plan.",
-    "validation still needed": "prove that the chosen local-only root is discoverable enough for the local user but ignorable for everyone else, and that shared surfaces remain independent from it.",
-    "next likely slice": "land the root name, subfolder convention, and ignore/boundary rules first; only then consider any helper discovery or reporting."
+    "discovered implications": "Previously tracked local override and delegation outcome files needed to leave the index for the boundary to be real rather than only documented.",
+    "proof achieved now": "Config/defaults expose the local-only root and boundary rules while ordinary workspace commands continue without requiring the root to exist.",
+    "validation still needed": "none for this slice beyond review and push confirmation.",
+    "next likely slice": "decide whether issue #287 needs runtime-specific examples after the root convention has merged."
   },
   "intent_interpretation": {
     "literal request": "prepare a full execplan for the fourth roadmap lane",
@@ -125,7 +125,7 @@
   ],
   "active_milestone": {
     "id": "choose-root-and-boundary-rules",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "Pick the local-only root name, vendor/runtime subfolder convention, and explicit boundary rules that keep the area outside shared workflow authority.",
     "ready": "ready",
     "blocked": "none",
@@ -156,9 +156,9 @@
     "The first slice is only root and boundary setting, not bridge implementation."
   ],
   "open_questions_to_close": [
-    "What root name is most explicit without adding cognitive residue to shared startup surfaces?",
-    "Should the local-only area be discoverable from config output, docs only, or a minimal optional report field?",
-    "Which ignore rule is safest: git ignore, local config only, or both?"
+    "Closed: the root is `.agentic-workspace/local/integrations/`.",
+    "Closed: the area is discoverable from config/defaults output plus a focused boundary doc.",
+    "Closed: `.agentic-workspace/local/`, `.agentic-workspace/config.local.toml`, and `.agentic-workspace/delegation-outcomes.json` are git-ignored, with the previously tracked local files removed from the index."
   ],
   "validation_commands": [
     "uv run agentic-workspace config --target . --format json",
@@ -178,29 +178,29 @@
     "The lane leaves a safe place for disposable local bridges without expanding the shared repo contract."
   ],
   "execution_run": {
-    "run status": "not-started",
-    "executor": "none yet",
+    "run status": "completed",
+    "executor": "workspace CLI",
     "handoff source": "this prepared execplan",
-    "what happened": "not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet",
-    "validations run": "none yet",
-    "result for continuation": "implementation still required",
-    "next step": "choose the root and boundary rules"
+    "what happened": "Defined `.agentic-workspace/local/integrations/` as the sanctioned ignored local-only integration root, documented direct vendor/runtime subfolders, surfaced the boundary in defaults/config output, and removed tracked local-only files from the shared index.",
+    "scope touched": ".gitignore; .agentic-workspace/docs/local-integration-area.md; .agentic-workspace/docs/workspace-config-contract.md; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/local-only-integration-area.plan.json; src/agentic_workspace/config.py; src/agentic_workspace/cli.py; tests/test_workspace_cli.py",
+    "changed surfaces": ".gitignore; .agentic-workspace/docs/local-integration-area.md; .agentic-workspace/docs/workspace-config-contract.md; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/local-only-integration-area.plan.json; src/agentic_workspace/config.py; src/agentic_workspace/cli.py; tests/test_workspace_cli.py; .agentic-workspace/config.local.toml removed from index; .agentic-workspace/delegation-outcomes.json removed from index",
+    "validations run": "uv run agentic-workspace config --target . --format json; uv run agentic-workspace doctor --format json; uv run pytest tests/test_workspace_cli.py -q -k \"config or local or integration\"; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_planning_surfaces.py; uv run ruff check src tests scripts",
+    "result for continuation": "The first local-only integration-area slice is complete; #288 is satisfied and #287 can close if review agrees the parent lane needs no runtime examples.",
+    "next step": "push the milestone branch for review"
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "unknown",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "moderate until the local-only boundary is explicit enough that workers stop treating it as shared workflow state",
-    "follow-on decision": "keep-lane-open"
+    "review status": "completed",
+    "scope respected": "yes, with the minimum CLI reporting change needed to make config proof meaningful",
+    "proof status": "satisfied for root, subfolder convention, ignore rule, config reporting, and local-only non-authority",
+    "intent served": "yes",
+    "config compliance": "local-only aids remain optional and non-authoritative; repo-owned config still carries shared policy",
+    "misinterpretation risk": "low after config/defaults output and the boundary doc both state the root is ignored, optional, disposable, and non-authoritative",
+    "follow-on decision": "close-slice"
   },
   "proof_report": {
-    "validation proof": "planned: config/doctor queries, focused local-config tests, and contract/planning checks",
-    "proof achieved now": "none yet; plan prepared only",
-    "evidence for \"proof achieved\" state": "pending implementation"
+    "validation proof": "`uv run agentic-workspace config --target . --format json`; `uv run agentic-workspace doctor --format json`; `uv run pytest tests/test_workspace_cli.py -q -k \"config or local or integration\"`; `uv run python scripts/check/check_contract_tooling_surfaces.py`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run ruff check src tests scripts`",
+    "proof achieved now": "The local-only root and vendor/runtime subfolder convention are queryable, documented, and ignored; shared workflow remains independent because commands report the area without requiring it to exist.",
+    "evidence for \"proof achieved\" state": "Focused local/config tests passed, config output shows `exists: false` and `authoritative: false` for the local integration area, contract/planning checks report no drift, and ruff passes."
   },
   "intent_satisfaction": {
     "original intent": "prepare a full execplan that safely bounds the local-only integration-area lane",
@@ -209,23 +209,24 @@
     "unsolved intent passed to": ".agentic-workspace/planning/state.toml lane local-only-integration-area"
   },
   "closure_check": {
-    "slice status": "planned but not started",
-    "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "the planning artifact exists, but the lane's root convention and boundary proof do not",
-    "evidence carried forward": "this execplan plus the lane record in state.toml",
-    "reopen trigger": "revisit if local-only boundary work turns out to fit under an even narrower direct task instead"
+    "slice status": "completed",
+    "larger-intent status": "implemented for the boundary/root slice",
+    "closure decision": "close-slice",
+    "why this decision is honest": "the repo now has the requested local-only home, vendor/runtime subfolder convention, ignore rules, boundary doc, and config/defaults proof without introducing a shared plugin framework.",
+    "evidence carried forward": "this execplan, `.agentic-workspace/docs/local-integration-area.md`, config/defaults output, ignore rules, and focused tests",
+    "reopen trigger": "revisit only if runtime-specific examples are needed after review or local users still put disposable integrations in shared workflow surfaces."
   },
   "execution_summary": {
-    "outcome delivered": "prepared a full machine-first execplan for the local-only integration-area lane",
-    "validation confirmed": "planning preparation only",
-    "follow-on routed to": ".agentic-workspace/planning/state.toml and this execplan",
-    "post-work posterity capture": "none yet beyond the plan",
-    "knowledge promoted (memory/docs/config)": "execplan only",
-    "resume from": "choose-root-and-boundary-rules"
+    "outcome delivered": "created a sanctioned local-only integration area rooted at `.agentic-workspace/local/integrations/` with direct vendor/runtime subfolders and explicit non-authority rules",
+    "validation confirmed": "config, doctor, focused workspace CLI tests, contract tooling check, planning surface check, and ruff",
+    "follow-on routed to": "issue/PR review for #287/#288",
+    "post-work posterity capture": ".agentic-workspace/docs/local-integration-area.md and this completed execplan",
+    "knowledge promoted (memory/docs/config)": "workspace config reporting and local integration boundary doc",
+    "resume from": "next roadmap lane after review"
   },
   "drift_log": [
     "2026-04-24: Initial full-lane execplan created from current roadmap order and live issue set.",
-    "2026-04-24: Activated as the next unfinished roadmap lane after machine-first planning-chain closeout."
+    "2026-04-24: Activated as the next unfinished roadmap lane after machine-first planning-chain closeout.",
+    "2026-04-25: Completed the root and boundary-rules slice with `.agentic-workspace/local/integrations/`, config/defaults reporting, ignore rules, and focused proof."
   ]
 }

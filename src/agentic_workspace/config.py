@@ -14,6 +14,23 @@ WORKSPACE_LOCAL_CONFIG_PATH = Path(".agentic-workspace/config.local.toml")
 LEGACY_WORKSPACE_LOCAL_CONFIG_PATH = Path("agentic-workspace.local.toml")
 WORKSPACE_DELEGATION_OUTCOMES_PATH = Path(".agentic-workspace/delegation-outcomes.json")
 LEGACY_WORKSPACE_DELEGATION_OUTCOMES_PATH = Path("agentic-workspace.delegation-outcomes.json")
+WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH = Path(".agentic-workspace/local/integrations")
+WORKSPACE_LOCAL_INTEGRATION_SUBFOLDER_CONVENTION = "<vendor-or-runtime>/"
+WORKSPACE_LOCAL_INTEGRATION_ALLOWED_AID_KINDS = (
+    "prompt helpers",
+    "export/import shims",
+    "local wrappers",
+    "native-workflow adapters",
+    "resumable handoff helpers",
+    "runtime scratch files",
+)
+WORKSPACE_LOCAL_INTEGRATION_BOUNDARY_RULES = (
+    "local-only and ignored by git",
+    "optional for ordinary workspace commands",
+    "non-authoritative for planning, memory, startup, review, and workflow state",
+    "safe to delete without changing repo-owned shared behavior",
+    "not a plugin registry or shared compatibility framework",
+)
 WORKSPACE_SYSTEM_INTENT_ROOT = Path(".agentic-workspace/system-intent")
 WORKSPACE_SYSTEM_INTENT_MIRROR_PATH = WORKSPACE_SYSTEM_INTENT_ROOT / "intent.toml"
 WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH = WORKSPACE_SYSTEM_INTENT_ROOT / "WORKFLOW.md"
