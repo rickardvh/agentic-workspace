@@ -329,6 +329,19 @@ def build_parser() -> argparse.ArgumentParser:
     summary_parser.add_argument("--profile", choices=("compact", "full"), default="compact")
     _add_format_argument(summary_parser)
 
+    start_parser = subparsers.add_parser(
+        "start",
+        help="Return the minimum safe startup context for beginning work in a target repository.",
+    )
+    start_parser.add_argument("--target", help="Optional repository path for startup context (defaults to current workspace).")
+    start_parser.add_argument(
+        "--changed",
+        nargs="*",
+        default=[],
+        help="Optional repo-relative changed paths used to include a proof recommendation.",
+    )
+    _add_format_argument(start_parser)
+
     defaults_parser = subparsers.add_parser(
         "defaults",
         help="Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
@@ -343,6 +356,12 @@ def build_parser() -> argparse.ArgumentParser:
     proof_parser.add_argument("--target", help="Optional repository path used to inspect installed modules and proof state.")
     proof_parser.add_argument("--route", help="Return one proof route by id instead of the full proof surface.")
     proof_parser.add_argument("--current", action="store_true", help="Return only the current proof summary.")
+    proof_parser.add_argument(
+        "--changed",
+        nargs="*",
+        default=[],
+        help="Return required proof commands for the provided repo-relative changed paths.",
+    )
     _add_format_argument(proof_parser)
 
     setup_parser = subparsers.add_parser(
@@ -1116,6 +1135,16 @@ def main(argv: list[str] | None = None) -> int:
         except ImportError:
             parser.error("The planning module must be installed to use the summary command.")
 
+    if args.command == "start":
+        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+        _validate_target_root(command_name="start", target_root=target_root)
+        payload = _start_payload(
+            target_root=target_root,
+            changed_paths=list(getattr(args, "changed", []) or []),
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
+
     if args.command == "preflight":
         target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
         _validate_target_root(command_name="preflight", target_root=target_root)
@@ -1137,6 +1166,7 @@ def main(argv: list[str] | None = None) -> int:
                     descriptors=descriptors,
                     route=getattr(args, "route", None),
                     current_only=bool(getattr(args, "current", False)),
+                    changed_paths=list(getattr(args, "changed", []) or []),
                 )
             elif args.command == "ownership":
                 _emit_ownership(
@@ -3083,6 +3113,92 @@ def _run_preflight_command(
         },
         "active_planning_state": active_state,
     }
+
+
+def _package_boundary_payload(*, target_root: Path) -> dict[str, Any]:
+    cwd = Path.cwd().resolve()
+    try:
+        relative_cwd = cwd.relative_to(target_root)
+    except ValueError:
+        return {
+            "status": "outside-target",
+            "cwd": cwd.as_posix(),
+            "warning": "Current working directory is outside the target root.",
+        }
+    parts = relative_cwd.parts
+    if len(parts) >= 2 and parts[0] == "packages":
+        package_root = Path(parts[0]) / parts[1]
+        return {
+            "status": "inside-package",
+            "cwd": relative_cwd.as_posix() or ".",
+            "package_root": package_root.as_posix(),
+            "warning": "Read package-local AGENTS.md before editing inside this package boundary.",
+        }
+    return {
+        "status": "repo-root-or-subdir",
+        "cwd": relative_cwd.as_posix() or ".",
+        "warning": None,
+    }
+
+
+def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
+    preflight = _run_preflight_command(target_root=target_root)
+    active_state = preflight.get("active_planning_state", {})
+    planning_record = active_state.get("planning_record", {})
+    active_contract = active_state.get("active_contract", {})
+    active_execplans = active_state.get("execplans", {}).get("active_execplans", [])
+    active_execplan = active_execplans[0].get("path") if active_execplans else None
+    next_action = ""
+    if isinstance(planning_record, dict):
+        next_action = str(planning_record.get("next_action", "") or "")
+    if not next_action and isinstance(active_contract, dict):
+        next_action = str(active_contract.get("todo_item", {}).get("why_now", "") or "")
+    if not next_action:
+        active_items = active_state.get("todo", {}).get("active_items", [])
+        if active_items:
+            next_action = str(active_items[0].get("next_action", "") or active_items[0].get("why_now", "") or "")
+    if not next_action:
+        next_action = "Use the startup sequence and compact planning summary before opening deeper planning surfaces."
+
+    payload: dict[str, Any] = {
+        "kind": "startup-context/v1",
+        "target": target_root.as_posix(),
+        "startup_sequence": [
+            {
+                "id": "entrypoint",
+                "command": None,
+                "surface": preflight.get("resolved_config", {}).get("agent_instructions_file", "AGENTS.md"),
+                "why": "configured ordinary repo startup entrypoint",
+            },
+            {
+                "id": "preflight",
+                "command": "agentic-workspace preflight --format json",
+                "surface": "startup_guidance + resolved_config + active_planning_state",
+                "why": "one-call takeover context",
+            },
+            {
+                "id": "summary",
+                "command": "agentic-workspace summary --format json",
+                "surface": "planning_record",
+                "why": "active planning state before raw planning reads",
+            },
+        ],
+        "active_state_summary": {
+            "todo_active_count": active_state.get("todo", {}).get("active_count", 0),
+            "active_execplan": active_execplan,
+            "planning_status": planning_record.get("status", "unavailable") if isinstance(planning_record, dict) else "unavailable",
+        },
+        "package_boundary": _package_boundary_payload(target_root=target_root),
+        "immediate_next_allowed_action": {
+            "summary": next_action,
+            "read_first": preflight.get("startup_guidance", {}).get("first_compact_queries", []),
+            "open_execplan_only_when": "the compact summary points to an active execplan or the task needs active sequencing detail",
+        },
+    }
+    normalized_paths = _normalize_changed_paths(changed_paths)
+    if normalized_paths:
+        payload["proof"] = _proof_selection_for_changed_paths(changed_paths=normalized_paths)
+    return payload
 
 
 def _preflight_active_state_payload(*, target_root: Path) -> dict[str, Any]:
@@ -5895,9 +6011,22 @@ def _select_proof_payload(
     *,
     route: str | None,
     current_only: bool,
+    changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
-    if route and current_only:
-        raise WorkspaceUsageError("proof selectors are mutually exclusive; use either --route or --current.")
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    selector_count = sum(1 for selected in (bool(route), current_only, bool(normalized_paths)) if selected)
+    if selector_count > 1:
+        raise WorkspaceUsageError("proof selectors are mutually exclusive; use only one of --route, --current, or --changed.")
+    if normalized_paths:
+        answer = _proof_selection_for_changed_paths(changed_paths=normalized_paths)
+        refs = [compact_contract_manifest()["canonical_doc"], payload["command"], payload["canonical_doc"]]
+        return _compact_contract_answer(
+            surface="proof",
+            selector={"changed": normalized_paths},
+            answer=answer,
+            refs=refs,
+            target=payload["target"],
+        )
     if route:
         answer = {
             "id": route,
@@ -5933,13 +6062,14 @@ def _emit_proof(
     descriptors: dict[str, ModuleDescriptor],
     route: str | None = None,
     current_only: bool = False,
+    changed_paths: list[str] | None = None,
 ) -> None:
     payload = _proof_payload(target_root=target_root, descriptors=descriptors)
-    payload = _select_proof_payload(payload, route=route, current_only=current_only)
+    payload = _select_proof_payload(payload, route=route, current_only=current_only, changed_paths=changed_paths)
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
         return
-    if route or current_only:
+    if route or current_only or changed_paths:
         _emit_compact_answer_text(payload)
         return
     print(f"Target: {payload['target']}")
@@ -6022,6 +6152,99 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
         "rule": defaults["rule"],
         "default_routes": defaults["default_routes"],
         "current": current,
+    }
+
+
+def _normalize_changed_paths(paths: list[str]) -> list[str]:
+    normalized: list[str] = []
+    for path_text in paths:
+        stripped = str(path_text).strip()
+        if not stripped:
+            continue
+        path = Path(stripped)
+        try:
+            if path.is_absolute():
+                stripped = path.resolve().as_posix()
+            else:
+                stripped = path.as_posix()
+        except OSError:
+            stripped = path.as_posix()
+        while stripped.startswith("./"):
+            stripped = stripped[2:]
+        stripped = stripped.rstrip("/")
+        if stripped and stripped not in normalized:
+            normalized.append(stripped)
+    return normalized
+
+
+def _proof_selection_for_changed_paths(*, changed_paths: list[str]) -> dict[str, Any]:
+    defaults = _defaults_payload()
+    validation_lanes = defaults["validation"]["lanes"]
+
+    def _lane(lane_id: str) -> dict[str, Any]:
+        return next(lane for lane in validation_lanes if lane["id"] == lane_id)
+
+    selected_ids: list[str] = []
+
+    def _select(lane_id: str) -> None:
+        if lane_id not in selected_ids:
+            selected_ids.append(lane_id)
+
+    for changed_path in changed_paths:
+        if changed_path.startswith("packages/planning/"):
+            _select("planning_package")
+        elif changed_path.startswith("packages/memory/"):
+            _select("memory_package")
+        elif changed_path.startswith(".agentic-workspace/planning/"):
+            _select("planning_surfaces")
+        elif changed_path in {"AGENTS.md", "llms.txt"} or changed_path.startswith("docs/"):
+            _select("maintainer_surfaces")
+        elif (
+            changed_path.startswith("src/agentic_workspace/")
+            or changed_path.startswith("tests/")
+            or changed_path.startswith("scripts/check/")
+            or changed_path == "pyproject.toml"
+        ):
+            _select("workspace_cli")
+        else:
+            _select("workspace_cli")
+
+    selected_lanes = [_lane(lane_id) for lane_id in selected_ids]
+    required_commands: list[str] = []
+    broaden_when: list[str] = []
+    escalate_when: list[str] = []
+    for lane in selected_lanes:
+        for command in lane.get("enough_proof", []):
+            if command not in required_commands:
+                required_commands.append(command)
+        for condition in lane.get("broaden_when", []):
+            if condition not in broaden_when:
+                broaden_when.append(condition)
+        for condition in lane.get("escalate_when", []):
+            if condition not in escalate_when:
+                escalate_when.append(condition)
+
+    if len(selected_lanes) > 1:
+        escalate_when.insert(0, "changed paths span multiple validation lanes; run all selected commands or split the work")
+
+    return {
+        "kind": "proof-selection/v1",
+        "changed_paths": changed_paths,
+        "selected_lanes": [
+            {
+                "id": lane["id"],
+                "when": lane["when"],
+                "required_commands": lane["enough_proof"],
+            }
+            for lane in selected_lanes
+        ],
+        "required_commands": required_commands,
+        "optional_commands": [
+            "agentic-workspace proof --target ./repo --current --format json",
+            "agentic-workspace summary --format json",
+        ],
+        "broaden_when": broaden_when,
+        "escalate_when": escalate_when,
     }
 
 

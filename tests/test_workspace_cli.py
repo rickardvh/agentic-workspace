@@ -3650,6 +3650,68 @@ def test_preflight_full_includes_active_todo_without_execplan(tmp_path: Path, ca
     assert active_state["todo"]["active_items"][0]["next_action"] == "land the preflight fix."
 
 
+def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "    { id = 'startup-slice', status = 'in-progress', surface = '.agentic-workspace/planning/execplans/startup.plan.json', why_now = 'keep startup cheap.', next_action = 'run the compact startup path.', done_when = 'startup is bounded.' }\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\n"
+        "lanes = []\n"
+        "candidates = []\n",
+    )
+
+    assert cli.main(["start", "--target", str(target), "--changed", "src/agentic_workspace/cli.py", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "startup-context/v1"
+    assert payload["startup_sequence"][0]["surface"] == "AGENTS.md"
+    assert payload["active_state_summary"]["todo_active_count"] == 1
+    assert payload["immediate_next_allowed_action"]["summary"] == "run the compact startup path."
+    assert payload["proof"]["required_commands"] == [
+        "uv run pytest tests/test_workspace_cli.py -q",
+        "uv run ruff check src tests",
+    ]
+
+
+def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> None:
+    assert cli.main(["proof", "--changed", ".agentic-workspace/planning/state.toml", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["surface"] == "proof"
+    assert payload["selector"] == {"changed": [".agentic-workspace/planning/state.toml"]}
+    answer = payload["answer"]
+    assert answer["kind"] == "proof-selection/v1"
+    assert answer["selected_lanes"][0]["id"] == "planning_surfaces"
+    assert answer["required_commands"] == ["agentic-workspace doctor --target ./repo --modules planning --format json"]
+
+
+def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--changed",
+                "packages/planning/src/repo_planning_bootstrap/installer.py",
+                "src/agentic_workspace/cli.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["planning_package", "workspace_cli"]
+    assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
+
+
 def test_upgrade_strict_preflight_requires_token(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
