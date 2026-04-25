@@ -56,6 +56,10 @@ def repo_friction_policy_manifest() -> dict[str, Any]:
     return load_contract_json("repo_friction_policy.json")
 
 
+def preflight_policy_manifest() -> dict[str, Any]:
+    return load_contract_json("preflight_policy.json")
+
+
 def module_registry_manifest() -> dict[str, Any]:
     return load_contract_json("module_registry.json")
 

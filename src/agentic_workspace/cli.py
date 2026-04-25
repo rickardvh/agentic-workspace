@@ -68,6 +68,7 @@ from agentic_workspace.contract_tooling import (
     improvement_latitude_policy_manifest,
     module_registry_manifest,
     optimization_bias_policy_manifest,
+    preflight_policy_manifest,
     proof_routes_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
@@ -91,10 +92,6 @@ from agentic_workspace.workspace_output import (
     _emit_setup_text,
 )
 
-HIGH_RISK_COMMANDS = frozenset({"install", "init", "upgrade", "uninstall"})
-PREFLIGHT_TOKEN_PREFIX = "preflight-v1:"
-DEFAULT_PREFLIGHT_MAX_AGE_SECONDS = 900
-PLACEHOLDER_RE = re.compile(r"<[A-Z][A-Z0-9_]+>")
 _CLI_COMMANDS_MANIFEST = cli_commands_manifest()
 _CLI_OPTION_GROUPS_MANIFEST = cli_option_groups_manifest()
 _MODULE_REGISTRY_MANIFEST = module_registry_manifest()
@@ -103,6 +100,12 @@ _WORKFLOW_ARTIFACT_PROFILES_MANIFEST = workflow_artifact_profiles_manifest()
 _IMPROVEMENT_LATITUDE_POLICY = improvement_latitude_policy_manifest()
 _OPTIMIZATION_BIAS_POLICY = optimization_bias_policy_manifest()
 _REPO_FRICTION_POLICY = repo_friction_policy_manifest()
+_PREFLIGHT_POLICY = preflight_policy_manifest()
+HIGH_RISK_COMMANDS = frozenset(str(command) for command in _PREFLIGHT_POLICY["high_risk_commands"])
+PREFLIGHT_TOKEN_PREFIX = str(_PREFLIGHT_POLICY["token"]["prefix"])
+DEFAULT_PREFLIGHT_MAX_AGE_SECONDS = int(_PREFLIGHT_POLICY["default_max_age_seconds"])
+_PREFLIGHT_STRICT_GATE_POLICY = _PREFLIGHT_POLICY["strict_gate"]
+PLACEHOLDER_RE = re.compile(r"<[A-Z][A-Z0-9_]+>")
 MODULE_COMMAND_ARGS = {command_name: tuple(args) for command_name, args in _MODULE_REGISTRY_MANIFEST["module_command_args"].items()}
 MIXED_AGENT_LOCAL_OVERRIDE_FIELDS = tuple(_WORKSPACE_SURFACES_MANIFEST["mixed_agent_local_override_fields"])
 WORKSPACE_PAYLOAD_FILES = tuple(Path(relative) for relative in _WORKSPACE_SURFACES_MANIFEST["payload_files"])
@@ -283,23 +286,25 @@ def _enforce_preflight_gate(*, parser: argparse.ArgumentParser, args: argparse.N
 
     token = str(getattr(args, "preflight_token", "") or "")
     if not token:
-        parser.error("Strict preflight gate is enabled. Provide --preflight-token from 'agentic-workspace preflight --format json'.")
+        parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["missing_token_error"]))
 
     issued_at_epoch = _parse_preflight_token(token)
     if issued_at_epoch is None:
-        parser.error("Invalid --preflight-token format. Expected token from 'agentic-workspace preflight --format json'.")
+        parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["invalid_token_error"]))
 
     max_age_seconds = int(getattr(args, "preflight_max_age_seconds", DEFAULT_PREFLIGHT_MAX_AGE_SECONDS))
     if max_age_seconds <= 0:
-        parser.error("--preflight-max-age-seconds must be a positive integer.")
+        parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["non_positive_max_age_error"]))
     now_epoch = int(time.time())
     age_seconds = now_epoch - issued_at_epoch
     if age_seconds < 0:
-        parser.error("Preflight token timestamp is in the future. Regenerate it with 'agentic-workspace preflight --format json'.")
+        parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["future_token_error"]))
     if age_seconds > max_age_seconds:
         parser.error(
-            f"Stale preflight token ({age_seconds}s old; max {max_age_seconds}s). "
-            "Regenerate it with 'agentic-workspace preflight --format json'."
+            str(_PREFLIGHT_STRICT_GATE_POLICY["stale_token_error_template"]).format(
+                age_seconds=age_seconds,
+                max_age_seconds=max_age_seconds,
+            )
         )
 
 
