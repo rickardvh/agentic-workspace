@@ -1,0 +1,13 @@
+{
+  "schema_version": "agentic-workspace/conformance-contracts/v1",
+  "summary": "Registry of black-box conformance contracts for generated or alternate implementations.",
+  "schema": "schemas/conformance.schema.json",
+  "contracts": [
+    {
+      "id": "defaults.report.process",
+      "operation_id": "defaults.report",
+      "path": "conformance/defaults.report.process.json",
+      "adapter_kind": "process"
+    }
+  ]
+}

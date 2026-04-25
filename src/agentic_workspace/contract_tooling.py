@@ -104,6 +104,14 @@ def operation_contracts_manifest() -> dict[str, Any]:
     return load_contract_json("operation_contracts.json")
 
 
+def conformance_contracts_manifest() -> dict[str, Any]:
+    return load_contract_json("conformance_contracts.json")
+
+
+def conformance_contract_manifest(relative_path: str) -> dict[str, Any]:
+    return load_validated_contract_json(relative_path, "conformance.schema.json")
+
+
 def operation_primitives_manifest() -> dict[str, Any]:
     return load_contract_json("operation_primitives.json")
 

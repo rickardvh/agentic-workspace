@@ -11,6 +11,8 @@ from agentic_workspace.contract_tooling import (
     cli_commands_manifest,
     cli_option_groups_manifest,
     compact_contract_manifest,
+    conformance_contract_manifest,
+    conformance_contracts_manifest,
     context_templates_manifest,
     contract_inventory_manifest,
     contract_schema,
@@ -292,6 +294,46 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
     return errors
 
 
+def _validate_conformance_registry(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    if payload.get("schema_version") != "agentic-workspace/conformance-contracts/v1":
+        errors.append("conformance_contracts.json has unexpected schema_version")
+    contracts = payload.get("contracts")
+    if not isinstance(contracts, list) or not contracts:
+        errors.append("conformance_contracts.json must contain at least one contract")
+        return errors
+    operation_ids = {operation_ref["id"] for operation_ref in operation_contracts_manifest()["operations"]}
+    seen_ids: set[str] = set()
+    for index, contract_ref in enumerate(contracts):
+        if not isinstance(contract_ref, dict):
+            errors.append(f"conformance registry entry {index} must be an object")
+            continue
+        for field in ("id", "operation_id", "path", "adapter_kind"):
+            if not isinstance(contract_ref.get(field), str) or not str(contract_ref.get(field)).strip():
+                errors.append(f"conformance registry entry {index} missing string field {field}")
+        contract_id = str(contract_ref.get("id", ""))
+        if contract_id in seen_ids:
+            errors.append(f"duplicate conformance contract id {contract_id}")
+        seen_ids.add(contract_id)
+        if contract_ref.get("operation_id") not in operation_ids:
+            errors.append(f"conformance contract {contract_id} references unknown operation {contract_ref.get('operation_id')}")
+        if contract_ref.get("adapter_kind") != "process":
+            errors.append(f"conformance contract {contract_id} has unsupported adapter kind {contract_ref.get('adapter_kind')}")
+        path = str(contract_ref.get("path", ""))
+        try:
+            contract = conformance_contract_manifest(path)
+        except Exception as exc:  # pragma: no cover - error text is surfaced by the checker
+            errors.append(f"conformance contract {contract_id} failed schema validation: {exc}")
+            continue
+        if contract.get("id") != contract_id:
+            errors.append(f"conformance contract {contract_id} path payload id drifted")
+        if contract.get("operation_id") != contract_ref.get("operation_id"):
+            errors.append(f"conformance contract {contract_id} operation_id drifted from registry")
+        if contract.get("adapter", {}).get("kind") != contract_ref.get("adapter_kind"):
+            errors.append(f"conformance contract {contract_id} adapter kind drifted from registry")
+    return errors
+
+
 def _parser_snapshot(parser) -> list[dict[str, object]]:
     subparsers_action = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
     return [_command_parser_snapshot(subparsers_action.choices[name]) for name in subparsers_action.choices]
@@ -474,6 +516,10 @@ def main(argv: list[str] | None = None) -> int:
         (
             "operation contracts registry",
             _validate_operation_registry(operation_contracts_manifest()),
+        ),
+        (
+            "conformance contracts registry",
+            _validate_conformance_registry(conformance_contracts_manifest()),
         ),
         (
             "operation primitives registry",

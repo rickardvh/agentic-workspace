@@ -264,6 +264,17 @@
       "notes": "Draft operation contracts describe behavior, effects, guards, proof expectations, and primitive sequencing without replacing current runtime logic yet."
     },
     {
+      "area": "generated_tool_conformance",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/conformance_contracts.json",
+      "consumers": [
+        "agentic_workspace.conformance:run_process_conformance",
+        "tests/test_generated_tool_conformance.py",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Black-box conformance contracts validate alternate or generated implementations against operation behavior without trusting their implementation path."
+    },
+    {
       "area": "python_extraction_map",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/python_extraction_map.json",
