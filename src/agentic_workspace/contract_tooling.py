@@ -5,6 +5,12 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from jsonschema import Draft202012Validator
+
+
+class ContractValidationError(ValueError):
+    """Raised when a checked-in contract does not satisfy its declared schema."""
+
 
 def contracts_root() -> Path:
     return Path(__file__).resolve().parent / "contracts"
@@ -16,6 +22,20 @@ def load_contract_json(relative_path: str) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+@lru_cache(maxsize=None)
+def load_validated_contract_json(relative_path: str, schema_relative_path: str) -> dict[str, Any]:
+    payload = load_contract_json(relative_path)
+    schema = contract_schema(schema_relative_path)
+    errors = sorted(Draft202012Validator(schema).iter_errors(payload), key=lambda error: list(error.path))
+    if errors:
+        first = errors[0]
+        location = ".".join(str(part) for part in first.path) or "<root>"
+        raise ContractValidationError(
+            f"{relative_path} failed validation against schemas/{schema_relative_path} at {location}: {first.message}"
+        )
+    return payload
+
+
 def compact_contract_manifest() -> dict[str, Any]:
     return load_contract_json("compact_contract_profile.json")
 
@@ -25,7 +45,7 @@ def proof_routes_manifest() -> dict[str, Any]:
 
 
 def proof_selection_rules_manifest() -> dict[str, Any]:
-    return load_contract_json("proof_selection_rules.json")
+    return load_validated_contract_json("proof_selection_rules.json", "proof_selection_rules.schema.json")
 
 
 def report_contract_manifest() -> dict[str, Any]:
@@ -90,6 +110,10 @@ def operation_manifest(relative_path: str) -> dict[str, Any]:
 
 def python_extraction_map_manifest() -> dict[str, Any]:
     return load_contract_json("python_extraction_map.json")
+
+
+def python_contract_consumption_manifest() -> dict[str, Any]:
+    return load_validated_contract_json("python_contract_consumption.json", "python_contract_consumption.schema.json")
 
 
 def contract_schema(relative_path: str) -> dict[str, Any]:

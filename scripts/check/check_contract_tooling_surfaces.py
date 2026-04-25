@@ -22,6 +22,7 @@ from agentic_workspace.contract_tooling import (
     preflight_policy_manifest,
     proof_routes_manifest,
     proof_selection_rules_manifest,
+    python_contract_consumption_manifest,
     python_extraction_map_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
@@ -428,6 +429,10 @@ def main(argv: list[str] | None = None) -> int:
             "python extraction map",
             _validate(python_extraction_map_manifest(), "python_extraction_map.schema.json"),
         ),
+        (
+            "python contract consumption policy",
+            _validate(python_contract_consumption_manifest(), "python_contract_consumption.schema.json"),
+        ),
     ]
 
     operation_contracts = operation_contracts_manifest()
@@ -468,11 +473,20 @@ def main(argv: list[str] | None = None) -> int:
     if defaults_payload["proof_surfaces"]["default_routes"] != proof_routes_manifest()["default_routes"]:
         checks.append(("proof routes parity", ["defaults payload proof routes drifted from proof_routes.json"]))
     proof_rules = proof_selection_rules_manifest()
+    consumption_policy = python_contract_consumption_manifest()
     validation_lane_ids = {lane["id"] for lane in defaults_payload["validation"]["lanes"]}
     proof_rule_lanes = {rule["lane"] for rule in proof_rules["rules"]} | {proof_rules["fallback_lane"]}
     unknown_rule_lanes = sorted(proof_rule_lanes - validation_lane_ids)
     if unknown_rule_lanes:
         checks.append(("proof selection rules parity", [f"unknown validation lane(s): {', '.join(unknown_rule_lanes)}"]))
+    expected_validated_contracts = {
+        ("proof_selection_rules.json", "proof_selection_rules.schema.json", "agentic_workspace.cli:_proof_selection_for_changed_paths")
+    }
+    actual_validated_contracts = {
+        (entry["contract"], entry["schema"], entry["consumer"]) for entry in consumption_policy["validated_at_consumption"]
+    }
+    if expected_validated_contracts - actual_validated_contracts:
+        checks.append(("python contract consumption parity", ["proof selection rules are not recorded as validated at consumption"]))
     if cli._reporting_schema_payload() != report_contract_manifest():  # type: ignore[attr-defined]
         checks.append(("report contract parity", ["reporting schema payload drifted from report_contract.json"]))
     workspace_surfaces = workspace_surfaces_manifest()

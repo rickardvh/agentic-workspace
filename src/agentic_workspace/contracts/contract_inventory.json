@@ -231,6 +231,16 @@
       "notes": "The remaining Python-owned extractable content is classified by future owner, authority status, readiness, and follow-on slice before more extraction work proceeds."
     },
     {
+      "area": "python_contract_consumption",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/python_contract_consumption.json",
+      "consumers": [
+        "agentic_workspace.contract_tooling",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "The Python contract-consumption boundary, validated-loader route, and schema-derived model policy are explicit contract data rather than implicit helper behavior."
+    },
+    {
       "area": "module_registry",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/module_registry.json",

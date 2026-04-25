@@ -1,0 +1,21 @@
+{
+  "schema_version": "agentic-workspace/python-contract-consumption/v1",
+  "loader_boundary": {
+    "module": "agentic_workspace.contract_tooling",
+    "generic_loader": "load_contract_json(relative_path)",
+    "validated_loader": "load_validated_contract_json(relative_path, schema_relative_path)",
+    "error_type": "ContractValidationError"
+  },
+  "validated_at_consumption": [
+    {
+      "contract": "proof_selection_rules.json",
+      "schema": "proof_selection_rules.schema.json",
+      "consumer": "agentic_workspace.cli:_proof_selection_for_changed_paths"
+    }
+  ],
+  "model_derivation_policy": {
+    "authority_rule": "JSON Schema remains the source of truth; Python models may be generated, schema-derived, or explicitly classified as runtime-owned implementation details.",
+    "first_schema_derived_target": "workspace_local_override.schema.json -> MixedAgentLocalOverride replacement or generated validator facade",
+    "handwritten_model_boundary": "Handwritten dataclasses remain acceptable when they represent runtime execution state, live repo inspection, or adapted third-party package results rather than reusable contract shape."
+  }
+}
