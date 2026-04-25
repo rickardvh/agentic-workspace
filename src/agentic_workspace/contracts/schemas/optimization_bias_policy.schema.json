@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/optimization-bias-policy.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "default_mode",
+    "owner_surface",
+    "must_not_change",
+    "surface_boundary",
+    "modes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/optimization-bias-policy/v1"
+    },
+    "default_mode": {
+      "type": "string"
+    },
+    "owner_surface": {
+      "type": "string"
+    },
+    "must_not_change": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "surface_boundary": {
+      "$ref": "#/$defs/surfaceBoundary"
+    },
+    "modes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "mode",
+          "summary",
+          "report_density",
+          "residue_density",
+          "rendered_view_style",
+          "allows",
+          "does_not_affect",
+          "surface_boundary"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "report_density": {
+            "type": "string"
+          },
+          "residue_density": {
+            "type": "string"
+          },
+          "rendered_view_style": {
+            "type": "string"
+          },
+          "allows": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "does_not_affect": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "surface_boundary": {
+            "$ref": "#/$defs/surfaceBoundary"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "$defs": {
+    "surfaceBoundary": {
+      "type": "object",
+      "required": [
+        "honors_bias",
+        "stays_invariant"
+      ],
+      "properties": {
+        "honors_bias": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "stays_invariant": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

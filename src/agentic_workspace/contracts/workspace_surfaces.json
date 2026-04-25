@@ -1,0 +1,34 @@
+{
+  "schema_version": "workspace-surfaces-manifest/v1",
+  "payload_files": [
+    ".agentic-workspace/WORKFLOW.md",
+    ".agentic-workspace/OWNERSHIP.toml",
+    ".agentic-workspace/system-intent/WORKFLOW.md"
+  ],
+  "system_intent_mirror_kind": "agentic-workspace/system-intent/v1",
+  "default_agents_path": "AGENTS.md",
+  "handoff_surfaces": [
+    "llms.txt",
+    ".agentic-workspace/bootstrap-handoff.md",
+    ".agentic-workspace/bootstrap-handoff.json"
+  ],
+  "module_upgrade_source_paths": {
+    "planning": ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
+    "memory": ".agentic-workspace/memory/UPGRADE-SOURCE.toml"
+  },
+  "setup_findings_path": "tools/setup-findings.json",
+  "mixed_agent_local_override_fields": [
+    "runtime.supports_internal_delegation",
+    "runtime.strong_planner_available",
+    "runtime.cheap_bounded_executor_available",
+    "handoff.prefer_internal_delegation_when_available",
+    "safety.safe_to_auto_run_commands",
+    "safety.requires_human_verification_on_pr",
+    "delegation_targets.<target>.strength",
+    "delegation_targets.<target>.location",
+    "delegation_targets.<target>.confidence",
+    "delegation_targets.<target>.task_fit",
+    "delegation_targets.<target>.capability_classes",
+    "delegation_targets.<target>.execution_methods"
+  ]
+}

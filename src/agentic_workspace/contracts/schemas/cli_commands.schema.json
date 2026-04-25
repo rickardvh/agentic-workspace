@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/cli-commands.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "program",
+    "description",
+    "commands"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/cli-commands/v1"
+    },
+    "program": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "commands": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/command"
+      }
+    }
+  },
+  "$defs": {
+    "command": {
+      "type": "object",
+      "required": [
+        "name",
+        "help"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "help": {
+          "type": "string"
+        },
+        "uses_option_groups": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/option"
+          }
+        },
+        "subcommand_dest": {
+          "type": "string"
+        },
+        "subcommands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/command"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "option": {
+      "type": "object",
+      "required": [
+        "name",
+        "flags"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "flags": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "action": {
+          "type": "string"
+        },
+        "nargs": {
+          "type": [
+            "string",
+            "integer"
+          ]
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "integer",
+              "number",
+              "boolean"
+            ]
+          }
+        },
+        "choices_ref": {
+          "type": "string"
+        },
+        "default": {},
+        "default_ref": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "help": {
+          "type": "string"
+        },
+        "help_template": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import difflib
 import fnmatch
 import hashlib
@@ -61,9 +62,19 @@ from agentic_workspace.config import (
     WorkspaceUsageError,
 )
 from agentic_workspace.contract_tooling import (
+    cli_commands_manifest,
+    cli_option_groups_manifest,
     compact_contract_manifest,
+    improvement_latitude_policy_manifest,
+    module_registry_manifest,
+    optimization_bias_policy_manifest,
+    preflight_policy_manifest,
     proof_routes_manifest,
+    repo_friction_policy_manifest,
     report_contract_manifest,
+    setup_findings_policy_manifest,
+    workflow_artifact_profiles_manifest,
+    workspace_surfaces_manifest,
 )
 from agentic_workspace.reporting_support import (
     output_contract_payload,
@@ -81,47 +92,28 @@ from agentic_workspace.workspace_output import (
     _emit_setup_text,
 )
 
-MODULE_COMMAND_ARGS: dict[str, tuple[str, ...]] = {
-    "install": ("target", "dry_run", "force"),
-    "adopt": ("target", "dry_run"),
-    "upgrade": ("target", "dry_run"),
-    "uninstall": ("target", "dry_run"),
-    "doctor": ("target",),
-    "status": ("target",),
-}
-HIGH_RISK_COMMANDS = frozenset({"install", "init", "upgrade", "uninstall"})
-PREFLIGHT_TOKEN_PREFIX = "preflight-v1:"
-DEFAULT_PREFLIGHT_MAX_AGE_SECONDS = 900
+_CLI_COMMANDS_MANIFEST = cli_commands_manifest()
+_CLI_OPTION_GROUPS_MANIFEST = cli_option_groups_manifest()
+_MODULE_REGISTRY_MANIFEST = module_registry_manifest()
+_WORKSPACE_SURFACES_MANIFEST = workspace_surfaces_manifest()
+_WORKFLOW_ARTIFACT_PROFILES_MANIFEST = workflow_artifact_profiles_manifest()
+_IMPROVEMENT_LATITUDE_POLICY = improvement_latitude_policy_manifest()
+_OPTIMIZATION_BIAS_POLICY = optimization_bias_policy_manifest()
+_REPO_FRICTION_POLICY = repo_friction_policy_manifest()
+_PREFLIGHT_POLICY = preflight_policy_manifest()
+HIGH_RISK_COMMANDS = frozenset(str(command) for command in _PREFLIGHT_POLICY["high_risk_commands"])
+PREFLIGHT_TOKEN_PREFIX = str(_PREFLIGHT_POLICY["token"]["prefix"])
+DEFAULT_PREFLIGHT_MAX_AGE_SECONDS = int(_PREFLIGHT_POLICY["default_max_age_seconds"])
+_PREFLIGHT_STRICT_GATE_POLICY = _PREFLIGHT_POLICY["strict_gate"]
 PLACEHOLDER_RE = re.compile(r"<[A-Z][A-Z0-9_]+>")
-MIXED_AGENT_LOCAL_OVERRIDE_FIELDS = (
-    "runtime.supports_internal_delegation",
-    "runtime.strong_planner_available",
-    "runtime.cheap_bounded_executor_available",
-    "handoff.prefer_internal_delegation_when_available",
-    "safety.safe_to_auto_run_commands",
-    "safety.requires_human_verification_on_pr",
-    "delegation_targets.<target>.strength",
-    "delegation_targets.<target>.location",
-    "delegation_targets.<target>.confidence",
-    "delegation_targets.<target>.task_fit",
-    "delegation_targets.<target>.capability_classes",
-    "delegation_targets.<target>.execution_methods",
-)
-WORKSPACE_PAYLOAD_FILES = (
-    Path(".agentic-workspace/WORKFLOW.md"),
-    Path(".agentic-workspace/OWNERSHIP.toml"),
-    WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH,
-)
-SYSTEM_INTENT_MIRROR_KIND = "agentic-workspace/system-intent/v1"
-WORKSPACE_AGENTS_PATH = Path(DEFAULT_AGENT_INSTRUCTIONS_FILE)
-WORKSPACE_HANDOFF_SURFACES = (
-    WORKSPACE_EXTERNAL_AGENT_PATH,
-    WORKSPACE_BOOTSTRAP_HANDOFF_PATH,
-    WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH,
-)
+MODULE_COMMAND_ARGS = {command_name: tuple(args) for command_name, args in _MODULE_REGISTRY_MANIFEST["module_command_args"].items()}
+MIXED_AGENT_LOCAL_OVERRIDE_FIELDS = tuple(_WORKSPACE_SURFACES_MANIFEST["mixed_agent_local_override_fields"])
+WORKSPACE_PAYLOAD_FILES = tuple(Path(relative) for relative in _WORKSPACE_SURFACES_MANIFEST["payload_files"])
+SYSTEM_INTENT_MIRROR_KIND = str(_WORKSPACE_SURFACES_MANIFEST["system_intent_mirror_kind"])
+WORKSPACE_AGENTS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["default_agents_path"])
+WORKSPACE_HANDOFF_SURFACES = tuple(Path(relative) for relative in _WORKSPACE_SURFACES_MANIFEST["handoff_surfaces"])
 MODULE_UPGRADE_SOURCE_PATHS = {
-    "planning": Path(".agentic-workspace/planning/UPGRADE-SOURCE.toml"),
-    "memory": Path(".agentic-workspace/memory/UPGRADE-SOURCE.toml"),
+    module_name: Path(relative) for module_name, relative in _WORKSPACE_SURFACES_MANIFEST["module_upgrade_source_paths"].items()
 }
 
 
@@ -137,12 +129,34 @@ def _load_toml_payload(*args, **kwargs):
     return config_lib.load_toml_payload(*args, **kwargs)
 
 
-SETUP_FINDINGS_PATH = Path("tools/setup-findings.json")
-SETUP_FINDINGS_KIND = "workspace-setup-findings/v1"
-SUPPORTED_SETUP_FINDING_CLASSES = (
-    "repo_friction_evidence",
-    "planning_candidate",
-)
+SETUP_FINDINGS_PATH = Path(_WORKSPACE_SURFACES_MANIFEST["setup_findings_path"])
+_SETUP_FINDINGS_POLICY = setup_findings_policy_manifest()
+SETUP_FINDINGS_KIND = str(_SETUP_FINDINGS_POLICY["accepted_kind"])
+SUPPORTED_SETUP_FINDING_CLASSES = tuple(item["class"] for item in _SETUP_FINDINGS_POLICY["accepted_classes"])
+SETUP_FINDING_PROMOTION_THRESHOLD = float(_SETUP_FINDINGS_POLICY["promotion_confidence_threshold"])
+_WORKFLOW_ARTIFACT_PROFILE_PAYLOADS = {
+    str(item["profile"]): copy.deepcopy(item) for item in _WORKFLOW_ARTIFACT_PROFILES_MANIFEST["profiles"]
+}
+_IMPROVEMENT_LATITUDE_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for item in _IMPROVEMENT_LATITUDE_POLICY["modes"]}
+_OPTIMIZATION_BIAS_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for item in _OPTIMIZATION_BIAS_POLICY["modes"]}
+_MODULE_REGISTRY_ENTRIES = {str(item["name"]): copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST["modules"]}
+_CLI_COMMAND_MANIFESTS = {str(item["name"]): copy.deepcopy(item) for item in _CLI_COMMANDS_MANIFEST["commands"]}
+_SETUP_FINDING_CLASS_PAYLOADS = {str(item["class"]): copy.deepcopy(item) for item in _SETUP_FINDINGS_POLICY["accepted_classes"]}
+if str(_WORKFLOW_ARTIFACT_PROFILES_MANIFEST["default_profile"]) != DEFAULT_WORKFLOW_ARTIFACT_PROFILE:
+    raise RuntimeError("workflow_artifact_profiles.json drifted from config defaults")
+if str(_IMPROVEMENT_LATITUDE_POLICY["default_mode"]) != DEFAULT_IMPROVEMENT_LATITUDE:
+    raise RuntimeError("improvement_latitude_policy.json drifted from config defaults")
+if str(_OPTIMIZATION_BIAS_POLICY["default_mode"]) != DEFAULT_OPTIMIZATION_BIAS:
+    raise RuntimeError("optimization_bias_policy.json drifted from config defaults")
+_memory_cleanup_blocks = _MODULE_REGISTRY_ENTRIES["memory"]["root_agents_cleanup_blocks"]
+if _memory_cleanup_blocks:
+    first_memory_cleanup_block = _memory_cleanup_blocks[0]
+    if str(first_memory_cleanup_block["block"]) != MEMORY_POINTER_BLOCK:
+        raise RuntimeError("module_registry.json drifted from memory pointer block")
+    if str(first_memory_cleanup_block["start_marker"]) != MEMORY_WORKFLOW_MARKER_START:
+        raise RuntimeError("module_registry.json drifted from memory workflow start marker")
+    if str(first_memory_cleanup_block["end_marker"]) != MEMORY_WORKFLOW_MARKER_END:
+        raise RuntimeError("module_registry.json drifted from memory workflow end marker")
 
 
 # Types moved to _schema.py
@@ -247,27 +261,7 @@ def _extract_unknown_command(message: str) -> str:
 def _command_suggestions(unknown_command: str) -> list[str]:
     if not unknown_command:
         return []
-    known_commands = [
-        "modules",
-        "summary",
-        "defaults",
-        "proof",
-        "setup",
-        "ownership",
-        "config",
-        "system-intent",
-        "note-delegation-outcome",
-        "skills",
-        "report",
-        "preflight",
-        "install",
-        "init",
-        "prompt",
-        "status",
-        "doctor",
-        "upgrade",
-        "uninstall",
-    ]
+    known_commands = [item["name"] for item in _CLI_COMMANDS_MANIFEST["commands"]]
     return difflib.get_close_matches(unknown_command, known_commands, n=2, cutoff=0.55)
 
 
@@ -292,683 +286,181 @@ def _enforce_preflight_gate(*, parser: argparse.ArgumentParser, args: argparse.N
 
     token = str(getattr(args, "preflight_token", "") or "")
     if not token:
-        parser.error("Strict preflight gate is enabled. Provide --preflight-token from 'agentic-workspace preflight --format json'.")
+        parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["missing_token_error"]))
 
     issued_at_epoch = _parse_preflight_token(token)
     if issued_at_epoch is None:
-        parser.error("Invalid --preflight-token format. Expected token from 'agentic-workspace preflight --format json'.")
+        parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["invalid_token_error"]))
 
     max_age_seconds = int(getattr(args, "preflight_max_age_seconds", DEFAULT_PREFLIGHT_MAX_AGE_SECONDS))
     if max_age_seconds <= 0:
-        parser.error("--preflight-max-age-seconds must be a positive integer.")
+        parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["non_positive_max_age_error"]))
     now_epoch = int(time.time())
     age_seconds = now_epoch - issued_at_epoch
     if age_seconds < 0:
-        parser.error("Preflight token timestamp is in the future. Regenerate it with 'agentic-workspace preflight --format json'.")
+        parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["future_token_error"]))
     if age_seconds > max_age_seconds:
         parser.error(
-            f"Stale preflight token ({age_seconds}s old; max {max_age_seconds}s). "
-            "Regenerate it with 'agentic-workspace preflight --format json'."
+            str(_PREFLIGHT_STRICT_GATE_POLICY["stale_token_error_template"]).format(
+                age_seconds=age_seconds,
+                max_age_seconds=max_age_seconds,
+            )
         )
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = WorkspaceArgumentParser(
-        prog="agentic-workspace",
-        description="Workspace-level lifecycle orchestrator for selected agentic-workspace modules.",
+        prog=str(_CLI_COMMANDS_MANIFEST["program"]),
+        description=str(_CLI_COMMANDS_MANIFEST["description"]),
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
-
-    modules_parser = subparsers.add_parser("modules", help="List workspace modules available to the orchestrator.")
-    modules_parser.add_argument("--target", help="Optional repository path used to report installed modules.")
-    _add_format_argument(modules_parser)
-
-    summary_parser = subparsers.add_parser("summary", help="Show the active execution summary from the planning module.")
-    summary_parser.add_argument("--target", help="Optional repository path to read summary from.")
-    summary_parser.add_argument("--profile", choices=("compact", "full"), default="compact")
-    _add_format_argument(summary_parser)
-
-    start_parser = subparsers.add_parser(
-        "start",
-        help="Return the minimum safe startup context for beginning work in a target repository.",
-    )
-    start_parser.add_argument("--target", help="Optional repository path for startup context (defaults to current workspace).")
-    start_parser.add_argument(
-        "--changed",
-        nargs="*",
-        default=[],
-        help="Optional repo-relative changed paths used to include a proof recommendation.",
-    )
-    _add_format_argument(start_parser)
-
-    defaults_parser = subparsers.add_parser(
-        "defaults",
-        help="Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
-    )
-    defaults_parser.add_argument("--section", help="Return only one top-level defaults section in the compact contract profile.")
-    _add_format_argument(defaults_parser)
-
-    proof_parser = subparsers.add_parser(
-        "proof",
-        help="Show the canonical proof routes and current workspace proof summary.",
-    )
-    proof_parser.add_argument("--target", help="Optional repository path used to inspect installed modules and proof state.")
-    proof_parser.add_argument("--route", help="Return one proof route by id instead of the full proof surface.")
-    proof_parser.add_argument("--current", action="store_true", help="Return only the current proof summary.")
-    proof_parser.add_argument(
-        "--changed",
-        nargs="*",
-        default=[],
-        help="Return required proof commands for the provided repo-relative changed paths.",
-    )
-    _add_format_argument(proof_parser)
-
-    setup_parser = subparsers.add_parser(
-        "setup",
-        help="Show the bounded post-bootstrap setup guidance for a mature repository.",
-    )
-    _add_selection_arguments(setup_parser)
-
-    ownership_parser = subparsers.add_parser(
-        "ownership",
-        help="Show the canonical ownership and authority mapping for the target repository.",
-    )
-    ownership_parser.add_argument("--target", help="Optional repository path used to inspect the ownership ledger.")
-    ownership_parser.add_argument("--concern", help="Return one authority-surface answer by concern.")
-    ownership_parser.add_argument("--path", help="Return the ownership answer for one repo-relative path.")
-    _add_format_argument(ownership_parser)
-
-    config_parser = subparsers.add_parser(
-        "config",
-        help="Show the resolved repo-owned workspace config layered onto product defaults.",
-    )
-    config_parser.add_argument("--target", help="Optional repository path used to resolve repo-owned config.")
-    _add_format_argument(config_parser)
-
-    system_intent_parser = subparsers.add_parser(
-        "system-intent",
-        help="Show or refresh the workspace-owned compiled system-intent declaration.",
-    )
-    system_intent_parser.add_argument("--target", help="Optional repository path used to inspect system intent.")
-    system_intent_parser.add_argument(
-        "--sync",
-        action="store_true",
-        help="Refresh source discovery metadata and create the compiled system-intent declaration if it is missing.",
-    )
-    _add_format_argument(system_intent_parser)
-
-    delegation_outcome_parser = subparsers.add_parser(
-        "note-delegation-outcome",
-        help="Append one local-only delegation outcome record for target-profile tuning.",
-    )
-    delegation_outcome_parser.add_argument("--target", help="Optional repository path used to record the local outcome.")
-    delegation_outcome_parser.add_argument("--delegation-target", required=True, help="Local delegation target alias.")
-    delegation_outcome_parser.add_argument("--task-class", required=True, help="Bounded task class label for this delegated run.")
-    delegation_outcome_parser.add_argument(
-        "--outcome",
-        required=True,
-        choices=SUPPORTED_DELEGATION_OUTCOMES,
-        help="High-level delegated execution outcome.",
-    )
-    delegation_outcome_parser.add_argument(
-        "--handoff-sufficiency",
-        choices=SUPPORTED_HANDOFF_SUFFICIENCY,
-        default="sufficient",
-        help="Whether the checked-in handoff was enough for the delegated worker.",
-    )
-    delegation_outcome_parser.add_argument(
-        "--review-burden",
-        choices=SUPPORTED_REVIEW_BURDENS,
-        default="normal",
-        help="How much review/rework burden remained after delegation.",
-    )
-    delegation_outcome_parser.add_argument(
-        "--escalation-required",
-        action="store_true",
-        help="Record that the delegated run had to stop and escalate.",
-    )
-    _add_format_argument(delegation_outcome_parser)
-
-    skills_parser = subparsers.add_parser(
-        "skills",
-        help="List registered workspace skills from installed package registries and repo-owned skill registries.",
-    )
-    skills_parser.add_argument("--target", help="Optional repository path used to inspect installed and repo-owned skills.")
-    skills_parser.add_argument("--task", help="Optional task description used to recommend likely skills.")
-    _add_format_argument(skills_parser)
-
-    report_parser = subparsers.add_parser(
-        "report",
-        help="Show a compact combined workspace report for installed modules, mixed-agent posture, and next-action guidance.",
-    )
-    _add_selection_arguments(report_parser)
-    report_parser.add_argument(
-        "--startup",
-        action="store_true",
-        help="Return the high-signal orientation block for fresh agents.",
-    )
-
-    preflight_parser = subparsers.add_parser(
-        "preflight",
-        help="Get compact takeover-safe context: startup defaults + resolved config + active planning state in one call.",
-    )
-    preflight_parser.add_argument("--target", help="Optional repository path for preflight context (defaults to current workspace).")
-    preflight_parser.add_argument(
-        "--active-only",
-        action="store_true",
-        help="Return only active planning state without startup defaults and config.",
-    )
-    _add_format_argument(preflight_parser)
-
-    install_parser = subparsers.add_parser("install", help="Bootstrap selected modules into a target repository.")
-    _add_init_arguments(install_parser)
-    init_parser = subparsers.add_parser("init", help="Bootstrap selected modules into a target repository.")
-    _add_init_arguments(init_parser)
-
-    prompt_parser = subparsers.add_parser("prompt", help="Print a ready-to-paste workspace lifecycle handoff prompt.")
-    prompt_subparsers = prompt_parser.add_subparsers(dest="prompt_command", required=True)
-    prompt_init_parser = prompt_subparsers.add_parser("init", help="Print the workspace bootstrap handoff prompt.")
-    _add_selection_arguments(prompt_init_parser)
-    prompt_init_parser.add_argument(
-        "--agent-instructions-file",
-        help="Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md).",
-    )
-    prompt_init_parser.add_argument("--adopt", action="store_true", help="Force conservative adopt behavior.")
-    prompt_upgrade_parser = prompt_subparsers.add_parser("upgrade", help="Print the workspace upgrade handoff prompt.")
-    _add_selection_arguments(prompt_upgrade_parser)
-    prompt_uninstall_parser = prompt_subparsers.add_parser("uninstall", help="Print the workspace uninstall handoff prompt.")
-    _add_selection_arguments(prompt_uninstall_parser)
-
-    status_parser = subparsers.add_parser("status", help="Report installed modules and workspace health summary.")
-    _add_selection_arguments(status_parser)
-
-    doctor_parser = subparsers.add_parser("doctor", help="Report drift, missing surfaces, and recommended remediation.")
-    _add_selection_arguments(doctor_parser)
-
-    upgrade_parser = subparsers.add_parser("upgrade", help="Refresh managed surfaces for selected installed modules.")
-    _add_selection_arguments(upgrade_parser)
-    _add_preflight_gate_arguments(upgrade_parser)
-    upgrade_parser.add_argument("--dry-run", action="store_true", help="Show planned changes without mutating files.")
-
-    uninstall_parser = subparsers.add_parser("uninstall", help="Remove managed surfaces conservatively for selected installed modules.")
-    _add_selection_arguments(uninstall_parser)
-    _add_preflight_gate_arguments(uninstall_parser)
-    uninstall_parser.add_argument("--dry-run", action="store_true", help="Show planned changes without mutating files.")
-    uninstall_parser.add_argument(
-        "--local-only",
-        action="store_true",
-        help="Remove the local-only workspace install from `.agentic-workspace/` instead of the repository root.",
-    )
+    for command_spec in _CLI_COMMANDS_MANIFEST["commands"]:
+        _add_manifest_command(subparsers, command_spec)
 
     return parser
 
 
 def _add_selection_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--target", help="Target repository path. Defaults to the current directory.")
-    parser.add_argument("--preset", help="Named module bundle.")
-    parser.add_argument("--modules", help="Comma-separated module selection.")
-    parser.add_argument(
-        "--non-interactive",
-        action="store_true",
-        help="Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
-    )
-    _add_format_argument(parser)
+    _apply_option_group(parser, "selection")
 
 
 def _add_init_arguments(parser: argparse.ArgumentParser) -> None:
-    _add_selection_arguments(parser)
-    _add_preflight_gate_arguments(parser)
-    parser.add_argument(
-        "--local-only",
-        action="store_true",
-        help="Install into `.agentic-workspace/` instead of the repository root.",
-    )
-    parser.add_argument(
-        "--agent-instructions-file",
-        help="Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md).",
-    )
-    parser.add_argument("--adopt", action="store_true", help="Force conservative adopt behavior.")
-    parser.add_argument("--dry-run", action="store_true", help="Show planned changes without mutating files.")
-    parser.add_argument("--print-prompt", action="store_true", help="Print the generated handoff prompt.")
-    parser.add_argument("--write-prompt", help="Write the generated handoff prompt to a file.")
+    _apply_option_group(parser, "init")
 
 
 def _add_preflight_gate_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        "--strict-preflight",
-        action="store_true",
-        help="Require a fresh --preflight-token before running high-risk mutating commands.",
-    )
-    parser.add_argument(
-        "--preflight-token",
-        help="Token emitted by 'agentic-workspace preflight --format json'.",
-    )
-    parser.add_argument(
-        "--preflight-max-age-seconds",
-        type=int,
-        default=DEFAULT_PREFLIGHT_MAX_AGE_SECONDS,
-        help=f"Maximum token age when --strict-preflight is enabled (default: {DEFAULT_PREFLIGHT_MAX_AGE_SECONDS}).",
-    )
+    _apply_option_group(parser, "preflight_gate")
 
 
 def _add_format_argument(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--format", choices=("text", "json"), default="text", help="Output format.")
+    _apply_option_group(parser, "format")
+
+
+def _resolve_option_choices(option_spec: dict[str, Any]) -> tuple[Any, ...] | None:
+    if "choices" in option_spec:
+        return tuple(option_spec["choices"])
+    ref = option_spec.get("choices_ref")
+    if ref == "SUPPORTED_DELEGATION_OUTCOMES":
+        return SUPPORTED_DELEGATION_OUTCOMES
+    if ref == "SUPPORTED_HANDOFF_SUFFICIENCY":
+        return SUPPORTED_HANDOFF_SUFFICIENCY
+    if ref == "SUPPORTED_REVIEW_BURDENS":
+        return SUPPORTED_REVIEW_BURDENS
+    return None
+
+
+def _resolve_option_default(option_spec: dict[str, Any]) -> Any:
+    if "default" in option_spec:
+        return option_spec["default"]
+    ref = option_spec.get("default_ref")
+    if ref == "preflight_policy.default_max_age_seconds":
+        return DEFAULT_PREFLIGHT_MAX_AGE_SECONDS
+    return None
+
+
+def _resolve_option_type(option_spec: dict[str, Any]) -> Any:
+    if option_spec.get("type") == "integer":
+        return int
+    return None
+
+
+def _resolved_option_help(option_spec: dict[str, Any]) -> str | None:
+    help_text = option_spec.get("help")
+    if isinstance(help_text, str):
+        return help_text
+    help_template = option_spec.get("help_template")
+    if isinstance(help_template, str):
+        return help_template.format(default=_resolve_option_default(option_spec))
+    return None
+
+
+def _add_manifest_option(parser: argparse.ArgumentParser, option_spec: dict[str, Any]) -> None:
+    kwargs: dict[str, Any] = {}
+    action = option_spec.get("action")
+    if isinstance(action, str):
+        kwargs["action"] = action
+    choices = _resolve_option_choices(option_spec)
+    if choices is not None:
+        kwargs["choices"] = choices
+    if "default" in option_spec or "default_ref" in option_spec:
+        kwargs["default"] = _resolve_option_default(option_spec)
+    if "nargs" in option_spec:
+        kwargs["nargs"] = option_spec["nargs"]
+    option_type = _resolve_option_type(option_spec)
+    if option_type is not None:
+        kwargs["type"] = option_type
+    if option_spec.get("required") is True:
+        kwargs["required"] = True
+    help_text = _resolved_option_help(option_spec)
+    if help_text is not None:
+        kwargs["help"] = help_text
+    parser.add_argument(*option_spec["flags"], **kwargs)
+
+
+def _apply_option_group(parser: argparse.ArgumentParser, group_name: str) -> None:
+    group_spec = _CLI_OPTION_GROUPS_MANIFEST["option_groups"][group_name]
+    for parent_group in group_spec.get("uses", []):
+        _apply_option_group(parser, str(parent_group))
+    for option_spec in group_spec.get("options", []):
+        _add_manifest_option(parser, option_spec)
+
+
+def _add_manifest_command(subparsers, command_spec: dict[str, Any]) -> None:
+    command_parser = subparsers.add_parser(
+        str(command_spec["name"]),
+        help=str(command_spec["help"]),
+        description=str(command_spec["help"]),
+    )
+    for group_name in command_spec.get("uses_option_groups", []):
+        _apply_option_group(command_parser, str(group_name))
+    for option_spec in command_spec.get("options", []):
+        _add_manifest_option(command_parser, option_spec)
+    subcommands = command_spec.get("subcommands", [])
+    if isinstance(subcommands, list) and subcommands:
+        child_subparsers = command_parser.add_subparsers(dest=str(command_spec.get("subcommand_dest", "subcommand")), required=True)
+        for subcommand_spec in subcommands:
+            _add_manifest_command(child_subparsers, subcommand_spec)
 
 
 def _workflow_artifact_profile_payload(profile: str) -> dict[str, Any]:
-    profiles = {
-        "repo-owned": {
-            "profile": "repo-owned",
-            "summary": "Use only the repo-owned planning surfaces; do not rely on native runtime artifacts.",
-            "native_artifacts": [],
-            "canonical_surfaces": [".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/execplans/"],
-            "sync_rule": ".agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans stay authoritative; no extra runtime artifact should carry durable state.",
-            "handoff_rule": "Use repo-owned planning surfaces directly for restart, review, and cross-agent continuation.",
-        },
-        "gemini": {
-            "profile": "gemini",
-            "summary": (
-                "Allow Gemini-style native workflow artifacts as runtime scratchpads, but "
-                "project durable state back into repo-owned planning before handoff or review."
-            ),
-            "native_artifacts": ["implementation_plan.md", "task.md", "walkthrough.md"],
-            "canonical_surfaces": [".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/execplans/"],
-            "sync_rule": (
-                "Before review, handoff, or session end, mirror the durable execution state into "
-                ".agentic-workspace/planning/state.toml and the active execplan instead of leaving it only in native artifacts."
-            ),
-            "handoff_rule": (
-                "Treat native artifacts as local execution aids; treat .agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans as the only cross-agent source of truth."
-            ),
-        },
-    }
-    return profiles[profile].copy()
+    return copy.deepcopy(_WORKFLOW_ARTIFACT_PROFILE_PAYLOADS[profile])
 
 
 def _improvement_latitude_payload(mode: str) -> dict[str, Any]:
-    policies = {
-        "none": {
-            "mode": "none",
-            "initiative_posture": "no-opportunistic-action",
-            "summary": ("Do not perform opportunistic repo-friction reduction outside the explicitly requested work."),
-            "allows": [
-                "only the cleanup necessary to complete the requested work safely",
-                "ignoring incidental friction that does not block the current slice",
-            ],
-            "forbids": [
-                "agent-initiated cleanup prompted only by repo-friction evidence",
-                "turning incidental hotspots into side work during the current slice",
-            ],
-            "reporting_destinations": [
-                "agentic-workspace report --target ./repo --format json",
-            ],
-            "reporting_rule": "Surface friction passively through derived reporting only; do not create follow-on work on your own.",
-        },
-        "reporting": {
-            "mode": "reporting",
-            "initiative_posture": "reporting-only",
-            "summary": ("Notice and surface notable repo friction, but do not reduce it on the agent's own initiative."),
-            "allows": [
-                "recording notable friction in bounded reporting or review outputs",
-                "capturing durable follow-through in planning residue when the current slice already owns planning state",
-                "surfacing evidence-backed hotspots for later human-directed action",
-            ],
-            "forbids": [
-                "opportunistic cleanup outside the explicitly requested work",
-                "promoting friction into active work without a bounded promotion step",
-            ],
-            "reporting_destinations": [
-                "agentic-workspace report --target ./repo --format json",
-                "review outputs",
-                ".agentic-workspace/planning/state.toml or the active execplan when the current slice already owns planning residue",
-            ],
-            "reporting_rule": (
-                "Surface notable friction through bounded reporting or residue; do not act on it without explicit direction."
-            ),
-        },
-        "conservative": {
-            "mode": "conservative",
-            "initiative_posture": "local-touched-scope-only",
-            "summary": (
-                "Only reduce repo friction opportunistically inside already-touched scope; "
-                "do not create standalone cleanup work from one hotspot alone."
-            ),
-            "allows": [
-                "small local simplifications inside already-touched files",
-                "narrow helper extraction when proof and ownership stay unchanged",
-                "recording repeated friction as durable follow-on instead of widening the current slice",
-            ],
-            "forbids": [
-                "standalone cleanup work triggered by one hotspot alone",
-                "broad refactors or concept-pruning without explicit promotion",
-            ],
-            "reporting_destinations": [
-                "agentic-workspace report --target ./repo --format json",
-                ".agentic-workspace/planning/state.toml or the active execplan when repeated friction deserves promotion",
-            ],
-            "reporting_rule": (
-                "Use reporting to justify or defer bounded follow-on; do not treat one hotspot as permission for standalone cleanup."
-            ),
-        },
-        "balanced": {
-            "mode": "balanced",
-            "initiative_posture": "bounded-evidence-backed-action",
-            "summary": (
-                "Allow bounded friction reduction when evidence is clear and the extra work "
-                "stays inside the current proof and ownership boundary."
-            ),
-            "allows": [
-                "simplifying a touched hotspot during the current slice",
-                "small repo-friction reductions when repeated shared evidence is present and proof stays narrow",
-                "turning repeated friction into a bounded follow-on candidate",
-            ],
-            "forbids": [
-                "rewriting requested ends in the name of cleanup",
-                "treating one-off agent discomfort or local taste as enough evidence for repo-directed change",
-                "broad cross-owner refactors without promotion",
-            ],
-            "reporting_destinations": [
-                "agentic-workspace report --target ./repo --format json",
-                ".agentic-workspace/planning/state.toml or the active execplan when friction should become bounded follow-on work",
-            ],
-            "reporting_rule": (
-                "Use reporting to preserve evidence and deferred cleanup residue whenever the current slice intentionally stops short."
-            ),
-        },
-        "proactive": {
-            "mode": "proactive",
-            "initiative_posture": "bounded-standalone-action-allowed",
-            "summary": (
-                "Allow bounded standalone friction reduction when evidence is strong and the "
-                "work can still stay inside clear ownership and proof lanes."
-            ),
-            "allows": [
-                "small standalone cleanup slices backed by repeated shared friction evidence",
-                "collapsing low-value local complexity before it grows further",
-                "promoting repeated friction into planning earlier",
-            ],
-            "forbids": [
-                "unsignaled broad redesign under a cleanup label",
-                "using one-off preference or single-agent discomfort as the proof threshold for repo-directed cleanup",
-                "using proactive mode as a scheduler or blanket refactor permission",
-            ],
-            "reporting_destinations": [
-                "agentic-workspace report --target ./repo --format json",
-                ".agentic-workspace/planning/state.toml or the active execplan when proactive cleanup stops before the larger opportunity is complete",
-            ],
-            "reporting_rule": "Use reporting to preserve evidence and unfinished bounded cleanup residue, not to justify hidden widening.",
-        },
-    }
-    return policies[mode].copy()
+    return copy.deepcopy(_IMPROVEMENT_LATITUDE_PAYLOADS[mode])
 
 
 def _workspace_self_adaptation_payload() -> dict[str, Any]:
-    return {
-        "status": "allowed-with-bounds",
-        "summary": (
-            "Workspace-self-adaptation may reduce friction inside Agentic Workspace-owned surfaces under every improvement-latitude mode."
-        ),
-        "rule": (
-            "Treat improvement_latitude as the policy for repo-directed initiative only; do not read "
-            "it as a ban on bounded workspace self-improvement."
-        ),
-        "applies_to": [
-            "reporting surfaces",
-            "routing and selector surfaces",
-            "recovery surfaces",
-            "workspace contract clarity",
-        ],
-        "bounded_by": [
-            "correctness",
-            "ownership",
-            "proof",
-            "portability",
-        ],
-    }
+    return copy.deepcopy(_REPO_FRICTION_POLICY["workspace_self_adaptation"])
 
 
 def _friction_response_order_payload() -> list[dict[str, Any]]:
-    return [
-        {
-            "step": 1,
-            "action": "adapt-inside-workspace-first",
-            "rule": ("Adapt inside Agentic Workspace first when the friction can be removed there safely and cheaply."),
-        },
-        {
-            "step": 2,
-            "action": "promote-repo-directed-improvement-when-external",
-            "rule": (
-                "Promote repo-directed improvement only when the friction reflects a real repo "
-                "problem that should not be masked by workspace adaptation."
-            ),
-        },
-        {
-            "step": 3,
-            "action": "avoid-externalizing-honestly-absorbable-friction",
-            "rule": ("Do not externalize friction to the user when Agentic Workspace can honestly absorb it itself."),
-        },
-    ]
+    return copy.deepcopy(_REPO_FRICTION_POLICY["friction_response_order"])
 
 
 def _workspace_self_adaptation_guardrail_payload() -> dict[str, Any]:
-    return {
-        "adapt_when": [
-            "the friction is genuinely about workspace fit, reporting, routing, selector design, recovery clarity, or contract wording",
-            "one bounded workspace change can remove the friction without hiding repo-owned structural problems",
-        ],
-        "surface_repo_friction_when": [
-            "the root problem is really unclear repo seams, tranche boundaries, validation friction, or ownership",
-            "repeated friction would otherwise require accumulating narrow workspace compensations",
-        ],
-        "keep_true": [
-            "new adaptation paths stay general",
-            "new adaptation paths stay bounded",
-            "new adaptation paths stay cheaper than repeated repo or user burden",
-        ],
-        "prefer": "one clear adaptation over accumulating many narrow special cases",
-    }
+    return copy.deepcopy(_REPO_FRICTION_POLICY["workspace_self_adaptation_guardrail"])
 
 
 def _repo_directed_improvement_evidence_threshold_payload() -> dict[str, Any]:
-    return {
-        "status": "explicit-contract",
-        "summary": (
-            "Repo-directed improvement requires repeated shared evidence that the repo is the real friction source, "
-            "not one-off agent preference or local discomfort."
-        ),
-        "minimum_threshold": [
-            "at least two independent friction confirmations, or one bounded review artifact plus one repeated maintenance or dogfooding pass",
-            "evidence should point to the repo as the real source after honest workspace adaptation has already been tried or would become concealment",
-        ],
-        "not_enough": [
-            "one-off agent discomfort",
-            "one contributor or one model preferring a different repo shape",
-            "friction the workspace can still remove honestly inside its own surfaces",
-        ],
-        "promote_when": [
-            "repeated evidence shows the same repo-owned seam, boundary, ownership, or validation problem",
-            "further workspace adaptation would hide the repo problem instead of solving it honestly",
-            "the follow-on can stay bounded and explain why the repo change is more honest than another workspace-only patch",
-        ],
-        "collaboration_bias": (
-            "In collaborative repos, prefer the higher bar: shared repeated evidence beats local agent taste before repo-directed change."
-        ),
-    }
+    return copy.deepcopy(_REPO_FRICTION_POLICY["repo_directed_improvement_threshold"])
 
 
 def _validation_friction_payload() -> dict[str, Any]:
-    return {
-        "status": "explicit-contract",
-        "rule": (
-            "Treat validation friction as repo-friction evidence only when otherwise straightforward work keeps "
-            "stalling at validation because repo seams, tranche boundaries, proof expectations, or rerun/re-entry "
-            "paths stay unclear."
-        ),
-        "distinguish_from": [
-            "ordinary bug-fixing where the failing check and expected fix are already clear",
-            "one-off broken tests or environment failures that do not reveal a repeated repo seam problem",
-            "genuinely difficult domains where the hard part is the domain logic itself rather than validation fit",
-        ],
-        "subtypes": [
-            "weak_seam",
-            "bad_tranche_boundary",
-            "unclear_proof_contract",
-            "validation_bounce_reentry",
-        ],
-        "reporting_destinations": [
-            "repo_friction review output",
-            "bounded planning residue when a follow-on slice is justified",
-            "ordinary report output without implicit active work",
-        ],
-    }
+    return copy.deepcopy(_REPO_FRICTION_POLICY["validation_friction"])
 
 
 def _improvement_boundary_test_payload() -> dict[str, Any]:
-    return {
-        "stays_local_when": [
-            "the requested outcome still means the same thing after the improvement",
-            "the proof lane remains narrow enough to prove the change without cross-owner validation",
-            "ownership stays inside the current workspace/planning/memory boundary",
-            "the improvement reduces proven friction rather than creating a new capability branch",
-        ],
-        "changed_task_when": [
-            "the improvement changes what counts as success instead of only changing the means",
-            "proof must broaden into another lane or owner before the change can be trusted",
-            "the work introduces new visible process, routing, tooling, or module responsibility",
-            "the friction signal is being used to justify standalone work that the current slice did not already own",
-        ],
-        "broaden_proof_when": [
-            "the touched surface expands from local code cleanup into shared reporting, planning, or memory state",
-            "the improvement changes a generated or front-door surface that weaker agents may rely on directly",
-            "the concept-friction change alters user-visible routing, startup, or ownership guidance",
-        ],
-        "escalate_when": [
-            "the improvement would rewrite requested ends under a cleanup label",
-            "the change would create a new top-level concept or module to fix the friction",
-            "the available evidence is too weak to distinguish local means improvement from a different task",
-        ],
-    }
+    return copy.deepcopy(_REPO_FRICTION_POLICY["improvement_boundary_test"])
 
 
 def _optimization_bias_payload(mode: str) -> dict[str, Any]:
-    surface_boundary = {
-        "honors_bias": [
-            "derived report rendering density",
-            "rendered human-facing views",
-            "durable residue style when canonical truth is unchanged",
-        ],
-        "stays_invariant": [
-            "execution method",
-            "reasoning depth",
-            "delegated-judgment boundaries",
-            "proof requirements",
-            "ownership semantics",
-            "machine-readable report truth",
-            "canonical state semantics",
-        ],
-    }
-    policies = {
-        "agent-efficiency": {
-            "mode": "agent-efficiency",
-            "summary": "Prefer terse durable outputs and low-token rendered views when canonical state would stay unchanged.",
-            "report_density": "compact",
-            "residue_density": "compact-carry-forward",
-            "rendered_view_style": "minimal-prose",
-            "allows": [
-                "preferring terse labels when machine-readable state already carries the contract",
-                "keeping follow-through and residue compact when explanation would only restate canonical fields",
-                "trimming repeated explanatory prose from rendered human views",
-            ],
-            "does_not_affect": [
-                "execution method",
-                "reasoning depth",
-                "delegated-judgment boundaries",
-                "proof requirements",
-                "canonical state semantics",
-            ],
-            "surface_boundary": surface_boundary,
-        },
-        "balanced": {
-            "mode": "balanced",
-            "summary": (
-                "Keep durable outputs compact by default while preserving enough explanatory rendering for routine human inspection."
-            ),
-            "report_density": "balanced",
-            "residue_density": "compact-with-brief-explanation",
-            "rendered_view_style": "brief-explanatory",
-            "allows": [
-                "keeping machine-readable state terse",
-                "adding short explanatory labels in rendered human views",
-                "preserving compact residue with only the explanation needed to avoid rereading",
-            ],
-            "does_not_affect": [
-                "execution method",
-                "reasoning depth",
-                "delegated-judgment boundaries",
-                "proof requirements",
-                "canonical state semantics",
-            ],
-            "surface_boundary": surface_boundary,
-        },
-        "human-legibility": {
-            "mode": "human-legibility",
-            "summary": "Prefer clearer explanatory rendering and more legible durable residue when truth would remain unchanged.",
-            "report_density": "explanatory",
-            "residue_density": "legible-with-context",
-            "rendered_view_style": "explicit-labels-and-context",
-            "allows": [
-                "adding brief explanatory context around compact state",
-                "rendering section purpose more explicitly for human readers",
-                "keeping durable residue slightly more legible when terseness would force rereading",
-            ],
-            "does_not_affect": [
-                "execution method",
-                "reasoning depth",
-                "delegated-judgment boundaries",
-                "proof requirements",
-                "canonical state semantics",
-            ],
-            "surface_boundary": surface_boundary,
-        },
-    }
-    return policies[mode].copy()
+    return copy.deepcopy(_OPTIMIZATION_BIAS_PAYLOADS[mode])
 
 
 def _setup_finding_class_payload(finding_class: str) -> dict[str, Any]:
-    payloads = {
-        "repo_friction_evidence": {
-            "class": "repo_friction_evidence",
-            "summary": "Evidence-backed structural or routing friction worth preserving as shared workspace evidence.",
-            "promote_to": "agentic-workspace report --target ./repo --format json repo_friction.external_evidence",
-            "preserve_when": [
-                "confidence is at least 0.75",
-                "the finding has a repo-relative path or explicit refs",
-                "the finding would reduce rediscovery if it survived the current setup pass",
-            ],
-            "transient_when": [
-                "the finding has no grounding path or refs",
-                "confidence is below 0.75",
-                "the finding only restates report output already present elsewhere",
-            ],
-        },
-        "planning_candidate": {
-            "class": "planning_candidate",
-            "summary": "A bounded follow-on or handoff candidate worth preserving as explicit planning promotion guidance.",
-            "promote_to": ".agentic-workspace/planning/state.toml or .agentic-workspace/planning/execplans/ after bounded planning review",
-            "preserve_when": [
-                "confidence is at least 0.75",
-                "the finding includes a bounded next_action",
-                "the finding would still matter after the current session or agent ends",
-            ],
-            "transient_when": [
-                "the finding lacks a bounded next_action",
-                "confidence is below 0.75",
-                "the finding is only generic analysis with no clear planning owner",
-            ],
-        },
-    }
-    return payloads[finding_class].copy()
+    return copy.deepcopy(_SETUP_FINDING_CLASS_PAYLOADS[finding_class])
 
 
 def _normalized_setup_finding(raw: Any) -> dict[str, Any] | None:
@@ -1009,7 +501,7 @@ def _normalized_setup_finding(raw: Any) -> dict[str, Any] | None:
 
 def _setup_finding_promotion_decision(item: dict[str, Any]) -> tuple[bool, str]:
     confidence = float(item.get("confidence", 0.0))
-    if confidence < 0.75:
+    if confidence < SETUP_FINDING_PROMOTION_THRESHOLD:
         return False, "confidence below promotion threshold"
     finding_class = item["class"]
     if finding_class == "repo_friction_evidence":
@@ -1422,119 +914,52 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
         upgrade_bootstrap as planning_upgrade_bootstrap,
     )
 
-    return {
-        "planning": _build_module_descriptor(
-            name="planning",
-            description="Repo-native execution planning bootstrap and maintenance.",
-            install_handler=planning_install_bootstrap,
-            adopt_handler=planning_adopt_bootstrap,
-            upgrade_handler=planning_upgrade_bootstrap,
-            uninstall_handler=planning_uninstall_bootstrap,
-            doctor_handler=planning_doctor_bootstrap,
-            status_handler=planning_collect_status,
-            selection_rank=10,
-            include_in_full_preset=True,
-            detector=lambda target_root: (
+    handlers = {
+        "planning": {
+            "install_handler": planning_install_bootstrap,
+            "adopt_handler": planning_adopt_bootstrap,
+            "upgrade_handler": planning_upgrade_bootstrap,
+            "uninstall_handler": planning_uninstall_bootstrap,
+            "doctor_handler": planning_doctor_bootstrap,
+            "status_handler": planning_collect_status,
+            "detector": lambda target_root: (
                 (target_root / ".agentic-workspace" / "planning" / "state.toml").exists()
                 and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
             ),
-            install_signals=(
-                Path(".agentic-workspace/planning/state.toml"),
-                Path(".agentic-workspace/planning/execplans"),
-            ),
-            workflow_surfaces=(
-                Path("AGENTS.md"),
-                Path(".agentic-workspace/planning/state.toml"),
-                Path(".agentic-workspace/planning/execplans"),
-                Path("docs/contributor-playbook.md"),
-                Path("docs/maintainer-commands.md"),
-            ),
-            generated_artifacts=(),
-            startup_steps=(
-                "Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary`.",
-                "Read the active feature plan in `.agentic-workspace/planning/execplans/` when the TODO surface points there.",
-                "Check the roadmap in `state.toml` (authoritative) only when promoting work.",
-            ),
-            sources_of_truth=(
-                "Active queue: `.agentic-workspace/planning/state.toml` (authoritative)",
-                "Roadmap: `.agentic-workspace/planning/state.toml` (authoritative)",
-            ),
-            root_agents_cleanup_blocks=(),
-            capabilities=(
-                "active-execution-state",
-                "execplan-routing",
-                "generated-maintainer-guidance",
-            ),
-            dependencies=(),
-            conflicts=(),
-            result_contract=ModuleResultContract(
-                schema_version="workspace-module-report/v1",
-                guaranteed_fields=("module", "message", "target_root", "dry_run", "actions", "warnings"),
-                action_fields=("kind", "path", "detail"),
-                warning_fields=("path", "message"),
-            ),
-        ),
-        "memory": _build_module_descriptor(
-            name="memory",
-            description="Durable repository knowledge bootstrap and maintenance.",
-            install_handler=memory_install_bootstrap,
-            adopt_handler=memory_adopt_bootstrap,
-            upgrade_handler=memory_upgrade_bootstrap,
-            uninstall_handler=memory_uninstall_bootstrap,
-            doctor_handler=memory_doctor_bootstrap,
-            status_handler=memory_collect_status,
-            selection_rank=20,
-            include_in_full_preset=True,
-            detector=lambda target_root: (
+        },
+        "memory": {
+            "install_handler": memory_install_bootstrap,
+            "adopt_handler": memory_adopt_bootstrap,
+            "upgrade_handler": memory_upgrade_bootstrap,
+            "uninstall_handler": memory_uninstall_bootstrap,
+            "doctor_handler": memory_doctor_bootstrap,
+            "status_handler": memory_collect_status,
+            "detector": lambda target_root: (
                 (target_root / ".agentic-workspace" / "memory" / "repo" / "index.md").exists()
                 and (target_root / ".agentic-workspace" / "memory").exists()
             ),
-            install_signals=(
-                Path(".agentic-workspace/memory/repo/index.md"),
-                Path(".agentic-workspace/memory/repo/current"),
-                Path(".agentic-workspace/memory"),
-            ),
-            workflow_surfaces=(
-                Path("AGENTS.md"),
-                Path(".agentic-workspace/memory/repo/index.md"),
-                Path(".agentic-workspace/memory/repo/current"),
-                Path(".agentic-workspace/memory"),
-            ),
-            generated_artifacts=(),
-            startup_steps=(
-                "Read `.agentic-workspace/memory/repo/index.md` only when memory is installed and the task is not already well-routed.",
-                "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself.",
-            ),
-            sources_of_truth=("Durable routed knowledge, when installed: `.agentic-workspace/memory/repo/index.md`",),
-            root_agents_cleanup_blocks=(
-                RootAgentsCleanupBlock(
-                    block=MEMORY_POINTER_BLOCK,
-                    start_marker=MEMORY_WORKFLOW_MARKER_START,
-                    end_marker=MEMORY_WORKFLOW_MARKER_END,
-                    label="memory workflow pointer block",
-                ),
-            ),
-            capabilities=(
-                "durable-repo-knowledge",
-                "anti-rediscovery-memory",
-                "runbook-routing",
-            ),
-            dependencies=(),
-            conflicts=(),
-            result_contract=ModuleResultContract(
-                schema_version="workspace-module-report/v1",
-                guaranteed_fields=("module", "message", "target_root", "dry_run", "actions", "warnings"),
-                action_fields=("kind", "path", "detail"),
-                warning_fields=("path", "message"),
-            ),
-        ),
+        },
+    }
+    return {
+        module_name: _build_module_descriptor(
+            name=module_name,
+            metadata=_MODULE_REGISTRY_ENTRIES[module_name],
+            install_handler=cast(Callable[..., Any], handler_bundle["install_handler"]),
+            adopt_handler=cast(Callable[..., Any], handler_bundle["adopt_handler"]),
+            upgrade_handler=cast(Callable[..., Any], handler_bundle["upgrade_handler"]),
+            uninstall_handler=cast(Callable[..., Any], handler_bundle["uninstall_handler"]),
+            doctor_handler=cast(Callable[..., Any], handler_bundle["doctor_handler"]),
+            status_handler=cast(Callable[..., Any], handler_bundle["status_handler"]),
+            detector=cast(Callable[[Path], bool], handler_bundle["detector"]),
+        )
+        for module_name, handler_bundle in handlers.items()
     }
 
 
 def _build_module_descriptor(
     *,
     name: str,
-    description: str,
+    metadata: dict[str, Any],
     install_handler: Callable[..., Any],
     adopt_handler: Callable[..., Any],
     upgrade_handler: Callable[..., Any],
@@ -1542,22 +967,25 @@ def _build_module_descriptor(
     doctor_handler: Callable[..., Any],
     status_handler: Callable[..., Any],
     detector: Callable[[Path], bool],
-    selection_rank: int,
-    include_in_full_preset: bool,
-    install_signals: tuple[Path, ...],
-    workflow_surfaces: tuple[Path, ...],
-    generated_artifacts: tuple[Path, ...],
-    startup_steps: tuple[str, ...],
-    sources_of_truth: tuple[str, ...],
-    root_agents_cleanup_blocks: tuple[RootAgentsCleanupBlock, ...],
-    capabilities: tuple[str, ...],
-    dependencies: tuple[str, ...],
-    conflicts: tuple[str, ...],
-    result_contract: ModuleResultContract,
 ) -> ModuleDescriptor:
+    result_contract = ModuleResultContract(
+        schema_version=str(metadata["result_contract"]["schema_version"]),
+        guaranteed_fields=tuple(metadata["result_contract"]["guaranteed_fields"]),
+        action_fields=tuple(metadata["result_contract"]["action_fields"]),
+        warning_fields=tuple(metadata["result_contract"]["warning_fields"]),
+    )
+    root_agents_cleanup_blocks = tuple(
+        RootAgentsCleanupBlock(
+            block=str(block["block"]),
+            start_marker=str(block["start_marker"]),
+            end_marker=str(block["end_marker"]),
+            label=str(block["label"]),
+        )
+        for block in metadata["root_agents_cleanup_blocks"]
+    )
     return ModuleDescriptor(
         name=name,
-        description=description,
+        description=str(metadata["description"]),
         commands={
             "install": lambda *, target, dry_run, force: install_handler(target=target, dry_run=dry_run, force=force),
             "adopt": lambda *, target, dry_run: adopt_handler(target=target, dry_run=dry_run),
@@ -1567,18 +995,18 @@ def _build_module_descriptor(
             "status": lambda *, target: status_handler(target=target),
         },
         detector=detector,
-        selection_rank=selection_rank,
-        include_in_full_preset=include_in_full_preset,
-        install_signals=install_signals,
-        workflow_surfaces=workflow_surfaces,
-        generated_artifacts=generated_artifacts,
+        selection_rank=int(metadata["selection_rank"]),
+        include_in_full_preset=bool(metadata["include_in_full_preset"]),
+        install_signals=tuple(Path(path) for path in metadata["install_signals"]),
+        workflow_surfaces=tuple(Path(path) for path in metadata["workflow_surfaces"]),
+        generated_artifacts=tuple(Path(path) for path in metadata["generated_artifacts"]),
         command_args=MODULE_COMMAND_ARGS,
-        startup_steps=startup_steps,
-        sources_of_truth=sources_of_truth,
+        startup_steps=tuple(metadata["startup_steps"]),
+        sources_of_truth=tuple(metadata["sources_of_truth"]),
         root_agents_cleanup_blocks=root_agents_cleanup_blocks,
-        capabilities=capabilities,
-        dependencies=dependencies,
-        conflicts=conflicts,
+        capabilities=tuple(metadata["capabilities"]),
+        dependencies=tuple(metadata["dependencies"]),
+        conflicts=tuple(metadata["conflicts"]),
         result_contract=result_contract,
     )
 
@@ -5188,11 +4616,7 @@ def _defaults_payload() -> dict[str, Any]:
             "preserve_rule": (
                 "Promote only evidence-backed repo-friction findings or bounded planning candidates; leave everything else transient."
             ),
-            "secondary": [
-                "Do not build a workspace-owned analyzer.",
-                "Do not auto-write planning or memory state from setup input.",
-                "Do not preserve findings that have no durable owner or bounded next action.",
-            ],
+            "secondary": list(_SETUP_FINDINGS_POLICY["secondary"]),
         },
         "agent_configuration_system": _agent_configuration_system_payload(),
         "agent_configuration_queries": _agent_configuration_queries_payload(),
@@ -5244,34 +4668,15 @@ def _defaults_payload() -> dict[str, Any]:
             ),
             "workspace_self_adaptation": _workspace_self_adaptation_payload(),
             "friction_response_order": _friction_response_order_payload(),
-            "mode_interpretation": {
-                "none": ("Repo-directed initiative stays off, but bounded workspace self-adaptation remains allowed."),
-                "reporting": ("Repo-directed follow-through stays reporting-only, but bounded workspace self-adaptation remains allowed."),
-                "proactive": (
-                    "Prefer workspace adaptation first; use repo-directed action only when the root problem is genuinely external and the work stays bounded."
-                ),
-            },
-            "examples": {
-                "workspace_adaptation_first": [
-                    "tighten a selector, recovery hint, or report field so the workspace points agents at the right repo surface without asking the repo to restructure itself"
-                ],
-                "repo_directed_improvement_next": [
-                    "after the workspace already routes correctly, repeated shared friction still comes from unclear repo seams, tranche boundaries, or ownership and should be promoted as repo-directed follow-on work",
-                    "when validation keeps bouncing across unclear seams or proof expectations, keep that visible as validation-friction evidence instead of treating it as just another one-off failure",
-                ],
-            },
+            "mode_interpretation": copy.deepcopy(_IMPROVEMENT_LATITUDE_POLICY["mode_interpretation"]),
+            "examples": copy.deepcopy(_IMPROVEMENT_LATITUDE_POLICY["examples"]),
             "guardrail_test": _workspace_self_adaptation_guardrail_payload(),
             "repo_directed_improvement_threshold": _repo_directed_improvement_evidence_threshold_payload(),
-            "default_mode": DEFAULT_IMPROVEMENT_LATITUDE,
+            "default_mode": str(_IMPROVEMENT_LATITUDE_POLICY["default_mode"]),
             "supported_modes": [_improvement_latitude_payload(mode) for mode in SUPPORTED_IMPROVEMENT_LATITUDES],
             "decision_test": _improvement_boundary_test_payload(),
-            "evidence_source": "agentic-workspace report --target ./repo --format json",
-            "evidence_classes": [
-                "large_file_hotspots",
-                "concept_surface_hotspots",
-                "planning_friction",
-                "validation_friction",
-            ],
+            "evidence_source": str(_IMPROVEMENT_LATITUDE_POLICY["evidence_source"]),
+            "evidence_classes": list(_IMPROVEMENT_LATITUDE_POLICY["evidence_classes"]),
             "validation_friction": _validation_friction_payload(),
         },
         "optimization_bias": {
@@ -5282,21 +4687,15 @@ def _defaults_payload() -> dict[str, Any]:
                 "but it must not change execution method or canonical state semantics."
             ),
             "owner_surface": "workspace",
-            "default_mode": DEFAULT_OPTIMIZATION_BIAS,
+            "default_mode": str(_OPTIMIZATION_BIAS_POLICY["default_mode"]),
             "supported_modes": [_optimization_bias_payload(mode) for mode in SUPPORTED_OPTIMIZATION_BIASES],
             "applies_to": [
                 "derived report rendering density",
                 "rendered human-facing views",
                 "durable residue style when canonical state is unchanged",
             ],
-            "surface_boundary": _optimization_bias_payload(DEFAULT_OPTIMIZATION_BIAS)["surface_boundary"],
-            "must_not_change": [
-                "execution method",
-                "reasoning depth",
-                "delegated-judgment boundaries",
-                "proof requirements",
-                "canonical state semantics",
-            ],
+            "surface_boundary": copy.deepcopy(_OPTIMIZATION_BIAS_POLICY["surface_boundary"]),
+            "must_not_change": list(_OPTIMIZATION_BIAS_POLICY["must_not_change"]),
         },
         "workflow_artifact_adapters": {
             "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
@@ -5305,7 +4704,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "Runtime-native planning artifacts may exist, but durable cross-agent state "
                 "must project back into .agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans before handoff or review."
             ),
-            "default_profile": DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
+            "default_profile": str(_WORKFLOW_ARTIFACT_PROFILES_MANIFEST["default_profile"]),
             "supported_profiles": [_workflow_artifact_profile_payload(profile) for profile in SUPPORTED_WORKFLOW_ARTIFACT_PROFILES],
         },
         "mixed_agent": {

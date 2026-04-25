@@ -32,5 +32,45 @@ def contract_inventory_manifest() -> dict[str, Any]:
     return load_contract_json("contract_inventory.json")
 
 
+def workspace_surfaces_manifest() -> dict[str, Any]:
+    return load_contract_json("workspace_surfaces.json")
+
+
+def setup_findings_policy_manifest() -> dict[str, Any]:
+    return load_contract_json("setup_findings_policy.json")
+
+
+def workflow_artifact_profiles_manifest() -> dict[str, Any]:
+    return load_contract_json("workflow_artifact_profiles.json")
+
+
+def improvement_latitude_policy_manifest() -> dict[str, Any]:
+    return load_contract_json("improvement_latitude_policy.json")
+
+
+def optimization_bias_policy_manifest() -> dict[str, Any]:
+    return load_contract_json("optimization_bias_policy.json")
+
+
+def repo_friction_policy_manifest() -> dict[str, Any]:
+    return load_contract_json("repo_friction_policy.json")
+
+
+def preflight_policy_manifest() -> dict[str, Any]:
+    return load_contract_json("preflight_policy.json")
+
+
+def module_registry_manifest() -> dict[str, Any]:
+    return load_contract_json("module_registry.json")
+
+
+def cli_commands_manifest() -> dict[str, Any]:
+    return load_contract_json("cli_commands.json")
+
+
+def cli_option_groups_manifest() -> dict[str, Any]:
+    return load_contract_json("cli_option_groups.json")
+
+
 def contract_schema(relative_path: str) -> dict[str, Any]:
     return load_contract_json(f"schemas/{relative_path}")

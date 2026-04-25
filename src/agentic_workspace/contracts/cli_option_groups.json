@@ -1,0 +1,139 @@
+{
+  "schema_version": "agentic-workspace/cli-option-groups/v1",
+  "option_groups": {
+    "format": {
+      "options": [
+        {
+          "name": "format",
+          "flags": [
+            "--format"
+          ],
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "help": "Output format."
+        }
+      ]
+    },
+    "selection": {
+      "uses": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory."
+        },
+        {
+          "name": "preset",
+          "flags": [
+            "--preset"
+          ],
+          "help": "Named module bundle."
+        },
+        {
+          "name": "modules",
+          "flags": [
+            "--modules"
+          ],
+          "help": "Comma-separated module selection."
+        },
+        {
+          "name": "non_interactive",
+          "flags": [
+            "--non-interactive"
+          ],
+          "action": "store_true",
+          "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+        }
+      ]
+    },
+    "preflight_gate": {
+      "options": [
+        {
+          "name": "strict_preflight",
+          "flags": [
+            "--strict-preflight"
+          ],
+          "action": "store_true",
+          "help": "Require a fresh --preflight-token before running high-risk mutating commands."
+        },
+        {
+          "name": "preflight_token",
+          "flags": [
+            "--preflight-token"
+          ],
+          "help": "Token emitted by 'agentic-workspace preflight --format json'."
+        },
+        {
+          "name": "preflight_max_age_seconds",
+          "flags": [
+            "--preflight-max-age-seconds"
+          ],
+          "type": "integer",
+          "default_ref": "preflight_policy.default_max_age_seconds",
+          "help_template": "Maximum token age when --strict-preflight is enabled (default: {default})."
+        }
+      ]
+    },
+    "init": {
+      "uses": [
+        "selection",
+        "preflight_gate"
+      ],
+      "options": [
+        {
+          "name": "local_only",
+          "flags": [
+            "--local-only"
+          ],
+          "action": "store_true",
+          "help": "Install into `.agentic-workspace/` instead of the repository root."
+        },
+        {
+          "name": "agent_instructions_file",
+          "flags": [
+            "--agent-instructions-file"
+          ],
+          "help": "Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md)."
+        },
+        {
+          "name": "adopt",
+          "flags": [
+            "--adopt"
+          ],
+          "action": "store_true",
+          "help": "Force conservative adopt behavior."
+        },
+        {
+          "name": "dry_run",
+          "flags": [
+            "--dry-run"
+          ],
+          "action": "store_true",
+          "help": "Show planned changes without mutating files."
+        },
+        {
+          "name": "print_prompt",
+          "flags": [
+            "--print-prompt"
+          ],
+          "action": "store_true",
+          "help": "Print the generated handoff prompt."
+        },
+        {
+          "name": "write_prompt",
+          "flags": [
+            "--write-prompt"
+          ],
+          "help": "Write the generated handoff prompt to a file."
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,456 @@
+{
+  "schema_version": "agentic-workspace/cli-commands/v1",
+  "program": "agentic-workspace",
+  "description": "Workspace-level lifecycle orchestrator for selected agentic-workspace modules.",
+  "commands": [
+    {
+      "name": "modules",
+      "help": "List workspace modules available to the orchestrator.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to report installed modules."
+        }
+      ]
+    },
+    {
+      "name": "summary",
+      "help": "Show the active execution summary from the planning module.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path to read summary from."
+        },
+        {
+          "name": "profile",
+          "flags": [
+            "--profile"
+          ],
+          "choices": [
+            "compact",
+            "full"
+          ],
+          "default": "compact"
+        }
+      ]
+    },
+    {
+      "name": "start",
+      "help": "Return the minimum safe startup context for beginning work in a target repository.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path for startup context (defaults to current workspace)."
+        },
+        {
+          "name": "changed",
+          "flags": [
+            "--changed"
+          ],
+          "nargs": "*",
+          "default": [],
+          "help": "Optional repo-relative changed paths used to include a proof recommendation."
+        }
+      ]
+    },
+    {
+      "name": "defaults",
+      "help": "Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "section",
+          "flags": [
+            "--section"
+          ],
+          "help": "Return only one top-level defaults section in the compact contract profile."
+        }
+      ]
+    },
+    {
+      "name": "proof",
+      "help": "Show the canonical proof routes and current workspace proof summary.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to inspect installed modules and proof state."
+        },
+        {
+          "name": "route",
+          "flags": [
+            "--route"
+          ],
+          "help": "Return one proof route by id instead of the full proof surface."
+        },
+        {
+          "name": "current",
+          "flags": [
+            "--current"
+          ],
+          "action": "store_true",
+          "help": "Return only the current proof summary."
+        },
+        {
+          "name": "changed",
+          "flags": [
+            "--changed"
+          ],
+          "nargs": "*",
+          "default": [],
+          "help": "Return required proof commands for the provided repo-relative changed paths."
+        }
+      ]
+    },
+    {
+      "name": "setup",
+      "help": "Show the bounded post-bootstrap setup guidance for a mature repository.",
+      "uses_option_groups": [
+        "selection"
+      ]
+    },
+    {
+      "name": "ownership",
+      "help": "Show the canonical ownership and authority mapping for the target repository.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to inspect the ownership ledger."
+        },
+        {
+          "name": "concern",
+          "flags": [
+            "--concern"
+          ],
+          "help": "Return one authority-surface answer by concern."
+        },
+        {
+          "name": "path",
+          "flags": [
+            "--path"
+          ],
+          "help": "Return the ownership answer for one repo-relative path."
+        }
+      ]
+    },
+    {
+      "name": "config",
+      "help": "Show the resolved repo-owned workspace config layered onto product defaults.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to resolve repo-owned config."
+        }
+      ]
+    },
+    {
+      "name": "system-intent",
+      "help": "Show or refresh the workspace-owned compiled system-intent declaration.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to inspect system intent."
+        },
+        {
+          "name": "sync",
+          "flags": [
+            "--sync"
+          ],
+          "action": "store_true",
+          "help": "Refresh source discovery metadata and create the compiled system-intent declaration if it is missing."
+        }
+      ]
+    },
+    {
+      "name": "note-delegation-outcome",
+      "help": "Append one local-only delegation outcome record for target-profile tuning.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to record the local outcome."
+        },
+        {
+          "name": "delegation_target",
+          "flags": [
+            "--delegation-target"
+          ],
+          "required": true,
+          "help": "Local delegation target alias."
+        },
+        {
+          "name": "task_class",
+          "flags": [
+            "--task-class"
+          ],
+          "required": true,
+          "help": "Bounded task class label for this delegated run."
+        },
+        {
+          "name": "outcome",
+          "flags": [
+            "--outcome"
+          ],
+          "required": true,
+          "choices_ref": "SUPPORTED_DELEGATION_OUTCOMES",
+          "help": "High-level delegated execution outcome."
+        },
+        {
+          "name": "handoff_sufficiency",
+          "flags": [
+            "--handoff-sufficiency"
+          ],
+          "choices_ref": "SUPPORTED_HANDOFF_SUFFICIENCY",
+          "default": "sufficient",
+          "help": "Whether the checked-in handoff was enough for the delegated worker."
+        },
+        {
+          "name": "review_burden",
+          "flags": [
+            "--review-burden"
+          ],
+          "choices_ref": "SUPPORTED_REVIEW_BURDENS",
+          "default": "normal",
+          "help": "How much review/rework burden remained after delegation."
+        },
+        {
+          "name": "escalation_required",
+          "flags": [
+            "--escalation-required"
+          ],
+          "action": "store_true",
+          "help": "Record that the delegated run had to stop and escalate."
+        }
+      ]
+    },
+    {
+      "name": "skills",
+      "help": "List registered workspace skills from installed package registries and repo-owned skill registries.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to inspect installed and repo-owned skills."
+        },
+        {
+          "name": "task",
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task description used to recommend likely skills."
+        }
+      ]
+    },
+    {
+      "name": "report",
+      "help": "Show a compact combined workspace report for installed modules, mixed-agent posture, and next-action guidance.",
+      "uses_option_groups": [
+        "selection"
+      ],
+      "options": [
+        {
+          "name": "startup",
+          "flags": [
+            "--startup"
+          ],
+          "action": "store_true",
+          "help": "Return the high-signal orientation block for fresh agents."
+        }
+      ]
+    },
+    {
+      "name": "preflight",
+      "help": "Get compact takeover-safe context: startup defaults + resolved config + active planning state in one call.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path for preflight context (defaults to current workspace)."
+        },
+        {
+          "name": "active_only",
+          "flags": [
+            "--active-only"
+          ],
+          "action": "store_true",
+          "help": "Return only active planning state without startup defaults and config."
+        }
+      ]
+    },
+    {
+      "name": "install",
+      "help": "Bootstrap selected modules into a target repository.",
+      "uses_option_groups": [
+        "init"
+      ]
+    },
+    {
+      "name": "init",
+      "help": "Bootstrap selected modules into a target repository.",
+      "uses_option_groups": [
+        "init"
+      ]
+    },
+    {
+      "name": "prompt",
+      "help": "Print a ready-to-paste workspace lifecycle handoff prompt.",
+      "subcommand_dest": "prompt_command",
+      "subcommands": [
+        {
+          "name": "init",
+          "help": "Print the workspace bootstrap handoff prompt.",
+          "uses_option_groups": [
+            "selection"
+          ],
+          "options": [
+            {
+              "name": "agent_instructions_file",
+              "flags": [
+                "--agent-instructions-file"
+              ],
+              "help": "Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md)."
+            },
+            {
+              "name": "adopt",
+              "flags": [
+                "--adopt"
+              ],
+              "action": "store_true",
+              "help": "Force conservative adopt behavior."
+            }
+          ]
+        },
+        {
+          "name": "upgrade",
+          "help": "Print the workspace upgrade handoff prompt.",
+          "uses_option_groups": [
+            "selection"
+          ]
+        },
+        {
+          "name": "uninstall",
+          "help": "Print the workspace uninstall handoff prompt.",
+          "uses_option_groups": [
+            "selection"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "status",
+      "help": "Report installed modules and workspace health summary.",
+      "uses_option_groups": [
+        "selection"
+      ]
+    },
+    {
+      "name": "doctor",
+      "help": "Report drift, missing surfaces, and recommended remediation.",
+      "uses_option_groups": [
+        "selection"
+      ]
+    },
+    {
+      "name": "upgrade",
+      "help": "Refresh managed surfaces for selected installed modules.",
+      "uses_option_groups": [
+        "selection",
+        "preflight_gate"
+      ],
+      "options": [
+        {
+          "name": "dry_run",
+          "flags": [
+            "--dry-run"
+          ],
+          "action": "store_true",
+          "help": "Show planned changes without mutating files."
+        }
+      ]
+    },
+    {
+      "name": "uninstall",
+      "help": "Remove managed surfaces conservatively for selected installed modules.",
+      "uses_option_groups": [
+        "selection",
+        "preflight_gate"
+      ],
+      "options": [
+        {
+          "name": "dry_run",
+          "flags": [
+            "--dry-run"
+          ],
+          "action": "store_true",
+          "help": "Show planned changes without mutating files."
+        },
+        {
+          "name": "local_only",
+          "flags": [
+            "--local-only"
+          ],
+          "action": "store_true",
+          "help": "Remove the workspace install from `.agentic-workspace/` instead of the repository root."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "schema_version": "agentic-workspace/repo-friction-policy/v1",
+  "workspace_self_adaptation": {
+    "status": "allowed-with-bounds",
+    "summary": "Workspace-self-adaptation may reduce friction inside Agentic Workspace-owned surfaces under every improvement-latitude mode.",
+    "rule": "Treat improvement_latitude as the policy for repo-directed initiative only; do not read it as a ban on bounded workspace self-improvement.",
+    "applies_to": [
+      "reporting surfaces",
+      "routing and selector surfaces",
+      "recovery surfaces",
+      "workspace contract clarity"
+    ],
+    "bounded_by": [
+      "correctness",
+      "ownership",
+      "proof",
+      "portability"
+    ]
+  },
+  "friction_response_order": [
+    {
+      "step": 1,
+      "action": "adapt-inside-workspace-first",
+      "rule": "Adapt inside Agentic Workspace first when the friction can be removed there safely and cheaply."
+    },
+    {
+      "step": 2,
+      "action": "promote-repo-directed-improvement-when-external",
+      "rule": "Promote repo-directed improvement only when the friction reflects a real repo problem that should not be masked by workspace adaptation."
+    },
+    {
+      "step": 3,
+      "action": "avoid-externalizing-honestly-absorbable-friction",
+      "rule": "Do not externalize friction to the user when Agentic Workspace can honestly absorb it itself."
+    }
+  ],
+  "workspace_self_adaptation_guardrail": {
+    "adapt_when": [
+      "the friction is genuinely about workspace fit, reporting, routing, selector design, recovery clarity, or contract wording",
+      "one bounded workspace change can remove the friction without hiding repo-owned structural problems"
+    ],
+    "surface_repo_friction_when": [
+      "the root problem is really unclear repo seams, tranche boundaries, validation friction, or ownership",
+      "repeated friction would otherwise require accumulating narrow workspace compensations"
+    ],
+    "keep_true": [
+      "new adaptation paths stay general",
+      "new adaptation paths stay bounded",
+      "new adaptation paths stay cheaper than repeated repo or user burden"
+    ],
+    "prefer": "one clear adaptation over accumulating many narrow special cases"
+  },
+  "repo_directed_improvement_threshold": {
+    "status": "explicit-contract",
+    "summary": "Repo-directed improvement requires repeated shared evidence that the repo is the real friction source, not one-off agent preference or local discomfort.",
+    "minimum_threshold": [
+      "at least two independent friction confirmations, or one bounded review artifact plus one repeated maintenance or dogfooding pass",
+      "evidence should point to the repo as the real source after honest workspace adaptation has already been tried or would become concealment"
+    ],
+    "not_enough": [
+      "one-off agent discomfort",
+      "one contributor or one model preferring a different repo shape",
+      "friction the workspace can still remove honestly inside its own surfaces"
+    ],
+    "promote_when": [
+      "repeated evidence shows the same repo-owned seam, boundary, ownership, or validation problem",
+      "further workspace adaptation would hide the repo problem instead of solving it honestly",
+      "the follow-on can stay bounded and explain why the repo change is more honest than another workspace-only patch"
+    ],
+    "collaboration_bias": "In collaborative repos, prefer the higher bar: shared repeated evidence beats local agent taste before repo-directed change."
+  },
+  "validation_friction": {
+    "status": "explicit-contract",
+    "rule": "Treat validation friction as repo-friction evidence only when otherwise straightforward work keeps stalling at validation because repo seams, tranche boundaries, proof expectations, or rerun/re-entry paths stay unclear.",
+    "distinguish_from": [
+      "ordinary bug-fixing where the failing check and expected fix are already clear",
+      "one-off broken tests or environment failures that do not reveal a repeated repo seam problem",
+      "genuinely difficult domains where the hard part is the domain logic itself rather than validation fit"
+    ],
+    "subtypes": [
+      "weak_seam",
+      "bad_tranche_boundary",
+      "unclear_proof_contract",
+      "validation_bounce_reentry"
+    ],
+    "reporting_destinations": [
+      "repo_friction review output",
+      "bounded planning residue when a follow-on slice is justified",
+      "ordinary report output without implicit active work"
+    ]
+  },
+  "improvement_boundary_test": {
+    "stays_local_when": [
+      "the requested outcome still means the same thing after the improvement",
+      "the proof lane remains narrow enough to prove the change without cross-owner validation",
+      "ownership stays inside the current workspace/planning/memory boundary",
+      "the improvement reduces proven friction rather than creating a new capability branch"
+    ],
+    "changed_task_when": [
+      "the improvement changes what counts as success instead of only changing the means",
+      "proof must broaden into another lane or owner before the change can be trusted",
+      "the work introduces new visible process, routing, tooling, or module responsibility",
+      "the friction signal is being used to justify standalone work that the current slice did not already own"
+    ],
+    "broaden_proof_when": [
+      "the touched surface expands from local code cleanup into shared reporting, planning, or memory state",
+      "the improvement changes a generated or front-door surface that weaker agents may rely on directly",
+      "the concept-friction change alters user-visible routing, startup, or ownership guidance"
+    ],
+    "escalate_when": [
+      "the improvement would rewrite requested ends under a cleanup label",
+      "the change would create a new top-level concept or module to fix the friction",
+      "the available evidence is too weak to distinguish local means improvement from a different task"
+    ]
+  }
+}

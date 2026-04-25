@@ -1,0 +1,49 @@
+{
+  "schema_version": "agentic-workspace/setup-findings-policy/v1",
+  "artifact_path": "tools/setup-findings.json",
+  "accepted_kind": "workspace-setup-findings/v1",
+  "promotion_confidence_threshold": 0.75,
+  "accepted_classes": [
+    {
+      "class": "repo_friction_evidence",
+      "summary": "Evidence-backed structural or routing friction worth preserving as shared workspace evidence.",
+      "promote_to": "agentic-workspace report --target ./repo --format json repo_friction.external_evidence",
+      "preserve_when": [
+        "confidence is at least 0.75",
+        "the finding has a repo-relative path or explicit refs",
+        "the finding would reduce rediscovery if it survived the current setup pass"
+      ],
+      "transient_when": [
+        "the finding has no grounding path or refs",
+        "confidence is below 0.75",
+        "the finding only restates report output already present elsewhere"
+      ],
+      "required_for_promotion": [
+        "path_or_refs"
+      ]
+    },
+    {
+      "class": "planning_candidate",
+      "summary": "A bounded follow-on or handoff candidate worth preserving as explicit planning promotion guidance.",
+      "promote_to": ".agentic-workspace/planning/state.toml or .agentic-workspace/planning/execplans/ after bounded planning review",
+      "preserve_when": [
+        "confidence is at least 0.75",
+        "the finding includes a bounded next_action",
+        "the finding would still matter after the current session or agent ends"
+      ],
+      "transient_when": [
+        "the finding lacks a bounded next_action",
+        "confidence is below 0.75",
+        "the finding is only generic analysis with no clear planning owner"
+      ],
+      "required_for_promotion": [
+        "next_action"
+      ]
+    }
+  ],
+  "secondary": [
+    "Do not build a workspace-owned analyzer.",
+    "Do not auto-write planning or memory state from setup input.",
+    "Do not preserve findings that have no durable owner or bounded next action."
+  ]
+}

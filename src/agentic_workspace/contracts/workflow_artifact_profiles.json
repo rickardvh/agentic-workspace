@@ -1,0 +1,32 @@
+{
+  "schema_version": "agentic-workspace/workflow-artifact-profiles/v1",
+  "default_profile": "repo-owned",
+  "profiles": [
+    {
+      "profile": "repo-owned",
+      "summary": "Use only the repo-owned planning surfaces; do not rely on native runtime artifacts.",
+      "native_artifacts": [],
+      "canonical_surfaces": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/"
+      ],
+      "sync_rule": ".agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans stay authoritative; no extra runtime artifact should carry durable state.",
+      "handoff_rule": "Use repo-owned planning surfaces directly for restart, review, and cross-agent continuation."
+    },
+    {
+      "profile": "gemini",
+      "summary": "Allow Gemini-style native workflow artifacts as runtime scratchpads, but project durable state back into repo-owned planning before handoff or review.",
+      "native_artifacts": [
+        "implementation_plan.md",
+        "task.md",
+        "walkthrough.md"
+      ],
+      "canonical_surfaces": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/"
+      ],
+      "sync_rule": "Before review, handoff, or session end, mirror the durable execution state into .agentic-workspace/planning/state.toml and the active execplan instead of leaving it only in native artifacts.",
+      "handoff_rule": "Treat native artifacts as local execution aids; treat .agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans as the only cross-agent source of truth."
+    }
+  ]
+}

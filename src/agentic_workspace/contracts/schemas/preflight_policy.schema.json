@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/preflight-policy.schema.json",
+  "title": "Preflight Policy",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "summary",
+    "high_risk_commands",
+    "token",
+    "default_max_age_seconds",
+    "strict_gate"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/preflight-policy/v1"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "high_risk_commands": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "token": {
+      "type": "object",
+      "required": [
+        "prefix",
+        "issued_at_epoch_encoding"
+      ],
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issued_at_epoch_encoding": {
+          "type": "string",
+          "enum": [
+            "decimal_unix_epoch_seconds"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "default_max_age_seconds": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "strict_gate": {
+      "type": "object",
+      "required": [
+        "enabled_by_option",
+        "token_option",
+        "max_age_option",
+        "missing_token_error",
+        "invalid_token_error",
+        "non_positive_max_age_error",
+        "future_token_error",
+        "stale_token_error_template"
+      ],
+      "properties": {
+        "enabled_by_option": {
+          "type": "string",
+          "minLength": 1
+        },
+        "token_option": {
+          "type": "string",
+          "minLength": 1
+        },
+        "max_age_option": {
+          "type": "string",
+          "minLength": 1
+        },
+        "missing_token_error": {
+          "type": "string",
+          "minLength": 1
+        },
+        "invalid_token_error": {
+          "type": "string",
+          "minLength": 1
+        },
+        "non_positive_max_age_error": {
+          "type": "string",
+          "minLength": 1
+        },
+        "future_token_error": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stale_token_error_template": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

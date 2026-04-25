@@ -8,11 +8,21 @@ from jsonschema import Draft202012Validator
 
 from agentic_workspace import cli
 from agentic_workspace.contract_tooling import (
+    cli_commands_manifest,
+    cli_option_groups_manifest,
     compact_contract_manifest,
     contract_inventory_manifest,
     contract_schema,
+    improvement_latitude_policy_manifest,
+    module_registry_manifest,
+    optimization_bias_policy_manifest,
+    preflight_policy_manifest,
     proof_routes_manifest,
+    repo_friction_policy_manifest,
     report_contract_manifest,
+    setup_findings_policy_manifest,
+    workflow_artifact_profiles_manifest,
+    workspace_surfaces_manifest,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -200,6 +210,92 @@ def _sample_module_capability_payload() -> dict[str, object]:
     }
 
 
+def _parser_snapshot(parser) -> list[dict[str, object]]:
+    subparsers_action = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
+    return [_command_parser_snapshot(subparsers_action.choices[name]) for name in subparsers_action.choices]
+
+
+def _command_parser_snapshot(parser) -> dict[str, object]:
+    snapshot: dict[str, object] = {"name": parser.prog.split()[-1], "help": parser.description}
+    options: list[dict[str, object]] = []
+    for action in parser._actions:
+        if not action.option_strings:
+            continue
+        if action.dest == "help":
+            continue
+        option: dict[str, object] = {"flags": list(action.option_strings)}
+        if action.help is not None:
+            option["help"] = action.help
+        if action.required:
+            option["required"] = True
+        if action.choices is not None:
+            option["choices"] = list(action.choices)
+        if action.default is not None and action.default != argparse.SUPPRESS:
+            option["default"] = action.default
+        if action.type is int:
+            option["type"] = "integer"
+        if type(action).__name__ == "_StoreTrueAction":
+            option["action"] = "store_true"
+        options.append(option)
+    if options:
+        snapshot["options"] = options
+    subparsers_action = next((action for action in parser._actions if isinstance(action, argparse._SubParsersAction)), None)
+    if subparsers_action is not None:
+        snapshot["subcommands"] = [_command_parser_snapshot(subparsers_action.choices[name]) for name in subparsers_action.choices]
+    return snapshot
+
+
+def _resolved_manifest_option(option_spec: dict[str, object]) -> dict[str, object]:
+    resolved: dict[str, object] = {"flags": list(option_spec["flags"])}
+    help_text = cli._resolved_option_help(option_spec)  # type: ignore[attr-defined]
+    if help_text is not None:
+        resolved["help"] = help_text
+    if option_spec.get("required") is True:
+        resolved["required"] = True
+    choices = cli._resolve_option_choices(option_spec)  # type: ignore[attr-defined]
+    if choices is not None:
+        resolved["choices"] = list(choices)
+    if "default" in option_spec or "default_ref" in option_spec:
+        resolved["default"] = cli._resolve_option_default(option_spec)  # type: ignore[attr-defined]
+    option_type = cli._resolve_option_type(option_spec)  # type: ignore[attr-defined]
+    if option_type is int:
+        resolved["type"] = "integer"
+    action = option_spec.get("action")
+    if isinstance(action, str):
+        resolved["action"] = action
+        if action == "store_true" and "default" not in resolved:
+            resolved["default"] = False
+    return resolved
+
+
+def _resolved_group_options(group_name: str) -> list[dict[str, object]]:
+    group_spec = cli_option_groups_manifest()["option_groups"][group_name]
+    resolved: list[dict[str, object]] = []
+    for parent_group in group_spec.get("uses", []):
+        resolved.extend(_resolved_group_options(parent_group))
+    for option_spec in group_spec.get("options", []):
+        resolved.append(_resolved_manifest_option(option_spec))
+    return resolved
+
+
+def _resolved_command_manifest(command_spec: dict[str, object]) -> dict[str, object]:
+    resolved: dict[str, object] = {
+        "name": str(command_spec["name"]),
+        "help": str(command_spec["help"]),
+    }
+    options: list[dict[str, object]] = []
+    for group_name in command_spec.get("uses_option_groups", []):
+        options.extend(_resolved_group_options(str(group_name)))
+    for option_spec in command_spec.get("options", []):
+        options.append(_resolved_manifest_option(option_spec))
+    if options:
+        resolved["options"] = options
+    subcommands = command_spec.get("subcommands", [])
+    if isinstance(subcommands, list) and subcommands:
+        resolved["subcommands"] = [_resolved_command_manifest(spec) for spec in subcommands]
+    return resolved
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     checks: list[tuple[str, list[str]]] = [
@@ -226,6 +322,46 @@ def main(argv: list[str] | None = None) -> int:
             "module capability sample",
             _validate(_sample_module_capability_payload(), "module_capability.schema.json"),
         ),
+        (
+            "workspace surfaces manifest",
+            _validate(workspace_surfaces_manifest(), "workspace_surfaces_manifest.schema.json"),
+        ),
+        (
+            "setup findings policy manifest",
+            _validate(setup_findings_policy_manifest(), "setup_findings_policy.schema.json"),
+        ),
+        (
+            "workflow artifact profiles manifest",
+            _validate(workflow_artifact_profiles_manifest(), "workflow_artifact_profiles.schema.json"),
+        ),
+        (
+            "improvement latitude policy manifest",
+            _validate(improvement_latitude_policy_manifest(), "improvement_latitude_policy.schema.json"),
+        ),
+        (
+            "optimization bias policy manifest",
+            _validate(optimization_bias_policy_manifest(), "optimization_bias_policy.schema.json"),
+        ),
+        (
+            "repo friction policy manifest",
+            _validate(repo_friction_policy_manifest(), "repo_friction_policy.schema.json"),
+        ),
+        (
+            "preflight policy manifest",
+            _validate(preflight_policy_manifest(), "preflight_policy.schema.json"),
+        ),
+        (
+            "module registry manifest",
+            _validate(module_registry_manifest(), "module_registry.schema.json"),
+        ),
+        (
+            "cli commands manifest",
+            _validate(cli_commands_manifest(), "cli_commands.schema.json"),
+        ),
+        (
+            "cli option groups manifest",
+            _validate(cli_option_groups_manifest(), "cli_option_groups.schema.json"),
+        ),
     ]
 
     defaults_payload = cli._defaults_payload()  # type: ignore[attr-defined]
@@ -235,6 +371,160 @@ def main(argv: list[str] | None = None) -> int:
         checks.append(("proof routes parity", ["defaults payload proof routes drifted from proof_routes.json"]))
     if cli._reporting_schema_payload() != report_contract_manifest():  # type: ignore[attr-defined]
         checks.append(("report contract parity", ["reporting schema payload drifted from report_contract.json"]))
+    workspace_surfaces = workspace_surfaces_manifest()
+    if [path.as_posix() for path in cli.WORKSPACE_PAYLOAD_FILES] != workspace_surfaces["payload_files"]:
+        checks.append(("workspace surfaces parity", ["workspace payload files drifted from workspace_surfaces.json"]))
+    if cli.SYSTEM_INTENT_MIRROR_KIND != workspace_surfaces["system_intent_mirror_kind"]:
+        checks.append(("workspace surfaces parity", ["system intent mirror kind drifted from workspace_surfaces.json"]))
+    if cli.WORKSPACE_AGENTS_PATH.as_posix() != workspace_surfaces["default_agents_path"]:
+        checks.append(("workspace surfaces parity", ["workspace agents path drifted from workspace_surfaces.json"]))
+    if [path.as_posix() for path in cli.WORKSPACE_HANDOFF_SURFACES] != workspace_surfaces["handoff_surfaces"]:
+        checks.append(("workspace surfaces parity", ["workspace handoff surfaces drifted from workspace_surfaces.json"]))
+    if {key: value.as_posix() for key, value in cli.MODULE_UPGRADE_SOURCE_PATHS.items()} != workspace_surfaces["module_upgrade_source_paths"]:
+        checks.append(("workspace surfaces parity", ["module upgrade source paths drifted from workspace_surfaces.json"]))
+    if cli.SETUP_FINDINGS_PATH.as_posix() != workspace_surfaces["setup_findings_path"]:
+        checks.append(("workspace surfaces parity", ["setup findings path drifted from workspace_surfaces.json"]))
+    if list(cli.MIXED_AGENT_LOCAL_OVERRIDE_FIELDS) != workspace_surfaces["mixed_agent_local_override_fields"]:
+        checks.append(("workspace surfaces parity", ["mixed-agent local override fields drifted from workspace_surfaces.json"]))
+    setup_policy = setup_findings_policy_manifest()
+    if setup_policy["artifact_path"] != cli.SETUP_FINDINGS_PATH.as_posix():
+        checks.append(("setup findings policy parity", ["setup findings artifact path drifted from setup_findings_policy.json"]))
+    if setup_policy["accepted_kind"] != cli.SETUP_FINDINGS_KIND:
+        checks.append(("setup findings policy parity", ["setup findings kind drifted from setup_findings_policy.json"]))
+    if setup_policy["promotion_confidence_threshold"] != cli.SETUP_FINDING_PROMOTION_THRESHOLD:
+        checks.append(("setup findings policy parity", ["setup findings promotion threshold drifted from setup_findings_policy.json"]))
+    if [item["class"] for item in setup_policy["accepted_classes"]] != list(cli.SUPPORTED_SETUP_FINDING_CLASSES):
+        checks.append(("setup findings policy parity", ["setup findings classes drifted from setup_findings_policy.json"]))
+    if setup_policy["accepted_classes"] != [cli._setup_finding_class_payload(name) for name in cli.SUPPORTED_SETUP_FINDING_CLASSES]:  # type: ignore[attr-defined]
+        checks.append(("setup findings policy parity", ["setup finding class payloads drifted from setup_findings_policy.json"]))
+    workflow_profiles = workflow_artifact_profiles_manifest()
+    if workflow_profiles["default_profile"] != cli.DEFAULT_WORKFLOW_ARTIFACT_PROFILE:
+        checks.append(("workflow artifact profiles parity", ["default workflow artifact profile drifted from workflow_artifact_profiles.json"]))
+    if [item["profile"] for item in workflow_profiles["profiles"]] != list(cli.SUPPORTED_WORKFLOW_ARTIFACT_PROFILES):
+        checks.append(("workflow artifact profiles parity", ["workflow artifact profiles drifted from workflow_artifact_profiles.json"]))
+    if workflow_profiles["profiles"] != [cli._workflow_artifact_profile_payload(name) for name in cli.SUPPORTED_WORKFLOW_ARTIFACT_PROFILES]:  # type: ignore[attr-defined]
+        checks.append(("workflow artifact profiles parity", ["workflow artifact payloads drifted from workflow_artifact_profiles.json"]))
+    improvement_policy = improvement_latitude_policy_manifest()
+    if improvement_policy["default_mode"] != cli.DEFAULT_IMPROVEMENT_LATITUDE:
+        checks.append(("improvement latitude policy parity", ["default improvement latitude drifted from improvement_latitude_policy.json"]))
+    if [item["mode"] for item in improvement_policy["modes"]] != list(cli.SUPPORTED_IMPROVEMENT_LATITUDES):
+        checks.append(("improvement latitude policy parity", ["supported improvement latitude modes drifted from improvement_latitude_policy.json"]))
+    if improvement_policy["modes"] != [cli._improvement_latitude_payload(name) for name in cli.SUPPORTED_IMPROVEMENT_LATITUDES]:  # type: ignore[attr-defined]
+        checks.append(("improvement latitude policy parity", ["improvement latitude payloads drifted from improvement_latitude_policy.json"]))
+    improvement_defaults = defaults_payload["improvement_latitude"]
+    if improvement_defaults["default_mode"] != improvement_policy["default_mode"]:
+        checks.append(("improvement latitude policy parity", ["defaults payload default_mode drifted from improvement_latitude_policy.json"]))
+    if improvement_defaults["supported_modes"] != improvement_policy["modes"]:
+        checks.append(("improvement latitude policy parity", ["defaults payload supported_modes drifted from improvement_latitude_policy.json"]))
+    if improvement_defaults["mode_interpretation"] != improvement_policy["mode_interpretation"]:
+        checks.append(("improvement latitude policy parity", ["defaults payload mode_interpretation drifted from improvement_latitude_policy.json"]))
+    if improvement_defaults["examples"] != improvement_policy["examples"]:
+        checks.append(("improvement latitude policy parity", ["defaults payload examples drifted from improvement_latitude_policy.json"]))
+    if improvement_defaults["evidence_source"] != improvement_policy["evidence_source"]:
+        checks.append(("improvement latitude policy parity", ["defaults payload evidence_source drifted from improvement_latitude_policy.json"]))
+    if improvement_defaults["evidence_classes"] != improvement_policy["evidence_classes"]:
+        checks.append(("improvement latitude policy parity", ["defaults payload evidence_classes drifted from improvement_latitude_policy.json"]))
+    optimization_policy = optimization_bias_policy_manifest()
+    if optimization_policy["default_mode"] != cli.DEFAULT_OPTIMIZATION_BIAS:
+        checks.append(("optimization bias policy parity", ["default optimization bias drifted from optimization_bias_policy.json"]))
+    if [item["mode"] for item in optimization_policy["modes"]] != list(cli.SUPPORTED_OPTIMIZATION_BIASES):
+        checks.append(("optimization bias policy parity", ["supported optimization bias modes drifted from optimization_bias_policy.json"]))
+    if optimization_policy["modes"] != [cli._optimization_bias_payload(name) for name in cli.SUPPORTED_OPTIMIZATION_BIASES]:  # type: ignore[attr-defined]
+        checks.append(("optimization bias policy parity", ["optimization bias payloads drifted from optimization_bias_policy.json"]))
+    optimization_defaults = defaults_payload["optimization_bias"]
+    if optimization_defaults["default_mode"] != optimization_policy["default_mode"]:
+        checks.append(("optimization bias policy parity", ["defaults payload default_mode drifted from optimization_bias_policy.json"]))
+    if optimization_defaults["supported_modes"] != optimization_policy["modes"]:
+        checks.append(("optimization bias policy parity", ["defaults payload supported_modes drifted from optimization_bias_policy.json"]))
+    if optimization_defaults["surface_boundary"] != optimization_policy["surface_boundary"]:
+        checks.append(("optimization bias policy parity", ["defaults payload surface_boundary drifted from optimization_bias_policy.json"]))
+    if optimization_defaults["must_not_change"] != optimization_policy["must_not_change"]:
+        checks.append(("optimization bias policy parity", ["defaults payload must_not_change drifted from optimization_bias_policy.json"]))
+    repo_friction_policy = repo_friction_policy_manifest()
+    if cli._workspace_self_adaptation_payload() != repo_friction_policy["workspace_self_adaptation"]:  # type: ignore[attr-defined]
+        checks.append(("repo friction policy parity", ["workspace self adaptation payload drifted from repo_friction_policy.json"]))
+    if cli._friction_response_order_payload() != repo_friction_policy["friction_response_order"]:  # type: ignore[attr-defined]
+        checks.append(("repo friction policy parity", ["friction response order drifted from repo_friction_policy.json"]))
+    if cli._workspace_self_adaptation_guardrail_payload() != repo_friction_policy["workspace_self_adaptation_guardrail"]:  # type: ignore[attr-defined]
+        checks.append(("repo friction policy parity", ["workspace self adaptation guardrail drifted from repo_friction_policy.json"]))
+    if cli._repo_directed_improvement_evidence_threshold_payload() != repo_friction_policy["repo_directed_improvement_threshold"]:  # type: ignore[attr-defined]
+        checks.append(("repo friction policy parity", ["repo-directed improvement threshold drifted from repo_friction_policy.json"]))
+    if cli._validation_friction_payload() != repo_friction_policy["validation_friction"]:  # type: ignore[attr-defined]
+        checks.append(("repo friction policy parity", ["validation friction payload drifted from repo_friction_policy.json"]))
+    if cli._improvement_boundary_test_payload() != repo_friction_policy["improvement_boundary_test"]:  # type: ignore[attr-defined]
+        checks.append(("repo friction policy parity", ["improvement boundary test drifted from repo_friction_policy.json"]))
+    if improvement_defaults["workspace_self_adaptation"] != repo_friction_policy["workspace_self_adaptation"]:
+        checks.append(("repo friction policy parity", ["defaults payload workspace_self_adaptation drifted from repo_friction_policy.json"]))
+    if improvement_defaults["friction_response_order"] != repo_friction_policy["friction_response_order"]:
+        checks.append(("repo friction policy parity", ["defaults payload friction_response_order drifted from repo_friction_policy.json"]))
+    if improvement_defaults["guardrail_test"] != repo_friction_policy["workspace_self_adaptation_guardrail"]:
+        checks.append(("repo friction policy parity", ["defaults payload guardrail_test drifted from repo_friction_policy.json"]))
+    if improvement_defaults["repo_directed_improvement_threshold"] != repo_friction_policy["repo_directed_improvement_threshold"]:
+        checks.append(("repo friction policy parity", ["defaults payload repo_directed_improvement_threshold drifted from repo_friction_policy.json"]))
+    if improvement_defaults["validation_friction"] != repo_friction_policy["validation_friction"]:
+        checks.append(("repo friction policy parity", ["defaults payload validation_friction drifted from repo_friction_policy.json"]))
+    if improvement_defaults["decision_test"] != repo_friction_policy["improvement_boundary_test"]:
+        checks.append(("repo friction policy parity", ["defaults payload decision_test drifted from repo_friction_policy.json"]))
+    preflight_policy = preflight_policy_manifest()
+    if sorted(cli.HIGH_RISK_COMMANDS) != sorted(preflight_policy["high_risk_commands"]):
+        checks.append(("preflight policy parity", ["high-risk command set drifted from preflight_policy.json"]))
+    if cli.PREFLIGHT_TOKEN_PREFIX != preflight_policy["token"]["prefix"]:
+        checks.append(("preflight policy parity", ["preflight token prefix drifted from preflight_policy.json"]))
+    if cli.DEFAULT_PREFLIGHT_MAX_AGE_SECONDS != preflight_policy["default_max_age_seconds"]:
+        checks.append(("preflight policy parity", ["default preflight max age drifted from preflight_policy.json"]))
+    if cli._PREFLIGHT_STRICT_GATE_POLICY != preflight_policy["strict_gate"]:  # type: ignore[attr-defined]
+        checks.append(("preflight policy parity", ["strict-gate policy drifted from preflight_policy.json"]))
+    module_registry = module_registry_manifest()
+    if {name: list(args) for name, args in cli.MODULE_COMMAND_ARGS.items()} != module_registry["module_command_args"]:
+        checks.append(("module registry parity", ["module command args drifted from module_registry.json"]))
+    descriptors = cli._module_operations()  # type: ignore[attr-defined]
+    expected_module_names = [item["name"] for item in module_registry["modules"]]
+    if cli._ordered_module_names(descriptors) != expected_module_names:  # type: ignore[attr-defined]
+        checks.append(("module registry parity", ["ordered module names drifted from module_registry.json"]))
+    live_registry = cli._module_registry(descriptors=descriptors, target_root=None)  # type: ignore[attr-defined]
+    live_registry_payload = [
+        {
+            "name": entry.name,
+            "description": entry.description,
+            "selection_rank": descriptors[entry.name].selection_rank,
+            "include_in_full_preset": descriptors[entry.name].include_in_full_preset,
+            "install_signals": [path.as_posix() for path in entry.install_signals],
+            "workflow_surfaces": [path.as_posix() for path in entry.workflow_surfaces],
+            "generated_artifacts": [path.as_posix() for path in entry.generated_artifacts],
+            "startup_steps": list(descriptors[entry.name].startup_steps),
+            "sources_of_truth": list(descriptors[entry.name].sources_of_truth),
+            "root_agents_cleanup_blocks": [
+                {
+                    "block": block.block,
+                    "start_marker": block.start_marker,
+                    "end_marker": block.end_marker,
+                    "label": block.label,
+                }
+                for block in descriptors[entry.name].root_agents_cleanup_blocks
+            ],
+            "capabilities": list(entry.capabilities),
+            "dependencies": list(entry.dependencies),
+            "conflicts": list(entry.conflicts),
+            "result_contract": {
+                "schema_version": entry.result_contract.schema_version,
+                "guaranteed_fields": list(entry.result_contract.guaranteed_fields),
+                "action_fields": list(entry.result_contract.action_fields),
+                "warning_fields": list(entry.result_contract.warning_fields),
+            },
+        }
+        for entry in live_registry
+    ]
+    if live_registry_payload != module_registry["modules"]:
+        checks.append(("module registry parity", ["live module registry drifted from module_registry.json"]))
+    parser_manifest = cli_commands_manifest()
+    parser_snapshot = _parser_snapshot(cli.build_parser())
+    expected_parser_snapshot = [_resolved_command_manifest(spec) for spec in parser_manifest["commands"]]
+    if parser_snapshot != expected_parser_snapshot:
+        checks.append(("cli command manifest parity", ["argparse command/options/defaults drifted from cli_commands.json or cli_option_groups.json"]))
+    if [item["name"] for item in parser_manifest["commands"]] != [item["name"] for item in expected_parser_snapshot]:
+        checks.append(("cli command manifest parity", ["resolved command ordering drifted from cli_commands.json"]))
+    if "modules" not in cli._command_suggestions("moduls"):  # type: ignore[attr-defined]
+        checks.append(("cli command manifest parity", ["command suggestions no longer derive the expected known commands"]))
     workspace_config_schema = contract_schema("workspace_config.schema.json")
     local_override_schema = contract_schema("workspace_local_override.schema.json")
     if workspace_config_schema["properties"]["workspace"]["properties"]["agent_instructions_file"]["enum"] != list(

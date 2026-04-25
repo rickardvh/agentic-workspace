@@ -1,0 +1,135 @@
+{
+  "schema_version": "agentic-workspace/optimization-bias-policy/v1",
+  "default_mode": "balanced",
+  "owner_surface": "workspace",
+  "must_not_change": [
+    "execution method",
+    "reasoning depth",
+    "delegated-judgment boundaries",
+    "proof requirements",
+    "canonical state semantics"
+  ],
+  "surface_boundary": {
+    "honors_bias": [
+      "derived report rendering density",
+      "rendered human-facing views",
+      "durable residue style when canonical truth is unchanged"
+    ],
+    "stays_invariant": [
+      "execution method",
+      "reasoning depth",
+      "delegated-judgment boundaries",
+      "proof requirements",
+      "ownership semantics",
+      "machine-readable report truth",
+      "canonical state semantics"
+    ]
+  },
+  "modes": [
+    {
+      "mode": "agent-efficiency",
+      "summary": "Prefer terse durable outputs and low-token rendered views when canonical state would stay unchanged.",
+      "report_density": "compact",
+      "residue_density": "compact-carry-forward",
+      "rendered_view_style": "minimal-prose",
+      "allows": [
+        "preferring terse labels when machine-readable state already carries the contract",
+        "keeping follow-through and residue compact when explanation would only restate canonical fields",
+        "trimming repeated explanatory prose from rendered human views"
+      ],
+      "does_not_affect": [
+        "execution method",
+        "reasoning depth",
+        "delegated-judgment boundaries",
+        "proof requirements",
+        "canonical state semantics"
+      ],
+      "surface_boundary": {
+        "honors_bias": [
+          "derived report rendering density",
+          "rendered human-facing views",
+          "durable residue style when canonical truth is unchanged"
+        ],
+        "stays_invariant": [
+          "execution method",
+          "reasoning depth",
+          "delegated-judgment boundaries",
+          "proof requirements",
+          "ownership semantics",
+          "machine-readable report truth",
+          "canonical state semantics"
+        ]
+      }
+    },
+    {
+      "mode": "balanced",
+      "summary": "Keep durable outputs compact by default while preserving enough explanatory rendering for routine human inspection.",
+      "report_density": "balanced",
+      "residue_density": "compact-with-brief-explanation",
+      "rendered_view_style": "brief-explanatory",
+      "allows": [
+        "keeping machine-readable state terse",
+        "adding short explanatory labels in rendered human views",
+        "preserving compact residue with only the explanation needed to avoid rereading"
+      ],
+      "does_not_affect": [
+        "execution method",
+        "reasoning depth",
+        "delegated-judgment boundaries",
+        "proof requirements",
+        "canonical state semantics"
+      ],
+      "surface_boundary": {
+        "honors_bias": [
+          "derived report rendering density",
+          "rendered human-facing views",
+          "durable residue style when canonical truth is unchanged"
+        ],
+        "stays_invariant": [
+          "execution method",
+          "reasoning depth",
+          "delegated-judgment boundaries",
+          "proof requirements",
+          "ownership semantics",
+          "machine-readable report truth",
+          "canonical state semantics"
+        ]
+      }
+    },
+    {
+      "mode": "human-legibility",
+      "summary": "Prefer clearer explanatory rendering and more legible durable residue when truth would remain unchanged.",
+      "report_density": "explanatory",
+      "residue_density": "legible-with-context",
+      "rendered_view_style": "explicit-labels-and-context",
+      "allows": [
+        "adding brief explanatory context around compact state",
+        "rendering section purpose more explicitly for human readers",
+        "keeping durable residue slightly more legible when terseness would force rereading"
+      ],
+      "does_not_affect": [
+        "execution method",
+        "reasoning depth",
+        "delegated-judgment boundaries",
+        "proof requirements",
+        "canonical state semantics"
+      ],
+      "surface_boundary": {
+        "honors_bias": [
+          "derived report rendering density",
+          "rendered human-facing views",
+          "durable residue style when canonical truth is unchanged"
+        ],
+        "stays_invariant": [
+          "execution method",
+          "reasoning depth",
+          "delegated-judgment boundaries",
+          "proof requirements",
+          "ownership semantics",
+          "machine-readable report truth",
+          "canonical state semantics"
+        ]
+      }
+    }
+  ]
+}

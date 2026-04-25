@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/improvement-latitude-policy.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "default_mode",
+    "owner_surface",
+    "policy_target",
+    "mode_interpretation",
+    "examples",
+    "evidence_source",
+    "evidence_classes",
+    "modes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/improvement-latitude-policy/v1"
+    },
+    "default_mode": {
+      "type": "string"
+    },
+    "owner_surface": {
+      "type": "string"
+    },
+    "policy_target": {
+      "type": "string"
+    },
+    "mode_interpretation": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "examples": {
+      "type": "object",
+      "required": [
+        "workspace_adaptation_first",
+        "repo_directed_improvement_next"
+      ],
+      "properties": {
+        "workspace_adaptation_first": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "repo_directed_improvement_next": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence_source": {
+      "type": "string"
+    },
+    "evidence_classes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "modes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "mode",
+          "initiative_posture",
+          "summary",
+          "allows",
+          "forbids",
+          "reporting_destinations",
+          "reporting_rule"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string"
+          },
+          "initiative_posture": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "allows": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "forbids": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "reporting_destinations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "reporting_rule": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

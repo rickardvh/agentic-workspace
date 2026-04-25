@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/workflow-artifact-profiles.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "default_profile",
+    "profiles"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/workflow-artifact-profiles/v1"
+    },
+    "default_profile": {
+      "type": "string"
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "profile",
+          "summary",
+          "native_artifacts",
+          "canonical_surfaces",
+          "sync_rule",
+          "handoff_rule"
+        ],
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "native_artifacts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "canonical_surfaces": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "sync_rule": {
+            "type": "string"
+          },
+          "handoff_rule": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
