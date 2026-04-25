@@ -1,0 +1,96 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "config.report",
+  "command_surface": {
+    "command": "config",
+    "format_option": "format"
+  },
+  "summary": "Show the resolved repo-owned workspace config layered onto product defaults.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": ".agentic-workspace/config.toml",
+      "required": false
+    },
+    {
+      "surface": ".agentic-workspace/config.local.toml",
+      "required": false
+    },
+    {
+      "surface": "product defaults",
+      "required": true
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve",
+      "description": "Resolve the effective target root."
+    },
+    {
+      "id": "load_config",
+      "uses": "workspace.config.load",
+      "description": "Load workspace config, defaults, and local override state."
+    },
+    {
+      "id": "emit_config",
+      "uses": "workspace.config.emit",
+      "description": "Emit resolved config in the requested format."
+    }
+  ],
+  "guards": [
+    "Report config without writing repo state.",
+    "Treat missing repo config as product-default resolution."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "json output remains compatible with existing config command tests"
+  ],
+  "projections": {
+    "cli": {
+      "command_ref": "config"
+    },
+    "mcp": {
+      "tool_name": "agentic_workspace_config_report",
+      "read_only_hint": true,
+      "destructive_hint": false,
+      "idempotent_hint": true
+    },
+    "skill": {
+      "activation": [
+        "resolved workspace config",
+        "workspace policy"
+      ],
+      "instruction_summary": "Use this operation when an agent needs the effective workspace config."
+    }
+  },
+  "migration_status": "draft-contract-only"
+}
