@@ -23,7 +23,7 @@
       "system": "github",
       "id": "#251",
       "title": "[Workspace]: Design for graceful partial compliance so generic agents still get value from the package, and bypassing it becomes visible and harder to trust",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -32,7 +32,7 @@
       "system": "github",
       "id": "#253",
       "title": "[Workspace]: Make core package surfaces cheaper for generic agents to consume so using the package is easier than broad repo scavenging or private reinvention",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -41,7 +41,7 @@
       "system": "github",
       "id": "#254",
       "title": "[Workspace]: Make the default entry path easier for generic agents to discover and follow so startup compliance does not depend on deep product awareness",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -50,7 +50,7 @@
       "system": "github",
       "id": "#255",
       "title": "[Workspace]: Make core package surfaces easier for generic agents to use so package startup and state feel cheaper than ad hoc repo reading",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -59,7 +59,7 @@
       "system": "github",
       "id": "#256",
       "title": "[Review]: Surface lower-trust signals when package use was likely bypassed so review and closure do not silently assume disciplined package usage",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -248,7 +248,7 @@
       "system": "github",
       "id": "#277",
       "title": "Improve takeover robustness with preflight-first workflow gates",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -302,7 +302,7 @@
       "system": "github",
       "id": "#285",
       "title": "[Workspace]: Resolve portable execplan semantics against local execution posture so the current environment can optimize quality, cost, and delegation behavior",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -311,7 +311,7 @@
       "system": "github",
       "id": "#286",
       "title": "[Workspace]: Add a first preflight/runtime-resolution slice that turns portable work semantics plus local config into actionable delegation and handoff guidance",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#285",
       "planning_residue_expected": "required"
@@ -338,7 +338,7 @@
       "system": "github",
       "id": "#289",
       "title": "[Workspace]: Add a compact handoff/prompt-generation slice for strong general-purpose reasoning so high-judgment questions can be escalated cheaply without moving the whole tranche",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#285",
       "planning_residue_expected": "required"
@@ -359,6 +359,204 @@
       "status": "closed",
       "kind": "issue",
       "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#292",
+      "title": "Review friction: reduce competing first-contact surfaces",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#251",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#293",
+      "title": "Direction / proposal: diff-path-based proof selector command",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#251",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#295",
+      "title": "Review friction: adapter vs canonical surface ambiguity",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#251",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#296",
+      "title": "Direction / proposal: minimum-safe-read startup command",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#251",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#297",
+      "title": "Review friction: package boundary confusion (source vs payload vs installed)",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#251",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#298",
+      "title": "Direction / proposal: cheap-implementer mode for bounded agents",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#251",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#299",
+      "title": "Direction / proposal: extract CLI command and option manifests",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#258",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#300",
+      "title": "Direction / proposal: extract module registry metadata from Python",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#258",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#301",
+      "title": "Direction / proposal: extract CLI policy payloads (defaults surfaces)",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#258",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#302",
+      "title": "Direction / proposal: extract setup findings and preflight policy",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#258",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#303",
+      "title": "Direction / proposal: extract workspace surface and path manifests",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#258",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#305",
+      "title": "[Draft][Workspace]: Define implementation-independent operation contracts",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#309",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#306",
+      "title": "[Draft][Workspace]: Add black-box conformance contracts for generated tools",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#305",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#307",
+      "title": "[Draft][Workspace]: Distill durable lane learning before archiving execplans",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#309",
+      "title": "[Workspace]: Complete Python-consumable contract extraction",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#258",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#310",
+      "title": "[Workspace]: Audit remaining Python-owned extractable contract content",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#309",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#311",
+      "title": "[Workspace]: Extract input/output and result schemas for Python consumption",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#309",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#312",
+      "title": "[Workspace]: Extract static data, text, and rendering templates from Python",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#309",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#313",
+      "title": "[Workspace]: Complete operation-contract coverage for every CLI command",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#309",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#314",
+      "title": "[Workspace]: Wire Python loaders and schema-derived models for extracted contracts",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#309",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#315",
+      "title": "[Workspace]: Add extraction parity checks and Python-consumed contract conformance",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#309",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#316",
+      "title": "[Workspace]: Classify remaining Python-owned procedural logic after extraction",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#309",
       "planning_residue_expected": "required"
     }
   ]

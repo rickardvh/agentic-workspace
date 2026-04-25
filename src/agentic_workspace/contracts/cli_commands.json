@@ -47,6 +47,31 @@
       ]
     },
     {
+      "name": "start",
+      "help": "Return the minimum safe startup context for beginning work in a target repository.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path for startup context (defaults to current workspace)."
+        },
+        {
+          "name": "changed",
+          "flags": [
+            "--changed"
+          ],
+          "nargs": "*",
+          "default": [],
+          "help": "Optional repo-relative changed paths used to include a proof recommendation."
+        }
+      ]
+    },
+    {
       "name": "defaults",
       "help": "Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
       "uses_option_groups": [
@@ -90,6 +115,15 @@
           ],
           "action": "store_true",
           "help": "Return only the current proof summary."
+        },
+        {
+          "name": "changed",
+          "flags": [
+            "--changed"
+          ],
+          "nargs": "*",
+          "default": [],
+          "help": "Return required proof commands for the provided repo-relative changed paths."
         }
       ]
     },
