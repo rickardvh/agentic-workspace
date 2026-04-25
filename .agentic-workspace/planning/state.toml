@@ -1,7 +1,5 @@
 [todo]
-active_items = [
-  { id = "local-only-integration-area", status = "in-progress", surface = ".agentic-workspace/planning/execplans/local-only-integration-area.md", why_now = "The machine-first planning chain is complete, and the next unfinished roadmap direction is the local-only integration-area lane. The immediate slice is to choose the local-only root and boundary rules without letting disposable integrations become shared workflow authority.", next_action = "Keep the local-only integration-area execplan active while landing the root name, vendor/runtime subfolder convention, and explicit non-authority boundary.", done_when = "The local-only integration-area lane has a live execplan-backed slice with the root, boundary rules, and proof that shared workflow remains independent from it." }
-]
+active_items = []
 queued_items = []
 
 [roadmap]

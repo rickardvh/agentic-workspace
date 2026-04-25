@@ -310,6 +310,12 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "kind": "agentic-workspace/delegation-outcomes/v1",
         "rule": "local-only delegation outcome evidence used to derive advisory tuning suggestions over time",
     }
+    assert payload["mixed_agent"]["local_integration_area"]["root"] == ".agentic-workspace/local/integrations"
+    assert payload["mixed_agent"]["local_integration_area"]["subfolder_convention"] == "<vendor-or-runtime>/"
+    assert payload["mixed_agent"]["local_integration_area"]["authoritative"] is False
+    assert payload["mixed_agent"]["local_integration_area"]["git_ignored"] is True
+    assert payload["mixed_agent"]["local_integration_area"]["canonical_doc"] == ".agentic-workspace/docs/local-integration-area.md"
+    assert "not a plugin registry or shared compatibility framework" in payload["mixed_agent"]["local_integration_area"]["boundary_rules"]
     assert payload["mixed_agent"]["runtime_inference"]["tool_owned"] is True
     assert payload["mixed_agent"]["handoff_quality"]["must_recover"] == [
         "current intent",
@@ -588,6 +594,32 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["mixed_agent"]["local_override"]["supported"] is True
     assert payload["mixed_agent"]["local_override"]["exists"] is False
     assert payload["mixed_agent"]["local_override"]["applied"] is False
+    assert payload["mixed_agent"]["local_integration_area"] == {
+        "root": ".agentic-workspace/local/integrations",
+        "subfolder_convention": "<vendor-or-runtime>/",
+        "example_subfolder": ".agentic-workspace/local/integrations/codex",
+        "status": "available-local-only",
+        "exists": False,
+        "authoritative": False,
+        "git_ignored": True,
+        "canonical_doc": ".agentic-workspace/docs/local-integration-area.md",
+        "allowed_aid_kinds": [
+            "prompt helpers",
+            "export/import shims",
+            "local wrappers",
+            "native-workflow adapters",
+            "resumable handoff helpers",
+            "runtime scratch files",
+        ],
+        "boundary_rules": [
+            "local-only and ignored by git",
+            "optional for ordinary workspace commands",
+            "non-authoritative for planning, memory, startup, review, and workflow state",
+            "safe to delete without changing repo-owned shared behavior",
+            "not a plugin registry or shared compatibility framework",
+        ],
+        "rule": "local-only vendor/runtime aids; may reduce local operating cost, but must not become shared workflow authority",
+    }
     assert payload["mixed_agent"]["runtime_inference"]["tool_owned"] is True
     assert payload["mixed_agent"]["runtime_inference"]["reported_here"] is False
     assert payload["mixed_agent"]["effective_posture"]["supports_internal_delegation"] == {"value": None, "source": "unset"}
