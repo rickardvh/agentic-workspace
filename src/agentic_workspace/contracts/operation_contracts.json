@@ -1,0 +1,26 @@
+{
+  "schema_version": "agentic-workspace/operation-contracts/v1",
+  "summary": "Registry for procedural operation contracts that describe local behavior without embedding implementation code.",
+  "primitive_registry": "operation_primitives.json",
+  "schema": "schemas/operation.schema.json",
+  "operations": [
+    {
+      "id": "config.report",
+      "path": "operations/config.report.json",
+      "command": "config",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "preflight.report",
+      "path": "operations/preflight.report.json",
+      "command": "preflight",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "system-intent.sync",
+      "path": "operations/system-intent.sync.json",
+      "command": "system-intent",
+      "migration_status": "draft-contract-only"
+    }
+  ]
+}
