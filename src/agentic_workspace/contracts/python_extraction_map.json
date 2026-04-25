@@ -95,7 +95,7 @@
       "future_owner": "procedural execution",
       "authority_status": "procedural-owned",
       "extraction_readiness": "operation-contract candidate",
-      "rationale": "Matching behavior is inspectable and stable enough for an operation contract, but the actual fnmatch/path normalization should remain Python-owned for now.",
+      "rationale": "Matching behavior is inspectable and stable enough for an operation contract; ownership command coverage is now present in operation contracts, while actual fnmatch/path normalization remains Python-owned.",
       "issue_hint": "#313"
     },
     {
@@ -155,7 +155,7 @@
       "future_owner": "live repo inspection",
       "authority_status": "procedural-owned",
       "extraction_readiness": "live-inspection-owned for now",
-      "rationale": "Report behavior is dominated by live module inspection and runtime reconciliation; operation-contract coverage is useful before any data extraction.",
+      "rationale": "Report behavior is dominated by live module inspection and runtime reconciliation; operation-contract coverage is now present, while runtime inspection should remain procedural.",
       "issue_hint": "#316"
     },
     {
@@ -196,7 +196,7 @@
     },
     {
       "issue": "#313",
-      "summary": "Extend operation contracts for remaining stable read-only commands before modeling behavior-heavy commands.",
+      "summary": "Operation contracts now cover every executable CLI command surface, including prompt subcommands; keep future additions covered by command-surface parity.",
       "candidate_ids": [
         "ownership-path-classifier",
         "report-assembly"

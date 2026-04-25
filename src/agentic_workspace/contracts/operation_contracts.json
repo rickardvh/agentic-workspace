@@ -5,6 +5,54 @@
   "schema": "schemas/operation.schema.json",
   "operations": [
     {
+      "id": "modules.report",
+      "path": "operations/modules.report.json",
+      "command": "modules",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "summary.report",
+      "path": "operations/summary.report.json",
+      "command": "summary",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "start.context",
+      "path": "operations/start.context.json",
+      "command": "start",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "implement.context",
+      "path": "operations/implement.context.json",
+      "command": "implement",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "defaults.report",
+      "path": "operations/defaults.report.json",
+      "command": "defaults",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "proof.report",
+      "path": "operations/proof.report.json",
+      "command": "proof",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "setup.guidance",
+      "path": "operations/setup.guidance.json",
+      "command": "setup",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "ownership.report",
+      "path": "operations/ownership.report.json",
+      "command": "ownership",
+      "migration_status": "draft-contract-only"
+    },
+    {
       "id": "config.report",
       "path": "operations/config.report.json",
       "command": "config",
@@ -20,6 +68,78 @@
       "id": "system-intent.sync",
       "path": "operations/system-intent.sync.json",
       "command": "system-intent",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "delegation-outcome.append",
+      "path": "operations/delegation-outcome.append.json",
+      "command": "note-delegation-outcome",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "skills.report",
+      "path": "operations/skills.report.json",
+      "command": "skills",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "report.combined",
+      "path": "operations/report.combined.json",
+      "command": "report",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "install.lifecycle",
+      "path": "operations/install.lifecycle.json",
+      "command": "install",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "init.lifecycle",
+      "path": "operations/init.lifecycle.json",
+      "command": "init",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "prompt.init",
+      "path": "operations/prompt.init.json",
+      "command": "prompt",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "prompt.upgrade",
+      "path": "operations/prompt.upgrade.json",
+      "command": "prompt",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "prompt.uninstall",
+      "path": "operations/prompt.uninstall.json",
+      "command": "prompt",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "status.report",
+      "path": "operations/status.report.json",
+      "command": "status",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "doctor.report",
+      "path": "operations/doctor.report.json",
+      "command": "doctor",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "upgrade.lifecycle",
+      "path": "operations/upgrade.lifecycle.json",
+      "command": "upgrade",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "uninstall.lifecycle",
+      "path": "operations/uninstall.lifecycle.json",
+      "command": "uninstall",
       "migration_status": "draft-contract-only"
     }
   ]

@@ -376,6 +376,19 @@ def _resolved_command_manifest(command_spec: dict[str, object]) -> dict[str, obj
     return resolved
 
 
+def _executable_command_surfaces(command_specs: list[dict[str, object]]) -> set[tuple[str, str | None]]:
+    surfaces: set[tuple[str, str | None]] = set()
+    for command_spec in command_specs:
+        command_name = str(command_spec["name"])
+        subcommands = command_spec.get("subcommands", [])
+        if isinstance(subcommands, list) and subcommands:
+            for subcommand_spec in subcommands:
+                surfaces.add((command_name, str(subcommand_spec["name"])))
+            continue
+        surfaces.add((command_name, None))
+    return surfaces
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     checks: list[tuple[str, list[str]]] = [
@@ -474,8 +487,11 @@ def main(argv: list[str] | None = None) -> int:
     operation_primitives = operation_primitives_manifest()
     known_commands = {command["name"] for command in cli_commands_manifest()["commands"]}
     known_primitives = {primitive["id"] for primitive in operation_primitives["primitives"]}
+    operation_surfaces: list[tuple[str, str | None]] = []
     for operation_ref in operation_contracts["operations"]:
         operation = operation_manifest(operation_ref["path"])
+        command_surface = operation["command_surface"]
+        operation_surfaces.append((str(command_surface["command"]), command_surface.get("subcommand")))
         checks.append(
             (
                 f"operation contract {operation_ref['id']}",
@@ -501,6 +517,22 @@ def main(argv: list[str] | None = None) -> int:
                     [f"{operation_ref['id']} uses unknown primitive(s): {', '.join(missing_primitives)}"],
                 )
             )
+    expected_operation_surfaces = _executable_command_surfaces(cli_commands_manifest()["commands"])
+    actual_operation_surfaces = set(operation_surfaces)
+    missing_operation_surfaces = sorted(expected_operation_surfaces - actual_operation_surfaces)
+    extra_operation_surfaces = sorted(actual_operation_surfaces - expected_operation_surfaces)
+    duplicate_operation_surfaces = sorted(
+        surface for surface in actual_operation_surfaces if operation_surfaces.count(surface) > 1
+    )
+    operation_surface_errors: list[str] = []
+    if missing_operation_surfaces:
+        operation_surface_errors.append(f"missing operation contracts: {missing_operation_surfaces}")
+    if extra_operation_surfaces:
+        operation_surface_errors.append(f"operation contracts reference non-executable surfaces: {extra_operation_surfaces}")
+    if duplicate_operation_surfaces:
+        operation_surface_errors.append(f"duplicate operation contracts: {duplicate_operation_surfaces}")
+    if operation_surface_errors:
+        checks.append(("operation command-surface parity", operation_surface_errors))
 
     defaults_payload = cli._defaults_payload()  # type: ignore[attr-defined]
     if defaults_payload["compact_contract_profile"]["answer_shape"] != compact_contract_manifest()["answer_shape"]:
