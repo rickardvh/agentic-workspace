@@ -1362,6 +1362,7 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
             "completed_execplans": completed_execplans,
             "archived_count": archived_execplans,
         },
+        "machine_first_planning": _machine_first_planning_payload(active_execplans=active_execplans),
         "planning_record": planning_record,
         "active_contract": _contract_projection(active_contract, view_name="active_contract"),
         "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
@@ -1608,6 +1609,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "adoption_mode",
             "todo",
             "execplans",
+            "machine_first_planning",
             "ownership_review",
             "planning_surface_health",
             "planning_record",
@@ -1628,6 +1630,14 @@ def _planning_summary_schema() -> dict[str, Any]:
             "warning_count",
         ],
         "view_fields": {
+            "machine_first_planning": [
+                "status",
+                "canonical_record_extension",
+                "human_view_extension",
+                "active_canonical_count",
+                "active_markdown_fallback_count",
+                "rule",
+            ],
             "planning_surface_health": [
                 "status",
                 "warning_count",
@@ -1815,6 +1825,30 @@ def _planning_summary_schema() -> dict[str, Any]:
     }
 
 
+def _machine_first_planning_payload(*, active_execplans: list[dict[str, str]]) -> dict[str, Any]:
+    active_paths = [str(item.get("path", "")) for item in active_execplans]
+    canonical_paths = [path for path in active_paths if path.endswith(".plan.json")]
+    markdown_fallback_paths = [path for path in active_paths if path.endswith(".md")]
+    if active_paths and not markdown_fallback_paths:
+        status = "canonical-active"
+    elif active_paths and canonical_paths:
+        status = "mixed-active"
+    elif active_paths:
+        status = "markdown-fallback-active"
+    else:
+        status = "no-active-execplan"
+    return {
+        "status": status,
+        "canonical_record_extension": ".plan.json",
+        "human_view_extension": ".md",
+        "active_canonical_count": len(canonical_paths),
+        "active_markdown_fallback_count": len(markdown_fallback_paths),
+        "canonical_active_execplans": canonical_paths,
+        "markdown_fallback_active_execplans": markdown_fallback_paths,
+        "rule": "When an execplan has a sibling .plan.json file, the sidecar is canonical and the .md file is a derived human-readable view; Markdown parsing remains a compatibility fallback.",
+    }
+
+
 def _planning_summary_compact_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-summary-compact-schema/v1",
@@ -1828,6 +1862,7 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
             "adoption_mode",
             "todo",
             "execplans",
+            "machine_first_planning",
             "planning_surface_health",
             "planning_record",
             "active_contract",
@@ -1860,6 +1895,7 @@ def _compact_projection(payload: dict[str, Any], *, fields: tuple[str, ...]) -> 
 def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, Any]:
     todo = dict(summary.get("todo", {}))
     execplans = dict(summary.get("execplans", {}))
+    machine_first_planning = dict(summary.get("machine_first_planning", {}))
     roadmap = dict(summary.get("roadmap", {}))
     planning_surface_health = dict(summary.get("planning_surface_health", {}))
     ownership_review = dict(summary.get("ownership_review", {}))
@@ -1886,6 +1922,14 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "active_execplans": execplans.get("active_execplans", []),
             "completed_count": execplans.get("completed_count", 0),
             "archived_count": execplans.get("archived_count", 0),
+        },
+        "machine_first_planning": {
+            "status": machine_first_planning.get("status", "unknown"),
+            "canonical_record_extension": machine_first_planning.get("canonical_record_extension", ".plan.json"),
+            "human_view_extension": machine_first_planning.get("human_view_extension", ".md"),
+            "active_canonical_count": machine_first_planning.get("active_canonical_count", 0),
+            "active_markdown_fallback_count": machine_first_planning.get("active_markdown_fallback_count", 0),
+            "rule": machine_first_planning.get("rule", ""),
         },
         "planning_surface_health": {
             "status": planning_surface_health.get("status", "unknown"),

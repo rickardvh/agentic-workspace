@@ -1330,6 +1330,10 @@ def test_planning_summary_prefers_canonical_execplan_record_when_markdown_stales
     assert summary["planning_record"]["requested_outcome"] == "this item needs a bounded execution contract."
     assert summary["planning_record"]["next_action"] == "add one checker."
     assert summary["planning_record"]["task"]["surface"] == ".agentic-workspace/planning/execplans/plan-alpha.md"
+    assert summary["machine_first_planning"]["status"] == "canonical-active"
+    assert summary["machine_first_planning"]["active_canonical_count"] == 1
+    assert summary["machine_first_planning"]["active_markdown_fallback_count"] == 0
+    assert summary["machine_first_planning"]["canonical_active_execplans"] == [".agentic-workspace/planning/execplans/plan-alpha.plan.json"]
 
 
 def test_planning_summary_and_handoff_expose_structured_execplan_references(tmp_path: Path) -> None:
@@ -2200,9 +2204,15 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["schema"]["schema_version"] == "planning-summary-schema/v1"
     assert summary["schema"]["command"] == "agentic-workspace summary --format json --profile full"
     assert "planning_record" in summary["schema"]["shared_fields"]
+    assert "machine_first_planning" in summary["schema"]["shared_fields"]
     assert "planning_surface_health" in summary["schema"]["shared_fields"]
     assert summary["todo"]["active_count"] == 1
     assert summary["execplans"]["active_count"] == 1
+    assert summary["machine_first_planning"]["status"] == "markdown-fallback-active"
+    assert summary["machine_first_planning"]["canonical_record_extension"] == ".plan.json"
+    assert summary["machine_first_planning"]["active_canonical_count"] == 0
+    assert summary["machine_first_planning"]["active_markdown_fallback_count"] == 1
+    assert "sidecar is canonical" in summary["machine_first_planning"]["rule"]
     assert summary["planning_surface_health"]["status"] == "clean"
     assert summary["planning_surface_health"]["warning_count"] == 0
     assert summary["planning_surface_health"]["recommended_next_action"] == "No planning-surface drift detected."
@@ -2352,6 +2362,8 @@ candidates = [
     assert summary["schema"]["schema_version"] == "planning-summary-compact-schema/v1"
     assert summary["schema"]["command"] == "agentic-workspace summary --format json"
     assert summary["schema"]["full_profile_command"] == "agentic-workspace summary --format json --profile full"
+    assert summary["machine_first_planning"]["status"] == "markdown-fallback-active"
+    assert summary["machine_first_planning"]["active_markdown_fallback_count"] == 1
     assert "candidate_lanes" not in summary["roadmap"]
     assert summary["roadmap"]["candidates"] == [{"priority": "first", "summary": "Tracked lane"}]
     assert "signals" not in summary["intent_validation_contract"]
