@@ -84,6 +84,28 @@
       "notes": "Local delegation outcome evidence shape is formalized separately from the editable local override so accumulated tuning evidence stays quiet and machine-readable."
     },
     {
+      "area": "startup_context_schema",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+      "consumers": [
+        "agentic-workspace start --format json",
+        "agentic_workspace.cli:_start_payload",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "The bounded startup context payload emitted by the CLI is schema-backed so adapter consumers can validate the shape without treating cli.py as the sole contract."
+    },
+    {
+      "area": "implementer_context_schema",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+      "consumers": [
+        "agentic-workspace implement --format json",
+        "agentic_workspace.cli:_implement_payload",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "The bounded implementer context payload emitted by the CLI is schema-backed so changed-path handoffs and proof requirements can be validated by non-Python adapters."
+    },
+    {
       "area": "report_payload_derivation",
       "classification": "derived",
       "owner_surface": "src/agentic_workspace/cli.py",

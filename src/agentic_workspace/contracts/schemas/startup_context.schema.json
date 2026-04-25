@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/startup-context.schema.json",
+  "title": "Startup Context Payload",
+  "type": "object",
+  "required": [
+    "kind",
+    "target",
+    "startup_sequence",
+    "active_state_summary",
+    "package_boundary",
+    "authority_markers",
+    "immediate_next_allowed_action"
+  ],
+  "properties": {
+    "kind": {
+      "const": "startup-context/v1"
+    },
+    "target": {
+      "type": "string"
+    },
+    "startup_sequence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "surface",
+          "why"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "command": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "surface": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "active_state_summary": {
+      "type": "object",
+      "required": [
+        "todo_active_count",
+        "active_execplan",
+        "planning_status"
+      ],
+      "properties": {
+        "todo_active_count": {
+          "type": "integer"
+        },
+        "active_execplan": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "planning_status": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "package_boundary": {
+      "$ref": "#/$defs/package_boundary"
+    },
+    "authority_markers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/authority_marker"
+      }
+    },
+    "immediate_next_allowed_action": {
+      "type": "object",
+      "required": [
+        "summary",
+        "read_first",
+        "open_execplan_only_when"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "read_first": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "open_execplan_only_when": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "proof": {
+      "type": "object"
+    },
+    "path_boundaries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/path_boundary"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "authority_marker": {
+      "type": "object",
+      "required": [
+        "path",
+        "authority",
+        "canonical_source",
+        "safe_to_edit",
+        "refresh_command"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "authority": {
+          "type": "string"
+        },
+        "canonical_source": {
+          "type": "string"
+        },
+        "safe_to_edit": {
+          "type": "boolean"
+        },
+        "refresh_command": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "package_boundary": {
+      "type": "object",
+      "required": [
+        "status",
+        "cwd",
+        "warning"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "cwd": {
+          "type": "string"
+        },
+        "warning": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "package_root": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "path_boundary": {
+      "type": "object",
+      "required": [
+        "path",
+        "authority",
+        "warning",
+        "requires_attention"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "authority": {
+          "type": "string"
+        },
+        "warning": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requires_attention": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

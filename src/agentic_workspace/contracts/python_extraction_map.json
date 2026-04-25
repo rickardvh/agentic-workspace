@@ -53,6 +53,7 @@
       "id": "implementer-context-template",
       "source": "src/agentic_workspace/cli.py:_implement_payload",
       "candidate_content": [
+        "implementer-context/v1 result shape",
         "files_to_avoid text",
         "handoff requirements",
         "stop conditions",
@@ -62,13 +63,14 @@
       "future_owner": "render templates",
       "authority_status": "adapter",
       "extraction_readiness": "template candidate",
-      "rationale": "The command is a derived bounded view over proof and authority data; stable text can move to templates after the command shape settles.",
+      "rationale": "The command is a derived bounded view over proof and authority data; the emitted result shape is now schema-backed, and stable text can move to templates after the command shape settles.",
       "issue_hint": "#312"
     },
     {
       "id": "startup-context-template",
       "source": "src/agentic_workspace/cli.py:_start_payload",
       "candidate_content": [
+        "startup-context/v1 result shape",
         "startup sequence labels",
         "fallback next-action wording",
         "open execplan rule"
@@ -77,7 +79,7 @@
       "future_owner": "render templates",
       "authority_status": "adapter",
       "extraction_readiness": "template candidate",
-      "rationale": "Startup context combines live planning state with stable adapter text; the text can be extracted while active-state assembly remains runtime-owned.",
+      "rationale": "Startup context combines live planning state with stable adapter text; the emitted result shape is now schema-backed, and the text can be extracted while active-state assembly remains runtime-owned.",
       "issue_hint": "#312"
     },
     {
@@ -175,8 +177,10 @@
   "next_slices": [
     {
       "issue": "#311",
-      "summary": "Use existing schemas and this map to decide which output/result shapes should become schema-derived Python models first.",
+      "summary": "Startup and implementer CLI output shapes are now schema-backed; continue with schema-derived Python model reduction where it removes duplicate authority.",
       "candidate_ids": [
+        "startup-context-template",
+        "implementer-context-template",
         "config-local-override-model"
       ]
     },

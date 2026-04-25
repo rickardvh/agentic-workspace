@@ -216,6 +216,31 @@ def _sample_module_capability_payload() -> dict[str, object]:
     }
 
 
+def _sample_startup_context_payload() -> dict[str, object]:
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        target = Path(tmp_dir) / "repo"
+        target.mkdir()
+        (target / ".git").mkdir(exist_ok=True)
+        return cli._start_payload(  # type: ignore[attr-defined]
+            target_root=target,
+            changed_paths=["src/agentic_workspace/cli.py"],
+        )
+
+
+def _sample_implementer_context_payload() -> dict[str, object]:
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        target = Path(tmp_dir) / "repo"
+        target.mkdir()
+        (target / ".git").mkdir(exist_ok=True)
+        return cli._implement_payload(  # type: ignore[attr-defined]
+            target_root=target,
+            changed_paths=[
+                "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
+                "src/agentic_workspace/cli.py",
+            ],
+        )
+
+
 def _validate_operation_registry(payload: dict[str, object]) -> list[str]:
     errors: list[str] = []
     if payload.get("schema_version") != "agentic-workspace/operation-contracts/v1":
@@ -376,6 +401,14 @@ def main(argv: list[str] | None = None) -> int:
         (
             "module capability sample",
             _validate(_sample_module_capability_payload(), "module_capability.schema.json"),
+        ),
+        (
+            "startup context sample",
+            _validate(_sample_startup_context_payload(), "startup_context.schema.json"),
+        ),
+        (
+            "implementer context sample",
+            _validate(_sample_implementer_context_payload(), "implementer_context.schema.json"),
         ),
         (
             "workspace surfaces manifest",
