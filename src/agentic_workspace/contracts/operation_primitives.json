@@ -1,0 +1,58 @@
+{
+  "schema_version": "agentic-workspace/operation-primitives/v1",
+  "summary": "Named primitive capabilities that procedural operation contracts may reference without embedding implementation code.",
+  "primitives": [
+    {
+      "id": "workspace.root.resolve",
+      "summary": "Resolve the effective workspace root from a target path or current working directory."
+    },
+    {
+      "id": "workspace.config.load",
+      "summary": "Load resolved workspace config layered over product defaults and local override state."
+    },
+    {
+      "id": "workspace.config.emit",
+      "summary": "Emit the resolved workspace config payload in the requested output format."
+    },
+    {
+      "id": "planning.summary.load",
+      "summary": "Load compact active planning summary when the planning module is installed."
+    },
+    {
+      "id": "workspace.defaults.load",
+      "summary": "Load compact startup defaults, route contracts, and generated policy answers."
+    },
+    {
+      "id": "preflight.token.create",
+      "summary": "Create a fresh preflight token using the configured token policy."
+    },
+    {
+      "id": "preflight.context.assemble",
+      "summary": "Assemble startup defaults, resolved config, and active planning state into takeover-safe context."
+    },
+    {
+      "id": "system_intent.config.resolve",
+      "summary": "Resolve configured or autodetected system-intent source hints from workspace config."
+    },
+    {
+      "id": "system_intent.source_metadata.refresh",
+      "summary": "Refresh metadata for configured system-intent source hints without interpreting source prose."
+    },
+    {
+      "id": "system_intent.mirror.read_or_create",
+      "summary": "Read the compiled system-intent declaration or create a conservative missing declaration shell."
+    },
+    {
+      "id": "system_intent.result.emit",
+      "summary": "Emit compiled system-intent declaration status and metadata in the requested format."
+    },
+    {
+      "id": "output.emit",
+      "summary": "Render text or JSON output according to the operation format option."
+    },
+    {
+      "id": "usage.error",
+      "summary": "Stop with a user-facing usage error when operation preconditions are violated."
+    }
+  ]
+}
