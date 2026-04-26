@@ -1597,6 +1597,81 @@ def planning_handoff(*, target: str | Path | None = None) -> dict[str, Any]:
     }
 
 
+def planning_reconcile(*, target: str | Path | None = None) -> dict[str, Any]:
+    target_root = resolve_target_root(target)
+    summary = planning_summary(target=target_root, profile="full")
+    intent_validation = summary.get("intent_validation_contract", {})
+    current_external_work = intent_validation.get("current_external_work", {})
+    historical_audit_references = intent_validation.get("historical_audit_references", {})
+    completed_execplans = list(summary.get("execplans", {}).get("completed_execplans", []))
+    external_evidence = _load_external_intent_evidence(target_root)
+    external_items_by_id = {
+        str(item.get("id", "")).strip(): item
+        for item in external_evidence.get("items", [])
+        if isinstance(item, dict) and str(item.get("id", "")).strip()
+    }
+    state = _read_state_from_toml(target_root) or {}
+    roadmap = state.get("roadmap", {}) if isinstance(state, dict) else {}
+    lanes = roadmap.get("lanes", []) if isinstance(roadmap, dict) else []
+    closed_lanes: list[dict[str, Any]] = []
+    if isinstance(lanes, list):
+        for lane in lanes:
+            if not isinstance(lane, dict):
+                continue
+            issue_refs = [str(item).strip() for item in lane.get("issues", []) if str(item).strip()]
+            if not issue_refs:
+                continue
+            matched = [external_items_by_id.get(ref) for ref in issue_refs]
+            if matched and all(isinstance(item, dict) and _external_status_is_closed(item.get("status")) for item in matched):
+                closed_lanes.append(
+                    {
+                        "id": str(lane.get("id", "")).strip(),
+                        "title": str(lane.get("title", "")).strip(),
+                        "refs": issue_refs,
+                        "recommended_action": "remove or archive this roadmap lane unless a fresh planning owner remains",
+                    }
+                )
+
+    recommendations: list[str] = []
+    if completed_execplans:
+        recommendations.append("Archive completed live execplans or return them to active status.")
+    if closed_lanes:
+        recommendations.append("Prune roadmap lanes whose supplied external-work items are all closed or resolved.")
+    if current_external_work.get("untracked_open_count", 0):
+        recommendations.append("Route open external-work items into active or candidate checked-in planning state.")
+    if not recommendations:
+        recommendations.append("No reconcile cleanup found from supplied provider-agnostic evidence.")
+
+    return {
+        "kind": "planning-reconcile/v1",
+        "schema": {
+            "schema_version": "planning-reconcile-schema/v1",
+            "command": "agentic-planning-bootstrap reconcile --format json",
+            "provider_rule": (
+                "Core reconciliation consumes provider-agnostic external work evidence; host-specific trackers belong in optional adapters."
+            ),
+        },
+        "target_root": str(target_root),
+        "status": "attention-needed"
+        if completed_execplans or closed_lanes or current_external_work.get("untracked_open_count", 0)
+        else "clean",
+        "external_work_state": current_external_work,
+        "historical_audit_references": historical_audit_references,
+        "stale_forward_state": {
+            "completed_live_execplans": [
+                {
+                    "path": str(plan.get("path", "")),
+                    "status": str(plan.get("status", "")),
+                    "recommended_action": "archive with agentic-planning-bootstrap archive-plan",
+                }
+                for plan in completed_execplans
+            ],
+            "closed_roadmap_lanes": closed_lanes,
+        },
+        "recommendations": recommendations,
+    }
+
+
 def _planning_summary_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-summary-schema/v1",
@@ -2097,7 +2172,13 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         ),
         "intent_validation_contract": _compact_projection(
             intent_validation_contract,
-            fields=("counts", "closeout_reconciliation", "recommended_next_action"),
+            fields=(
+                "counts",
+                "current_external_work",
+                "historical_audit_references",
+                "closeout_reconciliation",
+                "recommended_next_action",
+            ),
         ),
         "finished_work_inspection_contract": _compact_projection(
             finished_work_inspection_contract,
@@ -2258,6 +2339,8 @@ def _intent_validation_contract(
 
     tracked_open = 0
     untracked_open = 0
+    external_open = 0
+    external_closed = 0
     lower_trust_closeouts = 0
     closed_residue_items: list[dict[str, Any]] = []
     external_items = external_evidence.get("items", [])
@@ -2270,8 +2353,8 @@ def _intent_validation_contract(
                 continue
             refs = _reference_locations(token=item_id, surface_index=surface_index)
             active_refs = [ref for ref in refs if _is_live_planning_tracking_ref(ref)]
-            status = str(item.get("status", "")).strip().lower()
-            if status == "open":
+            if _external_status_is_open(item.get("status")):
+                external_open += 1
                 if active_refs:
                     tracked_open += 1
                 else:
@@ -2287,7 +2370,13 @@ def _intent_validation_contract(
                             "refs": [external_evidence.get("path", ""), *refs],
                         }
                     )
-            elif status == "closed" and str(item.get("planning_residue_expected", "")).strip().lower() == "required" and not refs:
+            elif _external_status_is_closed(item.get("status")):
+                external_closed += 1
+                if str(item.get("planning_residue_expected", "")).strip().lower() != "required":
+                    continue
+                if refs:
+                    closed_residue_items.append(item)
+                    continue
                 closed_residue_items.append(item)
                 lower_trust_closeouts += 1
                 signals.append(
@@ -2301,8 +2390,6 @@ def _intent_validation_contract(
                         "refs": [external_evidence.get("path", "")],
                     }
                 )
-            elif status == "closed" and str(item.get("planning_residue_expected", "")).strip().lower() == "required":
-                closed_residue_items.append(item)
 
     closeout_reconciliation = _closeout_reconciliation_from_reviews(
         target_root=target_root,
@@ -2316,6 +2403,37 @@ def _intent_validation_contract(
         "closeout_reconciled_count": closeout_reconciliation["counts"]["reconciled_count"],
         "closeout_needs_audit_count": closeout_reconciliation["counts"]["needs_audit_count"],
         "attention_count": len(signals),
+    }
+    current_external_work = {
+        "status": external_evidence.get("status", "absent"),
+        "path": external_evidence.get("path", ""),
+        "kind": external_evidence.get("kind", ""),
+        "systems": external_evidence.get("systems", []),
+        "item_count": external_evidence.get("item_count", 0),
+        "open_count": external_open,
+        "closed_count": external_closed,
+        "tracked_open_count": tracked_open,
+        "untracked_open_count": untracked_open,
+        "provider_rule": (
+            "Core planning only consumes provider-agnostic external work evidence; host-specific trackers belong in optional adapters."
+        ),
+        "reason": external_evidence.get("reason", ""),
+    }
+    historical_audit_references = {
+        "status": closeout_reconciliation.get("status", "absent"),
+        "source_count": closeout_reconciliation.get("source_count", 0),
+        "sources": closeout_reconciliation.get("sources", []),
+        "item_count": closeout_reconciliation.get("item_count", 0),
+        "follow_up_open_count": closeout_reconciliation.get("counts", {}).get("follow_up_open_count", 0),
+        "needs_audit_count": closeout_reconciliation.get("counts", {}).get("needs_audit_count", 0),
+        "likely_premature_closeout_count": closeout_reconciliation.get("counts", {}).get(
+            "likely_premature_closeout_count",
+            0,
+        ),
+        "rule": (
+            "Historical closeout and review evidence is audit context; it is not current external-work state "
+            "unless refreshed through provider-agnostic external evidence."
+        ),
     }
     recommended_next_action = "No dangling larger intent or lower-trust closeout signals detected."
     if untracked_open:
@@ -2363,11 +2481,34 @@ def _intent_validation_contract(
             "item_count": external_evidence.get("item_count", 0),
             "reason": external_evidence.get("reason", ""),
         },
+        "current_external_work": current_external_work,
+        "historical_audit_references": historical_audit_references,
         "counts": counts,
         "closeout_reconciliation": closeout_reconciliation,
         "signals": signals,
         "recommended_next_action": recommended_next_action,
         "minimal_refs": [ref for ref in refs if ref],
+    }
+
+
+def _external_status_is_open(value: object) -> bool:
+    return str(value).strip().lower().replace("_", "-") in {
+        "active",
+        "in-progress",
+        "open",
+        "opened",
+        "planned",
+        "todo",
+    }
+
+
+def _external_status_is_closed(value: object) -> bool:
+    return str(value).strip().lower().replace("_", "-") in {
+        "closed",
+        "complete",
+        "completed",
+        "done",
+        "resolved",
     }
 
 

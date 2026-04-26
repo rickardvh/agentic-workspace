@@ -18,6 +18,7 @@ from repo_planning_bootstrap.installer import (
     doctor_bootstrap,
     install_bootstrap,
     planning_handoff,
+    planning_reconcile,
     planning_report,
     planning_summary,
     promote_todo_item_to_execplan,
@@ -2969,6 +2970,12 @@ candidates = [
     assert contract["status"] == "present"
     assert contract["external_evidence"]["status"] == "loaded"
     assert contract["external_evidence"]["item_count"] == 3
+    assert contract["current_external_work"]["status"] == "loaded"
+    assert contract["current_external_work"]["open_count"] == 2
+    assert contract["current_external_work"]["closed_count"] == 1
+    assert "provider-agnostic" in contract["current_external_work"]["provider_rule"]
+    assert contract["historical_audit_references"]["status"] == "needs-audit"
+    assert "not current external-work state" in contract["historical_audit_references"]["rule"]
     assert contract["counts"]["tracked_external_open_count"] == 1
     assert contract["counts"]["untracked_external_open_count"] == 1
     assert contract["counts"]["lower_trust_closeout_count"] == 1
@@ -3060,6 +3067,98 @@ def test_planning_summary_reconciles_lower_trust_closeouts_from_review_artifact(
     }
     assert summary["intent_validation_contract"]["counts"]["closeout_reconciled_count"] == 2
     assert summary["intent_validation_contract"]["counts"]["closeout_needs_audit_count"] == 1
+
+
+def test_planning_reconcile_reports_stale_state_from_provider_agnostic_evidence(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "closed-lane", title = "Closed lane", priority = "first", issues = ["EXT-1"], outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "None." },
+  { id = "mixed-lane", title = "Mixed lane", priority = "second", issues = ["EXT-1", "EXT-2"], outcome = "Mixed.", reason = "Mixed.", promotion_signal = "None.", suggested_first_slice = "None." },
+]
+candidates = []
+""",
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "EXT-1",
+                "title": "Closed elsewhere",
+                "status": "resolved",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "optional",
+            },
+            {
+                "system": "manual",
+                "id": "EXT-2",
+                "title": "Still open elsewhere",
+                "status": "in_progress",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "optional",
+            },
+        ],
+    )
+
+    reconcile = planning_reconcile(target=tmp_path)
+
+    assert reconcile["kind"] == "planning-reconcile/v1"
+    assert reconcile["status"] == "attention-needed"
+    assert "provider-agnostic" in reconcile["schema"]["provider_rule"]
+    assert reconcile["external_work_state"]["open_count"] == 1
+    assert reconcile["external_work_state"]["closed_count"] == 1
+    closed_lanes = reconcile["stale_forward_state"]["closed_roadmap_lanes"]
+    assert [lane["id"] for lane in closed_lanes] == ["closed-lane"]
+    assert closed_lanes[0]["refs"] == ["EXT-1"]
+
+
+def test_planning_cli_reconcile_outputs_provider_agnostic_state(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "closed-lane", title = "Closed lane", priority = "first", issues = ["EXT-1"], outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "None." },
+]
+candidates = []
+""",
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "EXT-1",
+                "title": "Closed elsewhere",
+                "status": "done",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "optional",
+            }
+        ],
+    )
+
+    assert planning_cli.main(["reconcile", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"]["schema_version"] == "planning-reconcile-schema/v1"
+    assert payload["external_work_state"]["closed_count"] == 1
+    assert payload["stale_forward_state"]["closed_roadmap_lanes"][0]["id"] == "closed-lane"
 
 
 def test_planning_report_promotes_intent_validation_signals_to_findings(tmp_path: Path) -> None:

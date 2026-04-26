@@ -89,6 +89,12 @@
       "migration_status": "draft-contract-only"
     },
     {
+      "id": "reconcile.report",
+      "path": "operations/reconcile.report.json",
+      "command": "reconcile",
+      "migration_status": "draft-contract-only"
+    },
+    {
       "id": "install.lifecycle",
       "path": "operations/install.lifecycle.json",
       "command": "install",

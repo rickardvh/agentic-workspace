@@ -337,6 +337,22 @@
       ]
     },
     {
+      "name": "reconcile",
+      "help": "Show stale planning state against provider-agnostic external work evidence.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to reconcile planning state."
+        }
+      ]
+    },
+    {
       "name": "preflight",
       "help": "Get compact takeover-safe context: startup defaults + resolved config + active planning state in one call.",
       "uses_option_groups": [

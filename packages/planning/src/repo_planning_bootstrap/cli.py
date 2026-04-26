@@ -17,6 +17,7 @@ from repo_planning_bootstrap.installer import (
     install_bootstrap,
     list_payload_files,
     planning_handoff,
+    planning_reconcile,
     planning_report,
     planning_summary,
     promote_todo_item_to_execplan,
@@ -69,6 +70,13 @@ def build_parser() -> argparse.ArgumentParser:
     report_parser = subparsers.add_parser("report", help="Report compact planning module state without reading raw planning files first.")
     report_parser.add_argument("--target")
     report_parser.add_argument("--format", choices=("text", "json"), default="text")
+
+    reconcile_parser = subparsers.add_parser(
+        "reconcile",
+        help="Report stale planning state against provider-agnostic external work evidence.",
+    )
+    reconcile_parser.add_argument("--target")
+    reconcile_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     handoff_parser = subparsers.add_parser("handoff", help="Emit the compact delegated-worker handoff derived from active planning state.")
     handoff_parser.add_argument("--target")
@@ -134,6 +142,13 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(report, indent=2))
         else:
             _print_report(report)
+        return 0
+    if args.command == "reconcile":
+        reconcile = planning_reconcile(target=args.target)
+        if args.format == "json":
+            print(json.dumps(reconcile, indent=2))
+        else:
+            _print_reconcile(reconcile)
         return 0
     if args.command == "handoff":
         handoff = planning_handoff(target=args.target)
@@ -388,11 +403,23 @@ def _print_summary(summary: dict) -> None:
     if intent_validation_contract.get("status") == "present":
         counts = intent_validation_contract.get("counts", {})
         external = intent_validation_contract.get("external_evidence", {})
+        current_external = intent_validation_contract.get("current_external_work", {})
+        historical_audit = intent_validation_contract.get("historical_audit_references", {})
         print("Intent-validation contract view:")
         print(f"- Attention count: {counts.get('attention_count', 0)}")
         print(f"- Untracked external open items: {counts.get('untracked_external_open_count', 0)}")
         print(f"- Lower-trust closeouts: {counts.get('lower_trust_closeout_count', 0)}")
         print(f"- External evidence: {external.get('status', 'absent')}")
+        print(
+            "- Current external work: "
+            f"{current_external.get('status', 'absent')} "
+            f"({current_external.get('open_count', 0)} open / {current_external.get('closed_count', 0)} closed)"
+        )
+        print(
+            "- Historical audit references: "
+            f"{historical_audit.get('status', 'absent')} "
+            f"({historical_audit.get('follow_up_open_count', 0)} follow-up open)"
+        )
         print(f"- Recommended next action: {intent_validation_contract.get('recommended_next_action', '')}")
     elif intent_validation_contract:
         print(
@@ -489,6 +516,8 @@ def _print_report(report: dict) -> None:
     if isinstance(intent_validation, dict) and intent_validation.get("status") == "present":
         counts = intent_validation.get("counts", {})
         external = intent_validation.get("external_evidence", {})
+        current_external = intent_validation.get("current_external_work", {})
+        historical_audit = intent_validation.get("historical_audit_references", {})
         print(
             "Intent validation: "
             f"{counts.get('attention_count', 0)} attention / "
@@ -496,6 +525,16 @@ def _print_report(report: dict) -> None:
             f"{counts.get('lower_trust_closeout_count', 0)} lower-trust closeouts"
         )
         print(f"External intent evidence: {external.get('status', 'absent')}")
+        print(
+            "Current external work: "
+            f"{current_external.get('status', 'absent')} "
+            f"({current_external.get('open_count', 0)} open / {current_external.get('closed_count', 0)} closed)"
+        )
+        print(
+            "Historical audit references: "
+            f"{historical_audit.get('status', 'absent')} "
+            f"({historical_audit.get('follow_up_open_count', 0)} follow-up open)"
+        )
     finished_work_inspection = report.get("finished_work_inspection", {})
     if isinstance(finished_work_inspection, dict) and finished_work_inspection.get("status") == "present":
         counts = finished_work_inspection.get("counts", {})
@@ -527,6 +566,40 @@ def _print_report(report: dict) -> None:
         for finding in findings:
             path = f"{finding['path']}: " if finding.get("path") else ""
             print(f"- {path}{finding.get('message', '')}")
+
+
+def _print_reconcile(reconcile: dict) -> None:
+    print(f"Target: {reconcile['target_root']}")
+    print("Command: reconcile")
+    print(f"Status: {reconcile['status']}")
+    external = reconcile.get("external_work_state", {})
+    if isinstance(external, dict):
+        print(
+            "Current external work: "
+            f"{external.get('status', 'absent')} / "
+            f"{external.get('open_count', 0)} open / "
+            f"{external.get('closed_count', 0)} closed / "
+            f"{external.get('untracked_open_count', 0)} untracked open"
+        )
+    historical = reconcile.get("historical_audit_references", {})
+    if isinstance(historical, dict):
+        print(
+            "Historical audit references: "
+            f"{historical.get('status', 'absent')} / "
+            f"{historical.get('follow_up_open_count', 0)} follow-up open / "
+            f"{historical.get('needs_audit_count', 0)} need audit"
+        )
+    stale = reconcile.get("stale_forward_state", {})
+    if isinstance(stale, dict):
+        completed = stale.get("completed_live_execplans", [])
+        closed_lanes = stale.get("closed_roadmap_lanes", [])
+        print(f"Completed live execplans: {len(completed) if isinstance(completed, list) else 0}")
+        print(f"Closed roadmap lanes: {len(closed_lanes) if isinstance(closed_lanes, list) else 0}")
+    recommendations = reconcile.get("recommendations", [])
+    if isinstance(recommendations, list) and recommendations:
+        print("Recommendations:")
+        for item in recommendations:
+            print(f"- {item}")
 
 
 def _print_handoff(handoff: dict) -> None:

@@ -71,3 +71,48 @@ def test_workspace_summary_json_accepts_full_profile(tmp_path: Path, capsys) -> 
     assert exit_code == 0
     assert payload["profile"] == "full"
     assert payload["schema"]["schema_version"] == "planning-summary-schema/v1"
+
+
+def test_workspace_reconcile_json_exposes_provider_agnostic_planning_state(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "closed-lane", title = "Closed lane", priority = "first", issues = ["EXT-1"], outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "None." },
+]
+candidates = []
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "system": "manual",
+                        "id": "EXT-1",
+                        "title": "Closed elsewhere",
+                        "status": "resolved",
+                        "kind": "lane",
+                        "planning_residue_expected": "optional",
+                    }
+                ],
+            },
+            indent=2,
+        ),
+    )
+
+    exit_code = cli.main(["reconcile", "--target", str(tmp_path), "--format", "json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["kind"] == "planning-reconcile/v1"
+    assert payload["external_work_state"]["closed_count"] == 1
+    assert payload["stale_forward_state"]["closed_roadmap_lanes"][0]["id"] == "closed-lane"

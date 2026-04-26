@@ -19,6 +19,10 @@
       "summary": "Load compact active planning summary when the planning module is installed."
     },
     {
+      "id": "planning.reconcile.load",
+      "summary": "Load provider-agnostic planning reconciliation state when the planning module is installed."
+    },
+    {
       "id": "workspace.defaults.load",
       "summary": "Load compact startup defaults, route contracts, and generated policy answers."
     },

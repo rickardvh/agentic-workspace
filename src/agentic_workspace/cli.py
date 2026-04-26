@@ -854,6 +854,23 @@ def main(argv: list[str] | None = None) -> int:
         _emit_payload(payload=payload, format_name=args.format)
         return 0
 
+    if args.command == "reconcile":
+        try:
+            target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+            _validate_target_root(command_name="reconcile", target_root=target_root)
+            from repo_planning_bootstrap.cli import _print_reconcile
+            from repo_planning_bootstrap.installer import planning_reconcile
+        except ImportError:
+            parser.error("The planning module must be installed to use the reconcile command.")
+        except WorkspaceUsageError as exc:
+            parser.error(str(exc))
+        payload = planning_reconcile(target=target_root)
+        if args.format == "json":
+            _emit_payload(payload=payload, format_name=args.format)
+        else:
+            _print_reconcile(payload)
+        return 0
+
     local_only_repo_root: Path | None = None
     try:
         if args.command == "uninstall" and bool(getattr(args, "local_only", False)):
