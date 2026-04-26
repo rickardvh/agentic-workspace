@@ -1,5 +1,12 @@
 # Agent Instructions
 
+Authority marker:
+
+- authority: adapter
+- canonical_source: `packages/planning/src/` plus root `AGENTS.md`
+- safe_to_edit: true
+- refresh_command: null
+
 <!-- agentic-workspace:workflow:start -->
 Read `../../AGENTS.md` first, then apply this package-specific contract.
 <!-- agentic-workspace:workflow:end -->

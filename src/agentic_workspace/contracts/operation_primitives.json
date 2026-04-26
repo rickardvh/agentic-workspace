@@ -23,6 +23,58 @@
       "summary": "Load compact startup defaults, route contracts, and generated policy answers."
     },
     {
+      "id": "workspace.defaults.select",
+      "summary": "Select a requested defaults section when the operation supports compact section filtering."
+    },
+    {
+      "id": "workspace.modules.inspect",
+      "summary": "Inspect module descriptors and installed-module signals for the target repository."
+    },
+    {
+      "id": "workspace.selection.resolve",
+      "summary": "Resolve module selection options, presets, and configured defaults."
+    },
+    {
+      "id": "workspace.lifecycle.plan",
+      "summary": "Plan lifecycle changes for selected modules without applying file mutations."
+    },
+    {
+      "id": "workspace.lifecycle.apply",
+      "summary": "Apply lifecycle mutations for selected modules when the operation is not a dry run."
+    },
+    {
+      "id": "workspace.report.assemble",
+      "summary": "Assemble combined workspace status, doctor, setup, or report payloads from module and workspace surfaces."
+    },
+    {
+      "id": "startup.context.assemble",
+      "summary": "Assemble bounded startup context from preflight state, authority markers, and optional changed paths."
+    },
+    {
+      "id": "implementer.context.assemble",
+      "summary": "Assemble bounded implementer context from changed paths, boundary markers, and proof selection."
+    },
+    {
+      "id": "proof.routes.resolve",
+      "summary": "Resolve canonical proof routes, current proof state, or changed-path proof recommendations."
+    },
+    {
+      "id": "ownership.answer.resolve",
+      "summary": "Resolve ownership, authority, concern, or path-specific boundary answers."
+    },
+    {
+      "id": "skills.registry.inspect",
+      "summary": "Inspect installed and repo-owned skill registries and optionally rank them for a task."
+    },
+    {
+      "id": "delegation.outcome.append",
+      "summary": "Append a local-only delegation outcome record for future target-profile tuning."
+    },
+    {
+      "id": "prompt.render",
+      "summary": "Render a ready-to-paste lifecycle handoff prompt without mutating repo state."
+    },
+    {
       "id": "preflight.token.create",
       "summary": "Create a fresh preflight token using the configured token policy."
     },

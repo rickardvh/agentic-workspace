@@ -11,6 +11,9 @@ from agentic_workspace.contract_tooling import (
     cli_commands_manifest,
     cli_option_groups_manifest,
     compact_contract_manifest,
+    conformance_contract_manifest,
+    conformance_contracts_manifest,
+    context_templates_manifest,
     contract_inventory_manifest,
     contract_schema,
     improvement_latitude_policy_manifest,
@@ -21,10 +24,15 @@ from agentic_workspace.contract_tooling import (
     optimization_bias_policy_manifest,
     preflight_policy_manifest,
     proof_routes_manifest,
+    proof_selection_rules_manifest,
+    python_contract_consumption_manifest,
+    python_extraction_map_manifest,
+    python_runtime_boundary_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
     setup_findings_policy_manifest,
     workflow_artifact_profiles_manifest,
+    workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
 
@@ -213,6 +221,31 @@ def _sample_module_capability_payload() -> dict[str, object]:
     }
 
 
+def _sample_startup_context_payload() -> dict[str, object]:
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        target = Path(tmp_dir) / "repo"
+        target.mkdir()
+        (target / ".git").mkdir(exist_ok=True)
+        return cli._start_payload(  # type: ignore[attr-defined]
+            target_root=target,
+            changed_paths=["src/agentic_workspace/cli.py"],
+        )
+
+
+def _sample_implementer_context_payload() -> dict[str, object]:
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        target = Path(tmp_dir) / "repo"
+        target.mkdir()
+        (target / ".git").mkdir(exist_ok=True)
+        return cli._implement_payload(  # type: ignore[attr-defined]
+            target_root=target,
+            changed_paths=[
+                "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
+                "src/agentic_workspace/cli.py",
+            ],
+        )
+
+
 def _validate_operation_registry(payload: dict[str, object]) -> list[str]:
     errors: list[str] = []
     if payload.get("schema_version") != "agentic-workspace/operation-contracts/v1":
@@ -258,6 +291,46 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
         seen_ids.add(primitive_id)
         if not isinstance(primitive.get("summary"), str) or not str(primitive.get("summary")).strip():
             errors.append(f"primitive {primitive_id} missing summary")
+    return errors
+
+
+def _validate_conformance_registry(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    if payload.get("schema_version") != "agentic-workspace/conformance-contracts/v1":
+        errors.append("conformance_contracts.json has unexpected schema_version")
+    contracts = payload.get("contracts")
+    if not isinstance(contracts, list) or not contracts:
+        errors.append("conformance_contracts.json must contain at least one contract")
+        return errors
+    operation_ids = {operation_ref["id"] for operation_ref in operation_contracts_manifest()["operations"]}
+    seen_ids: set[str] = set()
+    for index, contract_ref in enumerate(contracts):
+        if not isinstance(contract_ref, dict):
+            errors.append(f"conformance registry entry {index} must be an object")
+            continue
+        for field in ("id", "operation_id", "path", "adapter_kind"):
+            if not isinstance(contract_ref.get(field), str) or not str(contract_ref.get(field)).strip():
+                errors.append(f"conformance registry entry {index} missing string field {field}")
+        contract_id = str(contract_ref.get("id", ""))
+        if contract_id in seen_ids:
+            errors.append(f"duplicate conformance contract id {contract_id}")
+        seen_ids.add(contract_id)
+        if contract_ref.get("operation_id") not in operation_ids:
+            errors.append(f"conformance contract {contract_id} references unknown operation {contract_ref.get('operation_id')}")
+        if contract_ref.get("adapter_kind") != "process":
+            errors.append(f"conformance contract {contract_id} has unsupported adapter kind {contract_ref.get('adapter_kind')}")
+        path = str(contract_ref.get("path", ""))
+        try:
+            contract = conformance_contract_manifest(path)
+        except Exception as exc:  # pragma: no cover - error text is surfaced by the checker
+            errors.append(f"conformance contract {contract_id} failed schema validation: {exc}")
+            continue
+        if contract.get("id") != contract_id:
+            errors.append(f"conformance contract {contract_id} path payload id drifted")
+        if contract.get("operation_id") != contract_ref.get("operation_id"):
+            errors.append(f"conformance contract {contract_id} operation_id drifted from registry")
+        if contract.get("adapter", {}).get("kind") != contract_ref.get("adapter_kind"):
+            errors.append(f"conformance contract {contract_id} adapter kind drifted from registry")
     return errors
 
 
@@ -347,11 +420,26 @@ def _resolved_command_manifest(command_spec: dict[str, object]) -> dict[str, obj
     return resolved
 
 
+def _executable_command_surfaces(command_specs: list[dict[str, object]]) -> set[tuple[str, str | None]]:
+    surfaces: set[tuple[str, str | None]] = set()
+    for command_spec in command_specs:
+        command_name = str(command_spec["name"])
+        subcommands = command_spec.get("subcommands", [])
+        if isinstance(subcommands, list) and subcommands:
+            for subcommand_spec in subcommands:
+                surfaces.add((command_name, str(subcommand_spec["name"])))
+            continue
+        surfaces.add((command_name, None))
+    return surfaces
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     checks: list[tuple[str, list[str]]] = [
         ("compact_contract_profile.json", _validate(compact_contract_manifest(), "selector_contracts_manifest.schema.json")),
         ("proof_routes.json", _validate(proof_routes_manifest(), "proof_routes_manifest.schema.json")),
+        ("proof_selection_rules.json", _validate(proof_selection_rules_manifest(), "proof_selection_rules.schema.json")),
+        ("context_templates.json", _validate(context_templates_manifest(), "context_templates.schema.json")),
         ("report_contract.json", _validate(report_contract_manifest(), "report_contract_manifest.schema.json")),
         ("contract_inventory.json", _validate(contract_inventory_manifest(), "contract_inventory.schema.json")),
         ("compact answer sample", _validate(_sample_compact_answer(), "compact_contract_answer.schema.json")),
@@ -374,6 +462,14 @@ def main(argv: list[str] | None = None) -> int:
             _validate(_sample_module_capability_payload(), "module_capability.schema.json"),
         ),
         (
+            "startup context sample",
+            _validate(_sample_startup_context_payload(), "startup_context.schema.json"),
+        ),
+        (
+            "implementer context sample",
+            _validate(_sample_implementer_context_payload(), "implementer_context.schema.json"),
+        ),
+        (
             "workspace surfaces manifest",
             _validate(workspace_surfaces_manifest(), "workspace_surfaces_manifest.schema.json"),
         ),
@@ -384,6 +480,10 @@ def main(argv: list[str] | None = None) -> int:
         (
             "workflow artifact profiles manifest",
             _validate(workflow_artifact_profiles_manifest(), "workflow_artifact_profiles.schema.json"),
+        ),
+        (
+            "workflow definition format manifest",
+            _validate(workflow_definition_format_manifest(), "workflow_definition_format.schema.json"),
         ),
         (
             "improvement latitude policy manifest",
@@ -418,8 +518,24 @@ def main(argv: list[str] | None = None) -> int:
             _validate_operation_registry(operation_contracts_manifest()),
         ),
         (
+            "conformance contracts registry",
+            _validate_conformance_registry(conformance_contracts_manifest()),
+        ),
+        (
             "operation primitives registry",
             _validate_operation_primitives(operation_primitives_manifest()),
+        ),
+        (
+            "python extraction map",
+            _validate(python_extraction_map_manifest(), "python_extraction_map.schema.json"),
+        ),
+        (
+            "python contract consumption policy",
+            _validate(python_contract_consumption_manifest(), "python_contract_consumption.schema.json"),
+        ),
+        (
+            "python runtime boundary",
+            _validate(python_runtime_boundary_manifest(), "python_runtime_boundary.schema.json"),
         ),
     ]
 
@@ -427,8 +543,11 @@ def main(argv: list[str] | None = None) -> int:
     operation_primitives = operation_primitives_manifest()
     known_commands = {command["name"] for command in cli_commands_manifest()["commands"]}
     known_primitives = {primitive["id"] for primitive in operation_primitives["primitives"]}
+    operation_surfaces: list[tuple[str, str | None]] = []
     for operation_ref in operation_contracts["operations"]:
         operation = operation_manifest(operation_ref["path"])
+        command_surface = operation["command_surface"]
+        operation_surfaces.append((str(command_surface["command"]), command_surface.get("subcommand")))
         checks.append(
             (
                 f"operation contract {operation_ref['id']}",
@@ -454,12 +573,51 @@ def main(argv: list[str] | None = None) -> int:
                     [f"{operation_ref['id']} uses unknown primitive(s): {', '.join(missing_primitives)}"],
                 )
             )
+    expected_operation_surfaces = _executable_command_surfaces(cli_commands_manifest()["commands"])
+    actual_operation_surfaces = set(operation_surfaces)
+    missing_operation_surfaces = sorted(expected_operation_surfaces - actual_operation_surfaces)
+    extra_operation_surfaces = sorted(actual_operation_surfaces - expected_operation_surfaces)
+    duplicate_operation_surfaces = sorted(
+        surface for surface in actual_operation_surfaces if operation_surfaces.count(surface) > 1
+    )
+    operation_surface_errors: list[str] = []
+    if missing_operation_surfaces:
+        operation_surface_errors.append(f"missing operation contracts: {missing_operation_surfaces}")
+    if extra_operation_surfaces:
+        operation_surface_errors.append(f"operation contracts reference non-executable surfaces: {extra_operation_surfaces}")
+    if duplicate_operation_surfaces:
+        operation_surface_errors.append(f"duplicate operation contracts: {duplicate_operation_surfaces}")
+    if operation_surface_errors:
+        checks.append(("operation command-surface parity", operation_surface_errors))
 
     defaults_payload = cli._defaults_payload()  # type: ignore[attr-defined]
     if defaults_payload["compact_contract_profile"]["answer_shape"] != compact_contract_manifest()["answer_shape"]:
         checks.append(("defaults compact profile parity", ["defaults payload answer_shape drifted from compact_contract_profile.json"]))
     if defaults_payload["proof_surfaces"]["default_routes"] != proof_routes_manifest()["default_routes"]:
         checks.append(("proof routes parity", ["defaults payload proof routes drifted from proof_routes.json"]))
+    proof_rules = proof_selection_rules_manifest()
+    consumption_policy = python_contract_consumption_manifest()
+    validation_lane_ids = {lane["id"] for lane in defaults_payload["validation"]["lanes"]}
+    proof_rule_lanes = {rule["lane"] for rule in proof_rules["rules"]} | {proof_rules["fallback_lane"]}
+    unknown_rule_lanes = sorted(proof_rule_lanes - validation_lane_ids)
+    if unknown_rule_lanes:
+        checks.append(("proof selection rules parity", [f"unknown validation lane(s): {', '.join(unknown_rule_lanes)}"]))
+    expected_validated_contracts = {
+        ("proof_selection_rules.json", "proof_selection_rules.schema.json", "agentic_workspace.cli:_proof_selection_for_changed_paths"),
+        ("context_templates.json", "context_templates.schema.json", "agentic_workspace.cli:_start_payload"),
+        ("context_templates.json", "context_templates.schema.json", "agentic_workspace.cli:_implement_payload"),
+    }
+    actual_validated_contracts = {
+        (entry["contract"], entry["schema"], entry["consumer"]) for entry in consumption_policy["validated_at_consumption"]
+    }
+    if expected_validated_contracts - actual_validated_contracts:
+        missing_consumers = sorted(consumer for _, _, consumer in expected_validated_contracts - actual_validated_contracts)
+        checks.append(
+            (
+                "python contract consumption parity",
+                [f"validated contract consumers are not recorded: {', '.join(missing_consumers)}"],
+            )
+        )
     if cli._reporting_schema_payload() != report_contract_manifest():  # type: ignore[attr-defined]
         checks.append(("report contract parity", ["reporting schema payload drifted from report_contract.json"]))
     workspace_surfaces = workspace_surfaces_manifest()

@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/python-extraction-map.schema.json",
+  "title": "Python-Owned Extraction Map",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "parent_issue",
+    "purpose",
+    "authority_statuses",
+    "extraction_readiness",
+    "candidates",
+    "next_slices"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/python-extraction-map/v1"
+    },
+    "parent_issue": {
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "authority_statuses": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "authoritative",
+          "derived",
+          "adapter",
+          "procedural-owned"
+        ]
+      },
+      "minItems": 4
+    },
+    "extraction_readiness": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "extract now",
+          "extract after schema exists",
+          "operation-contract candidate",
+          "template candidate",
+          "procedural-owned for now",
+          "live-inspection-owned for now",
+          "defer with reason"
+        ]
+      },
+      "minItems": 7
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "candidate_content",
+          "proposed_owner_surface",
+          "future_owner",
+          "authority_status",
+          "extraction_readiness",
+          "rationale"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "candidate_content": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "proposed_owner_surface": {
+            "type": "string"
+          },
+          "future_owner": {
+            "enum": [
+              "JSON contract data",
+              "JSON Schema",
+              "markdown contract/doc text",
+              "render templates",
+              "generated or schema-derived Python model",
+              "procedural execution",
+              "live repo inspection"
+            ]
+          },
+          "authority_status": {
+            "enum": [
+              "authoritative",
+              "derived",
+              "adapter",
+              "procedural-owned"
+            ]
+          },
+          "extraction_readiness": {
+            "enum": [
+              "extract now",
+              "extract after schema exists",
+              "operation-contract candidate",
+              "template candidate",
+              "procedural-owned for now",
+              "live-inspection-owned for now",
+              "defer with reason"
+            ]
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "issue_hint": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "next_slices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "issue",
+          "summary",
+          "candidate_ids"
+        ],
+        "properties": {
+          "issue": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "candidate_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

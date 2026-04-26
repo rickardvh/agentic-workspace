@@ -69,15 +69,18 @@ from agentic_workspace.contract_tooling import (
     cli_commands_manifest,
     cli_option_groups_manifest,
     compact_contract_manifest,
+    context_templates_manifest,
     improvement_latitude_policy_manifest,
     module_registry_manifest,
     optimization_bias_policy_manifest,
     preflight_policy_manifest,
     proof_routes_manifest,
+    proof_selection_rules_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
     setup_findings_policy_manifest,
     workflow_artifact_profiles_manifest,
+    workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
 from agentic_workspace.reporting_support import (
@@ -101,10 +104,13 @@ _CLI_OPTION_GROUPS_MANIFEST = cli_option_groups_manifest()
 _MODULE_REGISTRY_MANIFEST = module_registry_manifest()
 _WORKSPACE_SURFACES_MANIFEST = workspace_surfaces_manifest()
 _WORKFLOW_ARTIFACT_PROFILES_MANIFEST = workflow_artifact_profiles_manifest()
+_WORKFLOW_DEFINITION_FORMAT = workflow_definition_format_manifest()
 _IMPROVEMENT_LATITUDE_POLICY = improvement_latitude_policy_manifest()
 _OPTIMIZATION_BIAS_POLICY = optimization_bias_policy_manifest()
 _REPO_FRICTION_POLICY = repo_friction_policy_manifest()
 _PREFLIGHT_POLICY = preflight_policy_manifest()
+_PROOF_SELECTION_RULES = proof_selection_rules_manifest()
+_CONTEXT_TEMPLATES = context_templates_manifest()
 HIGH_RISK_COMMANDS = frozenset(str(command) for command in _PREFLIGHT_POLICY["high_risk_commands"])
 PREFLIGHT_TOKEN_PREFIX = str(_PREFLIGHT_POLICY["token"]["prefix"])
 DEFAULT_PREFLIGHT_MAX_AGE_SECONDS = int(_PREFLIGHT_POLICY["default_max_age_seconds"])
@@ -661,6 +667,16 @@ def main(argv: list[str] | None = None) -> int:
         _emit_payload(payload=payload, format_name=args.format)
         return 0
 
+    if args.command == "implement":
+        target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+        _validate_target_root(command_name="implement", target_root=target_root)
+        payload = _implement_payload(
+            target_root=target_root,
+            changed_paths=list(getattr(args, "changed", []) or []),
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
+
     if args.command == "preflight":
         target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
         _validate_target_root(command_name="preflight", target_root=target_root)
@@ -1074,16 +1090,18 @@ def _workspace_agents_template(
     cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> str:
     _ = workflow_artifact_profile
-    startup_steps: list[str] = []
-    sources_of_truth: list[str] = []
-
-    for module_name in selected_modules:
-        descriptor = descriptors[module_name]
-        startup_steps.extend(descriptor.startup_steps)
-        sources_of_truth.extend(descriptor.sources_of_truth)
+    _ = selected_modules
+    _ = descriptors
 
     lines = [
         "# Agent Instructions",
+        "",
+        "Authority marker:",
+        "",
+        "- authority: adapter",
+        "- canonical_source: `.agentic-workspace/config.toml` and `agentic-workspace start --target . --format json`",
+        "- safe_to_edit: true",
+        "- refresh_command: null",
         "",
         WORKSPACE_POINTER_BLOCK,
         "",
@@ -1091,18 +1109,13 @@ def _workspace_agents_template(
         "",
         "## Startup",
         "",
-        f"1. Read `{agent_instructions_file}`.",
-        f"2. Use `{cli_invoke} preflight --format json` when you want startup guidance, resolved config, and active state in one compact answer.",
-        f"3. Use `{cli_invoke} defaults --section startup --format json` when startup order or first-contact routing is the question.",
-        f"4. Use `{cli_invoke} config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.",
-        f"5. Use `{cli_invoke} summary --format json` when only active planning or ownership state is the question.",
-        "6. Open raw planning state, an active execplan, or deeper routing docs only when those compact answers point there.",
-        "7. Read package-local `AGENTS.md` only for the package being edited.",
+        f"- Use `{cli_invoke} preflight --format json` when you want startup guidance, resolved config, and active state in one compact answer.",
+        f"- Use `{cli_invoke} defaults --section startup --format json` when startup order or first-contact routing is the question.",
+        f"- Use `{cli_invoke} config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.",
+        f"- Use `{cli_invoke} summary --format json` when only active planning or ownership state is the question.",
+        "- Open module, planning, memory, or deeper routing files only when the compact answers point there.",
+        "- Read package-local `AGENTS.md` only for the package being edited.",
     ]
-    if startup_steps or sources_of_truth:
-        lines.extend(["", "## Module Notes", ""])
-        lines.extend(f"- {step}" for step in startup_steps)
-        lines.extend(f"- {item}" for item in sources_of_truth)
     lines.extend(
         [
             "",
@@ -1112,6 +1125,7 @@ def _workspace_agents_template(
             "Do not bulk-read all planning surfaces.",
             "Keep package boundaries explicit.",
             "Preserve independent package versioning and CLI entry points.",
+            "Keep repo-custom workflow obligations in `.agentic-workspace/config.toml`; let `AGENTS.md` stay a compact router.",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -1321,6 +1335,13 @@ def _external_agent_handoff_text(
     artifact_profile = _workflow_artifact_profile_payload(workflow_artifact_profile)
     lines = [
         "# Agent Entrypoint Router",
+        "",
+        "Authority marker:",
+        "",
+        "- authority: generated-adapter",
+        "- canonical_source: `src/agentic_workspace/cli.py:_external_agent_handoff_text`",
+        "- safe_to_edit: false",
+        "- refresh_command: `make maintainer-surfaces`",
         "",
         "This file is the agent entrypoint router.",
         "Treat it as a lightweight compatibility adapter over the structured workspace config, not as the primary authority.",
@@ -2588,7 +2609,105 @@ def _package_boundary_payload(*, target_root: Path) -> dict[str, Any]:
     }
 
 
+def _authority_marker_for_path(path_text: str) -> dict[str, Any]:
+    normalized = _normalize_changed_paths([path_text])[0] if _normalize_changed_paths([path_text]) else path_text
+    if normalized == "AGENTS.md":
+        return {
+            "path": normalized,
+            "authority": "adapter",
+            "canonical_source": ".agentic-workspace/config.toml + agentic-workspace start --format json",
+            "safe_to_edit": True,
+            "refresh_command": None,
+        }
+    if normalized == "llms.txt":
+        return {
+            "path": normalized,
+            "authority": "generated-adapter",
+            "canonical_source": "src/agentic_workspace/cli.py:_external_agent_handoff_text",
+            "safe_to_edit": False,
+            "refresh_command": "make maintainer-surfaces",
+        }
+    if normalized.startswith(".agentic-workspace/planning/"):
+        return {
+            "path": normalized,
+            "authority": "canonical",
+            "canonical_source": normalized,
+            "safe_to_edit": True,
+            "refresh_command": "uv run python scripts/check/check_planning_surfaces.py",
+        }
+    if normalized.startswith(".agentic-workspace/memory/"):
+        return {
+            "path": normalized,
+            "authority": "canonical",
+            "canonical_source": normalized,
+            "safe_to_edit": True,
+            "refresh_command": None,
+        }
+    if "/bootstrap/" in normalized or normalized.endswith("/bootstrap"):
+        package_root = "/".join(normalized.split("/")[:2]) if normalized.startswith("packages/") else "package"
+        return {
+            "path": normalized,
+            "authority": "payload",
+            "canonical_source": f"{package_root}/src/",
+            "safe_to_edit": False,
+            "refresh_command": "sync package payload from source before claiming completion",
+        }
+    if normalized.startswith("src/agentic_workspace/") or normalized.startswith("packages/"):
+        return {
+            "path": normalized,
+            "authority": "source",
+            "canonical_source": normalized,
+            "safe_to_edit": True,
+            "refresh_command": None,
+        }
+    if normalized.startswith(".agentic-workspace/"):
+        return {
+            "path": normalized,
+            "authority": "managed",
+            "canonical_source": ".agentic-workspace/OWNERSHIP.toml",
+            "safe_to_edit": True,
+            "refresh_command": "agentic-workspace ownership --target . --path <path> --format json",
+        }
+    return {
+        "path": normalized,
+        "authority": "repo-owned",
+        "canonical_source": normalized,
+        "safe_to_edit": True,
+        "refresh_command": None,
+    }
+
+
+def _boundary_warning_for_path(path_text: str) -> dict[str, Any]:
+    marker = _authority_marker_for_path(path_text)
+    normalized = str(marker["path"])
+    warning: str | None = None
+    if marker["authority"] == "payload":
+        warning = (
+            "Package bootstrap payload is not live authority; reflect durable behavior in package source and sync payload before closeout."
+        )
+    elif normalized.startswith(".agentic-workspace/") and marker["authority"] not in {"canonical", "managed"}:
+        warning = "Installed workspace surfaces are shared operational state; verify ownership before editing."
+    elif normalized.startswith("packages/") and "/src/" in normalized:
+        warning = "Package source edits may need matching payload or installed-surface proof before closeout."
+    elif marker["authority"] == "generated-adapter":
+        warning = "Generated adapter content should be refreshed from its canonical source rather than hand-edited."
+    return {
+        "path": normalized,
+        "authority": marker["authority"],
+        "warning": warning,
+        "requires_attention": warning is not None,
+    }
+
+
+def _authority_markers_for_startup(*, active_execplan: str | None = None) -> list[dict[str, Any]]:
+    paths = ["AGENTS.md", "llms.txt", ".agentic-workspace/WORKFLOW.md", ".agentic-workspace/OWNERSHIP.toml"]
+    if active_execplan:
+        paths.append(active_execplan)
+    return [_authority_marker_for_path(path) for path in paths]
+
+
 def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
+    startup_template = _CONTEXT_TEMPLATES["startup_context"]
     preflight = _run_preflight_command(target_root=target_root)
     active_state = preflight.get("active_planning_state", {})
     planning_record = active_state.get("planning_record", {})
@@ -2605,47 +2724,67 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
         if active_items:
             next_action = str(active_items[0].get("next_action", "") or active_items[0].get("why_now", "") or "")
     if not next_action:
-        next_action = "Use the startup sequence and compact planning summary before opening deeper planning surfaces."
+        next_action = str(startup_template["fallback_next_action"])
+    startup_sequence = copy.deepcopy(startup_template["startup_sequence"])
+    for step in startup_sequence:
+        if step["id"] == "entrypoint":
+            step["surface"] = str(step["surface"]).format(
+                agent_instructions_file=preflight.get("resolved_config", {}).get("agent_instructions_file", "AGENTS.md")
+            )
 
     payload: dict[str, Any] = {
         "kind": "startup-context/v1",
         "target": target_root.as_posix(),
-        "startup_sequence": [
-            {
-                "id": "entrypoint",
-                "command": None,
-                "surface": preflight.get("resolved_config", {}).get("agent_instructions_file", "AGENTS.md"),
-                "why": "configured ordinary repo startup entrypoint",
-            },
-            {
-                "id": "preflight",
-                "command": "agentic-workspace preflight --format json",
-                "surface": "startup_guidance + resolved_config + active_planning_state",
-                "why": "one-call takeover context",
-            },
-            {
-                "id": "summary",
-                "command": "agentic-workspace summary --format json",
-                "surface": "planning_record",
-                "why": "active planning state before raw planning reads",
-            },
-        ],
+        "startup_sequence": startup_sequence,
         "active_state_summary": {
             "todo_active_count": active_state.get("todo", {}).get("active_count", 0),
             "active_execplan": active_execplan,
             "planning_status": planning_record.get("status", "unavailable") if isinstance(planning_record, dict) else "unavailable",
         },
         "package_boundary": _package_boundary_payload(target_root=target_root),
+        "authority_markers": _authority_markers_for_startup(active_execplan=active_execplan),
         "immediate_next_allowed_action": {
             "summary": next_action,
             "read_first": preflight.get("startup_guidance", {}).get("first_compact_queries", []),
-            "open_execplan_only_when": "the compact summary points to an active execplan or the task needs active sequencing detail",
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
         },
     }
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths:
         payload["proof"] = _proof_selection_for_changed_paths(changed_paths=normalized_paths)
+        payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     return payload
+
+
+def _implement_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
+    implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
+    normalized_paths = _normalize_changed_paths(changed_paths)
+    proof = (
+        _proof_selection_for_changed_paths(changed_paths=normalized_paths)
+        if normalized_paths
+        else copy.deepcopy(implementer_template["unknown_scope_proof"])
+    )
+    path_boundaries = [_boundary_warning_for_path(path) for path in normalized_paths]
+    attention_paths = [item["path"] for item in path_boundaries if item["requires_attention"]]
+    inspect_files = normalized_paths or list(implementer_template["default_inspect_files"])
+    return {
+        "kind": "implementer-context/v1",
+        "target": target_root.as_posix(),
+        "changed_paths": normalized_paths,
+        "inspect_files": inspect_files,
+        "files_to_avoid": list(implementer_template["files_to_avoid"]),
+        "package_boundary": _package_boundary_payload(target_root=target_root),
+        "path_boundaries": path_boundaries,
+        "authority_markers": [_authority_marker_for_path(path) for path in (normalized_paths or ["AGENTS.md", "llms.txt"])],
+        "proof": proof,
+        "required_validation_commands": proof["required_commands"],
+        "handoff_requirements": copy.deepcopy(implementer_template["handoff_requirements"]),
+        "next_allowed_action": (
+            implementer_template["next_allowed_action"]["attention"]
+            if attention_paths
+            else implementer_template["next_allowed_action"]["default"]
+        ),
+    }
 
 
 def _preflight_active_state_payload(*, target_root: Path) -> dict[str, Any]:
@@ -4006,6 +4145,7 @@ def _agent_configuration_workflow_extensions_payload() -> dict[str, Any]:
             "Declare small repo-custom workflow obligations in `.agentic-workspace/config.toml` so workspace owns the "
             "extension mechanism and planning only consumes relevant obligations."
         ),
+        "definition_format": copy.deepcopy(_WORKFLOW_DEFINITION_FORMAT),
         "owner_surface": ".agentic-workspace/config.toml [workflow_obligations]",
         "fields": [
             {"field": "summary", "purpose": "bounded repo-local expectation worth surfacing into active work"},
@@ -5617,23 +5757,16 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str]) -> dict[str,
             selected_ids.append(lane_id)
 
     for changed_path in changed_paths:
-        if changed_path.startswith("packages/planning/"):
-            _select("planning_package")
-        elif changed_path.startswith("packages/memory/"):
-            _select("memory_package")
-        elif changed_path.startswith(".agentic-workspace/planning/"):
-            _select("planning_surfaces")
-        elif changed_path in {"AGENTS.md", "llms.txt"} or changed_path.startswith("docs/"):
-            _select("maintainer_surfaces")
-        elif (
-            changed_path.startswith("src/agentic_workspace/")
-            or changed_path.startswith("tests/")
-            or changed_path.startswith("scripts/check/")
-            or changed_path == "pyproject.toml"
-        ):
-            _select("workspace_cli")
-        else:
-            _select("workspace_cli")
+        matched_rule = False
+        for rule in _PROOF_SELECTION_RULES["rules"]:
+            exact_matches = set(rule.get("exact", []))
+            prefixes = tuple(rule.get("prefixes", []))
+            if changed_path in exact_matches or changed_path.startswith(prefixes):
+                _select(str(rule["lane"]))
+                matched_rule = True
+                break
+        if not matched_rule:
+            _select(str(_PROOF_SELECTION_RULES["fallback_lane"]))
 
     selected_lanes = [_lane(lane_id) for lane_id in selected_ids]
     required_commands: list[str] = []
@@ -5651,7 +5784,7 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str]) -> dict[str,
                 escalate_when.append(condition)
 
     if len(selected_lanes) > 1:
-        escalate_when.insert(0, "changed paths span multiple validation lanes; run all selected commands or split the work")
+        escalate_when.insert(0, str(_PROOF_SELECTION_RULES["cross_lane_escalation"]))
 
     return {
         "kind": "proof-selection/v1",
@@ -5891,6 +6024,8 @@ def _select_ownership_payload(
         )
     if repo_path:
         answer, matched = _ownership_answer_for_path(payload, repo_path=repo_path)
+        answer["authority_marker"] = _authority_marker_for_path(repo_path)
+        answer["boundary_warning"] = _boundary_warning_for_path(repo_path)
         return _compact_contract_answer(
             surface="ownership",
             selector={"path": _normalize_repo_path(repo_path)},

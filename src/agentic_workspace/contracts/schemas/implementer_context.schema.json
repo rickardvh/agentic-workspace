@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/implementer-context.schema.json",
+  "title": "Implementer Context Payload",
+  "type": "object",
+  "required": [
+    "kind",
+    "target",
+    "changed_paths",
+    "inspect_files",
+    "files_to_avoid",
+    "package_boundary",
+    "path_boundaries",
+    "authority_markers",
+    "proof",
+    "required_validation_commands",
+    "handoff_requirements",
+    "next_allowed_action"
+  ],
+  "properties": {
+    "kind": {
+      "const": "implementer-context/v1"
+    },
+    "target": {
+      "type": "string"
+    },
+    "changed_paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inspect_files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "files_to_avoid": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "package_boundary": {
+      "$ref": "#/$defs/package_boundary"
+    },
+    "path_boundaries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/path_boundary"
+      }
+    },
+    "authority_markers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/authority_marker"
+      }
+    },
+    "proof": {
+      "type": "object"
+    },
+    "required_validation_commands": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "handoff_requirements": {
+      "type": "object",
+      "required": [
+        "before_handoff",
+        "stop_when"
+      ],
+      "properties": {
+        "before_handoff": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "stop_when": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "next_allowed_action": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "authority_marker": {
+      "type": "object",
+      "required": [
+        "path",
+        "authority",
+        "canonical_source",
+        "safe_to_edit",
+        "refresh_command"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "authority": {
+          "type": "string"
+        },
+        "canonical_source": {
+          "type": "string"
+        },
+        "safe_to_edit": {
+          "type": "boolean"
+        },
+        "refresh_command": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "package_boundary": {
+      "type": "object",
+      "required": [
+        "status",
+        "cwd",
+        "warning"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "cwd": {
+          "type": "string"
+        },
+        "warning": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "package_root": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "path_boundary": {
+      "type": "object",
+      "required": [
+        "path",
+        "authority",
+        "warning",
+        "requires_attention"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "authority": {
+          "type": "string"
+        },
+        "warning": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requires_attention": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

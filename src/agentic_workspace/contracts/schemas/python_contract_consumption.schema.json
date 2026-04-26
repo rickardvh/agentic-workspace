@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/python-contract-consumption.schema.json",
+  "title": "Python Contract Consumption Policy",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "loader_boundary",
+    "validated_at_consumption",
+    "model_derivation_policy"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/python-contract-consumption/v1"
+    },
+    "loader_boundary": {
+      "type": "object",
+      "required": [
+        "module",
+        "generic_loader",
+        "validated_loader",
+        "error_type"
+      ],
+      "properties": {
+        "module": {
+          "type": "string"
+        },
+        "generic_loader": {
+          "type": "string"
+        },
+        "validated_loader": {
+          "type": "string"
+        },
+        "error_type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "validated_at_consumption": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "contract",
+          "schema",
+          "consumer"
+        ],
+        "properties": {
+          "contract": {
+            "type": "string"
+          },
+          "schema": {
+            "type": "string"
+          },
+          "consumer": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "model_derivation_policy": {
+      "type": "object",
+      "required": [
+        "authority_rule",
+        "first_schema_derived_target",
+        "handwritten_model_boundary"
+      ],
+      "properties": {
+        "authority_rule": {
+          "type": "string"
+        },
+        "first_schema_derived_target": {
+          "type": "string"
+        },
+        "handwritten_model_boundary": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

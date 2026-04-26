@@ -1,5 +1,12 @@
 # Agent Entrypoint Router
 
+Authority marker:
+
+- authority: generated-adapter
+- canonical_source: `src/agentic_workspace/cli.py:_external_agent_handoff_text`
+- safe_to_edit: false
+- refresh_command: `make maintainer-surfaces`
+
 This file is the agent entrypoint router.
 Treat it as a lightweight compatibility adapter over the structured workspace config, not as the primary authority.
 
@@ -26,17 +33,12 @@ When needed:
 Preferred lifecycle commands:
 - `agentic-workspace install --target ./repo --preset full`
 - `agentic-workspace config --target ./repo --format json`
-- `agentic-planning-bootstrap summary --format json`
 - `agentic-workspace summary --format json`
 - `agentic-workspace report --target ./repo --format json`
 
 Quick state check:
 - If .agentic-workspace/config.local.toml is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.
 - If `.agentic-workspace/config.local.toml` is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.
-
-Compact routing docs when present:
-- `tools/AGENT_QUICKSTART.md`
-- `tools/AGENT_ROUTING.md`
 
 Rules:
 - Keep this file lightweight.

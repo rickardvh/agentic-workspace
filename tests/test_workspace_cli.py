@@ -510,6 +510,9 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
 def test_external_agent_handoff_text_names_target_repository_and_no_install_assumption() -> None:
     text = cli._external_agent_handoff_text(selected_modules=["planning"])
 
+    assert "Authority marker:" in text
+    assert "- authority: generated-adapter" in text
+    assert "- safe_to_edit: false" in text
     assert "repository that contains this file" in text
     assert "Target repository:" in text
     assert "Default startup path:" in text
@@ -992,6 +995,12 @@ def test_defaults_section_selector_returns_agent_configuration_workflow_extensio
     assert payload["selector"] == {"section": "agent_configuration_workflow_extensions"}
     assert payload["matched"] is True
     assert payload["answer"]["owner_surface"] == ".agentic-workspace/config.toml [workflow_obligations]"
+    assert payload["answer"]["definition_format"]["schema_version"] == "agentic-workspace/workflow-definition-format/v1"
+    assert payload["answer"]["definition_format"]["primary_component_family"]["id"] == "workflow_obligation"
+    assert (
+        payload["answer"]["definition_format"]["flexibility_boundary"]["leave_flexible"][0]
+        == "local implementation steps inside the bounded component"
+    )
     assert payload["answer"]["supported_stages"][0] == "pre-work"
     assert payload["answer"]["consumption_rule"][0].startswith("workspace owns declaration")
 
@@ -2674,7 +2683,11 @@ def test_install_real_init_creates_combined_memory_and_planning_surfaces(tmp_pat
     assert "<!-- agentic-workspace:workflow:start -->" in agents_text
     assert "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules." in agents_text
     assert "agentic-workspace preflight --format json" in agents_text
-    assert "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself." in agents_text
+    assert (
+        "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself." not in agents_text
+    )
+    assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." in agents_text
+    assert "## Module Notes" not in agents_text
     assert "<!-- agentic-memory:workflow:start -->" not in agents_text
     assert "<PROJECT_NAME>" not in agents_text
 
@@ -2689,8 +2702,8 @@ def test_install_real_init_can_use_gemini_as_root_startup_entrypoint(tmp_path: P
     assert (target / "GEMINI.md").exists()
     assert not (target / "AGENTS.md").exists()
     gemini_text = (target / "GEMINI.md").read_text(encoding="utf-8")
-    assert "Read `GEMINI.md`." in gemini_text
     assert "Keep this file thin." in gemini_text
+    assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." in gemini_text
     assert "Read GEMINI.md first." in (target / "llms.txt").read_text(encoding="utf-8")
 
 
@@ -3703,11 +3716,74 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["kind"] == "startup-context/v1"
     assert payload["startup_sequence"][0]["surface"] == "AGENTS.md"
     assert payload["active_state_summary"]["todo_active_count"] == 1
+    assert payload["authority_markers"][0] == {
+        "path": "AGENTS.md",
+        "authority": "adapter",
+        "canonical_source": ".agentic-workspace/config.toml + agentic-workspace start --format json",
+        "safe_to_edit": True,
+        "refresh_command": None,
+    }
     assert payload["immediate_next_allowed_action"]["summary"] == "run the compact startup path."
     assert payload["proof"]["required_commands"] == [
         "uv run pytest tests/test_workspace_cli.py -q",
         "uv run ruff check src tests",
     ]
+    assert payload["path_boundaries"] == [
+        {
+            "path": "src/agentic_workspace/cli.py",
+            "authority": "source",
+            "warning": None,
+            "requires_attention": False,
+        }
+    ]
+
+
+def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--changed",
+                "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
+                "src/agentic_workspace/cli.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "implementer-context/v1"
+    assert payload["inspect_files"] == [
+        "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
+        "src/agentic_workspace/cli.py",
+    ]
+    assert payload["required_validation_commands"] == [
+        "cd packages/planning && uv run pytest tests/test_installer.py",
+        "cd packages/planning && uv run ruff check .",
+        "uv run pytest tests/test_workspace_cli.py -q",
+        "uv run ruff check src tests",
+    ]
+    assert payload["path_boundaries"][0]["authority"] == "payload"
+    assert payload["path_boundaries"][0]["requires_attention"] is True
+    assert payload["authority_markers"][0]["safe_to_edit"] is False
+    assert payload["next_allowed_action"] == "Resolve boundary warnings before editing."
+
+
+def test_ownership_path_answer_includes_authority_marker_and_boundary_warning(capsys) -> None:
+    assert cli.main(["ownership", "--path", "llms.txt", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert answer["authority_marker"] == {
+        "path": "llms.txt",
+        "authority": "generated-adapter",
+        "canonical_source": "src/agentic_workspace/cli.py:_external_agent_handoff_text",
+        "safe_to_edit": False,
+        "refresh_command": "make maintainer-surfaces",
+    }
+    assert answer["boundary_warning"]["requires_attention"] is True
 
 
 def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> None:
@@ -4045,7 +4121,7 @@ def test_selected_modules_rejects_declared_conflict(tmp_path: Path) -> None:
         cli._validate_selected_module_contract(selected_modules=["planning", "memory"], descriptors=descriptors)
 
 
-def test_workspace_agents_template_uses_descriptor_guidance(tmp_path: Path) -> None:
+def test_workspace_agents_template_keeps_descriptor_guidance_out_of_root_entrypoint(tmp_path: Path) -> None:
     descriptor = cli.ModuleDescriptor(
         name="signals",
         description="signals module",
@@ -4073,8 +4149,10 @@ def test_workspace_agents_template_uses_descriptor_guidance(tmp_path: Path) -> N
 
     rendered = cli._workspace_agents_template(selected_modules=["signals"], descriptors={"signals": descriptor})
 
-    assert "Read `signals.md` when the signals module is installed." in rendered
-    assert "- Signal routing: `signals.md`" in rendered
+    assert "Read `signals.md` when the signals module is installed." not in rendered
+    assert "Signal routing: `signals.md`" not in rendered
+    assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." in rendered
+    assert "## Module Notes" not in rendered
 
 
 def _fake_descriptors(target_root: Path, calls: list[tuple[str, str, dict[str, object]]]) -> dict[str, cli.ModuleDescriptor]:

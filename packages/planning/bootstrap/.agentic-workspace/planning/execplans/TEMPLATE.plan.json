@@ -154,6 +154,12 @@
     "evidence of intent satisfaction": "",
     "unsolved intent passed to": ""
   },
+  "system_intent_alignment": {
+    "relevant system intent": "",
+    "slice shaping bias": "",
+    "broader-lane validation question": "",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
   "closure_check": {
     "slice status": "",
     "larger-intent status": "",

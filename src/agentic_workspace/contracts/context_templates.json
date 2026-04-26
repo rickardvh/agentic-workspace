@@ -1,0 +1,68 @@
+{
+  "schema_version": "agentic-workspace/context-templates/v1",
+  "startup_context": {
+    "startup_sequence": [
+      {
+        "id": "entrypoint",
+        "command": null,
+        "surface": "{agent_instructions_file}",
+        "why": "configured ordinary repo startup entrypoint"
+      },
+      {
+        "id": "preflight",
+        "command": "agentic-workspace preflight --format json",
+        "surface": "startup_guidance + resolved_config + active_planning_state",
+        "why": "one-call takeover context"
+      },
+      {
+        "id": "summary",
+        "command": "agentic-workspace summary --format json",
+        "surface": "planning_record",
+        "why": "active planning state before raw planning reads"
+      }
+    ],
+    "fallback_next_action": "Use the startup sequence and compact planning summary before opening deeper planning surfaces.",
+    "open_execplan_only_when": "the compact summary points to an active execplan or the task needs active sequencing detail"
+  },
+  "implementer_context": {
+    "unknown_scope_proof": {
+      "kind": "proof-selection/v1",
+      "changed_paths": [],
+      "selected_lanes": [],
+      "required_commands": [],
+      "optional_commands": [
+        "agentic-workspace start --target ./repo --format json"
+      ],
+      "broaden_when": [
+        "changed paths are unknown"
+      ],
+      "escalate_when": [
+        "no changed paths were provided; ask for scope before implementing"
+      ]
+    },
+    "default_inspect_files": [
+      "agentic-workspace start --target ./repo --format json"
+    ],
+    "files_to_avoid": [
+      "broad planning archives unless the compact summary points there",
+      "package bootstrap payloads unless the task is explicitly payload sync",
+      "generated adapters such as llms.txt unless refreshing from source"
+    ],
+    "handoff_requirements": {
+      "before_handoff": [
+        "summarize changed files and proof commands run",
+        "call out any path_boundaries with requires_attention=true",
+        "leave active planning state clean or explicitly routed"
+      ],
+      "stop_when": [
+        "changed paths are missing or too broad",
+        "a payload/source boundary warning cannot be resolved inside the assigned scope",
+        "required validation cannot prove the touched contract"
+      ]
+    },
+    "next_allowed_action": {
+      "attention": "Resolve boundary warnings before editing.",
+      "default": "Inspect only the listed files and run the required validation commands."
+    }
+  }
+}

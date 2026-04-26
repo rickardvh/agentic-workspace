@@ -40,6 +40,7 @@ packages = ["src/repo_planning_bootstrap"]
 "bootstrap/.agentic-workspace/planning/execplans" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/execplans"
 "bootstrap/.agentic-workspace/planning/reviews" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/reviews"
 "bootstrap/.agentic-workspace/planning/upstream-task-intake.md" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/upstream-task-intake.md"
+"bootstrap/.agentic-workspace/planning/pre-ingestion-refinement.md" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/pre-ingestion-refinement.md"
 "bootstrap/.agentic-workspace/planning/UPGRADE-SOURCE.toml" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/UPGRADE-SOURCE.toml"
 "bootstrap/.agentic-workspace/planning/agent-manifest.json" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/agent-manifest.json"
 "skills" = "src/repo_planning_bootstrap/_skills"

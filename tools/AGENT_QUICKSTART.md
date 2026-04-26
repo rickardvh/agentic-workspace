@@ -112,7 +112,7 @@ Fast path for autonomous agents working on this repo.
 - `planning_surface_change`
   Use when: Editing planning-for-execution surfaces, plan templates, or planning-surface checks.
   Prefer this route when: the change affects planning state, execplans, generated agent docs, or the planning bootstrap itself.
-  Touches: `AGENTS.md`, `.agentic-workspace/planning/state.toml`, `.agentic-workspace/planning/upstream-task-intake.md`, `.agentic-workspace/docs/lifecycle-and-config-contract.md`, `.agentic-workspace/docs/routing-contract.md`, `.agentic-workspace/docs/execution-flow-contract.md`, `.agentic-workspace/planning/execplans/`, `scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`, `.agentic-workspace/planning/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`
+  Touches: `AGENTS.md`, `.agentic-workspace/planning/state.toml`, `.agentic-workspace/planning/upstream-task-intake.md`, `.agentic-workspace/planning/pre-ingestion-refinement.md`, `.agentic-workspace/docs/lifecycle-and-config-contract.md`, `.agentic-workspace/docs/routing-contract.md`, `.agentic-workspace/docs/execution-flow-contract.md`, `.agentic-workspace/planning/execplans/`, `scripts/check/check_maintainer_surfaces.py`, `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`, `.agentic-workspace/planning/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`
   Validate: `make maintainer-surfaces`; `make render-agent-docs`
 
 ## Skills

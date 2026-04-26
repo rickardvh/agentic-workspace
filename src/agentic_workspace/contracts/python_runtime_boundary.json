@@ -1,0 +1,164 @@
+{
+  "schema_version": "agentic-workspace/python-runtime-boundary/v1",
+  "parent_issue": "#309",
+  "purpose": "Classify remaining Python-owned behavior after contract, schema, parser, policy, and template extraction so runtime code is intentional implementation rather than hidden contract authority.",
+  "classification_values": [
+    "procedural-owned",
+    "live-inspection-owned",
+    "operation-contract-covered",
+    "deferred-extractable"
+  ],
+  "boundaries": [
+    {
+      "id": "lifecycle-execution",
+      "classification": "procedural-owned",
+      "owner_modules": [
+        "agentic_workspace.cli"
+      ],
+      "runtime_surfaces": [
+        "install",
+        "init",
+        "upgrade",
+        "uninstall"
+      ],
+      "why_python_owned": "Lifecycle commands perform filesystem writes, dry-run planning, conservative reconciliation, local-only uninstall behavior, and preflight-gated mutation checks that depend on current repo state.",
+      "contract_surfaces": [
+        "src/agentic_workspace/contracts/operation_contracts.json",
+        "src/agentic_workspace/contracts/operations/install.lifecycle.json",
+        "src/agentic_workspace/contracts/operations/init.lifecycle.json",
+        "src/agentic_workspace/contracts/operations/upgrade.lifecycle.json",
+        "src/agentic_workspace/contracts/operations/uninstall.lifecycle.json"
+      ],
+      "remaining_extractable_content": []
+    },
+    {
+      "id": "live-report-and-doctor-assembly",
+      "classification": "live-inspection-owned",
+      "owner_modules": [
+        "agentic_workspace.cli",
+        "agentic_workspace.doctor",
+        "agentic_workspace.workspace_output"
+      ],
+      "runtime_surfaces": [
+        "report",
+        "status",
+        "doctor",
+        "setup"
+      ],
+      "why_python_owned": "Reports combine live module detection, config layering, installed-surface checks, integrity checks, and current planning state; the operation contracts describe observable behavior without freezing repo inspection logic as static data.",
+      "contract_surfaces": [
+        "src/agentic_workspace/contracts/operation_contracts.json",
+        "src/agentic_workspace/contracts/operations/report.combined.json",
+        "src/agentic_workspace/contracts/operations/status.report.json",
+        "src/agentic_workspace/contracts/operations/doctor.report.json",
+        "src/agentic_workspace/contracts/operations/setup.guidance.json"
+      ],
+      "remaining_extractable_content": []
+    },
+    {
+      "id": "runtime-preflight-token-validation",
+      "classification": "procedural-owned",
+      "owner_modules": [
+        "agentic_workspace.cli"
+      ],
+      "runtime_surfaces": [
+        "preflight",
+        "upgrade --strict-preflight",
+        "uninstall --strict-preflight"
+      ],
+      "why_python_owned": "Token parsing, freshness checks, current time comparison, and strict-gate decisions are runtime safety behavior; static policy values are already contract-backed.",
+      "contract_surfaces": [
+        "src/agentic_workspace/contracts/preflight_policy.json",
+        "src/agentic_workspace/contracts/operations/preflight.report.json"
+      ],
+      "remaining_extractable_content": []
+    },
+    {
+      "id": "command-dispatch-and-parser-construction",
+      "classification": "operation-contract-covered",
+      "owner_modules": [
+        "agentic_workspace.cli"
+      ],
+      "runtime_surfaces": [
+        "argparse parser",
+        "command dispatch"
+      ],
+      "why_python_owned": "The parser and dispatch remain runtime adapter code, while command names, options, option groups, and executable operation coverage are manifest-backed and checked for parity.",
+      "contract_surfaces": [
+        "src/agentic_workspace/contracts/cli_commands.json",
+        "src/agentic_workspace/contracts/cli_option_groups.json",
+        "src/agentic_workspace/contracts/operation_contracts.json"
+      ],
+      "remaining_extractable_content": []
+    },
+    {
+      "id": "path-normalization-and-boundary-matching",
+      "classification": "procedural-owned",
+      "owner_modules": [
+        "agentic_workspace.cli"
+      ],
+      "runtime_surfaces": [
+        "ownership --path",
+        "start --changed",
+        "implement --changed",
+        "proof --changed"
+      ],
+      "why_python_owned": "Path normalization, fnmatch ordering, package-boundary detection, and attention-path selection depend on caller input and the current checkout; stable proof and context fragments are contract-backed.",
+      "contract_surfaces": [
+        "src/agentic_workspace/contracts/proof_selection_rules.json",
+        "src/agentic_workspace/contracts/context_templates.json",
+        "src/agentic_workspace/contracts/operations/ownership.report.json",
+        "src/agentic_workspace/contracts/operations/start.context.json",
+        "src/agentic_workspace/contracts/operations/implement.context.json"
+      ],
+      "remaining_extractable_content": [
+        {
+          "summary": "Authority marker policy is still table-like data inside cli.py and remains the next low-risk extraction target after schema selection.",
+          "tracking_issue": "#320",
+          "status": "open follow-up"
+        }
+      ]
+    },
+    {
+      "id": "config-parsing-and-diagnostics",
+      "classification": "procedural-owned",
+      "owner_modules": [
+        "agentic_workspace.config"
+      ],
+      "runtime_surfaces": [
+        "workspace config loading",
+        "local override loading"
+      ],
+      "why_python_owned": "Parser diagnostics, TOML/BOM handling, local override layering, and typed runtime objects are implementation behavior; reusable shapes are schema-backed.",
+      "contract_surfaces": [
+        "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
+        "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+        "src/agentic_workspace/contracts/python_contract_consumption.json"
+      ],
+      "remaining_extractable_content": []
+    },
+    {
+      "id": "generated-adapter-text",
+      "classification": "deferred-extractable",
+      "owner_modules": [
+        "agentic_workspace.cli"
+      ],
+      "runtime_surfaces": [
+        "llms.txt",
+        "root AGENTS.md template"
+      ],
+      "why_python_owned": "Large Markdown adapter templates still render from Python for now; the stable start/implement context fragments have moved to context_templates.json, and the remaining adapter-template extraction is tracked separately.",
+      "contract_surfaces": [
+        "src/agentic_workspace/contracts/context_templates.json",
+        "src/agentic_workspace/contracts/python_extraction_map.json"
+      ],
+      "remaining_extractable_content": [
+        {
+          "summary": "Extract external-agent handoff and root AGENTS adapter templates so maintainer-surface refresh drift is easier to detect and fix.",
+          "tracking_issue": "#319",
+          "status": "open follow-up"
+        }
+      ]
+    }
+  ]
+}

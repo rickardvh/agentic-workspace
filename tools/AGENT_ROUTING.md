@@ -45,6 +45,7 @@ Focused routing reference derived from `.agentic-workspace/planning/agent-manife
   - `AGENTS.md`
   - `.agentic-workspace/planning/state.toml`
   - `.agentic-workspace/planning/upstream-task-intake.md`
+  - `.agentic-workspace/planning/pre-ingestion-refinement.md`
   - `.agentic-workspace/docs/lifecycle-and-config-contract.md`
   - `.agentic-workspace/docs/routing-contract.md`
   - `.agentic-workspace/docs/execution-flow-contract.md`

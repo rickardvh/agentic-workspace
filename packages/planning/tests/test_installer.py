@@ -88,6 +88,12 @@ def _write_execplan_record(
     )
     if references is not None:
         record["references"] = references
+    record["system_intent_alignment"] = {
+        "relevant system intent": "Preserve larger user or product outcome separately from the bounded slice.",
+        "slice shaping bias": "Keep this slice small but route continuation explicitly.",
+        "broader-lane validation question": ("Did this slice advance the parent lane rather than only local task completion?"),
+        "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md",
+    }
     if status in {"completed", "done", "closed"}:
         record["iterative_follow_through"] = {
             "what this slice enabled": "one bounded planning improvement landed",
@@ -268,6 +274,13 @@ def _minimal_execplan(status: str = "in-progress") -> str:
         if status in {"completed", "done", "closed"}
         else ""
     )
+    system_intent_alignment = (
+        "\n## System Intent Alignment\n\n"
+        "- Relevant system intent: Preserve larger user or product outcome separately from the bounded slice.\n"
+        "- Slice shaping bias: Keep this slice small but route continuation explicitly.\n"
+        "- Broader-lane validation question: Did this slice advance the parent lane rather than only local task completion?\n"
+        "- Intent evidence source: .agentic-workspace/docs/system-intent-contract.md\n"
+    )
     closure_check = (
         "\n## Closure Check\n\n"
         "- Slice status: bounded slice complete\n"
@@ -418,6 +431,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
 
 {proof_report}
 {intent_satisfaction}
+{system_intent_alignment}
 {closure_check}
 
 ## Drift Log
@@ -430,6 +444,7 @@ def _minimal_execplan(status: str = "in-progress") -> str:
         execution_summary=execution_summary,
         proof_report=proof_report,
         intent_satisfaction=intent_satisfaction,
+        system_intent_alignment=system_intent_alignment,
         closure_check=closure_check,
     )
 
@@ -468,6 +483,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     review_template_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.md"
     review_record_template_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.review.json"
     intake_doc_path = tmp_path / ".agentic-workspace" / "planning" / "upstream-task-intake.md"
+    refinement_doc_path = tmp_path / ".agentic-workspace" / "planning" / "pre-ingestion-refinement.md"
 
     assert (tmp_path / "AGENTS.md").exists()
     assert (tmp_path / ".agentic-workspace/planning/state.toml").exists()
@@ -484,6 +500,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert review_record_template_path.exists()
     assert not review_template_path.exists()
     assert intake_doc_path.exists()
+    assert refinement_doc_path.exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "TEMPLATE.plan.json").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert not (tmp_path / ".agentic-workspace" / "planning" / "scripts").exists()
@@ -510,6 +527,7 @@ def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path(".agentic-workspace/planning/reviews/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/upstream-task-intake.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
+    assert Path(".agentic-workspace/planning/pre-ingestion-refinement.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/docs/routing-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/UPGRADE-SOURCE.toml") in PLANNING_LOWER_STABILITY_HELPER_FILES
     assert Path("tools/AGENT_QUICKSTART.md") not in REQUIRED_PAYLOAD_FILES
@@ -750,6 +768,7 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "`Execution Summary`" in readme_text
     assert "Required continuation for an unfinished larger intended outcome" in readme_text
     assert "Keep this file thin." in bootstrap_agents_text
+    assert "agentic-workspace preflight --format json" in bootstrap_agents_text
     assert "agentic-workspace summary --format json" in bootstrap_agents_text
     assert "agentic-workspace defaults --section startup --format json" in bootstrap_agents_text
     assert (
@@ -757,6 +776,7 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
         in bootstrap_agents_text
     )
     assert "Read package-local `AGENTS.md` only for the package being edited." in bootstrap_agents_text
+    assert "## When Needed" not in bootstrap_agents_text
     assert "remove or archive the matched queue residue in the same pass" in execplans_readme_text
     assert "Iterative carry-forward belongs under `## Iterative Follow-Through`" in execplans_readme_text
     assert any(
@@ -1330,6 +1350,13 @@ def test_planning_summary_prefers_canonical_execplan_record_when_markdown_stales
     assert summary["planning_record"]["requested_outcome"] == "this item needs a bounded execution contract."
     assert summary["planning_record"]["next_action"] == "add one checker."
     assert summary["planning_record"]["task"]["surface"] == ".agentic-workspace/planning/execplans/plan-alpha.md"
+    assert summary["planning_record"]["system_intent_alignment"]["relevant system intent"] == (
+        "Preserve larger user or product outcome separately from the bounded slice."
+    )
+    assert summary["machine_first_planning"]["status"] == "canonical-active"
+    assert summary["machine_first_planning"]["active_canonical_count"] == 1
+    assert summary["machine_first_planning"]["active_markdown_fallback_count"] == 0
+    assert summary["machine_first_planning"]["canonical_active_execplans"] == [".agentic-workspace/planning/execplans/plan-alpha.plan.json"]
 
 
 def test_planning_summary_and_handoff_expose_structured_execplan_references(tmp_path: Path) -> None:
@@ -2200,9 +2227,15 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["schema"]["schema_version"] == "planning-summary-schema/v1"
     assert summary["schema"]["command"] == "agentic-workspace summary --format json --profile full"
     assert "planning_record" in summary["schema"]["shared_fields"]
+    assert "machine_first_planning" in summary["schema"]["shared_fields"]
     assert "planning_surface_health" in summary["schema"]["shared_fields"]
     assert summary["todo"]["active_count"] == 1
     assert summary["execplans"]["active_count"] == 1
+    assert summary["machine_first_planning"]["status"] == "markdown-fallback-active"
+    assert summary["machine_first_planning"]["canonical_record_extension"] == ".plan.json"
+    assert summary["machine_first_planning"]["active_canonical_count"] == 0
+    assert summary["machine_first_planning"]["active_markdown_fallback_count"] == 1
+    assert "sidecar is canonical" in summary["machine_first_planning"]["rule"]
     assert summary["planning_surface_health"]["status"] == "clean"
     assert summary["planning_surface_health"]["warning_count"] == 0
     assert summary["planning_surface_health"]["recommended_next_action"] == "No planning-surface drift detected."
@@ -2212,6 +2245,12 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["planning_record"]["next_action"] == "Add one checker."
     assert summary["planning_record"]["proof_expectations"] == ["uv run pytest tests/test_check_planning_surfaces.py"]
     assert summary["planning_record"]["closure_check"]["closure decision"] == "keep-active"
+    assert summary["planning_record"]["system_intent_alignment"]["slice shaping bias"] == (
+        "Keep this slice small but route continuation explicitly."
+    )
+    assert summary["planning_record"]["system_intent_alignment"]["broader-lane validation question"] == (
+        "Did this slice advance the parent lane rather than only local task completion?"
+    )
     assert summary["planning_record"]["agent_may_decide"] == (
         "Bounded decomposition, validation tightening, and plan-local residue routing."
     )
@@ -2293,6 +2332,9 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["handoff_contract"]["execution_bounds"]["allowed paths"] == "scripts/check/check_planning_surfaces.py"
     assert summary["handoff_contract"]["stop_conditions"]["stop when"].startswith("the work needs broader")
     assert summary["handoff_contract"]["intent_interpretation"]["status"] == "present"
+    assert summary["handoff_contract"]["system_intent_alignment"]["intent evidence source"] == (
+        ".agentic-workspace/docs/system-intent-contract.md"
+    )
     assert summary["handoff_contract"]["return_with"]["execution_run_fields"][0] == "run status"
     assert summary["handoff_contract"]["return_with"]["execution_run_fields"][5] == "changed surfaces"
     assert summary["handoff_contract"]["return_with"]["execution_summary_fields"][3] == "post-work posterity capture"
@@ -2352,6 +2394,14 @@ candidates = [
     assert summary["schema"]["schema_version"] == "planning-summary-compact-schema/v1"
     assert summary["schema"]["command"] == "agentic-workspace summary --format json"
     assert summary["schema"]["full_profile_command"] == "agentic-workspace summary --format json --profile full"
+    assert summary["machine_first_planning"]["status"] == "markdown-fallback-active"
+    assert summary["machine_first_planning"]["active_markdown_fallback_count"] == 1
+    assert summary["planning_record"]["system_intent_alignment"]["relevant system intent"] == (
+        "Preserve larger user or product outcome separately from the bounded slice."
+    )
+    assert summary["handoff_contract"]["system_intent_alignment"]["slice shaping bias"] == (
+        "Keep this slice small but route continuation explicitly."
+    )
     assert "candidate_lanes" not in summary["roadmap"]
     assert summary["roadmap"]["candidates"] == [{"priority": "first", "summary": "Tracked lane"}]
     assert "signals" not in summary["intent_validation_contract"]
@@ -2869,6 +2919,7 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "execution_run" in summary["schema"]["view_fields"]["planning_record"]
     assert "finished_run_review" in summary["schema"]["view_fields"]["planning_record"]
     assert "tool_verification" in summary["schema"]["view_fields"]["planning_record"]
+    assert "system_intent_alignment" in summary["schema"]["view_fields"]["planning_record"]
     assert "tool_verification" in summary["schema"]["view_fields"]["resumable_contract"]
     assert "follow_through_contract" in summary["schema"]["shared_fields"]
     assert "intent_interpretation_contract" in summary["schema"]["shared_fields"]
@@ -2896,6 +2947,7 @@ def test_planning_summary_schema_describes_projection_fields(tmp_path: Path) -> 
     assert "read_first" in summary["schema"]["view_fields"]["handoff_contract"]
     assert "pre_work_config_pull" in summary["schema"]["view_fields"]["handoff_contract"]
     assert "pre_work_memory_pull" in summary["schema"]["view_fields"]["handoff_contract"]
+    assert "system_intent_alignment" in summary["schema"]["view_fields"]["handoff_contract"]
 
 
 def test_planning_summary_exposes_ownership_review(tmp_path: Path, capsys) -> None:

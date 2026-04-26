@@ -54,6 +54,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path(".agentic-workspace/planning/reviews/README.md"),
     Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json"),
     Path(".agentic-workspace/planning/upstream-task-intake.md"),
+    Path(".agentic-workspace/planning/pre-ingestion-refinement.md"),
     UPGRADE_SOURCE_PATH,
     PLANNING_MANIFEST_PATH,
 )
@@ -85,6 +86,7 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     Path(".agentic-workspace/planning/reviews/README.md"),
     Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json"),
     Path(".agentic-workspace/planning/upstream-task-intake.md"),
+    Path(".agentic-workspace/planning/pre-ingestion-refinement.md"),
     PLANNING_MANIFEST_PATH,
 )
 
@@ -145,6 +147,7 @@ EXECPLAN_SECTION_ORDER: tuple[tuple[str, str, str], ...] = (
     ("Finished-Run Review", "finished_run_review", "dict"),
     ("Proof Report", "proof_report", "dict"),
     ("Intent Satisfaction", "intent_satisfaction", "dict"),
+    ("System Intent Alignment", "system_intent_alignment", "dict"),
     ("Closure Check", "closure_check", "dict"),
     ("Execution Summary", "execution_summary", "dict"),
     ("Drift Log", "drift_log", "list"),
@@ -895,6 +898,7 @@ def _build_execplan_record_from_markdown(plan_path: Path) -> dict[str, Any]:
         "finished_run_review": _extract_kv_fields(_section_lines(lines, "Finished-Run Review")),
         "proof_report": _extract_kv_fields(_section_lines(lines, "Proof Report")),
         "intent_satisfaction": _extract_kv_fields(_section_lines(lines, "Intent Satisfaction")),
+        "system_intent_alignment": _extract_kv_fields(_section_lines(lines, "System Intent Alignment")),
         "closure_check": _extract_kv_fields(_section_lines(lines, "Closure Check")),
         "execution_summary": _extract_kv_fields(_section_lines(lines, "Execution Summary")),
         "drift_log": _extract_section_bullets(plan_path, "Drift Log"),
@@ -1362,6 +1366,7 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
             "completed_execplans": completed_execplans,
             "archived_count": archived_execplans,
         },
+        "machine_first_planning": _machine_first_planning_payload(active_execplans=active_execplans),
         "planning_record": planning_record,
         "active_contract": _contract_projection(active_contract, view_name="active_contract"),
         "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
@@ -1608,6 +1613,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "adoption_mode",
             "todo",
             "execplans",
+            "machine_first_planning",
             "ownership_review",
             "planning_surface_health",
             "planning_record",
@@ -1628,6 +1634,14 @@ def _planning_summary_schema() -> dict[str, Any]:
             "warning_count",
         ],
         "view_fields": {
+            "machine_first_planning": [
+                "status",
+                "canonical_record_extension",
+                "human_view_extension",
+                "active_canonical_count",
+                "active_markdown_fallback_count",
+                "rule",
+            ],
             "planning_surface_health": [
                 "status",
                 "warning_count",
@@ -1646,6 +1660,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "proof_expectations",
                 "proof_report",
                 "intent_satisfaction",
+                "system_intent_alignment",
                 "closure_check",
                 "intent_interpretation",
                 "execution_bounds",
@@ -1781,6 +1796,7 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "owned_write_scope",
                 "proof_expectations",
                 "intent_interpretation",
+                "system_intent_alignment",
                 "pre_work_config_pull",
                 "pre_work_memory_pull",
                 "execution_bounds",
@@ -1815,6 +1831,30 @@ def _planning_summary_schema() -> dict[str, Any]:
     }
 
 
+def _machine_first_planning_payload(*, active_execplans: list[dict[str, str]]) -> dict[str, Any]:
+    active_paths = [str(item.get("path", "")) for item in active_execplans]
+    canonical_paths = [path for path in active_paths if path.endswith(".plan.json")]
+    markdown_fallback_paths = [path for path in active_paths if path.endswith(".md")]
+    if active_paths and not markdown_fallback_paths:
+        status = "canonical-active"
+    elif active_paths and canonical_paths:
+        status = "mixed-active"
+    elif active_paths:
+        status = "markdown-fallback-active"
+    else:
+        status = "no-active-execplan"
+    return {
+        "status": status,
+        "canonical_record_extension": ".plan.json",
+        "human_view_extension": ".md",
+        "active_canonical_count": len(canonical_paths),
+        "active_markdown_fallback_count": len(markdown_fallback_paths),
+        "canonical_active_execplans": canonical_paths,
+        "markdown_fallback_active_execplans": markdown_fallback_paths,
+        "rule": "When an execplan has a sibling .plan.json file, the sidecar is canonical and the .md file is a derived human-readable view; Markdown parsing remains a compatibility fallback.",
+    }
+
+
 def _planning_summary_compact_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-summary-compact-schema/v1",
@@ -1828,6 +1868,7 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
             "adoption_mode",
             "todo",
             "execplans",
+            "machine_first_planning",
             "planning_surface_health",
             "planning_record",
             "active_contract",
@@ -1860,6 +1901,7 @@ def _compact_projection(payload: dict[str, Any], *, fields: tuple[str, ...]) -> 
 def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, Any]:
     todo = dict(summary.get("todo", {}))
     execplans = dict(summary.get("execplans", {}))
+    machine_first_planning = dict(summary.get("machine_first_planning", {}))
     roadmap = dict(summary.get("roadmap", {}))
     planning_surface_health = dict(summary.get("planning_surface_health", {}))
     ownership_review = dict(summary.get("ownership_review", {}))
@@ -1887,6 +1929,14 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "completed_count": execplans.get("completed_count", 0),
             "archived_count": execplans.get("archived_count", 0),
         },
+        "machine_first_planning": {
+            "status": machine_first_planning.get("status", "unknown"),
+            "canonical_record_extension": machine_first_planning.get("canonical_record_extension", ".plan.json"),
+            "human_view_extension": machine_first_planning.get("human_view_extension", ".md"),
+            "active_canonical_count": machine_first_planning.get("active_canonical_count", 0),
+            "active_markdown_fallback_count": machine_first_planning.get("active_markdown_fallback_count", 0),
+            "rule": machine_first_planning.get("rule", ""),
+        },
         "planning_surface_health": {
             "status": planning_surface_health.get("status", "unknown"),
             "warning_count": planning_surface_health.get("warning_count", 0),
@@ -1901,6 +1951,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "next_action",
                 "review_residue",
                 "proof_expectations",
+                "system_intent_alignment",
                 "tool_verification",
                 "continuation_owner",
                 "execution_bounds",
@@ -1951,6 +2002,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "read_first",
                 "owned_write_scope",
                 "proof_expectations",
+                "system_intent_alignment",
                 "execution_bounds",
                 "stop_conditions",
                 "tool_verification",
@@ -2847,6 +2899,7 @@ def _canonical_planning_record(
     plan_path = _resolve_execplan_path(target_root, str(todo_item.get("surface", "")).strip() or active_milestone.get("id", ""))
     proof_report: dict[str, str] = {}
     intent_satisfaction: dict[str, str] = {}
+    system_intent_alignment: dict[str, str] = {}
     closure_check: dict[str, str] = {}
     intent_interpretation: dict[str, str] = {}
     execution_bounds: dict[str, str] = {}
@@ -2857,6 +2910,7 @@ def _canonical_planning_record(
     if plan_path is not None:
         proof_report = _execplan_proof_report(plan_path)
         intent_satisfaction = _execplan_intent_satisfaction(plan_path)
+        system_intent_alignment = _execplan_system_intent_alignment(plan_path)
         closure_check = _execplan_closure_check(plan_path)
         intent_interpretation = _execplan_intent_interpretation(plan_path)
         execution_bounds = _execplan_execution_bounds(plan_path)
@@ -2887,6 +2941,7 @@ def _canonical_planning_record(
         "proof_expectations": list(resumable_contract.get("proof_expectations", [])),
         "proof_report": proof_report,
         "intent_satisfaction": intent_satisfaction,
+        "system_intent_alignment": system_intent_alignment,
         "closure_check": closure_check,
         "intent_interpretation": intent_interpretation,
         "execution_bounds": execution_bounds,
@@ -3401,6 +3456,7 @@ def _active_handoff_contract(
         "proof_expectations": list(planning_record.get("proof_expectations", [])),
         "proof_report": dict(planning_record.get("proof_report", {})),
         "intent_satisfaction": dict(planning_record.get("intent_satisfaction", {})),
+        "system_intent_alignment": dict(planning_record.get("system_intent_alignment", {})),
         "intent_interpretation": dict(intent_interpretation_contract if intent_interpretation_contract.get("status") == "present" else {}),
         "pre_work_config_pull": str(context_budget_contract.get("pre_work_config_pull", "")).strip(),
         "pre_work_memory_pull": str(context_budget_contract.get("pre_work_memory_pull", "")).strip(),
@@ -3661,6 +3717,7 @@ def _render_inactive_execplan_residue(*, plan_path: Path, target_root: Path) -> 
     finished_run_review = _execplan_finished_run_review(plan_path)
     proof_report = _execplan_proof_report(plan_path)
     intent_satisfaction = _execplan_intent_satisfaction(plan_path)
+    system_intent_alignment = _execplan_system_intent_alignment(plan_path)
     closure_check = _execplan_closure_check(plan_path)
     execution_summary = _execplan_execution_summary(plan_path)
     relative = plan_path.relative_to(target_root).as_posix()
@@ -3788,6 +3845,16 @@ def _render_inactive_execplan_residue(*, plan_path: Path, target_root: Path) -> 
     ):
         if key in intent_satisfaction:
             lines.append(f"- {key[0].upper() + key[1:]}: {intent_satisfaction[key]}")
+    if system_intent_alignment:
+        lines.extend(["", "## System Intent Alignment", ""])
+        for key in (
+            "relevant system intent",
+            "slice shaping bias",
+            "broader-lane validation question",
+            "intent evidence source",
+        ):
+            if key in system_intent_alignment:
+                lines.append(f"- {key[0].upper() + key[1:]}: {system_intent_alignment[key]}")
     lines.extend(["", "## Closure Check", ""])
     for key in (
         "slice status",
@@ -4752,6 +4819,12 @@ def _build_execplan_record_from_todo_item(
             "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
             "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
         },
+        "system_intent_alignment": {
+            "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+            "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+            "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+            "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md",
+        },
         "references": [],
         "active_milestone": {
             "id": item_id,
@@ -4965,6 +5038,14 @@ def _execplan_intent_satisfaction(path: Path) -> dict[str, str]:
         return record
     lines = _read_lines(path)
     return _extract_kv_fields(_section_lines(lines, "Intent Satisfaction"))
+
+
+def _execplan_system_intent_alignment(path: Path) -> dict[str, str]:
+    record = _record_section_dict(_load_execplan_record(path), "system_intent_alignment")
+    if record is not None:
+        return record
+    lines = _read_lines(path)
+    return _extract_kv_fields(_section_lines(lines, "System Intent Alignment"))
 
 
 def _execplan_closure_check(path: Path) -> dict[str, str]:

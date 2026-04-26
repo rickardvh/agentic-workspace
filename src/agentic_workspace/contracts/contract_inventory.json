@@ -23,6 +23,17 @@
       "notes": "Stable proof route ids and commands are manifest-backed."
     },
     {
+      "area": "proof_selection_rules",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/proof_selection_rules.json",
+      "consumers": [
+        "agentic_workspace.cli:_proof_selection_for_changed_paths",
+        "agentic_workspace.cli:_implement_payload",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Changed-path proof classification rules are manifest-backed so bounded implementer proof selection does not depend on inline Python path tables."
+    },
+    {
       "area": "report_contract",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/report_contract.json",
@@ -71,6 +82,39 @@
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Local delegation outcome evidence shape is formalized separately from the editable local override so accumulated tuning evidence stays quiet and machine-readable."
+    },
+    {
+      "area": "startup_context_schema",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+      "consumers": [
+        "agentic-workspace start --format json",
+        "agentic_workspace.cli:_start_payload",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "The bounded startup context payload emitted by the CLI is schema-backed so adapter consumers can validate the shape without treating cli.py as the sole contract."
+    },
+    {
+      "area": "implementer_context_schema",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+      "consumers": [
+        "agentic-workspace implement --format json",
+        "agentic_workspace.cli:_implement_payload",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "The bounded implementer context payload emitted by the CLI is schema-backed so changed-path handoffs and proof requirements can be validated by non-Python adapters."
+    },
+    {
+      "area": "context_templates",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/context_templates.json",
+      "consumers": [
+        "agentic_workspace.cli:_start_payload",
+        "agentic_workspace.cli:_implement_payload",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Stable startup and implementer context text fragments are contract-backed so cli.py remains the renderer instead of the wording authority."
     },
     {
       "area": "report_payload_derivation",
@@ -152,6 +196,16 @@
       "notes": "Workflow artifact adapter profiles now come from checked-in contract JSON instead of inline Python tables."
     },
     {
+      "area": "workflow_definition_format",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/workflow_definition_format.json",
+      "consumers": [
+        "agentic_workspace.cli:_agent_configuration_workflow_extensions_payload",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Workflow component structure, composition, attachment, and migration posture are schema-backed so workflow docs can stay adapters over a machine-usable format."
+    },
+    {
       "area": "improvement_latitude_policy",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/improvement_latitude_policy.json",
@@ -208,6 +262,47 @@
         "future CLI/MCP/skill generators"
       ],
       "notes": "Draft operation contracts describe behavior, effects, guards, proof expectations, and primitive sequencing without replacing current runtime logic yet."
+    },
+    {
+      "area": "generated_tool_conformance",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/conformance_contracts.json",
+      "consumers": [
+        "agentic_workspace.conformance:run_process_conformance",
+        "tests/test_generated_tool_conformance.py",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Black-box conformance contracts validate alternate or generated implementations against operation behavior without trusting their implementation path."
+    },
+    {
+      "area": "python_extraction_map",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/python_extraction_map.json",
+      "consumers": [
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "future extraction slices"
+      ],
+      "notes": "The remaining Python-owned extractable content is classified by future owner, authority status, readiness, and follow-on slice before more extraction work proceeds."
+    },
+    {
+      "area": "python_contract_consumption",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/python_contract_consumption.json",
+      "consumers": [
+        "agentic_workspace.contract_tooling",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "The Python contract-consumption boundary, validated-loader route, and schema-derived model policy are explicit contract data rather than implicit helper behavior."
+    },
+    {
+      "area": "python_runtime_boundary",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/python_runtime_boundary.json",
+      "consumers": [
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "future extraction and conformance slices"
+      ],
+      "notes": "Remaining Python-owned behavior is classified as procedural-owned, live-inspection-owned, operation-contract-covered, or deferred-extractable so cli.py is no longer the only boundary map."
     },
     {
       "area": "module_registry",

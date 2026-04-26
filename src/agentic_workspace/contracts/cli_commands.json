@@ -72,6 +72,31 @@
       ]
     },
     {
+      "name": "implement",
+      "help": "Return a cheap-implementer context for a bounded changed-path scope.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path for implementer context (defaults to current workspace)."
+        },
+        {
+          "name": "changed",
+          "flags": [
+            "--changed"
+          ],
+          "nargs": "*",
+          "default": [],
+          "help": "Repo-relative changed paths used to select inspect scope, boundary warnings, and proof commands."
+        }
+      ]
+    },
+    {
       "name": "defaults",
       "help": "Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
       "uses_option_groups": [
