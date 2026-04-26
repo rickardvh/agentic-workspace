@@ -41,6 +41,24 @@
         "phrases": ["check path consolidation", "verify install boundaries align"],
         "when": ["path drift", "boundary consolidation"]
       }
+    },
+    {
+      "id": "self-improvement-dogfooding",
+      "path": "self-improvement-dogfooding/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "run bounded repo-local improvement cycles that dogfood package surfaces without becoming shipped workflow",
+      "activation_hints": {
+        "verbs": ["continue", "repeat", "improve", "dogfood", "autopilot"],
+        "nouns": ["self-improvement", "dogfooding", "improvement lane", "system intent"],
+        "phrases": [
+          "run self-improvement",
+          "repeat improvement work",
+          "dogfood the package",
+          "system-intent-driven dogfooding"
+        ],
+        "when": ["repo-local improvement loop", "autonomous package dogfooding", "system-intent follow-through"]
+      }
     }
   ]
 }

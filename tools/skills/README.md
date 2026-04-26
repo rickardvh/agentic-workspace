@@ -12,3 +12,4 @@ Current repo-specific skills:
 - `foundation-stability-check`
 - `ownership-ledger-check`
 - `path-consolidation-check`
+- `self-improvement-dogfooding`

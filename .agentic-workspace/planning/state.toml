@@ -3,7 +3,5 @@ active_items = []
 queued_items = []
 
 [roadmap]
-lanes = [
-  { id = "repo-local-dogfooding-skill", title = "Repo-local self-improvement dogfooding skill", priority = "first", issues = ["#379"], outcome = "Add a repo-local non-shipped skill for bounded system-intent-driven dogfooding.", reason = "#377 and #378 are complete; #379 is the remaining planned issue.", promotion_signal = "Create the smallest repo-local self-improvement skill using existing package surfaces.", suggested_first_slice = "Create the smallest repo-local self-improvement skill using existing package surfaces." },
-]
+lanes = []
 candidates = []

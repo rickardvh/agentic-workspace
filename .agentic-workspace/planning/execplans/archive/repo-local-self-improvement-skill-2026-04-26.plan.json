@@ -1,0 +1,148 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Repo Local Self Improvement Skill 2026 04 26",
+  "goal": [
+    "Resolve #379 by adding a repo-local, non-shipped self-improvement dogfooding skill."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Repo-local skill guidance exists for bounded system-intent-driven dogfooding loops.",
+      "constraints": "Do not create shipped package workflow, new authority over system intent, or an infinite autopilot loop.",
+      "latitude": "Place the skill in repo-owned tool skills and register it so package skill discovery can recommend it.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "repo-local-self-improvement-skill",
+      "status": "completed",
+      "next_step": "Create the smallest repo-local non-shipped self-improvement skill using existing package surfaces.",
+      "proof": "Run skills query, proof-selected workspace CLI tests, and root ruff."
+    },
+    "scope": {
+      "touched": [
+        "tools/skills/self-improvement-dogfooding/SKILL.md",
+        "tools/skills/REGISTRY.json",
+        "tools/skills/README.md"
+      ],
+      "invariants": [
+        "Skill stays repo-owned and non-shipped.",
+        "Package commands remain the operating path.",
+        "Human-owned product direction and system intent remain authoritative."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Let this repo dogfood the package through bounded improvement loops without adding shipped workflow machinery.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "agentic-workspace skills can now discover and recommend a repo-local self-improvement-dogfooding skill for repeat/autopilot dogfooding prompts.",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "skills query recommends the new skill; workspace CLI tests and ruff passed.",
+    "validation still needed": "none for #379",
+    "next likely slice": "refresh planning; no tracked open issue remains after #379 closes."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Add repo-local self-improvement dogfooding guidance.",
+    "hard constraints": "Keep it non-shipped, bounded, non-authoritative, and stop-trigger driven.",
+    "agent may decide locally": "Exact repo-owned skill placement and wording, provided package commands are the normal operating path.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "repo-local-self-improvement-skill",
+    "status": "completed",
+    "scope": "Repo-owned skill file, tool skill registry, and README listing.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Create the smallest repo-local non-shipped self-improvement skill using existing package surfaces."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "tools/skills/self-improvement-dogfooding/SKILL.md",
+    "tools/skills/REGISTRY.json",
+    "tools/skills/README.md"
+  ],
+  "invariants": [
+    "Skill stays repo-owned and non-shipped.",
+    "Package commands remain the operating path.",
+    "Human-owned product direction and system intent remain authoritative."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace skills --target . --task \"repeat system-intent-driven dogfooding improvement\" --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Repo-local guidance exists with loop shape, stop triggers, evidence requirements, friction routing, and anti-overfitting boundaries."
+  ],
+  "proof_report": {
+    "validation proof": "All selected proof commands passed.",
+    "proof achieved now": "The skills command discovers and recommends self-improvement-dogfooding for repeat system-intent dogfooding prompts; workspace CLI tests and root ruff passed.",
+    "evidence for \"proof achieved\" state": "uv run agentic-workspace skills --target . --task \"repeat system-intent-driven dogfooding improvement\" --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests"
+  },
+  "execution_summary": {
+    "outcome delivered": "Repo-owned self-improvement dogfooding skill added and registered.",
+    "validation confirmed": "uv run agentic-workspace skills --target . --task \"repeat system-intent-driven dogfooding improvement\" --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "pending closeout review",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "refresh planning state; no tracked open issue remains after #379 closeout"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No additional shipped package feature is needed for #379.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-26: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Add repo-local self-improvement dogfooding guidance.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#379 is closed; repo-local self-improvement-dogfooding skill exists, is registered, and is recommended by agentic-workspace skills.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The requested repo-local non-shipped guidance artifact is complete and bounded.",
+    "evidence carried forward": ".agentic-workspace/planning/reviews/repo-local-self-improvement-skill-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen if the skill is no longer discoverable or starts acting as shipped package authority."
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Repo-local self-improvement skill closeout",
+  "date": "2026-04-26",
+  "scope": [
+    "#379"
+  ],
+  "classification": "closeout",
+  "issue_classifications": [
+    {
+      "id": "#379",
+      "title": "[Workspace]: Add a repo-local self-improvement skill for system-intent-driven dogfooding",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "none",
+      "evidence": "Added tools/skills/self-improvement-dogfooding/SKILL.md, registered it in tools/skills/REGISTRY.json, listed it in tools/skills/README.md, and verified agentic-workspace skills recommends it for repeat system-intent-driven dogfooding improvement."
+    }
+  ],
+  "goal": [
+    "Confirm #379 added repo-local self-improvement dogfooding guidance without making it shipped package authority."
+  ],
+  "non_goals": [
+    "Do not ship a generic autopilot subsystem or give the skill authority over system intent."
+  ],
+  "review_mode": {
+    "mode": "closeout",
+    "review question": "Is the dogfooding loop repo-owned, bounded, discoverable, and routed through existing package commands?",
+    "default finding cap": "bounded",
+    "inputs inspected first": "compact planning and task-specific surfaces"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace skills --target . --task \"repeat system-intent-driven dogfooding improvement\" --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests",
+    "evidence sources": "tools/skills/self-improvement-dogfooding/SKILL.md, tools/skills/REGISTRY.json, tools/skills/README.md, skills command recommendation output"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#379",
+      "label": "repo-local self-improvement dogfooding skill",
+      "role": "closed-scope",
+      "locator": ""
+    }
+  ],
+  "findings": [],
+  "recommendation": {
+    "promote": "close #379 as complete",
+    "defer": "none",
+    "dismiss": "no shipped package feature needed"
+  },
+  "retention": {
+    "closeout shape": "shrink or archive after findings are routed",
+    "trigger": "review complete",
+    "proof surface": "this review record plus routed follow-up residue"
+  },
+  "validation_commands": [
+    "uv run agentic-workspace skills --target . --task \"repeat system-intent-driven dogfooding improvement\" --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests"
+  ],
+  "drift_log": [
+    "2026-04-26: Review record created by create-review.",
+    "2026-04-26: Closeout recorded after skill discovery and selected proof passed."
+  ]
+}
