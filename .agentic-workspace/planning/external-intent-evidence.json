@@ -617,7 +617,7 @@
       "system": "github",
       "id": "#343",
       "title": "[Planning]: Add closeout distillation so archived execplans stop being the durable-learning carrier",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
