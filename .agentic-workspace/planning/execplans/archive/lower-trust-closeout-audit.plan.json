@@ -183,9 +183,9 @@
   },
   "intent_satisfaction": {
     "original intent": "audit lower-trust roadmap lane closeouts before closing existing lanes",
-    "was original intent fully satisfied?": "yes for the audit artifact after validation passes",
-    "evidence of intent satisfaction": "The review artifact classifies #292-#316 plus #261/#279/#278/#306/#275 and adjacent #287/#288/#290, with evidence/follow-up/lane-impact fields.",
-    "unsolved intent passed to": "#323 and #325 in the machine-first-planning-state lane"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The review artifact classifies #292-#316 plus #261/#279/#278/#306/#275 and adjacent #287/#288/#290, with evidence/follow-up/lane-impact fields; follow-ups #323 and #325 are closed.",
+    "unsolved intent passed to": "none"
   },
   "system_intent_alignment": {
     "relevant system intent": "Agentic Workspace should make agent work restartable, reviewable, and grounded in structured local surfaces rather than chat-only state.",
@@ -195,9 +195,9 @@
   },
   "closure_check": {
     "slice status": "completed",
-    "larger-intent status": "open",
-    "closure decision": "close #324 only; keep roadmap lanes open",
-    "why this decision is honest": "The audit answers #324's requested reconciliation question without claiming the underlying lanes are complete.",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The audit answers #324's requested reconciliation question, follow-ups #323 and #325 are closed, and live planning state now carries only #230.",
     "evidence carried forward": ".agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json",
     "reopen trigger": "reopen or create follow-up if the audit finds closed issue intent not covered by open work"
   },

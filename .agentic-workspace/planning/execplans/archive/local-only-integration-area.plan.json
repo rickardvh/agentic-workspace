@@ -204,17 +204,17 @@
   },
   "intent_satisfaction": {
     "original intent": "prepare a full execplan that safely bounds the local-only integration-area lane",
-    "was original intent fully satisfied?": "yes for planning preparation, no for lane implementation",
-    "evidence of intent satisfaction": "the lane now has an explicit local-only boundary plan with path, validation, and non-authority constraints",
-    "unsolved intent passed to": ".agentic-workspace/planning/state.toml lane local-only-integration-area"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The local-only boundary/root slice landed, the related issues are closed, and live planning state no longer carries a local-only integration follow-up lane.",
+    "unsolved intent passed to": "none"
   },
   "closure_check": {
     "slice status": "completed",
-    "larger-intent status": "implemented for the boundary/root slice",
-    "closure decision": "close-slice",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
     "why this decision is honest": "the repo now has the requested local-only home, vendor/runtime subfolder convention, ignore rules, boundary doc, and config/defaults proof without introducing a shared plugin framework.",
     "evidence carried forward": "this execplan, `.agentic-workspace/docs/local-integration-area.md`, config/defaults output, ignore rules, and focused tests",
-    "reopen trigger": "revisit only if runtime-specific examples are needed after review or local users still put disposable integrations in shared workflow surfaces."
+    "reopen trigger": "create a fresh issue if runtime-specific examples are needed after review or local users still put disposable integrations in shared workflow surfaces."
   },
   "execution_summary": {
     "outcome delivered": "created a sanctioned local-only integration area rooted at `.agentic-workspace/local/integrations/` with direct vendor/runtime subfolders and explicit non-authority rules",

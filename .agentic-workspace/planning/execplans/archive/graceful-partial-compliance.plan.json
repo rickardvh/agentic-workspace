@@ -249,17 +249,17 @@
   },
   "intent_satisfaction": {
     "original intent": "prepare a full execplan that lets a strong planner steer the graceful-partial-compliance lane safely",
-    "was original intent fully satisfied?": "yes for planning preparation, no for lane implementation",
-    "evidence of intent satisfaction": "the lane now has an explicit audit-first plan with bounded validation and trust-signaling criteria",
-    "unsolved intent passed to": ".agentic-workspace/planning/state.toml lane graceful-partial-compliance"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The lane's bounded slices landed, #330 later closed the remaining compact TOML promote-to-plan friction, and live planning state no longer carries a graceful-partial-compliance follow-up lane.",
+    "unsolved intent passed to": "none"
   },
   "closure_check": {
-    "slice status": "all bounded slices complete",
+    "slice status": "completed",
     "larger-intent status": "completed",
-    "closure decision": "close-lane",
+    "closure decision": "archive-and-close",
     "why this decision is honest": "issues #277, #256, #254, #255, and #253 are complete, and together they satisfy the parent graceful-partial-compliance acceptance: startup is easier to discover, compact surfaces are cheaper to use, and likely bypass is now visibly lower-trust rather than silently accepted.",
     "evidence carried forward": "this execplan, the closed child issues, and the final checked-in startup/preflight/report routing behavior",
-    "reopen trigger": "reopen only if new generic-agent evidence shows startup, compact-surface cost, or lower-trust review still failing materially"
+    "reopen trigger": "create a fresh issue if new generic-agent evidence shows startup, compact-surface cost, or lower-trust review still failing materially"
   },
   "execution_summary": {
     "outcome delivered": "Completed the graceful-partial-compliance lane end to end: stronger startup discoverability, one-call takeover context, cheaper compact operating routes, and visible lower-trust closeout state are all landed.",
