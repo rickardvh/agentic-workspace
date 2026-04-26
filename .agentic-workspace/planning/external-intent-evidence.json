@@ -626,7 +626,7 @@
       "system": "github",
       "id": "#344",
       "title": "[Memory]: Shrink ordinary Memory pulls through structured durable-fact routing",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
