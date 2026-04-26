@@ -1276,6 +1276,7 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
             archived_execplans = max(archived_md, archived_json)
 
     warnings = _run_planning_checker(target_root)
+    warnings.extend(_completed_execplan_warnings(completed_execplans))
     drift = _detect_payload_drift(target_root)
     warnings.extend(drift)
     planning_surface_health = _planning_surface_health(warnings)
@@ -2184,6 +2185,25 @@ def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
         "recommended_next_action": first_fix,
         "warnings": health_warnings,
     }
+
+
+def _completed_execplan_warnings(completed_execplans: list[dict[str, Any]]) -> list[dict[str, str]]:
+    warnings: list[dict[str, str]] = []
+    for plan in completed_execplans:
+        path = str(plan.get("path", "")).strip()
+        if not path:
+            continue
+        warnings.append(
+            {
+                "warning_class": "archive_accumulation_drift",
+                "path": path,
+                "message": (
+                    "Completed execplan remains in the live execplans directory; "
+                    "archive it with `agentic-planning-bootstrap archive-plan` or return it to active status."
+                ),
+            }
+        )
+    return warnings
 
 
 def _planning_handoff_schema() -> dict[str, Any]:
@@ -4322,7 +4342,15 @@ def archive_execplan(
                 "message": "Completed execplan is missing a complete intent satisfaction report.",
             }
         )
-        result.add("manual review", plan_path, "fill `Intent Satisfaction` with satisfied intent evidence before archiving")
+        result.add(
+            "manual review",
+            plan_path,
+            (
+                "fill `Intent Satisfaction` before archiving: "
+                "`intent_satisfaction.was original intent fully satisfied?` must be one of `yes`, `true`, `no`, or `false`, "
+                "and `original intent` plus `evidence of intent satisfaction` must be present"
+            ),
+        )
         return result
     if (
         not slice_status
@@ -4349,7 +4377,14 @@ def archive_execplan(
                 "message": "Closure Check does not mark the bounded slice as complete.",
             }
         )
-        result.add("manual review", plan_path, "mark the bounded slice complete in `Closure Check` before archiving")
+        result.add(
+            "manual review",
+            plan_path,
+            (
+                "mark the bounded slice complete before archiving: "
+                "`closure_check.slice status` must be one of `complete`, `completed`, or `bounded slice complete`"
+            ),
+        )
         return result
     if closure_decision in {"keep-active", "stay-active", "continue-active"}:
         result.warnings.append(
@@ -4370,7 +4405,15 @@ def archive_execplan(
                     "message": "Archive-and-close requires explicit larger-intent closure evidence.",
                 }
             )
-            result.add("manual review", plan_path, "record larger-intent closure honestly before using `archive-and-close`")
+            result.add(
+                "manual review",
+                plan_path,
+                (
+                    "record larger-intent closure honestly before using `archive-and-close`: "
+                    "`intent_satisfaction.was original intent fully satisfied?` must be `yes` or `true`, "
+                    "and `closure_check.larger-intent status` must be one of `closed`, `complete`, or `completed`"
+                ),
+            )
             return result
         if unsolved_intent and unsolved_intent.lower() not in {"none", "n/a", "none yet"}:
             result.warnings.append(
@@ -4380,7 +4423,14 @@ def archive_execplan(
                     "message": "Archive-and-close cannot leave unsolved intent routed elsewhere.",
                 }
             )
-            result.add("manual review", plan_path, "remove unsolved intent routing or switch to `archive-but-keep-lane-open`")
+            result.add(
+                "manual review",
+                plan_path,
+                (
+                    "remove unsolved intent routing or switch to `archive-but-keep-lane-open`: "
+                    "`intent_satisfaction.unsolved intent passed to` must be `none`, `n/a`, or `none yet` for `archive-and-close`"
+                ),
+            )
             return result
     elif closure_decision == "archive-but-keep-lane-open":
         if fully_satisfied not in {"no", "false"} or larger_intent_status not in {"open", "partial", "unfinished"}:
@@ -4391,7 +4441,15 @@ def archive_execplan(
                     "message": "Archive-but-keep-lane-open requires explicit evidence that the larger intent remains open.",
                 }
             )
-            result.add("manual review", plan_path, "align `Intent Satisfaction` and `Closure Check` with the partial-intent decision")
+            result.add(
+                "manual review",
+                plan_path,
+                (
+                    "align `Intent Satisfaction` and `Closure Check` with `archive-but-keep-lane-open`: "
+                    "`intent_satisfaction.was original intent fully satisfied?` must be `no` or `false`, "
+                    "and `closure_check.larger-intent status` must be one of `open`, `partial`, or `unfinished`"
+                ),
+            )
             return result
         if not unsolved_intent or unsolved_intent.lower() in {"none", "n/a", "none yet"}:
             result.warnings.append(
@@ -4401,7 +4459,14 @@ def archive_execplan(
                     "message": "Partial-intent archive must name the checked-in owner that now carries the unsolved intent.",
                 }
             )
-            result.add("manual review", plan_path, "record the routed unsolved intent before archiving a partial slice")
+            result.add(
+                "manual review",
+                plan_path,
+                (
+                    "record the routed unsolved intent before archiving a partial slice: "
+                    "`intent_satisfaction.unsolved intent passed to` must name the checked-in continuation owner"
+                ),
+            )
             return result
     else:
         result.warnings.append(
@@ -4411,7 +4476,14 @@ def archive_execplan(
                 "message": f"Closure Check uses an unsupported closure decision: {closure_decision}.",
             }
         )
-        result.add("manual review", plan_path, "use `archive-and-close` or `archive-but-keep-lane-open` in `Closure Check`")
+        result.add(
+            "manual review",
+            plan_path,
+            (
+                "use a supported closure decision: "
+                "`closure_check.closure decision` must be one of `archive-and-close` or `archive-but-keep-lane-open`"
+            ),
+        )
         return result
     if _execplan_needs_reference_sweep(plan_path) and not _validation_has_reference_sweep(validation_commands):
         result.warnings.append(
@@ -4763,7 +4835,10 @@ def _warning_remediation(warning_class: str) -> str | None:
         "upgrade_source_stale": (
             "Refresh .agentic-workspace/planning/UPGRADE-SOURCE.toml after intentionally upgrading the bootstrap source."
         ),
-        "archive_accumulation_drift": "Remove completed residue from active surfaces or move completed plans into archive.",
+        "archive_accumulation_drift": (
+            "Archive completed live execplans with `agentic-planning-bootstrap archive-plan <plan> --target .`, "
+            "or return the plan to active status if it still owns future execution."
+        ),
         "planning_memory_boundary_blur": "Move durable technical facts into memory or canonical docs, then leave planning surfaces lean.",
         "startup_policy_drift": "Restore the minimal startup order in AGENTS, quickstart, and manifest.",
     }.get(warning_class)

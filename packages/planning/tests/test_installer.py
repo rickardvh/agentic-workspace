@@ -1770,6 +1770,59 @@ def test_archive_execplan_blocks_incomplete_intent_satisfaction(tmp_path: Path) 
         action.kind == "manual review"
         and action.path == plan_path
         and ("Intent Satisfaction" in action.detail or "archive-and-close" in action.detail or "larger-intent closure" in action.detail)
+        and (
+            "intent_satisfaction.was original intent fully satisfied?" in action.detail
+            or "closure_check.larger-intent status" in action.detail
+        )
+        for action in result.actions
+    )
+
+
+def test_archive_execplan_refusal_names_supported_closure_values(tmp_path: Path) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
+    _write(
+        plan_path,
+        _minimal_execplan(status="completed")
+        .replace("- Slice status: bounded slice complete", "- Slice status: all bounded slices complete")
+        .replace("- Closure decision: archive-and-close", "- Closure decision: close-lane"),
+    )
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_missing_closure_check" for warning in result.warnings)
+    assert any(
+        action.kind == "manual review"
+        and action.path == plan_path
+        and "closure_check.slice status" in action.detail
+        and "complete" in action.detail
+        and "completed" in action.detail
+        and "bounded slice complete" in action.detail
+        for action in result.actions
+    )
+
+
+def test_archive_execplan_refusal_names_supported_closure_decisions(tmp_path: Path) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md"
+    _write(
+        plan_path,
+        _minimal_execplan(status="completed").replace("- Closure decision: archive-and-close", "- Closure decision: close-lane"),
+    )
+
+    result = archive_execplan("plan-alpha", target=tmp_path)
+
+    assert plan_path.exists()
+    assert any(warning["warning_class"] == "archive_missing_closure_check" for warning in result.warnings)
+    assert any(
+        action.kind == "manual review"
+        and action.path == plan_path
+        and "closure_check.closure decision" in action.detail
+        and "archive-and-close" in action.detail
+        and "archive-but-keep-lane-open" in action.detail
         for action in result.actions
     )
 
@@ -3116,6 +3169,10 @@ def test_planning_summary_exposes_closure_evidence(tmp_path: Path) -> None:
     assert completed_execplans[0]["proof_report"]["proof achieved now"] == "validation and closure checks passed for the bounded slice."
     assert completed_execplans[0]["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
     assert completed_execplans[0]["closure_check"]["closure decision"] == "archive-and-close"
+    assert summary["planning_surface_health"]["status"] == "not-clean"
+    assert summary["planning_surface_health"]["warnings"][0]["warning_class"] == "archive_accumulation_drift"
+    assert summary["planning_surface_health"]["warnings"][0]["path"].endswith(".agentic-workspace/planning/execplans/plan-alpha.md")
+    assert "archive-plan" in summary["planning_surface_health"]["recommended_next_action"]
     assert "intent_interpretation" in summary["schema"]["view_fields"]["planning_record"]
     assert "execution_run" in summary["schema"]["view_fields"]["planning_record"]
     assert "finished_run_review" in summary["schema"]["view_fields"]["planning_record"]

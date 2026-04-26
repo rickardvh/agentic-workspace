@@ -1,0 +1,190 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning State Hygiene Followthrough",
+  "goal": [
+    "Implement the fresh package dogfooding issues #332 through #336 end-to-end.",
+    "Keep the shipped package provider-, repo-, agent-, tool-, and language-agnostic.",
+    "Commit and push after coherent milestones and close issues only after proof."
+  ],
+  "non_goals": [
+    "Do not assume GitHub in shipped package behavior.",
+    "Do not close #230 without a fresh product-compression slice.",
+    "Do not switch branches."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Planning package surfaces make stale state, archive refusal correction, compact-state dogfooding, and provider-agnostic reconciliation cheaper and harder to misuse.",
+      "constraints": "No GitHub-specific core package assumptions; root planning stays authoritative; local integrations stay ignored and advisory.",
+      "latitude": "Choose issue grouping by implementation dependency and commit after each milestone.",
+      "escalation": "Stop if a fix requires tracker-specific core semantics or broad planning schema redesign beyond the issue acceptance."
+    },
+    "execution": {
+      "milestone": "archive-health-and-messages",
+      "status": "completed",
+      "next_step": "Implement #336 compact-state dogfooding coverage.",
+      "proof": "Focused package tests, summary/checker, ruff, and dogfood commands."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/",
+        "packages/planning/tests/",
+        "src/agentic_workspace/",
+        "tests/",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/planning-state-hygiene-followthrough.plan.json"
+      ],
+      "invariants": [
+        "Core package behavior remains external-provider agnostic.",
+        "Completed execplans do not pass as clean live planning state.",
+        "Compact TOML state is exercised as a primary path."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "make package dogfooding findings become product behavior rather than one-off cleanup",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml and open issues #332-#336",
+    "parent lane": "planning-state-hygiene-followthrough"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "continue through #332-#336 until all are closed or explicitly rerouted"
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest issues and implement them end-to-end.",
+    "inferred intended outcome": "use the package and local integration to implement the fresh issues created from dogfooding findings, with proof, commits, pushes, and closures",
+    "chosen concrete what": "start with #332/#335, then #336, then #333/#334 provider-agnostic reconciliation/current-vs-historical reporting",
+    "interpretation distance": "low",
+    "review guidance": "reject tracker-specific core behavior and reject leaving stale planning residue live"
+  },
+  "delegated_judgment": {
+    "requested outcome": "implement #332-#336 end-to-end",
+    "hard constraints": "stay on master; core package must be provider-agnostic; use package workflow; commit/push after milestones",
+    "agent may decide locally": "exact test fixtures, helper names, and issue grouping by dependency",
+    "escalate when": "a feature requires hard-coding a host tracker or changing repo-owned planning authority"
+  },
+  "execution_bounds": {
+    "allowed paths": "planning/workspace package source and tests, active planning state and execplan",
+    "max changed files": "30",
+    "required validation commands": "focused pytest for touched behavior; ruff for touched Python; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "ask-before-refactor threshold": "stop before broad schema redesign or tracker-specific package core",
+    "stop before touching": "unrelated memory behavior or branch state"
+  },
+  "context_budget": {
+    "live working set": "#332 #333 #334 #335 #336, planning installer/checker/CLI tests, active execplan",
+    "recoverable later": "archived historical plans and broad #230 product-compression direction",
+    "externalize before shift": "update execution_run, proof_report, intent_satisfaction, and closure_check after each milestone",
+    "pre-work config pull": "local Codex snapshot, agentic-workspace preflight/summary, gh issue list",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "implement package hygiene issues from dogfooding in dependency order",
+    "context-shift triggers": "after each commit/push milestone or if provider-agnostic reconciliation scope grows"
+  },
+  "stop_conditions": {
+    "stop when": "#332-#336 are implemented, validated, committed, pushed, closed, and the plan is archived or remaining work is explicitly routed",
+    "escalate when boundary reached": "hard-coded GitHub semantics appear necessary in shipped package core",
+    "escalate on scope drift": "work becomes broad product simplification under #230",
+    "escalate on proof failure": "summary/checker or focused tests fail after attempted fixes"
+  },
+  "references": [
+    { "kind": "issue", "target": "#332", "label": "completed live execplans attention", "role": "milestone" },
+    { "kind": "issue", "target": "#333", "label": "provider-agnostic reconcile", "role": "milestone" },
+    { "kind": "issue", "target": "#334", "label": "current versus historical external state", "role": "milestone" },
+    { "kind": "issue", "target": "#335", "label": "archive refusal accepted values", "role": "milestone" },
+    { "kind": "issue", "target": "#336", "label": "compact-state dogfooding coverage", "role": "milestone" }
+  ],
+  "active_milestone": {
+    "id": "compact-state-dogfooding-coverage",
+    "status": "in-progress",
+    "scope": "#336",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add package-level dogfooding coverage that exercises compact state through command-level paths.",
+    "Keep legacy compatibility tests intact while making compact TOML the primary conformance fixture."
+  ],
+  "blockers": ["None."],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/planning-state-hygiene-followthrough.plan.json"
+  ],
+  "invariants": [
+    "Provider-agnostic shipped package core.",
+    "Checked-in planning state remains the active authority.",
+    "Local integration remains ignored and advisory."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py packages/planning/tests/test_check_planning_surfaces.py -q -k \"archive or planning_surface_health or completed\"",
+    "uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py packages/planning/tests/test_check_planning_surfaces.py",
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "git diff --check"
+  ],
+  "required_tools": ["git", "gh", "uv"],
+  "completion_criteria": [
+    "#332 exposes completed live execplans as planning-surface attention.",
+    "#335 archive-plan refusal messages name accepted values and field paths.",
+    "#336 compact-state dogfooding coverage protects package commands.",
+    "#333 provider-agnostic reconcile/report exists or is honestly scoped and proven.",
+    "#334 current external-work signals are separated from historical audit references without GitHub assumptions."
+  ],
+  "execution_run": {
+    "run status": "in-progress",
+    "executor": "Codex",
+    "handoff source": "active execplan plus local Codex snapshot",
+    "what happened": "Implemented #332/#335: completed live execplans now add archive_accumulation_drift to planning surface health, remediation names archive-plan, and archive-plan refusal details now name accepted closeout field values.",
+    "scope touched": "planning installer and tests plus active planning state",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/planning-state-hygiene-followthrough.plan.json",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"archive_execplan or planning_summary_exposes_closure_evidence or planning_surface_health\"; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "result for continuation": "#332 and #335 are ready to close after commit/push; continue with #336.",
+    "next step": "Commit/push #332/#335, close those issues, then implement #336."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "pending"
+  },
+  "proof_report": {
+    "validation proof": "pending",
+    "proof achieved now": "no",
+    "evidence for \"proof achieved\" state": "pending"
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement the freshly ingested package dogfooding issues end-to-end.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "pending",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Keep agent work restartable, reviewable, compact, and grounded in structured local surfaces.",
+    "slice shaping bias": "Turn dogfooding friction into package behavior and regression coverage.",
+    "broader-lane validation question": "Does the package make stale planning state and provider-specific assumptions harder to miss?",
+    "intent evidence source": "#332-#336"
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "implementation has just started",
+    "evidence carried forward": "pending",
+    "reopen trigger": "pending"
+  },
+  "execution_summary": {
+    "outcome delivered": "pending",
+    "validation confirmed": "pending",
+    "follow-on routed to": "#332-#336",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "pending",
+    "resume from": "compact-state-dogfooding-coverage"
+  },
+  "drift_log": [
+    "2026-04-26: Promoted #332-#336 after local Codex integration setup and issue ingestion.",
+    "2026-04-26: Completed #332/#335 package health and archive-message milestone."
+  ]
+}
