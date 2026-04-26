@@ -1,0 +1,31 @@
+{
+  "kind": "planning-review/v1",
+  "title": "CLI Authority Audit Closeout",
+  "summary": "#357 is a bounded audit prerequisite under #356. The audit artifact classifies root, planning, and memory CLI authority and identifies root `defaults` as the first low-risk generated adapter candidate. #358 should define the generation contract before #359 implements that adapter. #356 and #230 remain open for the broader lane.",
+  "issue_classifications": [
+    {
+      "id": "#357",
+      "title": "[Review]: Audit remaining hand-authored CLI authority before generated adapter work",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "live_state": "closed",
+      "evidence": "docs/reviews/cli-authority-audit-2026-04-26.md",
+      "follow_up": "#358"
+    },
+    {
+      "id": "#356",
+      "title": "[Workspace]: Generate shipped CLI adapters from authoritative package definitions",
+      "classification": "covered_by_open_followup",
+      "live_state": "open",
+      "evidence": "docs/reviews/cli-authority-audit-2026-04-26.md identifies root `defaults` as the first generated-adapter candidate after #358 defines the contract.",
+      "follow_up": "#356"
+    },
+    {
+      "id": "#358",
+      "title": "[Workspace]: Define the canonical command adapter generation contract",
+      "classification": "covered_by_open_followup",
+      "live_state": "open",
+      "evidence": "The audit identifies which fields and boundaries the generation contract must preserve.",
+      "follow_up": "#358"
+    }
+  ]
+}

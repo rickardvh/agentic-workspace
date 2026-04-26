@@ -4,6 +4,6 @@ queued_items = []
 
 [roadmap]
 lanes = [
-  { id = "further-product-compression-on-repeated-pressure", title = "Further product compression on repeated pressure", priority = "first", issues = ["#230"], outcome = "Continue removing, demoting, internalizing, or making measurable visible product residue so ordinary operation gets cheaper without losing leverage.", reason = "#355 landed the first validation-repair-loop slice and closed; #230 remains as the umbrella for future measured pressure.", promotion_signal = "Promote the smallest fresh slice that reduces default reading, durable residue, validation repair loops, or review cost without adding a new first-line concept.", suggested_first_slice = "Wait for fresh issue evidence or measured friction under #230 before promoting another slice." },
+  { id = "generated-cli-adapter-migration", title = "Generated CLI adapter migration", priority = "first", issues = ["#230", "#356", "#358", "#359", "#360", "#361", "#362", "#363"], outcome = "Move shipped CLI adapter interface authority behind implementation-independent contracts while preserving runtime primitive ownership.", reason = "#357 completed the prerequisite audit; refreshed issue state splits the implementation lane into #358-#363.", promotion_signal = "Start with #358, then #359 using root `defaults` as the first generated adapter candidate.", suggested_first_slice = "Define the canonical command-adapter generation contract in #358 before generating the root `defaults` adapter in #359." },
 ]
 candidates = []

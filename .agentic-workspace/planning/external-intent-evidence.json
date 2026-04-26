@@ -729,6 +729,78 @@
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#356",
+      "title": "[Workspace]: Generate shipped CLI adapters from authoritative package definitions",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#357",
+      "title": "[Workspace]: Audit remaining hand-authored CLI authority",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#356",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#358",
+      "title": "[Workspace]: Define the canonical command adapter generation contract",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#356",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#359",
+      "title": "[Workspace]: Generate the first read-only CLI adapter slice",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#356",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#360",
+      "title": "[Workspace]: Add conformance and drift checks for generated CLI adapters",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#356",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#361",
+      "title": "[Workspace]: Add no-direct-edit guardrails for generated CLI surfaces",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#356",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#362",
+      "title": "[Workspace]: Extend generated adapter migration to planning and memory command surfaces",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#356",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#363",
+      "title": "[Workspace]: Define multi-adapter projection requirements for generated command surfaces",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#356",
+      "planning_residue_expected": "required"
     }
   ]
 }

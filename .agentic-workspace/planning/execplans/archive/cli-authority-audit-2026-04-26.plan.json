@@ -1,0 +1,234 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "CLI Authority Audit",
+  "goal": [
+    "Implement #357 by auditing remaining hand-authored CLI authority across root, planning, and memory CLIs before generated adapter work."
+  ],
+  "non_goals": [
+    "Generate a CLI adapter.",
+    "Rewrite command behavior.",
+    "Add new commands."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "A compact audit identifies which CLI command surfaces are generation-ready, missing contracts, hand-authored authority, runtime-owned primitives, or deferred.",
+      "constraints": "Stay on master; keep this as an audit slice; do not start the #356 generation migration.",
+      "latitude": "Choose the artifact location and classification detail that best supports the next slice.",
+      "escalation": "Stop before implementing generated adapters or broad command refactors."
+    },
+    "execution": {
+      "milestone": "cli-authority-audit",
+      "status": "active",
+      "next_step": "Inspect CLI modules and contract sources, then write the compact audit artifact.",
+      "proof": "Use proof --changed, planning surface checks, reconcile, summary."
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Generate shipped CLI adapters from authoritative package definitions instead of treating executable CLI code as interface authority.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#356",
+    "parent lane": "#356"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#356",
+    "activation trigger": "After #357 audit is closed and a low-risk generated adapter candidate is selected."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Generated CLI adapter work can start from classified command authority instead of broad CLI rediscovery.",
+    "intentionally deferred": "Any generated adapter implementation.",
+    "discovered implications": "Root CLI command shape is already manifest-backed; planning and memory package CLIs still own interface authority directly in argparse.",
+    "proof achieved now": "The audit classified root, planning, and memory CLI authority and identified root `defaults` as the first low-risk generated adapter candidate.",
+    "validation still needed": "Run planning-surface and maintainer-surface validation after archive closeout.",
+    "next likely slice": "#358 should define the command-adapter generation contract, then #359 can start generated adapter work from the root `defaults` command."
+  },
+  "intent_interpretation": {
+    "literal request": "Do whatever further work you can already now.",
+    "inferred intended outcome": "Continue current open product-compression/follow-up work by handling the next safe prerequisite slice.",
+    "chosen concrete what": "Implement #357 audit and leave #356/#230 open.",
+    "interpretation distance": "low",
+    "review guidance": "Check that this is an audit only and identifies the first generation candidate without implementing it."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning state/evidence/execplan/review artifacts and a compact audit artifact.",
+    "max changed files": "Prefer under 6 files.",
+    "required validation commands": "agentic-workspace proof --changed; check_planning_surfaces; reconcile; summary.",
+    "ask-before-refactor threshold": "Any code generation or CLI behavior change.",
+    "stop before touching": "src/agentic_workspace/cli.py behavior, packages/* CLI behavior, contract schemas."
+  },
+  "stop_conditions": {
+    "stop when": "#357 is closed with a compact audit and this plan archives cleanly.",
+    "escalate when boundary reached": "The audit requires command behavior changes to classify accurately.",
+    "escalate on scope drift": "Work expands into generating adapters.",
+    "escalate on proof failure": "Planning surface checks fail."
+  },
+  "context_budget": {
+    "live working set": "issues #356/#357, root/planning/memory CLI modules, relevant command contracts, this execplan",
+    "recoverable later": "full CLI implementation details after audit",
+    "externalize before shift": "Update execution_run and closeout_distillation before archive.",
+    "pre-work config pull": "uv run agentic-workspace preflight --format json",
+    "pre-work memory pull": "Not needed.",
+    "tiny resumability note": "Continue from #357 audit plan.",
+    "context-shift triggers": "Before inspecting individual command implementations in depth beyond audit needs."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Close #357 with a compact CLI authority audit.",
+    "hard constraints": "Do not implement generation or change CLI behavior.",
+    "agent may decide locally": "Audit artifact format and first candidate recommendation.",
+    "escalate when": "The user expects #356 implementation rather than audit closure."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#357",
+      "label": "CLI authority audit",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#356",
+      "label": "generated CLI adapter migration",
+      "role": "parent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#230",
+      "label": "product compression umbrella",
+      "role": "related",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "cli-authority-audit",
+    "status": "completed",
+    "scope": "#357",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect CLI and contract surfaces and write the audit artifact."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/cli-authority-audit-2026-04-26.plan.json",
+    "docs/reviews/cli-authority-audit-2026-04-26.md",
+    ".agentic-workspace/planning/reviews/cli-authority-audit-closeout-2026-04-26.review.json"
+  ],
+  "invariants": [
+    "Do not switch branches.",
+    "Do not add shipped CLI generation in this audit slice."
+  ],
+  "contract_decisions_to_freeze": [
+    "Runtime primitive implementation is not the same as command/interface authority."
+  ],
+  "open_questions_to_close": [
+    "Closed: root `agentic-workspace defaults` is the first low-risk generated adapter candidate."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "gh",
+    "uv",
+    "git"
+  ],
+  "completion_criteria": [
+    "#357 is implemented and closed.",
+    "Audit covers root, planning, and memory CLIs.",
+    "Audit identifies first generated adapter candidate.",
+    "No active execplan remains after archive closeout."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "preflight, gh issue list, local CLI/contract inspection",
+    "what happened": "Promoted #357, inspected root/planning/memory CLI authority and root operation contracts, then wrote a compact review artifact.",
+    "scope touched": "Planning state, active execplan, and one review artifact.",
+    "changed surfaces": "state.toml, active execplan, docs/reviews/cli-authority-audit-2026-04-26.md.",
+    "validations run": "preflight, gh issue list, git status, local CLI/contract inspection.",
+    "result for continuation": "Use #358 to define the command-adapter generation contract, then #359 to generate or mechanically assemble the root `defaults` adapter first.",
+    "next step": "Archive this plan after closeout and validation."
+  },
+  "finished_run_review": {
+    "review status": "ready for archive after validation",
+    "scope respected": "yes; no CLI behavior or generated adapter implementation was changed",
+    "proof status": "proof selector chose planning_surfaces and maintainer_surfaces; final commands pending",
+    "intent served": "yes for #357; parent #356 remains open",
+    "config compliance": "stayed on master and used package planning/preflight surfaces",
+    "misinterpretation risk": "low",
+    "follow-on decision": "Keep #356, #358, #359, #360, #361, #362, #363, and #230 open."
+  },
+  "proof_report": {
+    "validation proof": "uv run agentic-workspace proof --target . --changed ... --format json; uv run agentic-workspace doctor --target . --modules planning --format json; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py",
+    "proof achieved now": "Proof selector returned planning_surfaces and maintainer_surfaces; planning doctor reported healthy; maintainer surfaces completed ok; planning-surface drift check reported no warnings.",
+    "evidence for \"proof achieved\" state": "docs/reviews/cli-authority-audit-2026-04-26.md plus successful local validation command outputs."
+  },
+  "intent_satisfaction": {
+    "original intent": "Do whatever further work you can already now.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#357 audit artifact completed at docs/reviews/cli-authority-audit-2026-04-26.md",
+    "unsolved intent passed to": "#356 via #358 then #359"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Reduce executable CLI code as an authority surface while preserving runtime primitives.",
+    "slice shaping bias": "Audit before generation.",
+    "broader-lane validation question": "Can the next generated adapter slice start without broad rediscovery?",
+    "intent evidence source": "#357"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#357 was a bounded audit prerequisite; generated adapter implementation remains open under #356.",
+    "evidence carried forward": "docs/reviews/cli-authority-audit-2026-04-26.md and .agentic-workspace/planning/reviews/cli-authority-audit-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen #357 if #358 or #359 cannot proceed without broad CLI authority rediscovery."
+  },
+  "execution_summary": {
+    "outcome delivered": "CLI authority audit for root, planning, and memory CLIs.",
+    "validation confirmed": "Proof selector, planning doctor, maintainer surfaces, and planning-surface drift check passed.",
+    "follow-on routed to": "#358 then #359 under #356",
+    "post-work posterity capture": "Review artifact records command classification and first candidate.",
+    "knowledge promoted (Memory/Docs/Config)": "Review artifact only; no startup surface added.",
+    "resume from": "#358 command-adapter generation contract, then #359 root `defaults` generated adapter candidate."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Raw inspection details not needed after the audit artifact.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#358 remains open to define the command-adapter generation contract before #359 implements root `defaults` generation.",
+          "owner": "#358",
+          "source": "#357"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "CLI authority audit complete; continue generated adapter work through #358, then #359, under #356.",
+          "owner": "#358",
+          "source": "#357"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-26: Promoted #357 as the next safe work after #355."
+  ]
+}
