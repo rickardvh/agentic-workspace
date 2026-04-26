@@ -21,7 +21,7 @@
     "execution": {
       "milestone": "archive-health-and-messages",
       "status": "completed",
-      "next_step": "Implement #336 compact-state dogfooding coverage.",
+      "next_step": "Implement #333/#334 provider-agnostic reconciliation and current-vs-historical reporting.",
       "proof": "Focused package tests, summary/checker, ruff, and dogfood commands."
     },
     "scope": {
@@ -94,16 +94,16 @@
     { "kind": "issue", "target": "#336", "label": "compact-state dogfooding coverage", "role": "milestone" }
   ],
   "active_milestone": {
-    "id": "compact-state-dogfooding-coverage",
+    "id": "provider-agnostic-reconcile",
     "status": "in-progress",
-    "scope": "#336",
+    "scope": "#333 and #334",
     "ready": "yes",
     "blocked": "no",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Add package-level dogfooding coverage that exercises compact state through command-level paths.",
-    "Keep legacy compatibility tests intact while making compact TOML the primary conformance fixture."
+    "Add a provider-agnostic planning reconcile/report path for stale planning state versus supplied external-work state.",
+    "Separate current external-work state from historical audit references without hard-coding GitHub."
   ],
   "blockers": ["None."],
   "touched_paths": [
@@ -134,12 +134,12 @@
     "run status": "in-progress",
     "executor": "Codex",
     "handoff source": "active execplan plus local Codex snapshot",
-    "what happened": "Implemented #332/#335: completed live execplans now add archive_accumulation_drift to planning surface health, remediation names archive-plan, and archive-plan refusal details now name accepted closeout field values.",
+    "what happened": "Implemented #332/#335 and #336: completed live execplans now add archive_accumulation_drift to planning surface health, archive-plan refusal details name accepted closeout field values, and package CLI command-level coverage now dogfoods compact TOML state through summary, promote-to-plan, and archive-plan.",
     "scope touched": "planning installer and tests plus active planning state",
     "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/planning-state-hygiene-followthrough.plan.json",
-    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"archive_execplan or planning_summary_exposes_closure_evidence or planning_surface_health\"; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
-    "result for continuation": "#332 and #335 are ready to close after commit/push; continue with #336.",
-    "next step": "Commit/push #332/#335, close those issues, then implement #336."
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"archive_execplan or planning_summary_exposes_closure_evidence or planning_surface_health\"; uv run pytest packages/planning/tests/test_installer.py -q -k \"dogfoods_compact_state or promote_todo_item_to_execplan or archive_execplan or planning_summary_exposes_closure_evidence or planning_surface_health\"; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "result for continuation": "#332, #335, and #336 are ready to close after commit/push; continue with #333/#334.",
+    "next step": "Commit/push #336, close it, then implement #333/#334."
   },
   "finished_run_review": {
     "review status": "pending",
@@ -181,10 +181,11 @@
     "follow-on routed to": "#332-#336",
     "post-work posterity capture": "pending",
     "knowledge promoted (Memory/Docs/Config)": "pending",
-    "resume from": "compact-state-dogfooding-coverage"
+    "resume from": "provider-agnostic-reconcile"
   },
   "drift_log": [
     "2026-04-26: Promoted #332-#336 after local Codex integration setup and issue ingestion.",
-    "2026-04-26: Completed #332/#335 package health and archive-message milestone."
+    "2026-04-26: Completed #332/#335 package health and archive-message milestone.",
+    "2026-04-26: Completed #336 package CLI compact-state dogfooding coverage."
   ]
 }

@@ -1378,6 +1378,49 @@ candidates = []
     assert any(action.kind == "manual review" and "already points at" in action.detail for action in result.actions)
 
 
+def test_planning_cli_dogfoods_compact_state_for_summary_promote_and_archive(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "compact-cli", status = "in-progress", surface = "direct", why_now = "prove package commands use compact state.", next_action = "promote through the CLI.", done_when = "archive through the CLI." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    assert planning_cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
+    summary_payload = json.loads(capsys.readouterr().out)
+    assert summary_payload["todo"]["active_items"][0]["id"] == "compact-cli"
+    assert summary_payload["execution_readiness"]["status"] == "active-item-without-execplan"
+
+    assert planning_cli.main(["promote-to-plan", "compact-cli", "--target", str(tmp_path), "--format", "json"]) == 0
+    promote_payload = json.loads(capsys.readouterr().out)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "compact-cli.plan.json"
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    assert promote_payload["actions"][0]["kind"] == "created"
+    assert record_path.exists()
+    assert 'surface = ".agentic-workspace/planning/execplans/compact-cli.plan.json"' in state_text
+    assert "next_action" not in state_text
+    assert "done_when" not in state_text
+
+    _write_execplan_record(record_path, item_id="compact-cli", status="completed")
+    assert planning_cli.main(["archive-plan", "compact-cli", "--target", str(tmp_path), "--apply-cleanup", "--format", "json"]) == 0
+    archive_payload = json.loads(capsys.readouterr().out)
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "compact-cli.plan.json"
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    assert any(action["kind"] == "archived" and action["path"].endswith("compact-cli.plan.json") for action in archive_payload["actions"])
+    assert archived_record_path.exists()
+    assert not record_path.exists()
+    assert "compact-cli" not in state_text
+
+
 def test_archive_execplan_moves_completed_plan(tmp_path: Path) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(
