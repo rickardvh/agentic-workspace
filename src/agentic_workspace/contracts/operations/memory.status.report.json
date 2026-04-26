@@ -1,0 +1,65 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.status.report",
+  "command_surface": {
+    "program": "agentic-memory-bootstrap",
+    "command": "status",
+    "format_option": "format"
+  },
+  "summary": "Report whether memory bootstrap files are present for a target repository.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "module-result"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository memory bootstrap files",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "load_status",
+      "uses": "memory.bootstrap.status.load",
+      "description": "Inspect package-local memory bootstrap state for the target repository."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit memory status in the requested format."
+    }
+  ],
+  "guards": [
+    "Status must remain read-only."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "memory status command conformance remains compatible"
+  ],
+  "migration_status": "draft-contract-only"
+}

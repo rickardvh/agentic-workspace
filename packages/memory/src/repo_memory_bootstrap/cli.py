@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from repo_memory_bootstrap import __version__
+from repo_memory_bootstrap.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 from repo_memory_bootstrap.installer import (
     BOOTSTRAP_WORKSPACE_ROOT,
     RepoDetectionError,
@@ -514,6 +515,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
+        generated_adapter = _generated_adapter_for_command(str(args.command))
+        if generated_adapter is not None:
+            return _run_generated_command_adapter(args, adapter=generated_adapter)
+
         handler = COMMAND_HANDLERS.get(_command_key(args))
         if handler is None:
             parser.error(f"Unknown command: {args.command}")
@@ -521,6 +526,17 @@ def main(argv: list[str] | None = None) -> int:
     except RepoDetectionError as exc:
         print(f"Error: {exc}")
         return 2
+
+
+def _generated_adapter_for_command(command_name: str) -> dict[str, object] | None:
+    return GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
+
+
+def _run_generated_command_adapter(args: argparse.Namespace, *, adapter: dict[str, object]) -> int:
+    operation_id = str(adapter["operation_id"])
+    if operation_id == "memory.status.report":
+        return _handle_status(args)
+    raise ValueError(f"Unsupported generated command adapter operation: {operation_id}")
 
 
 def _emit_result(result, *, output_format: str, include_install_summary: bool = False) -> None:

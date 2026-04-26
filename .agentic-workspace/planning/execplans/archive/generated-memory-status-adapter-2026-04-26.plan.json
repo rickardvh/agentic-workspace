@@ -1,0 +1,172 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Generated Memory Status Adapter 2026 04 26",
+  "goal": [
+    "Resolve #377 by extending the generated command adapter path to the memory package status command."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "#377 is the first planned post-baseline adapter slice.",
+      "constraints": "Only generate or mechanically assemble one read-only package command adapter; keep lifecycle mutation commands and runtime primitives hand-owned.",
+      "latitude": "Choose the smallest contract, generator, CLI dispatch, and conformance changes needed for memory status.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "generated-memory-status-adapter",
+      "status": "completed",
+      "next_step": "Generate or mechanically assemble memory package status as the next read-only package command adapter.",
+      "proof": "Run command-adapter generation check, contract tooling check, generated tool conformance tests, and the narrow package/root tests selected by proof."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/command_adapter_generation.json",
+        "src/agentic_workspace/contracts/operation_contracts.json",
+        "src/agentic_workspace/contracts/operations/memory.status.report.json",
+        "src/agentic_workspace/contracts/conformance_contracts.json",
+        "src/agentic_workspace/contracts/conformance/memory.status.process.json",
+        "scripts/generate/generate_command_adapters.py",
+        "packages/memory/src/repo_memory_bootstrap/cli.py",
+        "packages/memory/src/repo_memory_bootstrap/generated_command_adapters.py",
+        "tests/test_generated_tool_conformance.py"
+      ],
+      "invariants": [
+        "Generated adapter output must be reproducible.",
+        "Runtime status collection remains hand-owned in the memory package.",
+        "Contracts stay host-, repo-, agent-, tool-, and language-agnostic."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Keep command adapter generation valuable without expanding visible product residue or replacing runtime implementation.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "agentic-memory-bootstrap status is now backed by generated command adapter metadata, a memory.status.report operation contract, and a black-box process conformance contract.",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "generation drift check, contract tooling check, generated conformance tests, workspace CLI tests, root ruff, memory installer tests, and memory ruff all passed.",
+    "validation still needed": "none for #377",
+    "next likely slice": "#378 lifecycle dry-run conformance after #377 closes."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Add memory status as the next generated read-only package command adapter.",
+    "hard constraints": "Do not generate lifecycle mutations or replace runtime primitive code.",
+    "agent may decide locally": "Exact contract fields and conformance fixture shape, provided the generated output is reproducible and black-box covered.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "generated-memory-status-adapter",
+    "status": "completed",
+    "scope": "Contracts, generation metadata, generated memory status adapter, memory CLI dispatch, and conformance coverage.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Generate or mechanically assemble memory package status as the next read-only package command adapter."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_adapter_generation.json",
+    "src/agentic_workspace/contracts/operation_contracts.json",
+    "src/agentic_workspace/contracts/operations/memory.status.report.json",
+    "src/agentic_workspace/contracts/conformance_contracts.json",
+    "src/agentic_workspace/contracts/conformance/memory.status.process.json",
+    "scripts/generate/generate_command_adapters.py",
+    "packages/memory/src/repo_memory_bootstrap/cli.py",
+    "packages/memory/src/repo_memory_bootstrap/generated_command_adapters.py",
+    "tests/test_generated_tool_conformance.py"
+  ],
+  "invariants": [
+    "Generated adapter output must be reproducible.",
+    "Runtime status collection remains hand-owned in the memory package.",
+    "Contracts stay host-, repo-, agent-, tool-, and language-agnostic."
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_adapters.py --check",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest tests/test_generated_tool_conformance.py tests/test_contract_tooling.py -q"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Memory status command adapter generation is contract-owned, reproducible, drift-checked, and covered by black-box conformance."
+  ],
+  "proof_report": {
+    "validation proof": "All selected proof commands passed.",
+    "proof achieved now": "Generated adapter drift, contract-tooling health, black-box conformance, workspace CLI behavior, root lint, memory installer tests, and memory lint all passed.",
+    "evidence for \"proof achieved\" state": "uv run python scripts/generate/generate_command_adapters.py --check; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run pytest tests/test_generated_tool_conformance.py tests/test_contract_tooling.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; cd packages/memory && uv run pytest tests/test_installer.py; cd packages/memory && uv run ruff check ."
+  },
+  "execution_summary": {
+    "outcome delivered": "Generated adapter metadata now covers agentic-memory-bootstrap status without moving runtime status behavior out of hand-owned memory code.",
+    "validation confirmed": "uv run python scripts/generate/generate_command_adapters.py --check; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run pytest tests/test_generated_tool_conformance.py tests/test_contract_tooling.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; cd packages/memory && uv run pytest tests/test_installer.py; cd packages/memory && uv run ruff check .",
+    "follow-on routed to": "#378",
+    "post-work posterity capture": ".agentic-workspace/planning/reviews/generated-memory-status-adapter-closeout-2026-04-26.review.json",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "#378 lifecycle dry-run conformance"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No further work needed for memory status as the next read-only package adapter.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#378 remains the next lane item for lifecycle dry-run conformance.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "none",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-26: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Add memory status as the next generated read-only package command adapter.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#377 is closed; memory status has generated adapter metadata, operation/conformance contracts, reproducible generated output, and passing black-box conformance.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The requested one additional read-only package adapter is complete; #378 carries the remaining lane work.",
+    "evidence carried forward": ".agentic-workspace/planning/reviews/generated-memory-status-adapter-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen if memory status generated output drifts or lacks black-box conformance."
+  }
+}

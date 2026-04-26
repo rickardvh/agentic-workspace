@@ -5,6 +5,9 @@ import sys
 from pathlib import Path
 
 import pytest
+from repo_memory_bootstrap.generated_command_adapters import (
+    GENERATED_COMMAND_ADAPTERS_BY_COMMAND as GENERATED_MEMORY_COMMAND_ADAPTERS_BY_COMMAND,
+)
 from repo_planning_bootstrap.generated_command_adapters import (
     GENERATED_COMMAND_ADAPTERS_BY_COMMAND as GENERATED_PLANNING_COMMAND_ADAPTERS_BY_COMMAND,
 )
@@ -26,6 +29,12 @@ PLANNING_CLI_SHIM = (
     "from repo_planning_bootstrap.cli import main; "
     "raise SystemExit(main(sys.argv[1:]))"
 )
+MEMORY_CLI_SHIM = (
+    "import sys; "
+    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'memory' / 'src')!r}); "
+    "from repo_memory_bootstrap.cli import main; "
+    "raise SystemExit(main(sys.argv[1:]))"
+)
 
 
 def _contract_refs() -> list[dict[str, str]]:
@@ -45,6 +54,7 @@ def test_generated_tool_process_conformance_contracts(contract_ref: dict[str, st
         command_overrides={
             "agentic_workspace_cli": [sys.executable, "-c", CLI_SHIM],
             "agentic_planning_cli": [sys.executable, "-c", PLANNING_CLI_SHIM],
+            "agentic_memory_cli": [sys.executable, "-c", MEMORY_CLI_SHIM],
         },
     )
 
@@ -85,6 +95,7 @@ def test_generated_adapters_are_backed_by_black_box_conformance_contracts() -> N
     generated_adapters_by_command = {
         **GENERATED_COMMAND_ADAPTERS_BY_COMMAND,
         **GENERATED_PLANNING_COMMAND_ADAPTERS_BY_COMMAND,
+        **GENERATED_MEMORY_COMMAND_ADAPTERS_BY_COMMAND,
     }
     for command_name, adapter in generated_adapters_by_command.items():
         for conformance_ref in adapter["conformance_refs"]:
@@ -94,8 +105,11 @@ def test_generated_adapters_are_backed_by_black_box_conformance_contracts() -> N
 
             assert registry_ref["operation_id"] == adapter["operation_id"]
             assert contract["operation_id"] == adapter["operation_id"]
-            expected_placeholder = (
-                "{agentic_workspace_cli}" if adapter["command"]["program"] == "agentic-workspace" else "{agentic_planning_cli}"
-            )
+            placeholders_by_program = {
+                "agentic-workspace": "{agentic_workspace_cli}",
+                "agentic-planning-bootstrap": "{agentic_planning_cli}",
+                "agentic-memory-bootstrap": "{agentic_memory_cli}",
+            }
+            expected_placeholder = placeholders_by_program[adapter["command"]["program"]]
             assert command_template[0] == expected_placeholder
             assert command_template[1] == command_name

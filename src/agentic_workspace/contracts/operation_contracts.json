@@ -137,6 +137,12 @@
       "migration_status": "draft-contract-only"
     },
     {
+      "id": "memory.status.report",
+      "path": "operations/memory.status.report.json",
+      "command": "status",
+      "migration_status": "draft-contract-only"
+    },
+    {
       "id": "doctor.report",
       "path": "operations/doctor.report.json",
       "command": "doctor",

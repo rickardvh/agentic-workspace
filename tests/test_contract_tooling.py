@@ -44,7 +44,9 @@ def test_command_adapter_generation_contract_records_package_migration_path() ->
     assert adapters["planning.status.cli"]["command"]["program"] == migration["planning"]["program"]
     assert adapters["planning.status.cli"]["command"]["name"] == migration["planning"]["first_read_only_candidate"]
     assert migration["memory"]["program"] == "agentic-memory-bootstrap"
-    assert migration["memory"]["status"] == "planned-next-package-surface"
+    assert migration["memory"]["status"] == "first-read-only-generated"
+    assert adapters["memory.status.cli"]["command"]["program"] == migration["memory"]["program"]
+    assert adapters["memory.status.cli"]["command"]["name"] == migration["memory"]["first_read_only_candidate"]
 
 
 def test_command_adapter_generation_contract_records_multi_target_requirements() -> None:
@@ -107,6 +109,7 @@ def test_lifecycle_generation_readiness_records_phase_risk_and_fixture_plan() ->
     assert commands[("root", "uninstall")]["generation_eligibility"] == "deferred-destructive"
     assert commands[("root", "uninstall")]["effects"]["destructive_potential"] is True
     assert commands[("planning-package", "status")]["generation_eligibility"] == "eligible-read-only"
+    assert commands[("memory-package", "status")]["generation_eligibility"] == "eligible-read-only"
     assert any("strict preflight" in fixture for fixture in manifest["conformance_fixture_plan"])
 
 
@@ -148,7 +151,11 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     statuses, errors = module._generated_command_adapter_statuses()
 
     assert errors == []
-    assert {status["program"] for status in statuses} == {"agentic-workspace", "agentic-planning-bootstrap"}
+    assert {status["program"] for status in statuses} == {
+        "agentic-workspace",
+        "agentic-planning-bootstrap",
+        "agentic-memory-bootstrap",
+    }
     assert all(status["status"] == "current" for status in statuses)
     assert all(status["direct_edit_detected"] is False for status in statuses)
     assert all(status["source_contract"] == "src/agentic_workspace/contracts/command_adapter_generation.json" for status in statuses)
@@ -160,6 +167,7 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     commands_by_program = {status["program"]: status["command_surfaces"] for status in statuses}
     assert commands_by_program["agentic-workspace"] == ["defaults"]
     assert commands_by_program["agentic-planning-bootstrap"] == ["status"]
+    assert commands_by_program["agentic-memory-bootstrap"] == ["status"]
 
 
 def test_validated_contract_loader_reports_contract_and_schema(monkeypatch, tmp_path: Path) -> None:

@@ -105,6 +105,10 @@
     {
       "program": "agentic-planning-bootstrap",
       "path": "packages/planning/src/repo_planning_bootstrap/generated_command_adapters.py"
+    },
+    {
+      "program": "agentic-memory-bootstrap",
+      "path": "packages/memory/src/repo_memory_bootstrap/generated_command_adapters.py"
     }
   ],
   "package_surface_migration": {
@@ -117,8 +121,8 @@
     "memory": {
       "program": "agentic-memory-bootstrap",
       "first_read_only_candidate": "status",
-      "status": "planned-next-package-surface",
-      "next_step": "Add memory status as the next read-only package adapter only after multi-adapter projection requirements are explicit."
+      "status": "first-read-only-generated",
+      "next_step": "Use the memory status adapter proof before considering broader memory read-only adapters."
     }
   },
   "adapters": [
@@ -277,6 +281,80 @@
       },
       "conformance_refs": [
         "planning.status.process"
+      ]
+    },
+    {
+      "id": "memory.status.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory-bootstrap",
+        "name": "status",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.status.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.status.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.bootstrap.status.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "live memory surface inspection",
+          "payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.status.process"
       ]
     }
   ]

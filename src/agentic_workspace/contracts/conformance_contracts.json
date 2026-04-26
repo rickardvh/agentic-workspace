@@ -14,6 +14,12 @@
       "operation_id": "planning.status.report",
       "path": "conformance/planning.status.process.json",
       "adapter_kind": "process"
+    },
+    {
+      "id": "memory.status.process",
+      "operation_id": "memory.status.report",
+      "path": "conformance/memory.status.process.json",
+      "adapter_kind": "process"
     }
   ]
 }

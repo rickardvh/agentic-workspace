@@ -923,7 +923,7 @@
       "system": "github",
       "id": "#377",
       "title": "[Workspace]: Generate the next read-only package command adapter",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#376",
       "planning_residue_expected": "required"

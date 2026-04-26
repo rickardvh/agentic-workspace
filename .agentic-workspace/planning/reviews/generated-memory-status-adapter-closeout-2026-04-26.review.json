@@ -1,0 +1,75 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Generated memory status adapter closeout",
+  "date": "2026-04-26",
+  "scope": [
+    "#377"
+  ],
+  "classification": "closeout",
+  "issue_classifications": [
+    {
+      "id": "#377",
+      "title": "[Workspace]: Generate the next read-only package command adapter",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "#378",
+      "evidence": "Generated memory status adapter metadata was added from command_adapter_generation.json, memory.status.report and memory.status.process contracts were added, memory CLI dispatch now routes through generated metadata, generated output is drift-checked, and black-box conformance plus selected proof commands pass."
+    }
+  ],
+  "goal": [
+    "Confirm #377 generated one additional read-only package command adapter without expanding runtime ownership."
+  ],
+  "non_goals": [
+    "Do not claim lifecycle mutation generation or broader memory adapter generation."
+  ],
+  "review_mode": {
+    "mode": "closeout",
+    "review question": "Did #377 add one reproducible, contract-owned, conformance-backed read-only memory package adapter while leaving runtime behavior hand-owned?",
+    "default finding cap": "bounded",
+    "inputs inspected first": "compact planning and task-specific surfaces"
+  },
+  "review_method": {
+    "commands used": "uv run python scripts/generate/generate_command_adapters.py --check; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run pytest tests/test_generated_tool_conformance.py tests/test_contract_tooling.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; cd packages/memory && uv run pytest tests/test_installer.py; cd packages/memory && uv run ruff check .",
+    "evidence sources": "command_adapter_generation.json, memory.status.report operation contract, memory.status.process conformance contract, generated memory adapter, memory CLI dispatch, proof selector output"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#377",
+      "label": "generated memory status adapter",
+      "role": "closed-scope",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#378",
+      "label": "next lane item",
+      "role": "follow-up",
+      "locator": ""
+    }
+  ],
+  "findings": [],
+  "recommendation": {
+    "promote": "close #377 as complete",
+    "defer": "#378 remains the next planned follow-up",
+    "dismiss": "no additional follow-up found for the explicit-target conformance fixture edge; the contract now covers it"
+  },
+  "retention": {
+    "closeout shape": "shrink or archive after findings are routed",
+    "trigger": "review complete",
+    "proof surface": "this review record plus routed follow-up residue"
+  },
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_adapters.py --check",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run pytest tests/test_generated_tool_conformance.py tests/test_contract_tooling.py -q",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "cd packages/memory && uv run pytest tests/test_installer.py",
+    "cd packages/memory && uv run ruff check ."
+  ],
+  "drift_log": [
+    "2026-04-26: Review record created by create-review.",
+    "2026-04-26: Closeout recorded after generated adapter drift, conformance, workspace CLI, and memory package proof passed."
+  ]
+}
