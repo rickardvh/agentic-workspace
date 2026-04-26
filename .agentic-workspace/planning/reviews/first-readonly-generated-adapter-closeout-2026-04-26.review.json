@@ -1,0 +1,31 @@
+{
+  "kind": "planning-review/v1",
+  "title": "First Read-Only Generated Adapter Closeout",
+  "summary": "#359 generated the first read-only root CLI adapter path for `defaults` from command_adapter_generation.json. #360 remains open for broader generated-adapter drift and conformance guardrails, and #356 remains open as the parent lane.",
+  "issue_classifications": [
+    {
+      "id": "#359",
+      "title": "[Workspace]: Generate the first read-only CLI adapter slice",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "live_state": "closed",
+      "evidence": "scripts/generate/generate_command_adapters.py, src/agentic_workspace/generated_command_adapters.py, and tests/test_workspace_cli.py::test_defaults_command_routes_through_generated_adapter",
+      "follow_up": "#360"
+    },
+    {
+      "id": "#356",
+      "title": "[Workspace]: Generate shipped CLI adapters from authoritative package definitions",
+      "classification": "covered_by_open_followup",
+      "live_state": "open",
+      "evidence": "#359 landed the first generated adapter path; #360 remains open for broader guardrails before package expansion.",
+      "follow_up": "#360"
+    },
+    {
+      "id": "#360",
+      "title": "[Workspace]: Add conformance and drift checks for generated CLI adapters",
+      "classification": "covered_by_open_followup",
+      "live_state": "open",
+      "evidence": "The first adapter has a freshness test; broader generated-adapter drift policy remains the next planned slice.",
+      "follow_up": "#360"
+    }
+  ]
+}

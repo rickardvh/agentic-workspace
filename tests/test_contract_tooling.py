@@ -24,6 +24,7 @@ def test_command_adapter_generation_contract_identifies_defaults_candidate() -> 
 
     defaults_adapter = adapters["defaults.report.cli"]
 
+    assert defaults_adapter["status"] == "generated"
     assert defaults_adapter["command"]["name"] == "defaults"
     assert defaults_adapter["operation_ref"]["id"] == "defaults.report"
     assert defaults_adapter["runtime_binding"]["kind"] == "operation-primitive-sequence"
@@ -31,6 +32,15 @@ def test_command_adapter_generation_contract_identifies_defaults_candidate() -> 
     assert defaults_adapter["effect_hints"]["writes_repo_state"] is False
     assert "defaults.report.process" in defaults_adapter["conformance_refs"]
     assert "primitive implementation" in defaults_adapter["generation_boundary"]["runtime_owns"]
+
+
+def test_generated_command_adapter_module_is_current() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_adapters.py"
+    spec = importlib.util.spec_from_file_location("generate_command_adapters", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.main(["--check"]) == 0
 
 
 def test_validated_contract_loader_reports_contract_and_schema(monkeypatch, tmp_path: Path) -> None:

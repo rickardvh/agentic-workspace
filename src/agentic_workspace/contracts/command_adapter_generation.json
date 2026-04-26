@@ -5,7 +5,7 @@
   "adapters": [
     {
       "id": "defaults.report.cli",
-      "status": "ready-for-first-generation",
+      "status": "generated",
       "command": {
         "program": "agentic-workspace",
         "name": "defaults",

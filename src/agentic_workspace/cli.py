@@ -86,6 +86,7 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
+from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 from agentic_workspace.reporting_support import (
     output_contract_payload,
     repo_friction_payload,
@@ -672,10 +673,10 @@ def main(argv: list[str] | None = None) -> int:
         _emit_modules(format_name=args.format, target_root=target_root)
         return 0
 
-    if args.command == "defaults":
+    generated_adapter = _generated_adapter_for_command(str(args.command))
+    if generated_adapter is not None:
         try:
-            _emit_defaults(format_name=args.format, section=getattr(args, "section", None))
-            return 0
+            return _run_generated_command_adapter(args, adapter=generated_adapter)
         except WorkspaceUsageError as exc:
             parser.error(str(exc))
 
@@ -6636,6 +6637,28 @@ def _emit_proof(
         print("Stale generated surfaces:")
         for item in payload["current"]["stale_generated_surfaces"]:
             print(f"- {item}")
+
+
+def _generated_adapter_for_command(command_name: str) -> dict[str, Any] | None:
+    return GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
+
+
+def _run_defaults_report_adapter(args: argparse.Namespace) -> int:
+    _emit_defaults(format_name=args.format, section=getattr(args, "section", None))
+    return 0
+
+
+_GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
+    "defaults.report": _run_defaults_report_adapter,
+}
+
+
+def _run_generated_command_adapter(args: argparse.Namespace, *, adapter: dict[str, Any]) -> int:
+    operation_id = str(adapter["operation_id"])
+    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
+    if handler is None:
+        raise WorkspaceUsageError(f"Generated adapter for {args.command} references unsupported operation {operation_id}.")
+    return handler(args)
 
 
 def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> dict[str, Any]:

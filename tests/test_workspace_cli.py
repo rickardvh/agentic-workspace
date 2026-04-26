@@ -464,6 +464,22 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert any("skills --target ./repo --task" in step for step in payload["skill_discovery"]["primary"])
 
 
+def test_defaults_command_routes_through_generated_adapter(monkeypatch, capsys) -> None:
+    calls: list[tuple[str, str, str | None]] = []
+
+    def fake_defaults_handler(args) -> int:
+        calls.append((args.command, args.format, getattr(args, "section", None)))
+        print('{"ok": true}')
+        return 0
+
+    monkeypatch.setitem(cli._GENERATED_RUNTIME_HANDLERS, "defaults.report", fake_defaults_handler)
+
+    assert cli.main(["defaults", "--section", "startup", "--format", "json"]) == 0
+
+    assert json.loads(capsys.readouterr().out) == {"ok": True}
+    assert calls == [("defaults", "json", "startup")]
+
+
 def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -> None:
     assert cli.main(["defaults"]) == 0
 

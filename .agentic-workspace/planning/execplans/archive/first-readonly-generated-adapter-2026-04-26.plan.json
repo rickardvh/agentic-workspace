@@ -1,0 +1,266 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "First Read-Only Generated Adapter",
+  "goal": [
+    "Implement #359 by generating or mechanically assembling one read-only CLI adapter for root `agentic-workspace defaults` from authoritative command-adapter contracts while preserving current behavior."
+  ],
+  "non_goals": [
+    "Generate all commands.",
+    "Generate lifecycle or mutation commands.",
+    "Replace runtime primitive implementations.",
+    "Migrate planning or memory package CLIs."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "The `defaults` CLI adapter wiring is generated or mechanically assembled from command_adapter_generation.json instead of being a hand-authored command branch.",
+      "constraints": "Stay on master; keep runtime primitive implementation hand-written; preserve user-facing behavior; keep generated surfaces clearly sourced.",
+      "latitude": "Choose the smallest generator/assembler and generated output shape that proves the boundary.",
+      "escalation": "Stop before broad CLI refactors, lifecycle commands, or package CLI migration."
+    },
+    "execution": {
+      "milestone": "first-readonly-generated-adapter",
+      "status": "completed",
+      "next_step": "Archive this slice and continue with #360 generated-adapter drift/conformance guardrails.",
+      "proof": "Use proof --changed, contract checks, focused CLI/conformance tests, ruff, planning checks, reconcile, summary."
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Generated shipped CLI adapters from authoritative package definitions.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#360",
+    "parent lane": "#356"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#360",
+    "activation trigger": "After the first generated read-only adapter lands and needs stronger drift/conformance guardrails."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A first shipped read-only command can be wired from generated adapter metadata.",
+    "intentionally deferred": "Full drift guardrails, no-direct-edit enforcement, package CLI extension, and multi-adapter projection requirements.",
+    "discovered implications": "The first generated adapter path needs stronger drift guardrails before more commands are migrated; #360 remains the continuation.",
+    "proof achieved now": "Generated defaults adapter metadata is current, the root CLI dispatches through generated adapter metadata, and focused tests preserve defaults behavior.",
+    "validation still needed": "#360 should harden broader conformance and no-direct-edit drift checks before expanding generated adapters.",
+    "next likely slice": "#360 conformance and drift checks for generated CLI adapters."
+  },
+  "intent_interpretation": {
+    "literal request": "Continue implementing planned work until done.",
+    "inferred intended outcome": "Proceed from #358 into #359 using root `defaults` as the first generated adapter candidate.",
+    "chosen concrete what": "Generate/mechanically assemble defaults command adapter wiring from command_adapter_generation.json.",
+    "interpretation distance": "low",
+    "review guidance": "Check that parser/help/dispatch metadata comes from the contract and runtime behavior stays hand-written."
+  },
+  "execution_bounds": {
+    "allowed paths": "CLI adapter generation script/output, root CLI dispatch glue, command adapter contract/checks/tests, planning state/evidence/review artifacts.",
+    "max changed files": "Prefer under 12 files.",
+    "required validation commands": "proof --changed; check_contract_tooling_surfaces; generated adapter freshness check; workspace CLI tests; generated conformance tests; ruff; planning checks; reconcile; summary.",
+    "ask-before-refactor threshold": "Any broad CLI dispatch rewrite beyond generated adapter hook and defaults adapter.",
+    "stop before touching": "Lifecycle commands, planning/memory package CLIs, generated adapter guardrail policy beyond focused freshness check."
+  },
+  "stop_conditions": {
+    "stop when": "#359 is closed, committed, pushed, and #360 remains planned.",
+    "escalate when boundary reached": "The first adapter cannot be generated without rewriting large CLI dispatch.",
+    "escalate on scope drift": "Work expands into #360-#363 before #359 closes.",
+    "escalate on proof failure": "Generated adapter behavior or freshness checks fail."
+  },
+  "context_budget": {
+    "live working set": "#359, #358 contract, src/agentic_workspace/cli.py defaults dispatch, tests/test_workspace_cli.py, tests/test_generated_tool_conformance.py",
+    "recoverable later": "Full generated adapter lane details and package CLI migration",
+    "externalize before shift": "Update execution_run and closeout_distillation before archive.",
+    "pre-work config pull": "uv run agentic-workspace preflight --format json",
+    "pre-work memory pull": "Not needed.",
+    "tiny resumability note": "Continue #359 first generated defaults adapter.",
+    "context-shift triggers": "Before broad CLI dispatch refactor or generator generalization."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Generate the first read-only CLI adapter slice.",
+    "hard constraints": "One read-only command; no lifecycle; runtime primitives stay hand-written.",
+    "agent may decide locally": "Exact generator file name, generated module shape, and focused tests.",
+    "escalate when": "The change needs broad dispatch architecture or package CLI migration."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#359",
+      "label": "first generated adapter",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#356",
+      "label": "generated CLI adapter lane",
+      "role": "parent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#360",
+      "label": "adapter conformance and drift checks",
+      "role": "continuation",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "first-readonly-generated-adapter",
+    "status": "completed",
+    "scope": "#359",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect current defaults dispatch and add generated adapter metadata plus dispatch hook."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/first-readonly-generated-adapter-2026-04-26.plan.json",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/reviews/first-readonly-generated-adapter-closeout-2026-04-26.review.json",
+    "scripts/generate/generate_command_adapters.py",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/command_adapter_generation.json",
+    "src/agentic_workspace/generated_command_adapters.py",
+    "tests/test_contract_tooling.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Do not switch branches.",
+    "Do not generate lifecycle commands.",
+    "Do not move runtime primitive behavior into contracts."
+  ],
+  "contract_decisions_to_freeze": [
+    "Generated adapter metadata may own command dispatch wiring; runtime operation functions still own live behavior."
+  ],
+  "open_questions_to_close": [
+    "What generated output shape is the smallest useful proof?",
+    "What check proves the generated output matches command_adapter_generation.json?"
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run python scripts/generate/generate_command_adapters.py --check",
+    "uv run pytest tests/test_workspace_cli.py tests/test_generated_tool_conformance.py tests/test_contract_tooling.py",
+    "uv run ruff check src tests scripts",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "gh",
+    "uv",
+    "git"
+  ],
+  "completion_criteria": [
+    "#359 is implemented and closed.",
+    "`defaults` adapter wiring is generated or mechanically assembled from command_adapter_generation.json.",
+    "User-facing defaults behavior is preserved.",
+    "Focused tests prove generated adapter path.",
+    "No active execplan remains after archive closeout."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "preflight, #359 issue, #358 contract",
+    "what happened": "Generated src/agentic_workspace/generated_command_adapters.py from command_adapter_generation.json, routed root defaults dispatch through generated metadata, preserved hand-written runtime behavior, and added freshness plus dispatch tests.",
+    "scope touched": "Root CLI generated adapter metadata and dispatch glue, command-adapter contract status, generator script, focused tests, planning state/evidence/review artifacts.",
+    "changed surfaces": "cli.py, command_adapter_generation.json, generated_command_adapters.py, generate_command_adapters.py, tests, planning state/evidence/review.",
+    "validations run": "proof --changed; check_contract_tooling_surfaces; generate_command_adapters --check; pytest test_workspace_cli/test_generated_tool_conformance/test_contract_tooling; ruff; planning doctor; check_planning_surfaces; reconcile; summary.",
+    "result for continuation": "#359 closed; #360 remains open for broader generated-adapter drift/conformance guardrails.",
+    "next step": "Promote #360."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; only one read-only root command adapter path was generated and runtime primitives stayed hand-written.",
+    "proof status": "passed",
+    "intent served": "yes for #359; no for parent #356, which continues through #360-#363.",
+    "config compliance": "dogfooded preflight, proof, summary, reconcile, doctor, and planning closeout.",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue #360"
+  },
+  "proof_report": {
+    "validation proof": "uv run agentic-workspace proof --target . --changed ... --format json selected planning_surfaces and workspace_cli; required commands passed.",
+    "proof achieved now": "generated adapter freshness, contract tooling, workspace CLI behavior, conformance, lint, and planning health all passed.",
+    "evidence for \"proof achieved\" state": "170 focused CLI/contract tests passed, 7 generated conformance/contract tests passed, ruff passed, planning doctor/check/reconcile/summary clean."
+  },
+  "intent_satisfaction": {
+    "original intent": "Continue implementing planned work until done.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#359 generated defaults adapter metadata and CLI dispatch proof",
+    "unsolved intent passed to": "#360 and remaining #356 child slices"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Remove shipped executable CLI code as the authoring surface for command/interface truth.",
+    "slice shaping bias": "Small generated read-only proof before guardrails or package migration.",
+    "broader-lane validation question": "Can ordinary defaults interface changes move through contracts/generated adapter metadata rather than cli.py?",
+    "intent evidence source": "#359"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#359 delivered the first read-only generated adapter proof; parent #356 still needs drift guardrails and package adapter extension.",
+    "evidence carried forward": "src/agentic_workspace/generated_command_adapters.py, scripts/generate/generate_command_adapters.py, tests/test_workspace_cli.py::test_defaults_command_routes_through_generated_adapter, .agentic-workspace/planning/reviews/first-readonly-generated-adapter-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen #359 if defaults cannot be maintained through generated adapter metadata without bespoke command dispatch."
+  },
+  "execution_summary": {
+    "outcome delivered": "First read-only generated CLI adapter path for root defaults.",
+    "validation confirmed": "proof-selected workspace_cli and planning_surfaces lanes passed, plus generator freshness and contract/conformance checks.",
+    "follow-on routed to": "#360",
+    "post-work posterity capture": "closeout review plus archived execplan",
+    "knowledge promoted (Memory/Docs/Config)": "No durable Memory/docs/config promotion needed; #360 carries the recurring guardrail work.",
+    "resume from": "#360 generated-adapter drift/conformance checks"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Raw implementation inspection detail is not needed after generated metadata, tests, and closeout evidence.",
+          "owner": "discard",
+          "source": "#359 execution"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#360 remains open for broader conformance and drift checks after this first adapter proof.",
+          "owner": "#360",
+          "source": "#359"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No durable Memory/docs/config promotion needed; #360 carries the recurring guardrail work.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "No durable Memory/docs/config promotion needed; #360 carries the recurring guardrail work.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "No durable Memory/docs/config promotion needed; #360 carries the recurring guardrail work.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "First generated read-only CLI adapter",
+          "owner": "issue",
+          "source": "#359"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-26: Promoted #359 after #358 contract landed."
+  ]
+}

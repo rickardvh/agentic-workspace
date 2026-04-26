@@ -761,7 +761,7 @@
       "system": "github",
       "id": "#359",
       "title": "[Workspace]: Generate the first read-only CLI adapter slice",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#356",
       "planning_residue_expected": "required"
