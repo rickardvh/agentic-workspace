@@ -8,7 +8,7 @@
   "scope": [
     "Primary issue: #324.",
     "Audited set from #324: #292-#316 plus #261, #279, #278, #306, and #275.",
-    "Adjacent closed issues reviewed because they were part of the same planning period or roadmap lanes: #287, #288, and #290.",
+    "Adjacent closed issues reviewed because they were part of the same planning period or roadmap lanes: #287, #288, #290, #280, and #282.",
     "Live GitHub state checked on 2026-04-26 with `gh issue view` and `gh issue list --state all`."
   ],
   "non_goals": [
@@ -64,6 +64,24 @@
       "evidence": "Archived machine-first closeout records canonical execplan sidecars, typed references, and proportional review retention; commit e956063 exposed machine-first planning summary state.",
       "follow_up": "#323, #324, and #325 remain open under the machine-first-planning-state roadmap lane.",
       "lane_impact": "Do not close the machine-first-planning-state lane from #261 alone."
+    },
+    {
+      "id": "#280",
+      "title": "Add a multi-level structured reference model so execplans and higher-level planning surfaces can point explicitly to relevant issues, files, ranges, URLs, images, and other artifacts",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Archived machine-first closeout records typed references on execution and roadmap surfaces; current planning summary projects structured references, and planning tests cover execplan, handoff, and roadmap reference normalization.",
+      "follow_up": "None for the bounded structured-reference slice.",
+      "lane_impact": "Structured references are treated as delivered for the machine-first lane closeout."
+    },
+    {
+      "id": "#282",
+      "title": "Define proportional retention for planning review artifacts so review history stays useful without becoming a parallel archive",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Archived machine-first closeout records explicit proportional review-retention policy in canonical review records and compact review residue projections; review README/template now carry retention guidance.",
+      "follow_up": "None for the bounded review-retention slice.",
+      "lane_impact": "Review retention is treated as delivered for the machine-first lane closeout."
     },
     {
       "id": "#275",

@@ -1,0 +1,304 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Older Lower Trust Closeout Audit",
+  "goal": [
+    "Classify the older needs-audit closeouts surfaced by `intent_validation_contract.closeout_reconciliation` after #325."
+  ],
+  "scope": [
+    "IDs from #329: #206, #251, #253, #254, #255, #256, #259, #262, #263, #264, #265, #266, #267, #268, #257, #252, #269, #270, #271, #272, #273, #274, #276, #277, #285, #286, #289, #291."
+  ],
+  "non_goals": [
+    "No implementation work.",
+    "No lane closure by this artifact alone."
+  ],
+  "review_mode": {
+    "mode": "trust-reconciliation",
+    "review question": "Which older closed items have sufficient evidence, and which are covered by open follow-up or active roadmap lanes?",
+    "default finding cap": "none",
+    "inputs inspected first": "summary closeout_reconciliation output, planning roadmap state, finished-work evidence, external-intent evidence, recent issue/commit context already captured by #324/#325"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace summary --format json; gh issue view 329 --json number,title,body,state,url",
+    "evidence sources": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/finished-work-evidence.json; #329"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#329",
+      "label": "older unreconciled lower-trust closeouts",
+      "role": "primary-intent",
+      "locator": "github issue #329"
+    },
+    {
+      "kind": "issue",
+      "target": "#325",
+      "label": "summary reconciliation view",
+      "role": "producer",
+      "locator": "github issue #325"
+    }
+  ],
+  "issue_classifications": [
+    {
+      "id": "#206",
+      "title": "Add a local-only installation mode",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Local-only installation/adoption is represented by current config/reporting surfaces and later local-only integration work; no open issue points back to #206.",
+      "follow_up": "None for the old closed item."
+    },
+    {
+      "id": "#251",
+      "title": "Design for graceful partial compliance",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Multiple partial-compliance slices landed, but the roadmap still keeps `graceful-partial-compliance` visible.",
+      "follow_up": ".agentic-workspace/planning/state.toml roadmap lane `graceful-partial-compliance`."
+    },
+    {
+      "id": "#253",
+      "title": "Make core package surfaces cheaper for generic agents",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Compact startup/preflight/summary surfaces now exist; remaining generic-agent compliance pressure is tracked by the graceful-partial-compliance roadmap lane.",
+      "follow_up": "Roadmap lane `graceful-partial-compliance`."
+    },
+    {
+      "id": "#254",
+      "title": "Make the default entry path easier for generic agents",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Root AGENTS adapter and compact startup commands route agents into package-owned surfaces.",
+      "follow_up": "Roadmap lane `graceful-partial-compliance` for any remaining bypass-trust pressure."
+    },
+    {
+      "id": "#255",
+      "title": "Make core package surfaces easier for generic agents to use",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "The package now exposes compact summary/preflight/report surfaces; #325 adds the missing reconciliation view.",
+      "follow_up": "Roadmap lane `graceful-partial-compliance` if generic-agent cost remains high."
+    },
+    {
+      "id": "#256",
+      "title": "Surface lower-trust signals when package use was likely bypassed",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Summary exposes lower-trust closeout counts and #325 adds actionable reconciliation categories.",
+      "follow_up": "None for the old closed signal; new issues should be filed for new bypass patterns."
+    },
+    {
+      "id": "#259",
+      "title": "Reopen delegated-run review",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Delegated-run review residue was absorbed into planning/handoff closeout contracts and finished-work inspection surfaces.",
+      "follow_up": "None currently visible in roadmap."
+    },
+    {
+      "id": "#262",
+      "title": "Surface planning-surface drift immediately at resume/startup",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "`agentic-workspace summary --format json` and planning checks expose planning_surface_health; current runs report clean state.",
+      "follow_up": "None."
+    },
+    {
+      "id": "#263",
+      "title": "Turn unlogged recurring friction into durable improvement pressure",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Recurring friction is now fed into issues and roadmap state during dogfooding; #329 itself was created from such a signal.",
+      "follow_up": "Current roadmap lanes continue carrying newly discovered friction."
+    },
+    {
+      "id": "#264",
+      "title": "Add an explicit planning-memory handshake",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Execplan templates and summary contracts include pre-work memory pull and post-work posterity fields.",
+      "follow_up": "None for the old handshake slice."
+    },
+    {
+      "id": "#265",
+      "title": "Prompt pre-work memory pull explicitly",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Execplan context_budget includes `pre-work memory pull` and summary/handoff surfaces preserve it.",
+      "follow_up": "None."
+    },
+    {
+      "id": "#266",
+      "title": "Prompt post-work posterity capture explicitly",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Execplan execution_summary includes `post-work posterity capture` and archive gates require closeout evidence.",
+      "follow_up": "None."
+    },
+    {
+      "id": "#267",
+      "title": "Add an explicit planning-config handshake",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Preflight/config/report commands and execplan config-compliance fields now make config pull/check explicit.",
+      "follow_up": "None."
+    },
+    {
+      "id": "#268",
+      "title": "Add an explicit memory-config handshake",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Memory/config handshake behavior is represented in current config and memory guidance surfaces.",
+      "follow_up": "None."
+    },
+    {
+      "id": "#257",
+      "title": "Surface dangling larger intent and lower-trust closeout signals",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Intent validation contract reports dangling/lower-trust counts; #325 adds closeout reconciliation states.",
+      "follow_up": "None for #257; #329 closes the older needs-audit residue surfaced by #325."
+    },
+    {
+      "id": "#252",
+      "title": "Make the default entry path easier for generic agents",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Default entry path was slimmed and compact startup commands exist; remaining partial-compliance concerns stay in the roadmap.",
+      "follow_up": "Roadmap lane `graceful-partial-compliance`."
+    },
+    {
+      "id": "#269",
+      "title": "Formalize modules and repo-custom workflow extensions",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Config/report/defaults surfaces now expose module and workflow obligations for planning consumption.",
+      "follow_up": "None for the old module-formalization slice."
+    },
+    {
+      "id": "#270",
+      "title": "Build structured agent configuration system",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Structured config substrate landed; #278/#327 continue formal workflow substrate follow-through.",
+      "follow_up": "#327 and roadmap lane `formal-workflow-substrate-follow-through`."
+    },
+    {
+      "id": "#271",
+      "title": "Define structured config model and authority map",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Workspace config contract, authority markers, and ownership review expose structured configuration authority.",
+      "follow_up": "None."
+    },
+    {
+      "id": "#272",
+      "title": "Design selective loading and compact queries",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Preflight, summary, config, report, ownership, and defaults provide compact query paths.",
+      "follow_up": "None."
+    },
+    {
+      "id": "#273",
+      "title": "Make prose entry surfaces compatibility adapters",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Root/package AGENTS adapters are thin routers; generated compatibility artifact cleanup remains planned.",
+      "follow_up": "#281 and #319 under product-compression follow-through."
+    },
+    {
+      "id": "#274",
+      "title": "Make system intent shape implementation tradeoffs",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "System intent alignment fields are present in execplans and summary/handoff contracts.",
+      "follow_up": "Roadmap keeps system-intent-operational-follow-through visible for post-audit verification, but #274 itself is evidenced."
+    },
+    {
+      "id": "#276",
+      "title": "Add package-owned mirrored system-intent contract",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "System intent contract and sync/report surfaces exist and are referenced by planning summaries.",
+      "follow_up": "None."
+    },
+    {
+      "id": "#277",
+      "title": "Improve takeover robustness with preflight-first workflow gates",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Preflight-first startup and execution_readiness gates are now used by dogfooding workflow.",
+      "follow_up": "None."
+    },
+    {
+      "id": "#285",
+      "title": "Resolve portable execplan semantics against local execution posture",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Handoff/summary contracts expose runtime posture and delegation guidance without binding to one runtime.",
+      "follow_up": "None."
+    },
+    {
+      "id": "#286",
+      "title": "Add preflight/runtime-resolution slice",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Preflight and handoff outputs turn config and execution posture into actionable guidance.",
+      "follow_up": "None."
+    },
+    {
+      "id": "#289",
+      "title": "Add compact handoff/prompt-generation slice",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Prompt and handoff surfaces exist for bounded external/strong reasoning escalation.",
+      "follow_up": "None."
+    },
+    {
+      "id": "#291",
+      "title": "Delegate system-intent extraction to agents",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "System-intent sync and compiled contract surfaces exist; current planning references the compiled system intent contract.",
+      "follow_up": "None."
+    }
+  ],
+  "summary_counts": {
+    "fully_satisfied_with_evidence": 21,
+    "bounded_slice_satisfied_parent_open": 7,
+    "covered_by_open_followup": 0,
+    "premature_or_needs_reopening": 0
+  },
+  "findings": [
+    {
+      "title": "Older needs-audit closeouts are now reconciled",
+      "summary": "The older set is split between evidence-present and follow-up-open; none require reopening from this audit.",
+      "evidence": "The classifications above are consumed by `intent_validation_contract.closeout_reconciliation`.",
+      "risk if unchanged": "Summary would keep reporting older needs-audit items even after the package can classify them.",
+      "suggested action": "Close #329 after summary confirms zero needs-audit items from this older set.",
+      "confidence": "medium",
+      "source": "checked-in planning state and summary reconciliation output",
+      "promotion target": ".agentic-workspace/planning/state.toml",
+      "promotion trigger": "after validation",
+      "post-remediation note shape": "remove first-lane audit debt only when summary confirms it is classified"
+    }
+  ],
+  "recommendation": {
+    "promote": "#329 can close after validation.",
+    "defer": "Implementation follow-ups remain in their roadmap lanes.",
+    "dismiss": "No reopen action."
+  },
+  "retention": {
+    "closeout shape": "retain while summary reconciliation references this artifact",
+    "trigger": "until a generated reconciliation report supersedes manual audit artifacts",
+    "proof surface": ".agentic-workspace/planning/reviews/older-lower-trust-closeout-audit-2026-04-26.review.json"
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "git diff --check"
+  ],
+  "drift_log": [
+    "2026-04-26: Created after #325 exposed older needs-audit closeout IDs through compact summary."
+  ]
+}

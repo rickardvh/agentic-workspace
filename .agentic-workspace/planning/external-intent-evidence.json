@@ -86,7 +86,7 @@
       "system": "github",
       "id": "#261",
       "title": "[Planning]: Reopen execplan modernization so machine-readable planning state becomes canonical and human views become derived",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -275,7 +275,7 @@
       "system": "github",
       "id": "#280",
       "title": "[Planning]: Add a multi-level structured reference model so execplans and higher-level planning surfaces can point explicitly to relevant issues, files, ranges, URLs, images, and other artifacts",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#261",
       "planning_residue_expected": "required"
@@ -293,7 +293,7 @@
       "system": "github",
       "id": "#282",
       "title": "[Planning]: Define proportional retention for planning review artifacts so review history stays useful without becoming a parallel archive",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#261",
       "planning_residue_expected": "required"
@@ -482,7 +482,7 @@
       "system": "github",
       "id": "#307",
       "title": "[Draft][Workspace]: Distill durable lane learning before archiving execplans",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"

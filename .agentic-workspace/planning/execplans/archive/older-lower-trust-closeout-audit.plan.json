@@ -1,0 +1,193 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Older Lower Trust Closeout Audit",
+  "goal": [
+    "Resolve #329 by adding a checked-in reconciliation artifact for older lower-trust closeouts surfaced by summary.",
+    "Reduce `intent_validation_contract.closeout_reconciliation.items_by_state.needs-audit` for the older set without hiding uncertainty."
+  ],
+  "non_goals": [
+    "Do not implement old follow-up work in this audit.",
+    "Do not rely on chat-only recollection.",
+    "Do not close unrelated roadmap lanes."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Classify older unreconciled lower-trust closeouts into evidence-present, follow-up-open, or likely-premature-closeout.",
+      "constraints": "Use checked-in evidence and current open roadmap ownership where possible; keep the artifact compact and consumable by summary.",
+      "latitude": "Classify conservatively, preferring follow-up-open when broad parent intent remains visible.",
+      "escalation": "Escalate if any older closed item appears materially premature without an open owner."
+    },
+    "execution": {
+      "milestone": "older-closeout-review-artifact",
+      "status": "completed",
+      "next_step": "Archive this plan, close #329, remove the completed first roadmap lane, and promote the next lane.",
+      "proof": "Summary no longer reports older items as needs-audit after the artifact is added."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/archive/older-lower-trust-closeout-audit.plan.json",
+        ".agentic-workspace/planning/reviews/older-lower-trust-closeout-audit-2026-04-26.review.json",
+        ".agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json"
+      ],
+      "invariants": [
+        "Classifications are queryable by summary.",
+        "Follow-up-open classifications name the owner surface or issue.",
+        "No implementation claims are made beyond audit evidence."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "machine-first planning state and closeout hygiene",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane machine-first-planning-state",
+    "parent lane": "machine-first-planning-state"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "The first roadmap lane can stop carrying unresolved lower-trust audit debt after summary confirms no needs-audit items remain from the older set.",
+    "intentionally deferred": "Later roadmap lanes remain scheduled in priority order.",
+    "discovered implications": "The first lane can now close because #324, #323, #325, and #329 resolved its remaining trust blockers. Dogfooding the summary also surfaced #280 and #282 as missing classifications in the earlier #324 audit artifact, so that artifact now records their landed machine-first evidence.",
+    "proof achieved now": "summary reports zero lower-trust closeout count and zero closeout_needs_audit_count",
+    "validation still needed": "none after archive and lane removal validation",
+    "next likely slice": "formal-workflow-substrate-follow-through"
+  },
+  "intent_interpretation": {
+    "literal request": "continue planned lanes on autopilot",
+    "inferred intended outcome": "finish the remaining first-lane audit debt exposed by the package view",
+    "chosen concrete what": "write a second review artifact that classifies the older needs-audit IDs",
+    "interpretation distance": "low",
+    "review guidance": "verify summary consumes the artifact and does not leave older items as needs-audit"
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/archive/older-lower-trust-closeout-audit.plan.json; .agentic-workspace/planning/reviews/older-lower-trust-closeout-audit-2026-04-26.review.json; .agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json",
+    "max changed files": "5",
+    "required validation commands": "uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "ask-before-refactor threshold": "stop before package code changes",
+    "stop before touching": "non-audit implementation work"
+  },
+  "stop_conditions": {
+    "stop when": "the older closeout audit is checked in and summary consumes it",
+    "escalate when boundary reached": "an item appears premature without an open owner",
+    "escalate on scope drift": "audit turns into implementation",
+    "escalate on proof failure": "summary still reports the older set as needs-audit"
+  },
+  "context_budget": {
+    "live working set": "#329 issue body, summary reconciliation output, prior #324 audit pattern, roadmap state",
+    "recoverable later": "full issue comments and every archived historical plan",
+    "externalize before shift": "classifications and follow-up routing",
+    "pre-work config pull": "agentic-workspace summary --format json",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "classify the 28 needs-audit IDs from summary into a review artifact",
+    "context-shift triggers": "after artifact creation or before commit"
+  },
+  "delegated_judgment": {
+    "requested outcome": "audit older needs-audit closeouts",
+    "hard constraints": "checked-in artifact, conservative classification, no unrelated implementation",
+    "agent may decide locally": "exact evidence phrasing and category choice",
+    "escalate when": "a closed item needs reopening and no open follow-up exists"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#329",
+      "label": "older unreconciled closeouts",
+      "role": "primary-intent",
+      "locator": "github issue #329"
+    }
+  ],
+  "active_milestone": {
+    "id": "older-closeout-review-artifact",
+    "status": "completed",
+    "scope": "Add one review artifact with issue_classifications for the older needs-audit IDs.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this plan, close #329, and promote the next roadmap lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/older-lower-trust-closeout-audit.plan.json",
+    ".agentic-workspace/planning/reviews/older-lower-trust-closeout-audit-2026-04-26.review.json"
+  ],
+  "invariants": [
+    "Do not remove the lane until summary confirms the audit debt is classified.",
+    "The audit remains machine-readable through issue_classifications."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "git diff --check"
+  ],
+  "required_tools": [
+    "uv",
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "The older needs-audit IDs have classifications.",
+    "Summary shows those IDs under evidence-present or follow-up-open instead of needs-audit.",
+    "Planning checks pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex dogfooding agentic-workspace",
+    "handoff source": "#329 created by #325 dogfood",
+    "what happened": "Added a second checked-in lower-trust closeout audit artifact for the 28 older needs-audit IDs surfaced by #325. Summary now consumes both audit artifacts and reports zero needs-audit closeouts.",
+    "scope touched": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/older-lower-trust-closeout-audit.plan.json; .agentic-workspace/planning/reviews/older-lower-trust-closeout-audit-2026-04-26.review.json",
+    "changed surfaces": "planning active state and execplan; older closeout review artifact",
+    "validations run": "uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "result for continuation": "The machine-first-planning-state lane's audit and archive-cleanup blockers are resolved; next lane is formal-workflow-substrate-follow-through.",
+    "next step": "archive this plan and remove the completed first lane"
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "summary used before implementation",
+    "misinterpretation risk": "medium because old historical issues were classified from checked-in product evidence, not full manual issue-comment reconstruction",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "`uv run agentic-workspace summary --format json`; `uv run python scripts/check/check_planning_surfaces.py`; `git diff --check`",
+    "proof achieved now": "Summary reports `lower_trust_closeout_count = 0`, `closeout_reconciled_count = 60`, and `closeout_needs_audit_count = 0`.",
+    "evidence for \"proof achieved\" state": ".agentic-workspace/planning/reviews/older-lower-trust-closeout-audit-2026-04-26.review.json and live summary output"
+  },
+  "intent_satisfaction": {
+    "original intent": "audit older unreconciled lower-trust closeouts surfaced by summary reconciliation",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "All 28 older needs-audit IDs from #329 now have checked-in issue_classifications consumed by summary.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The first lane's remaining open trust blockers are #323/#324/#325/#329, all now fixed, audited, or routed in checked-in summary-readable artifacts.",
+    "evidence carried forward": "summary closeout_reconciliation output and the two lower-trust closeout review artifacts",
+    "reopen trigger": "reopen if summary again reports the audited older set as needs-audit"
+  },
+  "execution_summary": {
+    "outcome delivered": "older lower-trust closeout audit artifact",
+    "validation confirmed": "summary, planning check, and diff check passed",
+    "follow-on routed to": "formal-workflow-substrate-follow-through",
+    "post-work posterity capture": "archive this execplan and retain both audit artifacts",
+    "knowledge promoted (Memory/Docs/Config)": "planning review artifact consumed by summary reconciliation",
+    "resume from": ".agentic-workspace/planning/execplans/older-lower-trust-closeout-audit.plan.json"
+  },
+  "drift_log": [
+    "2026-04-26: Active execplan created from #329 after #325 summary reconciliation exposed older needs-audit items.",
+    "2026-04-26: Added older lower-trust closeout audit artifact; summary now reports zero needs-audit closeouts."
+  ]
+}
