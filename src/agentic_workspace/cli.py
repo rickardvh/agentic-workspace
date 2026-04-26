@@ -2606,6 +2606,7 @@ def _operational_compression_payload(
 
     closeout_distillation = planning_report.get("closeout_distillation", {}) if isinstance(planning_report, dict) else {}
     closeout_counts = closeout_distillation.get("counts", {}) if isinstance(closeout_distillation, dict) else {}
+    archived_distillation = _archived_plan_distillation_measure(target=report_payload.get("target"))
     intent_validation = planning_report.get("intent_validation", {}) if isinstance(planning_report, dict) else {}
     intent_counts = intent_validation.get("counts", {}) if isinstance(intent_validation, dict) else {}
     current_external_work = intent_validation.get("current_external_work", {}) if isinstance(intent_validation, dict) else {}
@@ -2669,10 +2670,14 @@ def _operational_compression_payload(
             "sources": ["surface_value_guardrail"],
         },
         "archived_plan_distillation": {
-            "status": closeout_distillation.get("status", "unavailable") if isinstance(closeout_distillation, dict) else "unavailable",
+            "status": "measured",
+            "active_closeout_status": (
+                closeout_distillation.get("status", "unavailable") if isinstance(closeout_distillation, dict) else "unavailable"
+            ),
             "promoted_or_routed_count": closeout_counts.get("promoted_or_routed_count"),
             "intentionally_discarded_count": closeout_counts.get("intentionally_discarded_count"),
-            "sources": ["planning.closeout_distillation.counts"],
+            **archived_distillation,
+            "sources": ["planning.closeout_distillation.counts", ".agentic-workspace/planning/execplans/archive/*.plan.json"],
         },
         "unresolved_external_work_routing": {
             "status": current_external_work.get("status", "unavailable") if isinstance(current_external_work, dict) else "unavailable",
@@ -2718,6 +2723,15 @@ def _operational_compression_payload(
                 "count": len(adapter_missing_removal_paths),
             }
         )
+    if _as_int(archived_distillation.get("missing_distillation_count")):
+        advisory_signals.append(
+            {
+                "severity": "advisory",
+                "measure": "archived_plan_distillation",
+                "message": "Some archived execplans do not expose closeout distillation buckets.",
+                "count": _as_int(archived_distillation.get("missing_distillation_count")),
+            }
+        )
     if _as_int(intent_counts.get("untracked_external_open_count")):
         advisory_signals.append(
             {
@@ -2751,6 +2765,46 @@ def _missing_metadata_fields(record: dict[str, Any], *, required: tuple[str, ...
         if not str(value or "").strip():
             missing.append(field)
     return missing
+
+
+def _archived_plan_distillation_measure(*, target: Any) -> dict[str, Any]:
+    target_text = str(target or "").strip()
+    if not target_text:
+        return {
+            "archived_plan_count": 0,
+            "with_distillation_count": 0,
+            "missing_distillation_count": 0,
+            "sample_missing_distillation": [],
+        }
+    archive_dir = Path(target_text) / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    if not archive_dir.exists():
+        return {
+            "archived_plan_count": 0,
+            "with_distillation_count": 0,
+            "missing_distillation_count": 0,
+            "sample_missing_distillation": [],
+        }
+    archived_plans = [path for path in sorted(archive_dir.glob("*.plan.json")) if path.is_file()]
+    missing: list[str] = []
+    with_distillation = 0
+    for path in archived_plans:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            missing.append(path.name)
+            continue
+        distillation = payload.get("closeout_distillation") if isinstance(payload, dict) else None
+        buckets = distillation.get("buckets", {}) if isinstance(distillation, dict) else {}
+        if isinstance(buckets, dict) and any(_list_payload(buckets.get(bucket)) for bucket in buckets):
+            with_distillation += 1
+        else:
+            missing.append(path.name)
+    return {
+        "archived_plan_count": len(archived_plans),
+        "with_distillation_count": with_distillation,
+        "missing_distillation_count": len(missing),
+        "sample_missing_distillation": missing[:5],
+    }
 
 
 def _list_payload(value: Any) -> list[Any]:

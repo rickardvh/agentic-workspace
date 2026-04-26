@@ -1,13 +1,11 @@
 [todo]
-active_items = [
-  { id = "product-compression-followups", status = "in-progress", surface = ".agentic-workspace/planning/execplans/product-compression-followups.plan.json", why_now = "Fresh #341-#346 follow-up issues were created from the system-intent future-work review and routed under #230." },
-]
+active_items = []
 queued_items = []
 
 [roadmap]
 lanes = [
-  { id = "further-product-compression-on-repeated-pressure", title = "Further product compression on repeated pressure", priority = "first", issues = ["#230", "#341", "#342", "#343", "#344", "#345", "#346"], outcome = "Continue removing, demoting, internalizing, or making measurable visible product residue so ordinary operation gets cheaper without losing leverage.", reason = "The system-intent future-work review created focused follow-up slices under #230 for report compactness, surface-value review gates, closeout distillation, Memory shrinkage, selector discipline, and falsifiable compression measures.", promotion_signal = "Promote the smallest child slice that reduces default reading, durable residue, or review cost without adding a new first-line concept.", suggested_first_slice = "Continue with #346 operational-compression measures after the #344 Memory durable-fact routing milestone." },
+  { id = "further-product-compression-on-repeated-pressure", title = "Further product compression on repeated pressure", priority = "first", issues = ["#230"], outcome = "Continue removing, demoting, internalizing, or making measurable visible product residue so ordinary operation gets cheaper without losing leverage.", reason = "#341-#346 landed and closed as focused child slices; #230 remains open for broader product-compression pressure only when new repeated cost is visible.", promotion_signal = "Promote the smallest fresh slice that reduces default reading, durable residue, or review cost without adding a new first-line concept.", suggested_first_slice = "Do not promote automatically; wait for fresh #230 pressure or a new child issue." },
 ]
 candidates = [
-  { priority = "first", summary = "Product compression follow-ups from the system-intent future-work review (#230, #341-#346)" },
+  { priority = "first", summary = "Further product compression only when fresh #230 pressure appears" },
 ]

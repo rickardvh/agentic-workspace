@@ -3015,6 +3015,23 @@ def test_report_section_selector_returns_operational_compression_measures(tmp_pa
     _init_git_repo(target)
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "execplans" / "archive" / "compressed-lane.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "active_milestone": {"status": "completed"},
+            "closeout_distillation": {
+                "buckets": {
+                    "continuation": [{"summary": "Parent remains open.", "owner": "planning", "source": "test"}],
+                    "discard": [],
+                    "memory": [],
+                    "config_check": [],
+                    "docs": [],
+                    "issue_follow_up": [],
+                }
+            },
+        },
+    )
 
     assert cli.main(["report", "--target", str(target), "--section", "operational_compression", "--format", "json"]) == 0
 
@@ -3033,6 +3050,9 @@ def test_report_section_selector_returns_operational_compression_measures(tmp_pa
     assert measures["default_report_size_or_warning_count"]["decision_grade_field_count"] >= 1
     assert measures["additive_surface_replacement_pressure"]["status"] == "available-advisory-gate"
     assert measures["durable_surface_metadata"]["required_metadata"] == ["owner", "authority", "summary"]
+    assert measures["archived_plan_distillation"]["archived_plan_count"] == 1
+    assert measures["archived_plan_distillation"]["with_distillation_count"] == 1
+    assert measures["archived_plan_distillation"]["missing_distillation_count"] == 0
 
 
 def test_report_routes_roadmap_backed_work_to_planning_before_broad_execution(tmp_path: Path, capsys) -> None:

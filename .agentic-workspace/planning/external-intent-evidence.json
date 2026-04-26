@@ -644,7 +644,7 @@
       "system": "github",
       "id": "#346",
       "title": "[Workspace]: Make operational-compression measures falsifiable without adding dashboards",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
