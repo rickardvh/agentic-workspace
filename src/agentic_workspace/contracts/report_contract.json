@@ -17,6 +17,7 @@
     "agent_configuration_queries",
     "system_intent_mirror",
     "workflow_obligations",
+    "surface_value_guardrail",
     "execution_shape",
     "closeout_trust",
     "findings",

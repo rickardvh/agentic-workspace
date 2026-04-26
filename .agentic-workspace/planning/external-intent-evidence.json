@@ -567,6 +567,33 @@
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#337",
+      "title": "[Workspace]: Close the gap between system intent and operating reality",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#338",
+      "title": "[Workspace]: Add surface-sprawl guardrails for new contract, memory, and report surfaces",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#337",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#339",
+      "title": "[Workspace]: Add a compact effective authority and system-intent embodiment view",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#337",
+      "planning_residue_expected": "required"
     }
   ]
 }

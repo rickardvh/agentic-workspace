@@ -2532,6 +2532,7 @@ def _run_report_command(
             config=config,
             active_planning_record=_active_planning_record(module_reports=module_reports),
         ),
+        "surface_value_guardrail": _surface_value_guardrail_payload(),
         "findings": aggregated_findings,
         "closeout_trust": closeout_trust,
         "next_action": next_action,
@@ -4169,6 +4170,57 @@ def _reporting_schema_payload() -> dict[str, Any]:
     return report_contract_manifest().copy()
 
 
+def _surface_value_guardrail_payload() -> dict[str, Any]:
+    return {
+        "canonical_doc": ".agentic-workspace/docs/system-intent-contract.md",
+        "command": "agentic-workspace defaults --section surface_value_guardrail --format json",
+        "owner_surface": "workspace",
+        "rule": (
+            "New durable contract, memory, report, workflow, adapter, or local-only surfaces must show that they lower "
+            "repeated future cost more than they increase product feel."
+        ),
+        "applies_to": [
+            "checked-in contract or schema surfaces",
+            "memory and local-only memory surfaces",
+            "workspace or module report surfaces",
+            "workflow, adapter, and generated startup surfaces",
+        ],
+        "value_questions": [
+            "what repeated cost does this remove?",
+            "which existing surface does it replace, compress, merge, or make cheaper?",
+            "who owns it and is it authoritative, derived, adapter, or procedural-owned?",
+            "how does an agent discover it without broad rereading?",
+            "how does it remain removable, low-residue, or backgrounded?",
+            "what drift or review check keeps it trustworthy?",
+        ],
+        "preference_order": [
+            "remove an unnecessary surface",
+            "replace or merge with an existing compact surface",
+            "compress or background an existing surface",
+            "add a new durable surface only when the repeated cost and owner are explicit",
+        ],
+        "authority_classes": [
+            {"class": "authoritative", "test": "other surfaces should defer to it for this concern"},
+            {"class": "derived", "test": "it can be regenerated or reconstructed from a stronger source"},
+            {"class": "adapter", "test": "it routes a specific tool or audience into stronger structured surfaces"},
+            {"class": "procedural-owned", "test": "runtime code owns behavior until it is extracted into a contract"},
+        ],
+        "review_result": {
+            "accept_when": [
+                "the repeated cost is real and likely to recur",
+                "ownership and authority class are explicit",
+                "discovery starts from an existing compact query or selector",
+                "validation or drift checks are named",
+            ],
+            "reject_when": [
+                "the surface mainly makes a concept feel cleaner locally",
+                "agents would need another first-line thing to remember",
+                "the same result can be achieved by compressing, replacing, or backgrounding an existing surface",
+            ],
+        },
+    }
+
+
 def _agent_configuration_system_payload() -> dict[str, Any]:
     canonical_doc = ".agentic-workspace/docs/workspace-config-contract.md"
     return {
@@ -4963,6 +5015,7 @@ def _defaults_payload() -> dict[str, Any]:
         "agent_configuration_queries": _agent_configuration_queries_payload(),
         "agent_configuration_workflow_extensions": _agent_configuration_workflow_extensions_payload(),
         "system_intent": _system_intent_payload(),
+        "surface_value_guardrail": _surface_value_guardrail_payload(),
         "intent": _intent_contract_payload(),
         "clarification": _clarification_contract_payload(),
         "prompt_routing": _prompt_routing_contract_payload(),
@@ -5508,6 +5561,10 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- rule: {payload['intent']['rule']}")
     print(f"- confirmed: {payload['intent']['confirmed_intent']['summary']}")
     print(f"- interpreted: {payload['intent']['interpreted_intent']['summary']}")
+    print("Surface value guardrail:")
+    print(f"- command: {payload['surface_value_guardrail']['command']}")
+    print(f"- rule: {payload['surface_value_guardrail']['rule']}")
+    print(f"- prefer: {payload['surface_value_guardrail']['preference_order'][0]}")
     print("Clarification:")
     print(f"- doc: {payload['clarification']['canonical_doc']}")
     print(f"- command: {payload['clarification']['command']}")

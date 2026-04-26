@@ -17,6 +17,7 @@
     "agent_configuration_system",
     "agent_configuration_queries",
     "workflow_obligations",
+    "surface_value_guardrail",
     "closeout_trust",
     "findings",
     "next_action",
@@ -106,6 +107,9 @@
       "type": "object"
     },
     "workflow_obligations": {
+      "type": "object"
+    },
+    "surface_value_guardrail": {
       "type": "object"
     },
     "closeout_trust": {

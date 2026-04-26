@@ -176,6 +176,9 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["system_intent"]["command"] == "agentic-workspace defaults --section system_intent --format json"
     assert payload["system_intent"]["authority_ladder"][0]["layer"] == "confirmed request or live issue cluster"
     assert "larger outcome is actually closed" in payload["system_intent"]["recoverability"]["must_answer"][1]
+    assert payload["surface_value_guardrail"]["command"] == "agentic-workspace defaults --section surface_value_guardrail --format json"
+    assert payload["surface_value_guardrail"]["preference_order"][0] == "remove an unnecessary surface"
+    assert "replace, compress, merge" in payload["surface_value_guardrail"]["value_questions"][1]
     assert payload["clarification"]["canonical_doc"] == ".agentic-workspace/docs/compact-contract-profile.md"
     assert payload["clarification"]["command"] == "agentic-workspace defaults --section clarification --format json"
     assert payload["clarification"]["rule"] == "When a prompt is vague, ask the smallest repo-context question that removes the ambiguity."
@@ -926,6 +929,26 @@ def test_defaults_section_selector_returns_improvement_latitude_answer(capsys) -
     )
     assert ".agentic-workspace/docs/workspace-config-contract.md" in payload["refs"]
     assert "agentic-workspace defaults --format json" in payload["refs"]
+
+
+def test_defaults_section_selector_returns_surface_value_guardrail(capsys) -> None:
+    assert cli.main(["defaults", "--section", "surface_value_guardrail", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "surface_value_guardrail"}
+    assert payload["matched"] is True
+    answer = payload["answer"]
+    assert answer["owner_surface"] == "workspace"
+    assert answer["applies_to"][0] == "checked-in contract or schema surfaces"
+    assert answer["preference_order"][:3] == [
+        "remove an unnecessary surface",
+        "replace or merge with an existing compact surface",
+        "compress or background an existing surface",
+    ]
+    assert answer["authority_classes"][0]["class"] == "authoritative"
+    assert "first-line thing to remember" in answer["review_result"]["reject_when"][1]
 
 
 def test_defaults_section_selector_returns_optimization_bias_answer(capsys) -> None:
@@ -2882,6 +2905,9 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "weak_seam" in payload["repo_friction"]["validation_friction"]["subtypes"]
     assert "ordinary bug-fixing" in payload["repo_friction"]["validation_friction"]["distinguish_from"][0]
     assert payload["repo_friction"]["external_evidence"] == []
+    assert "surface_value_guardrail" in payload["schema"]["shared_fields"]
+    assert payload["surface_value_guardrail"]["preference_order"][0] == "remove an unnecessary surface"
+    assert payload["surface_value_guardrail"]["review_result"]["accept_when"][1] == "ownership and authority class are explicit"
     assert payload["reports"][0]["module"] == "planning"
     assert {report["module"] for report in payload["module_reports"]} == {"planning", "memory"}
     planning_report = next(report for report in payload["module_reports"] if report["module"] == "planning")

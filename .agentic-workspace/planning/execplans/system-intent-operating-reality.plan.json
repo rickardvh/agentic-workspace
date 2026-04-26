@@ -1,0 +1,189 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "System Intent Operating Reality",
+  "goal": [
+    "Implement the fresh #337 lane through the bounded #338 and #339 child slices.",
+    "Make surface growth justify itself against the package system intent.",
+    "Add a compact effective authority and system-intent embodiment view without creating a heavy workflow layer."
+  ],
+  "non_goals": [
+    "Do not implement every existing related issue under #337 in one slice.",
+    "Do not close #337 unless the parent lane acceptance is genuinely satisfied.",
+    "Do not close #230.",
+    "Do not switch branches."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Agents and reviewers can cheaply inspect surface-value pressure and effective authority/system-intent embodiment before claiming alignment or closure.",
+      "constraints": "Keep shipped package behavior repo-, agent-, tool-, language-, and provider-agnostic; prefer existing report/default surfaces before new top-level commands.",
+      "latitude": "Choose the compact payload shape, test fixtures, and whether #337 remains open after child slices land.",
+      "escalation": "Stop if implementation becomes a broad scoring system, workflow engine, or historical surface audit."
+    },
+    "execution": {
+      "milestone": "surface-value-guardrail",
+      "status": "in-progress",
+      "next_step": "Commit and push #338, close it with proof, then continue to #339.",
+      "proof": "Focused workspace tests, contract tooling, summary/reconcile dogfood, planning checker, and ruff for touched Python."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/",
+        "tests/",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/system-intent-operating-reality.plan.json"
+      ],
+      "invariants": [
+        "New durable surfaces must identify repeated cost removed and ownership/authority.",
+        "System intent remains directional and compact, not an automatic alignment score.",
+        "Roadmap candidates are not execution authority without active planning state."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "close the gap between stated system intent and ordinary package operation",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml and parent issue #337",
+    "parent lane": "system-intent-operating-reality"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "continue remaining #337 child work after #338/#339 or explicitly reroute parent lane"
+  },
+  "intent_interpretation": {
+    "literal request": "Reingest and repeat.",
+    "inferred intended outcome": "ingest newly opened issues, promote the next actionable lane, implement bounded child work end-to-end with package dogfooding, commits, pushes, and closures",
+    "chosen concrete what": "treat #337 as parent direction; implement #338 then #339 in order",
+    "interpretation distance": "low",
+    "review guidance": "reject additive surface growth unless it reduces repeated future cost and has clear authority/provenance"
+  },
+  "delegated_judgment": {
+    "requested outcome": "ingest and implement the next issues end-to-end",
+    "hard constraints": "stay on master; use checked-in planning; commit/push after milestones; close issues only after proof",
+    "agent may decide locally": "exact JSON payload names, tests, and whether parent #337 remains open",
+    "escalate when": "scope expands into broad architecture rewrite or all historical related issues under #337"
+  },
+  "execution_bounds": {
+    "allowed paths": "workspace package source/tests, planning state/evidence/active execplan, docs only if needed by #338/#339 acceptance",
+    "max changed files": "25",
+    "required validation commands": "focused pytest for touched workspace behavior; ruff for touched Python; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; uv run python scripts/check/check_contract_tooling_surfaces.py; git diff --check",
+    "ask-before-refactor threshold": "stop before creating a new top-level command, broad scoring model, or workflow engine",
+    "stop before touching": "unrelated memory implementation, branch state, or broad #230 surfaces"
+  },
+  "context_budget": {
+    "live working set": "#337 #338 #339, workspace report/default/config/ownership surfaces, contract inventory, system-intent mirror",
+    "recoverable later": "older related issues #307 #309 #313 #328 #331 and broad #230",
+    "externalize before shift": "update execution_run, proof_report, intent_satisfaction, closure_check, and drift_log after each milestone",
+    "pre-work config pull": "agentic-workspace preflight, summary, report, ownership, reconcile",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "implement #338 surface-value guardrail then #339 compact authority/system-intent view",
+    "context-shift triggers": "after each commit/push milestone or if adding a new top-level command becomes tempting"
+  },
+  "stop_conditions": {
+    "stop when": "#338 and #339 are implemented, validated, committed, pushed, and closed, with #337 either kept open or honestly closed",
+    "escalate when boundary reached": "the slice requires a heavy governance process or automatic alignment judgment",
+    "escalate on scope drift": "work turns into implementing all #337 related issues or #230",
+    "escalate on proof failure": "summary/checker or focused tests fail after attempted fixes"
+  },
+  "references": [
+    { "kind": "issue", "target": "#337", "label": "system intent operating reality parent lane", "role": "parent" },
+    { "kind": "issue", "target": "#338", "label": "surface-sprawl guardrails", "role": "milestone" },
+    { "kind": "issue", "target": "#339", "label": "effective authority and system-intent embodiment view", "role": "milestone" }
+  ],
+  "active_milestone": {
+    "id": "surface-value-guardrail",
+    "status": "in-progress",
+    "scope": "#338",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add a compact surface-value test for new durable surfaces.",
+    "Expose the guardrail through existing compact workspace surfaces and tests."
+  ],
+  "blockers": ["None."],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/execplans/system-intent-operating-reality.plan.json"
+  ],
+  "invariants": [
+    "Quiet, repo-native, low-residue package behavior.",
+    "Existing report/default surfaces are preferred over new commands.",
+    "Checked-in planning state remains the active authority."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q -k \"surface_value or effective_authority or defaults_command or contract\"",
+    "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "git diff --check"
+  ],
+  "required_tools": ["git", "gh", "uv"],
+  "completion_criteria": [
+    "#338 exposes a compact surface-value guardrail that favors replacement/compression/backgrounding over additive surface growth.",
+    "#339 exposes a compact effective authority/system-intent embodiment view through an existing query/report path.",
+    "Both child slices have focused tests and dogfood output.",
+    "Parent #337 is left open unless its broader related-work acceptance is honestly satisfied."
+  ],
+  "execution_run": {
+    "run status": "in-progress",
+    "executor": "Codex",
+    "handoff source": "preflight, summary, report, ownership, reconcile, live GitHub issue state",
+    "what happened": "Ingested open issues #337, #338, #339, promoted them into active checked-in planning state, and implemented #338 by adding a compact surface-value guardrail to defaults/report surfaces.",
+    "scope touched": "workspace CLI/report/defaults, report schema contract, tests, planning state, external intent evidence, active execplan",
+    "changed surfaces": "src/agentic_workspace/cli.py; src/agentic_workspace/contracts/report_contract.json; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/system-intent-operating-reality.plan.json",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"surface_value or defaults_command_reports_machine_readable_default_routes_as_json or report_command_returns_combined_workspace_state\"; uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace defaults --section surface_value_guardrail --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "result for continuation": "#338 is ready to close after commit/push; continue with #339.",
+    "next step": "Commit and push #338, close it, then implement #339."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "pending"
+  },
+  "proof_report": {
+    "validation proof": "Focused workspace CLI tests, ruff, contract tooling checker, planning checker, surface-value defaults dogfood, and git diff whitespace check passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "execution_run.validations run lists the passing commands"
+  },
+  "intent_satisfaction": {
+    "original intent": "Ingest and implement the next planned issue work end-to-end.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "pending",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Stay quiet, repo-native, low-residue, and sharply bounded while reducing total continuation, handoff, review, and proof cost.",
+    "slice shaping bias": "Add compact queryable guardrails only where they reduce repeated future cost.",
+    "broader-lane validation question": "Does this make alignment and authority cheaper to inspect without adding framework feel?",
+    "intent evidence source": "#337 #338 #339"
+  },
+  "closure_check": {
+    "slice status": "implemented",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "#338 is implemented but #339 and the parent #337 lane remain open",
+    "evidence carried forward": "surface_value_guardrail defaults/report payload and tests",
+    "reopen trigger": "surface additions no longer expose repeated-cost, owner, authority, discovery, removability, and drift-check criteria"
+  },
+  "execution_summary": {
+    "outcome delivered": "#338 surface-sprawl guardrail implemented in compact defaults and report surfaces.",
+    "validation confirmed": "Focused tests, ruff, contract tooling checker, planning checker, dogfood output, and diff check passed.",
+    "follow-on routed to": "#339 remains the next milestone under #337",
+    "post-work posterity capture": "The surface-value guardrail lives in workspace defaults/report payloads and tests rather than a new first-line document.",
+    "knowledge promoted (Memory/Docs/Config)": "pending",
+    "resume from": "surface-value-guardrail"
+  },
+  "drift_log": [
+    "2026-04-26: Reingested open issues and promoted #337/#338/#339 into active planning state.",
+    "2026-04-26: Implemented #338 surface-value guardrail through existing defaults/report surfaces."
+  ]
+}

@@ -1,11 +1,15 @@
 [todo]
-active_items = []
+active_items = [
+  { id = "system-intent-operating-reality", status = "in-progress", surface = ".agentic-workspace/planning/execplans/system-intent-operating-reality.plan.json", why_now = "Fresh lane #337 and child slices #338/#339 were added to close the gap between stated system intent and ordinary package operation." },
+]
 queued_items = []
 
 [roadmap]
 lanes = [
+  { id = "system-intent-operating-reality", title = "Close the gap between system intent and operating reality", priority = "first", issues = ["#337", "#338", "#339"], outcome = "Make system-intent embodiment cheaper to inspect and prevent new surfaces from increasing framework feel without clear value.", reason = "#337 is the current parent lane; #338 and #339 are bounded child slices ready for implementation.", promotion_signal = "Fresh issues #337-#339 are open and directly connected to recent dogfooding findings.", suggested_first_slice = "Implement #338 surface-sprawl guardrails, then #339 compact effective authority/system-intent view." },
   { id = "further-product-compression-on-repeated-pressure", title = "Further product compression on repeated pressure", priority = "fifth", issues = ["#230"], outcome = "Continue removing, demoting, or internalizing visible product residue only when repeated real use shows another surface still imposes first-line cognitive cost.", reason = "#281 compressed the generated helper docs into static routing adapters; #230 remains open for broader subtraction and product-shape compression that should not be closed by one cleanup.", promotion_signal = "Promote when repeated dogfooding shows another visible surface behaves like a first-line handbook, leaves startup ambiguity, keeps unnecessary adapter residue in the default mental model, leaves checked-in adapters stale, or lets memory runbooks accumulate rationale that belongs in a smaller decision surface.", suggested_first_slice = "Wait for a fresh repeated-use signal before choosing the next product-compression target under #230." },
 ]
 candidates = [
+  { priority = "first", summary = "Close the system-intent operating-reality gap (#337, #338, #339)" },
   { priority = "fifth", summary = "Further product compression on repeated pressure" },
 ]
