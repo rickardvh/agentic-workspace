@@ -1,0 +1,17 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Multi-Adapter Projection Requirements Closeout",
+  "date": "2026-04-26",
+  "scope": "#363",
+  "classification": "closeout",
+  "findings": [
+    {
+      "id": "#363",
+      "title": "[Workspace]: Define multi-adapter projection requirements for generated command surfaces",
+      "action_state": "evidence-present",
+      "evidence": "command_adapter_generation.json now records universal command truth, adapter-specific rendering, future target kinds, and pollution guardrails; schema and contract-tooling tests enforce the baseline.",
+      "follow_up": "#364 and #356",
+      "notes": "This is requirements-only; it intentionally does not generate additional adapter targets."
+    }
+  ]
+}

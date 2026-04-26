@@ -1,0 +1,199 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Multi-Adapter Projection Requirements",
+  "goal": [
+    "Implement #363 by defining the minimum adapter-target projection requirements that the generated command adapter contract must preserve for future non-Python surfaces."
+  ],
+  "non_goals": [
+    "Generate npm, shell, PowerShell, binary, MCP, or skill adapters now.",
+    "Choose a vendor-specific toolchain.",
+    "Move runtime primitive behavior into generated metadata.",
+    "Reopen completed generation slices unless tests reveal a regression."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "The command adapter generation contract distinguishes universal command truth from adapter-specific rendering requirements and can plausibly project beyond Python CLI surfaces.",
+      "constraints": "Keep this requirements-only; preserve implementation-independent wording; do not add a new generated target.",
+      "latitude": "Choose compact field names and validation tests that make future adapter work reviewable without over-specifying implementation.",
+      "escalation": "Stop before target-specific runtime behavior, host-specific assumptions, or broad adapter generation."
+    },
+    "execution": {
+      "milestone": "multi-adapter-projection-requirements-2026-04-26",
+      "status": "completed",
+      "next_step": "Archive this slice and continue with #364 validated contract-consumption parity.",
+      "proof": "Run contract tooling checks, focused contract tests, generated conformance tests, planning surface checks, reconcile, and summary."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/command_adapter_generation.json",
+        "src/agentic_workspace/contracts/schemas/command_adapter_generation.schema.json",
+        "tests/test_contract_tooling.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/multi-adapter-projection-requirements-2026-04-26.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Generated shipped CLI adapters from authoritative package definitions.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#364 and parent #356"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#364 and #356",
+    "activation trigger": "After multi-target projection requirements are recorded, validate contract consumption parity and decide the next generated adapter slice."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Future adapter targets can use one requirements baseline without polluting core operation definitions with target-specific rendering detail.",
+    "intentionally deferred": "Generating npm, shell, PowerShell, binary, MCP, or skill adapters.",
+    "discovered implications": "#364 remains the next dogfooding friction slice because contract consumption parity is still a double-entry check.",
+    "proof achieved now": "Contract requirements, schema, semantic checks, and focused tests passed.",
+    "validation still needed": "Parent #356 still needs #364 and a later decision on the next generated adapter target.",
+    "next likely slice": "#364"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Define multi-adapter projection requirements for generated command surfaces.",
+    "hard constraints": "Requirements only; implementation-independent; no new generated adapter target.",
+    "agent may decide locally": "How to encode universal fields, target kinds, and adapter-specific rendering requirements in the existing contract.",
+    "escalate when": "The work requires generating or selecting target-specific toolchains."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#363",
+      "label": "multi-adapter projection requirements",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#356",
+      "label": "generated CLI adapter lane",
+      "role": "parent",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "multi-adapter-projection-requirements-2026-04-26",
+    "status": "completed",
+    "scope": "#363",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this slice and continue with #364."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_adapter_generation.json",
+    "src/agentic_workspace/contracts/schemas/command_adapter_generation.schema.json",
+    "tests/test_contract_tooling.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "#363 is implemented and closed.",
+    "The generation contract records universal command truth separately from target-specific rendering requirements.",
+    "Likely future target kinds have a requirements baseline without implementation commitments.",
+    "Contract tooling tests fail if projection requirements regress."
+  ],
+  "execution_summary": {
+    "outcome delivered": "The command adapter generation contract now defines universal command truth, adapter-specific rendering, future target kinds, and pollution guardrails for multi-adapter projection.",
+    "validation confirmed": "Contract tooling, schema validation, generated adapter freshness, focused contract/conformance tests, proof-selected workspace CLI tests, ruff, planning doctor, reconcile, and summary passed.",
+    "follow-on routed to": "#364 and parent #356",
+    "post-work posterity capture": "Closeout review plus archived execplan.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory or docs promotion; the durable baseline belongs in command_adapter_generation.json.",
+    "resume from": "#364 validated contract-consumption parity."
+  },
+  "proof_report": {
+    "validation proof": "uv run agentic-workspace proof --target . --changed <paths> --format json selected workspace CLI and planning-surface lanes; contract tooling and focused conformance tests were run as lane-specific proof.",
+    "proof achieved now": "Projection requirements are schema-valid, semantically checked, covered by tests, and do not generate new adapter targets.",
+    "evidence for \"proof achieved\" state": "src/agentic_workspace/contracts/command_adapter_generation.json, src/agentic_workspace/contracts/schemas/command_adapter_generation.schema.json, scripts/check/check_contract_tooling_surfaces.py, tests/test_contract_tooling.py, and .agentic-workspace/planning/reviews/multi-adapter-projection-requirements-closeout-2026-04-26.review.json."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Detailed target wording iteration is not needed beyond the contract and tests.",
+          "owner": "discard",
+          "source": "execution_summary"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue with #364 to remove validated contract-consumption parity double-entry friction.",
+          "owner": "#364",
+          "source": "#363"
+        },
+        {
+          "summary": "Keep parent #356 open for the generated adapter migration lane.",
+          "owner": "#356",
+          "source": "#363"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No Memory or docs promotion; the durable baseline belongs in command_adapter_generation.json.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "No Memory or docs promotion; the durable baseline belongs in command_adapter_generation.json.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "Multi-adapter projection requirements",
+          "owner": "issue",
+          "source": "#363"
+        }
+      ]
+    }
+  },
+  "intent_satisfaction": {
+    "original intent": "Define multi-adapter projection requirements for generated command surfaces.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#363 slice satisfied: command_adapter_generation.json separates universal command truth from adapter-specific rendering and records future target requirements.",
+    "unsolved intent passed to": "#364 and parent #356"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#363 is complete as requirements-only; parent #356 remains open for generated adapter migration and #364 parity friction.",
+    "evidence carried forward": "src/agentic_workspace/contracts/command_adapter_generation.json, src/agentic_workspace/contracts/schemas/command_adapter_generation.schema.json, tests/test_contract_tooling.py, .agentic-workspace/planning/reviews/multi-adapter-projection-requirements-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen #363 if future adapter targets need fields that cannot be represented without polluting universal command truth."
+  },
+  "drift_log": [
+    "2026-04-26: Promoted from TODO direct-task shape into an execplan.",
+    "2026-04-26: Completed as requirements-only contract/schema/test slice."
+  ]
+}

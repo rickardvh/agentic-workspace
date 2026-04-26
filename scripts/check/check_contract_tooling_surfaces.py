@@ -352,6 +352,53 @@ def _validate_command_adapter_generation(payload: dict[str, object]) -> list[str
     adapters = payload.get("adapters", [])
     if not isinstance(adapters, list):
         return ["command_adapter_generation.json adapters must be a list"]
+    projection_requirements = payload.get("projection_requirements", {})
+    if not isinstance(projection_requirements, dict):
+        errors.append("command_adapter_generation.json projection_requirements must be an object")
+    else:
+        universal_truth = projection_requirements.get("universal_command_truth", [])
+        adapter_rendering = projection_requirements.get("adapter_specific_rendering", [])
+        target_kinds = projection_requirements.get("future_target_kinds", [])
+        if not isinstance(universal_truth, list) or not isinstance(adapter_rendering, list) or not isinstance(target_kinds, list):
+            errors.append("command_adapter_generation.json projection_requirements fields must be lists")
+        else:
+            universal_text = " ".join(str(item).lower() for item in universal_truth)
+            adapter_text = " ".join(str(item).lower() for item in adapter_rendering)
+            required_universal = {
+                "operation id and registry path",
+                "runtime primitive sequence",
+                "input and output schema refs",
+                "read/write/destructive/idempotence effects",
+                "conformance refs",
+            }
+            missing_universal = sorted(required_universal - {str(item) for item in universal_truth})
+            if missing_universal:
+                errors.append(
+                    "command_adapter_generation.json projection_requirements missing universal truth: "
+                    + ", ".join(missing_universal)
+                )
+            if "python" in universal_text or "argparse" in universal_text:
+                errors.append("command_adapter_generation.json universal command truth contains target-specific implementation detail")
+            if "help text layout" not in {str(item) for item in adapter_rendering}:
+                errors.append("command_adapter_generation.json adapter rendering requirements must include help text layout")
+            if "argparse" in adapter_text:
+                errors.append("command_adapter_generation.json adapter rendering requirements should not name Python argparse")
+            seen_target_kinds = {str(target.get("kind", "")) for target in target_kinds if isinstance(target, dict)}
+            expected_target_kinds = {
+                "process-cli",
+                "npm-cli",
+                "posix-shell",
+                "powershell",
+                "binary",
+                "local-mcp-tool",
+                "generated-skill",
+            }
+            missing_target_kinds = sorted(expected_target_kinds - seen_target_kinds)
+            if missing_target_kinds:
+                errors.append(
+                    "command_adapter_generation.json projection_requirements missing target kind(s): "
+                    + ", ".join(missing_target_kinds)
+                )
     for index, raw_adapter in enumerate(adapters):
         if not isinstance(raw_adapter, dict):
             errors.append(f"adapter entry {index} must be an object")

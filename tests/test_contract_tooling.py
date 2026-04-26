@@ -47,6 +47,25 @@ def test_command_adapter_generation_contract_records_package_migration_path() ->
     assert migration["memory"]["status"] == "planned-next-package-surface"
 
 
+def test_command_adapter_generation_contract_records_multi_target_requirements() -> None:
+    manifest = contract_tooling.command_adapter_generation_manifest()
+    requirements = manifest["projection_requirements"]
+    target_kinds = {target["kind"]: target for target in requirements["future_target_kinds"]}
+
+    assert "operation id and registry path" in requirements["universal_command_truth"]
+    assert "runtime primitive sequence" in requirements["universal_command_truth"]
+    assert "help text layout" in requirements["adapter_specific_rendering"]
+    assert "target-specific installation metadata" in requirements["adapter_specific_rendering"]
+    assert "Python module paths" not in " ".join(requirements["universal_command_truth"])
+
+    for kind in ("process-cli", "npm-cli", "posix-shell", "powershell", "binary", "local-mcp-tool", "generated-skill"):
+        assert kind in target_kinds
+        assert target_kinds[kind]["requirements"]
+
+    assert target_kinds["process-cli"]["status"] == "supported-now"
+    assert target_kinds["local-mcp-tool"]["status"] == "requirements-baseline"
+
+
 def test_generated_command_adapter_module_is_current() -> None:
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_adapters.py"
     spec = importlib.util.spec_from_file_location("generate_command_adapters", script_path)

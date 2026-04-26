@@ -7,6 +7,7 @@
     "schema_version",
     "summary",
     "schema",
+    "projection_requirements",
     "adapters"
   ],
   "properties": {
@@ -54,6 +55,39 @@
         },
         "memory": {
           "$ref": "#/$defs/package_migration"
+        }
+      },
+      "additionalProperties": false
+    },
+    "projection_requirements": {
+      "type": "object",
+      "required": [
+        "core_contract_rule",
+        "universal_command_truth",
+        "adapter_specific_rendering",
+        "future_target_kinds",
+        "pollution_guardrails"
+      ],
+      "properties": {
+        "core_contract_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "universal_command_truth": {
+          "$ref": "#/$defs/non_empty_strings"
+        },
+        "adapter_specific_rendering": {
+          "$ref": "#/$defs/non_empty_strings"
+        },
+        "future_target_kinds": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/future_target_kind"
+          }
+        },
+        "pollution_guardrails": {
+          "$ref": "#/$defs/non_empty_strings"
         }
       },
       "additionalProperties": false
@@ -333,6 +367,37 @@
         "next_step": {
           "type": "string",
           "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "future_target_kind": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "requirements"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "process-cli",
+            "npm-cli",
+            "posix-shell",
+            "powershell",
+            "binary",
+            "local-mcp-tool",
+            "generated-skill"
+          ]
+        },
+        "status": {
+          "enum": [
+            "supported-now",
+            "requirements-baseline"
+          ]
+        },
+        "requirements": {
+          "$ref": "#/$defs/non_empty_strings"
         }
       },
       "additionalProperties": false

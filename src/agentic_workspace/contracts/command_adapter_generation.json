@@ -2,6 +2,101 @@
   "schema_version": "agentic-workspace/command-adapter-generation/v1",
   "summary": "Generator-facing bindings that join command shape, operation contracts, primitive refs, schemas, projection hints, and conformance refs without owning runtime primitive behavior.",
   "schema": "schemas/command_adapter_generation.schema.json",
+  "projection_requirements": {
+    "core_contract_rule": "Keep universal command truth in the generation contract and leave target-specific rendering, packaging, invocation, and transport details in projection metadata or generated adapters.",
+    "universal_command_truth": [
+      "stable command identity",
+      "owning program or package surface",
+      "visible command and subcommand names",
+      "argument and option semantics",
+      "operation id and registry path",
+      "runtime primitive sequence",
+      "input and output schema refs",
+      "read/write/destructive/idempotence effects",
+      "conformance refs"
+    ],
+    "adapter_specific_rendering": [
+      "argv spelling and quoting",
+      "help text layout",
+      "exit-code mapping",
+      "environment variable mapping",
+      "package manager entrypoint wiring",
+      "shell function or script wrapper shape",
+      "transport envelope shape",
+      "target-specific installation metadata"
+    ],
+    "future_target_kinds": [
+      {
+        "kind": "process-cli",
+        "status": "supported-now",
+        "requirements": [
+          "render argv from command option semantics",
+          "dispatch to runtime binding by adapter id",
+          "preserve conformance checks as black-box process assertions"
+        ]
+      },
+      {
+        "kind": "npm-cli",
+        "status": "requirements-baseline",
+        "requirements": [
+          "map stable command identity to package bin entrypoints",
+          "preserve option semantics without assuming Python argparse",
+          "keep runtime behavior behind package-local implementation bindings"
+        ]
+      },
+      {
+        "kind": "posix-shell",
+        "status": "requirements-baseline",
+        "requirements": [
+          "derive wrapper invocation from universal command truth",
+          "keep quoting and environment handling target-specific",
+          "delegate runtime behavior instead of embedding primitives"
+        ]
+      },
+      {
+        "kind": "powershell",
+        "status": "requirements-baseline",
+        "requirements": [
+          "derive command parameters from option semantics",
+          "keep parameter binding and error rendering target-specific",
+          "preserve read/write/effect hints for preflight decisions"
+        ]
+      },
+      {
+        "kind": "binary",
+        "status": "requirements-baseline",
+        "requirements": [
+          "map command identity to compiled entrypoint metadata",
+          "preserve schema refs and effect hints for generated docs and checks",
+          "avoid embedding source-language runtime assumptions"
+        ]
+      },
+      {
+        "kind": "local-mcp-tool",
+        "status": "requirements-baseline",
+        "requirements": [
+          "map operation input and output schemas to tool schemas",
+          "preserve effect hints for tool safety declarations",
+          "route implementation through runtime bindings outside the contract"
+        ]
+      },
+      {
+        "kind": "generated-skill",
+        "status": "requirements-baseline",
+        "requirements": [
+          "derive user-facing invocation guidance from command semantics",
+          "route canonical behavior to contracts and compact command outputs",
+          "avoid duplicating doctrine in generated prose"
+        ]
+      }
+    ],
+    "pollution_guardrails": [
+      "Do not add Python module paths to universal command truth.",
+      "Do not add host tracker, repository, or agent assumptions to generated adapter requirements.",
+      "Do not make adapter-specific rendering fields required for every target.",
+      "Do not let generated prose adapters become canonical behavior."
+    ]
+  },
   "generated_outputs": [
     {
       "program": "agentic-workspace",

@@ -797,7 +797,7 @@
       "system": "github",
       "id": "#363",
       "title": "[Workspace]: Define multi-adapter projection requirements for generated command surfaces",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#356",
       "planning_residue_expected": "required"
