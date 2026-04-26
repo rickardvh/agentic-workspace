@@ -1,0 +1,205 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Compact TOML Promote To Plan",
+  "goal": [
+    "Resolve #330 by making promote-to-plan understand compact TOML active_items in .agentic-workspace/planning/state.toml.",
+    "Keep the command compatible with legacy Markdown-style TODO rows.",
+    "Prove the dogfooding path with focused tests and a real compact-state command run."
+  ],
+  "non_goals": [
+    "Do not redesign planning state or active item schema.",
+    "Do not close or materially reshape #230.",
+    "Do not switch branches."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Agents can promote compact TOML active items into canonical execplan records with the package command.",
+      "constraints": "Preserve legacy Markdown compatibility and keep state.toml as the authority.",
+      "latitude": "Choose the smallest parser/rewrite path that supports compact active_items cleanly.",
+      "escalation": "Stop before broad planning state migration or branch changes."
+    },
+    "execution": {
+      "milestone": "support-compact-toml-active-items",
+      "status": "in-progress",
+      "next_step": "Patch promote-to-plan to read and rewrite compact TOML active_items, then add regression tests.",
+      "proof": "Focused planning tests, ruff, package command dogfooding against compact TOML, summary/checker, and diff check."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/compact-toml-promote-to-plan.plan.json"
+      ],
+      "invariants": [
+        "Compact TOML state remains canonical for active planning state.",
+        "Legacy Markdown TODO promotion remains supported.",
+        "The active item points at the canonical .plan.json execplan after promotion."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "make package planning helpers dogfoodable against the repo-owned compact planning state",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane graceful-partial-compliance",
+    "parent lane": "graceful-partial-compliance"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "promote-to-plan now finds compact TOML active_items and queued_items, writes the matched row back structurally, and points compact rows at the canonical .plan.json record.",
+    "intentionally deferred": "broader planning schema redesign and deletion of #324-retained roadmap lanes",
+    "discovered implications": "Dogfooding exposed that BOM-prefixed TOML could fall through to legacy parsing on Windows-authored files, so the TOML reader now tolerates a UTF-8 BOM.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for #330",
+    "next likely slice": "further-product-compression-on-repeated-pressure after fresh repeated-use signal"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement remaining work as before",
+    "inferred intended outcome": "continue the remaining executable planned lane with package dogfooding, proof, commit, push, and issue closure",
+    "chosen concrete what": "resolve #330, the remaining concrete open friction issue besides broad #230",
+    "interpretation distance": "low",
+    "review guidance": "reject fixes that only document the limitation instead of supporting compact TOML active_items"
+  },
+  "delegated_judgment": {
+    "requested outcome": "ship compact TOML support for promote-to-plan",
+    "hard constraints": "stay on master; keep #230 open; preserve legacy Markdown behavior",
+    "agent may decide locally": "exact helper shape and regression coverage",
+    "escalate when": "support requires broad planning schema redesign"
+  },
+  "execution_bounds": {
+    "allowed paths": "planning package source/tests plus active planning state and execplan closeout",
+    "max changed files": "8",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q -k \"promote_todo_item_to_execplan\"; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run agentic-planning-bootstrap promote-to-plan <compact-item> --target <tmp> --format json; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "ask-before-refactor threshold": "stop before broad planning lifecycle redesign",
+    "stop before touching": "unrelated roadmap lanes or branch state"
+  },
+  "context_budget": {
+    "live working set": "#330, promote-to-plan implementation/tests, compact state.toml shape, active execplan",
+    "recoverable later": "full planning history and unrelated roadmap lanes",
+    "externalize before shift": "update this execplan execution_run, proof_report, and closure fields",
+    "pre-work config pull": "uv run agentic-workspace preflight and summary; gh issue view #330",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "support compact TOML active_items in promote-to-plan",
+    "context-shift triggers": "promotion support expands into planning schema redesign"
+  },
+  "stop_conditions": {
+    "stop when": "#330 is implemented, validated, dogfooded, committed, pushed, archived, and closed",
+    "escalate when boundary reached": "planning schema redesign is needed",
+    "escalate on scope drift": "work starts changing unrelated roadmap or memory behavior",
+    "escalate on proof failure": "compact-state promotion cannot be validated with package command"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#330",
+      "label": "compact TOML promote-to-plan",
+      "role": "primary-intent",
+      "locator": "github issue #330"
+    }
+  ],
+  "active_milestone": {
+    "id": "support-compact-toml-active-items",
+    "status": "completed",
+    "scope": "promote-to-plan compact TOML active item support",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Patch promote-to-plan to load compact TOML active_items before falling back to legacy Markdown rows.",
+    "Add regression coverage for compact TOML promotion and existing execplan refusal."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/compact-toml-promote-to-plan.plan.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "invariants": [
+    "Planning state remains compact TOML.",
+    "Legacy Markdown TODO rows remain supported.",
+    "Promotion does not leave direct-task fields in active_items."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"promote_todo_item_to_execplan\"",
+    "uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py",
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "git diff --check"
+  ],
+  "required_tools": [
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "promote-to-plan finds compact TOML active_items by id.",
+    "Promotion writes the active item surface to the execplan reference and removes direct next/done fields.",
+    "Existing execplan references in compact TOML still refuse manual review.",
+    "Legacy Markdown TODO promotion tests still pass.",
+    "The fixed command is dogfooded against compact TOML state."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "active execplan",
+    "what happened": "Added compact TOML active_items/queued_items support to promote-to-plan, preserved the legacy Markdown fallback, pointed compact items at canonical .plan.json records, and made the TOML state reader tolerate UTF-8 BOMs discovered during CLI dogfooding.",
+    "scope touched": "Planning package promote implementation, planning package tests, active planning state, and execplan closeout.",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/compact-toml-promote-to-plan.plan.json",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"promote_todo_item_to_execplan\"; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run agentic-planning-bootstrap promote-to-plan dogfood-compact --target <tmp> --format json; uv run agentic-planning-bootstrap promote-to-plan dogfood-bom --target <tmp> --format json",
+    "result for continuation": "#330 is complete; broader roadmap lane remains visible per #324 and should wait for fresh friction.",
+    "next step": "Run summary/checker/diff validation, archive this plan, close #330, commit, and push."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; implementation stayed in planning package promote behavior/tests and planning closeout surfaces",
+    "proof status": "proved by focused tests, ruff, and direct CLI dogfooding against compact TOML state including a BOM-prefixed file",
+    "intent served": "yes; package promotion no longer requires legacy Markdown TODO rows for compact state",
+    "config compliance": "yes; work ran from checked-in active planning state and dogfooded the package command",
+    "misinterpretation risk": "low; #230 remains open and #324-retained lanes were not deleted",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "5 focused promote tests passed; ruff passed; repaired CLI created canonical .plan.json records and updated compact state rows in normal UTF-8 and BOM-prefixed TOML dogfood runs.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "promote-to-plan actions reported created execplan records and updated compact state surfaces to .agentic-workspace/planning/execplans/<slug>.plan.json."
+  },
+  "intent_satisfaction": {
+    "original intent": "Make promote-to-plan support compact TOML active items or clearly route to a supported compact-state path.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The command now reads compact TOML active_items/queued_items, refuses already-routed compact execplan surfaces, updates compact rows structurally, and has regression coverage plus CLI dogfood proof.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "make repo-owned workflow surfaces cheaper for agents to use and verify",
+    "slice shaping bias": "Prefer package command support over manual scaffolding guidance.",
+    "broader-lane validation question": "Can agents promote compact active work through the package instead of falling back to hand-authored plan references?",
+    "intent evidence source": "#330"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#330 asked for compact TOML promote-to-plan support or clear routing; the package command now supports compact state directly and is validated through tests and dogfooding.",
+    "evidence carried forward": "Archived execplan, focused tests, CLI dogfood output, and package source/tests.",
+    "reopen trigger": "promote-to-plan again fails to promote a valid compact TOML active_items or queued_items row."
+  },
+  "execution_summary": {
+    "outcome delivered": "promote-to-plan supports compact TOML active_items/queued_items and updates compact rows to canonical .plan.json surfaces.",
+    "validation confirmed": "Focused promote tests, ruff, and package CLI dogfood passed.",
+    "follow-on routed to": "none for #330; #230 remains the only live open issue and should wait for a fresh product-compression signal.",
+    "post-work posterity capture": "Archived execplan will carry proof; regression tests document the compact and BOM behavior.",
+    "knowledge promoted (Memory/Docs/Config)": "Planning package tests encode the discovered compact-state and BOM friction.",
+    "resume from": "further-product-compression-on-repeated-pressure only after fresh repeated-use signal"
+  },
+  "drift_log": [
+    "2026-04-26: Promoted #330 as the next executable lane after #331; #230 remains open as a broad product-compression lane.",
+    "2026-04-26: Dogfooding exposed BOM-prefixed TOML fallback behavior; fixed in the same parser path and covered by regression."
+  ]
+}

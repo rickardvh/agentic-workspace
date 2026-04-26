@@ -1276,6 +1276,62 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
     assert any(action.kind == "created" and action.path == record_path for action in result.actions)
 
 
+def test_promote_todo_item_to_execplan_supports_compact_toml_active_items(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "compact-item", status = "in-progress", surface = "direct", why_now = "this thread needs the package command to dogfood compact state.", next_action = "promote the compact item.", done_when = "the command creates a plan." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    result = promote_todo_item_to_execplan("compact-item", target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "compact-item.plan.json"
+
+    assert record_path.exists()
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    assert record["kind"] == "planning-execplan/v1"
+    assert record["active_milestone"]["id"] == "compact-item"
+    assert record["delegated_judgment"]["requested outcome"] == "this thread needs the package command to dogfood compact state."
+    assert 'surface = ".agentic-workspace/planning/execplans/compact-item.plan.json"' in state_text
+    assert "next_action" not in state_text
+    assert "done_when" not in state_text
+    assert any(action.kind == "created" and action.path == record_path for action in result.actions)
+
+
+def test_promote_todo_item_to_execplan_accepts_bom_prefixed_compact_toml(tmp_path: Path) -> None:
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_bytes(
+        b"\xef\xbb\xbf"
+        + b"""
+[todo]
+active_items = [
+  { id = "bom-compact", status = "in-progress", surface = "direct", why_now = "Windows-authored TOML should still be parsed." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+"""
+    )
+
+    result = promote_todo_item_to_execplan("bom-compact", target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "bom-compact.plan.json"
+
+    assert record_path.exists()
+    assert any(action.kind == "created" and action.path == record_path for action in result.actions)
+
+
 def test_promote_todo_item_to_execplan_refuses_existing_execplan_surface(tmp_path: Path) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
@@ -1291,6 +1347,31 @@ def test_promote_todo_item_to_execplan_refuses_existing_execplan_surface(tmp_pat
 """,
     )
     _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.md", _minimal_execplan())
+
+    result = promote_todo_item_to_execplan("plan-alpha", target=tmp_path)
+
+    assert any(action.kind == "manual review" and "already points at" in action.detail for action in result.actions)
+
+
+def test_promote_todo_item_to_execplan_refuses_existing_compact_execplan_surface(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "in-progress", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json", why_now = "this item is already routed through an execplan." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_execplan_record(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json",
+        status="in-progress",
+    )
 
     result = promote_todo_item_to_execplan("plan-alpha", target=tmp_path)
 

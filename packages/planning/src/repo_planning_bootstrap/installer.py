@@ -3878,8 +3878,13 @@ def promote_todo_item_to_execplan(
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message=f"Promote TODO item '{item_id}' to execplan", dry_run=dry_run)
     todo_path = target_root / ".agentic-workspace/planning/state.toml"
-    todo_lines, todo_items = _read_todo_items(todo_path)
-    item = next((candidate for candidate in todo_items if candidate.item_id == item_id), None)
+    state = _read_state_from_toml(target_root)
+    compact_item = _compact_todo_item_from_state(state, item_id)
+    todo_lines, todo_items = ([], [])
+    item = compact_item
+    if item is None:
+        todo_lines, todo_items = _read_todo_items(todo_path)
+        item = next((candidate for candidate in todo_items if candidate.item_id == item_id), None)
     if item is None:
         result.add("manual review", todo_path, f"TODO item '{item_id}' was not found")
         return result
@@ -3894,6 +3899,7 @@ def promote_todo_item_to_execplan(
     execplan_relative = Path(".agentic-workspace") / "planning" / "execplans" / f"{slug}.md"
     execplan_path = target_root / execplan_relative
     execplan_record_path = _canonical_execplan_record_path(execplan_path)
+    execplan_record_relative = execplan_record_path.relative_to(target_root)
     if execplan_path.exists():
         result.add("manual review", execplan_path, "target execplan already exists")
         return result
@@ -3915,20 +3921,30 @@ def promote_todo_item_to_execplan(
     )
 
     updated_fields = dict(item.fields)
-    updated_fields["surface"] = execplan_relative.as_posix()
+    surface_relative = execplan_record_relative if compact_item is not None else execplan_relative
+    updated_fields["surface"] = surface_relative.as_posix()
     updated_fields.pop("next action", None)
     updated_fields.pop("done when", None)
-    new_todo_lines = _rewrite_todo_item(todo_lines, item, updated_fields)
+    if compact_item is not None:
+        new_state = _update_compact_todo_item_in_state(state, item_id, updated_fields)
+        if new_state is None:
+            result.add("manual review", todo_path, f"TODO item '{item_id}' could not be updated in compact state")
+            return result
+    else:
+        new_todo_lines = _rewrite_todo_item(todo_lines, item, updated_fields)
 
     if dry_run:
         result.add("would create", execplan_record_path, "scaffold canonical execplan record from TODO item")
-        result.add("would update", todo_path, f"point '{item_id}' at {execplan_relative.as_posix()} and remove direct-task fields")
+        result.add("would update", todo_path, f"point '{item_id}' at {surface_relative.as_posix()} and remove direct-task fields")
         return result
 
     _write_execplan_record(record_path=execplan_record_path, record=plan_record)
-    todo_path.write_text("\n".join(new_todo_lines).rstrip() + "\n", encoding="utf-8")
+    if compact_item is not None:
+        _write_state_to_toml(target_root, new_state)
+    else:
+        todo_path.write_text("\n".join(new_todo_lines).rstrip() + "\n", encoding="utf-8")
     result.add("created", execplan_record_path, "scaffolded canonical execplan record from TODO item")
-    result.add("updated", todo_path, f"pointed '{item_id}' at {execplan_relative.as_posix()} and removed direct-task fields")
+    result.add("updated", todo_path, f"pointed '{item_id}' at {surface_relative.as_posix()} and removed direct-task fields")
     return result
 
 
@@ -4954,6 +4970,77 @@ def _read_todo_items(path: Path) -> tuple[list[str], list[TodoItem]]:
     return lines, _read_todo_items_from_lines(lines)
 
 
+def _compact_todo_item_from_state(state: dict[str, Any] | None, item_id: str) -> TodoItem | None:
+    if not isinstance(state, dict):
+        return None
+    todo = state.get("todo")
+    if not isinstance(todo, dict):
+        return None
+
+    for bucket in ("active_items", "queued_items"):
+        raw_items = todo.get(bucket, [])
+        if not isinstance(raw_items, list):
+            continue
+        for raw in raw_items:
+            if not isinstance(raw, dict) or str(raw.get("id", "")) != item_id:
+                continue
+            fields: dict[str, str] = {}
+            field_order: list[str] = []
+            for key, value in raw.items():
+                normalized_key = str(key).replace("_", " ").lower()
+                field_order.append(normalized_key)
+                if isinstance(value, list):
+                    fields[normalized_key] = ", ".join(str(item) for item in value)
+                else:
+                    fields[normalized_key] = str(value)
+            return TodoItem(fields=fields, field_order=field_order, start=-1, end=-1)
+    return None
+
+
+def _update_compact_todo_item_in_state(
+    state: dict[str, Any] | None,
+    item_id: str,
+    updated_fields: dict[str, str],
+) -> dict[str, Any] | None:
+    if not isinstance(state, dict):
+        return None
+    todo = state.get("todo")
+    if not isinstance(todo, dict):
+        return None
+
+    next_state = dict(state)
+    next_todo = dict(todo)
+    for bucket in ("active_items", "queued_items"):
+        raw_items = todo.get(bucket, [])
+        if not isinstance(raw_items, list):
+            continue
+        next_items: list[Any] = []
+        changed = False
+        for raw in raw_items:
+            if not isinstance(raw, dict) or str(raw.get("id", "")) != item_id:
+                next_items.append(raw)
+                continue
+
+            next_item = dict(raw)
+            for key in ("next_action", "next action", "done_when", "done when"):
+                next_item.pop(key, None)
+            for key, value in updated_fields.items():
+                compact_key = key.replace(" ", "_")
+                if value:
+                    next_item[compact_key] = value
+                else:
+                    next_item.pop(compact_key, None)
+            next_items.append(next_item)
+            changed = True
+
+        if changed:
+            next_todo[bucket] = next_items
+            next_state["todo"] = next_todo
+            return next_state
+
+    return None
+
+
 def _rewrite_todo_item(lines: list[str], item: TodoItem, updated_fields: dict[str, str]) -> list[str]:
     ordered_keys = ["id", "status", "surface", "why now", "next action", "done when"]
     for key in item.field_order:
@@ -5737,8 +5824,10 @@ def _read_state_from_toml(target_root: Path) -> dict[str, Any] | None:
         return None
 
     try:
-        with state_path.open("rb") as f:
-            return tomllib.load(f)
+        raw = state_path.read_bytes()
+        if raw.startswith(b"\xef\xbb\xbf"):
+            raw = raw[3:]
+        return tomllib.loads(raw.decode("utf-8"))
     except Exception:
         return None
 
