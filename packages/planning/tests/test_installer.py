@@ -3643,6 +3643,22 @@ def test_planning_summary_exposes_closure_evidence(tmp_path: Path) -> None:
     assert "closure_check" in summary["schema"]["view_fields"]["planning_record"]
 
 
+def test_planning_summary_dedupes_unavailable_projection_reason_fragments(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+
+    summary = planning_summary(target=tmp_path)
+
+    reason = summary["hierarchy_contract"]["reason"]
+    fragments = [fragment.strip() for fragment in reason.split(";") if fragment.strip()]
+    assert len(fragments) == len(set(fragments))
+    assert fragments == [
+        "requires exactly one active execplan and at most one active TODO item",
+        "requires one active execplan with a present active intent contract",
+        "requires one active execplan with a present planning record",
+        "requires exactly one active execplan",
+    ]
+
+
 def test_planning_report_prints_closure_evidence(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(

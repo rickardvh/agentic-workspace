@@ -3113,7 +3113,7 @@ def _report_router_external_work_delta(value: Any) -> dict[str, Any]:
 
 def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
     section_purposes = {
-        "effective_authority": "authority, current work, system-intent pressure, and unresolved gaps",
+        "effective_authority": "authority, current work, system-intent pressure, idle context, and unresolved gaps",
         "execution_shape": "default execution posture and planning-backed work guidance",
         "operational_compression": "falsifiable advisory measures for whether surfaces reduce total operational cost",
         "findings": "raw warnings and attention signals grouped in router warning_summary",
@@ -8733,6 +8733,12 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
         hint_score = 0
         reasons: list[str] = []
 
+        matched_id = _matched_skill_id_phrase(skill=skill, task_text_normalized=task_text_normalized)
+        if matched_id:
+            score += 6
+            hint_score += 6
+            reasons.append(f"id match: {matched_id}")
+
         matched_phrases = _matched_skill_terms(
             terms=skill.activation_hints.phrases,
             task_text_lower=task_text_lower,
@@ -8783,6 +8789,17 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
         )
     )
     return recommendations
+
+
+def _matched_skill_id_phrase(*, skill: RegisteredSkill, task_text_normalized: str) -> str:
+    tokens = _skill_match_tokens(skill.skill_id)
+    if len(tokens) < 2:
+        return ""
+    for size in range(len(tokens), 1, -1):
+        phrase = " ".join(tokens[:size])
+        if phrase in task_text_normalized:
+            return phrase
+    return ""
 
 
 def _matched_skill_terms(

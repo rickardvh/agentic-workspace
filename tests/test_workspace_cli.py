@@ -2192,6 +2192,56 @@ def test_skills_command_recommends_self_improvement_for_hyphenated_dogfooding_ta
     assert any("noun match" in reason and "self-improvement" in reason for reason in payload["recommendations"][0]["reasons"])
 
 
+def test_skills_command_prioritizes_self_improvement_for_system_wide_improvement_review(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write_json(
+        target / "tools" / "skills" / "REGISTRY.json",
+        {
+            "schema_version": "skill-registry.v1",
+            "owner": "repo-local-tool-skills",
+            "source_kind": "repo-owned-tool-skills",
+            "skills": [
+                {
+                    "id": "self-improvement-dogfooding",
+                    "path": "self-improvement-dogfooding/SKILL.md",
+                    "summary": "run bounded repo-local improvement cycles that dogfood package surfaces",
+                    "activation_hints": {
+                        "nouns": ["self-improvement", "dogfooding", "system intent"],
+                    },
+                }
+            ],
+        },
+    )
+    _write(target / "tools" / "skills" / "self-improvement-dogfooding" / "SKILL.md", "# Self-improvement\n")
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "make a full review of the system as a whole to drive self-improvement",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["recommendations"][0]["id"] == "self-improvement-dogfooding"
+    assert any("id match: self improvement" in reason for reason in payload["recommendations"][0]["reasons"])
+
+
 def test_skills_command_keeps_repo_owned_memory_and_general_skill_sources_distinct(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -3074,6 +3124,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert section_hints["module_reports"]["volume"] == "high"
     assert section_hints["operational_compression"]["volume"] == "normal"
     assert section_hints["external_work_delta"]["volume"] == "normal"
+    assert "idle context" in section_hints["effective_authority"]["purpose"]
     assert section_hints["effective_authority"]["command"] == (
         "agentic-workspace report --target ./repo --section effective_authority --format json"
     )

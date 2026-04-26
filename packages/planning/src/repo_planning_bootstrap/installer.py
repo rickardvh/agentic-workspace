@@ -8,7 +8,7 @@ import tomllib
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from repo_planning_bootstrap import __version__
 from repo_planning_bootstrap._ownership import module_root
@@ -3995,6 +3995,16 @@ def _dedupe_distillation_items(items: list[dict[str, str]]) -> list[dict[str, st
     return deduped
 
 
+def _unavailable_reason_fragments(*contracts: dict[str, Any], extra: Iterable[str] = ()) -> str:
+    reasons: list[str] = []
+    for contract in contracts:
+        if contract.get("status") != "present":
+            raw_reason = str(contract.get("reason", "required planning contract unavailable")).strip()
+            reasons.extend(part.strip() for part in raw_reason.split(";") if part.strip())
+    reasons.extend(part.strip() for part in extra if part.strip())
+    return "; ".join(_dedupe(reasons))
+
+
 def _active_hierarchy_contract(
     *,
     target_root: Path,
@@ -4014,15 +4024,17 @@ def _active_hierarchy_contract(
         or context_budget_contract.get("status") != "present"
         or len(active_execplans) != 1
     ):
-        reasons: list[str] = []
-        for contract in (planning_record, active_contract, resumable_contract, follow_through_contract, context_budget_contract):
-            if contract.get("status") != "present":
-                reasons.append(contract.get("reason", "required planning contract unavailable"))
-        if len(active_execplans) != 1:
-            reasons.append("requires exactly one active execplan")
+        extra = ["requires exactly one active execplan"] if len(active_execplans) != 1 else []
         return {
             "status": "unavailable",
-            "reason": "; ".join(_dedupe(reasons)),
+            "reason": _unavailable_reason_fragments(
+                planning_record,
+                active_contract,
+                resumable_contract,
+                follow_through_contract,
+                context_budget_contract,
+                extra=extra,
+            ),
         }
 
     plan_path = _resolve_execplan_path(target_root, active_execplans[0]["path"])
