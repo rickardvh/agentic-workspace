@@ -2931,6 +2931,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["surface_value_guardrail"]["preference_order"][0] == "remove an unnecessary surface"
     assert payload["surface_value_guardrail"]["review_result"]["accept_when"][1] == "ownership and authority class are explicit"
     assert "effective_authority" in payload["schema"]["shared_fields"]
+    assert "operational_compression" in payload["schema"]["shared_fields"]
     effective_authority = payload["effective_authority"]
     assert effective_authority["status"] == "needs-review"
     authority_by_concern = {entry["concern"]: entry for entry in effective_authority["authority_map"]}
@@ -2944,6 +2945,18 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert planning_report["schema"]["command"] == "agentic-planning-bootstrap report --format json"
     assert memory_report["schema"]["command"] == "agentic-memory-bootstrap report --target ./repo --format json"
     assert payload["config"]["mixed_agent"]["status"] == "reporting-only"
+    operational_compression = payload["operational_compression"]
+    assert operational_compression["kind"] == "workspace-operational-compression/v1"
+    assert operational_compression["advisory_only"] is True
+    measures = operational_compression["measures"]
+    assert measures["default_report_size_or_warning_count"]["warning_count"] == len(payload["findings"])
+    assert measures["routed_memory_pull_size"]["sources"] == [
+        "memory.habitual_pull.evidence",
+        "memory.durable_facts.routing_measure",
+    ]
+    assert measures["unresolved_external_work_routing"]["provider_rule"].startswith(
+        "Core planning only consumes provider-agnostic external work evidence"
+    )
 
 
 def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path, capsys) -> None:
@@ -2965,9 +2978,14 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert payload["health"] == "healthy"
     assert "module_reports" not in payload
     assert "reports" not in payload
+    assert payload["operational_compression"]["section_command"] == (
+        "agentic-workspace report --target ./repo --section operational_compression --format json"
+    )
+    assert payload["operational_compression"]["hard_failure_count"] == 0
     assert payload["deeper_detail"]["high_volume_sections"][0]["section"] == "module_reports"
     section_hints = {item["section"]: item for item in payload["section_hints"]}
     assert section_hints["module_reports"]["volume"] == "high"
+    assert section_hints["operational_compression"]["volume"] == "normal"
     assert section_hints["effective_authority"]["command"] == (
         "agentic-workspace report --target ./repo --section effective_authority --format json"
     )
@@ -2989,6 +3007,32 @@ def test_report_section_selector_returns_compact_section_answer(tmp_path: Path, 
     assert payload["matched"] is True
     assert payload["answer"]["defaults_command"] == "agentic-workspace defaults --section effective_authority --format json"
     assert payload["refs"][0] == ".agentic-workspace/docs/reporting-contract.md"
+
+
+def test_report_section_selector_returns_operational_compression_measures(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(target), "--section", "operational_compression", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "report"
+    assert payload["selector"] == {"section": "operational_compression"}
+    assert payload["matched"] is True
+    answer = payload["answer"]
+    assert answer["kind"] == "workspace-operational-compression/v1"
+    assert answer["advisory_only"] is True
+    assert answer["hard_failures"] == []
+    assert "dashboard" in answer["rule"]
+    measures = answer["measures"]
+    assert measures["first_line_startup_read_surface_count"]["count"] >= 1
+    assert measures["default_report_size_or_warning_count"]["decision_grade_field_count"] >= 1
+    assert measures["additive_surface_replacement_pressure"]["status"] == "available-advisory-gate"
+    assert measures["durable_surface_metadata"]["required_metadata"] == ["owner", "authority", "summary"]
 
 
 def test_report_routes_roadmap_backed_work_to_planning_before_broad_execution(tmp_path: Path, capsys) -> None:

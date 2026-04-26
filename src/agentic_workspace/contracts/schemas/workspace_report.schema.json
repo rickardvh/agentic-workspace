@@ -20,6 +20,7 @@
     "workflow_obligations",
     "surface_value_guardrail",
     "effective_authority",
+    "operational_compression",
     "closeout_trust",
     "findings",
     "next_action",
@@ -118,6 +119,9 @@
       "type": "object"
     },
     "effective_authority": {
+      "type": "object"
+    },
+    "operational_compression": {
       "type": "object"
     },
     "closeout_trust": {

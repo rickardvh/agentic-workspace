@@ -2508,6 +2508,7 @@ def _run_report_command(
     branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
     local_memory = _local_memory_payload(config=config)
     closeout_trust = _report_closeout_trust_payload(module_reports=module_reports)
+    surface_value_guardrail = _surface_value_guardrail_payload()
     payload = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -2542,7 +2543,7 @@ def _run_report_command(
             config=config,
             active_planning_record=_active_planning_record(module_reports=module_reports),
         ),
-        "surface_value_guardrail": _surface_value_guardrail_payload(),
+        "surface_value_guardrail": surface_value_guardrail,
         "effective_authority": _effective_authority_payload(
             target_root=target_root,
             config=config,
@@ -2560,7 +2561,207 @@ def _run_report_command(
         "reports": status_payload["reports"],
         "module_reports": module_reports,
     }
+    payload["operational_compression"] = _operational_compression_payload(
+        report_payload=payload,
+        module_reports=module_reports,
+        findings=aggregated_findings,
+        surface_value_guardrail=surface_value_guardrail,
+    )
     return payload
+
+
+def _operational_compression_payload(
+    *,
+    report_payload: dict[str, Any],
+    module_reports: list[dict[str, Any]],
+    findings: list[dict[str, Any]],
+    surface_value_guardrail: dict[str, Any],
+) -> dict[str, Any]:
+    planning_report = next(
+        (report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"),
+        {},
+    )
+    memory_report = next(
+        (report for report in module_reports if isinstance(report, dict) and report.get("module") == "memory"),
+        {},
+    )
+    planning_report = planning_report if isinstance(planning_report, dict) else {}
+    memory_report = memory_report if isinstance(memory_report, dict) else {}
+
+    report_profile = report_payload.get("report_profile", {})
+    schema = report_payload.get("schema", {})
+    decision_grade_fields = _list_payload(report_profile.get("decision_grade_fields") if isinstance(report_profile, dict) else [])
+    high_volume_sections = _list_payload(report_profile.get("high_volume_sections") if isinstance(report_profile, dict) else [])
+    shared_fields = _list_payload(schema.get("shared_fields") if isinstance(schema, dict) else [])
+    section_hints = _report_section_hints({**report_payload, "operational_compression": {}})
+
+    memory_habitual_pull = memory_report.get("habitual_pull", {}) if isinstance(memory_report, dict) else {}
+    memory_evidence = memory_habitual_pull.get("evidence", {}) if isinstance(memory_habitual_pull, dict) else {}
+    durable_facts = memory_report.get("durable_facts", {}) if isinstance(memory_report, dict) else {}
+    durable_fact_records = _list_payload(durable_facts.get("records") if isinstance(durable_facts, dict) else [])
+
+    ownership_review = planning_report.get("ownership_review", {}) if isinstance(planning_report, dict) else {}
+    authority_surfaces = _list_payload(ownership_review.get("authority_surfaces") if isinstance(ownership_review, dict) else [])
+    managed_fences = _list_payload(ownership_review.get("managed_fences") if isinstance(ownership_review, dict) else [])
+
+    closeout_distillation = planning_report.get("closeout_distillation", {}) if isinstance(planning_report, dict) else {}
+    closeout_counts = closeout_distillation.get("counts", {}) if isinstance(closeout_distillation, dict) else {}
+    intent_validation = planning_report.get("intent_validation", {}) if isinstance(planning_report, dict) else {}
+    intent_counts = intent_validation.get("counts", {}) if isinstance(intent_validation, dict) else {}
+    current_external_work = intent_validation.get("current_external_work", {}) if isinstance(intent_validation, dict) else {}
+
+    durable_metadata_records = authority_surfaces + durable_fact_records
+    missing_metadata = [
+        {
+            "surface": str(record.get("surface") or record.get("id") or record.get("path") or ""),
+            "missing": _missing_metadata_fields(record, required=("owner", "authority", "summary")),
+        }
+        for record in durable_metadata_records
+        if isinstance(record, dict) and _missing_metadata_fields(record, required=("owner", "authority", "summary"))
+    ]
+    adapter_missing_removal_paths = [
+        str(record.get("file") or record.get("surface") or record.get("name") or "")
+        for record in managed_fences
+        if isinstance(record, dict) and not str(record.get("uninstall_policy", "")).strip()
+    ]
+
+    measures = {
+        "first_line_startup_read_surface_count": {
+            "status": "measured",
+            "count": len(_list_payload(report_payload.get("selected_modules"))) + 1,
+            "sources": [
+                "AGENTS.md workflow pointer",
+                "installed module routing from report.selected_modules",
+            ],
+            "advisory": "New first-line startup surfaces should replace, merge, or background an existing route.",
+        },
+        "default_report_size_or_warning_count": {
+            "status": "measured",
+            "shared_field_count": len(shared_fields),
+            "decision_grade_field_count": len(decision_grade_fields),
+            "section_hint_count": len(section_hints),
+            "high_volume_section_count": len(high_volume_sections),
+            "warning_count": len(findings),
+            "sources": ["report.schema.shared_fields", "report.report_profile", "report.findings"],
+        },
+        "routed_memory_pull_size": {
+            "status": "measured" if memory_evidence else "unavailable",
+            "average_routed_note_count": memory_evidence.get("average_routed_note_count"),
+            "average_routed_line_count": memory_evidence.get("average_routed_line_count"),
+            "durable_fact_count": memory_evidence.get("durable_fact_count", len(durable_fact_records)),
+            "durable_fact_matched_case_count": memory_evidence.get("durable_fact_matched_case_count"),
+            "durable_facts_smaller_or_more_precise": memory_evidence.get("durable_facts_smaller_or_more_precise"),
+            "sources": ["memory.habitual_pull.evidence", "memory.durable_facts.routing_measure"],
+        },
+        "durable_surface_metadata": {
+            "status": "measured",
+            "record_count": len(durable_metadata_records),
+            "missing_metadata_count": len(missing_metadata),
+            "sample_missing_metadata": missing_metadata[:5],
+            "required_metadata": ["owner", "authority", "summary"],
+            "sources": ["planning.ownership_review.authority_surfaces", "memory.durable_facts.records"],
+        },
+        "additive_surface_replacement_pressure": {
+            "status": "available-advisory-gate",
+            "preference_count": len(_list_payload(surface_value_guardrail.get("preference_order"))),
+            "value_question_count": len(_list_payload(surface_value_guardrail.get("value_questions"))),
+            "review_gate": surface_value_guardrail.get("review_gate", {}),
+            "sources": ["surface_value_guardrail"],
+        },
+        "archived_plan_distillation": {
+            "status": closeout_distillation.get("status", "unavailable") if isinstance(closeout_distillation, dict) else "unavailable",
+            "promoted_or_routed_count": closeout_counts.get("promoted_or_routed_count"),
+            "intentionally_discarded_count": closeout_counts.get("intentionally_discarded_count"),
+            "sources": ["planning.closeout_distillation.counts"],
+        },
+        "unresolved_external_work_routing": {
+            "status": current_external_work.get("status", "unavailable") if isinstance(current_external_work, dict) else "unavailable",
+            "tracked_open_count": intent_counts.get("tracked_external_open_count"),
+            "untracked_open_count": intent_counts.get("untracked_external_open_count"),
+            "provider_rule": current_external_work.get("provider_rule", "") if isinstance(current_external_work, dict) else "",
+            "sources": ["planning.intent_validation"],
+        },
+        "adapter_surface_lifecycle": {
+            "status": "measured",
+            "adapter_count": len(managed_fences),
+            "missing_removal_path_count": len(adapter_missing_removal_paths),
+            "sample_missing_removal_paths": adapter_missing_removal_paths[:5],
+            "sources": ["planning.ownership_review.managed_fences"],
+        },
+    }
+
+    advisory_signals: list[dict[str, Any]] = []
+    if len(findings) > 0:
+        advisory_signals.append(
+            {
+                "severity": "advisory",
+                "measure": "default_report_size_or_warning_count",
+                "message": "Report findings are present; inspect warning_summary before declaring the workspace quiet.",
+                "count": len(findings),
+            }
+        )
+    if missing_metadata:
+        advisory_signals.append(
+            {
+                "severity": "advisory",
+                "measure": "durable_surface_metadata",
+                "message": "Some durable records do not expose owner, authority, and summary metadata.",
+                "count": len(missing_metadata),
+            }
+        )
+    if adapter_missing_removal_paths:
+        advisory_signals.append(
+            {
+                "severity": "advisory",
+                "measure": "adapter_surface_lifecycle",
+                "message": "Some adapter surfaces do not expose a removal path.",
+                "count": len(adapter_missing_removal_paths),
+            }
+        )
+    if _as_int(intent_counts.get("untracked_external_open_count")):
+        advisory_signals.append(
+            {
+                "severity": "advisory",
+                "measure": "unresolved_external_work_routing",
+                "message": "External work evidence has open items not tracked by active planning.",
+                "count": _as_int(intent_counts.get("untracked_external_open_count")),
+            }
+        )
+
+    return {
+        "kind": "workspace-operational-compression/v1",
+        "status": "attention" if advisory_signals else "measured",
+        "advisory_only": True,
+        "rule": ("These measures make surface cost inspectable. They are not a score, workflow engine, dashboard, or host-tracker policy."),
+        "measures": measures,
+        "signals": advisory_signals,
+        "hard_failures": [],
+        "review_question": "Did this change remove, merge, compress, route, or background more repeated work than it added?",
+        "section_command": "agentic-workspace report --target ./repo --section operational_compression --format json",
+    }
+
+
+def _missing_metadata_fields(record: dict[str, Any], *, required: tuple[str, ...]) -> list[str]:
+    missing: list[str] = []
+    for field in required:
+        if field == "authority":
+            value = record.get("authority") or record.get("authority_class")
+        else:
+            value = record.get(field)
+        if not str(value or "").strip():
+            missing.append(field)
+    return missing
+
+
+def _list_payload(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _as_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _report_profile_payload() -> dict[str, Any]:
@@ -2601,6 +2802,7 @@ def _report_profile_payload() -> dict[str, Any]:
             "section_hints",
             "effective_authority",
             "execution_shape",
+            "operational_compression",
         ],
     }
 
@@ -2680,6 +2882,7 @@ def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "effective_authority": _report_router_effective_authority(payload.get("effective_authority", {})),
         "execution_shape": _report_router_execution_shape(payload.get("execution_shape", {})),
         "closeout_trust": payload.get("closeout_trust", {}),
+        "operational_compression": _report_router_operational_compression(payload.get("operational_compression", {})),
         "surface_value_guardrail": {
             "command": "agentic-workspace defaults --section surface_value_guardrail --format json",
             "prefer": payload.get("surface_value_guardrail", {}).get("preference_order", [])[:3],
@@ -2718,10 +2921,28 @@ def _report_router_execution_shape(value: Any) -> dict[str, Any]:
     }
 
 
+def _report_router_operational_compression(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    signals = _list_payload(value.get("signals"))
+    hard_failures = _list_payload(value.get("hard_failures"))
+    return {
+        "status": value.get("status", "unknown"),
+        "advisory_only": value.get("advisory_only", True),
+        "signal_count": len(signals),
+        "hard_failure_count": len(hard_failures),
+        "section_command": value.get(
+            "section_command",
+            "agentic-workspace report --target ./repo --section operational_compression --format json",
+        ),
+    }
+
+
 def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
     section_purposes = {
         "effective_authority": "authority, current work, system-intent pressure, and unresolved gaps",
         "execution_shape": "default execution posture and planning-backed work guidance",
+        "operational_compression": "falsifiable advisory measures for whether surfaces reduce total operational cost",
         "findings": "raw warnings and attention signals grouped in router warning_summary",
         "module_reports": "deep planning and memory module reports",
         "reports": "workspace lifecycle report detail",

@@ -21,8 +21,8 @@
     },
     "execution": {
       "milestone": "operational-compression-measures",
-      "status": "in-progress",
-      "next_step": "Implement #346 by making operational-compression measures falsifiable without adding dashboards.",
+      "status": "proof-passed",
+      "next_step": "Commit and push the #346 implementation, then close #346 and refresh external evidence.",
       "proof": "Focused package tests, report dogfood, ruff for touched Python, maintainer surfaces, package checks, planning checker, summary/reconcile, and git diff check."
     },
     "scope": {
@@ -99,15 +99,15 @@
   ],
   "active_milestone": {
     "id": "operational-compression-measures",
-    "status": "in-progress",
+    "status": "proof-passed",
     "scope": "#346",
     "ready": "yes",
     "blocked": "no",
     "optional_deps": "#341/#345 report router and selector support landed; #342 surface-value review gate landed; #343 closeout distillation landed; #344 Memory durable-fact routing landed locally"
   },
   "immediate_next_action": [
-    "Expose falsifiable operational-compression measures without adding a dashboard.",
-    "Keep measures compact, routeable, and tied to existing package outputs."
+    "Commit and push the #346 operational-compression implementation.",
+    "Close #346 after the pushed proof is available, then refresh external evidence and archive this child-slice plan if the package archive gate allows it."
   ],
   "blockers": ["None."],
   "touched_paths": [
@@ -120,18 +120,13 @@
     "Checked-in planning state remains the active authority."
   ],
   "validation_commands": [
-    "uv run pytest packages/memory/tests/test_installer.py packages/memory/tests/test_packaging.py -q -k \"durable_fact or memory_report or payload\"",
-    "uv run ruff check packages/memory/src/repo_memory_bootstrap/installer.py packages/memory/src/repo_memory_bootstrap/_installer_memory.py packages/memory/src/repo_memory_bootstrap/_installer_shared.py packages/memory/tests/test_installer.py",
-    "make maintainer-surfaces",
-    "uv run agentic-memory-bootstrap route --target . --surface memory planning --format json",
-    "uv run agentic-memory-bootstrap report --target . --format json",
-    "uv run agentic-memory-bootstrap route-report --target . --format json",
-    "uv run agentic-memory-bootstrap verify-payload --target . --format json",
-    "uv run python scripts/check/check_memory_freshness.py",
-    "uv run agentic-workspace summary --format json",
-    "uv run agentic-workspace reconcile --format json",
-    "uv run python scripts/check/check_planning_surfaces.py",
-    "git diff --check"
+    "uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py src/agentic_workspace/contracts/report_contract.json src/agentic_workspace/contracts/schemas/workspace_report.schema.json src/agentic_workspace/contracts/operations/report.combined.json tests/test_workspace_cli.py --format json",
+    "uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q -k \"report or operational_compression or contract_tooling\"",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run agentic-workspace report --target . --section operational_compression --format json",
+    "uv run agentic-workspace report --target . --format json"
   ],
   "required_tools": ["git", "gh", "uv"],
   "completion_criteria": [
@@ -144,35 +139,35 @@
     "#230 is left open unless its broader product-compression acceptance is honestly satisfied."
   ],
   "execution_run": {
-    "run status": "in-progress",
+    "run status": "proof-passed",
     "executor": "Codex",
     "handoff source": "preflight, summary, reconcile, live GitHub issue state, system-intent future-work review",
-    "what happened": "Implemented #344 by adding manifest-backed durable_facts records to Memory. Routing now surfaces matching facts directly, the memory report exposes durable_facts and measures whether matched fact pulls are smaller than routed note pulls, and the first packaged fact preserves the Memory/planning owner boundary without making Memory own active sequencing or workflow policy.",
-    "scope touched": "memory package source/tests, memory README, shipped payload manifest, installed manifest, routing fixture, active execplan",
-    "changed surfaces": ".agentic-workspace/memory/repo/manifest.toml; packages/memory/README.md; packages/memory/bootstrap/.agentic-workspace/memory/repo/manifest.toml; packages/memory/memory/manifest.toml; packages/memory/src/repo_memory_bootstrap/_installer_memory.py; packages/memory/src/repo_memory_bootstrap/_installer_shared.py; packages/memory/src/repo_memory_bootstrap/installer.py; packages/memory/tests/test_installer.py; tests/fixtures/routing/durable-fact-memory-boundary.json",
-    "validations run": "uv run pytest packages/memory/tests/test_installer.py -q -k \"durable_fact or memory_report_exposes_habitual_pull_boundary or memory_report_derives_compact_module_state\"; uv run ruff check packages/memory/src/repo_memory_bootstrap/installer.py packages/memory/src/repo_memory_bootstrap/_installer_memory.py packages/memory/src/repo_memory_bootstrap/_installer_shared.py packages/memory/tests/test_installer.py; uv run agentic-memory-bootstrap route --target . --surface memory planning --format json; uv run agentic-memory-bootstrap report --target . --format json; uv run agentic-memory-bootstrap route-report --target . --format json; uv run agentic-memory-bootstrap verify-payload --target . --format json; uv run python scripts/check/check_memory_freshness.py; make maintainer-surfaces; uv run pytest packages/memory/tests/test_installer.py packages/memory/tests/test_packaging.py -q -k \"durable_fact or memory_report or payload\"",
-    "result for continuation": "#344 is ready to commit, push, and close after milestone commit.",
-    "next step": "Implement #346 operational-compression measures."
+    "what happened": "Implemented #346 by adding an advisory operational_compression report section derived from already-loaded report, planning, memory, ownership, and surface-value data. The default report router now exposes the section command and signal counts, while --section operational_compression returns the compact falsifiable measures without adding a dashboard, workflow engine, score, or host-specific tracker behavior.",
+    "scope touched": "workspace CLI report assembly/router, report contracts/schemas, operation contract, focused CLI tests, active execplan",
+    "changed surfaces": "src/agentic_workspace/cli.py; src/agentic_workspace/contracts/report_contract.json; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; src/agentic_workspace/contracts/operations/report.combined.json; tests/test_workspace_cli.py; .agentic-workspace/planning/execplans/product-compression-followups.plan.json",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"operational_compression or report_default_profile_returns_router_before_deep_detail or report_command_includes_workspace_and_module_reports\"; uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py src/agentic_workspace/contracts/report_contract.json src/agentic_workspace/contracts/schemas/workspace_report.schema.json src/agentic_workspace/contracts/operations/report.combined.json tests/test_workspace_cli.py --format json; uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q -k \"report or operational_compression or contract_tooling\"; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace report --target . --section operational_compression --format json; uv run agentic-workspace report --target . --format json",
+    "result for continuation": "#346 implementation is proof-passed and ready to commit, push, close, and refresh external evidence.",
+    "next step": "Commit and push the #346 milestone, then close #346 and update evidence."
   },
   "finished_run_review": {
-    "review status": "completed for #344 milestone",
+    "review status": "completed for #346 milestone implementation",
     "scope respected": "yes",
     "proof status": "passed",
-    "intent served": "ordinary Memory can answer the durable Memory/planning boundary through a structured fact route before widening into prose notes",
-    "config compliance": "used package summary/reconcile, Memory route/report/route-report/verify-payload, maintainer surfaces, memory freshness, focused tests, and ruff",
+    "intent served": "reviewers can inspect whether new structure reduces total operating cost through a compact report selector instead of a dashboard or extra first-line command",
+    "config compliance": "used package summary, proof --changed, report router/section dogfooding, focused tests, full workspace CLI tests, contract tooling check, and ruff",
     "misinterpretation risk": "low",
-    "follow-on decision": "continue active lane with #346"
+    "follow-on decision": "commit, push, close #346, refresh external evidence, and archive this child-slice plan if allowed"
   },
   "proof_report": {
-    "validation proof": "Focused Memory tests, ruff, maintainer surfaces, Memory route/report/route-report/verify-payload dogfooding, memory freshness, and package payload tests passed for #344.",
-    "proof achieved now": "yes-for-memory-durable-fact-routing",
-    "evidence for \"proof achieved\" state": "agentic-memory-bootstrap report --target . --format json emitted durable_facts with one active record, matched evidence, matched_case_count=1, and durable_facts_smaller_or_more_precise=true; route --surface memory planning surfaced memory-owner-boundary directly."
+    "validation proof": "Package proof --changed accepted the durable report/contract updates; focused report tests, full tests/test_workspace_cli.py, tests/test_contract_tooling.py report slice, ruff, contract tooling check, and report router/operational_compression dogfooding passed for #346.",
+    "proof achieved now": "yes-for-operational-compression-measures",
+    "evidence for \"proof achieved\" state": "agentic-workspace report --target . --section operational_compression --format json emitted workspace-operational-compression/v1 with eight advisory measures, hard_failures=[], provider-agnostic external-work routing, memory pull size, durable metadata, closeout distillation, adapter lifecycle, and default report warning/size measures."
   },
   "intent_satisfaction": {
     "original intent": "Ingest and implement the new issues.",
     "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "pending",
-    "unsolved intent passed to": ".agentic-workspace/planning/state.toml and #230"
+    "evidence of intent satisfaction": "#341-#346 are implemented locally with passing proof; #346 still needs pushed commit, issue closure, and external evidence refresh before this child-slice plan can archive.",
+    "unsolved intent passed to": "#230 and .agentic-workspace/planning/state.toml"
   },
   "system_intent_alignment": {
     "relevant system intent": "Stay quiet, repo-native, low-residue, and sharply bounded while reducing total continuation, handoff, review, and proof cost.",
@@ -181,33 +176,33 @@
     "intent evidence source": "#230 #341 #342 #343 #344 #345 #346"
   },
   "closure_check": {
-    "slice status": "in-progress",
+    "slice status": "complete",
     "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "#341/#345/#342/#343 are closed and #344 landed locally, but #346 remains open and #230 is broader than this milestone.",
-    "evidence carried forward": "active planning state and milestone validation proof",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#341-#346 are implemented locally with proof, but #346 still needs issue closure/evidence refresh and #230 remains broader than the child-slice plan.",
+    "evidence carried forward": "operational_compression report section, report router signal, focused and full CLI validation, and external evidence after closure",
     "reopen trigger": "new report/default/memory/planning surfaces increase default reading or framework feel without a repeated-cost reduction"
   },
   "execution_summary": {
-    "outcome delivered": "#344 Memory durable-fact routing implemented.",
+    "outcome delivered": "#341-#346 child slices implemented through report routing/selectors, surface-value proof review, closeout distillation, Memory durable-fact routing, and operational-compression measures.",
     "validation confirmed": "yes",
-    "follow-on routed to": "#346 operational-compression measures",
-    "post-work posterity capture": "active execplan updated with proof and continuation",
-    "knowledge promoted (Memory/Docs/Config)": "first durable_facts manifest slice captures the Memory owner-boundary as structured routing data",
-    "resume from": "operational-compression-measures"
+    "follow-on routed to": "#230 remains open for broader product-compression pressure; no child #341-#346 implementation remains after #346 closure.",
+    "post-work posterity capture": "implementation lives in package code/tests/contracts; child-slice proof stays in this execplan and external evidence after issue closure",
+    "knowledge promoted (Memory/Docs/Config)": "operational-compression review is exposed through report --section operational_compression and the report router instead of a new first-line surface",
+    "resume from": "#230 if new product-compression pressure recurs"
   },
   "closeout_distillation": {
     "buckets": {
       "discard": [
         {
-          "summary": "Local #344 implementation mechanics are not promoted beyond tests and package code; the durable learning is the manifest-backed fact contract and report evidence.",
+          "summary": "Local implementation mechanics for #341-#346 are not promoted beyond package code, tests, contracts, and issue proof comments.",
           "owner": "discard",
           "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
         }
       ],
       "continuation": [
         {
-          "summary": "#346 operational-compression measures remains the next product-compression slice.",
+          "summary": "#230 remains open as the broader product-compression lane after child #341-#346 implementation.",
           "owner": ".agentic-workspace/planning/state.toml",
           "source": "execution_summary.follow-on routed to"
         }
@@ -221,15 +216,15 @@
       ],
       "config_check": [
         {
-          "summary": "Durable fact shape is enforced by Memory doctor checks and Memory report tests.",
-          "owner": "memory package tests",
-          "source": "packages/memory/tests/test_installer.py"
+          "summary": "Operational-compression shape is enforced by report selector tests and contract tooling schema checks.",
+          "owner": "workspace package tests",
+          "source": "tests/test_workspace_cli.py"
         }
       ],
       "docs": [],
       "issue_follow_up": [
         {
-          "summary": "#346 compression measures remains open under #230.",
+          "summary": "#346 must be closed after the milestone commit is pushed; #230 remains open.",
           "owner": "external work evidence",
           "source": ".agentic-workspace/planning/external-intent-evidence.json"
         }
@@ -241,6 +236,7 @@
     "2026-04-26: Implemented #341/#345 by turning report into a default router with explicit full and section selectors; routed continuation to #342.",
     "2026-04-26: Implemented #342 by making surface-value review an ordinary proof --changed gate for durable surfaces; routed continuation to #343.",
     "2026-04-26: Implemented #343 by adding closeout distillation buckets to planning summary/report; routed continuation to #344.",
-    "2026-04-26: Implemented #344 by adding manifest-backed durable facts, direct durable-fact routing, and report measurements; routed continuation to #346."
+    "2026-04-26: Implemented #344 by adding manifest-backed durable facts, direct durable-fact routing, and report measurements; routed continuation to #346.",
+    "2026-04-26: Implemented #346 by exposing advisory operational-compression measures through report router and --section operational_compression."
   ]
 }
