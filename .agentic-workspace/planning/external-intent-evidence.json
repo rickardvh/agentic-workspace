@@ -770,7 +770,7 @@
       "system": "github",
       "id": "#360",
       "title": "[Workspace]: Add conformance and drift checks for generated CLI adapters",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#356",
       "planning_residue_expected": "required"

@@ -1,0 +1,31 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Generated Adapter Drift And Conformance Closeout",
+  "summary": "#360 added ordinary contract-tooling drift checks for generated command adapter output and black-box conformance coverage assertions for generated adapters. #361 remains open for no-direct-edit guardrails, and #356 remains open as the parent lane.",
+  "issue_classifications": [
+    {
+      "id": "#360",
+      "title": "[Workspace]: Add conformance and drift checks for generated CLI adapters",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "live_state": "closed",
+      "evidence": "scripts/check/check_contract_tooling_surfaces.py and tests/test_generated_tool_conformance.py",
+      "follow_up": "#361"
+    },
+    {
+      "id": "#356",
+      "title": "[Workspace]: Generate shipped CLI adapters from authoritative package definitions",
+      "classification": "covered_by_open_followup",
+      "live_state": "open",
+      "evidence": "#360 landed drift/conformance checks; #361 remains open for direct-edit guardrails.",
+      "follow_up": "#361"
+    },
+    {
+      "id": "#361",
+      "title": "[Workspace]: Add no-direct-edit guardrails for generated CLI surfaces",
+      "classification": "covered_by_open_followup",
+      "live_state": "open",
+      "evidence": "Generated output freshness is now checked; manual-edit guardrails remain the next planned slice.",
+      "follow_up": "#361"
+    }
+  ]
+}

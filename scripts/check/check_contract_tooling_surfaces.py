@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import tempfile
 from pathlib import Path
 
@@ -37,6 +38,7 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
+from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -404,6 +406,49 @@ def _validate_command_adapter_generation(payload: dict[str, object]) -> list[str
     return errors
 
 
+def _validate_generated_command_adapter_output() -> list[str]:
+    errors: list[str] = []
+    repo_root = Path(__file__).resolve().parents[2]
+    generator_path = repo_root / "scripts" / "generate" / "generate_command_adapters.py"
+    generated_path = repo_root / "src" / "agentic_workspace" / "generated_command_adapters.py"
+    spec = importlib.util.spec_from_file_location("generate_command_adapters", generator_path)
+    if spec is None or spec.loader is None:
+        return [f"generator layer: cannot load {generator_path.relative_to(repo_root).as_posix()}"]
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    expected = module._render_generated_module(command_adapter_generation_manifest())
+    current = generated_path.read_text(encoding="utf-8") if generated_path.exists() else ""
+    if current != expected:
+        errors.append(
+            "generated adapter layer: src/agentic_workspace/generated_command_adapters.py is stale; "
+            "run uv run python scripts/generate/generate_command_adapters.py"
+        )
+
+    expected_by_command = {
+        str(adapter["command"]["name"]): {
+            "id": adapter["id"],
+            "status": adapter["status"],
+            "operation_id": adapter["operation_ref"]["id"],
+            "runtime_binding": adapter["runtime_binding"],
+            "effect_hints": adapter["effect_hints"],
+            "schemas": adapter["schemas"],
+            "conformance_refs": adapter["conformance_refs"],
+        }
+        for adapter in command_adapter_generation_manifest()["adapters"]
+    }
+    for command_name, expected_adapter in expected_by_command.items():
+        actual_adapter = GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
+        if actual_adapter is None:
+            errors.append(f"generated adapter layer: missing generated adapter for command {command_name}")
+            continue
+        for key, expected_value in expected_adapter.items():
+            if actual_adapter.get(key) != expected_value:
+                errors.append(f"generated adapter layer: {command_name} {key} drifted from command_adapter_generation.json")
+    for command_name in set(GENERATED_COMMAND_ADAPTERS_BY_COMMAND) - set(expected_by_command):
+        errors.append(f"generated adapter layer: unexpected generated adapter for command {command_name}")
+    return errors
+
+
 def _parser_snapshot(parser) -> list[dict[str, object]]:
     subparsers_action = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
     return [_command_parser_snapshot(subparsers_action.choices[name]) for name in subparsers_action.choices]
@@ -648,6 +693,10 @@ def main(argv: list[str] | None = None) -> int:
             "command adapter generation manifest",
             _validate(command_adapter_generation_manifest(), "command_adapter_generation.schema.json")
             + _validate_command_adapter_generation(command_adapter_generation_manifest()),
+        ),
+        (
+            "generated command adapter output",
+            _validate_generated_command_adapter_output(),
         ),
         (
             "operation primitives registry",

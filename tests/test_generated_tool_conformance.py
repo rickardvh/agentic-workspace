@@ -8,6 +8,7 @@ import pytest
 
 from agentic_workspace.conformance import materialize_fixture, run_process_conformance
 from agentic_workspace.contract_tooling import conformance_contract_manifest, conformance_contracts_manifest
+from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CLI_SHIM = (
@@ -63,3 +64,19 @@ def test_conformance_registry_points_at_schema_valid_contracts() -> None:
     assert registry["schema_version"] == "agentic-workspace/conformance-contracts/v1"
     assert registry["contracts"][0]["operation_id"] == "defaults.report"
     assert conformance_contract_manifest(registry["contracts"][0]["path"])["adapter"]["kind"] == "process"
+
+
+def test_generated_adapters_are_backed_by_black_box_conformance_contracts() -> None:
+    registry = conformance_contracts_manifest()
+    contracts_by_id = {contract["id"]: contract for contract in registry["contracts"]}
+
+    for command_name, adapter in GENERATED_COMMAND_ADAPTERS_BY_COMMAND.items():
+        for conformance_ref in adapter["conformance_refs"]:
+            registry_ref = contracts_by_id[conformance_ref]
+            contract = conformance_contract_manifest(registry_ref["path"])
+            command_template = contract["adapter"]["command_template"]
+
+            assert registry_ref["operation_id"] == adapter["operation_id"]
+            assert contract["operation_id"] == adapter["operation_id"]
+            assert command_template[0] == "{agentic_workspace_cli}"
+            assert command_template[1] == command_name

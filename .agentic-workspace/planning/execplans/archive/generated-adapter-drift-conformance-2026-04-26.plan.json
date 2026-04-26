@@ -1,0 +1,262 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Generated Adapter Drift And Conformance",
+  "goal": [
+    "Implement #360 by making generated CLI adapter freshness, contract backing, and black-box behavior part of ordinary check/conformance tooling."
+  ],
+  "non_goals": [
+    "Generate additional command adapters.",
+    "Add language-specific generated adapters.",
+    "Replace hand-written runtime primitives.",
+    "Implement #361 no-direct-edit guardrails beyond the checks needed for #360."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Generated adapter output can be deterministically checked, contract-backed, and behaviorally exercised through ordinary validation surfaces.",
+      "constraints": "Stay on master; keep checks repo-/agent-/tool-/language-agnostic in package logic; keep runtime primitive behavior hand-written.",
+      "latitude": "Choose the smallest check/test wiring that distinguishes contract, generator, generated adapter, and runtime behavior failures.",
+      "escalation": "Stop before broad generated adapter policy, package CLI generation, or direct-edit enforcement that belongs to #361."
+    },
+    "execution": {
+      "milestone": "generated-adapter-drift-conformance",
+      "status": "completed",
+      "next_step": "Archive this slice and continue with #361 no-direct-edit guardrails.",
+      "proof": "Use proof --changed, generator freshness, contract tooling checks, conformance tests, workspace CLI tests, ruff, planning checks, reconcile, summary."
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Generated shipped CLI adapters from authoritative package definitions.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#361",
+    "parent lane": "#356"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#361",
+    "activation trigger": "After generated-adapter drift/conformance checks are in ordinary validation."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Generated adapters become safer to expand because stale output and behavior drift are caught by checks.",
+    "intentionally deferred": "No-direct-edit enforcement, planning/memory package adapter generation, and multi-adapter projection requirements.",
+    "discovered implications": "The generated adapter output check is now part of contract-tooling validation; #361 can focus on direct-edit guardrails instead of freshness.",
+    "proof achieved now": "Contract tooling fails on stale generated adapter output and generated adapters are tied to black-box conformance contracts.",
+    "validation still needed": "#361 should prevent or flag manual edits to generated CLI surfaces.",
+    "next likely slice": "#361 no-direct-edit guardrails for generated CLI surfaces."
+  },
+  "intent_interpretation": {
+    "literal request": "Continue implementing planned work until done.",
+    "inferred intended outcome": "Proceed from #359 into #360 using the first generated defaults adapter as the conformance target.",
+    "chosen concrete what": "Make generated defaults adapter freshness and behavior visible in ordinary checks/tests.",
+    "interpretation distance": "low",
+    "review guidance": "Check failure messages make the failing layer clear: contract, generator, generated output, or runtime primitive."
+  },
+  "execution_bounds": {
+    "allowed paths": "conformance/check tooling, generator freshness surfaces, focused tests, planning state/evidence/review artifacts.",
+    "max changed files": "Prefer under 10 files.",
+    "required validation commands": "proof --changed; generator freshness; check_contract_tooling_surfaces; generated conformance tests; workspace CLI tests; ruff; planning checks; reconcile; summary.",
+    "ask-before-refactor threshold": "Any broad conformance framework rewrite or new permanent first-line surface.",
+    "stop before touching": "Planning/memory package CLIs, direct-edit enforcement policy, multi-adapter projection requirements."
+  },
+  "stop_conditions": {
+    "stop when": "#360 is closed, committed, pushed, and #361 remains planned.",
+    "escalate when boundary reached": "The check requires broad CLI architecture changes.",
+    "escalate on scope drift": "Work expands into #361-#363 before #360 closes.",
+    "escalate on proof failure": "Freshness, contract, conformance, or runtime behavior checks fail."
+  },
+  "context_budget": {
+    "live working set": "#360, #359 generated adapter, src/agentic_workspace/conformance.py, tests/test_generated_tool_conformance.py, scripts/check/check_contract_tooling_surfaces.py",
+    "recoverable later": "Direct-edit guardrails and package adapter generation.",
+    "externalize before shift": "Update execution_run and closeout_distillation before archive.",
+    "pre-work config pull": "uv run agentic-workspace preflight --format json",
+    "pre-work memory pull": "Not needed.",
+    "tiny resumability note": "Continue #360 generated-adapter drift/conformance checks.",
+    "context-shift triggers": "Before broad conformance framework changes."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Add generated CLI adapter drift and conformance checks.",
+    "hard constraints": "No new adapters; no runtime primitive migration; checks must stay package-agnostic.",
+    "agent may decide locally": "Exact check/test location and failure-message shape.",
+    "escalate when": "The change becomes a broader generation architecture refactor."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#360",
+      "label": "generated adapter drift checks",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#356",
+      "label": "generated CLI adapter lane",
+      "role": "parent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#361",
+      "label": "no-direct-edit guardrails",
+      "role": "continuation",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "generated-adapter-drift-conformance",
+    "status": "completed",
+    "scope": "#360",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect existing conformance and contract-tooling checks for #360 insertion points."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/generated-adapter-drift-conformance-2026-04-26.plan.json",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/reviews/generated-adapter-drift-conformance-closeout-2026-04-26.review.json",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "tests/test_generated_tool_conformance.py"
+  ],
+  "invariants": [
+    "Do not switch branches.",
+    "Do not generate additional adapters.",
+    "Do not make generated adapters own runtime primitive behavior."
+  ],
+  "contract_decisions_to_freeze": [
+    "Generated adapter freshness should be checked from the authoritative contract/generator path, not by manually asserting generated file details only."
+  ],
+  "open_questions_to_close": [
+    "Where should ordinary drift checks live so CI catches stale generated adapter output?",
+    "Which black-box conformance scenario proves the generated defaults adapter path?"
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run python scripts/generate/generate_command_adapters.py --check",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest tests/test_generated_tool_conformance.py tests/test_contract_tooling.py tests/test_workspace_cli.py",
+    "uv run ruff check src tests scripts",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "gh",
+    "uv",
+    "git"
+  ],
+  "completion_criteria": [
+    "#360 is implemented and closed.",
+    "Generated adapter output freshness is part of ordinary checks.",
+    "At least one generated adapter has black-box conformance coverage.",
+    "Failure messages distinguish the likely failing layer.",
+    "No active execplan remains after archive closeout."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "preflight, summary, #360 issue, #359 closeout",
+    "what happened": "Added generated adapter output freshness/parity checking to contract-tooling validation and tied generated adapters to black-box process conformance contracts.",
+    "scope touched": "Contract tooling check, generated tool conformance tests, planning state/evidence/review artifacts.",
+    "changed surfaces": "scripts/check/check_contract_tooling_surfaces.py, tests/test_generated_tool_conformance.py, planning state/evidence/review.",
+    "validations run": "proof --changed; generator freshness; check_contract_tooling_surfaces; generated conformance and contract tests; workspace CLI tests; ruff; planning doctor; planning surface check; reconcile; summary.",
+    "result for continuation": "#360 closed; #361 remains open for no-direct-edit guardrails.",
+    "next step": "Promote #361."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; no new adapters or runtime primitive migration.",
+    "proof status": "passed",
+    "intent served": "yes for #360; no for parent #356, which continues through #361-#363.",
+    "config compliance": "dogfooded preflight, proof, generator freshness, contract tooling, conformance tests, summary, reconcile, doctor, and planning checks.",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue #361"
+  },
+  "proof_report": {
+    "validation proof": "uv run agentic-workspace proof --target . --changed ... --format json selected planning_surfaces and workspace_cli; required and slice-specific checks passed.",
+    "proof achieved now": "generated output freshness, contract-tooling drift, black-box conformance coverage, workspace CLI behavior, lint, and planning health all passed.",
+    "evidence for \"proof achieved\" state": "scripts/check/check_contract_tooling_surfaces.py checks generated adapter output; tests/test_generated_tool_conformance.py asserts generated adapters have process conformance contracts."
+  },
+  "intent_satisfaction": {
+    "original intent": "Continue implementing planned work until done.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#360 added generated adapter freshness and black-box conformance guardrails",
+    "unsolved intent passed to": "#361 and remaining #356 child slices"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Move shipped CLI adapter interface authority behind implementation-independent contracts while preserving runtime primitive ownership.",
+    "slice shaping bias": "Make the first generated adapter trustworthy before expanding coverage.",
+    "broader-lane validation question": "Can stale generated adapter output and runtime drift be caught by ordinary validation?",
+    "intent evidence source": "#360"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#360 delivered drift/conformance checks; parent #356 still needs no-direct-edit guardrails and adapter expansion.",
+    "evidence carried forward": "scripts/check/check_contract_tooling_surfaces.py, tests/test_generated_tool_conformance.py, .agentic-workspace/planning/reviews/generated-adapter-drift-conformance-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen #360 if generated adapter output can drift from command_adapter_generation.json without contract-tooling failure."
+  },
+  "execution_summary": {
+    "outcome delivered": "Generated adapter drift/conformance checks.",
+    "validation confirmed": "proof-selected lanes and slice-specific generator/check/conformance tests passed.",
+    "follow-on routed to": "#361",
+    "post-work posterity capture": "closeout review plus archived execplan",
+    "knowledge promoted (Memory/Docs/Config)": "No durable Memory/docs/config promotion needed; #361 carries the remaining guardrail work.",
+    "resume from": "#361 no-direct-edit guardrails"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Raw implementation inspection detail is not needed after check/test evidence and closeout.",
+          "owner": "discard",
+          "source": "#360 execution"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#361 remains open for no-direct-edit guardrails after drift/conformance checks.",
+          "owner": "#361",
+          "source": "#360"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No durable Memory/docs/config promotion needed; #361 carries the remaining guardrail work.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "No durable Memory/docs/config promotion needed; #361 carries the remaining guardrail work.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "No durable Memory/docs/config promotion needed; #361 carries the remaining guardrail work.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "Generated adapter drift/conformance checks",
+          "owner": "issue",
+          "source": "#360"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-26: Promoted #360 after #359 generated the defaults adapter path."
+  ]
+}
