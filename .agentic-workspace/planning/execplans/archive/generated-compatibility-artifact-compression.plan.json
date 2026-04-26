@@ -1,0 +1,216 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Generated Compatibility Artifact Compression",
+  "goal": [
+    "Resolve #281 by reducing generated compatibility artifacts that restate live operational state.",
+    "Advance #230 by making the visible adapter layer smaller while preserving weak-agent discoverability."
+  ],
+  "non_goals": [
+    "Do not remove AGENTS.md or llms.txt.",
+    "Do not remove all weak-agent routing help.",
+    "Do not change canonical planning state ownership.",
+    "Do not close #230 unless the broader product-compression parent is materially complete."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Generated helper artifacts stop acting like broad handbooks and shrink toward static routing tables over compact query surfaces.",
+      "constraints": "Preserve one obvious weak-agent path; keep changing truth in structured/queryable surfaces; avoid new prose surfaces.",
+      "latitude": "Choose whether to remove a mirror, compress generated markdown, or make a documented generated surface static when tests support it.",
+      "escalation": "Stop before broad startup redesign or package payload migration."
+    },
+    "execution": {
+      "milestone": "compress-generated-agent-helpers",
+      "status": "completed",
+      "next_step": "Close #281 and continue from the next promoted roadmap lane.",
+      "proof": "Maintainer surfaces and focused tests pass while generated helper output is smaller and routing-only."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/agent-manifest.json",
+        ".agentic-workspace/planning/scripts/render_agent_docs.py",
+        "tools/AGENT_QUICKSTART.md",
+        "tools/AGENT_ROUTING.md",
+        "tools/agent-manifest.json",
+        "scripts/check/check_planning_surfaces.py",
+        "tests/",
+        "packages/planning/bootstrap/ if source-payload sync is required",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/generated-compatibility-artifact-compression.plan.json"
+      ],
+      "invariants": [
+        "AGENTS.md remains ordinary startup.",
+        "llms.txt remains external install/adopt handoff.",
+        "Generated helpers do not become doctrine owners or mirrors of changing live state."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "product-shape compression by removing or demoting visible residue",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane further-product-compression-on-repeated-pressure",
+    "parent lane": "further-product-compression-on-repeated-pressure"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "#230 remains open for broader product-shape compression after #281 is closed"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Weak-agent routing can stay available without broad generated helper-doc sprawl.",
+    "intentionally deferred": "Any larger front-door or module packaging redesign and the broader #230 subtraction lane.",
+    "discovered implications": "The CLI summary path compares against packaged payload renderers as well as the root checker, so generated-surface compression must keep package source, bootstrap payload, and root installed copies aligned.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for #281",
+    "next likely slice": "machine-readable-memory-state"
+  },
+  "intent_interpretation": {
+    "literal request": "implement remaining work as before",
+    "inferred intended outcome": "continue the active roadmap lane by lane with dogfooded planning authority",
+    "chosen concrete what": "compress generated agent helper artifacts under #281",
+    "interpretation distance": "low",
+    "review guidance": "reject broad docs expansion or removal of the only weak-agent routing path"
+  },
+  "delegated_judgment": {
+    "requested outcome": "ship generated compatibility artifact compression",
+    "hard constraints": "preserve weak-agent discoverability; do not add new visible surfaces; keep canonical truth structured/queryable",
+    "agent may decide locally": "which generated helper artifact to shrink or remove first and how to validate parity",
+    "escalate when": "the slice requires deleting startup surfaces, broad payload migration, or changing install/adopt semantics"
+  },
+  "execution_bounds": {
+    "allowed paths": "generated helper source and outputs, generated-surface checks/tests, active planning state and execplan, package payload only if maintainer/source-payload checks require sync",
+    "max changed files": "14",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py tests/test_maintainer_surfaces.py packages/planning/tests/test_check_planning_surfaces.py packages/planning/tests/test_installer.py -q -k \"agent_manifest or generated or quickstart or routing\"; make maintainer-surfaces; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; uv run ruff check .agentic-workspace/planning/scripts/render_agent_docs.py .agentic-workspace/planning/scripts/check/check_planning_surfaces.py scripts/check/check_planning_surfaces.py packages/planning/src/repo_planning_bootstrap/_render.py packages/planning/tests/test_installer.py; git diff --check",
+    "ask-before-refactor threshold": "stop before broad startup/front-door redesign",
+    "stop before touching": "unrelated roadmap lanes"
+  },
+  "context_budget": {
+    "live working set": "#281, #230, generated helper renderer/checks/tests, active execplan",
+    "recoverable later": "full startup/front-door archive history",
+    "externalize before shift": "update this execplan execution_run and closure fields",
+    "pre-work config pull": "uv run agentic-workspace summary and gh issue view #281/#230",
+    "pre-work memory pull": "none unless generated surface decisions need prior rationale",
+    "tiny resumability note": "compress generated agent helper residue without removing weak-agent routing",
+    "context-shift triggers": "payload sync or generated-surface removal becomes broad"
+  },
+  "stop_conditions": {
+    "stop when": "#281 is shipped, dogfooded, committed, pushed, and closed or residual #230 work is routed",
+    "escalate when boundary reached": "weak-agent routing would be removed without replacement",
+    "escalate on scope drift": "work becomes broad product-shape redesign",
+    "escalate on proof failure": "maintainer surfaces or generated-surface checks fail after compression"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#281",
+      "label": "generated compatibility artifact compression",
+      "role": "primary-intent",
+      "locator": "github issue #281"
+    },
+    {
+      "kind": "issue",
+      "target": "#230",
+      "label": "product compression parent",
+      "role": "parent-intent",
+      "locator": "github issue #230"
+    }
+  ],
+  "active_milestone": {
+    "id": "compress-generated-agent-helpers",
+    "status": "completed",
+    "scope": "generated helper surfaces and maintainer proof",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect generated helper renderer and tests.",
+    "Compress the broad generated helper output into smaller routing-only tables."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/generated-compatibility-artifact-compression.plan.json"
+  ],
+  "invariants": [
+    "Weak-agent discoverability remains possible.",
+    "Generated helpers stay non-authoritative.",
+    "Changing state remains in compact/queryable surfaces."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_maintainer_surfaces.py packages/planning/tests/test_check_planning_surfaces.py packages/planning/tests/test_installer.py -q -k \"agent_manifest or generated or quickstart or routing\"",
+    "make maintainer-surfaces",
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run ruff check .agentic-workspace/planning/scripts/render_agent_docs.py .agentic-workspace/planning/scripts/check/check_planning_surfaces.py scripts/check/check_planning_surfaces.py packages/planning/src/repo_planning_bootstrap/_render.py packages/planning/tests/test_installer.py",
+    "git diff --check"
+  ],
+  "required_tools": [
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "Generated compatibility artifacts that restate live state are removed or sharply reduced.",
+    "Remaining helper surfaces are static/routing-only and clearly non-authoritative.",
+    "Weak agents can still find the canonical compact startup/query surfaces.",
+    "Maintainer surface checks prove generated output is current."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "active execplan",
+    "what happened": "Compressed the generated quickstart and routing helper docs into short static routing adapters, updated manifest language so they no longer claim to mirror live state, and synced package/root renderers and checkers.",
+    "scope touched": "Generated helper renderers, generated helper docs, manifest mirrors, generated-surface checks, focused tests, and planning closeout.",
+    "changed surfaces": ".agentic-workspace/planning/scripts/render_agent_docs.py; packages/planning/src/repo_planning_bootstrap/_render.py; root and bootstrap AGENT_QUICKSTART/AGENT_ROUTING outputs; root/bootstrap agent manifests; planning-surface check copies; packages/planning/tests/test_installer.py",
+    "validations run": "uv run pytest tests/test_workspace_cli.py tests/test_maintainer_surfaces.py packages/planning/tests/test_check_planning_surfaces.py packages/planning/tests/test_installer.py -q -k \"agent_manifest or generated or quickstart or routing\"; make maintainer-surfaces; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "result for continuation": "#281 is complete; #230 remains open in the roadmap for broader product-shape compression.",
+    "next step": "Close #281 and continue from the next roadmap lane."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes stayed inside generated helper, package payload, manifest, check, test, and planning surfaces",
+    "proof status": "proved by focused tests, maintainer surfaces, summary, planning checker, and diff check",
+    "intent served": "yes for #281; generated prose helpers are now static routing adapters instead of manifest-expanded handbooks",
+    "config compliance": "yes; work executed from active checked-in planning state and verified with package workflow commands",
+    "misinterpretation risk": "low; weak-agent discoverability remains through the same filenames and compact command pointers",
+    "follow-on decision": "archive-but-keep-lane-open for #230"
+  },
+  "proof_report": {
+    "validation proof": "focused tests passed; make maintainer-surfaces passed; agentic-workspace summary reported clean planning surfaces; scripts/check/check_planning_surfaces.py reported no warnings; git diff --check passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Generated quickstart/routing outputs are short static adapters; package and root render/check paths agree; no generated-surface drift remains."
+  },
+  "intent_satisfaction": {
+    "original intent": "Replace generated compatibility artefacts with minimal static routing tables so canonical workflows stay discoverable without creating extra mutable surfaces, while advancing the broader product-compression parent.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#281 itself is satisfied: generated compatibility docs no longer restate live manifest state and now remain static, state-free, non-authoritative routing tables. The broader product-compression parent remains open.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane further-product-compression-on-repeated-pressure carrying #230"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Favor work that removes, compresses, or backgrounds visible residue instead of adding new first-line surfaces.",
+    "slice shaping bias": "Prefer shrinking generated helpers over adding or enriching docs.",
+    "broader-lane validation question": "Does the visible adapter layer become smaller without losing safe startup discovery?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#281 is complete, but #230 explicitly says not to close the broader product-compression direction after one cleanup.",
+    "evidence carried forward": "Roadmap lane further-product-compression-on-repeated-pressure remains for #230; this archived plan carries #281 proof.",
+    "reopen trigger": "generated helpers again expand into broad manifest/state handbooks or #230 identifies another visible adapter layer that needs compression"
+  },
+  "execution_summary": {
+    "outcome delivered": "Generated helper docs were compressed into minimal static routing tables while preserving weak-agent discovery through the same filenames.",
+    "validation confirmed": "Focused generated-surface tests, maintainer surfaces, package summary, planning checker, and diff check all passed.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane further-product-compression-on-repeated-pressure for #230, with the next roadmap lane machine-readable-memory-state queued after it.",
+    "post-work posterity capture": "The manifest and generated adapters now document the static/non-authoritative role; no separate memory note is needed.",
+    "knowledge promoted (Memory/Docs/Config)": ".agentic-workspace/planning/agent-manifest.json and generated static helper adapters",
+    "resume from": "machine-readable-memory-state after #281 closure, unless #230 is promoted again by a new product-compression signal"
+  },
+  "drift_log": [
+    "2026-04-26: Promoted #281 as the remaining concrete product-compression slice under #230.",
+    "2026-04-26: Dogfooding found that the CLI summary path uses packaged payload render/check copies as well as root installed scripts; synced both before closeout."
+  ]
+}

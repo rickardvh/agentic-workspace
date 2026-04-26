@@ -6,10 +6,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 MANAGED_ROOT = REPO_ROOT / ".agentic-workspace" / "planning"
 MANIFEST_PATH = MANAGED_ROOT / "agent-manifest.json"
-GENERATED_DOC_NOTICE = (
-    "> GENERATED FILE. Do not edit manually. Update `.agentic-workspace/planning/agent-manifest.json` "
-    "and rerender with `python scripts/render_agent_docs.py`."
-)
+GENERATED_DOC_NOTICE = "> GENERATED STATIC ROUTING ADAPTER. Do not edit manually. Rerender with `python scripts/render_agent_docs.py`."
 
 
 def load_manifest(path: Path = MANIFEST_PATH) -> dict:
@@ -19,11 +16,7 @@ def load_manifest(path: Path = MANIFEST_PATH) -> dict:
     return payload
 
 
-def render_quickstart(manifest: dict) -> str:
-    bootstrap = manifest.get("bootstrap", {})
-    routing = manifest.get("routing", {})
-    skills = manifest.get("skills", {})
-
+def render_quickstart(_manifest: dict) -> str:
     lines: list[str] = []
     lines.append("<!-- GENERATED FILE: do not edit manually. -->")
     lines.append("")
@@ -31,123 +24,44 @@ def render_quickstart(manifest: dict) -> str:
     lines.append("")
     lines.append(GENERATED_DOC_NOTICE)
     lines.append("")
-    lines.append("Fast path for autonomous agents working on this repo.")
+    lines.append("Static, non-authoritative entry table for agents that need one obvious next surface.")
     lines.append("")
-    lines.append("## First reads")
+    lines.append("## Start Here")
     lines.append("")
-    for path in bootstrap.get("first_reads", []):
-        lines.append(f"- `{path}`")
+    lines.append("- Read `AGENTS.md` first.")
+    lines.append("- Run `uv run agentic-workspace preflight --format json` for startup guidance plus active state.")
+    lines.append("- Run `uv run agentic-workspace summary --format json` when active planning recovery is the question.")
+    lines.append("- Run `uv run agentic-workspace defaults --section startup --format json` when startup order is the question.")
     lines.append("")
-
-    for title, key in (
-        ("First queries", "first_queries"),
-        ("Tiny safe model", "tiny_safe_model"),
-        ("Surface roles", "surface_roles"),
-        ("Boundary-triggered escalation", "boundary_triggered_escalation"),
-        ("Top-level capabilities", "top_level_capabilities"),
-        ("Conditional reads", "conditional_reads"),
-        ("Small-task mode", "small_task_mode"),
-        ("When to create a plan", "plan_threshold"),
-        ("Source of truth", None),
-        ("Validation flow", "validation_flow"),
-        ("Completion reminders", "completion_reminders"),
-        ("Generated surfaces", "generated_surfaces"),
-    ):
-        if key is None:
-            lines.append("## Source of truth")
-            lines.append("")
-            lines.append(
-                f"- Active queue and lightweight direct tasks: `{bootstrap.get('task_source_of_truth', '.agentic-workspace/planning/state.toml')}`"
-            )
-            lines.append(f"- Active feature plans: `{bootstrap.get('active_plan_dir', '.agentic-workspace/planning/execplans/')}`")
-            lines.append(f"- Archived plans: `{bootstrap.get('archived_plan_dir', '.agentic-workspace/planning/execplans/archive/')}`")
-            lines.append(f"- Long-horizon planning: `{bootstrap.get('roadmap_source_of_truth', '.agentic-workspace/planning/state.toml')}`")
-            lines.append("- Machine-readable routing: `.agentic-workspace/planning/agent-manifest.json`")
-            lines.append("")
-            continue
-
-        items = bootstrap.get(key, [])
-        if isinstance(items, list) and items:
-            lines.append(f"## {title}")
-            lines.append("")
-            for item in items:
-                if key == "boundary_triggered_escalation" and isinstance(item, dict):
-                    boundary = str(item.get("boundary", "")).strip()
-                    cue = str(item.get("cue", "")).strip()
-                    why = str(item.get("why", "")).strip()
-                    load_next = item.get("load_next", [])
-                    label = f"`{boundary}`" if boundary else "boundary"
-                    if cue:
-                        lines.append(f"- {label}: {cue}")
-                    if isinstance(load_next, list) and load_next:
-                        lines.append("  Load next: " + ", ".join(f"`{path}`" for path in load_next))
-                    if why:
-                        lines.append(f"  Why: {why}")
-                    continue
-                if key == "top_level_capabilities" and isinstance(item, dict):
-                    module = str(item.get("module", "")).strip()
-                    owns = str(item.get("owns", "")).strip()
-                    escalate_when = str(item.get("escalate_when", "")).strip()
-                    capability_unlocked = str(item.get("capability_unlocked", "")).strip()
-                    first_surface = str(item.get("first_surface", "")).strip()
-                    label = f"`{module}`" if module else "module"
-                    parts = [
-                        part
-                        for part in (
-                            owns,
-                            f"Escalate when: {escalate_when}" if escalate_when else "",
-                            f"Unlocks: {capability_unlocked}" if capability_unlocked else "",
-                            f"First surface: `{first_surface}`" if first_surface else "",
-                        )
-                        if part
-                    ]
-                    lines.append(f"- {label}: " + "; ".join(parts))
-                    continue
-                lines.append(f"- {item}")
-            lines.append("")
-
-    lines.append("## Common task classes")
+    lines.append("## Authority Table")
     lines.append("")
-    if not routing:
-        lines.append("- No task classes declared.")
-    for task_name, payload in routing.items():
-        if not isinstance(payload, dict):
-            continue
-        lines.append(f"- `{task_name}`")
-        when = payload.get("when")
-        prefer_when = payload.get("prefer_when")
-        touches = payload.get("touches", [])
-        commands = payload.get("commands", [])
-        if isinstance(when, str) and when.strip():
-            lines.append(f"  Use when: {when}")
-        if isinstance(prefer_when, str) and prefer_when.strip():
-            lines.append(f"  Prefer this route when: {prefer_when}")
-        if isinstance(touches, list) and touches:
-            lines.append("  Touches: " + ", ".join(f"`{path}`" for path in touches))
-        if isinstance(commands, list) and commands:
-            lines.append("  Validate: " + "; ".join(f"`{command}`" for command in commands))
+    lines.append("| Need | Use |")
+    lines.append("| --- | --- |")
+    lines.append("| ordinary repo startup | `AGENTS.md` |")
+    lines.append("| compact startup/config state | `uv run agentic-workspace preflight --format json` |")
+    lines.append("| active planning and continuation | `uv run agentic-workspace summary --format json` |")
+    lines.append("| configured entrypoint/posture | `uv run agentic-workspace config --target . --format json` |")
+    lines.append("| machine-readable routing mirror | `.agentic-workspace/planning/agent-manifest.json` |")
     lines.append("")
-
-    lines.append("## Skills")
+    lines.append("## Constraints")
     lines.append("")
-    lines.append(f"- Repo development skills: `{skills.get('repo_dev_source_dir', 'tools/skills')}`")
-    lines.append(f"- Shared memory workflow skills: `{skills.get('memory_source_dir', '.agentic-workspace/memory/skills')}`")
-    repo_memory_source_dir = skills.get("repo_memory_source_dir")
-    if isinstance(repo_memory_source_dir, str) and repo_memory_source_dir.strip():
-        lines.append(f"- Repo-specific memory skills: `{repo_memory_source_dir}`")
+    lines.append("- This file is a generated static adapter, not a doctrine or state owner.")
+    lines.append("- Do not bulk-read all planning surfaces; follow compact query results to the one needed file.")
+    lines.append("- Keep changing operational truth in structured/queryable surfaces, not in this helper.")
     lines.append("")
-
-    lines.append("## Core invariants")
+    lines.append("## Escalation Table")
     lines.append("")
-    for invariant in manifest.get("invariants", []):
-        lines.append(f"- {invariant}")
+    lines.append("| Boundary | First move |")
+    lines.append("| --- | --- |")
+    lines.append(
+        "| workspace startup, lifecycle, ownership, or config | `uv run agentic-workspace defaults --section startup --format json` |"
+    )
+    lines.append("| planning sequence, blockers, proof, or continuation | `uv run agentic-workspace summary --format json` |")
+    lines.append("| durable repo knowledge or repeated rediscovery | read `.agentic-workspace/memory/WORKFLOW.md` |")
     return "\n".join(lines) + "\n"
 
 
-def render_routing(manifest: dict) -> str:
-    bootstrap = manifest.get("bootstrap", {})
-    routing = manifest.get("routing", {})
-
+def render_routing(_manifest: dict) -> str:
     lines: list[str] = []
     lines.append("<!-- GENERATED FILE: do not edit manually. -->")
     lines.append("")
@@ -155,61 +69,32 @@ def render_routing(manifest: dict) -> str:
     lines.append("")
     lines.append(GENERATED_DOC_NOTICE)
     lines.append("")
-    lines.append("Focused routing reference derived from `.agentic-workspace/planning/agent-manifest.json`.")
+    lines.append("Static routing table for weak-agent discovery. It does not mirror active state.")
     lines.append("")
-
-    doc_precedence = bootstrap.get("doc_precedence", [])
-    if isinstance(doc_precedence, list) and doc_precedence:
-        lines.append("## Precedence")
-        lines.append("")
-        for item in doc_precedence:
-            lines.append(f"- {item}")
-        lines.append("")
-
-    boundary_triggered_escalation = bootstrap.get("boundary_triggered_escalation", [])
-    if isinstance(boundary_triggered_escalation, list) and boundary_triggered_escalation:
-        lines.append("## Discovery Boundaries")
-        lines.append("")
-        for item in boundary_triggered_escalation:
-            if not isinstance(item, dict):
-                continue
-            boundary = str(item.get("boundary", "")).strip()
-            cue = str(item.get("cue", "")).strip()
-            why = str(item.get("why", "")).strip()
-            if boundary and cue:
-                lines.append(f"- `{boundary}`: {cue}")
-            if why:
-                lines.append(f"  - Why: {why}")
-        lines.append("")
-
-    lines.append("## Task Routes")
+    lines.append("## Precedence")
     lines.append("")
-    if not routing:
-        lines.append("- No task routes declared.")
-        return "\n".join(lines) + "\n"
-
-    for task_name, payload in routing.items():
-        if not isinstance(payload, dict):
-            continue
-        lines.append(f"### `{task_name}`")
-        lines.append("")
-        when = payload.get("when")
-        prefer_when = payload.get("prefer_when")
-        touches = payload.get("touches", [])
-        commands = payload.get("commands", [])
-        if isinstance(when, str) and when.strip():
-            lines.append(f"- Use when: {when}")
-        if isinstance(prefer_when, str) and prefer_when.strip():
-            lines.append(f"- Prefer when: {prefer_when}")
-        if isinstance(touches, list) and touches:
-            lines.append("- Touches:")
-            for path in touches:
-                lines.append(f"  - `{path}`")
-        if isinstance(commands, list) and commands:
-            lines.append("- Validation:")
-            for command in commands:
-                lines.append(f"  - `{command}`")
-        lines.append("")
+    lines.append("1. Explicit user request.")
+    lines.append("2. Active execplan when `uv run agentic-workspace summary --format json` reports one.")
+    lines.append("3. `AGENTS.md` and the nearest package-local `AGENTS.md` for the files being edited.")
+    lines.append("4. Repo docs explicitly referenced by the active route.")
+    lines.append("")
+    lines.append("## Routing Table")
+    lines.append("")
+    lines.append("| Situation | Route |")
+    lines.append("| --- | --- |")
+    lines.append("| startup order or first-contact routing | `uv run agentic-workspace defaults --section startup --format json` |")
+    lines.append("| active work, queue, proof, or continuation | `uv run agentic-workspace summary --format json` |")
+    lines.append("| startup guidance plus resolved config and active state | `uv run agentic-workspace preflight --format json` |")
+    lines.append("| configured entrypoint, posture, or obligations | `uv run agentic-workspace config --target . --format json` |")
+    lines.append("| combined workspace/module state | `uv run agentic-workspace report --target . --format json` |")
+    lines.append("| task-specific package rules | nearest package-local `AGENTS.md` |")
+    lines.append("")
+    lines.append("## Boundaries")
+    lines.append("")
+    lines.append("- Keep mutable execution state in `.agentic-workspace/planning/state.toml` and active execplans.")
+    lines.append("- Keep durable repo knowledge in memory or canonical docs, not in these generated adapters.")
+    lines.append("- Keep this file state-free; rerendering should not expand it into a manifest mirror.")
+    lines.append("")
 
     return "\n".join(lines) + "\n"
 

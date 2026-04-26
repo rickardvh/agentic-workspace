@@ -681,14 +681,14 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     if (
         "agentic-workspace summary --format json" not in quickstart_text
         or "do not bulk-read all planning surfaces" not in quickstart_text
-        or "## first queries" not in quickstart_text
-        or "## surface roles" not in quickstart_text
+        or "## authority table" not in quickstart_text
+        or "generated static adapter" not in quickstart_text
     ):
         warnings.append(
             PlanningWarning(
                 WARNING_STARTUP_POLICY_DRIFT,
                 _render_path(quickstart_path),
-                "Quickstart must keep startup query order, surface roles, and roadmap/bulk-read constraints explicit.",
+                "Quickstart must remain a static routing adapter with compact query order and bulk-read constraints explicit.",
             )
         )
 

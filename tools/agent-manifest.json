@@ -24,8 +24,8 @@
       "`.agentic-workspace/planning/state.toml` is the package-owned active queue and candidate-lane state after the compact summary has shown raw detail is needed.",
       "`.agentic-workspace/docs/routing-contract.md` is the authoritative routing home.",
       "`llms.txt` is the agent entrypoint router.",
-      "`tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md` are generated helpers, not doctrine owners.",
-      "`.agentic-workspace/planning/agent-manifest.json` is the canonical source for the generated helper docs."
+      "`tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md` are generated static routing adapters, not doctrine or state owners.",
+      "`.agentic-workspace/planning/agent-manifest.json` is the machine-readable routing mirror; changing operational truth belongs in compact queryable surfaces."
     ],
     "boundary_triggered_escalation": [
       {
@@ -111,12 +111,12 @@
     ],
     "generated_surfaces": [
       "`tools/agent-manifest.json` is a generated mirror of `.agentic-workspace/planning/agent-manifest.json`.",
-      "`tools/AGENT_QUICKSTART.md` is generated from `.agentic-workspace/planning/agent-manifest.json` by `python scripts/render_agent_docs.py`.",
-      "`tools/AGENT_ROUTING.md` is generated from `.agentic-workspace/planning/agent-manifest.json` by `python scripts/render_agent_docs.py`."
+      "`tools/AGENT_QUICKSTART.md` is a generated static routing adapter from `python scripts/render_agent_docs.py`.",
+      "`tools/AGENT_ROUTING.md` is a generated static routing adapter from `python scripts/render_agent_docs.py`."
     ],
     "validation_flow": [
       "Run the narrowest validation that proves the change.",
-      "Use `.agentic-workspace/planning/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, `tools/AGENT_ROUTING.md`, and the nearest subsystem `AGENTS.md` for task-specific commands.",
+      "Use compact `agentic-workspace` query commands and the nearest subsystem `AGENTS.md` for task-specific commands.",
       "Escalate to broader checks only when the change crosses subsystem boundaries or invalidates the narrower proof."
     ],
     "doc_precedence": [

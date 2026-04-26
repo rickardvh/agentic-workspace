@@ -802,11 +802,10 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert manifest_payload["bootstrap"]["top_level_capabilities"][1]["module"] == "planning"
     assert any("clear the matched queue residue in the same pass" in item for item in manifest_payload["bootstrap"]["completion_reminders"])
     assert "agentic-workspace defaults --section startup --format json" in quickstart_text
-    assert "## Tiny safe model" in quickstart_text
-    assert "## Boundary-triggered escalation" in quickstart_text
-    assert "## Top-level capabilities" in quickstart_text
-    assert "## Surface roles" in quickstart_text
-    assert "clear the matched queue residue in the same pass" in quickstart_text
+    assert "## Authority Table" in quickstart_text
+    assert "generated static adapter" in quickstart_text
+    assert "Do not bulk-read all planning surfaces" in quickstart_text
+    assert "clear the matched queue residue in the same pass" not in quickstart_text
 
 
 def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
