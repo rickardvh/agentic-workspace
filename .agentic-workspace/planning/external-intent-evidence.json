@@ -855,6 +855,60 @@
       "kind": "issue",
       "parent_id": "#365",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#370",
+      "title": "[Review]: Verify post-generation CLI and lifecycle authority boundaries",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#371",
+      "title": "[Workspace]: Compress first-contact adapter surfaces into one ordinary startup path",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#372",
+      "title": "[Workspace]: Convert remaining durable artifact authoring paths to valid-by-construction commands",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#373",
+      "title": "[Workspace]: Make generated CLI adapter status a non-regression check",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#374",
+      "title": "[Workspace]: Make lifecycle dry-run plans the ordinary safe interface",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#375",
+      "title": "[Review]: Reassess whether product-compression intent in #230 is satisfied",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
     }
   ]
 }

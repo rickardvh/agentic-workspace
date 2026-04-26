@@ -1,0 +1,27 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Post-Generation Boundary Review Closeout",
+  "date": "2026-04-26",
+  "scope": "#370",
+  "classification": "closeout",
+  "issue_classifications": [
+    {
+      "id": "#370",
+      "title": "[Review]: Verify post-generation CLI and lifecycle authority boundaries",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "#371",
+      "evidence": "docs/reviews/post-generation-cli-lifecycle-boundary-review-2026-04-26.md lists generated surfaces, hand-authored authority, lifecycle eligibility, runtime primitive ownership, and selects #371 as next simplification target."
+    }
+  ],
+  "findings": [
+    {
+      "id": "#370",
+      "title": "[Review]: Verify post-generation CLI and lifecycle authority boundaries",
+      "action_state": "evidence-present",
+      "evidence": "Post-generation boundary review was recorded in docs/reviews/post-generation-cli-lifecycle-boundary-review-2026-04-26.md.",
+      "follow_up": "#371",
+      "notes": "The review recommends first-contact adapter compression before any lifecycle adapter generation."
+    }
+  ]
+}

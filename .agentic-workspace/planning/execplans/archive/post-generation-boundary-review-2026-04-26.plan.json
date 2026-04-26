@@ -1,0 +1,160 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Post-Generation Boundary Review",
+  "goal": [
+    "Implement #370 by producing a compact factual review of generated vs hand-authored CLI authority after the generated-adapter and lifecycle-readiness lanes."
+  ],
+  "non_goals": [
+    "Generate new adapters.",
+    "Refactor lifecycle tools.",
+    "Close #230 without the separate #375 closure review.",
+    "Reopen completed lanes without evidence of drift."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "A reviewer can see which command surfaces are generated, which remain hand-authored authority, which lifecycle surfaces are admitted or deferred, and what simplification target should come next.",
+      "constraints": "Review artifact only; no behavior changes.",
+      "latitude": "Use existing contracts and current source inspection to make the review compact and evidence-backed.",
+      "escalation": "Stop before implementation work for #371-#374."
+    },
+    "execution": {
+      "milestone": "post-generation-boundary-review",
+      "status": "completed",
+      "next_step": "Archive this slice and continue with #371.",
+      "proof": "Run planning surface checks, reconcile, and summary."
+    }
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#370",
+      "label": "boundary review",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#230",
+      "label": "product compression",
+      "role": "parent",
+      "locator": ""
+    },
+    {
+      "kind": "file",
+      "target": "src/agentic_workspace/contracts/command_adapter_generation.json",
+      "label": "generated adapter contract",
+      "role": "evidence",
+      "locator": ""
+    },
+    {
+      "kind": "file",
+      "target": "src/agentic_workspace/contracts/lifecycle_generation_readiness.json",
+      "label": "lifecycle readiness contract",
+      "role": "evidence",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "post-generation-boundary-review",
+    "status": "completed",
+    "scope": "#370",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Verify post-generation CLI and lifecycle authority boundaries.",
+    "hard constraints": "No implementation in this review slice.",
+    "agent may decide locally": "The concise review shape and next simplification target.",
+    "escalate when": "The review reveals generated adapter drift or unsafe lifecycle eligibility."
+  },
+  "touched_paths": [
+    "docs/reviews/post-generation-cli-lifecycle-boundary-review-2026-04-26.md",
+    ".agentic-workspace/planning/reviews/post-generation-boundary-review-closeout-2026-04-26.review.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json"
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "completion_criteria": [
+    "#370 is implemented and closed.",
+    "Generated vs hand-authored CLI surfaces are listed.",
+    "Lifecycle generation eligibility is summarized.",
+    "Remaining direct executable-code authority is named.",
+    "One next simplification target is selected."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Post-generation CLI and lifecycle authority boundary review recorded.",
+    "validation confirmed": "Pending final planning checks before archive.",
+    "follow-on routed to": "#371",
+    "post-work posterity capture": "Closeout review plus archived execplan.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory/config promotion; review artifact is historical evidence.",
+    "resume from": "#371 first-contact adapter compression."
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace reconcile --format json; uv run agentic-workspace summary --format json.",
+    "proof achieved now": "The review lists generated surfaces, remaining hand-authored authority, lifecycle eligibility, runtime primitive ownership, and next simplification target.",
+    "evidence for \"proof achieved\" state": "docs/reviews/post-generation-cli-lifecycle-boundary-review-2026-04-26.md and .agentic-workspace/planning/reviews/post-generation-boundary-review-closeout-2026-04-26.review.json."
+  },
+  "intent_satisfaction": {
+    "original intent": "Verify post-generation CLI and lifecycle authority boundaries.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#370 slice satisfied: review artifact lists generated surfaces, hand-authored authority, lifecycle eligibility, runtime primitive ownership, and selected #371 as next target.",
+    "unsolved intent passed to": "#371, #372, #373, #374, #375, and parent #230"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#370 is complete, but parent #230 and follow-up children remain open.",
+    "evidence carried forward": "docs/reviews/post-generation-cli-lifecycle-boundary-review-2026-04-26.md, .agentic-workspace/planning/reviews/post-generation-boundary-review-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen #370 if generated adapter or lifecycle authority boundaries are found to be misstated."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Raw inspection detail is superseded by the compact review artifact.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#371",
+          "owner": "docs/reviews/post-generation-cli-lifecycle-boundary-review-2026-04-26.md and closeout review.",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No Memory/config promotion; review artifact is historical evidence.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "No Memory/config promotion; review artifact is historical evidence.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "boundary review",
+          "owner": "issue",
+          "source": "#370"
+        },
+        {
+          "summary": "product compression",
+          "owner": "issue",
+          "source": "#230"
+        }
+      ]
+    }
+  }
+}
