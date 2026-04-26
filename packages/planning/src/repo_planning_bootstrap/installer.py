@@ -705,6 +705,79 @@ def _write_review_record(*, record_path: Path, record: dict[str, Any], render_ma
         markdown_path.write_text(_render_review_markdown_from_record(record), encoding="utf-8")
 
 
+def create_review_record(
+    *,
+    slug: str,
+    title: str,
+    target: str | Path | None = None,
+    scope: str | None = None,
+    classification: str = "review",
+    dry_run: bool = False,
+    render_markdown: bool = False,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    safe_slug = _safe_review_slug(slug)
+    record_path = target_root / PLANNING_MANAGED_ROOT / "reviews" / f"{safe_slug}.review.json"
+    result = InstallResult(target_root=target_root, message=f"Create review record '{safe_slug}'", dry_run=dry_run)
+    if record_path.exists():
+        result.add("manual review", record_path, "review record already exists; choose a new slug or edit intentionally")
+        return result
+
+    record = _new_review_record(title=title, scope=scope or safe_slug, classification=classification)
+    if dry_run:
+        result.add("would create", record_path, "valid planning-review/v1 record")
+        return result
+
+    _write_review_record(record_path=record_path, record=record, render_markdown=render_markdown)
+    result.add("created", record_path, "valid planning-review/v1 record")
+    if render_markdown:
+        result.add("created", _derived_review_markdown_path(record_path), "derived review markdown")
+    return result
+
+
+def _safe_review_slug(slug: str) -> str:
+    normalized = re.sub(r"[^A-Za-z0-9._-]+", "-", slug.strip().lower()).strip("-._")
+    if not normalized:
+        raise ValueError("review slug must contain at least one alphanumeric character")
+    return normalized
+
+
+def _new_review_record(*, title: str, scope: str, classification: str) -> dict[str, Any]:
+    return {
+        "kind": "planning-review/v1",
+        "title": title.strip() or scope.replace("-", " ").title(),
+        "date": date.today().isoformat(),
+        "scope": [scope],
+        "classification": classification,
+        "goal": ["Record a bounded review in a valid machine-readable shape."],
+        "non_goals": ["Do not use this generated skeleton as proof that review work is complete."],
+        "review_mode": {
+            "mode": classification,
+            "review question": "Fill before closeout.",
+            "default finding cap": "bounded",
+            "inputs inspected first": "compact planning and task-specific surfaces",
+        },
+        "review_method": {
+            "commands used": "Fill during review.",
+            "evidence sources": "Fill during review.",
+        },
+        "references": [],
+        "findings": [],
+        "recommendation": {
+            "promote": "pending",
+            "defer": "pending",
+            "dismiss": "pending",
+        },
+        "retention": {
+            "closeout shape": "shrink or archive after findings are routed",
+            "trigger": "review complete",
+            "proof surface": "this review record plus routed follow-up residue",
+        },
+        "validation_commands": [],
+        "drift_log": [f"{date.today().isoformat()}: Review record created by create-review."],
+    }
+
+
 def _review_title(path: Path) -> str:
     record = _load_review_record(path)
     if isinstance(record, dict):

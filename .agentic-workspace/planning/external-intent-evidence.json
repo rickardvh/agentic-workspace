@@ -878,7 +878,7 @@
       "system": "github",
       "id": "#372",
       "title": "[Workspace]: Convert remaining durable artifact authoring paths to valid-by-construction commands",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"

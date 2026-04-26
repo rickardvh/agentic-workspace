@@ -1,0 +1,79 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Valid-By-Construction Review Record Closeout",
+  "date": "2026-04-26",
+  "scope": [
+    "#372"
+  ],
+  "classification": "closeout",
+  "issue_classifications": [
+    {
+      "id": "#372",
+      "title": "[Workspace]: Convert remaining durable artifact authoring paths to valid-by-construction commands",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "#374, #375",
+      "evidence": "agentic-planning-bootstrap create-review creates valid planning-review/v1 records and was dogfooded to create this closeout record."
+    }
+  ],
+  "goal": [
+    "Record #372 closeout evidence after adding a valid-by-construction review-record authoring command."
+  ],
+  "non_goals": [
+    "Do not use this generated skeleton as proof that review work is complete."
+  ],
+  "review_mode": {
+    "mode": "closeout",
+    "review question": "Did this slice remove one normal manual durable artifact authoring loop?",
+    "default finding cap": "bounded",
+    "inputs inspected first": "compact planning and task-specific surfaces"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-planning-bootstrap create-review ... --format json; package tests; package ruff; selected proof lanes.",
+    "evidence sources": "packages/planning/src/repo_planning_bootstrap/cli.py, packages/planning/src/repo_planning_bootstrap/installer.py, packages/planning/tests/test_installer.py"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#372",
+      "label": "valid-by-construction durable artifact authoring",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#230",
+      "label": "product compression",
+      "role": "parent",
+      "locator": ""
+    }
+  ],
+  "findings": [
+    {
+      "id": "#372",
+      "title": "[Workspace]: Convert remaining durable artifact authoring paths to valid-by-construction commands",
+      "action_state": "evidence-present",
+      "evidence": "agentic-planning-bootstrap create-review creates a planning-review/v1 skeleton with slug normalization, date, scope, mode, retention, validation, dry-run support, and optional derived markdown.",
+      "follow_up": "#374, #375",
+      "notes": "The command was dogfooded to create this closeout record, then the record was filled with specific evidence."
+    }
+  ],
+  "recommendation": {
+    "promote": "close #372",
+    "defer": "#374 lifecycle dry-run plan simplification remains",
+    "dismiss": "none"
+  },
+  "retention": {
+    "closeout shape": "shrink or archive after findings are routed",
+    "trigger": "review complete",
+    "proof surface": "this review record plus routed follow-up residue"
+  },
+  "validation_commands": [
+    "cd packages/planning && uv run pytest tests/test_installer.py -q",
+    "cd packages/planning && uv run ruff check .",
+    "uv run agentic-planning-bootstrap create-review valid-by-construction-review-record-closeout-2026-04-26 --title \"Valid-By-Construction Review Record Closeout\" --scope \"#372\" --classification closeout --target . --format json"
+  ],
+  "drift_log": [
+    "2026-04-26: Review record created by create-review."
+  ]
+}

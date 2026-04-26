@@ -1449,6 +1449,59 @@ candidates = []
     assert "compact-cli" not in state_text
 
 
+def test_planning_cli_create_review_writes_valid_review_record(tmp_path: Path, capsys) -> None:
+    result = planning_cli.main(
+        [
+            "create-review",
+            "Lane Closeout",
+            "--title",
+            "Lane Closeout",
+            "--scope",
+            "#372",
+            "--classification",
+            "closeout",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ]
+    )
+
+    assert result == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["message"] == "Create review record 'lane-closeout'"
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "lane-closeout.review.json"
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    assert record["kind"] == "planning-review/v1"
+    assert record["title"] == "Lane Closeout"
+    assert record["scope"] == ["#372"]
+    assert record["classification"] == "closeout"
+    assert record["review_mode"]["mode"] == "closeout"
+    assert record["findings"] == []
+    assert payload["actions"][0]["kind"] == "created"
+
+
+def test_planning_cli_create_review_dry_run_does_not_write(tmp_path: Path, capsys) -> None:
+    result = planning_cli.main(
+        [
+            "create-review",
+            "future-review",
+            "--title",
+            "Future Review",
+            "--target",
+            str(tmp_path),
+            "--dry-run",
+            "--format",
+            "json",
+        ]
+    )
+
+    assert result == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["actions"][0]["kind"] == "would create"
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "reviews" / "future-review.review.json").exists()
+
+
 def test_archive_execplan_moves_completed_plan(tmp_path: Path) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(

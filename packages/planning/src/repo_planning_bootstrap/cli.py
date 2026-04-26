@@ -11,6 +11,7 @@ from repo_planning_bootstrap.installer import (
     adopt_bootstrap,
     archive_execplan,
     collect_status,
+    create_review_record,
     doctor_bootstrap,
     format_actions,
     format_result_json,
@@ -123,6 +124,16 @@ def build_parser() -> argparse.ArgumentParser:
     archive_parser.add_argument("--continuation-summary", help="Closeout distillation continuation bucket summary.")
     archive_parser.add_argument("--format", choices=("text", "json"), default="text")
 
+    review_parser = subparsers.add_parser("create-review", help="Create a valid planning review record skeleton.")
+    review_parser.add_argument("slug")
+    review_parser.add_argument("--title", required=True)
+    review_parser.add_argument("--target")
+    review_parser.add_argument("--scope")
+    review_parser.add_argument("--classification", default="review")
+    review_parser.add_argument("--render-markdown", action="store_true")
+    review_parser.add_argument("--dry-run", action="store_true")
+    review_parser.add_argument("--format", choices=("text", "json"), default="text")
+
     list_files_parser = subparsers.add_parser("list-files")
     list_files_parser.add_argument("--format", choices=("text", "json"), default="text")
 
@@ -211,6 +222,19 @@ def main(argv: list[str] | None = None) -> int:
                 reopen_trigger=args.reopen_trigger,
                 discard_summary=args.discard_summary,
                 continuation_summary=args.continuation_summary,
+            ),
+            args.format,
+        )
+    if args.command == "create-review":
+        return _emit(
+            create_review_record(
+                slug=args.slug,
+                title=args.title,
+                target=args.target,
+                scope=args.scope,
+                classification=args.classification,
+                dry_run=args.dry_run,
+                render_markdown=args.render_markdown,
             ),
             args.format,
         )
