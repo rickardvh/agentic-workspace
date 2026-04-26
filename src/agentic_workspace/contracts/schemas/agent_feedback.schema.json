@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/agent-feedback.schema.json",
+  "title": "Agent Feedback Artifact",
+  "type": "object",
+  "required": [
+    "kind",
+    "schema_version",
+    "evaluated_at",
+    "prompt_ref",
+    "context",
+    "impact",
+    "findings",
+    "suggestions",
+    "follow_up_routing"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agent-feedback-review/v1"
+    },
+    "schema_version": {
+      "const": "agentic-workspace/agent-feedback/v1"
+    },
+    "evaluated_at": {
+      "type": "string"
+    },
+    "prompt_ref": {
+      "type": "string"
+    },
+    "context": {
+      "type": "object",
+      "required": [
+        "target",
+        "work_window",
+        "package_surfaces_used"
+      ],
+      "properties": {
+        "target": {
+          "type": "string"
+        },
+        "work_window": {
+          "type": "string"
+        },
+        "package_surfaces_used": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "impact": {
+      "type": "object",
+      "required": [
+        "outcome",
+        "quality",
+        "efficiency",
+        "cognitive_load"
+      ],
+      "properties": {
+        "outcome": {
+          "type": "string"
+        },
+        "quality": {
+          "type": "string"
+        },
+        "efficiency": {
+          "type": "string"
+        },
+        "cognitive_load": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "summary",
+          "classification",
+          "evidence",
+          "severity"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "classification": {
+            "enum": [
+              "product-general",
+              "repo-local",
+              "mixed-unclear"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "severity": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "suggestions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "finding_id",
+          "summary",
+          "expected_effect"
+        ],
+        "properties": {
+          "finding_id": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "expected_effect": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "follow_up_routing": {
+      "type": "object",
+      "required": [
+        "issues",
+        "deferred"
+      ],
+      "properties": {
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deferred": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

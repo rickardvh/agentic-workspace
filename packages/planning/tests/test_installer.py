@@ -3643,6 +3643,19 @@ def test_planning_summary_exposes_closure_evidence(tmp_path: Path) -> None:
     assert "closure_check" in summary["schema"]["view_fields"]["planning_record"]
 
 
+def test_planning_summary_dedupes_unavailable_projection_reason_fragments(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    assert summary["projection_state"]["status"] == "idle"
+    assert summary["projection_state"]["reason"] == "no active planning record"
+    assert summary["schema"]["shared_fields"][10] == "projection_state"
+    assert summary["hierarchy_contract"]["reason"] == "no active planning record"
+    assert summary["hierarchy_contract"]["reason_code"] == "idle-no-active-planning-record"
+    assert summary["handoff_contract"]["reason_code"] == "idle-no-active-planning-record"
+
+
 def test_planning_report_prints_closure_evidence(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(

@@ -30,6 +30,7 @@ Use it when you need to know which checked-in file owns a machine-readable contr
 | `report_contract_manifest.schema.json` | report contract manifest |
 | `workspace_report.schema.json` | emitted workspace report envelope |
 | `contract_inventory.schema.json` | boundary inventory |
+| `agent_feedback.schema.json` | optional feedback review artifacts |
 | `workspace_config.schema.json` | `.agentic-workspace/config.toml` |
 | `workspace_local_override.schema.json` | `.agentic-workspace/config.local.toml` |
 | `setup_findings.schema.json` | `tools/setup-findings.json` |

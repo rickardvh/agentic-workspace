@@ -3008,7 +3008,12 @@ def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "source": "execution_shape",
             }
     section_hints = _report_section_hints(payload)
-    profile_payload = payload.get("report_profile", _report_profile_payload())
+    profile_payload = dict(payload.get("report_profile", _report_profile_payload()))
+    profile_payload["ordinary_agent_path"] = _ordinary_agent_path_payload(payload=payload, findings=findings)
+    decision_grade_fields = list(profile_payload.get("decision_grade_fields", []))
+    if "report_profile.ordinary_agent_path" not in decision_grade_fields:
+        decision_grade_fields.append("report_profile.ordinary_agent_path")
+    profile_payload["decision_grade_fields"] = decision_grade_fields
     return {
         "kind": "workspace-report-router/v1",
         "schema": {
@@ -3111,9 +3116,36 @@ def _report_router_external_work_delta(value: Any) -> dict[str, Any]:
     }
 
 
+def _ordinary_agent_path_payload(*, payload: dict[str, Any], findings: list[dict[str, Any]]) -> dict[str, Any]:
+    effective_authority = payload.get("effective_authority", {})
+    current_work = effective_authority.get("current_work", {}) if isinstance(effective_authority, dict) else {}
+    if not isinstance(current_work, dict):
+        current_work = {}
+    current_status = str(current_work.get("status", "unknown") or "unknown")
+    warning_count = len(findings)
+    return {
+        "status": "ready",
+        "entry_command": "agentic-workspace start --target ./repo --format json",
+        "state_command": "agentic-workspace report --target ./repo --format json",
+        "current_work_command": "agentic-workspace summary --format json",
+        "proof_command": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+        "deep_detail_rule": "Open section, memory, planning, or review artifacts only when compact output points there.",
+        "current_signal": {
+            "current_work_status": current_status,
+            "warning_count": warning_count,
+        },
+        "stop_or_escalate_when": [
+            "compact report health is not healthy",
+            "summary reports active broad work without a checked-in plan you can continue from",
+            "proof selection is ambiguous for the changed paths",
+            "the next change would alter product direction, authority boundaries, or system intent",
+        ],
+    }
+
+
 def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
     section_purposes = {
-        "effective_authority": "authority, current work, system-intent pressure, and unresolved gaps",
+        "effective_authority": "authority, current work, system-intent pressure, idle context, and unresolved gaps",
         "execution_shape": "default execution posture and planning-backed work guidance",
         "operational_compression": "falsifiable advisory measures for whether surfaces reduce total operational cost",
         "findings": "raw warnings and attention signals grouped in router warning_summary",
@@ -3128,6 +3160,29 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
         "config": "resolved workspace config and local posture",
         "registry": "module registry and lifecycle metadata",
     }
+    findings = [finding for finding in payload.get("findings", []) if isinstance(finding, dict)]
+    current_work = (
+        payload.get("effective_authority", {}).get("current_work", {}) if isinstance(payload.get("effective_authority"), dict) else {}
+    )
+    current_status = str(current_work.get("status", "unknown") if isinstance(current_work, dict) else "unknown")
+    why_now = {
+        "effective_authority": ("inspect now if authority, idle state, or unresolved intent pressure affects whether work can proceed"),
+        "execution_shape": "inspect now to choose direct work, light planning, or checked-in execplan promotion",
+        "operational_compression": "inspect now when assessing whether package surfaces are reducing total work",
+        "findings": "inspect now because warnings are present" if findings else "skip unless diagnosing an absent-warning state",
+        "module_reports": "deep detail; inspect only when a compact router field points to planning or memory internals",
+        "reports": "deep lifecycle detail; inspect only for report/debug work",
+        "surface_value_guardrail": "inspect before adding or expanding a visible surface",
+        "closeout_trust": "inspect before closing broad work or auditing package-use evidence",
+        "external_work_delta": "inspect when external-work intake or closure state is part of the task",
+        "discovery": "inspect during setup, bootstrap, or missing-surface diagnosis",
+        "standing_intent": "inspect when product direction or stronger-home placement is the question",
+        "repo_friction": "inspect when choosing or routing improvement targets",
+        "config": "deep detail; inspect only when resolved config, posture, or obligations matter",
+        "registry": "deep detail; inspect only when module metadata or lifecycle registration matters",
+    }
+    if current_status in {"absent", "direct-or-no-active-plan"}:
+        why_now["effective_authority"] = "inspect now only if idle state, authority, or system-intent pressure is unclear"
     hints: list[dict[str, Any]] = []
     for section, purpose in section_purposes.items():
         if section in payload:
@@ -3135,6 +3190,7 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 {
                     "section": section,
                     "purpose": purpose,
+                    "why_now": why_now.get(section, "inspect when this section is named by compact routing output"),
                     "command": f"agentic-workspace report --target ./repo --section {section} --format json",
                     "volume": "high" if section in {"module_reports", "reports", "registry", "config"} else "normal",
                 }
@@ -3153,6 +3209,7 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
             "reason": "planning module is not installed",
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report={}),
             "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report={}),
+            "historical_review_artifacts": _historical_review_artifacts_policy(planning_report={}, intent_validation={}),
         }
 
     intent_validation = planning_report.get("intent_validation", {})
@@ -3162,6 +3219,10 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
             "reason": "planning intent validation is unavailable",
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
             "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report),
+            "historical_review_artifacts": _historical_review_artifacts_policy(
+                planning_report=planning_report,
+                intent_validation={},
+            ),
         }
 
     counts = intent_validation.get("counts", {})
@@ -3196,7 +3257,32 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
         "sample_signals": sample_signals,
         "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
         "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report),
+        "historical_review_artifacts": _historical_review_artifacts_policy(
+            planning_report=planning_report,
+            intent_validation=intent_validation,
+        ),
         "recommended_next_action": recommended_next_action,
+    }
+
+
+def _historical_review_artifacts_policy(*, planning_report: dict[str, Any], intent_validation: dict[str, Any]) -> dict[str, Any]:
+    historical = intent_validation.get("historical_audit_references", {}) if isinstance(intent_validation, dict) else {}
+    if not isinstance(historical, dict):
+        historical = {}
+    source_count = _as_int(historical.get("source_count"))
+    item_count = _as_int(historical.get("item_count"))
+    if source_count == 0 and isinstance(planning_report, dict):
+        reconcile = planning_report.get("closeout_reconciliation", {})
+        if isinstance(reconcile, dict):
+            source_count = _as_int(reconcile.get("source_count"))
+            item_count = _as_int(reconcile.get("item_count"))
+    return {
+        "status": "evidence-only",
+        "role": "evidence/history, not ordinary operating input",
+        "source_count": source_count,
+        "item_count": item_count,
+        "rule": "Do not read historical review artifacts during startup unless a selected issue, audit, or report section points there.",
+        "selection_path": "agentic-workspace report --target ./repo --section closeout_trust --format json",
     }
 
 
@@ -5120,11 +5206,12 @@ def _effective_authority_payload(
     contract_areas = contract_inventory.get("areas", [])
     config_payload = _system_intent_source_payload(config) if config is not None else {}
     unresolved_gaps: list[dict[str, str]] = []
+    idle_context: list[dict[str, str]] = []
     if active_status == "absent":
-        unresolved_gaps.append(
+        idle_context.append(
             {
                 "id": "no-active-planning-record",
-                "summary": "No active planning record is present, so current-work alignment cannot be judged from an active execplan.",
+                "summary": "No active planning record is present; this is normal for idle or narrow direct work.",
                 "recommended_query": "agentic-workspace summary --format json",
             }
         )
@@ -5228,6 +5315,7 @@ def _effective_authority_payload(
             "ownership": "agentic-workspace ownership --target ./repo --format json",
         },
         "unresolved_gaps": unresolved_gaps,
+        "idle_context": idle_context,
     }
 
 
@@ -8710,6 +8798,7 @@ def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
 
 def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[SkillRecommendation]:
     task_text_lower = task_text.lower()
+    task_text_normalized = " ".join(_skill_match_tokens(task_text))
     if "setup" in task_text_lower:
         for skill in skills:
             if skill.skill_id == "planning-reporting":
@@ -8730,9 +8819,16 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
         hint_score = 0
         reasons: list[str] = []
 
+        matched_id = _matched_skill_id_phrase(skill=skill, task_text_normalized=task_text_normalized)
+        if matched_id:
+            score += 6
+            hint_score += 6
+            reasons.append(f"id match: {matched_id}")
+
         matched_phrases = _matched_skill_terms(
             terms=skill.activation_hints.phrases,
             task_text_lower=task_text_lower,
+            task_text_normalized=task_text_normalized,
             task_tokens=task_tokens,
         )
         if matched_phrases:
@@ -8746,7 +8842,12 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
             ("noun", skill.activation_hints.nouns, 2),
             ("context", skill.activation_hints.when, 1),
         ):
-            matched = _matched_skill_terms(terms=terms, task_text_lower=task_text_lower, task_tokens=task_tokens)
+            matched = _matched_skill_terms(
+                terms=terms,
+                task_text_lower=task_text_lower,
+                task_text_normalized=task_text_normalized,
+                task_tokens=task_tokens,
+            )
             if matched:
                 matched_score = len(matched) * weight
                 score += matched_score
@@ -8776,17 +8877,43 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
     return recommendations
 
 
-def _matched_skill_terms(*, terms: tuple[str, ...], task_text_lower: str, task_tokens: set[str]) -> list[str]:
-    matched = [term for term in terms if _skill_term_matches(term=term, task_text_lower=task_text_lower, task_tokens=task_tokens)]
+def _matched_skill_id_phrase(*, skill: RegisteredSkill, task_text_normalized: str) -> str:
+    tokens = _skill_match_tokens(skill.skill_id)
+    if len(tokens) < 2:
+        return ""
+    for size in range(len(tokens), 1, -1):
+        phrase = " ".join(tokens[:size])
+        if phrase in task_text_normalized:
+            return phrase
+    return ""
+
+
+def _matched_skill_terms(
+    *,
+    terms: tuple[str, ...],
+    task_text_lower: str,
+    task_text_normalized: str,
+    task_tokens: set[str],
+) -> list[str]:
+    matched = [
+        term
+        for term in terms
+        if _skill_term_matches(
+            term=term,
+            task_text_lower=task_text_lower,
+            task_text_normalized=task_text_normalized,
+            task_tokens=task_tokens,
+        )
+    ]
     return sorted(dict.fromkeys(matched))
 
 
-def _skill_term_matches(*, term: str, task_text_lower: str, task_tokens: set[str]) -> bool:
+def _skill_term_matches(*, term: str, task_text_lower: str, task_text_normalized: str, task_tokens: set[str]) -> bool:
     normalised = " ".join(_skill_match_tokens(term))
     if not normalised:
         return False
     if " " in normalised:
-        return normalised in task_text_lower
+        return normalised in task_text_lower or normalised in task_text_normalized
     return normalised in task_tokens
 
 
