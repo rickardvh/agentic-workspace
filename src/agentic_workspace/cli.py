@@ -4419,6 +4419,16 @@ def _surface_value_guardrail_payload() -> dict[str, Any]:
                 "the same result can be achieved by compressing, replacing, or backgrounding an existing surface",
             ],
         },
+        "review_gate": {
+            "ordinary_path": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+            "answer_field": "surface_value_review",
+            "rule": "Durable-surface changes should carry an inspectable answer during ordinary proof selection.",
+            "flags_additive_only_when": [
+                "the changed durable path does not currently exist under the target",
+                "the change appears to add a new first-line docs, contract, schema, workflow, adapter, report, memory, or planning surface",
+                "no repeated-cost, ownership, discovery, and validation answer is visible",
+            ],
+        },
     }
 
 
@@ -6159,6 +6169,7 @@ def _emit_setup(
 def _select_proof_payload(
     payload: dict[str, Any],
     *,
+    target_root: Path,
     route: str | None,
     current_only: bool,
     changed_paths: list[str] | None = None,
@@ -6168,7 +6179,7 @@ def _select_proof_payload(
     if selector_count > 1:
         raise WorkspaceUsageError("proof selectors are mutually exclusive; use only one of --route, --current, or --changed.")
     if normalized_paths:
-        answer = _proof_selection_for_changed_paths(changed_paths=normalized_paths)
+        answer = _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root)
         refs = [compact_contract_manifest()["canonical_doc"], payload["command"], payload["canonical_doc"]]
         return _compact_contract_answer(
             surface="proof",
@@ -6215,7 +6226,13 @@ def _emit_proof(
     changed_paths: list[str] | None = None,
 ) -> None:
     payload = _proof_payload(target_root=target_root, descriptors=descriptors)
-    payload = _select_proof_payload(payload, route=route, current_only=current_only, changed_paths=changed_paths)
+    payload = _select_proof_payload(
+        payload,
+        target_root=target_root,
+        route=route,
+        current_only=current_only,
+        changed_paths=changed_paths,
+    )
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
         return
@@ -6327,7 +6344,7 @@ def _normalize_changed_paths(paths: list[str]) -> list[str]:
     return normalized
 
 
-def _proof_selection_for_changed_paths(*, changed_paths: list[str]) -> dict[str, Any]:
+def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root: Path | None = None) -> dict[str, Any]:
     defaults = _defaults_payload()
     validation_lanes = defaults["validation"]["lanes"]
 
@@ -6370,7 +6387,7 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str]) -> dict[str,
     if len(selected_lanes) > 1:
         escalate_when.insert(0, str(_PROOF_SELECTION_RULES["cross_lane_escalation"]))
 
-    return {
+    proof_selection = {
         "kind": "proof-selection/v1",
         "changed_paths": changed_paths,
         "selected_lanes": [
@@ -6389,6 +6406,89 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str]) -> dict[str,
         "broaden_when": broaden_when,
         "escalate_when": escalate_when,
     }
+    surface_value_review = _surface_value_review_for_changed_paths(changed_paths=changed_paths, target_root=target_root)
+    if surface_value_review["durable_surface_count"]:
+        proof_selection["surface_value_review"] = surface_value_review
+    return proof_selection
+
+
+def _surface_value_review_for_changed_paths(*, changed_paths: list[str], target_root: Path | None) -> dict[str, Any]:
+    guardrail = _surface_value_guardrail_payload()
+    reviewed_paths: list[dict[str, Any]] = []
+    flagged_count = 0
+    accepted_count = 0
+    for changed_path in changed_paths:
+        durable_class = _durable_surface_class(changed_path)
+        if not durable_class:
+            continue
+        path_exists = _changed_path_exists(target_root=target_root, changed_path=changed_path)
+        if path_exists:
+            result = "accepted"
+            disposition = "existing durable surface update"
+            reason = "updating an existing durable surface is lower residue than adding a new first-line concept"
+            accepted_count += 1
+        else:
+            result = "flagged"
+            disposition = "additive-only durable surface candidate"
+            reason = "new durable surfaces need explicit repeated-cost, owner, discovery, and validation answers"
+            flagged_count += 1
+        reviewed_paths.append(
+            {
+                "path": changed_path,
+                "surface_class": durable_class,
+                "exists_under_target": path_exists,
+                "result": result,
+                "disposition": disposition,
+                "reason": reason,
+                "required_answers": guardrail["value_questions"],
+            }
+        )
+    status = "not-applicable"
+    if flagged_count:
+        status = "attention-needed"
+    elif accepted_count:
+        status = "accepted"
+    return {
+        "kind": "surface-value-review/v1",
+        "status": status,
+        "rule": guardrail["rule"],
+        "preference_order": guardrail["preference_order"],
+        "durable_surface_count": len(reviewed_paths),
+        "accepted_count": accepted_count,
+        "flagged_count": flagged_count,
+        "reviewed_paths": reviewed_paths,
+        "accept_when": guardrail["review_result"]["accept_when"],
+        "reject_when": guardrail["review_result"]["reject_when"],
+        "review_gate": guardrail["review_gate"],
+    }
+
+
+def _changed_path_exists(*, target_root: Path | None, changed_path: str) -> bool:
+    path = Path(changed_path)
+    if path.is_absolute():
+        return path.exists()
+    if target_root is None:
+        return path.exists()
+    return (target_root / path).exists()
+
+
+def _durable_surface_class(changed_path: str) -> str | None:
+    normalized = changed_path.replace("\\", "/").strip("/")
+    if normalized in {"AGENTS.md", "llms.txt", "SYSTEM_INTENT.md", "README.md"}:
+        return "adapter_or_repo_intent_surface"
+    if normalized.startswith("src/agentic_workspace/contracts/"):
+        return "workspace_contract_surface"
+    if normalized.startswith(".agentic-workspace/docs/") or normalized.startswith("docs/"):
+        return "docs_or_review_surface"
+    if normalized.startswith(".agentic-workspace/memory/"):
+        return "memory_surface"
+    if normalized.startswith(".agentic-workspace/planning/execplans/"):
+        return "planning_execplan_surface"
+    if normalized.startswith(".agentic-workspace/planning/reviews/"):
+        return "planning_review_surface"
+    if normalized in {".agentic-workspace/WORKFLOW.md", ".agentic-workspace/config.toml", ".agentic-workspace/OWNERSHIP.toml"}:
+        return "workspace_policy_surface"
+    return None
 
 
 def _normalize_repo_path(path_text: str) -> str:

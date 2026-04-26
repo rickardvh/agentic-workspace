@@ -952,6 +952,8 @@ def test_defaults_section_selector_returns_surface_value_guardrail(capsys) -> No
     ]
     assert answer["authority_classes"][0]["class"] == "authoritative"
     assert "first-line thing to remember" in answer["review_result"]["reject_when"][1]
+    assert answer["review_gate"]["answer_field"] == "surface_value_review"
+    assert answer["review_gate"]["ordinary_path"] == "agentic-workspace proof --target ./repo --changed <paths> --format json"
 
 
 def test_defaults_section_selector_returns_effective_authority_view(capsys) -> None:
@@ -4069,6 +4071,63 @@ def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None
     answer = payload["answer"]
     assert [lane["id"] for lane in answer["selected_lanes"]] == ["planning_package", "workspace_cli"]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
+
+
+def test_proof_changed_selector_accepts_existing_durable_surface_update(tmp_path: Path, capsys) -> None:
+    contract_path = tmp_path / "src" / "agentic_workspace" / "contracts" / "report_contract.json"
+    contract_path.parent.mkdir(parents=True)
+    contract_path.write_text("{}\n", encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/contracts/report_contract.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    review = payload["answer"]["surface_value_review"]
+    assert review["kind"] == "surface-value-review/v1"
+    assert review["status"] == "accepted"
+    assert review["accepted_count"] == 1
+    assert review["flagged_count"] == 0
+    assert review["reviewed_paths"][0]["surface_class"] == "workspace_contract_surface"
+    assert review["reviewed_paths"][0]["result"] == "accepted"
+    assert review["review_gate"]["ordinary_path"] == "agentic-workspace proof --target ./repo --changed <paths> --format json"
+
+
+def test_proof_changed_selector_flags_additive_only_durable_surface(tmp_path: Path, capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/new-first-line-concept.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    review = payload["answer"]["surface_value_review"]
+    assert review["status"] == "attention-needed"
+    assert review["accepted_count"] == 0
+    assert review["flagged_count"] == 1
+    assert review["reviewed_paths"][0]["result"] == "flagged"
+    assert review["reviewed_paths"][0]["disposition"] == "additive-only durable surface candidate"
+    assert "what repeated cost does this remove?" in review["reviewed_paths"][0]["required_answers"]
 
 
 def test_upgrade_strict_preflight_requires_token(tmp_path: Path, capsys) -> None:
