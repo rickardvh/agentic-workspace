@@ -14,7 +14,7 @@
       "system": "github",
       "id": "#230",
       "title": "[Workspace]: Strip away visible product residue that is no longer earning its keep so the system becomes easier to enter, recover, and trust without losing real leverage",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -905,7 +905,7 @@
       "system": "github",
       "id": "#375",
       "title": "[Review]: Reassess whether product-compression intent in #230 is satisfied",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"

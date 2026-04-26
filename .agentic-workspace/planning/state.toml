@@ -3,9 +3,5 @@ active_items = []
 queued_items = []
 
 [roadmap]
-lanes = [
-  { id = "product-compression-followthrough", title = "Product compression follow-through", priority = "first", issues = ["#230", "#375"], outcome = "Reduce visible product residue and verify whether #230 can honestly close.", reason = "#371, #372, #373, and #374 landed the planned compression slices; #375 remains as the closure assessment for #230.", promotion_signal = "Continue with #375 product-compression closure review.", suggested_first_slice = "Compare concrete before/after visible surface cost and decide whether #230 can close honestly." },
-]
-candidates = [
-  { id = "visible-product-residue-compression", title = "Continue product-shape subtraction pressure", issues = ["#230"], reason = "#230 remains intentionally open as a strategic product-compression direction; no current active slice is selected.", suggested_first_slice = "Refresh visible-surface inventory only when new first-contact residue appears or a concrete subtraction target is proposed." },
-]
+lanes = []
+candidates = []

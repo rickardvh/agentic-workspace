@@ -1,0 +1,124 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Product Compression Closure Review",
+  "date": "2026-04-26",
+  "scope": [
+    "#230"
+  ],
+  "classification": "closeout",
+  "issue_classifications": [
+    {
+      "id": "#375",
+      "title": "[Review]: Reassess whether product-compression intent in #230 is satisfied",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "none",
+      "evidence": "This review compares the completed compression slices and records the closure decision for #230."
+    },
+    {
+      "id": "#230",
+      "title": "[Workspace]: Strip away visible product residue that is no longer earning its keep",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "none",
+      "evidence": "#352-#354, #371-#374 materially reduced default visible product shape while preserving startup, weak-agent compatibility, generated-adapter trust, review authoring, and lifecycle safety."
+    }
+  ],
+  "goal": [
+    "Decide whether #230 is honestly satisfied after the product-compression slices landed."
+  ],
+  "non_goals": [
+    "Do not use this generated skeleton as proof that review work is complete."
+  ],
+  "review_mode": {
+    "mode": "closeout",
+    "review question": "Is the visible product shape materially smaller, clearer, and easier to enter without losing leverage?",
+    "default finding cap": "bounded",
+    "inputs inspected first": "compact planning and task-specific surfaces"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace summary --format json; gh issue list --state open; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace reconcile --format json.",
+    "evidence sources": "closeout reviews for #371, #372, #373, #374; generated adapter outputs; lifecycle dry-run JSON; current open issue state"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#230",
+      "label": "product compression parent",
+      "role": "parent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#375",
+      "label": "closure review",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#371",
+      "label": "first-contact adapter compression",
+      "role": "evidence",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#372",
+      "label": "valid-by-construction review records",
+      "role": "evidence",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#373",
+      "label": "generated adapter status checks",
+      "role": "evidence",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#374",
+      "label": "lifecycle dry-run plan interface",
+      "role": "evidence",
+      "locator": ""
+    }
+  ],
+  "findings": [
+    {
+      "id": "closure-decision",
+      "title": "#230 is satisfied enough to close",
+      "action_state": "evidence-present",
+      "evidence": "First-contact adapters now route through AGENTS.md/start instead of duplicating doctrine; generated adapter status is checkable; review records have a valid-by-construction command; lifecycle dry-runs expose lifecycle_plan; default report/startup paths remain compact and review artifacts are evidence, not operating input.",
+      "follow_up": "none",
+      "notes": "Remaining future product-shape work should be opened as new, narrower issues with fresh evidence rather than keeping #230 open as a broad subtraction umbrella."
+    },
+    {
+      "id": "remaining-visible-surfaces",
+      "title": "Remaining visible surfaces earn their cost",
+      "action_state": "evidence-present",
+      "evidence": "AGENTS.md is a thin startup adapter; llms/tools adapters are generated compatibility surfaces; contracts remain machinery behind checks/queries; reviews are historical evidence; planning state is compact and empty after archive.",
+      "follow_up": "none",
+      "notes": "The current shape preserves weak-agent compatibility and recovery while lowering ordinary first-contact burden."
+    }
+  ],
+  "recommendation": {
+    "promote": "close #375 and #230",
+    "defer": "none",
+    "dismiss": "do not keep #230 open as a generic compression bucket"
+  },
+  "retention": {
+    "closeout shape": "shrink or archive after findings are routed",
+    "trigger": "review complete",
+    "proof surface": "this review record plus routed follow-up residue"
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "gh issue list --state open --limit 10 --json number,title"
+  ],
+  "drift_log": [
+    "2026-04-26: Review record created by create-review."
+  ]
+}
