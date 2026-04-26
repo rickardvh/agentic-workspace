@@ -1,0 +1,156 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Lifecycle Dry Run Plan Interface 2026 04 26",
+  "goal": [
+    "Implement #374 by making lifecycle dry-run JSON expose a compact safe plan interface."
+  ],
+  "non_goals": [
+    "Change lifecycle mutation behavior.",
+    "Generate lifecycle adapters.",
+    "Remove raw action output compatibility."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Dry-run lifecycle output has a stable plan summary before agents need to scan raw actions.",
+      "constraints": "Preserve existing actions output and mutation primitives.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "lifecycle-dry-run-plan-interface-2026-04-26",
+      "status": "completed",
+      "next_step": "Archive #374 and run #375 closure review.",
+      "proof": "Planning package tests, package ruff, planning doctor, and dry-run JSON probe passed."
+    },
+    "scope": {
+      "touched": [
+        "Fill in the concrete files before implementation starts."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete the bounded work for TODO item `lifecycle-dry-run-plan-interface-2026-04-26`.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete the bounded work for TODO item `lifecycle-dry-run-plan-interface-2026-04-26`.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "lifecycle-dry-run-plan-interface-2026-04-26",
+    "status": "completed",
+    "scope": "#374",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Fill the execution contract and begin the first bounded implementation step."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py",
+    ".agentic-workspace/planning/reviews/lifecycle-dry-run-plan-interface-closeout-2026-04-26.review.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "cd packages/planning && uv run pytest tests/test_installer.py",
+    "cd packages/planning && uv run ruff check .",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-planning-bootstrap install --target .agentic-workspace/local/tmp-dry-run-probe --dry-run --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "#374 is implemented and closed.",
+    "Dry-run JSON contains a stable lifecycle_plan payload.",
+    "The payload shows target, selected modules, grouped file effects, warnings/review requirements, local-only boundary, and next safe command.",
+    "Raw action compatibility remains available."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Dry-run InstallResult JSON now includes lifecycle_plan with schema_version, target, operation, selected_modules, grouped file effects, counts, warnings, local-only boundary, and next safe command.",
+    "validation confirmed": "cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json; dry-run install JSON probe.",
+    "follow-on routed to": "#375 and parent #230 remain open.",
+    "post-work posterity capture": ".agentic-workspace/planning/reviews/lifecycle-dry-run-plan-interface-closeout-2026-04-26.review.json",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "#375 product-compression closure review"
+  },
+  "proof_report": {
+    "validation proof": "All selected proof lanes passed after adding lifecycle_plan to dry-run JSON.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "cd packages/planning && uv run pytest tests/test_installer.py passed 112 tests; cd packages/planning && uv run ruff check . passed; uv run agentic-workspace doctor --target . --modules planning --format json returned healthy; dry-run install JSON showed lifecycle_plan."
+  },
+  "intent_satisfaction": {
+    "original intent": "Complete the bounded work for TODO item `lifecycle-dry-run-plan-interface-2026-04-26`.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#374 slice satisfied: dry-run JSON now includes lifecycle_plan with target, operation, modules, grouped effects, review requirements, local-only boundary, and next safe command.",
+    "unsolved intent passed to": "#375 and parent #230"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#374 is complete, but parent #230 still needs closure review.",
+    "evidence carried forward": "packages/planning/src/repo_planning_bootstrap/installer.py, packages/planning/tests/test_installer.py, .agentic-workspace/planning/reviews/lifecycle-dry-run-plan-interface-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen #374 if lifecycle dry-run JSON again requires agents to infer the plan from raw action lists."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#375 and parent #230 remain open.",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-26: Promoted from TODO direct-task shape into an execplan."
+  ]
+}

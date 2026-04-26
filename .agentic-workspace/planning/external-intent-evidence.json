@@ -896,7 +896,7 @@
       "system": "github",
       "id": "#374",
       "title": "[Workspace]: Make lifecycle dry-run plans the ordinary safe interface",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"

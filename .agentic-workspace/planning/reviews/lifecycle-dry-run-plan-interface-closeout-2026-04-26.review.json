@@ -1,0 +1,80 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Lifecycle Dry-Run Plan Interface Closeout",
+  "date": "2026-04-26",
+  "scope": [
+    "#374"
+  ],
+  "classification": "closeout",
+  "issue_classifications": [
+    {
+      "id": "#374",
+      "title": "[Workspace]: Make lifecycle dry-run plans the ordinary safe interface",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "#375",
+      "evidence": "Planning lifecycle dry-run JSON now includes a compact lifecycle_plan with target, operation, selected modules, grouped file effects, review counts, warnings, local-only boundary, and next safe command."
+    }
+  ],
+  "goal": [
+    "Record #374 closeout evidence after adding a compact lifecycle dry-run plan payload."
+  ],
+  "non_goals": [
+    "Do not use this generated skeleton as proof that review work is complete."
+  ],
+  "review_mode": {
+    "mode": "closeout",
+    "review question": "Did lifecycle dry-run output become an ordinary safe plan interface?",
+    "default finding cap": "bounded",
+    "inputs inspected first": "compact planning and task-specific surfaces"
+  },
+  "review_method": {
+    "commands used": "cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json; agentic-planning-bootstrap install --dry-run --format json.",
+    "evidence sources": "packages/planning/src/repo_planning_bootstrap/installer.py, packages/planning/tests/test_installer.py"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#374",
+      "label": "lifecycle dry-run plan interface",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#230",
+      "label": "product compression",
+      "role": "parent",
+      "locator": ""
+    }
+  ],
+  "findings": [
+    {
+      "id": "#374",
+      "title": "[Workspace]: Make lifecycle dry-run plans the ordinary safe interface",
+      "action_state": "evidence-present",
+      "evidence": "format_result_json adds lifecycle_plan to dry-run results; the installer test asserts schema_version, operation, selected_modules, counts, grouped files, local-only boundary, and next safe command.",
+      "follow_up": "#375",
+      "notes": "Existing raw actions remain for compatibility, but agents can now read the compact plan first."
+    }
+  ],
+  "recommendation": {
+    "promote": "close #374",
+    "defer": "#375 closure review remains",
+    "dismiss": "none"
+  },
+  "retention": {
+    "closeout shape": "shrink or archive after findings are routed",
+    "trigger": "review complete",
+    "proof surface": "this review record plus routed follow-up residue"
+  },
+  "validation_commands": [
+    "cd packages/planning && uv run pytest tests/test_installer.py",
+    "cd packages/planning && uv run ruff check .",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-planning-bootstrap install --target .agentic-workspace/local/tmp-dry-run-probe --dry-run --format json"
+  ],
+  "drift_log": [
+    "2026-04-26: Review record created by create-review."
+  ]
+}

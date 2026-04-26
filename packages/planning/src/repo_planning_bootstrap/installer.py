@@ -5214,7 +5214,83 @@ def format_result_json(result: InstallResult) -> str:
         "actions": [{"kind": action.kind, "path": str(action.path), "detail": action.detail} for action in result.actions],
         "warnings": result.warnings,
     }
+    if result.dry_run:
+        payload["lifecycle_plan"] = _lifecycle_plan_payload(result)
     return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+def _lifecycle_plan_payload(result: InstallResult) -> dict[str, Any]:
+    grouped: dict[str, list[str]] = {
+        "create": [],
+        "update": [],
+        "remove": [],
+        "preserve": [],
+        "review_required": [],
+    }
+    for action in result.actions:
+        try:
+            path = action.path.relative_to(result.target_root).as_posix()
+        except ValueError:
+            path = action.path.as_posix()
+        kind = action.kind.lower()
+        if "copy" in kind or "create" in kind:
+            grouped["create"].append(path)
+        elif "overwrite" in kind or "update" in kind:
+            grouped["update"].append(path)
+        elif "remove" in kind or "delete" in kind:
+            grouped["remove"].append(path)
+        elif "skip" in kind or "preserve" in kind:
+            grouped["preserve"].append(path)
+        elif "review" in kind or "warning" in kind:
+            grouped["review_required"].append(path)
+
+    return {
+        "schema_version": "planning-lifecycle-plan/v1",
+        "target": str(result.target_root),
+        "operation": _lifecycle_operation_name(result.message),
+        "selected_modules": ["planning"],
+        "summary": {
+            "create_count": len(grouped["create"]),
+            "update_count": len(grouped["update"]),
+            "remove_count": len(grouped["remove"]),
+            "preserve_count": len(grouped["preserve"]),
+            "review_required_count": len(grouped["review_required"]),
+            "warning_count": len(result.warnings),
+        },
+        "files": grouped,
+        "warnings": result.warnings,
+        "local_only_state": {
+            "status": "not-authoritative",
+            "rule": "Lifecycle dry-run plans do not inspect or mutate ignored local-only integration or memory state.",
+        },
+        "next_safe_command": _lifecycle_next_safe_command(result),
+    }
+
+
+def _lifecycle_operation_name(message: str) -> str:
+    lowered = message.lower()
+    if "adoption" in lowered:
+        return "adopt"
+    if "upgrade" in lowered:
+        return "upgrade"
+    if "uninstall" in lowered:
+        return "uninstall"
+    if "archive" in lowered:
+        return "archive-plan"
+    if "promote" in lowered:
+        return "promote-to-plan"
+    if "create review" in lowered:
+        return "create-review"
+    if "install" in lowered:
+        return "install"
+    return "unknown"
+
+
+def _lifecycle_next_safe_command(result: InstallResult) -> str:
+    operation = _lifecycle_operation_name(result.message)
+    if operation == "unknown":
+        return "Review actions and rerun the same command without --dry-run only if the plan matches intent."
+    return f"agentic-planning-bootstrap {operation} --target {result.target_root}"
 
 
 def format_summary_json(summary: dict[str, Any]) -> str:

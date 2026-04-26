@@ -514,6 +514,22 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert any(action.kind in {"copied", "created", "updated"} for action in result.actions)
 
 
+def test_install_dry_run_json_includes_compact_lifecycle_plan(tmp_path: Path, capsys) -> None:
+    result = planning_cli.main(["install", "--target", str(tmp_path), "--dry-run", "--format", "json"])
+
+    assert result == 0
+    payload = json.loads(capsys.readouterr().out)
+    plan = payload["lifecycle_plan"]
+    assert plan["schema_version"] == "planning-lifecycle-plan/v1"
+    assert plan["operation"] == "install"
+    assert plan["selected_modules"] == ["planning"]
+    assert plan["summary"]["create_count"] > 0
+    assert plan["summary"]["review_required_count"] >= 0
+    assert plan["files"]["create"]
+    assert plan["local_only_state"]["status"] == "not-authoritative"
+    assert plan["next_safe_command"].startswith("agentic-planning-bootstrap install --target ")
+
+
 def test_ownership_module_root_matches_workspace_ledger() -> None:
     assert planning_module_root("planning") == Path(".agentic-workspace/planning")
 
