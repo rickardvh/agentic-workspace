@@ -1,0 +1,183 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Package Workflow Compression Follow-Ups",
+  "goal": [
+    "Implement issues #380 through #386 by making the existing report, defaults, summary, and reconciliation surfaces reduce workflow cognitive load while preserving package portability."
+  ],
+  "non_goals": [
+    "Add a new top-level command.",
+    "Make GitHub or any host tracker part of shipped package semantics.",
+    "Treat narrow direct work as requiring full planning ceremony."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Agents can cheaply decide direct vs planned workflow, preserve friction as product signal, inspect package-use and intent-satisfaction closeout evidence, see external-work deltas, and avoid expanding first-contact surfaces.",
+      "constraints": "Keep the shipped package repo-, language-, agent-, vendor-, and tracker-agnostic; implement through existing compact surfaces where possible.",
+      "latitude": "Choose compact field names and report/defaults placement that match current contracts.",
+      "escalation": "Stop before host-specific workflow automation or another permanent first-contact surface."
+    },
+    "execution": {
+      "milestone": "workflow-compression-followups",
+      "status": "completed",
+      "next_step": "No required continuation; reopen only on fresh dogfooding friction.",
+      "proof": "Selected workspace CLI and planning-surface proof commands passed."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/report_contract.json",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/package-workflow-compression-followups-2026-04-26.plan.json"
+      ],
+      "invariants": [
+        "Core package consumes provider-agnostic external work evidence.",
+        "Report remains router-shaped by default.",
+        "Surface growth pressure must prefer compression over new durable surfaces."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make the package easier to enter, recover, verify, and trust by reducing protocol overhead and capitalizing on continuity/proof strengths.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "new issues only if validation or dogfooding reveals additional friction",
+    "parent lane": "#230"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "fresh dogfooding friction after this slice"
+  },
+  "active_milestone": {
+    "id": "workflow-compression-followups",
+    "status": "completed",
+    "scope": "Implement compact package workflow compression signals for issues #380-#386.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "live issue refresh before closeout"
+  },
+  "immediate_next_action": [
+    "Run the selected proof commands, then close #380-#386 and archive this plan if all checks pass."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/report_contract.json",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/execplans/package-workflow-compression-followups-2026-04-26.plan.json",
+    ".agentic-workspace/system-intent/intent.toml"
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace proof --target . --changed src/agentic_workspace/cli.py src/agentic_workspace/contracts/report_contract.json src/agentic_workspace/contracts/schemas/workspace_report.schema.json tests/test_workspace_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/external-intent-evidence.json .agentic-workspace/planning/execplans/package-workflow-compression-followups-2026-04-26.plan.json .agentic-workspace/system-intent/intent.toml --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace report --target . --format json"
+  ],
+  "completion_criteria": [
+    "#380-#386 have shipped compact report/defaults/planning behavior or are explicitly represented as provider-agnostic evidence.",
+    "Selected proof commands pass.",
+    "The active plan records package workflow use and intent satisfaction before closeout."
+  ],
+  "iterative_follow_through": {
+    "what this slice enabled": "Compact existing package surfaces now distinguish direct/light/execplan workflow shape, expose friction capture guidance, show closeout package-use and intent-satisfaction checks, route external-work deltas, and warn against first-contact surface growth.",
+    "intentionally deferred": "no new command or host-specific ingest automation",
+    "discovered implications": "",
+    "proof achieved now": "workspace CLI tests, ruff, planning doctor, planning surface check, reconcile, summary/report dogfooding",
+    "validation still needed": "none",
+    "next likely slice": "none"
+  },
+  "intent_interpretation": {
+    "literal request": "Create issues for all of your suggestions, then implement them.",
+    "inferred intended outcome": "Turn dogfooding findings into tracked product improvements and land the compact package changes now.",
+    "chosen concrete what": "Implement #380-#386 in existing report/defaults/planning surfaces.",
+    "interpretation distance": "low",
+    "review guidance": "Check that the changes reduce protocol overhead without adding a new first-contact surface."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace CLI/reporting code, report contract, focused tests, planning state/evidence/execplan.",
+    "max changed files": "Prefer under 8 files.",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q -k \"execution_shape or closeout_trust or operational_compression or friction_capture or external_work_delta or surface_value\"; uv run agentic-workspace proof --target . --changed <paths> --format json; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
+    "ask-before-refactor threshold": "Large CLI extraction or adding a new command.",
+    "stop before touching": "Provider-specific core package behavior."
+  },
+  "stop_conditions": {
+    "stop when": "#380-#386 are implemented, tested, closed, and planning evidence is reconciled.",
+    "escalate when boundary reached": "A suggestion cannot be addressed without a new command or host-specific package assumption.",
+    "escalate on scope drift": "Work expands into unrelated product-compression cleanup.",
+    "escalate on proof failure": "Focused validation exposes broader contract mismatch."
+  },
+  "context_budget": {
+    "live working set": "report/defaults CLI functions, focused tests, this execplan, #380-#386",
+    "recoverable later": "historical reviews and archived execplans",
+    "externalize before shift": "Update execution_run and closeout_distillation before archive.",
+    "pre-work config pull": "uv run agentic-workspace report --target . --format json; uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Continue from this execplan and focused report/defaults tests.",
+    "context-shift triggers": "Before broad reread or after validation failure."
+  },
+  "delegated_judgment": {
+    "requested outcome": "No delegation requested.",
+    "hard constraints": "Stay on the current branch and keep package semantics portable.",
+    "agent may decide locally": "Exact compact field names and test placement.",
+    "escalate when": "A workflow decision would require human process policy outside the package."
+  },
+  "references": [
+    { "kind": "issue", "target": "#380", "label": "friction capture", "role": "child", "locator": "https://github.com/rickardvh/agentic-workspace/issues/380" },
+    { "kind": "issue", "target": "#381", "label": "external-work delta", "role": "child", "locator": "https://github.com/rickardvh/agentic-workspace/issues/381" },
+    { "kind": "issue", "target": "#382", "label": "surface-budget warning", "role": "child", "locator": "https://github.com/rickardvh/agentic-workspace/issues/382" },
+    { "kind": "issue", "target": "#383", "label": "task-shape recommender", "role": "child", "locator": "https://github.com/rickardvh/agentic-workspace/issues/383" },
+    { "kind": "issue", "target": "#384", "label": "package-use proof", "role": "child", "locator": "https://github.com/rickardvh/agentic-workspace/issues/384" },
+    { "kind": "issue", "target": "#385", "label": "intent-satisfaction closeout", "role": "child", "locator": "https://github.com/rickardvh/agentic-workspace/issues/385" },
+    { "kind": "issue", "target": "#386", "label": "narrow-work fast path", "role": "child", "locator": "https://github.com/rickardvh/agentic-workspace/issues/386" }
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "codex",
+    "handoff source": "uv run agentic-workspace preflight --format json; uv run agentic-workspace report --target . --format json; uv run agentic-workspace summary --format json; gh issue list --state open --limit 50 --json number,title,labels,updatedAt,url",
+    "what happened": "Created #380-#386, promoted the implementation slice into checked-in planning, implemented compact report/defaults signals, and archived the plan after proof.",
+    "scope touched": "workspace report/defaults code and contracts, focused CLI tests, planning evidence/state, system-intent mirror",
+    "changed surfaces": "src/agentic_workspace/cli.py; src/agentic_workspace/contracts/report_contract.json; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/archive/package-workflow-compression-followups-2026-04-26.plan.json; .agentic-workspace/system-intent/intent.toml",
+    "validations run": "uv run agentic-workspace proof --target . --changed <changed paths> --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace reconcile --format json; uv run agentic-workspace report --target . --format json",
+    "result for continuation": "done",
+    "next step": "Close #380-#386 and commit."
+  },
+  "execution_summary": {
+    "outcome delivered": "Issues #380-#386 are implemented through existing compact package surfaces without adding a new command.",
+    "validation confirmed": "Focused and full workspace CLI tests passed; ruff passed; planning doctor/checks/reconcile/report were dogfooded.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "Provider-agnostic external evidence records #380-#386 as closed and this archived execplan preserves proof.",
+    "knowledge promoted (memory/docs/config)": "No memory, docs, or config promotion needed; behavior is in code/contracts/tests.",
+    "resume from": "No active execplan after archive."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used package report, summary, proof, doctor, reconcile, and planning checks",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none required"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Do not preserve chat-level implementation narration beyond this archived proof record.",
+          "owner": "archive",
+          "source": "execution_run"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}

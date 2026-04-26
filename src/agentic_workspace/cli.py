@@ -2559,6 +2559,7 @@ def _run_report_command(
         boundary_test_payload=_improvement_boundary_test_payload(),
         external_setup_findings_payload=_repo_friction_external_setup_findings_payload(target_root=target_root),
     )
+    repo_friction["capture_shortcut"] = _friction_capture_shortcut_payload()
     standing_intent = standing_intent_payload(
         target_root=target_root,
         config_policy={
@@ -2577,6 +2578,7 @@ def _run_report_command(
     local_memory = _local_memory_payload(config=config)
     closeout_trust = _report_closeout_trust_payload(module_reports=module_reports)
     surface_value_guardrail = _surface_value_guardrail_payload()
+    external_work_delta = _external_work_delta_payload(target_root=target_root)
     payload = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -2620,6 +2622,7 @@ def _run_report_command(
         ),
         "findings": aggregated_findings,
         "closeout_trust": closeout_trust,
+        "external_work_delta": external_work_delta,
         "next_action": next_action,
         "discovery": discovery,
         "standing_intent": standing_intent,
@@ -3034,10 +3037,12 @@ def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "effective_authority": _report_router_effective_authority(payload.get("effective_authority", {})),
         "execution_shape": _report_router_execution_shape(payload.get("execution_shape", {})),
         "closeout_trust": payload.get("closeout_trust", {}),
+        "external_work_delta": _report_router_external_work_delta(payload.get("external_work_delta", {})),
         "operational_compression": _report_router_operational_compression(payload.get("operational_compression", {})),
         "surface_value_guardrail": {
             "command": "agentic-workspace defaults --section surface_value_guardrail --format json",
             "prefer": payload.get("surface_value_guardrail", {}).get("preference_order", [])[:3],
+            "first_contact_budget": payload.get("surface_value_guardrail", {}).get("first_contact_budget", {}),
         },
         "deeper_detail": {
             "full_profile_command": "agentic-workspace report --target ./repo --profile full --format json",
@@ -3068,6 +3073,8 @@ def _report_router_execution_shape(value: Any) -> dict[str, Any]:
     return {
         "status": value.get("status", "unknown"),
         "task_shape": task_shape if isinstance(task_shape, dict) else {},
+        "task_shape_recommender": value.get("task_shape_recommender", {}),
+        "narrow_work_fast_path": value.get("narrow_work_fast_path", {}),
         "recommendation": recommendation if isinstance(recommendation, dict) else {},
         "deviation_rule": value.get("deviation_rule", ""),
     }
@@ -3090,6 +3097,20 @@ def _report_router_operational_compression(value: Any) -> dict[str, Any]:
     }
 
 
+def _report_router_external_work_delta(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    return {
+        "status": value.get("status", "unknown"),
+        "provider_rule": value.get("provider_rule", ""),
+        "open_count": value.get("open_count", 0),
+        "changed_count": value.get("changed_count", 0),
+        "closed_count": value.get("closed_count", 0),
+        "recommended_next_lane": value.get("recommended_next_lane", {}),
+        "section_command": "agentic-workspace report --target ./repo --section external_work_delta --format json",
+    }
+
+
 def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
     section_purposes = {
         "effective_authority": "authority, current work, system-intent pressure, and unresolved gaps",
@@ -3100,6 +3121,7 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
         "reports": "workspace lifecycle report detail",
         "surface_value_guardrail": "surface growth review pressure",
         "closeout_trust": "closeout trust and lower-trust residue signals",
+        "external_work_delta": "provider-agnostic external-work snapshot or delta from prior evidence when available",
         "discovery": "setup discovery and candidate surfaces",
         "standing_intent": "effective standing intent and stronger-home guidance",
         "repo_friction": "repo-friction and improvement pressure evidence",
@@ -3130,6 +3152,7 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
             "status": "unavailable",
             "reason": "planning module is not installed",
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report={}),
+            "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report={}),
         }
 
     intent_validation = planning_report.get("intent_validation", {})
@@ -3138,6 +3161,7 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
             "status": "unavailable",
             "reason": "planning intent validation is unavailable",
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
+            "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report),
         }
 
     counts = intent_validation.get("counts", {})
@@ -3171,6 +3195,7 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
         "summary": summary,
         "sample_signals": sample_signals,
         "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
+        "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report),
         "recommended_next_action": recommended_next_action,
     }
 
@@ -3204,13 +3229,12 @@ def _package_workflow_evidence_payload(*, planning_report: dict[str, Any]) -> di
             ]
         )
     evidence_text = "\n".join(evidence_text_parts).lower()
-    used_surfaces = [
-        surface
-        for surface in ["preflight", "summary", "report", "proof", "reconcile", "doctor"]
-        if f"agentic-workspace {surface}" in evidence_text
-    ]
+    expected_surfaces = ["preflight", "summary", "report", "proof"]
+    optional_surfaces = ["reconcile", "doctor"]
+    used_surfaces = [surface for surface in expected_surfaces + optional_surfaces if f"agentic-workspace {surface}" in evidence_text]
+    missing_expected_surfaces = [surface for surface in expected_surfaces if surface not in used_surfaces]
     skipped_text = str(execution_run.get("package workflow skipped", "") or execution_run.get("package_workflow_skipped", "")).strip()
-    trust = "normal" if used_surfaces and not skipped_text else "lower-trust"
+    trust = "normal" if used_surfaces and not missing_expected_surfaces and not skipped_text else "lower-trust"
     if trust == "normal":
         recommended_next_action = "Package workflow use is visible in the active planning record."
     elif skipped_text:
@@ -3222,12 +3246,139 @@ def _package_workflow_evidence_payload(*, planning_report: dict[str, Any]) -> di
         "required_for_broad_work": True,
         "trust": trust,
         "used_surfaces": used_surfaces,
+        "expected_surfaces": expected_surfaces,
+        "optional_surfaces": optional_surfaces,
+        "missing_expected_surfaces": missing_expected_surfaces,
+        "evidence_quality": "complete" if trust == "normal" else "incomplete",
         "skipped": skipped_text,
         "evidence_sources": [
             "planning.active.planning_record.proof_expectations",
             "planning.active.planning_record.execution_run",
         ],
         "recommended_next_action": recommended_next_action,
+    }
+
+
+def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any]) -> dict[str, Any]:
+    active = planning_report.get("active", {}) if isinstance(planning_report, dict) else {}
+    planning_record = active.get("planning_record", {}) if isinstance(active, dict) else {}
+    if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
+        return {
+            "status": "unavailable",
+            "reason": "no active planning record exposes intent-continuity evidence",
+            "required_for_broad_work": True,
+            "rule": "Validation success is not enough; closeout should say whether the larger intent is satisfied, partially satisfied, or needs follow-up.",
+        }
+    intent_continuity = planning_record.get("intent_continuity", {})
+    required_continuation = planning_record.get("required_continuation", {})
+    hierarchy_contract = active.get("hierarchy_contract", {}) if isinstance(active, dict) else {}
+    hierarchy_required = hierarchy_contract.get("required_continuation", {}) if isinstance(hierarchy_contract, dict) else {}
+    if not isinstance(intent_continuity, dict):
+        intent_continuity = {}
+    if not isinstance(required_continuation, dict):
+        required_continuation = {}
+    if not isinstance(hierarchy_required, dict):
+        hierarchy_required = {}
+    if not intent_continuity and hierarchy_required:
+        intent_continuity = {
+            "larger intended outcome": hierarchy_required.get("larger_intended_outcome", ""),
+            "this slice completes the larger intended outcome": hierarchy_required.get("slice_completes_larger_outcome", ""),
+            "continuation surface": hierarchy_required.get("continuation_surface", ""),
+        }
+    if not required_continuation and hierarchy_required:
+        required_continuation = {
+            "required follow-on for the larger intended outcome": hierarchy_required.get("required_follow_on", ""),
+            "owner surface": hierarchy_required.get("owner_surface", ""),
+        }
+    completes = str(intent_continuity.get("this slice completes the larger intended outcome", "")).strip().lower()
+    continuation = str(required_continuation.get("required follow-on for the larger intended outcome", "")).strip().lower()
+    if completes in {"yes", "true"} and continuation in {"no", "false", "none"}:
+        trust = "satisfied"
+        recommended_next_action = "Closeout may claim intent satisfaction if proof also passed."
+    elif completes in {"no", "false"} or continuation in {"yes", "true"}:
+        trust = "follow-up-required"
+        recommended_next_action = "Record or preserve the continuation surface before treating this closeout as complete."
+    else:
+        trust = "needs-review"
+        recommended_next_action = "Name whether the larger intent is satisfied or requires follow-up before broad-work closeout."
+    return {
+        "status": "present",
+        "required_for_broad_work": True,
+        "trust": trust,
+        "larger_intent": intent_continuity.get("larger intended outcome", ""),
+        "slice_completes_larger_intent": intent_continuity.get("this slice completes the larger intended outcome", ""),
+        "required_follow_on": required_continuation.get("required follow-on for the larger intended outcome", ""),
+        "continuation_surface": intent_continuity.get("continuation surface", required_continuation.get("owner surface", "")),
+        "rule": "Proof and validation answer whether the implementation works; this check answers whether the intended outcome is actually closed.",
+        "recommended_next_action": recommended_next_action,
+    }
+
+
+def _external_work_delta_payload(*, target_root: Path) -> dict[str, Any]:
+    evidence_path = target_root / ".agentic-workspace" / "planning" / "external-intent-evidence.json"
+    provider_rule = "Core planning consumes provider-agnostic external work evidence; provider adapters may refresh it."
+    if not evidence_path.is_file():
+        return {
+            "status": "unavailable",
+            "reason": "external intent evidence is absent",
+            "provider_rule": provider_rule,
+            "open_count": 0,
+            "changed_count": 0,
+            "closed_count": 0,
+            "recommended_next_lane": {},
+        }
+    try:
+        payload = json.loads(evidence_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "status": "invalid",
+            "reason": str(exc),
+            "provider_rule": provider_rule,
+            "open_count": 0,
+            "changed_count": 0,
+            "closed_count": 0,
+            "recommended_next_lane": {},
+        }
+    items = [item for item in _list_payload(payload.get("items")) if isinstance(item, dict)]
+    previous_items = [item for item in _list_payload(payload.get("previous_items")) if isinstance(item, dict)]
+    open_items = [item for item in items if str(item.get("status", "")).lower() == "open"]
+    previous_by_id = {str(item.get("id", "")): item for item in previous_items if str(item.get("id", ""))}
+    current_by_id = {str(item.get("id", "")): item for item in items if str(item.get("id", ""))}
+    new_items = [item for item in items if str(item.get("id", "")) and str(item.get("id", "")) not in previous_by_id]
+    closed_items = [
+        item
+        for item_id, item in current_by_id.items()
+        if item_id in previous_by_id
+        and str(previous_by_id[item_id].get("status", "")).lower() == "open"
+        and str(item.get("status", "")).lower() == "closed"
+    ]
+    changed_items = [item for item_id, item in current_by_id.items() if item_id in previous_by_id and item != previous_by_id[item_id]]
+    recommended = open_items[0] if open_items else {}
+    status = "delta-present" if previous_items else "snapshot-only"
+    return {
+        "status": status,
+        "provider_rule": provider_rule,
+        "source": ".agentic-workspace/planning/external-intent-evidence.json",
+        "item_count": len(items),
+        "open_count": len(open_items),
+        "new_count": len(new_items) if previous_items else 0,
+        "changed_count": len(changed_items) if previous_items else 0,
+        "closed_count": len(closed_items) if previous_items else 0,
+        "sample_new": [_external_work_summary(item) for item in new_items[:5]] if previous_items else [],
+        "sample_changed": [_external_work_summary(item) for item in changed_items[:5]] if previous_items else [],
+        "sample_closed": [_external_work_summary(item) for item in closed_items[:5]] if previous_items else [],
+        "recommended_next_lane": _external_work_summary(recommended) if recommended else {},
+        "delta_rule": "When previous_items is present, compare provider-agnostic item ids and statuses; otherwise report a compact current snapshot only.",
+    }
+
+
+def _external_work_summary(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": str(item.get("id", "")),
+        "title": str(item.get("title", "")),
+        "status": str(item.get("status", "")),
+        "kind": str(item.get("kind", "")),
+        "parent_id": str(item.get("parent_id", "")),
     }
 
 
@@ -4025,6 +4176,7 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
         "advisory_only": True,
         "status": "present",
         "sources": sources,
+        "task_shape_recommender": _task_shape_recommender_payload(),
         "default_posture": {
             "planner_executor_pattern": mixed_agent["derived_mode"]["planner_executor_pattern"],
             "handoff_preference": mixed_agent["derived_mode"]["handoff_preference"],
@@ -4143,6 +4295,16 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
         "summary": "No planning-backed broad slice is active right now.",
         "why": "Without roadmap-backed planned work or an active execplan, the cheapest honest default is direct execution.",
     }
+    payload["narrow_work_fast_path"] = {
+        "status": "blessed",
+        "one_compact_check": "agentic-workspace report --target ./repo --format json",
+        "rule": "For small direct tasks, use one compact state check, do the work, and promote only if scope widens into sequencing, proof ambiguity, or handoff continuity.",
+        "promote_when": [
+            "the task claims roadmap or issue-lane progress",
+            "proof scope becomes expensive or ambiguous to reconstruct",
+            "handoff or restart continuity would be costly without checked-in state",
+        ],
+    }
     payload["recommendation"] = {
         "id": "stay-direct",
         "summary": "Stay direct unless the work widens enough to need checked-in planning or a compact handoff.",
@@ -4162,6 +4324,33 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
     if internal_delegation and prefer_internal and strong_planner and cheap_executor:
         payload["default_posture"]["note"] = "Delegation is available and preferred when a later slice becomes broad enough."
     return payload
+
+
+def _task_shape_recommender_payload() -> dict[str, Any]:
+    return {
+        "status": "available",
+        "rule": "Choose the cheapest workflow shape that preserves proof and continuation honesty.",
+        "shapes": [
+            {
+                "id": "direct",
+                "use_when": "one bounded answer or edit can be completed and proved without sequencing or handoff state",
+                "minimum_package_use": "one compact report or summary check when repo state matters",
+                "promote_when": "the task starts claiming lane progress, unclear proof, or expensive continuation",
+            },
+            {
+                "id": "light-plan",
+                "use_when": "the task has a few ordered steps but does not need durable cross-session ownership",
+                "minimum_package_use": "summary/report plus explicit final proof",
+                "promote_when": "later review would need checked-in milestone, intent, or handoff evidence",
+            },
+            {
+                "id": "checked-in-execplan",
+                "use_when": "broad lane work, autopilot work, issue batches, handoff-sensitive work, or intent that is expensive to reconstruct",
+                "minimum_package_use": "active todo item, execplan, proof selection, and closeout evidence",
+                "promote_when": "already required",
+            },
+        ],
+    }
 
 
 def _active_todo_surface(*, target_root: Path) -> str | None:
@@ -4851,6 +5040,16 @@ def _surface_value_guardrail_payload() -> dict[str, Any]:
             "compress or background an existing surface",
             "add a new durable surface only when the repeated cost and owner are explicit",
         ],
+        "first_contact_budget": {
+            "status": "active",
+            "ordinary_entry": "AGENTS.md -> agentic-workspace report --target ./repo --format json",
+            "warning": "Do not add another first-contact surface unless it replaces, merges, compresses, or backgrounds an existing route.",
+            "review_test": [
+                "does the new surface make the package easier to enter, recover, verify, or trust?",
+                "does it remove, merge, compress, or background an existing surface?",
+                "can a reviewer see the improvement without reconstructing chat?",
+            ],
+        },
         "authority_classes": [
             {"class": "authoritative", "test": "other surfaces should defer to it for this concern"},
             {"class": "derived", "test": "it can be regenerated or reconstructed from a stronger source"},
@@ -4880,6 +5079,27 @@ def _surface_value_guardrail_payload() -> dict[str, Any]:
                 "no repeated-cost, ownership, discovery, and validation answer is visible",
             ],
         },
+    }
+
+
+def _friction_capture_shortcut_payload() -> dict[str, Any]:
+    return {
+        "status": "available",
+        "owner_surface": "repo_friction",
+        "rule": "Capture friction as structured evidence first; promote only when repeated evidence justifies active work.",
+        "minimum_record": [
+            "observed friction",
+            "evidence source",
+            "likely classification",
+            "why workspace adaptation can or cannot absorb it",
+            "desired cheaper correction",
+        ],
+        "cheap_destinations": [
+            "agentic-workspace report --target ./repo --section repo_friction --format json",
+            ".agentic-workspace/planning/reviews/ for bounded review evidence",
+            ".agentic-workspace/planning/state.toml only when promotion is justified",
+        ],
+        "promotion_trigger": "repeated shared friction, or one bounded review artifact plus one repeated maintenance or dogfooding pass",
     }
 
 

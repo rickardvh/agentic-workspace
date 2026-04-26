@@ -945,6 +945,69 @@
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#380",
+      "title": "[Workspace]: Add a cheap friction-capture path",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#381",
+      "title": "[Workspace]: Report external-work ingest deltas compactly",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#382",
+      "title": "[Workspace]: Warn when new surfaces expand first-contact burden",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#383",
+      "title": "[Review]: Strengthen task-shape recommender for direct vs planned work",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#384",
+      "title": "[Review]: Expose package-use proof in broad-work closeout",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#385",
+      "title": "[Review]: Add closeout intent-satisfaction check",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#386",
+      "title": "[Review]: Make narrow-work fast path explicit",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
     }
   ]
 }

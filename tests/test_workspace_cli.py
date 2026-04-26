@@ -2859,6 +2859,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "system_intent_mirror" in payload["schema"]["shared_fields"]
     assert "workflow_obligations" in payload["schema"]["shared_fields"]
     assert "execution_shape" in payload["schema"]["shared_fields"]
+    assert "external_work_delta" in payload["schema"]["shared_fields"]
     assert "module_reports" in payload["schema"]["shared_fields"]
     assert payload["selected_modules"] == ["planning", "memory"]
     assert payload["installed_modules"] == ["planning", "memory"]
@@ -2882,6 +2883,7 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["workflow_obligations"]["relevant_to_current_work"] == []
     assert payload["execution_shape"]["status"] == "present"
     assert payload["execution_shape"]["task_shape"]["id"] == "direct-or-no-active-plan"
+    assert payload["execution_shape"]["narrow_work_fast_path"]["status"] == "blessed"
     assert payload["execution_shape"]["recommendation"]["id"] == "stay-direct"
     assert payload["execution_shape"]["recommendation"]["consult"] == ["agentic-workspace config --target ./repo --format json"]
     assert payload["next_action"]["summary"] == "No immediate action"
@@ -2943,8 +2945,11 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "weak_seam" in payload["repo_friction"]["validation_friction"]["subtypes"]
     assert "ordinary bug-fixing" in payload["repo_friction"]["validation_friction"]["distinguish_from"][0]
     assert payload["repo_friction"]["external_evidence"] == []
+    assert payload["repo_friction"]["capture_shortcut"]["status"] == "available"
+    assert "observed friction" in payload["repo_friction"]["capture_shortcut"]["minimum_record"]
     assert "surface_value_guardrail" in payload["schema"]["shared_fields"]
     assert payload["surface_value_guardrail"]["preference_order"][0] == "remove an unnecessary surface"
+    assert payload["surface_value_guardrail"]["first_contact_budget"]["status"] == "active"
     assert payload["surface_value_guardrail"]["review_result"]["accept_when"][1] == "ownership and authority class are explicit"
     assert "effective_authority" in payload["schema"]["shared_fields"]
     assert "operational_compression" in payload["schema"]["shared_fields"]
@@ -3004,10 +3009,17 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
         "agentic-workspace report --target ./repo --section operational_compression --format json"
     )
     assert payload["operational_compression"]["hard_failure_count"] == 0
+    assert payload["execution_shape"]["task_shape_recommender"]["status"] == "available"
+    assert payload["execution_shape"]["narrow_work_fast_path"]["status"] == "blessed"
+    assert payload["external_work_delta"]["section_command"] == (
+        "agentic-workspace report --target ./repo --section external_work_delta --format json"
+    )
+    assert payload["surface_value_guardrail"]["first_contact_budget"]["status"] == "active"
     assert payload["deeper_detail"]["high_volume_sections"][0]["section"] == "module_reports"
     section_hints = {item["section"]: item for item in payload["section_hints"]}
     assert section_hints["module_reports"]["volume"] == "high"
     assert section_hints["operational_compression"]["volume"] == "normal"
+    assert section_hints["external_work_delta"]["volume"] == "normal"
     assert section_hints["effective_authority"]["command"] == (
         "agentic-workspace report --target ./repo --section effective_authority --format json"
     )
@@ -3071,6 +3083,7 @@ def test_report_section_selector_returns_operational_compression_measures(tmp_pa
     assert measures["first_line_startup_read_surface_count"]["count"] >= 1
     assert measures["default_report_size_or_warning_count"]["decision_grade_field_count"] >= 1
     assert measures["additive_surface_replacement_pressure"]["status"] == "available-advisory-gate"
+    assert measures["additive_surface_replacement_pressure"]["review_gate"]["rule"].startswith("Durable-surface changes")
     assert measures["durable_surface_metadata"]["required_metadata"] == ["owner", "authority", "summary"]
     assert measures["archived_plan_distillation"]["archived_plan_count"] == 1
     assert measures["archived_plan_distillation"]["with_distillation_count"] == 1
@@ -3123,6 +3136,64 @@ def test_report_distinguishes_legacy_archive_distillation_debt(tmp_path: Path, c
     assert signal["count"] == 1
 
 
+def test_report_section_selector_returns_external_work_delta(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "external-intent-evidence.json",
+        {
+            "kind": "planning-external-intent-evidence/v1",
+            "previous_items": [
+                {
+                    "system": "manual",
+                    "id": "TASK-1",
+                    "title": "Old open task",
+                    "status": "open",
+                    "kind": "task",
+                    "parent_id": "",
+                    "planning_residue_expected": "required",
+                }
+            ],
+            "items": [
+                {
+                    "system": "manual",
+                    "id": "TASK-1",
+                    "title": "Old open task",
+                    "status": "closed",
+                    "kind": "task",
+                    "parent_id": "",
+                    "planning_residue_expected": "required",
+                },
+                {
+                    "system": "manual",
+                    "id": "TASK-2",
+                    "title": "New follow-up",
+                    "status": "open",
+                    "kind": "task",
+                    "parent_id": "",
+                    "planning_residue_expected": "required",
+                },
+            ],
+        },
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "external_work_delta", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "report"
+    assert payload["selector"] == {"section": "external_work_delta"}
+    answer = payload["answer"]
+    assert answer["status"] == "delta-present"
+    assert answer["new_count"] == 1
+    assert answer["changed_count"] == 1
+    assert answer["closed_count"] == 1
+    assert answer["recommended_next_lane"]["id"] == "TASK-2"
+
+
 def test_report_routes_roadmap_backed_work_to_planning_before_broad_execution(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -3148,6 +3219,11 @@ def test_report_routes_roadmap_backed_work_to_planning_before_broad_execution(tm
     payload = json.loads(capsys.readouterr().out)
     execution_shape = payload["execution_shape"]
     assert execution_shape["task_shape"]["id"] == "roadmap-backed-no-active-plan"
+    assert [shape["id"] for shape in execution_shape["task_shape_recommender"]["shapes"]] == [
+        "direct",
+        "light-plan",
+        "checked-in-execplan",
+    ]
     assert execution_shape["recommendation"]["id"] == "promote-before-broad-work"
     assert execution_shape["recommendation"]["consult"] == ["agentic-workspace summary --format json"]
     assert execution_shape["recommendation"]["allowed_execution_methods"] == [
@@ -3209,7 +3285,7 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
                 "run status": "active",
                 "executor": "test",
                 "handoff source": "uv run agentic-workspace preflight --format json",
-                "what happened": "Used package workflow.",
+                "what happened": "Used agentic-workspace report --target . --format json and proof-selected validation.",
                 "scope touched": "test",
                 "changed surfaces": "test",
                 "validations run": "uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
@@ -3235,7 +3311,11 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert evidence["status"] == "present"
     assert evidence["trust"] == "normal"
     assert evidence["required_for_broad_work"] is True
-    assert evidence["used_surfaces"] == ["preflight", "summary", "proof", "reconcile"]
+    assert evidence["used_surfaces"] == ["preflight", "summary", "report", "proof", "reconcile"]
+    assert evidence["missing_expected_surfaces"] == []
+    intent_check = payload["closeout_trust"]["intent_satisfaction_check"]
+    assert intent_check["status"] == "present"
+    assert intent_check["trust"] == "needs-review"
 
 
 def test_report_surfaces_local_only_memory_status(tmp_path: Path, capsys) -> None:

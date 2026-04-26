@@ -1,0 +1,63 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Package Workflow Compression Follow-Ups Closeout",
+  "summary": "Classify #380-#386 after the package workflow compression follow-up slice landed and was archived.",
+  "issue_classifications": [
+    {
+      "id": "#380",
+      "title": "[Workspace]: Add a cheap friction-capture path",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "Workspace report repo_friction now includes capture_shortcut with minimum record fields, cheap destinations, and promotion trigger guidance.",
+      "follow_up": ""
+    },
+    {
+      "id": "#381",
+      "title": "[Workspace]: Report external-work ingest deltas compactly",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "Workspace report now includes external_work_delta and a section selector that compares provider-agnostic current items with optional previous_items when available.",
+      "follow_up": ""
+    },
+    {
+      "id": "#382",
+      "title": "[Workspace]: Warn when new surfaces expand first-contact burden",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "Surface value guardrail now exposes first_contact_budget with review tests and warning language against additive first-contact surfaces.",
+      "follow_up": ""
+    },
+    {
+      "id": "#383",
+      "title": "[Review]: Strengthen task-shape recommender for direct vs planned work",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "Workspace report execution_shape now includes task_shape_recommender with direct, light-plan, and checked-in-execplan workflow shapes.",
+      "follow_up": ""
+    },
+    {
+      "id": "#384",
+      "title": "[Review]: Expose package-use proof in broad-work closeout",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "closeout_trust package_workflow_evidence now names expected surfaces, optional surfaces, missing expected surfaces, and evidence quality.",
+      "follow_up": ""
+    },
+    {
+      "id": "#385",
+      "title": "[Review]: Add closeout intent-satisfaction check",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "closeout_trust now includes intent_satisfaction_check so broad work distinguishes local proof success from larger intent satisfaction or follow-up needs.",
+      "follow_up": ""
+    },
+    {
+      "id": "#386",
+      "title": "[Review]: Make narrow-work fast path explicit",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "Workspace report execution_shape now exposes narrow_work_fast_path when no broad plan is active and the summary execution_readiness stays narrow-direct-ready.",
+      "follow_up": ""
+    }
+  ]
+}

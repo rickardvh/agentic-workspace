@@ -22,6 +22,7 @@
     "effective_authority",
     "operational_compression",
     "closeout_trust",
+    "external_work_delta",
     "findings",
     "next_action",
     "discovery",
@@ -125,6 +126,9 @@
       "type": "object"
     },
     "closeout_trust": {
+      "type": "object"
+    },
+    "external_work_delta": {
       "type": "object"
     },
     "findings": {
