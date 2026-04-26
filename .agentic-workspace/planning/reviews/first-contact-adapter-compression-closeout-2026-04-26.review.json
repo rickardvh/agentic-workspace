@@ -1,0 +1,36 @@
+{
+  "kind": "planning-review/v1",
+  "title": "First-Contact Adapter Compression Closeout",
+  "date": "2026-04-26",
+  "scope": "#371",
+  "classification": "closeout",
+  "issue_classifications": [
+    {
+      "id": "#371",
+      "title": "[Workspace]: Compress first-contact adapter surfaces into one ordinary startup path",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "#372, #373, #374, #375",
+      "evidence": "tools/AGENT_ROUTING.md and packages/planning/bootstrap/tools/AGENT_ROUTING.md are now short secondary generated adapters behind AGENTS.md, AGENT_QUICKSTART, start, and summary; renderer and tests keep the compressed shape."
+    }
+  ],
+  "findings": [
+    {
+      "id": "#371",
+      "title": "[Workspace]: Compress first-contact adapter surfaces into one ordinary startup path",
+      "action_state": "evidence-present",
+      "evidence": "Root and package renderers now generate the compact routing adapter; maintainer and package tests assert the adapter is secondary and does not repeat preflight/report routing doctrine.",
+      "follow_up": "#372, #373, #374, #375",
+      "notes": "Dogfooding exposed that root checks and package doctor can diverge when bootstrap payload copies are not updated together; this is a useful input for #373."
+    }
+  ],
+  "validation_commands": [
+    "make maintainer-surfaces",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "cd packages/planning && uv run pytest tests/test_installer.py",
+    "cd packages/planning && uv run ruff check .",
+    "uv run pytest tests/test_maintainer_surfaces.py -q"
+  ]
+}

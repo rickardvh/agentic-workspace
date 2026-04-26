@@ -803,7 +803,10 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "agentic-workspace start --format json" in quickstart_text
     assert "agentic-workspace preflight --format json" in quickstart_text
     assert "## Routing Table" not in routing_text
-    assert "## Compact Queries" in routing_text
+    assert "Secondary generated adapter" in routing_text
+    assert "## Use" in routing_text
+    assert "## Compact Queries" not in routing_text
+    assert "agentic-workspace preflight --format json" not in routing_text
     assert "agentic-workspace start --format json" in routing_text
     assert "Iterative carry-forward belongs under `## Iterative Follow-Through`" in execplans_readme_text
     assert any(

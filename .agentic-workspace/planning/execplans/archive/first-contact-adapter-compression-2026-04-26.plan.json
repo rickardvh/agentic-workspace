@@ -1,0 +1,155 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "First-Contact Adapter Compression",
+  "goal": [
+    "Implement #371 by compressing generated first-contact adapter surfaces into one ordinary startup path while preserving weak-agent compatibility."
+  ],
+  "non_goals": [
+    "Remove all adapters.",
+    "Change runtime startup behavior.",
+    "Move canonical authority into generated prose.",
+    "Close #230 without #375 review."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Generated adapter prose says less, routes more, and keeps AGENTS.md -> start as the ordinary path.",
+      "constraints": "Generated adapters remain non-authoritative; canonical truth stays in contracts/config/checks.",
+      "latitude": "Compress one adapter surface if it proves the pattern without weakening startup.",
+      "escalation": "Stop if compression would remove weak-agent recovery guidance."
+    },
+    "execution": {
+      "milestone": "first-contact-adapter-compression",
+      "status": "completed",
+      "next_step": "Archive #371 and continue with the next #230 compression slice.",
+      "proof": "Required proof lanes passed for root generated adapters, planning surfaces, workspace CLI tests, and planning package payload/tests."
+    }
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#371",
+      "label": "first-contact adapter compression",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#230",
+      "label": "product compression",
+      "role": "parent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#370",
+      "label": "boundary review selected next target",
+      "role": "evidence",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "first-contact-adapter-compression",
+    "status": "completed",
+    "scope": "#371",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Compress first-contact adapter surfaces into one ordinary startup path.",
+    "hard constraints": "Do not remove weak-agent compatibility; do not add new first-line surfaces.",
+    "agent may decide locally": "Which generated adapter to shrink and how to test it.",
+    "escalate when": "The existing renderer/check model cannot preserve the route after compression."
+  },
+  "touched_paths": [
+    ".agentic-workspace/planning/scripts/render_agent_docs.py",
+    "tools/AGENT_ROUTING.md",
+    "packages/planning/src/repo_planning_bootstrap/_render.py",
+    "packages/planning/bootstrap/.agentic-workspace/planning/scripts/render_agent_docs.py",
+    "packages/planning/bootstrap/tools/AGENT_QUICKSTART.md",
+    "packages/planning/bootstrap/tools/AGENT_ROUTING.md",
+    "packages/planning/tests/test_installer.py",
+    "tests/test_maintainer_surfaces.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json"
+  ],
+  "validation_commands": [
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run pytest tests/test_maintainer_surfaces.py tests/test_workspace_cli.py -q",
+    "cd packages/planning && uv run pytest tests/test_installer.py",
+    "cd packages/planning && uv run ruff check .",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "completion_criteria": [
+    "#371 is implemented and closed.",
+    "At least one generated adapter surface is shorter or demoted.",
+    "Ordinary startup remains AGENTS.md -> start.",
+    "Generated adapters remain non-authoritative and checked by renderer/tests."
+  ],
+  "execution_summary": {
+    "outcome delivered": "AGENT_ROUTING is now a short secondary generated adapter behind AGENTS.md, AGENT_QUICKSTART, start, and summary. The same compression is applied to the planning package renderer and bootstrap payload.",
+    "validation confirmed": "make maintainer-surfaces; uv run agentic-workspace doctor --target . --modules planning --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run pytest tests/test_maintainer_surfaces.py -q",
+    "follow-on routed to": "#372, #373, #374, #375, and parent #230 remain open.",
+    "post-work posterity capture": ".agentic-workspace/planning/reviews/first-contact-adapter-compression-closeout-2026-04-26.review.json",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "next product-compression follow-up"
+  },
+  "proof_report": {
+    "validation proof": "All selected proof lanes passed after updating the root renderer, generated root adapter, package renderer, package bootstrap payload, and tests.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "make maintainer-surfaces passed; uv run agentic-workspace doctor --target . --modules planning --format json returned healthy; uv run pytest tests/test_workspace_cli.py -q passed 166 tests; uv run ruff check src tests passed; cd packages/planning && uv run pytest tests/test_installer.py passed 109 tests; cd packages/planning && uv run ruff check . passed; uv run pytest tests/test_maintainer_surfaces.py -q passed 7 tests."
+  },
+  "intent_satisfaction": {
+    "original intent": "Compress first-contact adapter surfaces into one ordinary startup path.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#371 slice satisfied: AGENT_ROUTING is a shorter secondary generated adapter behind AGENTS.md, AGENT_QUICKSTART, and compact start/summary commands.",
+    "unsolved intent passed to": "#372, #373, #374, #375, and parent #230"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#371 is complete, but parent #230 and follow-up children remain open.",
+    "evidence carried forward": ".agentic-workspace/planning/scripts/render_agent_docs.py, tools/AGENT_ROUTING.md, packages/planning/src/repo_planning_bootstrap/_render.py, packages/planning/bootstrap/tools/AGENT_ROUTING.md, tests/test_maintainer_surfaces.py, packages/planning/tests/test_installer.py, .agentic-workspace/planning/reviews/first-contact-adapter-compression-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen #371 if generated first-contact adapters again duplicate broad startup doctrine or ordinary startup no longer has one clear path."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#372, #373, #374, #375, and parent #230 remain open.",
+          "owner": "",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "first-contact adapter compression",
+          "owner": "issue",
+          "source": "#371"
+        },
+        {
+          "summary": "product compression",
+          "owner": "issue",
+          "source": "#230"
+        },
+        {
+          "summary": "boundary review selected next target",
+          "owner": "issue",
+          "source": "#370"
+        }
+      ]
+    }
+  }
+}

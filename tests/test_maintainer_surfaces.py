@@ -401,6 +401,19 @@ def test_render_wrapper_keeps_backward_compatible_entrypoint_alias() -> None:
     assert mod.render_readme_entrypoints is mod.render_quickstart
 
 
+def test_rendered_routing_adapter_stays_secondary_and_compact() -> None:
+    mod = _load_module(_render_script_path(), "maintainer_render_compact")
+    text = mod.render_routing(_baseline_manifest())
+
+    assert "Secondary generated adapter" in text
+    assert "Prefer `AGENTS.md`, then `tools/AGENT_QUICKSTART.md`." in text
+    assert "uv run agentic-workspace start --format json" in text
+    assert "uv run agentic-workspace summary --format json" in text
+    assert "uv run agentic-workspace preflight --format json" not in text
+    assert "uv run agentic-workspace report --target . --format json" not in text
+    assert len(text.splitlines()) <= 20
+
+
 def test_render_external_agent_handoff_updates_stale_llms_adapter(tmp_path: Path) -> None:
     mod = _load_module(_render_handoff_script_path(), "maintainer_render_handoff")
     _write(tmp_path / "AGENTS.md", "# Agent Instructions\n")

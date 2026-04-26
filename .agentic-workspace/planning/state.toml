@@ -4,7 +4,7 @@ queued_items = []
 
 [roadmap]
 lanes = [
-  { id = "product-compression-followthrough", title = "Product compression follow-through", priority = "first", issues = ["#230", "#371", "#372", "#373", "#374", "#375"], outcome = "Reduce visible product residue and verify whether #230 can honestly close.", reason = "#370 selected #371 as the next concrete simplification target; #372-#374 remain follow-up implementation slices before #375 closure assessment.", promotion_signal = "Continue with #371 first-contact adapter compression.", suggested_first_slice = "Compress first-contact adapter surfaces and keep generated adapters non-authoritative." },
+  { id = "product-compression-followthrough", title = "Product compression follow-through", priority = "first", issues = ["#230", "#372", "#373", "#374", "#375"], outcome = "Reduce visible product residue and verify whether #230 can honestly close.", reason = "#371 compressed the first-contact routing adapter; #372-#374 remain follow-up implementation slices before #375 closure assessment.", promotion_signal = "Continue with #373 generated adapter status checks or #372 durable authoring commands.", suggested_first_slice = "Use #373 first because #371 dogfooding exposed root/package generated-status drift as a concrete regression target." },
 ]
 candidates = [
   { id = "visible-product-residue-compression", title = "Continue product-shape subtraction pressure", issues = ["#230"], reason = "#230 remains intentionally open as a strategic product-compression direction; no current active slice is selected.", suggested_first_slice = "Refresh visible-surface inventory only when new first-contact residue appears or a concrete subtraction target is proposed." },
