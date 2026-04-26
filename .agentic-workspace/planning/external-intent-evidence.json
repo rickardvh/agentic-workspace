@@ -779,7 +779,7 @@
       "system": "github",
       "id": "#361",
       "title": "[Workspace]: Add no-direct-edit guardrails for generated CLI surfaces",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#356",
       "planning_residue_expected": "required"

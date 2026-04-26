@@ -1,0 +1,31 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Generated Adapter No Direct Edit Closeout",
+  "summary": "#361 added no-direct-edit guidance to generated CLI adapter output and focused tests that keep source-contract, runtime-implementation, and regeneration routing visible. #362 remains open for planning/memory command surface expansion, and #356 remains open as the parent lane.",
+  "issue_classifications": [
+    {
+      "id": "#361",
+      "title": "[Workspace]: Add no-direct-edit guardrails for generated CLI surfaces",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "live_state": "closed",
+      "evidence": "scripts/generate/generate_command_adapters.py, src/agentic_workspace/generated_command_adapters.py, and tests/test_contract_tooling.py",
+      "follow_up": "#362"
+    },
+    {
+      "id": "#356",
+      "title": "[Workspace]: Generate shipped CLI adapters from authoritative package definitions",
+      "classification": "covered_by_open_followup",
+      "live_state": "open",
+      "evidence": "#361 landed no-direct-edit markers; #362 remains open for package command surface expansion.",
+      "follow_up": "#362"
+    },
+    {
+      "id": "#362",
+      "title": "[Workspace]: Extend generated adapter migration to planning and memory command surfaces",
+      "classification": "covered_by_open_followup",
+      "live_state": "open",
+      "evidence": "Generated root adapter path is protected; package command surface expansion remains the next planned slice.",
+      "follow_up": "#362"
+    }
+  ]
+}

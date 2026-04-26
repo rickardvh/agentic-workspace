@@ -43,6 +43,16 @@ def test_generated_command_adapter_module_is_current() -> None:
     assert module.main(["--check"]) == 0
 
 
+def test_generated_command_adapter_module_routes_direct_edits_to_authoritative_sources() -> None:
+    generated_path = Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "generated_command_adapters.py"
+    generated_text = generated_path.read_text(encoding="utf-8")
+
+    assert "DO NOT EDIT DIRECTLY." in generated_text
+    assert "src/agentic_workspace/contracts/command_adapter_generation.json" in generated_text
+    assert "hand-written operation/primitive implementation code" in generated_text
+    assert "uv run python scripts/generate/generate_command_adapters.py" in generated_text
+
+
 def test_validated_contract_loader_reports_contract_and_schema(monkeypatch, tmp_path: Path) -> None:
     contracts_root = tmp_path / "contracts"
     schemas_root = contracts_root / "schemas"

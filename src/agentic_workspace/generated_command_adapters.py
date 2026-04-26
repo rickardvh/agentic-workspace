@@ -9,7 +9,10 @@ from __future__ import annotations
 import json
 from typing import Any
 
-# Generated file; edit command_adapter_generation.json instead.
+# DO NOT EDIT DIRECTLY.
+# Command/interface changes belong in src/agentic_workspace/contracts/command_adapter_generation.json.
+# Runtime behavior changes belong in hand-written operation/primitive implementation code.
+# Regenerate with: uv run python scripts/generate/generate_command_adapters.py
 GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
     r"""
 {

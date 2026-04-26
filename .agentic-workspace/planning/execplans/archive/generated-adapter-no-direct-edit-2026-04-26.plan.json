@@ -1,0 +1,263 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Generated Adapter No Direct Edit Guardrails",
+  "goal": [
+    "Implement #361 by making generated CLI adapter surfaces clearly non-authoritative and by preserving the drift check that detects direct edits."
+  ],
+  "non_goals": [
+    "Block all CLI changes.",
+    "Prevent runtime primitive edits.",
+    "Add heavy governance or review workflow.",
+    "Generate additional adapters."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Contributors can tell generated adapter code is not the edit surface, and ordinary checks detect direct generated-file edits.",
+      "constraints": "Stay on master; keep guardrail lightweight; route interface edits to contracts and runtime edits to hand-written code.",
+      "latitude": "Use marker text, generator output, and focused tests/checks rather than a new governance surface.",
+      "escalation": "Stop before broad direct-edit policy or package adapter generation."
+    },
+    "execution": {
+      "milestone": "generated-adapter-no-direct-edit",
+      "status": "completed",
+      "next_step": "Archive this slice and continue with #362 package command surface expansion.",
+      "proof": "Use proof --changed, generator freshness, contract tooling checks, focused tests, ruff, planning checks, reconcile, summary."
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Generated shipped CLI adapters from authoritative package definitions.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#362",
+    "parent lane": "#356"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#362",
+    "activation trigger": "After generated surfaces have no-direct-edit markers and freshness guardrails."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Generated adapter files are explicitly non-authoritative and protected by freshness checks.",
+    "intentionally deferred": "Planning/memory package adapter migration and multi-adapter projection requirements.",
+    "discovered implications": "#360 already supplied direct-edit detection through generated output freshness; #361 made the generated surface self-routing and tested.",
+    "proof achieved now": "Generated adapter output clearly marks itself as derived and routes interface/runtime edits to authoritative surfaces.",
+    "validation still needed": "#362 should decide how far generated adapter migration extends to planning and memory command surfaces.",
+    "next likely slice": "#362 package command surface expansion."
+  },
+  "intent_interpretation": {
+    "literal request": "Continue implementing planned work until done.",
+    "inferred intended outcome": "Proceed from #360 into #361 by making the generated adapter output self-routing and protected against direct edits.",
+    "chosen concrete what": "Strengthen generated header and tests instead of introducing heavy governance.",
+    "interpretation distance": "low",
+    "review guidance": "Check that command/interface and runtime edit targets are clearly separated."
+  },
+  "execution_bounds": {
+    "allowed paths": "generator, generated adapter output, contract tooling/conformance tests, planning state/evidence/review artifacts.",
+    "max changed files": "Prefer under 8 files.",
+    "required validation commands": "proof --changed; generator freshness; check_contract_tooling_surfaces; focused tests; ruff; planning checks; reconcile; summary.",
+    "ask-before-refactor threshold": "Any broad generated-file governance or hook changes.",
+    "stop before touching": "Package CLI adapter generation and multi-adapter projection requirements."
+  },
+  "stop_conditions": {
+    "stop when": "#361 is closed, committed, pushed, and #362 remains planned.",
+    "escalate when boundary reached": "The guardrail requires a broad policy framework.",
+    "escalate on scope drift": "Work expands into #362-#363 before #361 closes.",
+    "escalate on proof failure": "Generated freshness/check/test proof fails."
+  },
+  "context_budget": {
+    "live working set": "#361, #360 check, scripts/generate/generate_command_adapters.py, src/agentic_workspace/generated_command_adapters.py, tests/test_contract_tooling.py",
+    "recoverable later": "Package CLI migration and multi-adapter projection.",
+    "externalize before shift": "Update execution_run and closeout_distillation before archive.",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "Not needed.",
+    "tiny resumability note": "Continue #361 generated no-direct-edit guardrail.",
+    "context-shift triggers": "Before adding broad policy or hook machinery."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Add no-direct-edit guardrails for generated CLI surfaces.",
+    "hard constraints": "Lightweight; direct runtime primitive edits remain allowed; no new adapters.",
+    "agent may decide locally": "Exact marker wording and focused test location.",
+    "escalate when": "The change becomes a general governance system."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#361",
+      "label": "no direct edit guardrails",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#356",
+      "label": "generated CLI adapter lane",
+      "role": "parent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#362",
+      "label": "package command surfaces",
+      "role": "continuation",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "generated-adapter-no-direct-edit",
+    "status": "completed",
+    "scope": "#361",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Strengthen generated adapter header and add focused marker tests."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/generated-adapter-no-direct-edit-2026-04-26.plan.json",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/reviews/generated-adapter-no-direct-edit-closeout-2026-04-26.review.json",
+    "scripts/generate/generate_command_adapters.py",
+    "src/agentic_workspace/generated_command_adapters.py",
+    "tests/test_contract_tooling.py"
+  ],
+  "invariants": [
+    "Do not switch branches.",
+    "Do not generate additional adapters.",
+    "Do not block hand-written runtime primitive edits."
+  ],
+  "contract_decisions_to_freeze": [
+    "Generated adapter files are derived; command/interface authority lives in command_adapter_generation.json and runtime behavior lives in hand-written implementation."
+  ],
+  "open_questions_to_close": [
+    "Is the generated file clear enough about edit targets?",
+    "Does ordinary validation detect direct generated-file edits?"
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run python scripts/generate/generate_command_adapters.py --check",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py",
+    "uv run ruff check src tests scripts",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "gh",
+    "uv",
+    "git"
+  ],
+  "completion_criteria": [
+    "#361 is implemented and closed.",
+    "Generated adapter files clearly identify their source contract and regeneration command.",
+    "Generated adapter files route command/interface changes and runtime changes to the correct surfaces.",
+    "Direct generated-file edits remain detected by checks.",
+    "No active execplan remains after archive closeout."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "summary, #361 issue, #360 closeout",
+    "what happened": "Strengthened generated adapter header with no-direct-edit guidance and added tests asserting source contract, runtime implementation, and regeneration routing remain visible.",
+    "scope touched": "Generator, generated adapter output, focused contract-tooling tests, planning state/evidence/review artifacts.",
+    "changed surfaces": "scripts/generate/generate_command_adapters.py, src/agentic_workspace/generated_command_adapters.py, tests/test_contract_tooling.py, planning state/evidence/review.",
+    "validations run": "proof --changed; generator freshness; check_contract_tooling_surfaces; focused contract/conformance tests; workspace CLI tests; ruff; planning doctor; planning surface check; reconcile; summary.",
+    "result for continuation": "#361 closed; #362 remains open for planning/memory command surface expansion.",
+    "next step": "Promote #362."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; lightweight marker/test only, no broad governance and no new adapters.",
+    "proof status": "passed",
+    "intent served": "yes for #361; no for parent #356, which continues through #362-#363.",
+    "config compliance": "dogfooded summary, proof, generator freshness, contract tooling, tests, reconcile, doctor, and planning checks.",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue #362"
+  },
+  "proof_report": {
+    "validation proof": "uv run agentic-workspace proof --target . --changed ... --format json selected planning_surfaces and workspace_cli; required and slice-specific checks passed.",
+    "proof achieved now": "generated adapter marker, regeneration freshness, contract tooling, tests, lint, and planning health all passed.",
+    "evidence for \"proof achieved\" state": "generated_command_adapters.py has no-direct-edit guidance; tests/test_contract_tooling.py asserts the marker and routing text."
+  },
+  "intent_satisfaction": {
+    "original intent": "Continue implementing planned work until done.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#361 added generated no-direct-edit marker and tests",
+    "unsolved intent passed to": "#362 and remaining #356 child slices"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Keep canonical authority in contracts/config/planning/Memory/checks rather than prose adapters or generated executable residue.",
+    "slice shaping bias": "Make generated output cheaper and safer to maintain without adding a new first-line surface.",
+    "broader-lane validation question": "Can a contributor know where to edit without reading chat or broad docs?",
+    "intent evidence source": "#361"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#361 delivered lightweight no-direct-edit guidance; parent #356 still needs package command surface expansion.",
+    "evidence carried forward": "scripts/generate/generate_command_adapters.py, src/agentic_workspace/generated_command_adapters.py, tests/test_contract_tooling.py, .agentic-workspace/planning/reviews/generated-adapter-no-direct-edit-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen #361 if generated adapter files no longer tell contributors where interface or runtime changes belong."
+  },
+  "execution_summary": {
+    "outcome delivered": "No-direct-edit guardrail marker for generated CLI adapter surfaces.",
+    "validation confirmed": "proof-selected lanes and slice-specific freshness/check/tests passed.",
+    "follow-on routed to": "#362",
+    "post-work posterity capture": "closeout review plus archived execplan",
+    "knowledge promoted (Memory/Docs/Config)": "No durable Memory/docs/config promotion needed; #362 carries expansion work.",
+    "resume from": "#362 planning/memory command surface expansion"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Raw marker wording iteration is not needed after generated output and tests preserve the guidance.",
+          "owner": "discard",
+          "source": "#361 execution"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#362 remains open for extending generated adapter migration to planning and memory command surfaces.",
+          "owner": "#362",
+          "source": "#361"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No durable Memory/docs/config promotion needed; #362 carries expansion work.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "No durable Memory/docs/config promotion needed; #362 carries expansion work.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "No durable Memory/docs/config promotion needed; #362 carries expansion work.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "No-direct-edit guardrail for generated CLI surfaces",
+          "owner": "issue",
+          "source": "#361"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-26: Promoted #361 after #360 drift/conformance checks landed."
+  ]
+}
