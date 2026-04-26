@@ -1,0 +1,31 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Command Adapter Contract Closeout",
+  "summary": "#358 added a schema-validated command-adapter generation contract for the root `defaults` command. #359 remains open for the first generated adapter implementation, and #364 records the validated-contract parity friction found while dogfooding.",
+  "issue_classifications": [
+    {
+      "id": "#358",
+      "title": "[Workspace]: Define the canonical command adapter generation contract",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "live_state": "closed",
+      "evidence": "src/agentic_workspace/contracts/command_adapter_generation.json and src/agentic_workspace/contracts/schemas/command_adapter_generation.schema.json",
+      "follow_up": "#359"
+    },
+    {
+      "id": "#356",
+      "title": "[Workspace]: Generate shipped CLI adapters from authoritative package definitions",
+      "classification": "covered_by_open_followup",
+      "live_state": "open",
+      "evidence": "#358 established the contract; #359 remains open for generated adapter implementation.",
+      "follow_up": "#359"
+    },
+    {
+      "id": "#364",
+      "title": "[Review]: Derive validated contract-consumption parity from declared loader use",
+      "classification": "covered_by_open_followup",
+      "live_state": "open",
+      "evidence": "Dogfooding #358 required updating both python_contract_consumption.json and a hard-coded parity set in scripts/check/check_contract_tooling_surfaces.py.",
+      "follow_up": "#364"
+    }
+  ]
+}

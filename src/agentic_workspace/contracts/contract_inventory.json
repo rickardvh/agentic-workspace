@@ -285,6 +285,16 @@
       "notes": "Black-box conformance contracts validate alternate or generated implementations against operation behavior without trusting their implementation path."
     },
     {
+      "area": "command_adapter_generation",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/command_adapter_generation.json",
+      "consumers": [
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "future CLI/MCP/skill generators"
+      ],
+      "notes": "Generator-facing adapter bindings join command shape, operation contracts, primitive refs, schemas, projection hints, and conformance refs while leaving runtime primitive behavior implementation-owned."
+    },
+    {
       "area": "python_extraction_map",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/python_extraction_map.json",

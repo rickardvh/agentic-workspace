@@ -26,6 +26,11 @@
       "contract": "context_templates.json",
       "schema": "context_templates.schema.json",
       "consumer": "agentic_workspace.cli:_implement_payload"
+    },
+    {
+      "contract": "command_adapter_generation.json",
+      "schema": "command_adapter_generation.schema.json",
+      "consumer": "scripts/check/check_contract_tooling_surfaces.py"
     }
   ],
   "model_derivation_policy": {

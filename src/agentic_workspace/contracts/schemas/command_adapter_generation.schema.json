@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/command-adapter-generation.schema.json",
+  "title": "Agentic Workspace Command Adapter Generation Contract",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "summary",
+    "schema",
+    "adapters"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/command-adapter-generation/v1"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schema": {
+      "const": "schemas/command_adapter_generation.schema.json"
+    },
+    "adapters": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/adapter"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "adapter": {
+      "type": "object",
+      "required": [
+        "id",
+        "status",
+        "command",
+        "operation_ref",
+        "runtime_binding",
+        "schemas",
+        "effect_hints",
+        "projection_hints",
+        "generation_boundary",
+        "conformance_refs"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "ready-for-first-generation",
+            "generated",
+            "deferred"
+          ]
+        },
+        "command": {
+          "type": "object",
+          "required": [
+            "program",
+            "name",
+            "command_manifest",
+            "option_group_manifest"
+          ],
+          "properties": {
+            "program": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "subcommand": {
+              "type": "string",
+              "minLength": 1
+            },
+            "command_manifest": {
+              "const": "cli_commands.json"
+            },
+            "option_group_manifest": {
+              "const": "cli_option_groups.json"
+            }
+          },
+          "additionalProperties": false
+        },
+        "operation_ref": {
+          "type": "object",
+          "required": [
+            "id",
+            "registry",
+            "path"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "registry": {
+              "const": "operation_contracts.json"
+            },
+            "path": {
+              "type": "string",
+              "pattern": "^operations/[A-Za-z0-9_.-]+\\.json$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "runtime_binding": {
+          "type": "object",
+          "required": [
+            "kind",
+            "primitive_refs"
+          ],
+          "properties": {
+            "kind": {
+              "const": "operation-primitive-sequence"
+            },
+            "primitive_refs": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "schemas": {
+          "type": "object",
+          "required": [
+            "input",
+            "output"
+          ],
+          "properties": {
+            "input": {
+              "$ref": "#/$defs/schema_refs"
+            },
+            "output": {
+              "$ref": "#/$defs/schema_refs"
+            }
+          },
+          "additionalProperties": false
+        },
+        "effect_hints": {
+          "type": "object",
+          "required": [
+            "read_only",
+            "destructive",
+            "idempotent",
+            "writes_repo_state",
+            "requires_preflight_gate"
+          ],
+          "properties": {
+            "read_only": {
+              "type": "boolean"
+            },
+            "destructive": {
+              "type": "boolean"
+            },
+            "idempotent": {
+              "type": "boolean"
+            },
+            "writes_repo_state": {
+              "type": "boolean"
+            },
+            "requires_preflight_gate": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "projection_hints": {
+          "type": "object",
+          "required": [
+            "universal_fields",
+            "adapter_specific_fields"
+          ],
+          "properties": {
+            "universal_fields": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "adapter_specific_fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "fields"
+                ],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "fields": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "generation_boundary": {
+          "type": "object",
+          "required": [
+            "contract_owns",
+            "generated_adapter_owns",
+            "runtime_owns"
+          ],
+          "properties": {
+            "contract_owns": {
+              "$ref": "#/$defs/non_empty_strings"
+            },
+            "generated_adapter_owns": {
+              "$ref": "#/$defs/non_empty_strings"
+            },
+            "runtime_owns": {
+              "$ref": "#/$defs/non_empty_strings"
+            }
+          },
+          "additionalProperties": false
+        },
+        "conformance_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "schema_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_.-]+\\.schema\\.json$"
+      }
+    },
+    "non_empty_strings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

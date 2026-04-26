@@ -1,0 +1,263 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Command Adapter Generation Contract",
+  "goal": [
+    "Implement #358 by defining a minimal implementation-independent command adapter generation contract that reuses existing CLI command, operation, primitive, schema, and conformance contracts."
+  ],
+  "non_goals": [
+    "Generate CLI adapter code in this slice.",
+    "Move runtime primitive implementation into contracts.",
+    "Design a workflow engine.",
+    "Implement package CLI migration."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "A schema-validated contract shape exists that a later generator can consume for one read-only command adapter.",
+      "constraints": "Stay on master; keep shipped package repo-/agent-/tool-/language-agnostic; reuse existing contract surfaces instead of duplicating them.",
+      "latitude": "Choose whether the generation contract is a new small manifest plus schema or an extension of existing contract files.",
+      "escalation": "Stop before generating adapter code or hard-coding Python-only assumptions."
+    },
+    "execution": {
+      "milestone": "command-adapter-contract",
+      "status": "active",
+      "next_step": "Inspect contract loading, schemas, and tests, then add the minimal generation contract and validation coverage.",
+      "proof": "Use proof --changed, contract tooling checks, focused tests, planning checks, reconcile, summary."
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Generated shipped CLI adapters from authoritative package definitions.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#359",
+    "parent lane": "#356"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#359",
+    "activation trigger": "After #358 closes with a generation contract sufficient for root `defaults`."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A generator can consume a single command-adapter contract instead of rediscovering command, option, operation, and primitive fields.",
+    "intentionally deferred": "Generated adapter implementation, drift guardrails, package CLI extension, and multi-adapter projection requirements.",
+    "discovered implications": "Validated contract-consumption parity still requires a separate hard-coded expected-consumer update; #364 records that dogfooding friction.",
+    "proof achieved now": "The command-adapter generation manifest and schema validate, cross-reference command/operation/primitive/schema/conformance surfaces, and identify root `defaults` as ready for first generation.",
+    "validation still needed": "Archive closeout and final planning summary/reconcile after #358 is closed.",
+    "next likely slice": "#359 root `defaults` generated adapter proof."
+  },
+  "intent_interpretation": {
+    "literal request": "Continue implementing planned work until done and feed friction back into plans.",
+    "inferred intended outcome": "Proceed through #356 child slices in order, starting with #358.",
+    "chosen concrete what": "Add the canonical command adapter generation contract and validation.",
+    "interpretation distance": "low",
+    "review guidance": "Check that the new contract is implementation-independent and sufficient for #359 without generating code yet."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/contracts, contract loaders/checks/tests, planning state/evidence/execplan/review artifacts.",
+    "max changed files": "Prefer under 10 files.",
+    "required validation commands": "proof --changed; contract tooling checks; focused contract tests; planning-surface check; reconcile; summary.",
+    "ask-before-refactor threshold": "Any broad CLI rewrite, generator implementation, or package CLI migration.",
+    "stop before touching": "Runtime command behavior except where a validation hook needs a loader."
+  },
+  "stop_conditions": {
+    "stop when": "#358 is closed, committed, pushed, and #359 remains planned.",
+    "escalate when boundary reached": "The contract cannot be made sufficient without implementing the generator.",
+    "escalate on scope drift": "Work expands into #359 or later child slices before #358 closes.",
+    "escalate on proof failure": "Contract validation or planning reconciliation fails."
+  },
+  "context_budget": {
+    "live working set": "#356/#358/#359, root contracts, schema validation, conformance references, this execplan",
+    "recoverable later": "Full generator implementation details",
+    "externalize before shift": "Update execution_run and closeout_distillation before archive.",
+    "pre-work config pull": "uv run agentic-workspace preflight --format json",
+    "pre-work memory pull": "Not needed.",
+    "tiny resumability note": "Continue #358 command adapter contract.",
+    "context-shift triggers": "Before generator implementation or broad test rewrites."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Define the command adapter generation contract.",
+    "hard constraints": "Implementation-independent; no generator implementation; preserve runtime primitive ownership.",
+    "agent may decide locally": "Exact file names, schema shape, and focused validation coverage.",
+    "escalate when": "The next best change belongs to #359 or later."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#358",
+      "label": "command adapter contract",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#356",
+      "label": "generated CLI adapter lane",
+      "role": "parent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#359",
+      "label": "first generated adapter slice",
+      "role": "continuation",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "command-adapter-contract",
+    "status": "completed",
+    "scope": "#358",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect contract loader/check/test patterns, then add the minimal command-adapter contract."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/command-adapter-contract-2026-04-26.plan.json",
+    "src/agentic_workspace/contracts/command_adapter_generation.json",
+    "src/agentic_workspace/contracts/schemas/command_adapter_generation.schema.json",
+    "src/agentic_workspace/contract_tooling.py",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "src/agentic_workspace/contracts/contract_inventory.json",
+    "src/agentic_workspace/contracts/python_contract_consumption.json",
+    "tests/test_contract_tooling.py",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/reviews/command-adapter-contract-closeout-2026-04-26.review.json"
+  ],
+  "invariants": [
+    "Do not switch branches.",
+    "Do not generate CLI adapter code in #358.",
+    "Keep adapter contracts host- and language-agnostic."
+  ],
+  "contract_decisions_to_freeze": [
+    "A command adapter contract binds command shape, operation contract, runtime binding metadata, effect hints, projection hints, and conformance refs without owning primitive implementation."
+  ],
+  "open_questions_to_close": [
+    "Closed: added a small command_adapter_generation.json manifest rather than expanding operation contracts with generator-only binding detail.",
+    "Closed: minimum fields are command ref, operation ref, runtime primitive sequence, schema refs, effect hints, projection hints, generation boundary, and conformance refs."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py tests/test_workspace_cli.py",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "gh",
+    "uv",
+    "git"
+  ],
+  "completion_criteria": [
+    "#358 is implemented and closed.",
+    "Generation contract is schema-validated.",
+    "The contract reuses existing command/operation/conformance surfaces.",
+    "The contract is sufficient to start #359 on root `defaults`.",
+    "No active execplan remains after archive closeout."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "preflight, summary, gh issue list, #357 audit",
+    "what happened": "Added command_adapter_generation.json plus schema, validated loader access, cross-reference checks, inventory/consumption metadata, and focused tests.",
+    "scope touched": "Workspace contracts, contract tooling/checks/tests, planning state/evidence/review.",
+    "changed surfaces": "New command-adapter generation contract/schema, contract_tooling loader, contract checker, inventory, python consumption record, focused tests, planning state/evidence/review.",
+    "validations run": "preflight, summary, gh issue list, proof selector, contract tooling check, focused tests, ruff, planning doctor, planning-surface check, reconcile.",
+    "result for continuation": "#359 can generate or mechanically assemble the root `defaults` adapter from command_adapter_generation.json.",
+    "next step": "Archive this plan and promote #359."
+  },
+  "finished_run_review": {
+    "review status": "ready for archive",
+    "scope respected": "yes; no generated adapter code or runtime behavior changed",
+    "proof status": "passed",
+    "intent served": "yes for #358; #356 remains open",
+    "config compliance": "stayed on master and used package preflight/summary/proof/reconcile surfaces",
+    "misinterpretation risk": "low",
+    "follow-on decision": "Close #358; continue #359; keep #364 as dogfooding friction follow-up."
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/check_contract_tooling_surfaces.py; uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py tests/test_workspace_cli.py; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace reconcile --format json; uv run agentic-workspace summary --format json",
+    "proof achieved now": "Contract tooling check passed, 171 focused tests passed, ruff passed, planning doctor was healthy, planning-surface drift check was clean, and reconcile was clean.",
+    "evidence for \"proof achieved\" state": "Successful local command outputs in this run; command_adapter_generation.json cross-reference checks are included in check_contract_tooling_surfaces.py."
+  },
+  "intent_satisfaction": {
+    "original intent": "Continue implementing planned work until done and feed friction back into plans.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#358 contract added at src/agentic_workspace/contracts/command_adapter_generation.json",
+    "unsolved intent passed to": "#359 and remaining #356 child slices"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Reduce shipped executable CLI code as an interface authority surface while preserving runtime primitives.",
+    "slice shaping bias": "Contract first, generation second.",
+    "broader-lane validation question": "Can #359 generate a read-only adapter without broad rediscovery?",
+    "intent evidence source": "#358"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#358 defines the generation contract but intentionally does not generate an adapter.",
+    "evidence carried forward": "src/agentic_workspace/contracts/command_adapter_generation.json and .agentic-workspace/planning/reviews/command-adapter-contract-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen #358 if #359 cannot consume the command-adapter generation contract without broad rediscovery."
+  },
+  "execution_summary": {
+    "outcome delivered": "Canonical command-adapter generation contract for the first root `defaults` adapter.",
+    "validation confirmed": "Contract tooling, focused tests, ruff, planning doctor, planning-surface check, reconcile, and summary passed.",
+    "follow-on routed to": "#359",
+    "post-work posterity capture": "Closeout review records #358 as bounded-slice satisfied and #364 as dogfooding friction.",
+    "knowledge promoted (Memory/Docs/Config)": "Contract inventory and python consumption metadata updated; no Memory update needed.",
+    "resume from": "#359 using command_adapter_generation.json defaults.report.cli."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Raw implementation inspection detail is not needed after contract/check/test evidence.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#359 remains open for the first generated read-only CLI adapter slice using defaults.report.cli.",
+          "owner": "#359",
+          "source": "#358"
+        },
+        {
+          "summary": "#364 remains open to reduce validated contract-consumption parity double-entry friction.",
+          "owner": "#364",
+          "source": "#358 dogfooding"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "Contract inventory and python consumption metadata updated; no Memory update needed.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Command adapter generation contract complete; continue generated adapter work in #359.",
+          "owner": "#359",
+          "source": "#358"
+        },
+        {
+          "summary": "Validated contract-consumption parity friction captured.",
+          "owner": "#364",
+          "source": "#358"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-26: Promoted #358 as the next planned child slice under #356."
+  ]
+}

@@ -18,6 +18,21 @@ def test_contract_tooling_check_passes() -> None:
     assert module.main([]) == 0
 
 
+def test_command_adapter_generation_contract_identifies_defaults_candidate() -> None:
+    manifest = contract_tooling.command_adapter_generation_manifest()
+    adapters = {adapter["id"]: adapter for adapter in manifest["adapters"]}
+
+    defaults_adapter = adapters["defaults.report.cli"]
+
+    assert defaults_adapter["command"]["name"] == "defaults"
+    assert defaults_adapter["operation_ref"]["id"] == "defaults.report"
+    assert defaults_adapter["runtime_binding"]["kind"] == "operation-primitive-sequence"
+    assert defaults_adapter["effect_hints"]["read_only"] is True
+    assert defaults_adapter["effect_hints"]["writes_repo_state"] is False
+    assert "defaults.report.process" in defaults_adapter["conformance_refs"]
+    assert "primitive implementation" in defaults_adapter["generation_boundary"]["runtime_owns"]
+
+
 def test_validated_contract_loader_reports_contract_and_schema(monkeypatch, tmp_path: Path) -> None:
     contracts_root = tmp_path / "contracts"
     schemas_root = contracts_root / "schemas"

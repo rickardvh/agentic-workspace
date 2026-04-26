@@ -11,6 +11,7 @@ from agentic_workspace.contract_tooling import (
     authority_markers_manifest,
     cli_commands_manifest,
     cli_option_groups_manifest,
+    command_adapter_generation_manifest,
     compact_contract_manifest,
     conformance_contract_manifest,
     conformance_contracts_manifest,
@@ -335,6 +336,74 @@ def _validate_conformance_registry(payload: dict[str, object]) -> list[str]:
     return errors
 
 
+def _validate_command_adapter_generation(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    if payload.get("schema_version") != "agentic-workspace/command-adapter-generation/v1":
+        errors.append("command_adapter_generation.json has unexpected schema_version")
+        return errors
+    command_manifest = cli_commands_manifest()
+    known_commands = {command["name"]: command for command in command_manifest["commands"]}
+    operation_refs = {operation_ref["id"]: operation_ref for operation_ref in operation_contracts_manifest()["operations"]}
+    primitives = {primitive["id"] for primitive in operation_primitives_manifest()["primitives"]}
+    conformance_refs = {contract_ref["id"]: contract_ref for contract_ref in conformance_contracts_manifest()["contracts"]}
+    seen_ids: set[str] = set()
+    adapters = payload.get("adapters", [])
+    if not isinstance(adapters, list):
+        return ["command_adapter_generation.json adapters must be a list"]
+    for index, raw_adapter in enumerate(adapters):
+        if not isinstance(raw_adapter, dict):
+            errors.append(f"adapter entry {index} must be an object")
+            continue
+        adapter_id = str(raw_adapter.get("id", ""))
+        if adapter_id in seen_ids:
+            errors.append(f"duplicate command adapter id {adapter_id}")
+        seen_ids.add(adapter_id)
+        command = raw_adapter.get("command", {})
+        operation_ref = raw_adapter.get("operation_ref", {})
+        runtime_binding = raw_adapter.get("runtime_binding", {})
+        if not isinstance(command, dict) or not isinstance(operation_ref, dict) or not isinstance(runtime_binding, dict):
+            errors.append(f"command adapter {adapter_id} has malformed command, operation_ref, or runtime_binding")
+            continue
+        command_name = str(command.get("name", ""))
+        if command_manifest.get("program") != command.get("program"):
+            errors.append(f"command adapter {adapter_id} program drifted from cli_commands.json")
+        if command_name not in known_commands:
+            errors.append(f"command adapter {adapter_id} references unknown command {command_name}")
+        operation_id = str(operation_ref.get("id", ""))
+        operation_registry_ref = operation_refs.get(operation_id)
+        if operation_registry_ref is None:
+            errors.append(f"command adapter {adapter_id} references unknown operation {operation_id}")
+            continue
+        if operation_ref.get("path") != operation_registry_ref.get("path"):
+            errors.append(f"command adapter {adapter_id} operation path drifted from operation registry")
+        operation = operation_manifest(str(operation_ref.get("path", "")))
+        operation_command = operation.get("command_surface", {}).get("command")
+        if operation_command != command_name:
+            errors.append(f"command adapter {adapter_id} command does not match operation command_surface")
+        if raw_adapter.get("effect_hints") != operation.get("effects"):
+            errors.append(f"command adapter {adapter_id} effect_hints drifted from operation effects")
+        operation_primitives = [step["uses"] for step in operation.get("steps", [])]
+        adapter_primitives = list(runtime_binding.get("primitive_refs", []))
+        if adapter_primitives != operation_primitives:
+            errors.append(f"command adapter {adapter_id} primitive sequence drifted from operation steps")
+        missing_primitives = [primitive for primitive in adapter_primitives if primitive not in primitives]
+        if missing_primitives:
+            errors.append(f"command adapter {adapter_id} references unknown primitive(s): {', '.join(missing_primitives)}")
+        for schema_ref in raw_adapter.get("schemas", {}).get("input", []) + raw_adapter.get("schemas", {}).get("output", []):
+            try:
+                contract_schema(str(schema_ref))
+            except FileNotFoundError:
+                errors.append(f"command adapter {adapter_id} references unknown schema {schema_ref}")
+        for conformance_ref in raw_adapter.get("conformance_refs", []):
+            conformance = conformance_refs.get(str(conformance_ref))
+            if conformance is None:
+                errors.append(f"command adapter {adapter_id} references unknown conformance contract {conformance_ref}")
+                continue
+            if conformance.get("operation_id") != operation_id:
+                errors.append(f"command adapter {adapter_id} conformance ref {conformance_ref} targets a different operation")
+    return errors
+
+
 def _parser_snapshot(parser) -> list[dict[str, object]]:
     subparsers_action = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
     return [_command_parser_snapshot(subparsers_action.choices[name]) for name in subparsers_action.choices]
@@ -576,6 +645,11 @@ def main(argv: list[str] | None = None) -> int:
             _validate_conformance_registry(conformance_contracts_manifest()),
         ),
         (
+            "command adapter generation manifest",
+            _validate(command_adapter_generation_manifest(), "command_adapter_generation.schema.json")
+            + _validate_command_adapter_generation(command_adapter_generation_manifest()),
+        ),
+        (
             "operation primitives registry",
             _validate_operation_primitives(operation_primitives_manifest()),
         ),
@@ -665,6 +739,11 @@ def main(argv: list[str] | None = None) -> int:
         ("authority_markers.json", "authority_markers.schema.json", "agentic_workspace.cli:_authority_marker_for_path"),
         ("context_templates.json", "context_templates.schema.json", "agentic_workspace.cli:_start_payload"),
         ("context_templates.json", "context_templates.schema.json", "agentic_workspace.cli:_implement_payload"),
+        (
+            "command_adapter_generation.json",
+            "command_adapter_generation.schema.json",
+            "scripts/check/check_contract_tooling_surfaces.py",
+        ),
     }
     actual_validated_contracts = {
         (entry["contract"], entry["schema"], entry["consumer"]) for entry in consumption_policy["validated_at_consumption"]

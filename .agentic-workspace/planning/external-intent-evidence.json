@@ -752,7 +752,7 @@
       "system": "github",
       "id": "#358",
       "title": "[Workspace]: Define the canonical command adapter generation contract",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#356",
       "planning_residue_expected": "required"
@@ -797,6 +797,15 @@
       "system": "github",
       "id": "#363",
       "title": "[Workspace]: Define multi-adapter projection requirements for generated command surfaces",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#356",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#364",
+      "title": "[Review]: Derive validated contract-consumption parity from declared loader use",
       "status": "open",
       "kind": "issue",
       "parent_id": "#356",

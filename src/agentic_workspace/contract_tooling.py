@@ -112,6 +112,10 @@ def conformance_contracts_manifest() -> dict[str, Any]:
     return load_contract_json("conformance_contracts.json")
 
 
+def command_adapter_generation_manifest() -> dict[str, Any]:
+    return load_validated_contract_json("command_adapter_generation.json", "command_adapter_generation.schema.json")
+
+
 def conformance_contract_manifest(relative_path: str) -> dict[str, Any]:
     return load_validated_contract_json(relative_path, "conformance.schema.json")
 
