@@ -1,0 +1,139 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "install.lifecycle.dry-run.process",
+  "operation_id": "install.lifecycle",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "install",
+      "--target",
+      ".",
+      "--module",
+      "planning",
+      "--dry-run",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-install-dry-run-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "command"
+          ],
+          "equals": "install"
+        },
+        {
+          "path": [
+            "dry_run"
+          ],
+          "equals": true
+        },
+        {
+          "path": [
+            "modules"
+          ],
+          "equals": [
+            "planning"
+          ]
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "kind"
+          ],
+          "equals": "workspace-lifecycle-plan/v1"
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "dry_run"
+          ],
+          "equals": true
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "selected_modules"
+          ],
+          "equals": [
+            "planning"
+          ]
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "planned_updates"
+          ],
+          "equals": []
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "planned_removals"
+          ],
+          "equals": []
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "preserved_files"
+          ],
+          "equals": []
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "local_only_state_interaction"
+          ],
+          "equals": "not-requested"
+        },
+        {
+          "path": [
+            "lifecycle_plan",
+            "next_safe_command",
+            "status"
+          ],
+          "equals": "review-required"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": [
+        ".agentic-workspace",
+        "AGENTS.md",
+        "llms.txt"
+      ]
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

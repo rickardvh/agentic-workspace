@@ -1,0 +1,159 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Lifecycle Dry Run Conformance 2026 04 26",
+  "goal": [
+    "Resolve #378 by making one lifecycle dry-run path plan-shaped and black-box conformance-backed."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Install dry-run exposes a stable lifecycle_plan and conformance proves no fixture writes.",
+      "constraints": "Do not generate lifecycle mutation adapters, change destructive behavior, or weaken preflight/ownership safeguards.",
+      "latitude": "Choose one lifecycle path and add the smallest output/conformance contract needed for reviewers to trust the dry-run plan.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "lifecycle-dry-run-conformance",
+      "status": "completed",
+      "next_step": "Add black-box conformance coverage for one lifecycle dry-run plan path without generating lifecycle mutation commands.",
+      "proof": "Run generated tool conformance, workspace CLI tests, contract tooling, and root ruff."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/conformance/install.lifecycle.dry-run.process.json",
+        "src/agentic_workspace/contracts/conformance_contracts.json",
+        "src/agentic_workspace/contracts/operations/install.lifecycle.json",
+        "tests/test_generated_tool_conformance.py"
+      ],
+      "invariants": [
+        "Dry-run remains no-write.",
+        "Mutation/apply implementation remains primitive-owned.",
+        "Lifecycle generation remains out of scope."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make lifecycle planning safer to trust before any future lifecycle adapter work.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "agentic-workspace install --dry-run now emits a compact lifecycle_plan with selected modules, planned creates/updates/removals, preserved files, review state, local-only interaction, and next safe command.",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "install.lifecycle.dry-run.process conformance passed and proved no writes; workspace CLI tests, contract tooling, and ruff passed.",
+    "validation still needed": "none for #378",
+    "next likely slice": "#379 repo-local self-improvement dogfooding skill."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Add conformance-backed lifecycle dry-run plan coverage for one path.",
+    "hard constraints": "Do not generate lifecycle adapters or change apply/destructive behavior.",
+    "agent may decide locally": "Use install dry-run as the first path and add compact output fields if needed for stable conformance.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "lifecycle-dry-run-conformance",
+    "status": "completed",
+    "scope": "Lifecycle dry-run plan summary and install dry-run black-box conformance.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add black-box conformance coverage for one lifecycle dry-run plan path without generating lifecycle mutation commands."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/conformance/install.lifecycle.dry-run.process.json",
+    "src/agentic_workspace/contracts/conformance_contracts.json",
+    "src/agentic_workspace/contracts/operations/install.lifecycle.json",
+    "tests/test_generated_tool_conformance.py"
+  ],
+  "invariants": [
+    "Dry-run remains no-write.",
+    "Mutation/apply implementation remains primitive-owned.",
+    "Lifecycle generation remains out of scope."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_generated_tool_conformance.py -q",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run ruff check src tests"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "At least one lifecycle dry-run path is plan-shaped, stable, no-write proven, and conformance-backed."
+  ],
+  "proof_report": {
+    "validation proof": "All selected proof commands passed.",
+    "proof achieved now": "The install dry-run conformance contract passed, including idempotent repeated execution and no filesystem writes to the fixture; workspace CLI regression tests, contract tooling, and ruff also passed.",
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_generated_tool_conformance.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check src tests"
+  },
+  "execution_summary": {
+    "outcome delivered": "Install dry-run emits lifecycle_plan and has black-box no-write conformance coverage.",
+    "validation confirmed": "uv run pytest tests/test_generated_tool_conformance.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check src tests",
+    "follow-on routed to": "#379",
+    "post-work posterity capture": ".agentic-workspace/planning/reviews/lifecycle-dry-run-conformance-closeout-2026-04-26.review.json",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "#379 repo-local self-improvement dogfooding skill"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No broader lifecycle adapter generation was needed for #378.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#379 remains the next planned lane item.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-26: Promoted from TODO direct-task shape into an execplan."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Add conformance-backed lifecycle dry-run plan coverage for one path.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#378 is closed; install dry-run exposes lifecycle_plan and install.lifecycle.dry-run.process proves plan shape, idempotency, and no writes.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The requested one lifecycle dry-run path is conformance-backed; broader lifecycle generation remains out of scope.",
+    "evidence carried forward": ".agentic-workspace/planning/reviews/lifecycle-dry-run-conformance-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen if install --dry-run stops emitting lifecycle_plan or conformance no longer proves no writes."
+  }
+}

@@ -20,6 +20,12 @@
       "operation_id": "memory.status.report",
       "path": "conformance/memory.status.process.json",
       "adapter_kind": "process"
+    },
+    {
+      "id": "install.lifecycle.dry-run.process",
+      "operation_id": "install.lifecycle",
+      "path": "conformance/install.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
     }
   ]
 }

@@ -853,6 +853,14 @@ def main(argv: list[str] | None = None) -> int:
             config=config,
         )
         payload["command"] = args.command
+        payload["lifecycle_plan"] = _lifecycle_plan_payload(
+            payload=payload,
+            command_name=args.command,
+            target_root=target_root,
+            selected_modules=selected_modules,
+            dry_run=args.dry_run,
+            local_only=bool(args.local_only),
+        )
         _emit_payload(payload=payload, format_name=args.format)
         return 0
 
@@ -2349,7 +2357,7 @@ def _run_lifecycle_command(
     placeholders.extend(summary["placeholders"])
     stale_generated_surfaces.extend(summary["stale_generated_surfaces"])
 
-    return {
+    payload = {
         "command": command_name,
         "target": target_root.as_posix(),
         "modules": selected_modules,
@@ -2391,6 +2399,74 @@ def _run_lifecycle_command(
         "reports": reports,
         "config": _config_payload(config=config),
     }
+    payload["lifecycle_plan"] = _lifecycle_plan_payload(
+        payload=payload,
+        command_name=command_name,
+        target_root=target_root,
+        selected_modules=selected_modules,
+        dry_run=dry_run,
+        local_only=local_only_repo_root is not None,
+    )
+    return payload
+
+
+def _lifecycle_plan_payload(
+    *,
+    payload: dict[str, Any],
+    command_name: str,
+    target_root: Path,
+    selected_modules: list[str],
+    dry_run: bool,
+    local_only: bool,
+) -> dict[str, Any]:
+    planned_removals: list[str] = []
+    for report in payload.get("module_reports", []) + payload.get("reports", []):
+        if not isinstance(report, dict):
+            continue
+        for action in report.get("actions", []):
+            if not isinstance(action, dict):
+                continue
+            if str(action.get("kind", "")) in {"would remove", "removed"}:
+                _append_unique(planned_removals, _display_path(action.get("path", "."), target_root))
+    warnings = list(payload.get("warnings", []))
+    review_items = list(payload.get("needs_review", [])) + list(payload.get("placeholders", []))
+    review_required = bool(review_items or warnings or payload.get("prompt_requirement") in {"required", "recommended"})
+    next_command = _lifecycle_apply_command(
+        command_name=command_name,
+        target_root=target_root,
+        selected_modules=selected_modules,
+        local_only=local_only,
+    )
+    return {
+        "kind": "workspace-lifecycle-plan/v1",
+        "command": command_name,
+        "target_root": target_root.as_posix(),
+        "selected_modules": selected_modules,
+        "dry_run": dry_run,
+        "planned_creates": list(payload.get("created", [])),
+        "planned_updates": list(payload.get("updated_managed", [])),
+        "planned_removals": planned_removals,
+        "preserved_files": list(payload.get("preserved_existing", [])),
+        "warnings": warnings,
+        "review_required": review_required,
+        "review_items": review_items,
+        "local_only_state_interaction": "install-root" if local_only else "not-requested",
+        "next_safe_command": {
+            "status": "review-required" if review_required else "ready",
+            "command": next_command,
+            "reason": "Resolve review_items before applying changes." if review_required else "Dry-run plan has no review blockers.",
+        },
+    }
+
+
+def _lifecycle_apply_command(*, command_name: str, target_root: Path, selected_modules: list[str], local_only: bool) -> str:
+    parts = ["agentic-workspace", command_name, "--target", target_root.as_posix()]
+    for module_name in selected_modules:
+        parts.extend(["--module", module_name])
+    if local_only:
+        parts.append("--local")
+    parts.extend(["--format", "json"])
+    return " ".join(parts)
 
 
 def _run_report_command(

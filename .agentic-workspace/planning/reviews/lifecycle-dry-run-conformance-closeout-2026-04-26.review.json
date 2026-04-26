@@ -1,0 +1,72 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Lifecycle dry-run conformance closeout",
+  "date": "2026-04-26",
+  "scope": [
+    "#378"
+  ],
+  "classification": "closeout",
+  "issue_classifications": [
+    {
+      "id": "#378",
+      "title": "[Workspace]: Make lifecycle dry-run plans conformance-backed",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "#379",
+      "evidence": "Install dry-run now emits lifecycle_plan and install.lifecycle.dry-run.process proves plan shape, idempotent repeated output, no fixture writes, and no outside-repo writes. Workspace CLI tests, contract tooling, and ruff passed."
+    }
+  ],
+  "goal": [
+    "Confirm #378 made at least one lifecycle dry-run path stable and conformance-backed."
+  ],
+  "non_goals": [
+    "Do not claim generated lifecycle adapters or broad lifecycle mutation coverage."
+  ],
+  "review_mode": {
+    "mode": "closeout",
+    "review question": "Does install --dry-run expose a stable plan and does black-box conformance prove it performs no writes?",
+    "default finding cap": "bounded",
+    "inputs inspected first": "compact planning and task-specific surfaces"
+  },
+  "review_method": {
+    "commands used": "uv run pytest tests/test_generated_tool_conformance.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check src tests",
+    "evidence sources": "lifecycle_plan output, install.lifecycle.dry-run.process conformance contract, install.lifecycle operation proof, proof selector output"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#378",
+      "label": "lifecycle dry-run conformance",
+      "role": "closed-scope",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#379",
+      "label": "next lane item",
+      "role": "follow-up",
+      "locator": ""
+    }
+  ],
+  "findings": [],
+  "recommendation": {
+    "promote": "close #378 as complete",
+    "defer": "#379 remains next",
+    "dismiss": "broader lifecycle adapter generation remains intentionally out of scope"
+  },
+  "retention": {
+    "closeout shape": "shrink or archive after findings are routed",
+    "trigger": "review complete",
+    "proof surface": "this review record plus routed follow-up residue"
+  },
+  "validation_commands": [
+    "uv run pytest tests/test_generated_tool_conformance.py -q",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run ruff check src tests"
+  ],
+  "drift_log": [
+    "2026-04-26: Review record created by create-review.",
+    "2026-04-26: Closeout recorded after install dry-run conformance and selected proof passed."
+  ]
+}

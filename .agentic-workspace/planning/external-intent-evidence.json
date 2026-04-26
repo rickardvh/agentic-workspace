@@ -932,7 +932,7 @@
       "system": "github",
       "id": "#378",
       "title": "[Workspace]: Make lifecycle dry-run plans conformance-backed",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#376",
       "planning_residue_expected": "required"
