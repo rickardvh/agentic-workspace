@@ -68,7 +68,7 @@
       "system": "github",
       "id": "#258",
       "title": "[Workspace]: Reopen declarative portability so stable lifecycle and runtime truth stops depending on large Python-owned implementations",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -230,7 +230,7 @@
       "system": "github",
       "id": "#275",
       "title": "[Workspace]: Slim the shipped root AGENTS entrypoint so installs converge on the thin startup contract",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -257,7 +257,7 @@
       "system": "github",
       "id": "#278",
       "title": "[Workspace]: Replace markdown-first workflow contracts with a stricter, composable workflow definition format that stays flexible inside each component step",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#270",
       "planning_residue_expected": "required"
@@ -266,7 +266,7 @@
       "system": "github",
       "id": "#279",
       "title": "[Planning]: Take relevant system intent into explicit account when shaping slices and validating intent satisfaction for broader lanes",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#270",
       "planning_residue_expected": "required"
@@ -284,7 +284,7 @@
       "system": "github",
       "id": "#281",
       "title": "[Workspace]: Replace generated compatibility artefacts with minimal static routing tables so canonical workflows stay discoverable without creating extra mutable surfaces",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#273",
       "planning_residue_expected": "required"
@@ -320,7 +320,7 @@
       "system": "github",
       "id": "#287",
       "title": "[Workspace]: Add a local-only agent integration area for vendor/runtime-specific shortcuts, bridge files, and shims that help agents reach canonical repo-native outcomes without becoming shared workflow state",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -329,7 +329,7 @@
       "system": "github",
       "id": "#288",
       "title": "[Workspace]: Define the first local integration root, vendor subfolder convention, and boundary rules for local-only agent/runtime bridges",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#287",
       "planning_residue_expected": "required"
@@ -347,7 +347,7 @@
       "system": "github",
       "id": "#290",
       "title": "[Workspace]: Add preparatory refinement templates for strong general-purpose reasoning so issues and candidate work can be clarified before coding-agent ingestion",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -365,7 +365,7 @@
       "system": "github",
       "id": "#292",
       "title": "Review friction: reduce competing first-contact surfaces",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -374,7 +374,7 @@
       "system": "github",
       "id": "#293",
       "title": "Direction / proposal: diff-path-based proof selector command",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -383,7 +383,7 @@
       "system": "github",
       "id": "#295",
       "title": "Review friction: adapter vs canonical surface ambiguity",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -392,7 +392,7 @@
       "system": "github",
       "id": "#296",
       "title": "Direction / proposal: minimum-safe-read startup command",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -401,7 +401,7 @@
       "system": "github",
       "id": "#297",
       "title": "Review friction: package boundary confusion (source vs payload vs installed)",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -410,7 +410,7 @@
       "system": "github",
       "id": "#298",
       "title": "Direction / proposal: cheap-implementer mode for bounded agents",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#251",
       "planning_residue_expected": "required"
@@ -419,7 +419,7 @@
       "system": "github",
       "id": "#299",
       "title": "Direction / proposal: extract CLI command and option manifests",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#258",
       "planning_residue_expected": "required"
@@ -428,7 +428,7 @@
       "system": "github",
       "id": "#300",
       "title": "Direction / proposal: extract module registry metadata from Python",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#258",
       "planning_residue_expected": "required"
@@ -437,7 +437,7 @@
       "system": "github",
       "id": "#301",
       "title": "Direction / proposal: extract CLI policy payloads (defaults surfaces)",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#258",
       "planning_residue_expected": "required"
@@ -446,7 +446,7 @@
       "system": "github",
       "id": "#302",
       "title": "Direction / proposal: extract setup findings and preflight policy",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#258",
       "planning_residue_expected": "required"
@@ -455,7 +455,7 @@
       "system": "github",
       "id": "#303",
       "title": "Direction / proposal: extract workspace surface and path manifests",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#258",
       "planning_residue_expected": "required"
@@ -464,7 +464,7 @@
       "system": "github",
       "id": "#305",
       "title": "[Draft][Workspace]: Define implementation-independent operation contracts",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#309",
       "planning_residue_expected": "required"
@@ -473,7 +473,7 @@
       "system": "github",
       "id": "#306",
       "title": "[Draft][Workspace]: Add black-box conformance contracts for generated tools",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#305",
       "planning_residue_expected": "required"
@@ -491,7 +491,7 @@
       "system": "github",
       "id": "#309",
       "title": "[Workspace]: Complete Python-consumable contract extraction",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#258",
       "planning_residue_expected": "required"
@@ -500,7 +500,7 @@
       "system": "github",
       "id": "#310",
       "title": "[Workspace]: Audit remaining Python-owned extractable contract content",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#309",
       "planning_residue_expected": "required"
@@ -509,7 +509,7 @@
       "system": "github",
       "id": "#311",
       "title": "[Workspace]: Extract input/output and result schemas for Python consumption",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#309",
       "planning_residue_expected": "required"
@@ -518,7 +518,7 @@
       "system": "github",
       "id": "#312",
       "title": "[Workspace]: Extract static data, text, and rendering templates from Python",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#309",
       "planning_residue_expected": "required"
@@ -527,7 +527,7 @@
       "system": "github",
       "id": "#313",
       "title": "[Workspace]: Complete operation-contract coverage for every CLI command",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#309",
       "planning_residue_expected": "required"
@@ -536,7 +536,7 @@
       "system": "github",
       "id": "#314",
       "title": "[Workspace]: Wire Python loaders and schema-derived models for extracted contracts",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#309",
       "planning_residue_expected": "required"
@@ -545,7 +545,7 @@
       "system": "github",
       "id": "#315",
       "title": "[Workspace]: Add extraction parity checks and Python-consumed contract conformance",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#309",
       "planning_residue_expected": "required"
@@ -554,7 +554,7 @@
       "system": "github",
       "id": "#316",
       "title": "[Workspace]: Classify remaining Python-owned procedural logic after extraction",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#309",
       "planning_residue_expected": "required"
@@ -563,7 +563,7 @@
       "system": "github",
       "id": "#330",
       "title": "[Review]: Make promote-to-plan support compact TOML active items",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -572,7 +572,7 @@
       "system": "github",
       "id": "#337",
       "title": "[Workspace]: Close the gap between system intent and operating reality",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"

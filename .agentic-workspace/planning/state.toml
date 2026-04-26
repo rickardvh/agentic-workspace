@@ -4,10 +4,8 @@ queued_items = []
 
 [roadmap]
 lanes = [
-  { id = "system-intent-operating-reality-parent", title = "Continue the system-intent operating-reality parent lane", priority = "first", issues = ["#337"], outcome = "Finish broader follow-through for making stated system intent match ordinary package operation.", reason = "#338 and #339 were implemented and closed with proof, but parent #337 remains open and should not be treated as satisfied by those child slices alone.", promotion_signal = "Promote when ready to choose the next bounded #337 child slice from live issue evidence.", suggested_first_slice = "Re-read #337 and select a bounded follow-up that is not already covered by #338/#339." },
   { id = "further-product-compression-on-repeated-pressure", title = "Further product compression on repeated pressure", priority = "fifth", issues = ["#230"], outcome = "Continue removing, demoting, or internalizing visible product residue only when repeated real use shows another surface still imposes first-line cognitive cost.", reason = "#281 compressed the generated helper docs into static routing adapters; #230 remains open for broader subtraction and product-shape compression that should not be closed by one cleanup.", promotion_signal = "Promote when repeated dogfooding shows another visible surface behaves like a first-line handbook, leaves startup ambiguity, keeps unnecessary adapter residue in the default mental model, leaves checked-in adapters stale, or lets memory runbooks accumulate rationale that belongs in a smaller decision surface.", suggested_first_slice = "Wait for a fresh repeated-use signal before choosing the next product-compression target under #230." },
 ]
 candidates = [
-  { priority = "first", summary = "Continue the system-intent operating-reality parent lane (#337)" },
   { priority = "fifth", summary = "Further product compression on repeated pressure" },
 ]
