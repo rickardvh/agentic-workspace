@@ -581,7 +581,7 @@
       "system": "github",
       "id": "#338",
       "title": "[Workspace]: Add surface-sprawl guardrails for new contract, memory, and report surfaces",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#337",
       "planning_residue_expected": "required"

@@ -179,6 +179,9 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["surface_value_guardrail"]["command"] == "agentic-workspace defaults --section surface_value_guardrail --format json"
     assert payload["surface_value_guardrail"]["preference_order"][0] == "remove an unnecessary surface"
     assert "replace, compress, merge" in payload["surface_value_guardrail"]["value_questions"][1]
+    assert payload["effective_authority"]["defaults_command"] == "agentic-workspace defaults --section effective_authority --format json"
+    assert payload["effective_authority"]["authority_map"][1]["surface"] == ".agentic-workspace/system-intent/intent.toml"
+    assert payload["effective_authority"]["system_intent_embodiment"]["must_answer_before_closure"][0].startswith("Did the slice")
     assert payload["clarification"]["canonical_doc"] == ".agentic-workspace/docs/compact-contract-profile.md"
     assert payload["clarification"]["command"] == "agentic-workspace defaults --section clarification --format json"
     assert payload["clarification"]["rule"] == "When a prompt is vague, ask the smallest repo-context question that removes the ambiguity."
@@ -949,6 +952,23 @@ def test_defaults_section_selector_returns_surface_value_guardrail(capsys) -> No
     ]
     assert answer["authority_classes"][0]["class"] == "authoritative"
     assert "first-line thing to remember" in answer["review_result"]["reject_when"][1]
+
+
+def test_defaults_section_selector_returns_effective_authority_view(capsys) -> None:
+    assert cli.main(["defaults", "--section", "effective_authority", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "effective_authority"}
+    assert payload["matched"] is True
+    answer = payload["answer"]
+    concerns = {entry["concern"]: entry for entry in answer["authority_map"]}
+    assert concerns["compiled system intent"]["authority_class"] == "authoritative"
+    assert concerns["runtime implementation"]["authority_class"] == "procedural-owned"
+    assert answer["system_intent_embodiment"]["status"] == "needs-review"
+    assert answer["provenance"]["contract_inventory"] == "src/agentic_workspace/contracts/contract_inventory.json"
+    assert answer["unresolved_gaps"][0]["id"] == "no-active-planning-record"
 
 
 def test_defaults_section_selector_returns_optimization_bias_answer(capsys) -> None:
@@ -2908,6 +2928,13 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "surface_value_guardrail" in payload["schema"]["shared_fields"]
     assert payload["surface_value_guardrail"]["preference_order"][0] == "remove an unnecessary surface"
     assert payload["surface_value_guardrail"]["review_result"]["accept_when"][1] == "ownership and authority class are explicit"
+    assert "effective_authority" in payload["schema"]["shared_fields"]
+    effective_authority = payload["effective_authority"]
+    assert effective_authority["status"] == "needs-review"
+    authority_by_concern = {entry["concern"]: entry for entry in effective_authority["authority_map"]}
+    assert authority_by_concern["active plan and continuation"]["status"] == "absent"
+    assert authority_by_concern["durable repo knowledge"]["status"] == "present"
+    assert effective_authority["system_intent_embodiment"]["anti_framework_pressure"][0] == "remove an unnecessary surface"
     assert payload["reports"][0]["module"] == "planning"
     assert {report["module"] for report in payload["module_reports"]} == {"planning", "memory"}
     planning_report = next(report for report in payload["module_reports"] if report["module"] == "planning")

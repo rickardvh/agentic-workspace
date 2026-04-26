@@ -20,9 +20,9 @@
       "escalation": "Stop if implementation becomes a broad scoring system, workflow engine, or historical surface audit."
     },
     "execution": {
-      "milestone": "surface-value-guardrail",
-      "status": "in-progress",
-      "next_step": "Commit and push #338, close it with proof, then continue to #339.",
+      "milestone": "effective-authority-view",
+      "status": "implemented",
+      "next_step": "Commit and push #339, close it with proof, then keep parent #337 routed open.",
       "proof": "Focused workspace tests, contract tooling, summary/reconcile dogfood, planning checker, and ruff for touched Python."
     },
     "scope": {
@@ -92,16 +92,16 @@
     { "kind": "issue", "target": "#339", "label": "effective authority and system-intent embodiment view", "role": "milestone" }
   ],
   "active_milestone": {
-    "id": "surface-value-guardrail",
-    "status": "in-progress",
-    "scope": "#338",
+    "id": "effective-authority-view",
+    "status": "implemented",
+    "scope": "#339",
     "ready": "yes",
     "blocked": "no",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Add a compact surface-value test for new durable surfaces.",
-    "Expose the guardrail through existing compact workspace surfaces and tests."
+    "Add a compact effective authority and system-intent embodiment view.",
+    "Reuse existing report/default surfaces and keep unresolved gaps explicit."
   ],
   "blockers": ["None."],
   "touched_paths": [
@@ -130,27 +130,27 @@
     "Parent #337 is left open unless its broader related-work acceptance is honestly satisfied."
   ],
   "execution_run": {
-    "run status": "in-progress",
+    "run status": "implemented",
     "executor": "Codex",
     "handoff source": "preflight, summary, report, ownership, reconcile, live GitHub issue state",
-    "what happened": "Ingested open issues #337, #338, #339, promoted them into active checked-in planning state, and implemented #338 by adding a compact surface-value guardrail to defaults/report surfaces.",
+    "what happened": "Ingested open issues #337, #338, #339, promoted them into active checked-in planning state, implemented #338 surface-value guardrail, and implemented #339 effective-authority/system-intent embodiment view through existing defaults/report surfaces.",
     "scope touched": "workspace CLI/report/defaults, report schema contract, tests, planning state, external intent evidence, active execplan",
     "changed surfaces": "src/agentic_workspace/cli.py; src/agentic_workspace/contracts/report_contract.json; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/system-intent-operating-reality.plan.json",
-    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"surface_value or defaults_command_reports_machine_readable_default_routes_as_json or report_command_returns_combined_workspace_state\"; uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace defaults --section surface_value_guardrail --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
-    "result for continuation": "#338 is ready to close after commit/push; continue with #339.",
-    "next step": "Commit and push #338, close it, then implement #339."
+    "validations run": "uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q -k \"surface_value or effective_authority or defaults_command or contract\"; uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace defaults --section effective_authority --format json; uv run agentic-workspace report --target . --format json; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "result for continuation": "#338 is closed; #339 is implemented and ready to close after commit/push; parent #337 should remain open for broader acceptance.",
+    "next step": "Commit and push #339, close it, then archive this child-slice plan while keeping #337 routed."
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "pending",
-    "follow-on decision": "pending"
+    "review status": "ready-for-commit",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "child slices satisfied; parent remains broader",
+    "config compliance": "used compact package surfaces and avoided new top-level commands",
+    "misinterpretation risk": "low",
+    "follow-on decision": "close #339 after proof, keep #337 open"
   },
   "proof_report": {
-    "validation proof": "Focused workspace CLI tests, ruff, contract tooling checker, planning checker, surface-value defaults dogfood, and git diff whitespace check passed.",
+    "validation proof": "Focused workspace CLI/contract tests, ruff, contract tooling checker, planning checker, effective-authority defaults/report dogfood, summary dogfood, and git diff whitespace check passed.",
     "proof achieved now": "yes",
     "evidence for \"proof achieved\" state": "execution_run.validations run lists the passing commands"
   },
@@ -170,20 +170,21 @@
     "slice status": "implemented",
     "larger-intent status": "open",
     "closure decision": "keep-active",
-    "why this decision is honest": "#338 is implemented but #339 and the parent #337 lane remain open",
-    "evidence carried forward": "surface_value_guardrail defaults/report payload and tests",
-    "reopen trigger": "surface additions no longer expose repeated-cost, owner, authority, discovery, removability, and drift-check criteria"
+    "why this decision is honest": "#338 and #339 are implemented, but parent #337 includes broader follow-on work that is not fully satisfied.",
+    "evidence carried forward": "surface_value_guardrail and effective_authority defaults/report payloads, schema contracts, tests, and dogfood output",
+    "reopen trigger": "agents again lack a compact answer for surface value pressure, effective authority, current work owner, or unresolved system-intent gaps"
   },
   "execution_summary": {
-    "outcome delivered": "#338 surface-sprawl guardrail implemented in compact defaults and report surfaces.",
-    "validation confirmed": "Focused tests, ruff, contract tooling checker, planning checker, dogfood output, and diff check passed.",
-    "follow-on routed to": "#339 remains the next milestone under #337",
-    "post-work posterity capture": "The surface-value guardrail lives in workspace defaults/report payloads and tests rather than a new first-line document.",
+    "outcome delivered": "#338 surface-sprawl guardrail and #339 compact effective-authority/system-intent embodiment view implemented in existing defaults/report surfaces.",
+    "validation confirmed": "Focused CLI/contract tests, ruff, contract tooling checker, planning checker, defaults/report/summary dogfood output, and diff check passed.",
+    "follow-on routed to": "#337 remains open for broader system-intent operating-reality follow-through.",
+    "post-work posterity capture": "The new checks live in workspace defaults/report payloads and schema contracts rather than new first-line documents.",
     "knowledge promoted (Memory/Docs/Config)": "pending",
-    "resume from": "surface-value-guardrail"
+    "resume from": "effective-authority-view"
   },
   "drift_log": [
     "2026-04-26: Reingested open issues and promoted #337/#338/#339 into active planning state.",
-    "2026-04-26: Implemented #338 surface-value guardrail through existing defaults/report surfaces."
+    "2026-04-26: Implemented #338 surface-value guardrail through existing defaults/report surfaces.",
+    "2026-04-26: Implemented #339 effective-authority/system-intent embodiment view through existing defaults/report surfaces."
   ]
 }

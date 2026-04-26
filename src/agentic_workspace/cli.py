@@ -72,6 +72,7 @@ from agentic_workspace.contract_tooling import (
     cli_option_groups_manifest,
     compact_contract_manifest,
     context_templates_manifest,
+    contract_inventory_manifest,
     improvement_latitude_policy_manifest,
     module_registry_manifest,
     optimization_bias_policy_manifest,
@@ -2533,6 +2534,12 @@ def _run_report_command(
             active_planning_record=_active_planning_record(module_reports=module_reports),
         ),
         "surface_value_guardrail": _surface_value_guardrail_payload(),
+        "effective_authority": _effective_authority_payload(
+            target_root=target_root,
+            config=config,
+            installed_modules=installed_modules,
+            module_reports=module_reports,
+        ),
         "findings": aggregated_findings,
         "closeout_trust": closeout_trust,
         "next_action": next_action,
@@ -4221,6 +4228,134 @@ def _surface_value_guardrail_payload() -> dict[str, Any]:
     }
 
 
+def _effective_authority_payload(
+    *,
+    target_root: Path | None = None,
+    config: WorkspaceConfig | None = None,
+    installed_modules: list[str] | None = None,
+    module_reports: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    active_direction = _effective_active_direction_payload(module_reports=module_reports or [])
+    active_status = "present" if active_direction else "absent"
+    active_surface = ""
+    if isinstance(active_direction, dict):
+        active_surface = str(active_direction.get("surface", "") or active_direction.get("task", {}).get("surface", ""))
+    installed = set(installed_modules or [])
+    contract_inventory = contract_inventory_manifest()
+    contract_areas = contract_inventory.get("areas", [])
+    config_payload = _system_intent_source_payload(config) if config is not None else {}
+    unresolved_gaps: list[dict[str, str]] = []
+    if active_status == "absent":
+        unresolved_gaps.append(
+            {
+                "id": "no-active-planning-record",
+                "summary": "No active planning record is present, so current-work alignment cannot be judged from an active execplan.",
+                "recommended_query": "agentic-workspace summary --format json",
+            }
+        )
+    if "memory" not in installed:
+        unresolved_gaps.append(
+            {
+                "id": "memory-not-installed",
+                "summary": "Durable Memory authority is absent; reusable learning has no shared module surface.",
+                "recommended_query": "agentic-workspace modules --format json",
+            }
+        )
+    return {
+        "canonical_doc": ".agentic-workspace/docs/system-intent-contract.md",
+        "command": "agentic-workspace report --target ./repo --format json",
+        "defaults_command": "agentic-workspace defaults --section effective_authority --format json",
+        "rule": (
+            "Use this compact view to identify the current authority for intent, policy, active work, durable knowledge, "
+            "checks, contracts, and runtime behavior before claiming system-intent alignment or closure."
+        ),
+        "status": "needs-review" if unresolved_gaps else "ready",
+        "current_work": {
+            "status": active_status,
+            "surface": active_surface,
+            "source": "planning module report" if active_status == "present" else "none",
+        },
+        "authority_map": [
+            {
+                "concern": "confirmed intent",
+                "authority_class": "authoritative",
+                "owner": "human or live issue cluster",
+                "surface": "current request and checked external-work evidence",
+                "status": "runtime",
+            },
+            {
+                "concern": "compiled system intent",
+                "authority_class": "authoritative",
+                "owner": "workspace",
+                "surface": ".agentic-workspace/system-intent/intent.toml",
+                "status": "present",
+            },
+            {
+                "concern": "workspace policy",
+                "authority_class": "authoritative",
+                "owner": "repo",
+                "surface": ".agentic-workspace/config.toml",
+                "status": "present" if config is not None else "unknown",
+            },
+            {
+                "concern": "active plan and continuation",
+                "authority_class": "authoritative",
+                "owner": "planning",
+                "surface": active_surface or ".agentic-workspace/planning/state.toml",
+                "status": active_status,
+            },
+            {
+                "concern": "durable repo knowledge",
+                "authority_class": "authoritative",
+                "owner": "memory",
+                "surface": ".agentic-workspace/memory/repo/",
+                "status": "present" if "memory" in installed else "absent",
+            },
+            {
+                "concern": "surface ownership",
+                "authority_class": "authoritative",
+                "owner": "workspace",
+                "surface": ".agentic-workspace/OWNERSHIP.toml",
+                "status": "present",
+            },
+            {
+                "concern": "contract extraction and schema coverage",
+                "authority_class": "derived",
+                "owner": "workspace",
+                "surface": "src/agentic_workspace/contracts/contract_inventory.json",
+                "status": "present",
+            },
+            {
+                "concern": "runtime implementation",
+                "authority_class": "procedural-owned",
+                "owner": "workspace",
+                "surface": "src/agentic_workspace/cli.py",
+                "status": "present",
+            },
+        ],
+        "system_intent_embodiment": {
+            "status": "needs-review" if unresolved_gaps else "inspectable",
+            "must_answer_before_closure": [
+                "Did the slice preserve the larger intended outcome, not only land a local implementation?",
+                "Where does unresolved continuation belong?",
+                "Did new durable surfaces pass the surface-value guardrail?",
+                "Which authoritative surfaces changed and which should remain untouched?",
+            ],
+            "anti_framework_pressure": _surface_value_guardrail_payload()["preference_order"],
+        },
+        "provenance": {
+            "system_intent_sources": config_payload.get("sources", []),
+            "system_intent_preferred_source": config_payload.get("preferred_source", ""),
+            "contract_inventory": "src/agentic_workspace/contracts/contract_inventory.json",
+            "contract_area_count": len(contract_areas) if isinstance(contract_areas, list) else 0,
+            "report": "agentic-workspace report --target ./repo --format json",
+            "summary": "agentic-workspace summary --format json",
+            "ownership": "agentic-workspace ownership --target ./repo --format json",
+        },
+        "unresolved_gaps": unresolved_gaps,
+    }
+
+
 def _agent_configuration_system_payload() -> dict[str, Any]:
     canonical_doc = ".agentic-workspace/docs/workspace-config-contract.md"
     return {
@@ -5016,6 +5151,7 @@ def _defaults_payload() -> dict[str, Any]:
         "agent_configuration_workflow_extensions": _agent_configuration_workflow_extensions_payload(),
         "system_intent": _system_intent_payload(),
         "surface_value_guardrail": _surface_value_guardrail_payload(),
+        "effective_authority": _effective_authority_payload(),
         "intent": _intent_contract_payload(),
         "clarification": _clarification_contract_payload(),
         "prompt_routing": _prompt_routing_contract_payload(),
@@ -5565,6 +5701,10 @@ def _emit_defaults(*, format_name: str, section: str | None = None) -> None:
     print(f"- command: {payload['surface_value_guardrail']['command']}")
     print(f"- rule: {payload['surface_value_guardrail']['rule']}")
     print(f"- prefer: {payload['surface_value_guardrail']['preference_order'][0]}")
+    print("Effective authority:")
+    print(f"- command: {payload['effective_authority']['command']}")
+    print(f"- rule: {payload['effective_authority']['rule']}")
+    print(f"- status: {payload['effective_authority']['status']}")
     print("Clarification:")
     print(f"- doc: {payload['clarification']['canonical_doc']}")
     print(f"- command: {payload['clarification']['command']}")
