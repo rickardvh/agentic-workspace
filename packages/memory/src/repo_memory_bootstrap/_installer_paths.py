@@ -133,8 +133,18 @@ def _find_nested_repo_roots(target_root: Path) -> list[Path]:
     seen: set[Path] = set()
     for candidate in target_root.rglob(".git"):
         repo_root = candidate.parent
+        if _is_generated_dependency_cache(repo_root=repo_root, target_root=target_root):
+            continue
         if repo_root == target_root or repo_root in seen:
             continue
         nested.append(repo_root)
         seen.add(repo_root)
     return sorted(nested)
+
+
+def _is_generated_dependency_cache(*, repo_root: Path, target_root: Path) -> bool:
+    try:
+        relative = repo_root.relative_to(target_root)
+    except ValueError:
+        return False
+    return any(part.startswith(".uv-cache") for part in relative.parts)
