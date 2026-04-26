@@ -81,6 +81,11 @@ def _emit_report_text(payload: dict[str, Any]) -> None:
     print(f"Installed modules: {installed if installed else '(none)'}")
     if selected:
         print(f"Selected modules: {selected}")
+    branch_posture = payload.get("branch_workflow_posture", {})
+    if isinstance(branch_posture, dict) and branch_posture.get("status") == "present":
+        current_branch = branch_posture.get("current_branch") or "(unknown)"
+        default_branch = branch_posture.get("default_branch") or "(unknown)"
+        print(f"Branch posture: {current_branch} (default: {default_branch}; risk: {branch_posture.get('risk', 'unknown')})")
     execution_shape = payload.get("execution_shape", {})
     if isinstance(execution_shape, dict) and execution_shape.get("status") == "present":
         recommendation = execution_shape.get("recommendation", {})

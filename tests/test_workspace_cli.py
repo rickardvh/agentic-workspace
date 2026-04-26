@@ -2893,6 +2893,44 @@ def test_report_routes_roadmap_backed_work_to_planning_before_broad_execution(tm
     assert "chat or issue context alone" in execution_shape["deviation_rule"]
 
 
+def test_report_surfaces_default_branch_commit_risk(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _set_git_branch(target, current="master", default="master")
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "branch_workflow_posture" in payload["schema"]["shared_fields"]
+    posture = payload["branch_workflow_posture"]
+    assert posture["status"] == "present"
+    assert posture["current_branch"] == "master"
+    assert posture["default_branch"] == "master"
+    assert posture["on_default_branch"] is True
+    assert posture["risk"] == "default-branch-commit-risk"
+    assert "do not switch branches unless the user decides" in posture["recommended_next_action"]
+
+
+def test_preflight_surfaces_non_default_branch_posture(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _set_git_branch(target, current="feature/work", default="master")
+
+    assert cli.main(["preflight", "--target", str(target), "--active-only", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    posture = payload["branch_workflow_posture"]
+    assert posture["status"] == "present"
+    assert posture["current_branch"] == "feature/work"
+    assert posture["default_branch"] == "master"
+    assert posture["on_default_branch"] is False
+    assert posture["risk"] == "normal"
+
+
 def test_report_handles_modules_with_empty_findings_lists(tmp_path: Path, monkeypatch, capsys) -> None:
     from repo_memory_bootstrap import installer as memory_installer
     from repo_planning_bootstrap import installer as planning_installer
@@ -4453,6 +4491,14 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
 
 def _init_git_repo(target: Path) -> None:
     (target / ".git").mkdir(exist_ok=True)
+
+
+def _set_git_branch(target: Path, *, current: str, default: str) -> None:
+    (target / ".git" / "HEAD").write_text(f"ref: refs/heads/{current}\n", encoding="utf-8")
+    (target / ".git" / "refs" / "remotes" / "origin" / "HEAD").write_text(
+        f"ref: refs/remotes/origin/{default}\n",
+        encoding="utf-8",
+    )
 
 
 def _write(path: Path, content: str, encoding: str = "utf-8") -> None:

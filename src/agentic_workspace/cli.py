@@ -2423,6 +2423,7 @@ def _run_report_command(
         memory_installed="memory" in installed_modules,
     )
     execution_shape = _execution_shape_payload(config=config, module_reports=module_reports)
+    branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
     closeout_trust = _report_closeout_trust_payload(module_reports=module_reports)
     return {
         "kind": "workspace-report/v1",
@@ -2438,6 +2439,7 @@ def _run_report_command(
             bias_payload=_optimization_bias_payload(config.optimization_bias),
             surface="report",
         ),
+        "branch_workflow_posture": branch_workflow_posture,
         "execution_shape": execution_shape,
         "agent_configuration_system": _agent_configuration_report_payload(
             config=config,
@@ -2539,6 +2541,7 @@ def _run_preflight_command(
 
     active_state = _preflight_active_state_payload(target_root=target_root)
     planning_record = active_state.get("planning_record", {"status": "unavailable"})
+    branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
 
     if active_only:
         # Return only compact active state for polling/monitoring.
@@ -2551,6 +2554,7 @@ def _run_preflight_command(
             "issued_at": issued_at,
             "preflight_token": preflight_token,
             "timestamp_hint": "Run this periodically to poll current active state without startup overhead.",
+            "branch_workflow_posture": branch_workflow_posture,
             "active_planning_state": active_state,
             "planning_record": planning_record if isinstance(planning_record, dict) else {"status": "unavailable"},
         }
@@ -2579,8 +2583,94 @@ def _run_preflight_command(
             "optimization_bias": config_payload.get("optimization_bias"),
             "agent_instructions_file": config_payload.get("workspace", {}).get("agent_instructions_file", "AGENTS.md"),
         },
+        "branch_workflow_posture": branch_workflow_posture,
         "active_planning_state": active_state,
     }
+
+
+def _branch_workflow_posture_payload(*, target_root: Path) -> dict[str, Any]:
+    rule = (
+        "Staying on the current branch is separate from being safe to implement, commit, or push there; "
+        "surface default-branch posture before broad implementation or push."
+    )
+    git_dir = _git_metadata_dir(target_root=target_root)
+    if git_dir is None:
+        return {
+            "status": "unavailable",
+            "reason": "target is not a git worktree or git metadata is unavailable",
+            "advisory_only": True,
+            "rule": rule,
+        }
+
+    current_branch = _read_symbolic_ref(git_dir=git_dir, ref_name="HEAD", prefix="refs/heads/")
+    default_branch = _read_symbolic_ref(git_dir=git_dir, ref_name="refs/remotes/origin/HEAD", prefix="refs/remotes/origin/")
+    sources = [".git/HEAD"]
+    if default_branch:
+        sources.append(".git/refs/remotes/origin/HEAD")
+
+    if not current_branch:
+        return {
+            "status": "detached-or-unknown",
+            "current_branch": "",
+            "default_branch": default_branch or "",
+            "on_default_branch": False,
+            "risk": "unknown",
+            "advisory_only": True,
+            "rule": rule,
+            "sources": sources,
+            "recommended_next_action": "Inspect git branch state before implementation, commit, or push.",
+        }
+
+    default_branch_known = bool(default_branch)
+    on_default_branch = default_branch_known and current_branch == default_branch
+    likely_default_name = current_branch in {"main", "master", "trunk"}
+    risk = "default-branch-commit-risk" if on_default_branch or (not default_branch_known and likely_default_name) else "normal"
+    if risk == "default-branch-commit-risk":
+        recommended_next_action = "Make the default-branch posture explicit before implementation, commit, or push; do not switch branches unless the user decides."
+    else:
+        recommended_next_action = "Continue normal branch-aware workflow; keep commit and push posture explicit before closeout."
+
+    return {
+        "status": "present",
+        "current_branch": current_branch,
+        "default_branch": default_branch or "",
+        "default_branch_known": default_branch_known,
+        "on_default_branch": on_default_branch,
+        "risk": risk,
+        "advisory_only": True,
+        "rule": rule,
+        "sources": sources,
+        "recommended_next_action": recommended_next_action,
+    }
+
+
+def _git_metadata_dir(*, target_root: Path) -> Path | None:
+    git_path = target_root / ".git"
+    if git_path.is_dir():
+        return git_path
+    if not git_path.is_file():
+        return None
+    text = git_path.read_text(encoding="utf-8", errors="replace").strip()
+    if not text.startswith("gitdir:"):
+        return None
+    raw_path = text.split(":", 1)[1].strip()
+    git_dir = Path(raw_path)
+    if not git_dir.is_absolute():
+        git_dir = (target_root / git_dir).resolve()
+    return git_dir if git_dir.exists() else None
+
+
+def _read_symbolic_ref(*, git_dir: Path, ref_name: str, prefix: str) -> str:
+    ref_path = git_dir / ref_name
+    if not ref_path.exists():
+        return ""
+    text = ref_path.read_text(encoding="utf-8", errors="replace").strip()
+    if not text.startswith("ref:"):
+        return ""
+    ref_target = text.split(":", 1)[1].strip()
+    if not ref_target.startswith(prefix):
+        return ""
+    return ref_target[len(prefix) :].strip()
 
 
 def _package_boundary_payload(*, target_root: Path) -> dict[str, Any]:

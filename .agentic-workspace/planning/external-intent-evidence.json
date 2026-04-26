@@ -558,6 +558,15 @@
       "kind": "issue",
       "parent_id": "#309",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#330",
+      "title": "[Review]: Make promote-to-plan support compact TOML active items",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
     }
   ]
 }

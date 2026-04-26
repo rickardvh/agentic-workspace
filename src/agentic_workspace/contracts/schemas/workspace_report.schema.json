@@ -12,6 +12,7 @@
     "installed_modules",
     "health",
     "output_contract",
+    "branch_workflow_posture",
     "agent_configuration_system",
     "agent_configuration_queries",
     "workflow_obligations",
@@ -86,6 +87,9 @@
       "type": "string"
     },
     "output_contract": {
+      "type": "object"
+    },
+    "branch_workflow_posture": {
       "type": "object"
     },
     "agent_configuration_system": {

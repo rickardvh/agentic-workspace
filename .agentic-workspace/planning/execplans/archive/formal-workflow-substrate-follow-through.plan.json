@@ -1,0 +1,221 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Formal Workflow Substrate Follow Through",
+  "goal": [
+    "Resolve #327 by adding the smallest package-backed branch-posture signal that makes default-branch commit or push risk visible before implementation closeout.",
+    "Keep the result in the formal workflow/config/reporting substrate rather than adding another prose-only instruction."
+  ],
+  "non_goals": [
+    "Do not switch branches.",
+    "Do not build a heavyweight git policy engine.",
+    "Do not forbid direct default-branch work when the user has explicitly kept the agent on that branch."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Package compact startup/report surfaces distinguish staying on the current branch from being safe to implement, commit, and push on the default branch.",
+      "constraints": "Use current repo branch state; preserve user authority over branch switching; keep the signal advisory unless repo policy says otherwise.",
+      "latitude": "Choose the smallest derived report/preflight/config field and validation coverage needed to make the risk visible.",
+      "escalation": "Stop if the change would require enforcing a branching policy instead of surfacing posture and risk."
+    },
+    "execution": {
+      "milestone": "default-branch-posture-signal",
+      "status": "completed",
+      "next_step": "Archive this plan, close #327, and continue to local-only-memory-continuity.",
+      "proof": "Focused tests plus live package preflight/report show current branch, default-branch status, and commit/push risk."
+    },
+    "scope": {
+      "touched": [
+        "packages/workspace or root workspace reporting source",
+        "workspace/package tests",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/formal-workflow-substrate-follow-through.plan.json"
+      ],
+      "invariants": [
+        "No branch switch.",
+        "No hidden git mutation in read-only report/preflight surfaces.",
+        "User branch authority remains explicit."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "formal workflow substrate follow-through",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane formal-workflow-substrate-follow-through",
+    "parent lane": "formal-workflow-substrate-follow-through"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Branch posture becomes a first-class compact workflow signal.",
+    "intentionally deferred": "Broader workflow definition migration beyond #327.",
+    "discovered implications": "Dogfooding showed `promote-to-plan` does not understand compact TOML active items; filed #330 and routed it to the graceful-partial-compliance lane.",
+    "proof achieved now": "preflight and report now expose `branch_workflow_posture` with current branch, default branch, on-default status, advisory risk, and branch-authority guidance",
+    "validation still needed": "archive cleanup and final commit/push",
+    "next likely slice": "local-only-memory-continuity"
+  },
+  "intent_interpretation": {
+    "literal request": "execute all planned work lane by lane and dogfood the package",
+    "inferred intended outcome": "complete the second roadmap lane's concrete #327 follow-up before moving on",
+    "chosen concrete what": "surface current/default branch posture and advisory risk in compact package outputs",
+    "interpretation distance": "low",
+    "review guidance": "reject work that only adds prose reminders or silently changes branch behavior"
+  },
+  "execution_bounds": {
+    "allowed paths": "workspace reporting/preflight source and tests; package docs only if output contract changes; active planning state and this execplan",
+    "max changed files": "8",
+    "required validation commands": "focused pytest for changed package; uv run agentic-workspace preflight --format json; uv run agentic-workspace report --target . --format json; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "ask-before-refactor threshold": "stop before broad CLI restructuring or branch policy enforcement",
+    "stop before touching": "unrelated memory/planning lane implementation"
+  },
+  "stop_conditions": {
+    "stop when": "the branch posture signal is shipped, dogfooded, committed, pushed, and #327 is closed or a follow-up is opened for any residual",
+    "escalate when boundary reached": "default-branch policy would require a user decision instead of package-derived reporting",
+    "escalate on scope drift": "work expands into full workflow engine design",
+    "escalate on proof failure": "live compact outputs still hide default-branch risk"
+  },
+  "context_budget": {
+    "live working set": "#327, #278, preflight/report implementation, active execplan, package tests",
+    "recoverable later": "full issue history, old workflow docs",
+    "externalize before shift": "update this execplan execution_run and immediate_next_action",
+    "pre-work config pull": "uv run agentic-workspace preflight/report/ownership were run before promotion",
+    "pre-work memory pull": "not required; task is workflow/reporting substrate and current planning context is sufficient",
+    "tiny resumability note": "add current/default branch posture to compact workflow outputs without changing branch switching behavior",
+    "context-shift triggers": "package report implementation is larger than expected or tests reveal hidden branch mutation"
+  },
+  "delegated_judgment": {
+    "requested outcome": "make default-branch commit/push risk visible through the package",
+    "hard constraints": "stay on current branch; preserve user authority over branch switching; keep read-only outputs read-only",
+    "agent may decide locally": "exact output field names and whether preflight, report, or both expose the signal",
+    "escalate when": "risk handling would become enforcement or require a branch switch"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#327",
+      "label": "default-branch commit risk",
+      "role": "primary-intent",
+      "locator": "github issue #327"
+    },
+    {
+      "kind": "issue",
+      "target": "#278",
+      "label": "formal workflow substrate",
+      "role": "parent-intent",
+      "locator": "github issue #278"
+    },
+    {
+      "kind": "planning-state",
+      "target": ".agentic-workspace/planning/state.toml",
+      "label": "roadmap lane",
+      "role": "lane-continuation",
+      "locator": "roadmap.lanes.formal-workflow-substrate-follow-through"
+    }
+  ],
+  "active_milestone": {
+    "id": "default-branch-posture-signal",
+    "status": "completed",
+    "scope": "workspace reporting/preflight branch posture",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan with cleanup.",
+    "Close #327 after commit and push."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/formal-workflow-substrate-follow-through.plan.json"
+  ],
+  "invariants": [
+    "No branch switch.",
+    "Compact outputs remain machine-readable.",
+    "Current branch posture is advisory and explicit."
+  ],
+  "contract_decisions_to_freeze": [
+    "Default-branch risk is a workflow posture signal, not permission to switch branches."
+  ],
+  "open_questions_to_close": [
+    "Which compact output should carry branch posture: preflight, report, or both?"
+  ],
+  "validation_commands": [
+    "uv run pytest <focused tests>",
+    "uv run agentic-workspace preflight --format json",
+    "uv run agentic-workspace report --target . --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "git diff --check"
+  ],
+  "required_tools": [
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "Compact package output includes current branch and default-branch risk when applicable.",
+    "Tests cover default-branch and non-default-branch posture.",
+    "Live dogfood output on this repo exposes that current branch is master/default before commit/push."
+  ],
+  "execution_run": {
+    "run status": "not-run-yet",
+    "executor": "Codex",
+    "handoff source": "active execplan",
+    "what happened": "",
+    "scope touched": "",
+    "changed surfaces": "",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"branch_posture or default_branch_commit_risk or preflight_surfaces_non_default_branch_posture or report_real_init_summarizes_combined_workspace_state or preflight_command_full_returns_bundled_takeover_context\"; uv run ruff check src/agentic_workspace/cli.py src/agentic_workspace/workspace_output.py tests/test_workspace_cli.py; uv run pytest tests/test_workspace_cli.py -q -k \"report or preflight\"; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; git diff --check; uv run agentic-workspace preflight --format json; uv run agentic-workspace report --target . --format json; uv run agentic-workspace summary --format json",
+    "result for continuation": "Default-branch posture is now visible before commit/push; #330 owns the separate compact-TOML promote-to-plan helper gap.",
+    "next step": "Archive this plan and close #327."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; branch switching behavior was not changed",
+    "proof status": "satisfied",
+    "intent served": "yes; compact outputs now surface default-branch commit risk",
+    "config compliance": "preflight/report/ownership/summary were used before and during implementation",
+    "misinterpretation risk": "low; the signal is advisory and preserves user branch authority",
+    "follow-on decision": "#330 filed for promote-to-plan compact TOML support"
+  },
+  "proof_report": {
+    "validation proof": "focused report/preflight tests, contract tooling check, maintainer-surface check, planning-surface check, live preflight/report/summary dogfood",
+    "proof achieved now": "workspace preflight and report expose `branch_workflow_posture` and report this repo as `master` on default branch with `default-branch-commit-risk`",
+    "evidence for \"proof achieved\" state": "src/agentic_workspace/cli.py branch posture projection, report contract/schema updates, workspace text rendering, and tests in tests/test_workspace_cli.py"
+  },
+  "intent_satisfaction": {
+    "original intent": "Surface default-branch commit risk before implementation or push.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Live package output now distinguishes current branch, default branch, and default-branch risk without switching branches.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make weaker agents safer and bounded execution cheaper to start, continue, review, and finish.",
+    "slice shaping bias": "Expose one compact, actionable posture signal instead of adding another prose rule.",
+    "broader-lane validation question": "Does the workflow substrate now prevent the branch-risk ambiguity that caused #327?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "the requested branch-risk signal is in compact package outputs and dogfooded on the current default branch",
+    "evidence carried forward": "active execplan, branch_workflow_posture output, tests, and #330",
+    "reopen trigger": "compact output hides default-branch posture during future implementation"
+  },
+  "execution_summary": {
+    "outcome delivered": "branch_workflow_posture is exposed through preflight and report, including default-branch commit risk",
+    "validation confirmed": "focused tests, contract tooling, maintainer surfaces, planning surfaces, diff check, and live dogfood passed",
+    "follow-on routed to": "#330 and graceful-partial-compliance for promote-to-plan compact TOML support",
+    "post-work posterity capture": "active execplan plus #330 issue",
+    "knowledge promoted (Memory/Docs/Config)": "report contract/schema and compact package output",
+    "resume from": "local-only-memory-continuity"
+  },
+  "drift_log": [
+    "2026-04-26: Promoted the second roadmap lane for #327 and noted promote-to-plan compact-TOML friction.",
+    "2026-04-26: Added branch_workflow_posture to preflight/report and routed promote-to-plan compact-state friction to #330."
+  ]
+}
