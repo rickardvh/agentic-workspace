@@ -42,14 +42,14 @@
   },
   "intent_continuity": {
     "larger intended outcome": "make package dogfooding findings become product behavior rather than one-off cleanup",
-    "this slice completes the larger intended outcome": "no",
-    "continuation surface": ".agentic-workspace/planning/state.toml and open issues #332-#336",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
     "parent lane": "planning-state-hygiene-followthrough"
   },
   "required_continuation": {
-    "required follow-on for the larger intended outcome": "yes",
-    "owner surface": ".agentic-workspace/planning/state.toml",
-    "activation trigger": "continue through #332-#336 until all are closed or explicitly rerouted"
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
   },
   "intent_interpretation": {
     "literal request": "Ingest issues and implement them end-to-end.",
@@ -95,15 +95,14 @@
   ],
   "active_milestone": {
     "id": "provider-agnostic-reconcile",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "#333 and #334",
     "ready": "yes",
     "blocked": "no",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Commit and push the #333/#334 reconcile milestone.",
-    "Close #333 and #334 with proof, then archive this completed plan."
+    "Archive this completed plan with package cleanup."
   ],
   "blockers": ["None."],
   "touched_paths": [
@@ -131,24 +130,24 @@
     "#334 current external-work signals are separated from historical audit references without GitHub assumptions."
   ],
   "execution_run": {
-    "run status": "in-progress",
+    "run status": "completed",
     "executor": "Codex",
     "handoff source": "active execplan plus local Codex snapshot",
     "what happened": "Implemented #332/#335, #336, and #333/#334: completed live execplans now surface archive_accumulation_drift, archive-plan refusal details name accepted closeout values, compact TOML state is dogfooded through summary/promote/archive, provider-agnostic reconcile is available through agentic-planning-bootstrap and agentic-workspace, and intent validation now separates current external-work state from historical audit references.",
     "scope touched": "planning installer and CLI, workspace CLI command manifest/contracts, tests, and active planning state",
     "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/src/repo_planning_bootstrap/cli.py; packages/planning/tests/test_installer.py; src/agentic_workspace/cli.py; src/agentic_workspace/contracts/cli_commands.json; src/agentic_workspace/contracts/operation_contracts.json; src/agentic_workspace/contracts/operation_primitives.json; src/agentic_workspace/contracts/operations/reconcile.report.json; tests/test_workspace_summary_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/planning-state-hygiene-followthrough.plan.json",
     "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"archive_execplan or planning_summary_exposes_closure_evidence or planning_surface_health\"; uv run pytest packages/planning/tests/test_installer.py -q -k \"dogfoods_compact_state or promote_todo_item_to_execplan or archive_execplan or planning_summary_exposes_closure_evidence or planning_surface_health\"; uv run pytest packages/planning/tests/test_installer.py tests/test_workspace_summary_cli.py tests/test_workspace_cli.py tests/test_contract_tooling.py -q -k \"intent_validation or planning_reconcile or cli_reconcile or workspace_reconcile or workspace_summary_json_defaults or cli_commands or defaults_command\"; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/src/repo_planning_bootstrap/cli.py packages/planning/tests/test_installer.py src/agentic_workspace/cli.py tests/test_workspace_summary_cli.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace reconcile --format json; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
-    "result for continuation": "#333 and #334 are ready to close after commit/push; then archive this completed plan.",
-    "next step": "Commit and push #333/#334, close those issues, then archive the completed plan."
+    "result for continuation": "#332, #333, #334, #335, and #336 are implemented, pushed, and closed; #230 remains open as the next broad product-compression candidate.",
+    "next step": "Archive this completed plan and return to open candidate planning state."
   },
   "finished_run_review": {
     "review status": "completed",
     "scope respected": "yes",
     "proof status": "passed",
-    "intent served": "yes for implementation; issue closure and plan archive remain as closeout steps",
+    "intent served": "yes",
     "config compliance": "followed compact summary/report/reconcile/checker workflow and stayed on master per user correction",
     "misinterpretation risk": "low",
-    "follow-on decision": "close #333/#334 after push, then archive this plan"
+    "follow-on decision": "archive this plan; leave #230 open"
   },
   "proof_report": {
     "validation proof": "Focused pytest, ruff, contract tooling checker, planning checker, workspace reconcile dogfood output, compact summary dogfood output, and git diff whitespace check passed.",
@@ -157,9 +156,9 @@
   },
   "intent_satisfaction": {
     "original intent": "Implement the freshly ingested package dogfooding issues end-to-end.",
-    "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "pending",
-    "unsolved intent passed to": ".agentic-workspace/planning/state.toml"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#332, #333, #334, #335, and #336 were implemented, validated, pushed, and closed with proof comments.",
+    "unsolved intent passed to": "none"
   },
   "system_intent_alignment": {
     "relevant system intent": "Keep agent work restartable, reviewable, compact, and grounded in structured local surfaces.",
@@ -168,20 +167,20 @@
     "intent evidence source": "#332-#336"
   },
   "closure_check": {
-    "slice status": "implemented",
-    "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "the implementation is complete but issue closure and plan archive are still pending",
-    "evidence carried forward": "execution_run and proof_report list the implemented surfaces and validations",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "the planned dogfooding follow-through issues #332-#336 are implemented, pushed, and closed; broad #230 was explicitly outside this plan",
+    "evidence carried forward": "execution_run, proof_report, commit 793d583, and issue closeout comments carry the implementation and validation evidence",
     "reopen trigger": "reopen if provider-specific assumptions enter core reconcile behavior or compact summary hides current external-work state"
   },
   "execution_summary": {
     "outcome delivered": "Implemented #332-#336 package dogfooding follow-through behavior through the final #333/#334 reconcile milestone.",
     "validation confirmed": "Focused tests, ruff, contract tooling checker, planning checker, reconcile dogfood output, summary dogfood output, and git diff check passed.",
-    "follow-on routed to": "close #333/#334 and archive this execplan after the milestone commit is pushed",
+    "follow-on routed to": "#230 remains open for future product-compression work; no #332-#336 follow-on remains",
     "post-work posterity capture": "Provider-agnostic reconcile and current-vs-historical external work separation are now covered by package and workspace CLI tests.",
-    "knowledge promoted (Memory/Docs/Config)": "pending",
-    "resume from": "commit-push-close-archive"
+    "knowledge promoted (Memory/Docs/Config)": "No new memory was needed; behavior is captured in package/workspace code, command contracts, tests, and issue closeout comments.",
+    "resume from": "#230 or newly ingested issues"
   },
   "drift_log": [
     "2026-04-26: Promoted #332-#336 after local Codex integration setup and issue ingestion.",
