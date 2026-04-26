@@ -31,6 +31,10 @@ forbid_core_docs_depend_on_memory = false
 # the first evidence-backed trust anchors for durable notes: they say what currently
 # grounds the note and what should make it questionable or stale when repo evidence changes.
 # These fields are advisory only; existing manifests remain valid without them.
+# Optional structured durable facts live under [durable_facts."<id>"].
+# Use them only for compact facts that save rediscovery without requiring a prose note read.
+# Required fields: summary, owner, authority_class, route_keys or touched_surfaces,
+# evidence, promotion, demotion_or_expiry, and status.
 
 [notes.".agentic-workspace/memory/repo/index.md"]
 note_type = "routing"
@@ -383,3 +387,14 @@ preferred_remediation = "test"
 improvement_candidate = true
 improvement_note = "If recurring failures persist, consider a regression test, validation, or lint rule before growing the note."
 elimination_target = "shrink"
+
+[durable_facts."memory-owner-boundary"]
+summary = "Memory owns durable rediscovery-saving repo facts, not active sequencing, backlog state, or workflow policy."
+owner = "memory"
+authority_class = "canonical"
+route_keys = ["memory", "planning", "workflow-policy"]
+touched_surfaces = [".agentic-workspace/memory/**", ".agentic-workspace/planning/**", "AGENTS.md"]
+evidence = [".agentic-workspace/memory/WORKFLOW.md", ".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/manifest.toml"]
+promotion = "Promote to canonical repo docs if this boundary must guide humans outside Memory routing."
+demotion_or_expiry = "Remove or demote if the boundary stops reducing routed note reads or becomes enforced elsewhere."
+status = "active"

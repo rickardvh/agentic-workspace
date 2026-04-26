@@ -20,16 +20,17 @@
       "escalation": "Stop if the work requires deleting major public concepts or redesigning all reporting, planning, or memory at once."
     },
     "execution": {
-      "milestone": "memory-durable-fact-routing",
+      "milestone": "operational-compression-measures",
       "status": "in-progress",
-      "next_step": "Implement #344 by shrinking ordinary Memory pulls through structured durable-fact routing.",
-      "proof": "Focused workspace CLI tests, report dogfood, ruff for touched Python, contract tooling, planning checker, summary/reconcile, and git diff check."
+      "next_step": "Implement #346 by making operational-compression measures falsifiable without adding dashboards.",
+      "proof": "Focused package tests, report dogfood, ruff for touched Python, maintainer surfaces, package checks, planning checker, summary/reconcile, and git diff check."
     },
     "scope": {
       "touched": [
         "src/agentic_workspace/",
         "tests/",
         "src/agentic_workspace/contracts/",
+        "packages/memory/",
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/external-intent-evidence.json",
         ".agentic-workspace/planning/execplans/product-compression-followups.plan.json"
@@ -97,16 +98,16 @@
     { "kind": "issue", "target": "#346", "label": "operational compression measures", "role": "milestone" }
   ],
   "active_milestone": {
-    "id": "memory-durable-fact-routing",
+    "id": "operational-compression-measures",
     "status": "in-progress",
-    "scope": "#344",
+    "scope": "#346",
     "ready": "yes",
     "blocked": "no",
-    "optional_deps": "#341/#345 report router and selector support landed; #342 surface-value review gate landed; #343 closeout distillation landed locally"
+    "optional_deps": "#341/#345 report router and selector support landed; #342 surface-value review gate landed; #343 closeout distillation landed; #344 Memory durable-fact routing landed locally"
   },
   "immediate_next_action": [
-    "Shrink ordinary Memory pulls through a structured durable-fact routing path.",
-    "Keep Memory ownership intact and avoid host-specific behavior."
+    "Expose falsifiable operational-compression measures without adding a dashboard.",
+    "Keep measures compact, routeable, and tied to existing package outputs."
   ],
   "blockers": ["None."],
   "touched_paths": [
@@ -119,11 +120,14 @@
     "Checked-in planning state remains the active authority."
   ],
   "validation_commands": [
-    "uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q -k \"report or defaults_command_reports_machine_readable_default_routes_as_json or contract\"",
-    "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py",
-    "uv run python scripts/check/check_contract_tooling_surfaces.py",
-    "uv run agentic-workspace report --target . --format json",
-    "uv run agentic-workspace report --target . --profile full --format json",
+    "uv run pytest packages/memory/tests/test_installer.py packages/memory/tests/test_packaging.py -q -k \"durable_fact or memory_report or payload\"",
+    "uv run ruff check packages/memory/src/repo_memory_bootstrap/installer.py packages/memory/src/repo_memory_bootstrap/_installer_memory.py packages/memory/src/repo_memory_bootstrap/_installer_shared.py packages/memory/tests/test_installer.py",
+    "make maintainer-surfaces",
+    "uv run agentic-memory-bootstrap route --target . --surface memory planning --format json",
+    "uv run agentic-memory-bootstrap report --target . --format json",
+    "uv run agentic-memory-bootstrap route-report --target . --format json",
+    "uv run agentic-memory-bootstrap verify-payload --target . --format json",
+    "uv run python scripts/check/check_memory_freshness.py",
     "uv run agentic-workspace summary --format json",
     "uv run agentic-workspace reconcile --format json",
     "uv run python scripts/check/check_planning_surfaces.py",
@@ -143,26 +147,26 @@
     "run status": "in-progress",
     "executor": "Codex",
     "handoff source": "preflight, summary, reconcile, live GitHub issue state, system-intent future-work review",
-    "what happened": "Implemented #343 by adding closeout_distillation_contract to planning summary/report. The contract buckets closeout residue into discard, continuation, Memory, config/check, docs, and issue follow-up, and makes archive the recovery/proof surface rather than the normal durable-learning carrier.",
-    "scope touched": "planning package summary/report implementation, planning template surface, planning tests, active execplan",
-    "changed surfaces": ".agentic-workspace/planning/execplans/product-compression-followups.plan.json; .agentic-workspace/planning/execplans/TEMPLATE.plan.json; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py",
-    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"closeout_distillation or planning_summary_exposes_finished_work_inspection_contract\"; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace summary --format json --profile full; uv run agentic-workspace report --target . --section module_reports --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json; git diff --check",
-    "result for continuation": "#343 is ready to commit, push, and close after milestone commit.",
-    "next step": "Implement #344 Memory durable-fact routing."
+    "what happened": "Implemented #344 by adding manifest-backed durable_facts records to Memory. Routing now surfaces matching facts directly, the memory report exposes durable_facts and measures whether matched fact pulls are smaller than routed note pulls, and the first packaged fact preserves the Memory/planning owner boundary without making Memory own active sequencing or workflow policy.",
+    "scope touched": "memory package source/tests, memory README, shipped payload manifest, installed manifest, routing fixture, active execplan",
+    "changed surfaces": ".agentic-workspace/memory/repo/manifest.toml; packages/memory/README.md; packages/memory/bootstrap/.agentic-workspace/memory/repo/manifest.toml; packages/memory/memory/manifest.toml; packages/memory/src/repo_memory_bootstrap/_installer_memory.py; packages/memory/src/repo_memory_bootstrap/_installer_shared.py; packages/memory/src/repo_memory_bootstrap/installer.py; packages/memory/tests/test_installer.py; tests/fixtures/routing/durable-fact-memory-boundary.json",
+    "validations run": "uv run pytest packages/memory/tests/test_installer.py -q -k \"durable_fact or memory_report_exposes_habitual_pull_boundary or memory_report_derives_compact_module_state\"; uv run ruff check packages/memory/src/repo_memory_bootstrap/installer.py packages/memory/src/repo_memory_bootstrap/_installer_memory.py packages/memory/src/repo_memory_bootstrap/_installer_shared.py packages/memory/tests/test_installer.py; uv run agentic-memory-bootstrap route --target . --surface memory planning --format json; uv run agentic-memory-bootstrap report --target . --format json; uv run agentic-memory-bootstrap route-report --target . --format json; uv run agentic-memory-bootstrap verify-payload --target . --format json; uv run python scripts/check/check_memory_freshness.py; make maintainer-surfaces; uv run pytest packages/memory/tests/test_installer.py packages/memory/tests/test_packaging.py -q -k \"durable_fact or memory_report or payload\"",
+    "result for continuation": "#344 is ready to commit, push, and close after milestone commit.",
+    "next step": "Implement #346 operational-compression measures."
   },
   "finished_run_review": {
-    "review status": "completed for #343 milestone",
+    "review status": "completed for #344 milestone",
     "scope respected": "yes",
     "proof status": "passed",
-    "intent served": "closeout learning is bucketed into live owner surfaces or intentional discard instead of depending on archived execplans",
-    "config compliance": "used package summary/report/reconcile, maintainer surfaces, planning checker, and contract tooling",
+    "intent served": "ordinary Memory can answer the durable Memory/planning boundary through a structured fact route before widening into prose notes",
+    "config compliance": "used package summary/reconcile, Memory route/report/route-report/verify-payload, maintainer surfaces, memory freshness, focused tests, and ruff",
     "misinterpretation risk": "low",
-    "follow-on decision": "continue active lane with #344"
+    "follow-on decision": "continue active lane with #346"
   },
   "proof_report": {
-    "validation proof": "Focused planning tests, ruff, maintainer surfaces, planning checks, contract tooling, package summary/report dogfooding, reconcile, and diff check passed for #343.",
-    "proof achieved now": "yes-for-closeout-distillation",
-    "evidence for \"proof achieved\" state": "agentic-workspace summary --format json emitted closeout_distillation_contract with discard, continuation, and issue_follow_up buckets; report module_reports exposed the same planning closeout_distillation signal."
+    "validation proof": "Focused Memory tests, ruff, maintainer surfaces, Memory route/report/route-report/verify-payload dogfooding, memory freshness, and package payload tests passed for #344.",
+    "proof achieved now": "yes-for-memory-durable-fact-routing",
+    "evidence for \"proof achieved\" state": "agentic-memory-bootstrap report --target . --format json emitted durable_facts with one active record, matched evidence, matched_case_count=1, and durable_facts_smaller_or_more_precise=true; route --surface memory planning surfaced memory-owner-boundary directly."
   },
   "intent_satisfaction": {
     "original intent": "Ingest and implement the new issues.",
@@ -180,46 +184,52 @@
     "slice status": "in-progress",
     "larger-intent status": "open",
     "closure decision": "keep-active",
-    "why this decision is honest": "#341/#345/#342 are closed and #343 landed locally, but #344/#346 remain open and #230 is broader than this milestone.",
+    "why this decision is honest": "#341/#345/#342/#343 are closed and #344 landed locally, but #346 remains open and #230 is broader than this milestone.",
     "evidence carried forward": "active planning state and milestone validation proof",
     "reopen trigger": "new report/default/memory/planning surfaces increase default reading or framework feel without a repeated-cost reduction"
   },
   "execution_summary": {
-    "outcome delivered": "#343 closeout distillation implemented.",
+    "outcome delivered": "#344 Memory durable-fact routing implemented.",
     "validation confirmed": "yes",
-    "follow-on routed to": "#344 Memory durable-fact routing",
+    "follow-on routed to": "#346 operational-compression measures",
     "post-work posterity capture": "active execplan updated with proof and continuation",
-    "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "memory-durable-fact-routing"
+    "knowledge promoted (Memory/Docs/Config)": "first durable_facts manifest slice captures the Memory owner-boundary as structured routing data",
+    "resume from": "operational-compression-measures"
   },
   "closeout_distillation": {
     "buckets": {
       "discard": [
         {
-          "summary": "Local #343 implementation detail is not promoted; the durable learning is the package contract and regression test.",
+          "summary": "Local #344 implementation mechanics are not promoted beyond tests and package code; the durable learning is the manifest-backed fact contract and report evidence.",
           "owner": "discard",
           "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
         }
       ],
       "continuation": [
         {
-          "summary": "#344 Memory durable-fact routing remains the next product-compression slice.",
+          "summary": "#346 operational-compression measures remains the next product-compression slice.",
           "owner": ".agentic-workspace/planning/state.toml",
           "source": "execution_summary.follow-on routed to"
         }
       ],
-      "memory": [],
+      "memory": [
+        {
+          "summary": "Memory/planning ownership boundary is now represented as a routeable durable_fact in manifest.toml.",
+          "owner": ".agentic-workspace/memory/repo/manifest.toml",
+          "source": "durable_facts.memory-owner-boundary"
+        }
+      ],
       "config_check": [
         {
-          "summary": "Closeout distillation is enforced by planning summary/report tests and planning surface checks.",
-          "owner": "planning package tests",
-          "source": "packages/planning/tests/test_installer.py"
+          "summary": "Durable fact shape is enforced by Memory doctor checks and Memory report tests.",
+          "owner": "memory package tests",
+          "source": "packages/memory/tests/test_installer.py"
         }
       ],
       "docs": [],
       "issue_follow_up": [
         {
-          "summary": "#344 Memory routing and #346 compression measures remain open under #230.",
+          "summary": "#346 compression measures remains open under #230.",
           "owner": "external work evidence",
           "source": ".agentic-workspace/planning/external-intent-evidence.json"
         }
@@ -230,6 +240,7 @@
     "2026-04-26: Reingested #341-#346 and promoted the product-compression follow-up lane under #230.",
     "2026-04-26: Implemented #341/#345 by turning report into a default router with explicit full and section selectors; routed continuation to #342.",
     "2026-04-26: Implemented #342 by making surface-value review an ordinary proof --changed gate for durable surfaces; routed continuation to #343.",
-    "2026-04-26: Implemented #343 by adding closeout distillation buckets to planning summary/report; routed continuation to #344."
+    "2026-04-26: Implemented #343 by adding closeout distillation buckets to planning summary/report; routed continuation to #344.",
+    "2026-04-26: Implemented #344 by adding manifest-backed durable facts, direct durable-fact routing, and report measurements; routed continuation to #346."
   ]
 }

@@ -113,6 +113,7 @@ from repo_memory_bootstrap._installer_shared import (
     Action,
     CurrentNoteView,
     CurrentViewResult,
+    DurableFactRecord,
     InstallResult,
     MemoryManifest,
     MemoryNoteRecord,
@@ -954,6 +955,17 @@ def route_memory(
         surfaces=selected_surfaces,
         use_staleness=False,
     )
+    for fact in _route_durable_facts(manifest=manifest, files=files or [], surfaces=list(selected_surfaces)) if manifest else []:
+        result.add(
+            "current",
+            target_root / MANIFEST_PATH,
+            f"durable fact '{fact.fact_id}': {fact.summary}",
+            role="memory-durable-fact",
+            safety="safe",
+            source=f"{MANIFEST_PATH.as_posix()}#durable_facts.{fact.fact_id}",
+            category="safe-update",
+            match_source="durable-fact",
+        )
     suggestions.extend(
         (
             recommendation,
@@ -1860,7 +1872,115 @@ def _memory_trust_item(*, note: MemoryNoteRecord, target_root: Path) -> dict[str
     }
 
 
-def _memory_usefulness_audit(*, route_snapshot: InstallResult, remediation: InstallResult) -> dict[str, object]:
+def _route_durable_facts(
+    *,
+    manifest: MemoryManifest,
+    files: list[str] | None = None,
+    surfaces: list[str] | None = None,
+) -> list[DurableFactRecord]:
+    selected_surfaces = {_normalise_surface_name(surface) for surface in (surfaces or [])}
+    selected_surfaces.update(_infer_surfaces_from_paths(files or []))
+    if not selected_surfaces:
+        return []
+    matches: list[DurableFactRecord] = []
+    for fact in manifest.durable_facts:
+        fact_keys = set(fact.route_keys) | set(fact.touched_surfaces)
+        if fact_keys & selected_surfaces:
+            matches.append(fact)
+    return matches
+
+
+def _durable_fact_record_view(fact: DurableFactRecord, *, target_root: Path) -> dict[str, object]:
+    matched_evidence: list[str] = []
+    for pattern in fact.evidence:
+        if "*" in pattern:
+            if any(target_root.glob(pattern)):
+                matched_evidence.append(pattern)
+            continue
+        if (target_root / pattern).exists():
+            matched_evidence.append(pattern)
+    return {
+        "id": fact.fact_id,
+        "summary": fact.summary,
+        "owner": fact.owner,
+        "authority_class": fact.authority_class,
+        "route_keys": list(fact.route_keys),
+        "touched_surfaces": list(fact.touched_surfaces),
+        "evidence": list(fact.evidence),
+        "matched_evidence": matched_evidence,
+        "promotion": fact.promotion,
+        "demotion_or_expiry": fact.demotion_or_expiry,
+        "status": fact.status,
+    }
+
+
+def _durable_fact_routing_view(
+    *,
+    manifest: MemoryManifest,
+    route_snapshot: InstallResult,
+    target_root: Path,
+) -> dict[str, object]:
+    summary = route_snapshot.route_report_summary or {}
+    fixture_results_obj = route_snapshot.route_report_fixture_results or []
+    fixture_results = [item for item in fixture_results_obj if isinstance(item, dict)]
+    matched_counts: list[int] = []
+    matched_cases: list[dict[str, object]] = []
+    for item in fixture_results:
+        files = [str(value) for value in item.get("files", [])] if isinstance(item.get("files"), list) else []
+        surfaces = [str(value) for value in item.get("surfaces", [])] if isinstance(item.get("surfaces"), list) else []
+        matches = _route_durable_facts(manifest=manifest, files=files, surfaces=surfaces)
+        matched_counts.append(len(matches))
+        if matches:
+            matched_cases.append(
+                {
+                    "case_id": str(item.get("case_id", "")),
+                    "matched_fact_ids": [fact.fact_id for fact in matches],
+                    "matched_fact_count": len(matches),
+                }
+            )
+
+    working_set = summary.get("working_set", {}) if isinstance(summary, dict) else {}
+    average_routed_note_count = float(cast(dict[str, Any], working_set).get("average_routed_note_count", 0) or 0)
+    average_routed_fact_count = sum(matched_counts) / len(matched_counts) if matched_counts else 0.0
+    smaller_or_more_precise = bool(matched_cases and average_routed_fact_count < average_routed_note_count)
+    return {
+        "kind": "agentic-memory/durable-facts/v1",
+        "status": "active" if manifest.durable_facts else "absent",
+        "owner_surface": MANIFEST_PATH.as_posix(),
+        "memory_role": "durable-fact-routing-only",
+        "rule": "Use durable facts as a small structured routing slice for expensive-to-rediscover facts; Memory still does not own active sequencing or workflow policy.",
+        "record_contract": {
+            "required_fields": [
+                "summary",
+                "owner",
+                "authority_class",
+                "route_keys",
+                "touched_surfaces",
+                "evidence",
+                "promotion",
+                "demotion_or_expiry",
+            ],
+            "route_inputs": ["route_keys", "touched_surfaces"],
+            "authority_classes": ["canonical", "advisory", "supporting"],
+        },
+        "records": [_durable_fact_record_view(fact, target_root=target_root) for fact in manifest.durable_facts],
+        "routing_measure": {
+            "fixture_count": len(fixture_results),
+            "matched_case_count": len(matched_cases),
+            "average_routed_note_count": average_routed_note_count,
+            "average_routed_fact_count": average_routed_fact_count,
+            "smaller_or_more_precise": smaller_or_more_precise,
+            "matched_cases": matched_cases[:5],
+        },
+    }
+
+
+def _memory_usefulness_audit(
+    *,
+    route_snapshot: InstallResult,
+    remediation: InstallResult,
+    durable_facts: dict[str, object] | None = None,
+) -> dict[str, object]:
     summary = route_snapshot.route_report_summary or {}
     feedback = summary.get("feedback", {}) if isinstance(summary, dict) else {}
     fixtures = summary.get("fixtures", {}) if isinstance(summary, dict) else {}
@@ -1874,6 +1994,8 @@ def _memory_usefulness_audit(*, route_snapshot: InstallResult, remediation: Inst
     low_confidence = int(cast(dict[str, Any], routing_confidence).get("low_confidence_fixture_count", 0) or 0)
     over_target = int(cast(dict[str, Any], working_set).get("fixture_count_exceeding_target", 0) or 0)
     promotion_candidates = int(remediation_counts.get("candidate", 0) or 0)
+    durable_fact_measure = durable_facts.get("routing_measure", {}) if isinstance(durable_facts, dict) else {}
+    smaller_or_more_precise = bool(cast(dict[str, Any], durable_fact_measure).get("smaller_or_more_precise", False))
 
     status = "measured"
     summary_text = "Memory usefulness is being measured through routing and remediation signals."
@@ -1883,6 +2005,9 @@ def _memory_usefulness_audit(*, route_snapshot: InstallResult, remediation: Inst
     elif low_confidence or over_target:
         status = "attention-needed"
         summary_text = "Routing evidence shows Memory is being exercised, but confidence or working-set cost still needs attention."
+    elif smaller_or_more_precise:
+        status = "actionable"
+        summary_text = "Structured durable facts make ordinary Memory pulls smaller or more precise for matched routing cases."
     elif promotion_candidates:
         status = "actionable"
         summary_text = (
@@ -1899,6 +2024,9 @@ def _memory_usefulness_audit(*, route_snapshot: InstallResult, remediation: Inst
         "average_routed_note_count": cast(dict[str, Any], working_set).get("average_routed_note_count", 0),
         "average_routed_line_count": cast(dict[str, Any], startup_cost).get("average_routed_line_count", 0),
         "promotion_candidate_count": promotion_candidates,
+        "durable_fact_count": len(cast(list[Any], durable_facts.get("records", []))) if isinstance(durable_facts, dict) else 0,
+        "durable_fact_matched_case_count": int(cast(Any, cast(dict[str, Any], durable_fact_measure).get("matched_case_count", 0) or 0)),
+        "durable_facts_smaller_or_more_precise": smaller_or_more_precise,
     }
 
 
@@ -1907,6 +2035,7 @@ def _memory_habitual_pull_view(
     manifest: MemoryManifest,
     route_snapshot: InstallResult,
     usefulness_audit: dict[str, object],
+    durable_facts: dict[str, object],
 ) -> dict[str, object]:
     routing_baseline = [path.as_posix() for path in _routing_baseline_paths(manifest)]
     high_level_paths = [path.as_posix() for path in _high_level_paths(manifest) if path.as_posix() not in routing_baseline]
@@ -1915,6 +2044,7 @@ def _memory_habitual_pull_view(
     routing_confidence = summary.get("routing_confidence", {}) if isinstance(summary, dict) else {}
     working_set = summary.get("working_set", {}) if isinstance(summary, dict) else {}
     startup_cost = summary.get("startup_cost", {}) if isinstance(summary, dict) else {}
+    durable_fact_measure = durable_facts.get("routing_measure", {}) if isinstance(durable_facts, dict) else {}
 
     unresolved_feedback = cast(int, cast(dict[str, Any], feedback).get("unresolved_feedback_case_count", 0) or 0)
     low_confidence = cast(int, cast(dict[str, Any], routing_confidence).get("low_confidence_fixture_count", 0) or 0)
@@ -1945,6 +2075,10 @@ def _memory_habitual_pull_view(
             "always_load": routing_baseline,
             "optional_reorientation": high_level_paths,
             "route_rule": "after the baseline, load only manifest- or index-routed durable notes from touched files or explicit surfaces",
+            "durable_fact_route_rule": (
+                "use manifest durable_facts as a structured first-pass answer when route_keys or touched_surfaces match; "
+                "only widen to prose notes when the fact is insufficient"
+            ),
             "working_set_target": ROUTE_WORKING_SET_TARGET,
         },
         "owner_boundary": {
@@ -1968,6 +2102,9 @@ def _memory_habitual_pull_view(
             ),
             "average_routed_note_count": cast(dict[str, Any], working_set).get("average_routed_note_count", 0),
             "average_routed_line_count": cast(dict[str, Any], startup_cost).get("average_routed_line_count", 0),
+            "durable_fact_count": len(cast(list[Any], durable_facts.get("records", []))),
+            "durable_fact_matched_case_count": cast(dict[str, Any], durable_fact_measure).get("matched_case_count", 0),
+            "durable_facts_smaller_or_more_precise": cast(dict[str, Any], durable_fact_measure).get("smaller_or_more_precise", False),
         },
     }
 
@@ -2013,10 +2150,29 @@ def _memory_state_model_view(
                 "stale_when",
                 "related_validations",
                 "improvement_candidate",
+                "durable_facts",
             ],
         }
     ]
     class_counts = {"structured_state": 1, "adapter_rendering": 0, "prose_explanation": 0}
+    for fact in manifest.durable_facts:
+        class_counts["structured_state"] = class_counts.get("structured_state", 0) + 1
+        records.append(
+            {
+                "path": f"{MANIFEST_PATH.as_posix()}#durable_facts.{fact.fact_id}",
+                "surface_class": "structured_state",
+                "note_type": "durable-fact",
+                "authority": fact.authority_class,
+                "memory_role": "durable_truth",
+                "advisory_only": True,
+                "provenance": list(fact.evidence),
+                "confidence": "high" if fact.evidence else "low",
+                "trust_state": "supported" if fact.status == "active" else fact.status,
+                "promotion_status": fact.promotion or "none",
+                "route_keys": list(fact.route_keys),
+                "touched_surfaces": list(fact.touched_surfaces),
+            }
+        )
 
     for note in manifest.notes:
         surface_class = _memory_surface_class(note)
@@ -2051,6 +2207,7 @@ def _memory_state_model_view(
             "structured_state_owner": MANIFEST_PATH.as_posix(),
             "current_context": current_context,
             "improvement_candidates": improvement_candidates,
+            "durable_fact_count": len(manifest.durable_facts),
             "prose_explanation_count": len(prose_explanations),
             "adapter_rendering_count": class_counts.get("adapter_rendering", 0),
         },
@@ -2249,11 +2406,17 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
     questionable_notes = [item for item in trust_items if item["state"] == "questionable"]
     elimination_candidates = [item for item in trust_items if item["state"] == "elimination_candidate"]
     recurring_friction = _recurring_friction_report(target_root=target_root)
-    usefulness_audit = _memory_usefulness_audit(route_snapshot=route_snapshot, remediation=remediation)
+    durable_facts = _durable_fact_routing_view(manifest=manifest, route_snapshot=route_snapshot, target_root=target_root)
+    usefulness_audit = _memory_usefulness_audit(
+        route_snapshot=route_snapshot,
+        remediation=remediation,
+        durable_facts=durable_facts,
+    )
     habitual_pull = _memory_habitual_pull_view(
         manifest=manifest,
         route_snapshot=route_snapshot,
         usefulness_audit=usefulness_audit,
+        durable_facts=durable_facts,
     )
     state_model = _memory_state_model_view(manifest=manifest, trust_items=trust_items)
     manual_review_total = sum(1 for action in significant_actions if action.kind in {"manual review", "missing"})
@@ -2323,6 +2486,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
                 "status",
                 "active",
                 "state_model",
+                "durable_facts",
                 "habitual_pull",
                 "trust",
                 "recurring_friction",
@@ -2347,6 +2511,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
             "route_report_summary": route_snapshot.route_report_summary,
         },
         "state_model": state_model,
+        "durable_facts": durable_facts,
         "habitual_pull": habitual_pull,
         "trust": {
             "warning_count": warning_total,

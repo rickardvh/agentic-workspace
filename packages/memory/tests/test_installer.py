@@ -2309,6 +2309,83 @@ def test_memory_report_exposes_habitual_pull_boundary_and_evidence(tmp_path: Pat
     assert habitual_pull["ordinary_work_bundle"]["working_set_target"] == 3
 
 
+def test_memory_report_routes_structured_durable_facts(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+    _write_routing_fixture_file(
+        target,
+        "durable-fact-architecture.json",
+        {
+            "name": "durable-fact-architecture",
+            "case_type": "general",
+            "files": ["packages/memory/src/repo_memory_bootstrap/installer.py"],
+            "surfaces": ["architecture"],
+            "expected_required": [".agentic-workspace/memory/repo/index.md"],
+            "expected_optional": [],
+            "unexpected_notes": [".agentic-workspace/memory/repo/current/task-context.md"],
+            "missing_note_candidates": [],
+        },
+    )
+    manifest_path = target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
+    manifest_path.write_text(
+        manifest_path.read_text(encoding="utf-8")
+        + """
+
+[durable_facts."memory-test-boundary"]
+summary = "Memory owns durable rediscovery-saving facts, not active sequencing or workflow policy."
+owner = "memory"
+authority_class = "canonical"
+route_keys = ["architecture", "memory"]
+touched_surfaces = ["packages/memory/**", ".agentic-workspace/memory/repo/manifest.toml"]
+evidence = ["packages/memory/README.md", ".agentic-workspace/memory/repo/manifest.toml"]
+promotion = "Promote into canonical docs if humans need it outside Memory routing."
+demotion_or_expiry = "Remove or demote if it stops reducing routed prose reads."
+status = "active"
+""",
+        encoding="utf-8",
+    )
+
+    route_result = installer.route_memory(target=target, surfaces=["architecture"])
+    report = installer.memory_report(target=target)
+
+    assert any(action.role == "memory-durable-fact" and "memory-test-boundary" in action.detail for action in route_result.actions)
+    assert report["durable_facts"]["kind"] == "agentic-memory/durable-facts/v1"
+    test_record = next(record for record in report["durable_facts"]["records"] if record["id"] == "memory-test-boundary")
+    assert test_record["owner"] == "memory"
+    assert test_record["authority_class"] == "canonical"
+    assert test_record["promotion"]
+    assert test_record["demotion_or_expiry"]
+    assert report["durable_facts"]["routing_measure"]["matched_case_count"] >= 1
+    assert report["durable_facts"]["routing_measure"]["smaller_or_more_precise"] is True
+    assert report["usefulness_audit"]["durable_facts_smaller_or_more_precise"] is True
+    assert "active task state, next actions, or milestone sequencing" in report["habitual_pull"]["owner_boundary"]["memory_does_not_own"]
+    assert report["state_model"]["common_queries"]["durable_fact_count"] >= 1
+
+
+def test_doctor_flags_incomplete_durable_fact_records(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+    manifest_path = target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
+    manifest_path.write_text(
+        manifest_path.read_text(encoding="utf-8")
+        + """
+
+[durable_facts."too-vague"]
+summary = ""
+owner = ""
+authority_class = "policy"
+status = "active"
+""",
+        encoding="utf-8",
+    )
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(action.role == "memory-manifest" and "durable_facts.too-vague" in action.detail for action in result.actions)
+
+
 def test_memory_report_classifies_trust_states_from_manifest_metadata(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)

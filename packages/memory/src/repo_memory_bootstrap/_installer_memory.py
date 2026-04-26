@@ -26,11 +26,14 @@ from repo_memory_bootstrap._installer_shared import (
     SHADOW_DOC_MIN_SHARED_TERMS,
     VALID_CANONICALITY_VALUES,
     VALID_CONFIG_TREATMENT_VALUES,
+    VALID_DURABLE_FACT_AUTHORITY_VALUES,
+    VALID_DURABLE_FACT_STATUS_VALUES,
     VALID_ELIMINATION_TARGET_VALUES,
     VALID_MEMORY_ROLE_VALUES,
     VALID_PREFERRED_REMEDIATION_VALUES,
     VALID_SYMPTOM_OF_VALUES,
     VALID_TASK_RELEVANCE_VALUES,
+    DurableFactRecord,
     InstallResult,
     MemoryManifest,
     MemoryNoteRecord,
@@ -91,6 +94,7 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
     except tomllib.TOMLDecodeError:
         return None
     notes_table = data.get("notes", {})
+    durable_facts_table = data.get("durable_facts", {})
     rules_table = data.get("rules", {})
     version = int(data.get("version", 1))
 
@@ -126,10 +130,30 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
             )
         )
 
+    durable_facts: list[DurableFactRecord] = []
+    for fact_id, raw in durable_facts_table.items():
+        if not isinstance(raw, dict):
+            continue
+        durable_facts.append(
+            DurableFactRecord(
+                fact_id=str(fact_id),
+                summary=str(raw.get("summary", "") or "").strip(),
+                owner=str(raw.get("owner", "") or "").strip(),
+                authority_class=str(raw.get("authority_class", "supporting") or "").strip(),
+                route_keys=tuple(_normalise_surface_name(value) for value in _string_list(raw.get("route_keys"))),
+                touched_surfaces=tuple(_normalise_surface_name(value) for value in _string_list(raw.get("touched_surfaces"))),
+                evidence=tuple(_string_list(raw.get("evidence"))),
+                promotion=str(raw.get("promotion", "") or "").strip(),
+                demotion_or_expiry=str(raw.get("demotion_or_expiry", "") or "").strip(),
+                status=str(raw.get("status", "active") or "").strip(),
+            )
+        )
+
     return MemoryManifest(
         path=path,
         version=version,
         notes=tuple(notes),
+        durable_facts=tuple(durable_facts),
         routing_only=tuple(Path(value) for value in _string_list(rules_table.get("routing_only"))),
         high_level=tuple(Path(value) for value in _string_list(rules_table.get("high_level"))),
         canonical_dirs=tuple(Path(value) for value in _string_list(rules_table.get("canonical_dirs"))),
@@ -243,6 +267,27 @@ def _task_board_dependency_warning(*, note: MemoryNoteRecord, manifest: MemoryMa
     return ""
 
 
+def _durable_fact_manifest_findings(fact: DurableFactRecord) -> list[str]:
+    findings: list[str] = []
+    if not fact.summary:
+        findings.append("durable fact records must declare summary")
+    if not fact.owner:
+        findings.append("durable fact records must declare owner")
+    if fact.authority_class not in VALID_DURABLE_FACT_AUTHORITY_VALUES:
+        findings.append("durable fact authority_class must be canonical, advisory, or supporting")
+    if fact.status not in VALID_DURABLE_FACT_STATUS_VALUES:
+        findings.append("durable fact status must be active, candidate, or deprecated")
+    if not fact.route_keys and not fact.touched_surfaces:
+        findings.append("durable fact records need route_keys or touched_surfaces so they can be pulled selectively")
+    if not fact.evidence:
+        findings.append("durable fact records must include evidence anchors")
+    if not fact.promotion:
+        findings.append("durable fact records must declare a promotion expectation")
+    if not fact.demotion_or_expiry:
+        findings.append("durable fact records must declare demotion_or_expiry expectations")
+    return findings
+
+
 def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement: bool = False) -> None:
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
     if manifest is None:
@@ -285,6 +330,18 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
             source=MANIFEST_PATH.as_posix(),
             category="contract-drift",
         )
+
+    for fact in manifest.durable_facts:
+        for finding in _durable_fact_manifest_findings(fact):
+            result.add(
+                "manual review",
+                target_root / MANIFEST_PATH,
+                f"durable_facts.{fact.fact_id}: {finding}",
+                role="memory-manifest",
+                safety="manual",
+                source=MANIFEST_PATH.as_posix(),
+                category="contract-drift",
+            )
 
     for note in manifest.notes:
         if note.canonicality not in VALID_CANONICALITY_VALUES:

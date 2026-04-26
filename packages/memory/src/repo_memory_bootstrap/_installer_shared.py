@@ -260,6 +260,8 @@ VALID_CANONICALITY_VALUES = {
 }
 VALID_TASK_RELEVANCE_VALUES = {"required", "optional"}
 VALID_MEMORY_ROLE_VALUES = {"durable_truth", "improvement_signal"}
+VALID_DURABLE_FACT_STATUS_VALUES = {"active", "candidate", "deprecated"}
+VALID_DURABLE_FACT_AUTHORITY_VALUES = {"canonical", "advisory", "supporting"}
 VALID_CONFIG_TREATMENT_VALUES = {"promote", "cleanup", "retain", "no_action"}
 VALID_SYMPTOM_OF_VALUES = {
     "workflow_friction",
@@ -476,10 +478,25 @@ class MemoryNoteRecord:
 
 
 @dataclass(frozen=True, slots=True)
+class DurableFactRecord:
+    fact_id: str
+    summary: str
+    owner: str
+    authority_class: str
+    route_keys: tuple[str, ...] = ()
+    touched_surfaces: tuple[str, ...] = ()
+    evidence: tuple[str, ...] = ()
+    promotion: str = ""
+    demotion_or_expiry: str = ""
+    status: str = "active"
+
+
+@dataclass(frozen=True, slots=True)
 class MemoryManifest:
     path: Path
     version: int
     notes: tuple[MemoryNoteRecord, ...]
+    durable_facts: tuple[DurableFactRecord, ...] = ()
     routing_only: tuple[Path, ...] = ()
     high_level: tuple[Path, ...] = ()
     canonical_dirs: tuple[Path, ...] = ()

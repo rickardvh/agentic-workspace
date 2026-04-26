@@ -1,0 +1,11 @@
+{
+  "name": "durable-fact-memory-boundary",
+  "case_type": "general",
+  "files": [".agentic-workspace/memory/repo/manifest.toml"],
+  "surfaces": ["memory", "planning"],
+  "expected_required": [".agentic-workspace/memory/repo/index.md"],
+  "expected_optional": [".agentic-workspace/memory/WORKFLOW.md"],
+  "unexpected_notes": [".agentic-workspace/memory/repo/current/task-context.md"],
+  "missing_note_candidates": [],
+  "notes": "Structured durable facts should answer the memory/planning boundary before widening into prose notes."
+}
