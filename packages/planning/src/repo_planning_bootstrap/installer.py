@@ -1323,6 +1323,11 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
         execution_run_contract=execution_run_contract,
         intent_interpretation_contract=intent_interpretation_contract,
     )
+    closeout_distillation_contract = _active_closeout_distillation_contract(
+        target_root=target_root,
+        planning_record=planning_record,
+        active_execplans=active_execplans,
+    )
     intent_validation_contract = _intent_validation_contract(
         target_root=target_root,
         active_items=active_items,
@@ -1388,6 +1393,10 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
             finished_run_review_contract,
             view_name="finished_run_review_contract",
         ),
+        "closeout_distillation_contract": _contract_projection(
+            closeout_distillation_contract,
+            view_name="closeout_distillation_contract",
+        ),
         "intent_validation_contract": _contract_projection(
             intent_validation_contract,
             view_name="intent_validation_contract",
@@ -1428,6 +1437,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
     context_budget_contract = summary.get("context_budget_contract", {})
     execution_run_contract = summary.get("execution_run_contract", {})
     finished_run_review_contract = summary.get("finished_run_review_contract", {})
+    closeout_distillation_contract = summary.get("closeout_distillation_contract", {})
     intent_validation_contract = summary.get("intent_validation_contract", {})
     finished_work_inspection_contract = summary.get("finished_work_inspection_contract", {})
     hierarchy_contract = summary.get("hierarchy_contract", {})
@@ -1538,6 +1548,7 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
                 "ownership_review",
                 "active",
                 "system_intent",
+                "closeout_distillation",
                 "intent_validation",
                 "finished_work_inspection",
                 "findings",
@@ -1571,10 +1582,12 @@ def planning_report(*, target: str | Path | None = None) -> dict[str, Any]:
             "context_budget_contract": context_budget_contract,
             "execution_run_contract": execution_run_contract,
             "finished_run_review_contract": finished_run_review_contract,
+            "closeout_distillation_contract": closeout_distillation_contract,
             "hierarchy_contract": hierarchy_contract,
             "handoff_contract": handoff_contract,
         },
         "system_intent": summary.get("system_intent", {}),
+        "closeout_distillation": closeout_distillation_contract,
         "intent_validation": intent_validation_contract,
         "finished_work_inspection": finished_work_inspection_contract,
         "findings": findings,
@@ -1707,6 +1720,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "context_budget_contract",
             "execution_run_contract",
             "finished_run_review_contract",
+            "closeout_distillation_contract",
             "intent_validation_contract",
             "finished_work_inspection_contract",
             "hierarchy_contract",
@@ -1851,6 +1865,15 @@ def _planning_summary_schema() -> dict[str, Any]:
                 "recommended_next_action",
                 "minimal_refs",
             ],
+            "closeout_distillation_contract": [
+                "current_plan",
+                "rule",
+                "archive_role",
+                "buckets",
+                "counts",
+                "recommended_next_action",
+                "minimal_refs",
+            ],
             "hierarchy_contract": [
                 "current_layer",
                 "parent_lane",
@@ -1901,13 +1924,15 @@ def _planning_summary_schema() -> dict[str, Any]:
             "planning_record is the canonical compact active planning state when it is available",
             (
                 "active_contract, resumable_contract, follow_through_contract, intent_interpretation_contract, "
-                "context_budget_contract, execution_run_contract, finished_run_review_contract, intent_validation_contract, finished_work_inspection_contract, and hierarchy_contract "
+                "context_budget_contract, execution_run_contract, finished_run_review_contract, closeout_distillation_contract, "
+                "intent_validation_contract, finished_work_inspection_contract, and hierarchy_contract "
                 "remain thinner projections over that state"
             ),
             "system intent remains durable and queryable even when the active slice is narrower than the parent issue or lane",
             "closure decisions must distinguish bounded slice completion from larger-intent satisfaction",
             "intent validation must still work when there is no active execplan by reconciling checked-in planning state with optional external evidence",
             "finished-work inspection must derive from archived checked-in residue first and treat optional reopening evidence as corroboration only",
+            "closeout distillation must route durable learning to live owner buckets before archive so archived execplans are not the normal knowledge base",
             "handoff_contract remains a thinner delegated-worker view over the same active planning state",
             "prefer the summary schema over raw TODO or execplan parsing when one structured answer is enough",
         ],
@@ -2022,6 +2047,7 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
             "resumable_contract",
             "hierarchy_contract",
             "handoff_contract",
+            "closeout_distillation_contract",
             "intent_validation_contract",
             "finished_work_inspection_contract",
             "system_intent",
@@ -2168,6 +2194,18 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "continuation_owner",
                 "return_with",
                 "worker_contract",
+            ),
+        ),
+        "closeout_distillation_contract": _compact_projection(
+            dict(summary.get("closeout_distillation_contract", {})),
+            fields=(
+                "current_plan",
+                "rule",
+                "archive_role",
+                "buckets",
+                "counts",
+                "recommended_next_action",
+                "minimal_refs",
             ),
         ),
         "intent_validation_contract": _compact_projection(
@@ -3709,6 +3747,174 @@ def _finished_run_config_signal(*, review_status: str, config_compliance: str) -
             "Finished-run config compliance is too ambiguous to trust by default; restate whether config was respected, bypassed, or irrelevant before closing cleanly."
         ),
     }
+
+
+def _active_closeout_distillation_contract(
+    *,
+    target_root: Path,
+    planning_record: dict[str, Any],
+    active_execplans: list[dict[str, str]],
+) -> dict[str, Any]:
+    if planning_record.get("status") != "present" or len(active_execplans) != 1:
+        return {
+            "status": "unavailable",
+            "reason": "requires one active execplan with a present planning record",
+        }
+
+    plan_path = _resolve_execplan_path(target_root, active_execplans[0]["path"])
+    if plan_path is None or not plan_path.exists():
+        return {
+            "status": "unavailable",
+            "reason": "active execplan path is not available for closeout distillation extraction",
+        }
+
+    record = _load_execplan_record(plan_path) or {}
+    explicit = _record_section_dict(record, "closeout_distillation") or {}
+    buckets = _closeout_distillation_buckets(record=record, explicit=explicit)
+    counts = {bucket: len(items) for bucket, items in buckets.items()}
+    promoted_count = sum(counts[bucket] for bucket in ("memory", "config_check", "docs", "issue_follow_up", "continuation"))
+    discarded_count = counts["discard"]
+    recommended_next_action = "Closeout distillation is ready for archive or continuation routing."
+    if not promoted_count and not discarded_count:
+        recommended_next_action = (
+            "Complete closeout distillation before archiving so durable learning has an owner or is intentionally discarded."
+        )
+    elif discarded_count:
+        recommended_next_action = (
+            "Do not promote discarded execution detail; keep only the named continuation and durable-owner buckets live."
+        )
+
+    return {
+        "status": "present",
+        "current_plan": plan_path.relative_to(target_root).as_posix(),
+        "rule": (
+            "Closeout should route durable learning to continuation, Memory, config/checks, docs, or issue follow-up, "
+            "and explicitly discard non-recurring execution detail instead of making archived execplans the normal knowledge base."
+        ),
+        "archive_role": "archive is proof and historical recovery, not the ordinary durable-learning carrier",
+        "buckets": buckets,
+        "counts": {
+            **counts,
+            "promoted_or_routed_count": promoted_count,
+            "intentionally_discarded_count": discarded_count,
+        },
+        "recommended_next_action": recommended_next_action,
+        "minimal_refs": _dedupe(
+            [
+                planning_record.get("task", {}).get("surface", ""),
+                ".agentic-workspace/planning/execplans/README.md",
+                ".agentic-workspace/docs/execution-flow-contract.md",
+            ]
+        ),
+    }
+
+
+def _closeout_distillation_buckets(*, record: dict[str, Any], explicit: dict[str, str]) -> dict[str, list[dict[str, str]]]:
+    buckets = {
+        "discard": [],
+        "continuation": [],
+        "memory": [],
+        "config_check": [],
+        "docs": [],
+        "issue_follow_up": [],
+    }
+    explicit_buckets = record.get("closeout_distillation", {}) if isinstance(record, dict) else {}
+    if isinstance(explicit_buckets, dict):
+        raw_buckets = explicit_buckets.get("buckets", {})
+        if isinstance(raw_buckets, dict):
+            for bucket in buckets:
+                raw_items = raw_buckets.get(bucket, [])
+                if isinstance(raw_items, list):
+                    buckets[bucket].extend(_normalize_distillation_items(raw_items))
+
+    execution_summary = _record_section_dict(record, "execution_summary") or {}
+    closure_check = _record_section_dict(record, "closure_check") or {}
+    required_continuation = _record_section_dict(record, "required_continuation") or {}
+    knowledge = execution_summary.get("knowledge promoted (memory/docs/config)", "").strip()
+    posterity = execution_summary.get("post-work posterity capture", "").strip()
+    follow_on = execution_summary.get("follow-on routed to", "").strip()
+
+    if not buckets["continuation"] and follow_on and follow_on.lower() not in {"none", "none yet", "n/a", "no further action"}:
+        buckets["continuation"].append(
+            {
+                "summary": follow_on,
+                "owner": required_continuation.get("owner surface", "") or closure_check.get("evidence carried forward", ""),
+                "source": "execution_summary.follow-on routed to",
+            }
+        )
+    if not buckets["continuation"] and required_continuation.get(
+        "required follow-on for the larger intended outcome", ""
+    ).strip().lower() in {
+        "yes",
+        "true",
+        "required",
+    }:
+        buckets["continuation"].append(
+            {
+                "summary": required_continuation.get("activation trigger", ""),
+                "owner": required_continuation.get("owner surface", ""),
+                "source": "required_continuation",
+            }
+        )
+
+    combined_learning = " ".join(value for value in (knowledge, posterity, explicit.get("summary", "")) if value).lower()
+    if "memory" in combined_learning:
+        buckets["memory"].append({"summary": knowledge or posterity, "owner": "Memory", "source": "execution_summary"})
+    if any(marker in combined_learning for marker in ("config", "check", "checker", "validation", "test")):
+        buckets["config_check"].append({"summary": knowledge or posterity, "owner": "config/check", "source": "execution_summary"})
+    if "doc" in combined_learning:
+        buckets["docs"].append({"summary": knowledge or posterity, "owner": "docs", "source": "execution_summary"})
+
+    for ref in [] if buckets["issue_follow_up"] else (_record_section_references(record, "references") or []):
+        role = str(ref.get("role", "")).lower()
+        if "follow" in role or "issue" in str(ref.get("kind", "")).lower():
+            buckets["issue_follow_up"].append(
+                {
+                    "summary": str(ref.get("label", "")).strip() or str(ref.get("target", "")).strip(),
+                    "owner": str(ref.get("kind", "")).strip(),
+                    "source": str(ref.get("target", "")).strip(),
+                }
+            )
+
+    if not buckets["discard"] and (not knowledge or knowledge.strip().lower() in {"none", "none.", "n/a", "not needed", "no"}):
+        buckets["discard"].append(
+            {
+                "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+                "owner": "discard",
+                "source": "execution_summary.knowledge promoted (Memory/Docs/Config)",
+            }
+        )
+    return {bucket: _dedupe_distillation_items(items) for bucket, items in buckets.items()}
+
+
+def _normalize_distillation_items(raw_items: list[Any]) -> list[dict[str, str]]:
+    normalized: list[dict[str, str]] = []
+    for item in raw_items:
+        if isinstance(item, dict):
+            summary = str(item.get("summary", "")).strip()
+            if summary:
+                normalized.append(
+                    {
+                        "summary": summary,
+                        "owner": str(item.get("owner", "")).strip(),
+                        "source": str(item.get("source", "")).strip(),
+                    }
+                )
+        elif isinstance(item, str) and item.strip():
+            normalized.append({"summary": item.strip(), "owner": "", "source": "closeout_distillation"})
+    return normalized
+
+
+def _dedupe_distillation_items(items: list[dict[str, str]]) -> list[dict[str, str]]:
+    deduped: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for item in items:
+        key = (item.get("summary", ""), item.get("owner", ""), item.get("source", ""))
+        if key in seen or not key[0]:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped
 
 
 def _active_hierarchy_contract(
@@ -5379,7 +5585,19 @@ def _build_execplan_record_from_todo_item(
             "outcome delivered": "not completed yet",
             "validation confirmed": "pending",
             "follow-on routed to": "none yet",
+            "post-work posterity capture": "pending",
+            "knowledge promoted (Memory/Docs/Config)": "none",
             "resume from": "current milestone",
+        },
+        "closeout_distillation": {
+            "buckets": {
+                "discard": [],
+                "continuation": [],
+                "memory": [],
+                "config_check": [],
+                "docs": [],
+                "issue_follow_up": [],
+            }
         },
         "drift_log": [f"{date.today().isoformat()}: Promoted from TODO direct-task shape into an execplan."],
     }

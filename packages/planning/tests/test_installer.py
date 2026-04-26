@@ -3247,6 +3247,55 @@ def test_planning_summary_exposes_finished_work_inspection_contract(tmp_path: Pa
     assert contract["signals"][0]["kind"] == "likely_premature_closeout"
 
 
+def test_planning_summary_exposes_closeout_distillation_contract(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "distill-closeout.plan.json"
+    _write_execplan_record(plan_path, item_id="distill-closeout", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "yes",
+        "owner surface": ".agentic-workspace/planning/state.toml",
+        "activation trigger": "continue #344",
+    }
+    record["execution_summary"] = {
+        "outcome delivered": "Added closeout distillation.",
+        "validation confirmed": "focused tests",
+        "follow-on routed to": "#344 memory routing",
+        "post-work posterity capture": "No durable learning beyond continuation; local execution details should die.",
+        "knowledge promoted (Memory/Docs/Config)": "none",
+        "resume from": "next milestone",
+    }
+    record["references"] = [{"kind": "external-work", "target": "#344", "label": "Memory routing follow-up", "role": "follow-up"}]
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        (
+            "[todo]\n"
+            "active_items = [\n"
+            '  { id = "distill-closeout", status = "in-progress", surface = ".agentic-workspace/planning/execplans/distill-closeout.plan.json", why_now = "prove closeout distillation." },\n'
+            "]\n"
+            "queued_items = []\n"
+        ),
+    )
+
+    summary = planning_summary(target=tmp_path)
+    contract = summary["closeout_distillation_contract"]
+
+    assert "closeout_distillation_contract" in summary["schema"]["shared_fields"]
+    assert contract["status"] == "present"
+    assert contract["archive_role"] == "archive is proof and historical recovery, not the ordinary durable-learning carrier"
+    assert contract["counts"]["intentionally_discarded_count"] == 1
+    assert contract["buckets"]["discard"][0]["owner"] == "discard"
+    assert contract["buckets"]["continuation"][0]["summary"] == "#344 memory routing"
+    assert contract["buckets"]["issue_follow_up"][0]["source"] == "#344"
+
+    report = planning_report(target=tmp_path)
+    assert report["closeout_distillation"]["counts"]["intentionally_discarded_count"] == 1
+    assert report["active"]["closeout_distillation_contract"]["buckets"]["discard"][0]["source"] == (
+        "execution_summary.knowledge promoted (Memory/Docs/Config)"
+    )
+
+
 def test_planning_report_promotes_finished_work_inspection_signals_to_findings(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"

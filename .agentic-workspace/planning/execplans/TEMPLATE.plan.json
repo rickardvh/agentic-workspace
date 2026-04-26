@@ -176,6 +176,16 @@
     "knowledge promoted (Memory/Docs/Config)": "",
     "resume from": ""
   },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
   "drift_log": [
     "2026-01-01: Initial plan created."
   ]

@@ -20,9 +20,9 @@
       "escalation": "Stop if the work requires deleting major public concepts or redesigning all reporting, planning, or memory at once."
     },
     "execution": {
-      "milestone": "closeout-distillation",
+      "milestone": "memory-durable-fact-routing",
       "status": "in-progress",
-      "next_step": "Implement #343 by distilling closeout learning away from archived execplans.",
+      "next_step": "Implement #344 by shrinking ordinary Memory pulls through structured durable-fact routing.",
       "proof": "Focused workspace CLI tests, report dogfood, ruff for touched Python, contract tooling, planning checker, summary/reconcile, and git diff check."
     },
     "scope": {
@@ -97,16 +97,16 @@
     { "kind": "issue", "target": "#346", "label": "operational compression measures", "role": "milestone" }
   ],
   "active_milestone": {
-    "id": "closeout-distillation",
+    "id": "memory-durable-fact-routing",
     "status": "in-progress",
-    "scope": "#343",
+    "scope": "#344",
     "ready": "yes",
     "blocked": "no",
-    "optional_deps": "#341/#345 report router and selector support landed; #342 surface-value review gate landed locally"
+    "optional_deps": "#341/#345 report router and selector support landed; #342 surface-value review gate landed; #343 closeout distillation landed locally"
   },
   "immediate_next_action": [
-    "Add closeout distillation so archive scanning is no longer the durable-learning path.",
-    "Prefer existing planning summary/reconcile surfaces over a new first-line command."
+    "Shrink ordinary Memory pulls through a structured durable-fact routing path.",
+    "Keep Memory ownership intact and avoid host-specific behavior."
   ],
   "blockers": ["None."],
   "touched_paths": [
@@ -143,26 +143,26 @@
     "run status": "in-progress",
     "executor": "Codex",
     "handoff source": "preflight, summary, reconcile, live GitHub issue state, system-intent future-work review",
-    "what happened": "Implemented #342 by attaching surface_value_review to ordinary proof --changed output for durable surfaces. Existing durable surface updates are accepted; additive-only durable surface candidates are flagged with required guardrail answers.",
-    "scope touched": "workspace CLI, proof operation contract, tests, active execplan",
-    "changed surfaces": ".agentic-workspace/planning/execplans/product-compression-followups.plan.json; src/agentic_workspace/cli.py; src/agentic_workspace/contracts/operations/proof.report.json; tests/test_workspace_cli.py",
-    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"surface_value or proof_changed\"; uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace proof --target . --changed src/agentic_workspace/contracts/report_contract.json --format json; uv run agentic-workspace proof --target . --changed docs/new-first-line-concept.md --format json; uv run agentic-workspace report --target . --section surface_value_guardrail --format json; uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q -k \"surface_value or proof_changed or contract\"; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
-    "result for continuation": "#342 is ready to commit, push, and close after milestone commit.",
-    "next step": "Implement #343 closeout distillation."
+    "what happened": "Implemented #343 by adding closeout_distillation_contract to planning summary/report. The contract buckets closeout residue into discard, continuation, Memory, config/check, docs, and issue follow-up, and makes archive the recovery/proof surface rather than the normal durable-learning carrier.",
+    "scope touched": "planning package summary/report implementation, planning template surface, planning tests, active execplan",
+    "changed surfaces": ".agentic-workspace/planning/execplans/product-compression-followups.plan.json; .agentic-workspace/planning/execplans/TEMPLATE.plan.json; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"closeout_distillation or planning_summary_exposes_finished_work_inspection_contract\"; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace summary --format json --profile full; uv run agentic-workspace report --target . --section module_reports --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json; git diff --check",
+    "result for continuation": "#343 is ready to commit, push, and close after milestone commit.",
+    "next step": "Implement #344 Memory durable-fact routing."
   },
   "finished_run_review": {
-    "review status": "completed for #342 milestone",
+    "review status": "completed for #343 milestone",
     "scope respected": "yes",
     "proof status": "passed",
-    "intent served": "durable-surface changes now have an ordinary proof-time value review gate",
-    "config compliance": "used package preflight, summary, reconcile, report, planning checker, and contract tooling",
+    "intent served": "closeout learning is bucketed into live owner surfaces or intentional discard instead of depending on archived execplans",
+    "config compliance": "used package summary/report/reconcile, maintainer surfaces, planning checker, and contract tooling",
     "misinterpretation risk": "low",
-    "follow-on decision": "continue active lane with #343"
+    "follow-on decision": "continue active lane with #344"
   },
   "proof_report": {
-    "validation proof": "Focused tests, ruff, contract tooling, package proof/report dogfooding, planning checks, reconcile, and diff check passed for #342.",
-    "proof achieved now": "yes-for-surface-value-review-gate",
-    "evidence for \"proof achieved\" state": "proof --changed src/agentic_workspace/contracts/report_contract.json emitted surface_value_review status accepted; proof --changed docs/new-first-line-concept.md emitted surface_value_review status attention-needed with additive-only flag."
+    "validation proof": "Focused planning tests, ruff, maintainer surfaces, planning checks, contract tooling, package summary/report dogfooding, reconcile, and diff check passed for #343.",
+    "proof achieved now": "yes-for-closeout-distillation",
+    "evidence for \"proof achieved\" state": "agentic-workspace summary --format json emitted closeout_distillation_contract with discard, continuation, and issue_follow_up buckets; report module_reports exposed the same planning closeout_distillation signal."
   },
   "intent_satisfaction": {
     "original intent": "Ingest and implement the new issues.",
@@ -180,21 +180,56 @@
     "slice status": "in-progress",
     "larger-intent status": "open",
     "closure decision": "keep-active",
-    "why this decision is honest": "#341/#345 are closed and #342 landed locally, but #343-#346 remain open and #230 is broader than this milestone.",
+    "why this decision is honest": "#341/#345/#342 are closed and #343 landed locally, but #344/#346 remain open and #230 is broader than this milestone.",
     "evidence carried forward": "active planning state and milestone validation proof",
     "reopen trigger": "new report/default/memory/planning surfaces increase default reading or framework feel without a repeated-cost reduction"
   },
   "execution_summary": {
-    "outcome delivered": "#342 surface-value review gate implemented.",
+    "outcome delivered": "#343 closeout distillation implemented.",
     "validation confirmed": "yes",
-    "follow-on routed to": "#343 closeout distillation",
+    "follow-on routed to": "#344 Memory durable-fact routing",
     "post-work posterity capture": "active execplan updated with proof and continuation",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "closeout-distillation"
+    "resume from": "memory-durable-fact-routing"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Local #343 implementation detail is not promoted; the durable learning is the package contract and regression test.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#344 Memory durable-fact routing remains the next product-compression slice.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "Closeout distillation is enforced by planning summary/report tests and planning surface checks.",
+          "owner": "planning package tests",
+          "source": "packages/planning/tests/test_installer.py"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#344 Memory routing and #346 compression measures remain open under #230.",
+          "owner": "external work evidence",
+          "source": ".agentic-workspace/planning/external-intent-evidence.json"
+        }
+      ]
+    }
   },
   "drift_log": [
     "2026-04-26: Reingested #341-#346 and promoted the product-compression follow-up lane under #230.",
     "2026-04-26: Implemented #341/#345 by turning report into a default router with explicit full and section selectors; routed continuation to #342.",
-    "2026-04-26: Implemented #342 by making surface-value review an ordinary proof --changed gate for durable surfaces; routed continuation to #343."
+    "2026-04-26: Implemented #342 by making surface-value review an ordinary proof --changed gate for durable surfaces; routed continuation to #343.",
+    "2026-04-26: Implemented #343 by adding closeout distillation buckets to planning summary/report; routed continuation to #344."
   ]
 }
