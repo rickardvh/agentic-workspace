@@ -1972,6 +1972,106 @@ def _memory_habitual_pull_view(
     }
 
 
+def _memory_surface_class(note: MemoryNoteRecord) -> str:
+    if note.note_type in {"routing", "current-overview", "current-context", "routing-feedback", "version-marker"}:
+        return "adapter_rendering"
+    if note.note_type in {"workflow-policy"}:
+        return "structured_state"
+    return "prose_explanation"
+
+
+def _memory_state_confidence(*, note: MemoryNoteRecord, trust_item: dict[str, object]) -> str:
+    state = str(trust_item.get("state", ""))
+    if state in {"supported", "elimination_candidate"} and note.memory_role:
+        return "high"
+    if state in {"supported", "advisory", "elimination_candidate"}:
+        return "medium"
+    return "low"
+
+
+def _memory_state_model_view(
+    *,
+    manifest: MemoryManifest,
+    trust_items: list[dict[str, object]],
+) -> dict[str, object]:
+    trust_by_path = {str(item.get("path", "")): item for item in trust_items}
+    records: list[dict[str, object]] = [
+        {
+            "path": MANIFEST_PATH.as_posix(),
+            "surface_class": "structured_state",
+            "note_type": "manifest",
+            "authority": "canonical",
+            "memory_role": "state_index",
+            "advisory_only": True,
+            "provenance": ["manifest.toml"],
+            "confidence": "high",
+            "queryable_fields": [
+                "note_type",
+                "authority",
+                "memory_role",
+                "routes_from",
+                "stale_when",
+                "related_validations",
+                "improvement_candidate",
+            ],
+        }
+    ]
+    class_counts = {"structured_state": 1, "adapter_rendering": 0, "prose_explanation": 0}
+
+    for note in manifest.notes:
+        surface_class = _memory_surface_class(note)
+        class_counts[surface_class] = class_counts.get(surface_class, 0) + 1
+        trust_item = trust_by_path.get(note.path.as_posix(), {})
+        records.append(
+            {
+                "path": note.path.as_posix(),
+                "surface_class": surface_class,
+                "note_type": note.note_type,
+                "authority": note.authority,
+                "memory_role": note.memory_role or "unclassified",
+                "advisory_only": True,
+                "provenance": list(note.routes_from or note.stale_when or note.related_validations),
+                "confidence": _memory_state_confidence(note=note, trust_item=trust_item),
+                "trust_state": trust_item.get("state", "unknown"),
+                "promotion_status": "candidate" if note.improvement_candidate else "none",
+            }
+        )
+
+    current_context = [record["path"] for record in records if record["note_type"] in {"current-overview", "current-context"}]
+    improvement_candidates = [record["path"] for record in records if record.get("promotion_status") == "candidate"]
+    prose_explanations = [record["path"] for record in records if record.get("surface_class") == "prose_explanation"]
+
+    return {
+        "kind": "agentic-memory/state-model/v1",
+        "owner_surface": MANIFEST_PATH.as_posix(),
+        "advisory_only": True,
+        "status": "queryable",
+        "classification_counts": class_counts,
+        "common_queries": {
+            "structured_state_owner": MANIFEST_PATH.as_posix(),
+            "current_context": current_context,
+            "improvement_candidates": improvement_candidates,
+            "prose_explanation_count": len(prose_explanations),
+            "adapter_rendering_count": class_counts.get("adapter_rendering", 0),
+        },
+        "record_contract": {
+            "required_fields": [
+                "path",
+                "surface_class",
+                "note_type",
+                "authority",
+                "memory_role",
+                "advisory_only",
+                "provenance",
+                "confidence",
+            ],
+            "surface_classes": ["structured_state", "prose_explanation", "adapter_rendering"],
+            "rule": "Use structured records for routing, freshness, trust, and promotion questions; use prose notes for explanation.",
+        },
+        "records": records,
+    }
+
+
 def _detect_payload_drift(target_root: Path) -> list[dict[str, object]]:
     """Detect differences between root source files and bootstrap payload mirror."""
     mirror_root = payload_root()
@@ -2155,6 +2255,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
         route_snapshot=route_snapshot,
         usefulness_audit=usefulness_audit,
     )
+    state_model = _memory_state_model_view(manifest=manifest, trust_items=trust_items)
     manual_review_total = sum(1 for action in significant_actions if action.kind in {"manual review", "missing"})
     warning_total = sum(1 for action in significant_actions if action.kind == "warning")
     advisory_total = 0
@@ -2221,6 +2322,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
                 "health",
                 "status",
                 "active",
+                "state_model",
                 "habitual_pull",
                 "trust",
                 "recurring_friction",
@@ -2244,6 +2346,7 @@ def memory_report(*, target: str | Path | None = None) -> dict[str, object]:
             "current_notes": current_notes,
             "route_report_summary": route_snapshot.route_report_summary,
         },
+        "state_model": state_model,
         "habitual_pull": habitual_pull,
         "trust": {
             "warning_count": warning_total,

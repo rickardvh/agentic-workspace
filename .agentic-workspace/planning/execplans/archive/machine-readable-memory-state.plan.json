@@ -1,0 +1,208 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Machine-Readable Memory State",
+  "goal": [
+    "Resolve #331 with a narrow first slice that makes Memory state more queryable without turning Memory into a database.",
+    "Classify Memory surfaces by structured-state, prose-explanation, or adapter-rendering role.",
+    "Add one compact machine-readable representation or query/report hook for a prose-first Memory surface where agents need precise answers."
+  ],
+  "non_goals": [
+    "Do not remove Memory prose that is still the right explanatory layer.",
+    "Do not make Memory override planning, config, system intent, canonical docs, or explicit user instruction.",
+    "Do not build a general knowledge system, search engine, or cross-machine sync layer.",
+    "Do not absorb active task state into Memory."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Agents can answer common Memory-state questions through compact structured data with provenance/confidence boundaries.",
+      "constraints": "Keep Memory advisory; preserve prose as explanation; avoid broad rereads and broad schema migration.",
+      "latitude": "Choose the smallest Memory surface that benefits from structured state and add a narrow schema/query/report hook.",
+      "escalation": "Stop before database-like storage, repo-wide memory rewrite, or changes that reassign active planning ownership."
+    },
+    "execution": {
+      "milestone": "classify-and-query-memory-state",
+      "status": "in-progress",
+      "next_step": "Inspect Memory manifest/index/report paths and choose one compact structured-state slice.",
+      "proof": "Focused Memory/workspace tests plus summary/report proof show the structured state is queryable and planning remains clean."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/memory/repo/manifest.toml",
+        ".agentic-workspace/memory/repo/index.md",
+        "packages/memory/",
+        "src/agentic_workspace/",
+        "tests/",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/machine-readable-memory-state.plan.json"
+      ],
+      "invariants": [
+        "Memory remains advisory and anti-rediscovery-oriented.",
+        "Planning remains the owner of active execution state.",
+        "Structured records preserve provenance and confidence rather than flattening interpretation."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "make Memory and related module state compactly queryable where agents need continuation, routing, verification, or trust answers",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane machine-readable-memory-state",
+    "parent lane": "machine-readable-memory-state"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Memory reports now expose a machine-readable state_model that classifies surfaces and records provenance, trust state, confidence, advisory boundary, and promotion status.",
+    "intentionally deferred": "broad Memory schema migration and database-like storage",
+    "discovered implications": "The existing manifest was already the right structured owner; the missing piece was a compact report projection that made the classification/query contract first-class.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for #331",
+    "next likely slice": "generated-tool-conformance"
+  },
+  "intent_interpretation": {
+    "literal request": "implement remaining work as before",
+    "inferred intended outcome": "continue planned lanes on autopilot with package dogfooding, commits, pushes, and issue closure when complete",
+    "chosen concrete what": "first #331 slice: classify Memory surfaces and add one compact machine-readable queryable representation",
+    "interpretation distance": "low",
+    "review guidance": "reject broad Memory redesign or prose deletion that loses useful explanatory context"
+  },
+  "delegated_judgment": {
+    "requested outcome": "ship a narrow machine-readable Memory-state slice for #331",
+    "hard constraints": "Memory remains advisory; no broad rereads as a success path; active planning state stays out of Memory",
+    "agent may decide locally": "which Memory surface earns the first structured representation and which query/report hook proves it",
+    "escalate when": "the slice requires broad schema migration, database storage, or changing Memory ownership boundaries"
+  },
+  "execution_bounds": {
+    "allowed paths": "Memory manifest/index/report/query code and tests, active planning state and execplan, package payload if source-payload checks require sync",
+    "max changed files": "18",
+    "required validation commands": "uv run pytest tests packages/memory/tests -q -k \"memory or report or preflight or manifest\"; make maintainer-surfaces; uv run agentic-workspace report --target . --format json; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "ask-before-refactor threshold": "stop before broad Memory storage redesign",
+    "stop before touching": "unrelated roadmap lanes"
+  },
+  "context_budget": {
+    "live working set": "#331, Memory workflow/index/manifest, report/preflight query surfaces, active execplan",
+    "recoverable later": "full memory package history and broad schema discussions",
+    "externalize before shift": "update this execplan execution_run, proof_report, and closure fields",
+    "pre-work config pull": "uv run agentic-workspace summary and gh issue view #331",
+    "pre-work memory pull": ".agentic-workspace/memory/WORKFLOW.md plus the smallest relevant manifest/index files",
+    "tiny resumability note": "add one narrow structured/queryable Memory-state representation",
+    "context-shift triggers": "structured memory work becomes broader than one representation plus one proof path"
+  },
+  "stop_conditions": {
+    "stop when": "#331 is shipped, dogfooded, committed, pushed, and closed or residual Memory-state work is routed",
+    "escalate when boundary reached": "Memory would become active task state or a database-like system",
+    "escalate on scope drift": "work becomes general knowledge-system design",
+    "escalate on proof failure": "report/preflight/query proof or planning checks fail after the structured-state slice"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#331",
+      "label": "machine-readable Memory and module state",
+      "role": "primary-intent",
+      "locator": "github issue #331"
+    }
+  ],
+  "active_milestone": {
+    "id": "classify-and-query-memory-state",
+    "status": "completed",
+    "scope": "Memory surface classification plus one compact structured/queryable state slice",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect Memory manifest/index/report code and tests.",
+    "Choose one prose-first Memory surface that agents currently need to query and add the smallest structured representation."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/machine-readable-memory-state.plan.json"
+  ],
+  "invariants": [
+    "Memory remains advisory.",
+    "Planning owns active execution state.",
+    "Structured Memory state carries provenance/confidence or explicit limits."
+  ],
+  "validation_commands": [
+    "uv run pytest tests packages/memory/tests -q -k \"memory or report or preflight or manifest\"",
+    "make maintainer-surfaces",
+    "uv run agentic-workspace report --target . --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "git diff --check"
+  ],
+  "required_tools": [
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "Memory surfaces are classified as structured state, prose explanation, or adapter rendering.",
+    "At least one prose-first Memory surface has a compact machine-readable representation or a written reason to remain prose-first.",
+    "Agents can answer at least one common Memory-state question through compact data without broad rereading.",
+    "Structured records preserve provenance/confidence and advisory boundaries.",
+    "Planning and report/preflight surfaces remain clean."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "active execplan",
+    "what happened": "Added a machine-readable Memory state_model section to memory_report, deriving structured_state/prose_explanation/adapter_rendering classification and per-record provenance, confidence, trust state, advisory boundary, and promotion status from manifest.toml.",
+    "scope touched": "Memory report code, Memory report tests, Memory README, active planning state, and execplan closeout.",
+    "changed surfaces": "packages/memory/src/repo_memory_bootstrap/installer.py; packages/memory/tests/test_installer.py; packages/memory/README.md; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/machine-readable-memory-state.plan.json",
+    "validations run": "uv run pytest packages/memory/tests/test_installer.py -q -k \"memory_report\"; uv run ruff check packages/memory/src/repo_memory_bootstrap/installer.py packages/memory/tests/test_installer.py; uv run agentic-memory-bootstrap report --target . --format json; uv run pytest tests packages/memory/tests -q -k \"memory or report or preflight or manifest\"; make maintainer-surfaces; uv run agentic-workspace report --target . --format json; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "result for continuation": "#331 is complete and can be closed; continue with the next executable roadmap lane after archive.",
+    "next step": "Archive this plan, close #331, and promote the next executable lane."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; the slice stayed in Memory report/doc/test and planning closeout surfaces",
+    "proof status": "proved by focused and broader pytest selections, ruff, maintainer surfaces, workspace report, summary, planning checker, and diff check",
+    "intent served": "yes; Memory state is now classified and queryable without broad note rereads",
+    "config compliance": "yes; work executed from active checked-in planning state and dogfooded memory/workspace report commands",
+    "misinterpretation risk": "low; Memory remains advisory and prose notes remain explanation, not active task state",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "268 targeted memory/workspace tests passed; focused memory_report tests passed; ruff passed; maintainer-surfaces passed; memory and workspace report commands produced state_model; summary and planning checker stayed clean; git diff --check passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "memory_report now includes state_model.kind agentic-memory/state-model/v1 with classification_counts, common_queries, record_contract, and records containing provenance/confidence/trust/advisory fields."
+  },
+  "intent_satisfaction": {
+    "original intent": "Make Memory and other module state more machine-readable and queryable where that improves continuation, routing, verification, and trust.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Memory surfaces are classified as structured_state/prose_explanation/adapter_rendering; all manifest notes have report records with provenance and confidence; common Memory questions such as current context, improvement candidates, and prose/adapter counts are answerable from compact JSON.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Favor compact queryable operating answers while preserving advisory memory as anti-rediscovery context.",
+    "slice shaping bias": "Prefer one structured query path over broad Memory rewrite.",
+    "broader-lane validation question": "Can agents answer useful Memory-state questions without broad prose rereads?",
+    "intent evidence source": ".agentic-workspace/memory/WORKFLOW.md and #331"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#331 asked for an audit plus one narrow structured-record/query slice, not a broad Memory rewrite; the state_model report projection satisfies that acceptance.",
+    "evidence carried forward": "Archived execplan plus memory_report state_model output and tests",
+    "reopen trigger": "Agents still need broad Memory prose rereads for routing, trust, freshness, promotion, or surface-classification questions after using memory_report state_model"
+  },
+  "execution_summary": {
+    "outcome delivered": "Memory report now exposes compact machine-readable state classification and per-record query fields over manifest-backed Memory notes.",
+    "validation confirmed": "Focused tests, broader targeted tests, ruff, maintainer surfaces, memory report, workspace report, summary, planning checker, and diff check passed.",
+    "follow-on routed to": "none for #331; next executable roadmap lane is generated-tool-conformance unless #230 receives a fresh product-compression signal.",
+    "post-work posterity capture": "Package README documents state_model; archived plan carries proof.",
+    "knowledge promoted (Memory/Docs/Config)": "packages/memory/README.md and memory_report state_model contract",
+    "resume from": "generated-tool-conformance"
+  },
+  "drift_log": [
+    "2026-04-26: Promoted #331 from the roadmap after closing #281.",
+    "2026-04-26: Reused Memory's existing manifest as the structured owner and added a report projection instead of introducing another state file."
+  ]
+}

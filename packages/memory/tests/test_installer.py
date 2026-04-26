@@ -2272,6 +2272,16 @@ def test_memory_report_derives_compact_module_state(tmp_path: Path) -> None:
     assert report["status"]["note_count"] >= 1
     assert report["status"]["current_note_count"] >= 2
     assert "current_notes" in report["active"]
+    assert report["state_model"]["kind"] == "agentic-memory/state-model/v1"
+    assert report["state_model"]["owner_surface"] == ".agentic-workspace/memory/repo/manifest.toml"
+    assert report["state_model"]["classification_counts"]["structured_state"] >= 1
+    assert report["state_model"]["classification_counts"]["prose_explanation"] >= 1
+    assert report["state_model"]["record_contract"]["surface_classes"] == [
+        "structured_state",
+        "prose_explanation",
+        "adapter_rendering",
+    ]
+    assert any(record["path"] == ".agentic-workspace/memory/repo/index.md" for record in report["state_model"]["records"])
     assert report["habitual_pull"]["status"] in {
         "ready-for-ordinary-work",
         "attention-needed",
@@ -2282,6 +2292,7 @@ def test_memory_report_derives_compact_module_state(tmp_path: Path) -> None:
     assert "state_counts" in report["trust"]
     assert "usefulness_audit" in report
     assert report["usefulness_audit"]["status"] in {"measured", "needs-more-proof", "attention-needed", "actionable"}
+    assert ".agentic-workspace/memory/repo/manifest.toml" in report["state_model"]["common_queries"]["structured_state_owner"]
 
 
 def test_memory_report_exposes_habitual_pull_boundary_and_evidence(tmp_path: Path) -> None:
@@ -2369,6 +2380,9 @@ elimination_target = "promote"
     )
     assert any(
         item["path"] == ".agentic-workspace/memory/repo/mistakes/improvement-note.md" for item in report["trust"]["elimination_candidates"]
+    )
+    assert (
+        ".agentic-workspace/memory/repo/mistakes/improvement-note.md" in report["state_model"]["common_queries"]["improvement_candidates"]
     )
 
 
