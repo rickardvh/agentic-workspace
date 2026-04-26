@@ -1,0 +1,451 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Lower Trust Closeout Audit",
+  "goal": [
+    "Reconcile lower-trust issue closeouts from the no-active-plan implementation run.",
+    "Give future agents a compact evidence map before existing roadmap lanes are closed."
+  ],
+  "scope": [
+    "Primary issue: #324.",
+    "Audited set from #324: #292-#316 plus #261, #279, #278, #306, and #275.",
+    "Adjacent closed issues reviewed because they were part of the same planning period or roadmap lanes: #287, #288, and #290.",
+    "Live GitHub state checked on 2026-04-26 with `gh issue view` and `gh issue list --state all`."
+  ],
+  "non_goals": [
+    "Do not close existing roadmap lanes from this audit.",
+    "Do not implement follow-up issues here.",
+    "Do not store full GitHub history inside planning state."
+  ],
+  "review_mode": {
+    "mode": "trust-reconciliation",
+    "review question": "Which lower-trust closed issues are fully evidenced, which are bounded slices, which are covered by open follow-up, and which need reopening?",
+    "default finding cap": "none; all audited issues get a compact classification",
+    "inputs inspected first": "agentic-workspace preflight/summary, #324/#325/#323/#320 bodies, live issue state, recent commits named in #324, planning roadmap state, archived machine-first execplan"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace preflight --format json; uv run agentic-workspace summary --format json; gh issue list --state all --limit 400 --json number,title,state,closedAt,url,labels; gh issue view 324 --json number,title,body,state,url; gh issue view 325 --json number,title,body,state,url; gh issue view 323 --json number,title,body,state,url; gh issue view 320 --json number,title,body,state,url; gh issue view 261/275/278/279/306/287/288/290 --json number,title,state,closedAt,url; git log --oneline --decorate --max-count=40; git show --stat --oneline d46d689 46176cf 7e87cfb 1498c7f a691a33 4c05190 fabc9b3 997f4ae e956063 8709087 1b7a947 0f3882e 32f256b 9ab677b",
+    "evidence sources": "GitHub issue state, recent commit stats, `.agentic-workspace/planning/state.toml`, `.agentic-workspace/planning/external-intent-evidence.json`, `.agentic-workspace/planning/finished-work-evidence.json`, `.agentic-workspace/planning/execplans/archive/machine-first-planning-chain-closeout-2026-04-24.plan.json`"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#324",
+      "label": "lower-trust closeout audit",
+      "role": "primary-intent",
+      "locator": "github issue #324"
+    },
+    {
+      "kind": "issue",
+      "target": "#325",
+      "label": "product-level reconciliation view",
+      "role": "follow-up",
+      "locator": "github issue #325"
+    },
+    {
+      "kind": "planning-state",
+      "target": ".agentic-workspace/planning/state.toml",
+      "label": "roadmap lanes",
+      "role": "lane-continuation",
+      "locator": "roadmap.lanes"
+    }
+  ],
+  "classification_legend": {
+    "fully_satisfied_with_evidence": "The issue's own acceptance target appears satisfied by code, contracts, tests, docs, and/or checked-in planning evidence.",
+    "bounded_slice_satisfied_parent_open": "A concrete slice landed, but the larger lane remains open in roadmap state or parent issue state.",
+    "covered_by_open_followup": "The closed issue has residual intent, but an open issue now owns that residual work.",
+    "premature_or_needs_reopening": "The audit found material residual intent with no open owner."
+  },
+  "issue_classifications": [
+    {
+      "id": "#261",
+      "title": "Reopen execplan modernization so machine-readable planning state becomes canonical and human views become derived",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Archived machine-first closeout records canonical execplan sidecars, typed references, and proportional review retention; commit e956063 exposed machine-first planning summary state.",
+      "follow_up": "#323, #324, and #325 remain open under the machine-first-planning-state roadmap lane.",
+      "lane_impact": "Do not close the machine-first-planning-state lane from #261 alone."
+    },
+    {
+      "id": "#275",
+      "title": "Slim the shipped root AGENTS entrypoint so installs converge on the thin startup contract",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Commit 9ab677b slimmed AGENTS.md and related bootstrap adapter surfaces.",
+      "follow_up": "#281, #319, #326, and #230 remain open for product-residue and adapter-refresh pressure.",
+      "lane_impact": "Treat root AGENTS slimming as satisfied, not the whole product-compression lane."
+    },
+    {
+      "id": "#278",
+      "title": "Replace markdown-first workflow contracts with a stricter, composable workflow definition format",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Commit 0f3882e added workflow_definition_format contracts, schema, tooling validation, and CLI surface checks.",
+      "follow_up": "#327 remains open for default-branch workflow posture risk.",
+      "lane_impact": "Formal-workflow-substrate-follow-through remains open."
+    },
+    {
+      "id": "#279",
+      "title": "Take relevant system intent into explicit account when shaping slices and validating intent satisfaction",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Commit 1b7a947 added system intent alignment fields to planning records and template/test coverage.",
+      "follow_up": "The roadmap keeps system-intent-operational-follow-through open until post-audit verification decides whether another small slice is needed.",
+      "lane_impact": "Do not infer the system-intent lane is closed until that post-audit check is made."
+    },
+    {
+      "id": "#287",
+      "title": "Add a local-only agent integration area",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Commit ccd2cd3 added the local-only integration area boundary and the live execplan records root, convention, and validation proof.",
+      "follow_up": "Roadmap keeps local-only-integration-area visible pending this audit's lane decision.",
+      "lane_impact": "Adjacent item; included so the lane is not silently treated as closed."
+    },
+    {
+      "id": "#288",
+      "title": "Define the first local integration root and boundary rules",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "The active local-only integration execplan records `.agentic-workspace/local/integrations/`, vendor/runtime subfolders, ignore rules, config/defaults output, and focused validation.",
+      "follow_up": "None for the bounded root/convention slice.",
+      "lane_impact": "Supports #287 but does not by itself close every future local-only integration question."
+    },
+    {
+      "id": "#290",
+      "title": "Add preparatory refinement templates for strong general-purpose reasoning",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Commit 8709087 added `.agentic-workspace/planning/pre-ingestion-refinement.md` and package/bootstrap copies.",
+      "follow_up": "Roadmap keeps pre-ingestion-refinement-templates visible until post-audit coverage review.",
+      "lane_impact": "Template slice satisfied; lane closure still awaits coverage decision."
+    },
+    {
+      "id": "#292",
+      "title": "Review friction: reduce competing first-contact surfaces",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Compact startup/preflight/summary queries are now the default route and 9ab677b slimmed the root adapter; current AGENTS.md points into compact package surfaces.",
+      "follow_up": "Graceful-partial-compliance roadmap lane remains open until the audit decides whether more generic-agent compliance work is needed.",
+      "lane_impact": "Do not close the graceful partial-compliance lane solely from first-contact simplification."
+    },
+    {
+      "id": "#293",
+      "title": "Direction / proposal: diff-path-based proof selector command",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Proof-selection behavior is now represented in contract data by commit 7e87cfb and exercised by workspace CLI tests from the compact startup/proof work.",
+      "follow_up": "None for the bounded proof-selector proposal; future proof automation can still appear as new work.",
+      "lane_impact": "No lane closure implied."
+    },
+    {
+      "id": "#294",
+      "title": "Direction / proposal: diff-path-based proof selector command",
+      "live_state": "closed",
+      "classification": "covered_by_open_followup",
+      "evidence": "Duplicate/earlier proof-selector item; the implemented path is represented by #293 and contract proof-selection work.",
+      "follow_up": "#293 carries the satisfied bounded proposal; no separate reopening needed.",
+      "lane_impact": "No lane impact."
+    },
+    {
+      "id": "#295",
+      "title": "Review friction: adapter vs canonical surface ambiguity",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Root/package AGENTS adapters now route to structured package surfaces, and summary/preflight expose the canonical active planning record.",
+      "follow_up": "#281 and #319 remain open for compatibility artifact replacement and adapter refresh.",
+      "lane_impact": "Partial-compliance and product-compression lanes remain visible."
+    },
+    {
+      "id": "#296",
+      "title": "Direction / proposal: minimum-safe-read startup command",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "`agentic-workspace preflight --format json` and `agentic-workspace summary --format json` now provide compact startup and active-state guidance; this audit used them successfully before raw planning reads.",
+      "follow_up": "None for the minimum-safe-read slice.",
+      "lane_impact": "No lane closure implied."
+    },
+    {
+      "id": "#297",
+      "title": "Review friction: package boundary confusion",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Extraction/discovery contracts and package-local AGENTS adapters distinguish source, package payload, and install boundaries.",
+      "follow_up": "The graceful-partial-compliance lane stays open until post-audit validation decides whether boundary confusion remains for generic agents.",
+      "lane_impact": "No lane closure yet."
+    },
+    {
+      "id": "#298",
+      "title": "Direction / proposal: cheap-implementer mode for bounded agents",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Commit d46d689 added bounded implementer context to CLI/contracts/tests and package adapter instructions.",
+      "follow_up": "None for the bounded implementer context slice.",
+      "lane_impact": "No lane closure implied."
+    },
+    {
+      "id": "#299",
+      "title": "Direction / proposal: extract CLI command and option manifests",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "PR #304 and commit deb6bee extracted command/parser/policy manifests; later commit fabc9b3 completed operation-contract coverage.",
+      "follow_up": "None for this bounded extraction proposal.",
+      "lane_impact": "Parent #258 remains open for broader declarative portability."
+    },
+    {
+      "id": "#300",
+      "title": "Direction / proposal: extract module registry metadata from Python",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "PR #304 and contract inventory/module-registry extraction work moved stable metadata into contract payloads.",
+      "follow_up": "None for this bounded extraction proposal.",
+      "lane_impact": "Parent #258 remains open."
+    },
+    {
+      "id": "#301",
+      "title": "Direction / proposal: extract CLI policy payloads",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "PR #304 and subsequent manifest-backed CLI policy extraction moved stable policy payloads out of Python-only authorship.",
+      "follow_up": "None for this bounded extraction proposal.",
+      "lane_impact": "Parent #258 remains open."
+    },
+    {
+      "id": "#302",
+      "title": "Direction / proposal: extract setup findings and preflight policy",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "PR #304 plus later contract inventory work extracted setup/preflight policy surfaces and validation.",
+      "follow_up": "None for this bounded extraction proposal.",
+      "lane_impact": "Parent #258 remains open."
+    },
+    {
+      "id": "#303",
+      "title": "Direction / proposal: extract workspace surface and path manifests",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "PR #304 and manifest-backed extraction moved workspace/path manifest data into checked-in contracts.",
+      "follow_up": "None for this bounded extraction proposal.",
+      "lane_impact": "Parent #258 remains open."
+    },
+    {
+      "id": "#304",
+      "title": "Extract declarative workspace contracts",
+      "live_state": "merged pull request, not an issue",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "PR #304 merged the manifest-backed command/parser/policy extraction that several issue slices depend on.",
+      "follow_up": "Use PR #304 as evidence, not as a closed issue requiring lane accounting.",
+      "lane_impact": "Evidence item only."
+    },
+    {
+      "id": "#305",
+      "title": "Define implementation-independent operation contracts",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Commits 0ce021e through 0259889 established operation contract schemas, registries, and validation; later commit fabc9b3 expanded command coverage.",
+      "follow_up": "Parent #309/#258 remains open for broader extraction posture.",
+      "lane_impact": "Operation-contract slice satisfied; declarative-portability lane remains."
+    },
+    {
+      "id": "#306",
+      "title": "Add black-box conformance contracts for generated tools",
+      "live_state": "closed",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "evidence": "Commit 32f256b added `src/agentic_workspace/conformance.py`, conformance contracts, schemas, and generated-tool conformance tests.",
+      "follow_up": "Roadmap keeps generated-tool-conformance open until post-audit decides whether adapter coverage or negative cases are enough.",
+      "lane_impact": "Do not close the generated-tool-conformance lane yet."
+    },
+    {
+      "id": "#307",
+      "title": "Distill durable lane learning before archiving execplans",
+      "live_state": "closed",
+      "classification": "covered_by_open_followup",
+      "evidence": "Machine-first archived plans record closeout/learning fields, but the no-active-plan run and archive cleanup bug showed the process is not yet trustworthy enough.",
+      "follow_up": "#323, #324, and #325 directly own cleanup, audit, and reconciliation.",
+      "lane_impact": "Machine-first-planning-state remains open."
+    },
+    {
+      "id": "#308",
+      "title": "Procedural operation contracts",
+      "live_state": "merged pull request, not an issue in the audited set",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "PR #308 merged procedural operation-contract validation after PR #304.",
+      "follow_up": "Evidence item only.",
+      "lane_impact": "No issue accounting required."
+    },
+    {
+      "id": "#309",
+      "title": "Complete Python-consumable contract extraction",
+      "live_state": "closed",
+      "classification": "covered_by_open_followup",
+      "evidence": "Commits 46176cf, 7e87cfb, 1498c7f, a691a33, 4c05190, fabc9b3, and 997f4ae added extraction maps, schemas, loaders, templates, operation contracts, parity checks, and runtime-boundary classification.",
+      "follow_up": "#320 remains open for authority marker policy extraction; #258 remains open as the broader declarative-portability parent.",
+      "lane_impact": "Python-consumable-contract-extraction remains open with #320 as first post-audit slice."
+    },
+    {
+      "id": "#310",
+      "title": "Audit remaining Python-owned extractable contract content",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Commit 46176cf added `python_extraction_map.json`; commit 997f4ae added `python_runtime_boundary.json` to classify remaining Python-owned behavior.",
+      "follow_up": "#320 for the specific remaining stable authority marker data.",
+      "lane_impact": "Audit slice satisfied; parent extraction lane remains because a known follow-up exists."
+    },
+    {
+      "id": "#311",
+      "title": "Extract input/output and result schemas for Python consumption",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Commit a691a33 added startup and implementer output schemas with contract tooling validation.",
+      "follow_up": "None for this bounded schema slice.",
+      "lane_impact": "Parent #309/#258 remains open."
+    },
+    {
+      "id": "#312",
+      "title": "Extract static data, text, and rendering templates from Python",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Commit 4c05190 added `context_templates.json`, schema validation, and rewired CLI rendering to consume templates.",
+      "follow_up": "None for this bounded template slice.",
+      "lane_impact": "Parent #309/#258 remains open."
+    },
+    {
+      "id": "#313",
+      "title": "Complete operation-contract coverage for every CLI command",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Commit fabc9b3 expanded operation contracts for all CLI commands and validation checks.",
+      "follow_up": "None for operation-command coverage as audited.",
+      "lane_impact": "Parent #309/#258 remains open."
+    },
+    {
+      "id": "#314",
+      "title": "Wire Python loaders and schema-derived models for extracted contracts",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Commits 1498c7f and surrounding extraction work added validated consumption policy and contract_tooling loader support.",
+      "follow_up": "None for this bounded loader slice.",
+      "lane_impact": "Parent #309/#258 remains open."
+    },
+    {
+      "id": "#315",
+      "title": "Add extraction parity checks and Python-consumed contract conformance",
+      "live_state": "closed",
+      "classification": "fully_satisfied_with_evidence",
+      "evidence": "Contract tooling checks were expanded across extraction contracts, and tests cover Python consumption/parity paths.",
+      "follow_up": "None for this bounded parity slice.",
+      "lane_impact": "Parent #309/#258 remains open."
+    },
+    {
+      "id": "#316",
+      "title": "Classify remaining Python-owned procedural logic after extraction",
+      "live_state": "closed",
+      "classification": "covered_by_open_followup",
+      "evidence": "Commit 997f4ae added runtime boundary classification; #320 was opened for the authority-marker policy data that remains stable but Python-authored.",
+      "follow_up": "#320 owns the remaining authority marker extraction gap.",
+      "lane_impact": "Python-consumable-contract-extraction remains open."
+    }
+  ],
+  "summary_counts": {
+    "fully_satisfied_with_evidence": 18,
+    "bounded_slice_satisfied_parent_open": 11,
+    "covered_by_open_followup": 5,
+    "premature_or_needs_reopening": 0,
+    "evidence_only_prs": 2
+  },
+  "lane_impacts": [
+    {
+      "lane": "machine-first-planning-state",
+      "decision": "keep open",
+      "reason": "#323 and #325 remain open after #324; #261/#307 were not enough to trust closeout hygiene."
+    },
+    {
+      "lane": "formal-workflow-substrate-follow-through",
+      "decision": "keep open",
+      "reason": "#278 landed a contract slice, but #327 owns remaining default-branch workflow posture risk."
+    },
+    {
+      "lane": "local-only-memory-continuity",
+      "decision": "not audited here",
+      "reason": "#328 was added after the lower-trust run and remains scheduled as its own lane."
+    },
+    {
+      "lane": "python-consumable-contract-extraction",
+      "decision": "keep open",
+      "reason": "#320 remains a concrete extraction gap and #258 remains the broader parent."
+    },
+    {
+      "lane": "further-product-compression-on-repeated-pressure",
+      "decision": "keep open",
+      "reason": "#275 was satisfied as a root adapter slice, but #281, #319, #326, and #230 remain open."
+    },
+    {
+      "lane": "generated-tool-conformance",
+      "decision": "keep open until post-audit check",
+      "reason": "#306 landed a conformance harness, but the roadmap intentionally asks whether adapter coverage and negative cases are enough."
+    },
+    {
+      "lane": "system-intent-operational-follow-through",
+      "decision": "keep open until post-audit check",
+      "reason": "#279 landed alignment fields, but the roadmap asks for one verification pass before closure."
+    },
+    {
+      "lane": "pre-ingestion-refinement-templates",
+      "decision": "keep open until post-audit check",
+      "reason": "#290 landed templates, but coverage across recurring intake ambiguity still needs a decision."
+    },
+    {
+      "lane": "local-only-integration-area",
+      "decision": "keep open until post-audit check",
+      "reason": "#287/#288 landed the root and boundary; decide separately whether runtime examples are needed."
+    },
+    {
+      "lane": "graceful-partial-compliance",
+      "decision": "keep open until post-audit check",
+      "reason": "#292/#293/#295/#296/#297/#298 landed several improvements, but the no-active-plan run proves compliance and bypass trust still need review."
+    }
+  ],
+  "findings": [
+    {
+      "title": "No audited item needs immediate reopening",
+      "summary": "The audit found no material closed-issue intent without either landed evidence or an open follow-up.",
+      "evidence": "Open follow-ups cover residual gaps: #320, #323, #325, #327, #328, #281, #319, #326, #258, and #230.",
+      "risk if unchanged": "Low for issue reopening; high if lanes are closed before the follow-ups are executed.",
+      "suggested action": "Close #324 after this artifact lands, then continue the first roadmap lane with #323/#325.",
+      "confidence": "medium",
+      "source": "live GitHub issue state and checked-in planning evidence",
+      "promotion target": ".agentic-workspace/planning/state.toml roadmap lanes",
+      "promotion trigger": "after #324 commit is pushed",
+      "post-remediation note shape": "Issue #324 can close as an audit artifact, not as roadmap lane closure."
+    },
+    {
+      "title": "Several issue closures were honest bounded slices, not lane closure evidence",
+      "summary": "#261, #275, #278, #279, #287, #290, #292, #295, #297, and #306 should not be read as proving their whole lanes complete.",
+      "evidence": "The current roadmap still tracks each larger lane or corresponding open follow-up.",
+      "risk if unchanged": "Future agents may close lanes prematurely because individual issue closure looks stronger than the evidence supports.",
+      "suggested action": "Keep these lanes visible until their planned post-audit slices run.",
+      "confidence": "high",
+      "source": ".agentic-workspace/planning/state.toml and live issue state",
+      "promotion target": "#325",
+      "promotion trigger": "when implementing the product-level reconciliation view",
+      "post-remediation note shape": "Compact reconciliation should expose bounded-slice versus full-lane distinction."
+    }
+  ],
+  "recommendation": {
+    "promote": "#324 itself is satisfied by this checked-in audit artifact once validation passes.",
+    "defer": "Do not close existing roadmap lanes yet. Continue with #323/#325 in the first lane, then later lanes in priority order.",
+    "dismiss": "No immediate reopen action from this audit."
+  },
+  "retention": {
+    "closeout shape": "Keep this review artifact as the durable lower-trust closeout map until #325 provides a generated reconciliation view.",
+    "trigger": "Retain while roadmap lanes reference lower-trust closeout signals.",
+    "proof surface": ".agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json"
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "git diff --check"
+  ],
+  "drift_log": [
+    "2026-04-26: Created from #324 after promoting the audit into an active execplan and checking live GitHub issue state."
+  ]
+}

@@ -1,0 +1,217 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Lower Trust Closeout Audit",
+  "goal": [
+    "Produce a compact checked-in audit for issue #324 that reconciles lower-trust issue closeouts from the no-active-plan implementation run.",
+    "Map each audited closed issue to fully satisfied with evidence, bounded slice satisfied with parent intent still open, covered by open follow-up, or needs reopening.",
+    "Preserve #324's constraint that existing roadmap lanes must not be closed until the audit makes the evidence state explicit."
+  ],
+  "non_goals": [
+    "Do not close existing roadmap lanes as part of this audit.",
+    "Do not reopen issues unless the checked evidence clearly shows an uncovered dangling intent.",
+    "Do not implement the follow-up issues found by the audit in this slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Make the lower-trust closeout state reviewable and machine-consumable before treating prior lanes as satisfied.",
+      "constraints": "Use live GitHub issue state and checked-in planning evidence; do not rely on chat memory alone; keep the artifact compact enough for future agents to consume.",
+      "latitude": "Choose the smallest review artifact shape that records issue classification, evidence pointers, lane impact, and follow-up routing.",
+      "escalation": "Escalate if the audit finds closed issues with material uncovered intent that cannot be represented by an existing open follow-up."
+    },
+    "execution": {
+      "milestone": "issue-324-audit-artifact",
+      "status": "completed",
+      "next_step": "Validate the audit artifact, close #324, then continue the machine-first lane with #323/#325.",
+      "proof": "A checked-in review artifact maps the audited issue set to explicit satisfaction categories, references evidence/follow-ups, and leaves existing roadmap lanes open."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/lower-trust-closeout-audit.plan.json",
+        ".agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json"
+      ],
+      "invariants": [
+        "Existing roadmap lanes remain open until their satisfaction state is separately promoted or closed.",
+        "Audit claims cite live issues, commits, plans, reviews, or explicit open follow-ups.",
+        "The active planning record remains singular and valid while the slice is in progress."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "machine-first planning state and closeout hygiene",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane machine-first-planning-state",
+    "parent lane": "machine-first-planning-state"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane machine-first-planning-state",
+    "activation trigger": "continue with #323/#325 after #324 establishes the lower-trust evidence map"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Future lane closeout can start from explicit evidence categories instead of reconstructing trust state from chat and commits.",
+    "intentionally deferred": "archive cleanup hardening (#323), reconciliation view/tooling (#325), and any parent-lane implementation work outside the audit.",
+    "discovered implications": "No audited item needs immediate reopening, but many issue closures are bounded-slice evidence rather than lane-closure evidence.",
+    "proof achieved now": "lower-trust closeout audit artifact created with per-issue classification and lane impact",
+    "validation still needed": "none for #324 after closeout validation",
+    "next likely slice": "#323 or #325 in the same roadmap lane"
+  },
+  "intent_interpretation": {
+    "literal request": "execute planned work lane by lane, dogfooding the package fully",
+    "inferred intended outcome": "start with the first roadmap lane's first slice and use the planning package as the operational source of truth",
+    "chosen concrete what": "promote #324 into an active execplan and create the lower-trust closeout audit artifact",
+    "interpretation distance": "low",
+    "review guidance": "verify the artifact covers #324's issue set and does not prematurely close existing lanes"
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/lower-trust-closeout-audit.plan.json; .agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json",
+    "max changed files": "3",
+    "required validation commands": "uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "ask-before-refactor threshold": "stop before changing package code or GitHub issue state beyond closing #324 after proof",
+    "stop before touching": "roadmap lane closure, unrelated execplans, or implementation follow-ups"
+  },
+  "stop_conditions": {
+    "stop when": "the audit is checked in, validated, and #324 can honestly close as an audit artifact milestone",
+    "escalate when boundary reached": "the audit identifies a closed issue that needs reopening and no existing follow-up covers the remaining intent",
+    "escalate on scope drift": "work becomes implementation of the audited follow-up issues",
+    "escalate on proof failure": "planning checks fail or the audit cannot cite evidence"
+  },
+  "context_budget": {
+    "live working set": "#324 body, issue states for the audited set, roadmap lanes, recent planning artifacts and commits",
+    "recoverable later": "full archived plan history outside cited evidence",
+    "externalize before shift": "classification table, follow-up mapping, and lane impact",
+    "pre-work config pull": "agentic-workspace preflight --format json; agentic-workspace summary --format json",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "audit #324 first; do not close lanes; use live issue states and checked-in evidence",
+    "context-shift triggers": "after issue evidence collection or before committing"
+  },
+  "delegated_judgment": {
+    "requested outcome": "create a trustworthy closeout audit for lower-trust prior work",
+    "hard constraints": "do not close roadmap lanes; use live GitHub issue state; keep artifact compact and machine-readable",
+    "agent may decide locally": "exact grouping, evidence pointer format, and whether #324 can close after artifact proof",
+    "escalate when": "material dangling work is found without an open follow-up or clear reopen target"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#324",
+      "label": "Audit lower-trust roadmap lane closeouts",
+      "role": "primary-intent",
+      "locator": "github issue #324"
+    },
+    {
+      "kind": "planning-state",
+      "target": ".agentic-workspace/planning/state.toml",
+      "label": "machine-first-planning-state lane",
+      "role": "parent-lane",
+      "locator": "roadmap.lanes[id=machine-first-planning-state]"
+    }
+  ],
+  "active_milestone": {
+    "id": "issue-324-audit-artifact",
+    "status": "completed",
+    "scope": "Create one compact review artifact for lower-trust closed issue evidence state.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run validation commands, then close #324 and continue with #323/#325."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/lower-trust-closeout-audit.plan.json",
+    ".agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json"
+  ],
+  "invariants": [
+    "No existing roadmap lane is closed by this slice.",
+    "Issue classifications include evidence pointers.",
+    "Open follow-ups remain visible in planning state."
+  ],
+  "contract_decisions_to_freeze": [
+    "A lane cannot be considered closed from this no-active-plan run until the audit categorizes its issues and follow-ups."
+  ],
+  "open_questions_to_close": [
+    "Which closed issues are fully satisfied?",
+    "Which closed issues only completed a bounded slice?",
+    "Which closed issues are covered by open follow-ups?",
+    "Which, if any, need reopening?"
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "git diff --check"
+  ],
+  "required_tools": [
+    "uv",
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "The review artifact includes the issue set, classifications, evidence, follow-up mapping, and lane impact.",
+    "The active execplan records proof and honest continuation.",
+    "Planning summary and checker pass.",
+    "#324 can close without closing any existing roadmap lane."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex dogfooding agentic-workspace",
+    "handoff source": "roadmap lane suggested_first_slice",
+    "what happened": "Promoted #324 into an active execplan, gathered live GitHub issue state and local planning/commit evidence, and created a checked-in review artifact classifying each audited closeout.",
+    "scope touched": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/lower-trust-closeout-audit.plan.json; .agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json",
+    "changed surfaces": "planning active state, #324 execplan, lower-trust closeout audit review artifact",
+    "validations run": "uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "result for continuation": "#324 can close after validation; no existing roadmap lane should close from this audit alone.",
+    "next step": "validate and close #324"
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "preflight used before raw planning edits",
+    "misinterpretation risk": "low after per-issue classifications and lane impact were checked in",
+    "follow-on decision": "close #324 after validation, keep roadmap lanes open"
+  },
+  "proof_report": {
+    "validation proof": "`uv run agentic-workspace summary --format json`; `uv run python scripts/check/check_planning_surfaces.py`; `git diff --check`",
+    "proof achieved now": "A checked-in audit artifact maps the lower-trust closeouts to explicit trust categories and records open follow-up coverage.",
+    "evidence for \"proof achieved\" state": ".agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "audit lower-trust roadmap lane closeouts before closing existing lanes",
+    "was original intent fully satisfied?": "yes for the audit artifact after validation passes",
+    "evidence of intent satisfaction": "The review artifact classifies #292-#316 plus #261/#279/#278/#306/#275 and adjacent #287/#288/#290, with evidence/follow-up/lane-impact fields.",
+    "unsolved intent passed to": "#323 and #325 in the machine-first-planning-state lane"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Agentic Workspace should make agent work restartable, reviewable, and grounded in structured local surfaces rather than chat-only state.",
+    "slice shaping bias": "prefer compact machine-readable evidence over broad prose closeout",
+    "broader-lane validation question": "Can future agents decide lane continuation or closure from checked-in evidence without reconstructing the no-active-plan run?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "close #324 only; keep roadmap lanes open",
+    "why this decision is honest": "The audit answers #324's requested reconciliation question without claiming the underlying lanes are complete.",
+    "evidence carried forward": ".agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json",
+    "reopen trigger": "reopen or create follow-up if the audit finds closed issue intent not covered by open work"
+  },
+  "execution_summary": {
+    "outcome delivered": "lower-trust issue closeout audit artifact",
+    "validation confirmed": "summary, planning surface check, and diff whitespace check passed",
+    "follow-on routed to": "#323 and #325",
+    "post-work posterity capture": ".agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json",
+    "knowledge promoted (Memory/Docs/Config)": "planning review artifact",
+    "resume from": ".agentic-workspace/planning/execplans/lower-trust-closeout-audit.plan.json"
+  },
+  "drift_log": [
+    "2026-04-26: Active execplan created from roadmap lane `machine-first-planning-state` suggested first slice for #324.",
+    "2026-04-26: Added lower-trust closeout audit artifact with per-issue classifications and lane impacts.",
+    "2026-04-26: Validation passed and the active TODO row was removed, leaving the completed plan as durable proof for #324."
+  ]
+}
