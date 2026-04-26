@@ -887,7 +887,7 @@
       "system": "github",
       "id": "#373",
       "title": "[Workspace]: Make generated CLI adapter status a non-regression check",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"

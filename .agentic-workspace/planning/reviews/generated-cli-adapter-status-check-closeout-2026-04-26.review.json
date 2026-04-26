@@ -1,0 +1,35 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Generated CLI Adapter Status Check Closeout",
+  "date": "2026-04-26",
+  "scope": "#373",
+  "classification": "closeout",
+  "issue_classifications": [
+    {
+      "id": "#373",
+      "title": "[Workspace]: Make generated CLI adapter status a non-regression check",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "#372, #374, #375",
+      "evidence": "scripts/check/check_contract_tooling_surfaces.py now reports generated command adapter status by program/output path, generated command surfaces, source contract, freshness, direct-edit detection, regeneration command, and edit routes."
+    }
+  ],
+  "findings": [
+    {
+      "id": "#373",
+      "title": "[Workspace]: Make generated CLI adapter status a non-regression check",
+      "action_state": "evidence-present",
+      "evidence": "tests/test_contract_tooling.py covers _generated_command_adapter_statuses for both agentic-workspace and agentic-planning-bootstrap outputs; check output distinguishes command/interface contract edits from runtime primitive edits.",
+      "follow_up": "#372, #374, #375",
+      "notes": "This directly addresses the #371 dogfooding friction where root and package generated status had to be reconciled together."
+    }
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run python scripts/generate/generate_command_adapters.py --check",
+    "uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py -q",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ]
+}

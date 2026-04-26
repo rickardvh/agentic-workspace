@@ -460,22 +460,44 @@ def _validate_command_adapter_generation(payload: dict[str, object]) -> list[str
     return errors
 
 
-def _validate_generated_command_adapter_output() -> list[str]:
+def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list[str]]:
+    statuses: list[dict[str, object]] = []
     errors: list[str] = []
     repo_root = Path(__file__).resolve().parents[2]
     generator_path = repo_root / "scripts" / "generate" / "generate_command_adapters.py"
     spec = importlib.util.spec_from_file_location("generate_command_adapters", generator_path)
     if spec is None or spec.loader is None:
-        return [f"generator layer: cannot load {generator_path.relative_to(repo_root).as_posix()}"]
+        return statuses, [f"generator layer: cannot load {generator_path.relative_to(repo_root).as_posix()}"]
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     manifest = command_adapter_generation_manifest()
     for output_spec in manifest["generated_outputs"]:
         program = str(output_spec["program"])
         generated_path = repo_root / str(output_spec["path"])
+        output_adapters = [
+            adapter for adapter in manifest["adapters"] if adapter.get("command", {}).get("program") == program
+        ]
         expected = module._render_generated_module(manifest, program=program)
         current = generated_path.read_text(encoding="utf-8") if generated_path.exists() else ""
-        if current != expected:
+        is_current = current == expected
+        statuses.append(
+            {
+                "program": program,
+                "path": generated_path.relative_to(repo_root).as_posix(),
+                "status": "current" if is_current else "stale",
+                "direct_edit_detected": not is_current,
+                "source_contract": "src/agentic_workspace/contracts/command_adapter_generation.json",
+                "regenerate": "uv run python scripts/generate/generate_command_adapters.py",
+                "command_surfaces": [
+                    str(adapter.get("command", {}).get("name", "")) for adapter in output_adapters
+                ],
+                "where_to_edit": {
+                    "command_interface": "src/agentic_workspace/contracts/command_adapter_generation.json",
+                    "runtime_behavior": "hand-written operation/primitive implementation code",
+                },
+            }
+        )
+        if not is_current:
             errors.append(
                 f"generated adapter layer: {generated_path.relative_to(repo_root).as_posix()} is stale; "
                 "run uv run python scripts/generate/generate_command_adapters.py"
@@ -504,7 +526,11 @@ def _validate_generated_command_adapter_output() -> list[str]:
                 errors.append(f"generated adapter layer: {command_name} {key} drifted from command_adapter_generation.json")
     for command_name in set(GENERATED_COMMAND_ADAPTERS_BY_COMMAND) - set(expected_by_command):
         errors.append(f"generated adapter layer: unexpected generated adapter for command {command_name}")
-    return errors
+    return statuses, errors
+
+
+def _validate_generated_command_adapter_output() -> list[str]:
+    return _generated_command_adapter_statuses()[1]
 
 
 def _validate_python_contract_consumption_policy(payload: dict[str, object]) -> list[str]:
@@ -1238,8 +1264,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.quiet_success:
         print("[ok] contract tooling")
     else:
+        generated_adapter_statuses, _ = _generated_command_adapter_statuses()
         print("Contract tooling health report")
         print("- No contract-tooling drift warnings detected.")
+        print("- Generated command adapter status:")
+        for status in generated_adapter_statuses:
+            commands = ", ".join(str(command) for command in status["command_surfaces"])
+            print(
+                "  - "
+                f"{status['program']} -> {status['path']}: {status['status']}; "
+                f"commands: {commands}; "
+                f"source: {status['source_contract']}; "
+                f"direct_edit_detected: {str(status['direct_edit_detected']).lower()}; "
+                f"edit command interface in {status['where_to_edit']['command_interface']}; "
+                f"edit runtime behavior in {status['where_to_edit']['runtime_behavior']}"
+            )
     return 0
 
 

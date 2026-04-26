@@ -1,0 +1,166 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Generated Cli Adapter Status Check 2026 04 26",
+  "goal": [
+    "Implement #373 by making generated CLI adapter status a non-regression check that reports generated command surfaces, source authority, freshness, direct-edit detection, and edit routes."
+  ],
+  "non_goals": [
+    "Generate every CLI surface.",
+    "Block hand-written runtime primitive implementation changes.",
+    "Add host-specific tracker or agent assumptions to the package."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Complete the bounded work for TODO item `generated-cli-adapter-status-check-2026-04-26`.",
+      "constraints": "Keep the check repo-, host-, agent-, and language-agnostic; command/interface truth stays in contracts, runtime behavior stays in primitives.",
+      "latitude": "Tighten existing check output and tests instead of adding a new first-line command.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "generated-cli-adapter-status-check-2026-04-26",
+      "status": "completed",
+      "next_step": "Archive #373 and continue with #372 or #374.",
+      "proof": "Contract-tooling check, generated adapter freshness check, generated-tool conformance, workspace CLI tests, ruff, and planning doctor passed."
+    },
+    "scope": {
+      "touched": [
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "tests/test_contract_tooling.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete the bounded work for TODO item `generated-cli-adapter-status-check-2026-04-26`.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete the bounded work for TODO item `generated-cli-adapter-status-check-2026-04-26`.",
+    "hard constraints": "Keep the check repo-, host-, agent-, and language-agnostic; do not turn runtime primitive edits into generated-surface drift.",
+    "agent may decide locally": "Shape the status payload and tests around existing check scripts.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "generated-cli-adapter-status-check-2026-04-26",
+    "status": "completed",
+    "scope": "#373",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add generated-adapter status inventory to the existing contract-tooling check."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "tests/test_contract_tooling.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run python scripts/generate/generate_command_adapters.py --check",
+    "uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py -q",
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "#373 is implemented and closed.",
+    "The check identifies generated command adapter outputs and owning contract source.",
+    "The check reports whether generated outputs are current and flags direct generated-output edits as drift.",
+    "The check tells contributors where command/interface changes and runtime behavior changes belong."
+  ],
+  "execution_summary": {
+    "outcome delivered": "The existing contract-tooling check now reports generated command adapter status by program/output path, generated command surfaces, source contract, freshness, direct-edit detection, regeneration command, and command-vs-runtime edit routes.",
+    "validation confirmed": "uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/generate/generate_command_adapters.py --check; uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "follow-on routed to": "#372, #374, #375, and parent #230 remain open.",
+    "post-work posterity capture": ".agentic-workspace/planning/reviews/generated-cli-adapter-status-check-closeout-2026-04-26.review.json",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "next product-compression follow-up"
+  },
+  "proof_report": {
+    "validation proof": "All selected proof lanes passed after adding generated adapter status inventory and tests.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "uv run python scripts/check/check_contract_tooling_surfaces.py passed and printed generated adapter status; uv run python scripts/generate/generate_command_adapters.py --check passed; uv run pytest tests/test_contract_tooling.py tests/test_generated_tool_conformance.py -q passed; uv run pytest tests/test_workspace_cli.py -q passed 166 tests; uv run ruff check src tests passed; uv run agentic-workspace doctor --target . --modules planning --format json returned healthy."
+  },
+  "intent_satisfaction": {
+    "original intent": "Complete the bounded work for TODO item `generated-cli-adapter-status-check-2026-04-26`.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#373 slice satisfied: the contract-tooling check reports generated command adapter outputs, generated command surfaces, source contract, freshness, direct-edit detection, regeneration command, and edit routes.",
+    "unsolved intent passed to": "#372, #374, #375, and parent #230"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#373 is complete, but parent #230 and follow-up children remain open.",
+    "evidence carried forward": "scripts/check/check_contract_tooling_surfaces.py, tests/test_contract_tooling.py, .agentic-workspace/planning/reviews/generated-cli-adapter-status-check-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen #373 if generated CLI adapter outputs can drift without the contract-tooling check identifying source, freshness, direct-edit state, and edit route."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#372, #374, #375, and parent #230 remain open.",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-26: Promoted from TODO direct-task shape into an execplan."
+  ]
+}

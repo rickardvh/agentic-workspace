@@ -138,6 +138,30 @@ def test_generated_command_adapter_module_routes_direct_edits_to_authoritative_s
     assert "uv run python scripts/generate/generate_command_adapters.py" in generated_text
 
 
+def test_contract_tooling_check_reports_generated_adapter_status() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    statuses, errors = module._generated_command_adapter_statuses()
+
+    assert errors == []
+    assert {status["program"] for status in statuses} == {"agentic-workspace", "agentic-planning-bootstrap"}
+    assert all(status["status"] == "current" for status in statuses)
+    assert all(status["direct_edit_detected"] is False for status in statuses)
+    assert all(status["source_contract"] == "src/agentic_workspace/contracts/command_adapter_generation.json" for status in statuses)
+    assert all(
+        status["where_to_edit"]["command_interface"] == "src/agentic_workspace/contracts/command_adapter_generation.json"
+        for status in statuses
+    )
+    assert all(status["where_to_edit"]["runtime_behavior"] == "hand-written operation/primitive implementation code" for status in statuses)
+    commands_by_program = {status["program"]: status["command_surfaces"] for status in statuses}
+    assert commands_by_program["agentic-workspace"] == ["defaults"]
+    assert commands_by_program["agentic-planning-bootstrap"] == ["status"]
+
+
 def test_validated_contract_loader_reports_contract_and_schema(monkeypatch, tmp_path: Path) -> None:
     contracts_root = tmp_path / "contracts"
     schemas_root = contracts_root / "schemas"
