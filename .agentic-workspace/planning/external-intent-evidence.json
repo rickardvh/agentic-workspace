@@ -594,6 +594,60 @@
       "kind": "issue",
       "parent_id": "#337",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#341",
+      "title": "[Review]: Make the default workspace report a router instead of an encyclopedia",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#342",
+      "title": "[Workspace]: Turn the surface-value guardrail into an ordinary review gate for durable surfaces",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#343",
+      "title": "[Planning]: Add closeout distillation so archived execplans stop being the durable-learning carrier",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#344",
+      "title": "[Memory]: Shrink ordinary Memory pulls through structured durable-fact routing",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#345",
+      "title": "[Workspace]: Add selector and size discipline for high-volume report sections",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#346",
+      "title": "[Workspace]: Make operational-compression measures falsifiable without adding dashboards",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
     }
   ]
 }
