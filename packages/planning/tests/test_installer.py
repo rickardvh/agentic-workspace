@@ -2013,6 +2013,40 @@ candidates = [
     assert any(action.kind == "updated" and "roadmap lanes" in action.detail for action in result.actions)
 
 
+def test_archive_execplan_cleanup_requires_all_stem_tokens_before_removing_state_lane(tmp_path: Path) -> None:
+    plan_ref = ".agentic-workspace/planning/execplans/lower-trust-closeout-reconciliation-view.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        f"""
+[todo]
+active_items = [
+  {{ id = "lower-trust-closeout-reconciliation-view", status = "active", plan = "{plan_ref}" }},
+]
+queued_items = []
+
+[roadmap]
+lanes = [
+  {{ id = "machine-first-planning-state", title = "Machine-first planning state and closeout hygiene", priority = "first", issues = ["#323", "#325"] }},
+  {{ id = "graceful-partial-compliance", title = "Graceful partial compliance and bypass trust", priority = "tenth", issues = ["#292"] }},
+]
+candidates = [
+  {{ priority = "first", summary = "Machine-first planning state and closeout hygiene" }},
+  {{ priority = "tenth", summary = "Graceful partial compliance and bypass trust" }},
+]
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / plan_ref
+    _write_execplan_record(plan_path, item_id="lower-trust-closeout-reconciliation-view", status="completed")
+
+    archive_execplan("lower-trust-closeout-reconciliation-view", target=tmp_path, apply_cleanup=True)
+
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    assert "active_items = []" in state_text
+    assert "machine-first-planning-state" in state_text
+    assert "Graceful partial compliance and bypass trust" in state_text
+
+
 def test_archive_execplan_apply_cleanup_removes_matching_candidate_queue_entry(tmp_path: Path) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
@@ -2765,6 +2799,91 @@ candidates = [
     assert contract["counts"]["attention_count"] == 2
     assert contract["signals"][0]["kind"] == "external_open_untracked"
     assert contract["signals"][1]["kind"] == "closed_without_planning_residue"
+
+
+def test_planning_summary_reconciles_lower_trust_closeouts_from_review_artifact(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "EXT-1",
+                "title": "Closed with proof",
+                "status": "closed",
+                "kind": "slice",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            },
+            {
+                "system": "manual",
+                "id": "EXT-2",
+                "title": "Closed with follow-up",
+                "status": "closed",
+                "kind": "slice",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            },
+            {
+                "system": "manual",
+                "id": "EXT-3",
+                "title": "Closed without audit",
+                "status": "closed",
+                "kind": "slice",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            },
+        ],
+    )
+    _write(
+        tmp_path / ".agentic-workspace/planning/reviews/lower-trust.review.json",
+        json.dumps(
+            {
+                "kind": "planning-review/v1",
+                "title": "Lower Trust",
+                "issue_classifications": [
+                    {
+                        "id": "EXT-1",
+                        "title": "Closed with proof",
+                        "classification": "fully_satisfied_with_evidence",
+                        "live_state": "closed",
+                        "evidence": "commit abc123",
+                        "follow_up": "none",
+                    },
+                    {
+                        "id": "EXT-2",
+                        "title": "Closed with follow-up",
+                        "classification": "covered_by_open_followup",
+                        "live_state": "closed",
+                        "evidence": "bounded slice landed",
+                        "follow_up": "EXT-4",
+                    },
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    reconciliation = summary["intent_validation_contract"]["closeout_reconciliation"]
+
+    assert reconciliation["status"] == "needs-audit"
+    assert reconciliation["counts"]["reconciled_count"] == 2
+    assert reconciliation["counts"]["evidence_present_count"] == 1
+    assert reconciliation["counts"]["follow_up_open_count"] == 1
+    assert reconciliation["counts"]["needs_audit_count"] == 1
+    assert reconciliation["items_by_state"] == {
+        "needs-audit": ["EXT-3"],
+        "evidence-present": ["EXT-1"],
+        "follow-up-open": ["EXT-2"],
+    }
+    assert summary["intent_validation_contract"]["counts"]["closeout_reconciled_count"] == 2
+    assert summary["intent_validation_contract"]["counts"]["closeout_needs_audit_count"] == 1
 
 
 def test_planning_report_promotes_intent_validation_signals_to_findings(tmp_path: Path) -> None:

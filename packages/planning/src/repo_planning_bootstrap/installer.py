@@ -1978,6 +1978,10 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
     planning_surface_health = dict(summary.get("planning_surface_health", {}))
     ownership_review = dict(summary.get("ownership_review", {}))
     intent_validation_contract = dict(summary.get("intent_validation_contract", {}))
+    if "closeout_reconciliation" in intent_validation_contract:
+        intent_validation_contract["closeout_reconciliation"] = _compact_closeout_reconciliation(
+            intent_validation_contract["closeout_reconciliation"]
+        )
     finished_work_inspection_contract = dict(summary.get("finished_work_inspection_contract", {}))
     system_intent = dict(summary.get("system_intent", {}))
 
@@ -2092,7 +2096,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         ),
         "intent_validation_contract": _compact_projection(
             intent_validation_contract,
-            fields=("counts", "recommended_next_action"),
+            fields=("counts", "closeout_reconciliation", "recommended_next_action"),
         ),
         "finished_work_inspection_contract": _compact_projection(
             finished_work_inspection_contract,
@@ -2116,6 +2120,32 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         "warning_count": summary.get("warning_count", 0),
     }
     return compact_summary
+
+
+def _compact_closeout_reconciliation(reconciliation: Any) -> dict[str, Any]:
+    if not isinstance(reconciliation, dict):
+        return {}
+    items_by_state: dict[str, list[str]] = {
+        "needs-audit": [],
+        "evidence-present": [],
+        "follow-up-open": [],
+        "likely-premature-closeout": [],
+    }
+    for item in reconciliation.get("items", []):
+        if not isinstance(item, dict):
+            continue
+        item_id = str(item.get("id", "")).strip()
+        action_state = str(item.get("action_state", "")).strip()
+        if item_id and action_state in items_by_state:
+            items_by_state[action_state].append(item_id)
+    return {
+        "status": reconciliation.get("status", "absent"),
+        "source_count": reconciliation.get("source_count", 0),
+        "sources": reconciliation.get("sources", []),
+        "item_count": reconciliation.get("item_count", 0),
+        "counts": reconciliation.get("counts", {}),
+        "items_by_state": {key: value for key, value in items_by_state.items() if value},
+    }
 
 
 def _planning_surface_health(warnings: list[dict[str, Any]]) -> dict[str, Any]:
@@ -2209,6 +2239,7 @@ def _intent_validation_contract(
     tracked_open = 0
     untracked_open = 0
     lower_trust_closeouts = 0
+    closed_residue_items: list[dict[str, Any]] = []
     external_items = external_evidence.get("items", [])
     if isinstance(external_items, list):
         for item in external_items:
@@ -2237,6 +2268,7 @@ def _intent_validation_contract(
                         }
                     )
             elif status == "closed" and str(item.get("planning_residue_expected", "")).strip().lower() == "required" and not refs:
+                closed_residue_items.append(item)
                 lower_trust_closeouts += 1
                 signals.append(
                     {
@@ -2249,12 +2281,20 @@ def _intent_validation_contract(
                         "refs": [external_evidence.get("path", "")],
                     }
                 )
+            elif status == "closed" and str(item.get("planning_residue_expected", "")).strip().lower() == "required":
+                closed_residue_items.append(item)
 
+    closeout_reconciliation = _closeout_reconciliation_from_reviews(
+        target_root=target_root,
+        closed_residue_items=closed_residue_items,
+    )
     counts = {
         "internal_dangling_count": len(internal_signals),
         "tracked_external_open_count": tracked_open,
         "untracked_external_open_count": untracked_open,
         "lower_trust_closeout_count": lower_trust_closeouts,
+        "closeout_reconciled_count": closeout_reconciliation["counts"]["reconciled_count"],
+        "closeout_needs_audit_count": closeout_reconciliation["counts"]["needs_audit_count"],
         "attention_count": len(signals),
     }
     recommended_next_action = "No dangling larger intent or lower-trust closeout signals detected."
@@ -2262,6 +2302,12 @@ def _intent_validation_contract(
         recommended_next_action = (
             "Route open external planning items into checked-in active or candidate planning state before treating the repo as quiet."
         )
+    elif closeout_reconciliation["counts"]["likely_premature_closeout_count"]:
+        recommended_next_action = "Inspect likely premature closeouts before treating recently closed work as settled."
+    elif closeout_reconciliation["counts"]["needs_audit_count"]:
+        recommended_next_action = "Audit unreconciled lower-trust closeouts or add a checked-in reconciliation artifact."
+    elif closeout_reconciliation["counts"]["follow_up_open_count"]:
+        recommended_next_action = "Continue the open follow-ups identified by lower-trust closeout reconciliation."
     elif lower_trust_closeouts:
         recommended_next_action = "Review lower-trust closeout signals before assuming recently closed work is fully evidenced."
     elif internal_signals:
@@ -2298,10 +2344,102 @@ def _intent_validation_contract(
             "reason": external_evidence.get("reason", ""),
         },
         "counts": counts,
+        "closeout_reconciliation": closeout_reconciliation,
         "signals": signals,
         "recommended_next_action": recommended_next_action,
         "minimal_refs": [ref for ref in refs if ref],
     }
+
+
+def _closeout_reconciliation_from_reviews(
+    *,
+    target_root: Path,
+    closed_residue_items: list[dict[str, Any]],
+) -> dict[str, Any]:
+    items: list[dict[str, Any]] = []
+    source_paths: list[str] = []
+    seen_ids: set[str] = set()
+    for path in sorted((target_root / ".agentic-workspace" / "planning" / "reviews").glob("*.review.json")):
+        record = _load_review_record(path)
+        if not isinstance(record, dict):
+            continue
+        classifications = record.get("issue_classifications", [])
+        if not isinstance(classifications, list):
+            continue
+        relative_path = path.relative_to(target_root).as_posix()
+        for raw in classifications:
+            if not isinstance(raw, dict):
+                continue
+            item_id = str(raw.get("id", "")).strip()
+            if not item_id or item_id in seen_ids:
+                continue
+            action_state = _closeout_reconciliation_action_state(str(raw.get("classification", "")).strip())
+            items.append(
+                {
+                    "id": item_id,
+                    "title": str(raw.get("title", "")).strip(),
+                    "action_state": action_state,
+                    "classification": str(raw.get("classification", "")).strip(),
+                    "live_state": str(raw.get("live_state", "")).strip(),
+                    "follow_up": str(raw.get("follow_up", "")).strip(),
+                    "evidence": str(raw.get("evidence", "")).strip(),
+                    "source": relative_path,
+                }
+            )
+            seen_ids.add(item_id)
+            if relative_path not in source_paths:
+                source_paths.append(relative_path)
+
+    for item in closed_residue_items:
+        item_id = str(item.get("id", "")).strip()
+        if not item_id or item_id in seen_ids:
+            continue
+        items.append(
+            {
+                "id": item_id,
+                "title": str(item.get("title", "")).strip(),
+                "action_state": "needs-audit",
+                "classification": "unreconciled",
+                "live_state": str(item.get("status", "")).strip(),
+                "follow_up": "",
+                "evidence": "No checked-in closeout reconciliation artifact classified this item.",
+                "source": str(item.get("system", "")).strip(),
+            }
+        )
+        seen_ids.add(item_id)
+
+    counts = {
+        "reconciled_count": sum(1 for item in items if item["action_state"] != "needs-audit"),
+        "needs_audit_count": sum(1 for item in items if item["action_state"] == "needs-audit"),
+        "evidence_present_count": sum(1 for item in items if item["action_state"] == "evidence-present"),
+        "follow_up_open_count": sum(1 for item in items if item["action_state"] == "follow-up-open"),
+        "likely_premature_closeout_count": sum(1 for item in items if item["action_state"] == "likely-premature-closeout"),
+    }
+    status = "present" if items else "absent"
+    if counts["needs_audit_count"]:
+        status = "needs-audit"
+    return {
+        "status": status,
+        "rule": (
+            "Read checked-in planning review issue classifications first; any closed residue item without a classification remains needs-audit."
+        ),
+        "source_count": len(source_paths),
+        "sources": source_paths,
+        "item_count": len(items),
+        "counts": counts,
+        "items": items,
+    }
+
+
+def _closeout_reconciliation_action_state(classification: str) -> str:
+    normalized = classification.strip().lower().replace("_", "-")
+    if normalized in {"fully-satisfied-with-evidence", "evidence-present"}:
+        return "evidence-present"
+    if normalized in {"bounded-slice-satisfied-parent-open", "covered-by-open-followup", "follow-up-open"}:
+        return "follow-up-open"
+    if normalized in {"premature-or-needs-reopening", "likely-premature-closeout"}:
+        return "likely-premature-closeout"
+    return "needs-audit"
 
 
 def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
@@ -2438,13 +2576,24 @@ def _planning_surface_reference_index(target_root: Path) -> dict[str, str]:
         ],
         *[
             path
+            for path in sorted((target_root / ".agentic-workspace" / "planning" / "execplans").glob("*.plan.json"))
+            if path.name != "TEMPLATE.plan.json"
+        ],
+        *[
+            path
             for path in sorted((target_root / ".agentic-workspace" / "planning" / "execplans" / "archive").glob("*.md"))
             if path.name != "README.md"
         ],
+        *[path for path in sorted((target_root / ".agentic-workspace" / "planning" / "execplans" / "archive").glob("*.plan.json"))],
         *[
             path
             for path in sorted((target_root / ".agentic-workspace" / "planning" / "reviews").glob("*.md"))
             if path.name not in {"README.md", "TEMPLATE.md"}
+        ],
+        *[
+            path
+            for path in sorted((target_root / ".agentic-workspace" / "planning" / "reviews").glob("*.review.json"))
+            if path.name != "TEMPLATE.review.json"
         ],
     ]
     for path in candidate_paths:
@@ -4403,7 +4552,7 @@ def format_result_json(result: InstallResult) -> str:
 
 
 def format_summary_json(summary: dict[str, Any]) -> str:
-    return json.dumps(summary, ensure_ascii=False, indent=2)
+    return json.dumps(summary, indent=2)
 
 
 def _copy_payload(*, target_root: Path, result: InstallResult, conservative: bool, force: bool) -> None:
@@ -5475,7 +5624,7 @@ def _cleanup_state_roadmap_followup(target_root: Path, plan_path: Path) -> dict[
             if preserved_tokens and all(token in lane_identity for token in preserved_tokens):
                 kept_lanes.append(lane)
                 continue
-            if tokens and any(token in lane_identity for token in tokens):
+            if tokens and all(token in lane_identity for token in tokens):
                 lane_removed = True
                 continue
             kept_lanes.append(lane)
@@ -5496,7 +5645,7 @@ def _cleanup_state_roadmap_followup(target_root: Path, plan_path: Path) -> dict[
             if preserved_tokens and all(token in summary for token in preserved_tokens):
                 kept_candidates.append(candidate)
                 continue
-            if tokens and any(token in summary for token in tokens):
+            if tokens and all(token in summary for token in tokens):
                 candidate_removed = True
                 continue
             kept_candidates.append(candidate)
@@ -5554,7 +5703,7 @@ def _cleanup_roadmap_section(
             if preserved_tokens and all(token in lane_identity for token in preserved_tokens):
                 kept_lines.extend(block)
                 continue
-            if tokens and any(token in lane_identity for token in tokens):
+            if tokens and all(token in lane_identity for token in tokens):
                 removed = True
                 continue
             kept_lines.extend(block)
@@ -5567,7 +5716,7 @@ def _cleanup_roadmap_section(
             if preserved_tokens and all(token in lowered for token in preserved_tokens):
                 kept_lines.append(line)
                 continue
-            if tokens and any(token in lowered for token in tokens):
+            if tokens and all(token in lowered for token in tokens):
                 removed = True
                 continue
             kept_lines.append(line)

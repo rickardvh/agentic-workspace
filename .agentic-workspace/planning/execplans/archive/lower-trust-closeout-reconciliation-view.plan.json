@@ -1,0 +1,219 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Lower Trust Closeout Reconciliation View",
+  "goal": [
+    "Implement #325 as a compact read-only package view over lower-trust closeout reconciliation evidence.",
+    "Make `agentic-workspace summary --format json` reduce lower-trust closeouts into actionable categories when a checked-in audit artifact exists."
+  ],
+  "non_goals": [
+    "Do not close existing roadmap lanes.",
+    "Do not replace GitHub as issue tracker.",
+    "Do not mutate planning state from the reconciliation view."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Future agents can ask a compact package command which lower-trust closeouts still need audit, which have evidence, and which are covered by follow-up.",
+      "constraints": "Read-only; derive from checked-in planning evidence first; preserve uncertainty instead of pretending evidence exists.",
+      "latitude": "Use the #324 review artifact as the first authoritative reconciliation input and expose a compact projection in summary/report.",
+      "escalation": "Escalate if implementation requires live GitHub API dependency in summary."
+    },
+    "execution": {
+      "milestone": "summary-reconciliation-projection",
+      "status": "completed",
+      "next_step": "Archive this plan, close #325, and route the older unreconciled closeouts surfaced by the view.",
+      "proof": "Summary exposes reconciliation counts/categories from a planning-review artifact, keeps lower-trust attention honest, and compact output groups IDs by action state."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/lower-trust-closeout-reconciliation-view.plan.json",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py"
+      ],
+      "invariants": [
+        "The view is read-only.",
+        "Items without reconciliation evidence still remain needs-audit.",
+        "Existing roadmap lanes remain open."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "machine-first planning state and closeout hygiene",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane machine-first-planning-state",
+    "parent lane": "machine-first-planning-state"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Lower-trust closeout warnings can point to actionable reconciliation categories instead of a raw count.",
+    "intentionally deferred": "Live GitHub closure-comment/commit scraping; broad lane closure decisions.",
+    "discovered implications": "The #324 artifact is already structured enough to act as the first read-only reconciliation source.",
+    "proof achieved now": "compact summary projects closeout reconciliation counts and grouped IDs from checked-in review artifacts",
+    "validation still needed": "none for #325 after archive closeout",
+    "next likely slice": "promote the next roadmap lane after first-lane closeout"
+  },
+  "intent_interpretation": {
+    "literal request": "continue planned lanes on autopilot",
+    "inferred intended outcome": "finish the first lane by turning its lower-trust audit into package-native query output",
+    "chosen concrete what": "read planning-review issue classifications and project reconciliation counts/items through intent_validation_contract",
+    "interpretation distance": "low",
+    "review guidance": "reject any view that hides unreconciled lower-trust items or requires live GitHub access for normal summary use"
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/lower-trust-closeout-reconciliation-view.plan.json; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py",
+    "max changed files": "4",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q -k \"intent_validation_contract or reconciliation\"; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; git diff --check",
+    "ask-before-refactor threshold": "stop before adding a new persistent issue cache or live GitHub dependency",
+    "stop before touching": "roadmap lane closure"
+  },
+  "stop_conditions": {
+    "stop when": "summary/report expose reconciliation categories and tests pass",
+    "escalate when boundary reached": "read-only projection cannot distinguish audited from unaudited items without new state",
+    "escalate on scope drift": "work becomes GitHub sync or issue-tracker replacement",
+    "escalate on proof failure": "lower-trust items disappear instead of being classified"
+  },
+  "context_budget": {
+    "live working set": "intent_validation_contract builder, review artifact loader, summary tests",
+    "recoverable later": "full issue history and old archived plans",
+    "externalize before shift": "category mapping and proof commands",
+    "pre-work config pull": "agentic-workspace summary --format json",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "project #324 issue_classifications into summary intent_validation_contract",
+    "context-shift triggers": "after tests or before archive"
+  },
+  "delegated_judgment": {
+    "requested outcome": "add compact lower-trust closeout reconciliation view",
+    "hard constraints": "read-only, checked-in evidence first, no roadmap lane closure",
+    "agent may decide locally": "field names and category mapping",
+    "escalate when": "live GitHub dependency or persistent cache seems necessary"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#325",
+      "label": "lower-trust reconciliation view",
+      "role": "primary-intent",
+      "locator": "github issue #325"
+    },
+    {
+      "kind": "review",
+      "target": ".agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json",
+      "label": "#324 audit artifact",
+      "role": "input-evidence",
+      "locator": "issue_classifications"
+    }
+  ],
+  "active_milestone": {
+    "id": "summary-reconciliation-projection",
+    "status": "completed",
+    "scope": "Expose read-only lower-trust reconciliation in summary intent_validation_contract.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this plan, close #325, and route older unreconciled closeout audit work."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/lower-trust-closeout-reconciliation-view.plan.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "invariants": [
+    "Unreconciled lower-trust items remain visible.",
+    "Reconciled categories cite the source review artifact.",
+    "No live network dependency for summary."
+  ],
+  "contract_decisions_to_freeze": [
+    "The first reconciliation source is checked-in planning-review issue_classifications.",
+    "Category aliases map into needs-audit, evidence-present, follow-up-open, and likely-premature-closeout."
+  ],
+  "open_questions_to_close": [
+    "Where should reconciliation appear in summary?",
+    "How should #324 category names map to #325 action states?"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"intent_validation_contract or reconciliation\"",
+    "uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --format json",
+    "git diff --check"
+  ],
+  "required_tools": [
+    "uv",
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "Summary intent_validation_contract includes closeout_reconciliation counts and items.",
+    "Audited lower-trust items are categorized rather than left as only a raw warning count.",
+    "Items not covered by a reconciliation artifact remain needs-audit.",
+    "Focused tests and planning checks pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex dogfooding agentic-workspace",
+    "handoff source": "roadmap lane after #323 closeout",
+    "what happened": "Extended intent validation summary with a read-only closeout reconciliation projection derived from checked-in review `issue_classifications`. Added compact grouped IDs by action state and kept detailed item evidence in the full contract. Also made summary JSON output ASCII-safe for Windows consoles.",
+    "scope touched": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/lower-trust-closeout-reconciliation-view.plan.json; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py",
+    "changed surfaces": "planning active state and execplan; summary intent validation projection; installer tests",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"intent_validation_contract or reconciliation\"; uv run pytest packages/planning/tests/test_installer.py -q; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; git diff --check; uv run agentic-planning-bootstrap archive-plan lower-trust-closeout-reconciliation-view --target . --apply-cleanup --format json; uv run pytest packages/planning/tests/test_installer.py -q -k \"archive_execplan_apply_cleanup or requires_all_stem_tokens or intent_validation_contract or reconciliation\"",
+    "result for continuation": "#325 implementation is complete; the new view exposed older unreconciled closeouts that need separate routing. Dogfooding also found and fixed another over-broad archive cleanup lane-removal edge.",
+    "next step": "close #325 and route older unreconciled closeouts"
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "summary used before implementation",
+    "misinterpretation risk": "low for read-only summary projection; medium for older unreconciled closeouts until separately audited",
+    "follow-on decision": "archive-but-keep-lane-open"
+  },
+  "proof_report": {
+    "validation proof": "`uv run pytest packages/planning/tests/test_installer.py -q -k \"intent_validation_contract or reconciliation\"`; `uv run pytest packages/planning/tests/test_installer.py -q`; `uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py`; `uv run python scripts/check/check_planning_surfaces.py`; `uv run agentic-workspace summary --format json`; `git diff --check`; `uv run agentic-planning-bootstrap archive-plan lower-trust-closeout-reconciliation-view --target . --apply-cleanup --format json`; archive cleanup follow-up regression for all-token lane matching",
+    "proof achieved now": "Compact summary now includes `intent_validation_contract.closeout_reconciliation` with counts and grouped IDs for `needs-audit`, `evidence-present`, and `follow-up-open`; full profile preserves detailed evidence items.",
+    "evidence for \"proof achieved\" state": "Focused reconciliation test plus live summary output over the #324 audit artifact."
+  },
+  "intent_satisfaction": {
+    "original intent": "reconcile lower-trust closeouts into actionable evidence states",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#325's package view is implemented and validated; the first lane remains visible until older unreconciled lower-trust closeouts are routed, and archive cleanup now preserves that visible lane.",
+    "unsolved intent passed to": "new follow-up issue for older unreconciled closeouts"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make agent continuation cheaper and safer through compact checked-in machine-readable state.",
+    "slice shaping bias": "turn the audit into a package-native projection rather than another prose artifact",
+    "broader-lane validation question": "Can future agents decide lower-trust follow-through from summary without manual chat reconstruction?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#325's read-only projection landed, but live summary now exposes older unreconciled closeouts outside the #324 audit scope.",
+    "evidence carried forward": "summary closeout_reconciliation output, focused installer test, and archive cleanup all-token matching regression",
+    "reopen trigger": "reopen if summary again exposes only raw lower-trust counts after an audit exists"
+  },
+  "execution_summary": {
+    "outcome delivered": "read-only lower-trust closeout reconciliation projection in summary",
+    "validation confirmed": "focused reconciliation test, full installer tests, ruff, planning check, live summary, diff check, and archive cleanup dogfood passed after preserving roadmap lanes",
+    "follow-on routed to": "new follow-up issue for older unreconciled closeouts",
+    "post-work posterity capture": "archive this execplan after closing #325",
+    "knowledge promoted (Memory/Docs/Config)": "summary projection and regression test",
+    "resume from": ".agentic-workspace/planning/execplans/lower-trust-closeout-reconciliation-view.plan.json"
+  },
+  "drift_log": [
+    "2026-04-26: Active execplan created from #325 after #323 closeout.",
+    "2026-04-26: Added closeout reconciliation projection and compact grouped action-state output.",
+    "2026-04-26: Dogfooding archive cleanup exposed another over-broad roadmap token match; fixed cleanup to require all stem tokens and restored preserved lanes."
+  ]
+}
