@@ -1,0 +1,112 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Post-Compression Generated-Adapter Baseline Review",
+  "date": "2026-04-26",
+  "scope": [
+    "#376"
+  ],
+  "classification": "baseline",
+  "issue_classifications": [
+    {
+      "id": "#376",
+      "title": "[Review]: Verify post-compression generated-adapter baseline remains clean",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "#377, #378, #379",
+      "evidence": "Generated adapter checks, planning checks, generated-tool conformance, startup adapter inspection, default report shape, and reconcile were reviewed. Baseline is clean for generated adapters and planning residue; report warnings are environmental uv-cache nested repo warnings, not product-shape drift."
+    }
+  ],
+  "goal": [
+    "Verify the post-compression generated-adapter baseline before adding more adapters or lifecycle behavior."
+  ],
+  "non_goals": [
+    "Do not use this generated skeleton as proof that review work is complete."
+  ],
+  "review_mode": {
+    "mode": "baseline",
+    "review question": "Is the post-compression/generated-adapter state clean enough to continue implementation?",
+    "default finding cap": "bounded",
+    "inputs inspected first": "compact planning and task-specific surfaces"
+  },
+  "review_method": {
+    "commands used": "uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_planning_surfaces.py; uv run python scripts/generate/generate_command_adapters.py --check; uv run pytest tests/test_generated_tool_conformance.py -q; uv run agentic-workspace report --target . --format json; uv run agentic-workspace reconcile --format json",
+    "evidence sources": "AGENTS.md, llms.txt, tools/AGENT_QUICKSTART.md, tools/AGENT_ROUTING.md, generated adapter status output, default report router output, planning reconcile output"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#376",
+      "label": "baseline review",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#377",
+      "label": "next read-only package adapter",
+      "role": "follow-up",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#378",
+      "label": "lifecycle dry-run conformance",
+      "role": "follow-up",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#379",
+      "label": "repo-local dogfooding skill",
+      "role": "follow-up",
+      "locator": ""
+    }
+  ],
+  "findings": [
+    {
+      "id": "generated-adapter-baseline",
+      "title": "Generated adapter baseline is clean",
+      "action_state": "evidence-present",
+      "evidence": "Contract tooling reports agentic-workspace defaults and agentic-planning-bootstrap status generated outputs as current with direct_edit_detected=false; generator --check passes; generated-tool conformance passes.",
+      "follow_up": "#377",
+      "notes": "Next safe implementation target is one additional read-only package adapter, preferably memory status."
+    },
+    {
+      "id": "startup-surface-baseline",
+      "title": "First-contact startup remains one clear path",
+      "action_state": "evidence-present",
+      "evidence": "AGENTS.md routes ordinary startup to start; llms.txt and tools adapters are generated/non-authoritative compatibility surfaces; AGENT_ROUTING is secondary and short.",
+      "follow_up": "none",
+      "notes": "No first-contact bloat found."
+    },
+    {
+      "id": "report-and-residue-baseline",
+      "title": "Default report is router-shaped; planning residue is clean",
+      "action_state": "evidence-present",
+      "evidence": "Default report exposes router fields and section hints while keeping high-volume sections behind selectors. Reconcile is clean with four tracked open issues after ingestion.",
+      "follow_up": "#378",
+      "notes": "Report health is attention-needed due to uv-cache nested repository warnings; this is environmental workspace hygiene, not generated-adapter drift."
+    }
+  ],
+  "recommendation": {
+    "promote": "Continue with #377, then #378, then #379.",
+    "defer": "Do not reopen #230 without fresh product-shape evidence.",
+    "dismiss": "No generated-adapter drift found."
+  },
+  "retention": {
+    "closeout shape": "shrink or archive after findings are routed",
+    "trigger": "review complete",
+    "proof surface": "this review record plus routed follow-up residue"
+  },
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run python scripts/generate/generate_command_adapters.py --check",
+    "uv run pytest tests/test_generated_tool_conformance.py -q",
+    "uv run agentic-workspace report --target . --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "drift_log": [
+    "2026-04-26: Review record created by create-review."
+  ]
+}

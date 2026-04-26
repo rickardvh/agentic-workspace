@@ -909,6 +909,42 @@
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#376",
+      "title": "[Review]: Verify post-compression generated-adapter baseline remains clean",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#377",
+      "title": "[Workspace]: Generate the next read-only package command adapter",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#376",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#378",
+      "title": "[Workspace]: Make lifecycle dry-run plans conformance-backed",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#376",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#379",
+      "title": "[Workspace]: Add a repo-local self-improvement skill for system-intent-driven dogfooding",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
     }
   ]
 }
