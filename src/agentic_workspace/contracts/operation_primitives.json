@@ -51,6 +51,10 @@
       "summary": "Assemble combined workspace status, doctor, setup, or report payloads from module and workspace surfaces."
     },
     {
+      "id": "workspace.report.select",
+      "summary": "Select the compact report router profile, the full report profile, or one top-level report section."
+    },
+    {
       "id": "startup.context.assemble",
       "summary": "Assemble bounded startup context from preflight state, authority markers, and optional changed paths."
     },

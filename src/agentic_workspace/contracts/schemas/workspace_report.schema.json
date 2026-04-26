@@ -11,6 +11,7 @@
     "selected_modules",
     "installed_modules",
     "health",
+    "report_profile",
     "output_contract",
     "branch_workflow_posture",
     "local_memory",
@@ -88,6 +89,9 @@
     },
     "health": {
       "type": "string"
+    },
+    "report_profile": {
+      "type": "object"
     },
     "output_contract": {
       "type": "object"

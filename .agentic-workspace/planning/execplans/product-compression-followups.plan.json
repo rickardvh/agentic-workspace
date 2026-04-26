@@ -1,0 +1,199 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Product Compression Followups",
+  "goal": [
+    "Implement the #341-#346 follow-up issues created from the system-intent future-work review under #230.",
+    "Make ordinary package operation cheaper without adding a new first-line workflow layer.",
+    "Commit, push, and close each bounded milestone after proof."
+  ],
+  "non_goals": [
+    "Do not close #230 unless the broad product-compression lane is genuinely satisfied.",
+    "Do not switch branches.",
+    "Do not introduce GitHub-specific behavior into shipped package logic.",
+    "Do not create a broad dashboard, workflow engine, or automatic alignment score."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Agents can use compact package surfaces to route, review, and close work with less default reading and less durable residue.",
+      "constraints": "Keep the shipped package repo-, host-, tracker-, agent-, tool-, and language-agnostic. Prefer existing report/default/proof/planning/memory surfaces over new commands.",
+      "latitude": "Choose milestone grouping where closely related issues share the same implementation surface.",
+      "escalation": "Stop if the work requires deleting major public concepts or redesigning all reporting, planning, or memory at once."
+    },
+    "execution": {
+      "milestone": "surface-value-review-gate",
+      "status": "in-progress",
+      "next_step": "Implement #342 by making surface-value review inspectable through ordinary proof/review surfaces.",
+      "proof": "Focused workspace CLI tests, report dogfood, ruff for touched Python, contract tooling, planning checker, summary/reconcile, and git diff check."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/",
+        "tests/",
+        "src/agentic_workspace/contracts/",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/product-compression-followups.plan.json"
+      ],
+      "invariants": [
+        "Default report should route before dumping deep detail.",
+        "Full report detail remains reachable through an explicit profile or selector.",
+        "Surface-value and compression work must show the repeated future cost removed."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "strip away visible product residue that is no longer earning its keep",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml and #230",
+    "parent lane": "product-compression-followups"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "continue remaining #341-#346 child work or reroute #230 after bounded milestones land"
+  },
+  "intent_interpretation": {
+    "literal request": "Next ingest the new issues and implement them",
+    "inferred intended outcome": "promote the freshly created #341-#346 issues into checked-in planning and implement them end-to-end with dogfooding, commits, pushes, and closures",
+    "chosen concrete what": "start with #341/#345 because report router and selector discipline reduce every later work loop",
+    "interpretation distance": "low",
+    "review guidance": "reject changes that merely add report fields without reducing default reading or improving selector discipline"
+  },
+  "delegated_judgment": {
+    "requested outcome": "implement the new issues",
+    "hard constraints": "stay on master; use checked-in planning; commit/push after milestones; close issues only after proof",
+    "agent may decide locally": "milestone grouping, report profile names, exact payload shape, and validation scope",
+    "escalate when": "scope expands into broad product redesign or a host-specific workflow"
+  },
+  "execution_bounds": {
+    "allowed paths": "workspace package source/tests/contracts, planning state/evidence/active execplan, memory package only when implementing #344",
+    "max changed files": "30",
+    "required validation commands": "focused pytest for touched behavior; ruff for touched Python; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json; uv run python scripts/check/check_planning_surfaces.py; uv run python scripts/check/check_contract_tooling_surfaces.py; git diff --check",
+    "ask-before-refactor threshold": "stop before changing core module ownership boundaries or removing public commands",
+    "stop before touching": "unrelated archived plans, unrelated memory notes, or branch state"
+  },
+  "context_budget": {
+    "live working set": "#230 #341 #342 #343 #344 #345 #346, report/default/proof/planning/memory routing surfaces, system-intent future-work review",
+    "recoverable later": "older closed issues referenced from the new issues",
+    "externalize before shift": "update execution_run, proof_report, intent_satisfaction, closure_check, and drift_log after each milestone",
+    "pre-work config pull": "agentic-workspace preflight, summary, reconcile, live GitHub issue list",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "implement #341/#345 report router/selectors first, then #342 surface-value gate, #343 closeout distillation, #344 Memory shrinkage, #346 measures",
+    "context-shift triggers": "after each commit/push/issue-close milestone"
+  },
+  "stop_conditions": {
+    "stop when": "#341-#346 are implemented, validated, committed, pushed, and closed, with #230 either kept open or honestly closed",
+    "escalate when boundary reached": "the slice needs a new workflow engine, dashboard, or automatic intent score",
+    "escalate on scope drift": "work turns into broad deletion of public concepts or implementation of all #230 ideas beyond the child issues",
+    "escalate on proof failure": "focused tests or package checks fail after attempted fixes"
+  },
+  "references": [
+    { "kind": "issue", "target": "#230", "label": "product compression parent lane", "role": "parent" },
+    { "kind": "issue", "target": "#341", "label": "report router", "role": "milestone" },
+    { "kind": "issue", "target": "#342", "label": "surface-value review gate", "role": "milestone" },
+    { "kind": "issue", "target": "#343", "label": "closeout distillation", "role": "milestone" },
+    { "kind": "issue", "target": "#344", "label": "Memory shrinkage through structured routing", "role": "milestone" },
+    { "kind": "issue", "target": "#345", "label": "report selector and size discipline", "role": "milestone" },
+    { "kind": "issue", "target": "#346", "label": "operational compression measures", "role": "milestone" }
+  ],
+  "active_milestone": {
+    "id": "surface-value-review-gate",
+    "status": "in-progress",
+    "scope": "#342",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "#341/#345 report router and selector support landed"
+  },
+  "immediate_next_action": [
+    "Make durable surface-value review visible during ordinary proof/review.",
+    "Reuse existing report/default/proof surfaces rather than adding a new command."
+  ],
+  "blockers": ["None."],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/product-compression-followups.plan.json"
+  ],
+  "invariants": [
+    "Quiet, repo-native, low-residue package behavior.",
+    "Existing surfaces are preferred over new commands.",
+    "Checked-in planning state remains the active authority."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q -k \"report or defaults_command_reports_machine_readable_default_routes_as_json or contract\"",
+    "uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run agentic-workspace report --target . --format json",
+    "uv run agentic-workspace report --target . --profile full --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "git diff --check"
+  ],
+  "required_tools": ["git", "gh", "uv"],
+  "completion_criteria": [
+    "#341 makes default report output act as a router instead of requiring broad scan of deep detail.",
+    "#345 adds selector/profile discipline for deeper report detail and high-volume sections.",
+    "#342 makes durable surface-value review inspectable during ordinary proof/review.",
+    "#343 adds closeout distillation that routes learning away from archived execplans.",
+    "#344 shrinks ordinary Memory pulls through a structured durable-fact routing path.",
+    "#346 exposes compact operational-compression measures without a dashboard.",
+    "#230 is left open unless its broader product-compression acceptance is honestly satisfied."
+  ],
+  "execution_run": {
+    "run status": "in-progress",
+    "executor": "Codex",
+    "handoff source": "preflight, summary, reconcile, live GitHub issue state, system-intent future-work review",
+    "what happened": "Implemented #341/#345 by making report default to a compact router while preserving full detail behind --profile full and top-level sections behind --section.",
+    "scope touched": "workspace CLI, report contracts, operation contracts, contract schema, tests, planning state and active execplan",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/product-compression-followups.plan.json; src/agentic_workspace/cli.py; src/agentic_workspace/contracts/cli_commands.json; src/agentic_workspace/contracts/report_contract.json; src/agentic_workspace/contracts/schemas/workspace_report.schema.json; src/agentic_workspace/contracts/operations/report.combined.json; src/agentic_workspace/contracts/operation_primitives.json; tests/test_workspace_cli.py",
+    "validations run": "uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q -k \"report or contract\"; uv run ruff check src/agentic_workspace/cli.py tests/test_workspace_cli.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run agentic-workspace report --target . --format json; uv run agentic-workspace report --target . --profile full --format json; uv run agentic-workspace report --target . --section effective_authority --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "result for continuation": "#341/#345 are ready to commit, push, and close after milestone commit.",
+    "next step": "Implement #342 surface-value review gate."
+  },
+  "finished_run_review": {
+    "review status": "completed for #341/#345 milestone",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "default report now routes first and selectors expose deeper data explicitly",
+    "config compliance": "used package preflight, summary, reconcile, report, planning checker, and contract tooling",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue active lane with #342"
+  },
+  "proof_report": {
+    "validation proof": "Focused tests, ruff, contract tooling, package report dogfooding, planning checks, reconcile, and diff check passed for #341/#345.",
+    "proof achieved now": "yes-for-report-router-and-selectors",
+    "evidence for \"proof achieved\" state": "Default report emitted workspace-report-router/v1; --profile full emitted workspace-report/v1; --section effective_authority emitted compact-contract-answer/v1."
+  },
+  "intent_satisfaction": {
+    "original intent": "Ingest and implement the new issues.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "pending",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml and #230"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Stay quiet, repo-native, low-residue, and sharply bounded while reducing total continuation, handoff, review, and proof cost.",
+    "slice shaping bias": "Prefer compression, selectors, and better routing over new first-line surfaces.",
+    "broader-lane validation question": "Does this reduce default reading and durable residue without hiding necessary authority?",
+    "intent evidence source": "#230 #341 #342 #343 #344 #345 #346"
+  },
+  "closure_check": {
+    "slice status": "in-progress",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "#341/#345 landed locally but #342-#346 remain open and #230 is broader than this milestone.",
+    "evidence carried forward": "active planning state and milestone validation proof",
+    "reopen trigger": "new report/default/memory/planning surfaces increase default reading or framework feel without a repeated-cost reduction"
+  },
+  "execution_summary": {
+    "outcome delivered": "#341/#345 report router and selector discipline implemented.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#342 surface-value review gate",
+    "post-work posterity capture": "active execplan updated with proof and continuation",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "surface-value-review-gate"
+  },
+  "drift_log": [
+    "2026-04-26: Reingested #341-#346 and promoted the product-compression follow-up lane under #230.",
+    "2026-04-26: Implemented #341/#345 by turning report into a default router with explicit full and section selectors; routed continuation to #342."
+  ]
+}

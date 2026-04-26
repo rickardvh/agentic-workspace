@@ -916,6 +916,14 @@ def main(argv: list[str] | None = None) -> int:
             descriptors=descriptors,
             config=config,
         )
+        try:
+            payload = _select_report_payload(
+                payload,
+                profile=str(getattr(args, "profile", "router")),
+                section=getattr(args, "section", None),
+            )
+        except WorkspaceUsageError as exc:
+            parser.error(str(exc))
         if payload.get("health") != "healthy" and args.format == "json":
             import sys
 
@@ -2500,7 +2508,7 @@ def _run_report_command(
     branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
     local_memory = _local_memory_payload(config=config)
     closeout_trust = _report_closeout_trust_payload(module_reports=module_reports)
-    return {
+    payload = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
         "command": "report",
@@ -2508,6 +2516,7 @@ def _run_report_command(
         "selected_modules": selected_modules,
         "installed_modules": installed_modules,
         "health": status_payload["health"],
+        "report_profile": _report_profile_payload(),
         "output_contract": output_contract_payload(
             optimization_bias=config.optimization_bias,
             optimization_bias_source=config.optimization_bias_source,
@@ -2551,6 +2560,191 @@ def _run_report_command(
         "reports": status_payload["reports"],
         "module_reports": module_reports,
     }
+    return payload
+
+
+def _report_profile_payload() -> dict[str, Any]:
+    return {
+        "default_profile": "router",
+        "full_profile": "full",
+        "section_selector": "--section <top-level-field>",
+        "default_command": "agentic-workspace report --target ./repo --format json",
+        "full_profile_command": "agentic-workspace report --target ./repo --profile full --format json",
+        "section_command": "agentic-workspace report --target ./repo --section <section> --format json",
+        "rule": (
+            "Default report output should route to decision-grade current state before exposing high-volume "
+            "module detail. Use --profile full or --section when deeper data is needed."
+        ),
+        "high_volume_sections": [
+            {
+                "section": "module_reports",
+                "reason": "deep module state can be large; inspect only after the router points there",
+            },
+            {
+                "section": "reports",
+                "reason": "lifecycle report detail is useful for diagnosis but not needed for first-contact routing",
+            },
+            {
+                "section": "registry",
+                "reason": "module registry metadata is stable lookup detail rather than current-action routing",
+            },
+            {
+                "section": "config",
+                "reason": "resolved config is authoritative, but current work usually needs only routed policy highlights first",
+            },
+        ],
+        "decision_grade_fields": [
+            "health",
+            "current_work",
+            "next_action",
+            "warning_summary",
+            "section_hints",
+            "effective_authority",
+            "execution_shape",
+        ],
+    }
+
+
+def _select_report_payload(payload: dict[str, Any], *, profile: str, section: str | None) -> dict[str, Any]:
+    if section:
+        if profile != "router":
+            raise WorkspaceUsageError("report selectors are mutually exclusive; use either --profile or --section.")
+        if section not in payload:
+            available = ", ".join(sorted(str(key) for key in payload.keys()))
+            raise WorkspaceUsageError(f"Unknown report section {section!r}. Available sections: {available}")
+        return _compact_contract_answer(
+            surface="report",
+            selector={"section": section},
+            answer=payload[section],
+            refs=[
+                ".agentic-workspace/docs/reporting-contract.md",
+                "agentic-workspace report --target ./repo --profile full --format json",
+            ],
+        )
+    if profile == "full":
+        return payload
+    if profile == "router":
+        return _report_router_payload(payload)
+    raise WorkspaceUsageError("report --profile must be one of: router, full")
+
+
+def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    findings = [finding for finding in payload.get("findings", []) if isinstance(finding, dict)]
+    findings_by_severity: dict[str, int] = {}
+    findings_by_module: dict[str, int] = {}
+    for finding in findings:
+        severity = str(finding.get("severity", "info"))
+        module = str(finding.get("module", "workspace") or "workspace")
+        findings_by_severity[severity] = findings_by_severity.get(severity, 0) + 1
+        findings_by_module[module] = findings_by_module.get(module, 0) + 1
+    effective_authority = payload.get("effective_authority", {})
+    current_work = {}
+    if isinstance(effective_authority, dict):
+        current_work = dict(effective_authority.get("current_work", {}) or {})
+    execution_shape = payload.get("execution_shape", {})
+    if not current_work and isinstance(execution_shape, dict):
+        task_shape = execution_shape.get("task_shape", {})
+        if isinstance(task_shape, dict):
+            current_work = {
+                "status": str(task_shape.get("id", "unknown")),
+                "summary": str(task_shape.get("summary", "")),
+                "source": "execution_shape",
+            }
+    section_hints = _report_section_hints(payload)
+    profile_payload = payload.get("report_profile", _report_profile_payload())
+    return {
+        "kind": "workspace-report-router/v1",
+        "schema": {
+            "schema_version": "workspace-report-router-schema/v1",
+            "full_profile_command": "agentic-workspace report --target ./repo --profile full --format json",
+            "section_command": "agentic-workspace report --target ./repo --section <section> --format json",
+            "principle": "route first, inspect deep sections only when needed",
+        },
+        "command": "report",
+        "target": payload.get("target", ""),
+        "selected_modules": payload.get("selected_modules", []),
+        "installed_modules": payload.get("installed_modules", []),
+        "health": payload.get("health", "unknown"),
+        "output_contract": payload.get("output_contract", {}),
+        "report_profile": profile_payload,
+        "current_work": current_work,
+        "next_action": payload.get("next_action", {}),
+        "warning_summary": {
+            "total_count": len(findings),
+            "by_severity": findings_by_severity,
+            "by_module": findings_by_module,
+            "sample": findings[:5],
+            "raw_section": "findings",
+        },
+        "section_hints": section_hints,
+        "effective_authority": _report_router_effective_authority(payload.get("effective_authority", {})),
+        "execution_shape": _report_router_execution_shape(payload.get("execution_shape", {})),
+        "closeout_trust": payload.get("closeout_trust", {}),
+        "surface_value_guardrail": {
+            "command": "agentic-workspace defaults --section surface_value_guardrail --format json",
+            "prefer": payload.get("surface_value_guardrail", {}).get("preference_order", [])[:3],
+        },
+        "deeper_detail": {
+            "full_profile_command": "agentic-workspace report --target ./repo --profile full --format json",
+            "section_command": "agentic-workspace report --target ./repo --section <section> --format json",
+            "high_volume_sections": profile_payload.get("high_volume_sections", []),
+        },
+    }
+
+
+def _report_router_effective_authority(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    return {
+        "status": value.get("status", "unknown"),
+        "current_work": value.get("current_work", {}),
+        "unresolved_gap_count": len(value.get("unresolved_gaps", []) or []),
+        "authority_concerns": [
+            entry.get("concern") for entry in value.get("authority_map", []) if isinstance(entry, dict) and entry.get("concern")
+        ],
+    }
+
+
+def _report_router_execution_shape(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    recommendation = value.get("recommendation", {})
+    task_shape = value.get("task_shape", {})
+    return {
+        "status": value.get("status", "unknown"),
+        "task_shape": task_shape if isinstance(task_shape, dict) else {},
+        "recommendation": recommendation if isinstance(recommendation, dict) else {},
+        "deviation_rule": value.get("deviation_rule", ""),
+    }
+
+
+def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    section_purposes = {
+        "effective_authority": "authority, current work, system-intent pressure, and unresolved gaps",
+        "execution_shape": "default execution posture and planning-backed work guidance",
+        "findings": "raw warnings and attention signals grouped in router warning_summary",
+        "module_reports": "deep planning and memory module reports",
+        "reports": "workspace lifecycle report detail",
+        "surface_value_guardrail": "surface growth review pressure",
+        "closeout_trust": "closeout trust and lower-trust residue signals",
+        "discovery": "setup discovery and candidate surfaces",
+        "standing_intent": "effective standing intent and stronger-home guidance",
+        "repo_friction": "repo-friction and improvement pressure evidence",
+        "config": "resolved workspace config and local posture",
+        "registry": "module registry and lifecycle metadata",
+    }
+    hints: list[dict[str, Any]] = []
+    for section, purpose in section_purposes.items():
+        if section in payload:
+            hints.append(
+                {
+                    "section": section,
+                    "purpose": purpose,
+                    "command": f"agentic-workspace report --target ./repo --section {section} --format json",
+                    "volume": "high" if section in {"module_reports", "reports", "registry", "config"} else "normal",
+                }
+            )
+    return hints
 
 
 def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> dict[str, Any]:

@@ -333,6 +333,25 @@
           ],
           "action": "store_true",
           "help": "Return the high-signal orientation block for fresh agents."
+        },
+        {
+          "name": "profile",
+          "flags": [
+            "--profile"
+          ],
+          "choices": [
+            "router",
+            "full"
+          ],
+          "default": "router",
+          "help": "Select the compact router profile or the full combined report."
+        },
+        {
+          "name": "section",
+          "flags": [
+            "--section"
+          ],
+          "help": "Return one top-level full-report section in the compact contract profile."
         }
       ]
     },
