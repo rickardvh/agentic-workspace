@@ -1,0 +1,248 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Archive Closeout Valid By Construction",
+  "goal": [
+    "Implement the first #355 slice: make planning archive closeout easier to get right by generating valid closeout fields from simple command flags."
+  ],
+  "non_goals": [
+    "Remove archive validation.",
+    "Add a broad interactive wizard.",
+    "Implement review generators, contract scaffolds, or local-memory append commands in this slice."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "A common archive/closeout repair loop becomes valid-by-construction enough that agents do not learn normalized closure vocabulary only from refusal messages.",
+      "constraints": "Stay on master; keep package behavior repo-/agent-/tool-/language-agnostic; use command flags and generated record updates rather than another durable public surface.",
+      "latitude": "Choose archive-plan --prepare-closeout or a narrow closeout helper path, whichever is smaller in the current CLI shape.",
+      "escalation": "Stop before changing the full execplan schema or weakening archive validation."
+    },
+    "execution": {
+      "milestone": "archive-closeout-valid-by-construction",
+      "status": "completed",
+      "next_step": "Archive this plan using archive-plan --prepare-closeout after reconcile/summary are clean.",
+      "proof": "Use proof --changed, planning package tests/ruff, maintainer surfaces if payload changes, root checks if workspace wrappers change, reconcile, summary."
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Reduce validation-driven repair loops so Agentic Workspace feels smaller and easier to operate.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#230",
+    "parent lane": "#230"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "Fresh #355 follow-up pressure after the archive closeout slice lands."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Archive closeout can be prepared through package-owned command shape instead of manual JSON repair.",
+    "intentionally deferred": "Review generators, contract scaffolds, report-to-artifact transforms, and local-memory append flows.",
+    "discovered implications": "Archive closeout still requires execution summary and proof content, but the normalized intent/closure/distillation vocabulary no longer needs to be learned from refusal loops.",
+    "proof achieved now": "archive-plan --prepare-closeout dry-run emits a patch, and normal execution prepares and archives representative close and keep-open records.",
+    "validation still needed": "Final reconcile and summary after archive.",
+    "next likely slice": "Defer other #355 target areas to #230 until fresh repair-loop pressure appears."
+  },
+  "intent_interpretation": {
+    "literal request": "Plan and implement the suggested improvements. Issue #355 already contains some of that, so ingest it first.",
+    "inferred intended outcome": "Start with #355 and implement the first high-friction valid-by-construction improvement end to end.",
+    "chosen concrete what": "Implement planning closeout/archive preparation, then close #355 if this bounded first slice satisfies it or route remaining work to #230.",
+    "interpretation distance": "low",
+    "review guidance": "Check that the change reduces manual repair work rather than only expanding error messages."
+  },
+  "execution_bounds": {
+    "allowed paths": "packages/planning CLI/installer/tests, planning payload mirrors, root wrapper surfaces only if required, planning state/evidence/archive.",
+    "max changed files": "Prefer under 12 files including generated payload mirrors.",
+    "required validation commands": "agentic-workspace proof --changed; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; make maintainer-surfaces if payload changes; check_planning_surfaces; reconcile; summary.",
+    "ask-before-refactor threshold": "Adding a second new command beyond archive-plan flags or changing the execplan schema.",
+    "stop before touching": "Review generator, operation contract scaffold, local-memory implementation, branch switching."
+  },
+  "stop_conditions": {
+    "stop when": "The archive closeout preparation path is implemented, tested, documented through CLI help/JSON output shape, and this plan archives cleanly.",
+    "escalate when boundary reached": "The needed fix requires broad schema redesign rather than command-level preparation.",
+    "escalate on scope drift": "Work expands into unrelated #355 target areas.",
+    "escalate on proof failure": "Proof-selected validation fails outside touched surfaces."
+  },
+  "context_budget": {
+    "live working set": "preflight, issue #355, archive-plan CLI/installer/tests, this execplan",
+    "recoverable later": "older review artifacts and non-closeout #355 sections",
+    "externalize before shift": "Update execution_run and closeout_distillation before archive.",
+    "pre-work config pull": "uv run agentic-workspace preflight --format json",
+    "pre-work memory pull": "Not needed.",
+    "tiny resumability note": "Continue from this plan and #355.",
+    "context-shift triggers": "Before schema redesign or if package tests reveal broader command boundary needs."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make the first #355 archive closeout repair loop valid-by-construction.",
+    "hard constraints": "Stay portable and avoid broad new visible surfaces.",
+    "agent may decide locally": "Exact archive-plan flag names and generated field defaults.",
+    "escalate when": "The smallest working path requires schema loosening or a new broad command family."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#355",
+      "label": "validation-driven repair loops",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#230",
+      "label": "product compression umbrella",
+      "role": "parent",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "archive-closeout-valid-by-construction",
+    "status": "completed",
+    "scope": "#355 first slice",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan with archive-plan --prepare-closeout."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/archive-closeout-valid-by-construction-2026-04-26.plan.json"
+  ],
+  "invariants": [
+    "Do not switch branches.",
+    "Do not make GitHub a shipped package dependency.",
+    "Keep validation as a guardrail for exceptional cases."
+  ],
+  "contract_decisions_to_freeze": [
+    "Archive closeout preparation should write normalized values rather than only describing them in refusal messages."
+  ],
+  "open_questions_to_close": [
+    "Closed: archive-plan itself carries the preparation path through --prepare-closeout."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "cd packages/planning && uv run pytest tests/test_installer.py",
+    "cd packages/planning && uv run ruff check .",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "gh",
+    "uv",
+    "git"
+  ],
+  "completion_criteria": [
+    "#355 first closeout/archive slice is implemented.",
+    "A representative archive closeout can be prepared through command flags and then archived without manual JSON repair.",
+    "Tests prove the generated record validates.",
+    "No active execplan remains after archive closeout."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace preflight --format json; gh issue view 355",
+    "what happened": "Added archive-plan --prepare-closeout flags that generate normalized intent satisfaction, closure check, and closeout-distillation fields before archive validation.",
+    "scope touched": "Planning package CLI, archive installer logic, focused package tests, planning state/evidence, and this execplan.",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/cli.py, installer.py, packages/planning/tests/test_installer.py, planning state/evidence, and active execplan.",
+    "validations run": "uv run agentic-workspace proof --target . --changed <paths> --format json; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json.",
+    "result for continuation": "#355 first recommended slice is complete and the issue is closed; remaining candidate areas are deferred to #230.",
+    "next step": "Archive this completed plan with --prepare-closeout."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; only the planning closeout/archive first slice was implemented.",
+    "proof status": "passed selected lanes",
+    "intent served": "yes; one normal validation-repair loop is now valid-by-construction.",
+    "config compliance": "used package workflow surfaces, stayed on master, and kept GitHub as external evidence only.",
+    "misinterpretation risk": "low; other #355 target areas were explicitly deferred.",
+    "follow-on decision": "archive-but-keep-lane-open"
+  },
+  "proof_report": {
+    "validation proof": "proof selected planning_surfaces and planning_package; package tests, package ruff, and planning doctor passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Focused tests cover dry-run patch output, one-command prepare plus archive, and keep-open parent-lane closeout."
+  },
+  "intent_satisfaction": {
+    "original intent": "Plan and implement the suggested improvements. Issue #355 already contains some of that, so ingest it first.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": "#230"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Reduce total successful-completion cost and make package use cheaper than schema rediscovery.",
+    "slice shaping bias": "Prefer valid-by-construction command output over expanded validation prose.",
+    "broader-lane validation question": "Did this pass remove a normal repair loop rather than merely document it?",
+    "intent evidence source": "#355"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when #230 activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "archive-plan --prepare-closeout writes normalized closeout fields from simple flags and can archive without manual JSON repair.",
+    "validation confirmed": "cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json.",
+    "follow-on routed to": "#230",
+    "post-work posterity capture": "The command behavior and tests are the durable owner; no new docs or Memory needed.",
+    "knowledge promoted (Memory/Docs/Config)": "None.",
+    "resume from": "#230 for future repair-loop or product-compression pressure."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Remaining #355 target areas stay deferred unless fresh repair-loop pressure appears.",
+          "owner": "#230",
+          "source": "issue #355"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "None.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "None.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "None.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "Archive closeout valid-by-construction first slice",
+          "owner": "issue",
+          "source": "#355"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-26: Promoted #355 first slice after identifying archive closeout as the freshest repair-loop friction.",
+    "2026-04-26: Implemented archive-plan --prepare-closeout and closed #355 after package validation passed."
+  ]
+}

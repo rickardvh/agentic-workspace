@@ -4,6 +4,6 @@ queued_items = []
 
 [roadmap]
 lanes = [
-  { id = "further-product-compression-on-repeated-pressure", title = "Further product compression on repeated pressure", priority = "first", issues = ["#230"], outcome = "Continue removing, demoting, internalizing, or making measurable visible product residue so ordinary operation gets cheaper without losing leverage.", reason = "#352-#354 landed and closed as focused child slices; #230 remains open as the umbrella for future measured compression.", promotion_signal = "Promote the smallest fresh slice that reduces default reading, durable residue, or review cost without adding a new first-line concept.", suggested_first_slice = "Wait for fresh issue evidence or measured friction under #230 before promoting another slice." },
+  { id = "further-product-compression-on-repeated-pressure", title = "Further product compression on repeated pressure", priority = "first", issues = ["#230"], outcome = "Continue removing, demoting, internalizing, or making measurable visible product residue so ordinary operation gets cheaper without losing leverage.", reason = "#355 landed the first validation-repair-loop slice and closed; #230 remains as the umbrella for future measured pressure.", promotion_signal = "Promote the smallest fresh slice that reduces default reading, durable residue, validation repair loops, or review cost without adding a new first-line concept.", suggested_first_slice = "Wait for fresh issue evidence or measured friction under #230 before promoting another slice." },
 ]
 candidates = []

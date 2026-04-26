@@ -1,0 +1,15 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Archive Closeout Valid By Construction Closeout",
+  "summary": "Classify #355 after the first validation-repair-loop reduction slice landed.",
+  "issue_classifications": [
+    {
+      "id": "#355",
+      "title": "[Workspace]: Reduce validation-driven repair loops with simpler command and schema shapes",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "live_state": "closed",
+      "evidence": "archive-plan --prepare-closeout now generates normalized intent satisfaction, closure check, and closeout-distillation fields from simple flags; tests prove dry-run patch output, archive-and-close, and archive-but-keep-lane-open records archive without manual JSON repair.",
+      "follow_up": "#230"
+    }
+  ]
+}

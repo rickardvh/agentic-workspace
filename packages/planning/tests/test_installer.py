@@ -1879,6 +1879,129 @@ def test_archive_execplan_refusal_names_supported_closure_decisions(tmp_path: Pa
     )
 
 
+def test_archive_plan_prepare_closeout_dry_run_returns_valid_patch(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record.pop("intent_satisfaction")
+    record.pop("closure_check")
+    record.pop("closeout_distillation", None)
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        planning_cli.main(["archive-plan", "plan-alpha", "--target", str(tmp_path), "--prepare-closeout", "--dry-run", "--format", "json"])
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    text = json.dumps(payload)
+
+    assert payload["warnings"] == []
+    assert any(action["kind"] == "would update" and "prepared closeout patch" in action["detail"] for action in payload["actions"])
+    assert "archive-and-close" in text
+    assert "intent_satisfaction" in text
+    assert "closeout_distillation" in text
+    assert "next command" in text
+    assert record_path.exists()
+    assert "intent_satisfaction" not in json.loads(record_path.read_text(encoding="utf-8"))
+
+
+def test_archive_plan_prepare_closeout_archives_without_manual_json_repair(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "completed", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record.pop("intent_satisfaction")
+    record.pop("closure_check")
+    record.pop("closeout_distillation", None)
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--apply-cleanup",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    archived = json.loads(archived_record_path.read_text(encoding="utf-8"))
+
+    assert payload["warnings"] == []
+    assert any(action["kind"] == "updated" and "prepared normalized closeout fields" in action["detail"] for action in payload["actions"])
+    assert any(action["kind"] == "archived" for action in payload["actions"])
+    assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
+    assert archived["closure_check"]["closure decision"] == "archive-and-close"
+    assert archived["closeout_distillation"]["buckets"]["discard"][0]["owner"] == "discard"
+    assert not record_path.exists()
+
+
+def test_archive_plan_prepare_closeout_handles_open_parent_lane(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["intent_continuity"]["this slice completes the larger intended outcome"] = "no"
+    record["intent_continuity"]["continuation surface"] = ".agentic-workspace/planning/state.toml"
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "yes",
+        "owner surface": ".agentic-workspace/planning/state.toml",
+        "activation trigger": "when fresh product-compression pressure appears",
+    }
+    record.pop("intent_satisfaction")
+    record.pop("closure_check")
+    record.pop("closeout_distillation", None)
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--closure-decision",
+                "archive-but-keep-lane-open",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    archived = json.loads(archived_record_path.read_text(encoding="utf-8"))
+
+    assert payload["warnings"] == []
+    assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "no"
+    assert archived["intent_satisfaction"]["unsolved intent passed to"] == ".agentic-workspace/planning/state.toml"
+    assert archived["closure_check"]["larger-intent status"] == "open"
+    assert archived["closure_check"]["closure decision"] == "archive-but-keep-lane-open"
+    assert archived["closeout_distillation"]["buckets"]["continuation"][0]["owner"] == ".agentic-workspace/planning/state.toml"
+
+
 def test_archive_execplan_allows_partial_intent_when_continuation_is_explicit(tmp_path: Path) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(tmp_path / "ROADMAP.md", "# Roadmap\n")

@@ -4497,12 +4497,147 @@ def _render_inactive_execplan_residue(*, plan_path: Path, target_root: Path) -> 
     return "\n".join(lines)
 
 
+def _prepare_execplan_closeout(
+    *,
+    plan_path: Path,
+    target_root: Path,
+    result: InstallResult,
+    dry_run: bool,
+    closure_decision: str | None,
+    intent_satisfied: str | None,
+    unsolved_intent: str | None,
+    intent_evidence: str | None,
+    closure_reason: str | None,
+    closure_evidence: str | None,
+    reopen_trigger: str | None,
+    discard_summary: str | None,
+    continuation_summary: str | None,
+) -> bool:
+    record_path = _canonical_execplan_record_path(plan_path)
+    record = _load_execplan_record(plan_path)
+    if record is None:
+        result.add("manual review", record_path, "--prepare-closeout currently requires a canonical .plan.json record")
+        return False
+
+    intent_continuity = _record_section_dict(record, "intent_continuity") or {}
+    required_continuation = _record_section_dict(record, "required_continuation") or {}
+    delegated_judgment = _record_section_dict(record, "delegated_judgment") or {}
+    intent_interpretation = _record_section_dict(record, "intent_interpretation") or {}
+    completes_larger_outcome = intent_continuity.get("this slice completes the larger intended outcome", "").strip().lower()
+    continuation_owner = (
+        unsolved_intent
+        or intent_continuity.get("continuation surface")
+        or required_continuation.get("owner surface")
+        or intent_continuity.get("parent lane")
+        or "#230"
+    )
+    normalized_closure = (closure_decision or "").strip().lower()
+    if not normalized_closure:
+        normalized_closure = "archive-but-keep-lane-open" if completes_larger_outcome == "no" else "archive-and-close"
+    if normalized_closure not in {"archive-and-close", "archive-but-keep-lane-open"}:
+        result.add("manual review", record_path, "--closure-decision must be one of archive-and-close or archive-but-keep-lane-open")
+        return False
+
+    normalized_intent_satisfied = (intent_satisfied or "").strip().lower()
+    if not normalized_intent_satisfied:
+        normalized_intent_satisfied = "no" if normalized_closure == "archive-but-keep-lane-open" else "yes"
+    if normalized_intent_satisfied not in {"yes", "true", "no", "false"}:
+        result.add("manual review", record_path, "--intent-satisfied must be one of yes, no, true, or false")
+        return False
+
+    larger_status = "open" if normalized_closure == "archive-but-keep-lane-open" else "closed"
+    routed_unsolved_intent = continuation_owner if normalized_closure == "archive-but-keep-lane-open" else "none"
+    original_intent = (
+        intent_interpretation.get("literal request")
+        or intent_interpretation.get("inferred intended outcome")
+        or delegated_judgment.get("requested outcome")
+        or str(record.get("title", "Completed execplan")).strip()
+    )
+    evidence = intent_evidence or "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields."
+    honest_reason = closure_reason or (
+        "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner."
+        if normalized_closure == "archive-but-keep-lane-open"
+        else "The bounded slice and larger intent are both complete."
+    )
+    carried_evidence = closure_evidence or (
+        "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets."
+    )
+    reopen = reopen_trigger or (
+        f"Reopen when {routed_unsolved_intent} activates a fresh bounded slice."
+        if normalized_closure == "archive-but-keep-lane-open"
+        else "None unless new evidence shows the bounded closure was incomplete."
+    )
+
+    patch = {
+        "intent_satisfaction": {
+            "original intent": original_intent,
+            "was original intent fully satisfied?": normalized_intent_satisfied,
+            "evidence of intent satisfaction": evidence,
+            "unsolved intent passed to": routed_unsolved_intent,
+        },
+        "closure_check": {
+            "slice status": "completed",
+            "larger-intent status": larger_status,
+            "closure decision": normalized_closure,
+            "why this decision is honest": honest_reason,
+            "evidence carried forward": carried_evidence,
+            "reopen trigger": reopen,
+        },
+    }
+
+    buckets = _closeout_distillation_buckets(record=record, explicit={})
+    for bucket in ("discard", "continuation", "memory", "config_check", "docs", "issue_follow_up"):
+        buckets.setdefault(bucket, [])
+    if not buckets["discard"]:
+        buckets["discard"].append(
+            {
+                "summary": discard_summary or "Command-by-command execution detail stays in the archived proof record.",
+                "owner": "discard",
+                "source": "archive-plan --prepare-closeout",
+            }
+        )
+    if normalized_closure == "archive-but-keep-lane-open" and not buckets["continuation"]:
+        buckets["continuation"].append(
+            {
+                "summary": continuation_summary or f"Unsolved larger intent continues in {routed_unsolved_intent}.",
+                "owner": routed_unsolved_intent,
+                "source": "archive-plan --prepare-closeout",
+            }
+        )
+    patch["closeout_distillation"] = {"buckets": buckets}
+
+    detail = json.dumps(patch, ensure_ascii=False, sort_keys=True)
+    if dry_run:
+        result.add("would update", record_path, f"prepared closeout patch: {detail}")
+        result.add(
+            "next command",
+            record_path,
+            f"rerun without --dry-run to write the closeout and archive {plan_path.relative_to(target_root).as_posix()}",
+        )
+        return True
+
+    record.update(patch)
+    _write_execplan_record(record_path=record_path, record=record, render_markdown=plan_path != record_path)
+    result.add("updated", record_path, "prepared normalized closeout fields before archive validation")
+    return True
+
+
 def archive_execplan(
     plan: str,
     *,
     target: str | Path | None = None,
     dry_run: bool = False,
     apply_cleanup: bool = False,
+    prepare_closeout: bool = False,
+    closure_decision: str | None = None,
+    intent_satisfied: str | None = None,
+    unsolved_intent: str | None = None,
+    intent_evidence: str | None = None,
+    closure_reason: str | None = None,
+    closure_evidence: str | None = None,
+    reopen_trigger: str | None = None,
+    discard_summary: str | None = None,
+    continuation_summary: str | None = None,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message=f"Archive execplan '{plan}'", dry_run=dry_run)
@@ -4520,6 +4655,24 @@ def archive_execplan(
     if status not in {"completed", "done", "closed"}:
         result.add("manual review", plan_path, "archive requires the active milestone status to be completed/done/closed")
         return result
+    if prepare_closeout:
+        prepared = _prepare_execplan_closeout(
+            plan_path=plan_path,
+            target_root=target_root,
+            result=result,
+            dry_run=dry_run,
+            closure_decision=closure_decision,
+            intent_satisfied=intent_satisfied,
+            unsolved_intent=unsolved_intent,
+            intent_evidence=intent_evidence,
+            closure_reason=closure_reason,
+            closure_evidence=closure_evidence,
+            reopen_trigger=reopen_trigger,
+            discard_summary=discard_summary,
+            continuation_summary=continuation_summary,
+        )
+        if not prepared or dry_run:
+            return result
     intent_continuity = _execplan_intent_continuity(plan_path)
     completes_larger_outcome = intent_continuity.get("this slice completes the larger intended outcome", "").strip().lower()
     continuation_surface = intent_continuity.get("continuation surface", "").strip()

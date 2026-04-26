@@ -720,6 +720,15 @@
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#355",
+      "title": "[Workspace]: Reduce validation-driven repair loops with simpler command and schema shapes",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
     }
   ]
 }

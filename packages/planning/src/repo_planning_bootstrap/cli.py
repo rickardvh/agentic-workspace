@@ -98,6 +98,28 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Apply narrow cleanup for completed TODO references and Active Handoff residue tied to the archived plan.",
     )
+    archive_parser.add_argument(
+        "--prepare-closeout",
+        action="store_true",
+        help="Write package-normalized closeout fields before archive validation runs.",
+    )
+    archive_parser.add_argument(
+        "--closure-decision",
+        choices=("archive-and-close", "archive-but-keep-lane-open"),
+        help="Closeout decision to write when --prepare-closeout is used.",
+    )
+    archive_parser.add_argument(
+        "--intent-satisfied",
+        choices=("yes", "no", "true", "false"),
+        help="Whether the larger original intent is fully satisfied when --prepare-closeout is used.",
+    )
+    archive_parser.add_argument("--unsolved-intent", help="Continuation owner for unsolved larger intent.")
+    archive_parser.add_argument("--intent-evidence", help="Evidence of intent satisfaction for prepared closeout.")
+    archive_parser.add_argument("--closure-reason", help="Why the prepared closure decision is honest.")
+    archive_parser.add_argument("--closure-evidence", help="Evidence carried forward by the prepared closure.")
+    archive_parser.add_argument("--reopen-trigger", help="Reopen trigger for the prepared closure.")
+    archive_parser.add_argument("--discard-summary", help="Closeout distillation discard bucket summary.")
+    archive_parser.add_argument("--continuation-summary", help="Closeout distillation continuation bucket summary.")
     archive_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     list_files_parser = subparsers.add_parser("list-files")
@@ -174,6 +196,16 @@ def main(argv: list[str] | None = None) -> int:
                 target=args.target,
                 dry_run=args.dry_run,
                 apply_cleanup=args.apply_cleanup,
+                prepare_closeout=args.prepare_closeout,
+                closure_decision=args.closure_decision,
+                intent_satisfied=args.intent_satisfied,
+                unsolved_intent=args.unsolved_intent,
+                intent_evidence=args.intent_evidence,
+                closure_reason=args.closure_reason,
+                closure_evidence=args.closure_evidence,
+                reopen_trigger=args.reopen_trigger,
+                discard_summary=args.discard_summary,
+                continuation_summary=args.continuation_summary,
             ),
             args.format,
         )
