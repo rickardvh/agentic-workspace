@@ -1972,6 +1972,47 @@ candidates = []
     assert any(action.kind == "updated" and "remove TODO item '#257'" in action.detail for action in result.actions)
 
 
+def test_archive_execplan_apply_cleanup_merges_compact_state_todo_and_roadmap_cleanup(tmp_path: Path) -> None:
+    plan_ref = ".agentic-workspace/planning/execplans/planning-backed-dogfooding-guardrail.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        f"""
+[todo]
+active_items = [
+  {{ id = "planning-backed-dogfooding-guardrail", status = "active", plan = "{plan_ref}" }},
+]
+queued_items = []
+
+[roadmap]
+lanes = [
+  {{ id = "planning-backed-dogfooding-guardrail", title = "Planning backed dogfooding guardrail", priority = "first", issues = ["#322"] }},
+  {{ id = "machine-first-planning-state", title = "Machine-first planning state and closeout hygiene", priority = "second", issues = ["#323", "#325"] }},
+]
+candidates = [
+  {{ priority = "first", summary = "Planning backed dogfooding guardrail" }},
+  {{ priority = "second", summary = "Machine-first planning state and closeout hygiene" }},
+]
+""",
+    )
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    plan_path = tmp_path / plan_ref
+    _write_execplan_record(plan_path, item_id="planning-backed-dogfooding-guardrail", status="completed")
+
+    result = archive_execplan("planning-backed-dogfooding-guardrail", target=tmp_path, apply_cleanup=True)
+
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    archived_path = tmp_path / ".agentic-workspace/planning/execplans/archive/planning-backed-dogfooding-guardrail.plan.json"
+
+    assert archived_path.exists()
+    assert not plan_path.exists()
+    assert "active_items = []" in state_text
+    assert "planning-backed-dogfooding-guardrail" not in state_text
+    assert "Machine-first planning state and closeout hygiene" in state_text
+    assert "machine-first-planning-state" in state_text
+    assert any(action.kind == "updated" and "remove TODO item" in action.detail for action in result.actions)
+    assert any(action.kind == "updated" and "roadmap lanes" in action.detail for action in result.actions)
+
+
 def test_archive_execplan_apply_cleanup_removes_matching_candidate_queue_entry(tmp_path: Path) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",

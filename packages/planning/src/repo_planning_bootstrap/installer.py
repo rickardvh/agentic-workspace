@@ -4366,10 +4366,13 @@ def archive_execplan(
     # Remove the active .md (if plan_path is .md and separate from the record)
     if plan_path.exists() and plan_path != record_path:
         plan_path.unlink()
-    if cleanup_todo_lines is not None:
+    if cleanup_todo_lines is not None and not (cleanup_roadmap_state["changed"] and apply_cleanup):
         (target_root / ".agentic-workspace/planning/state.toml").write_text("\n".join(cleanup_todo_lines).rstrip() + "\n", encoding="utf-8")
     if cleanup_roadmap_state["changed"] and apply_cleanup:
-        _write_state_to_toml(target_root, cleanup_roadmap_state["state"])
+        state_to_write = cleanup_roadmap_state["state"]
+        if cleanup_todo_lines is not None and isinstance(state_to_write, dict):
+            state_to_write = _merge_todo_state_from_toml_lines(state_to_write, cleanup_todo_lines)
+        _write_state_to_toml(target_root, state_to_write)
     if cleanup_legacy_roadmap["changed"] and apply_cleanup and cleanup_legacy_roadmap["text"] is not None:
         legacy_roadmap_path.write_text(cleanup_legacy_roadmap["text"], encoding="utf-8")
     result.add("archived", destination_record, f"canonical record for {plan_path.relative_to(target_root).as_posix()}")
@@ -5197,7 +5200,9 @@ def _todo_referencing_items(todo_path: Path, plan_path: Path, target_root: Path)
                 for raw in state.get("todo", {}).get(bucket, []):
                     if not isinstance(raw, dict):
                         continue
-                    if _surface_execplan_reference(str(raw.get("surface", ""))) != relative:
+                    item_plan = _surface_execplan_reference(str(raw.get("plan", ""))) or str(raw.get("plan", "")).strip()
+                    item_surface = _surface_execplan_reference(str(raw.get("surface", ""))) or str(raw.get("surface", "")).strip()
+                    if relative not in {item_plan, item_surface}:
                         continue
                     fields = {str(key): str(value) for key, value in raw.items()}
                     matches.append(TodoItem(fields=fields, field_order=list(fields.keys()), start=0, end=0))
@@ -5366,7 +5371,7 @@ def _cleanup_todo_now_section(lines: list[str], plan_stem: str) -> tuple[list[st
 
 
 def _plan_stem_tokens(plan_path: Path) -> list[str]:
-    stop_tokens = {"plan", "lane", "slice", "tranche", "candidate", "native"}
+    stop_tokens = {"plan", "planning", "lane", "slice", "tranche", "candidate", "native"}
     return [
         token
         for token in re.split(r"[^a-z0-9]+", plan_path.stem.lower())
@@ -5593,6 +5598,18 @@ def _write_state_to_toml(target_root: Path, state: dict[str, Any]) -> None:
     state_path = target_root / PLANNING_STATE_PATH
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text("\n".join(_state_to_toml_lines(state)), encoding="utf-8")
+
+
+def _merge_todo_state_from_toml_lines(state: dict[str, Any], lines: list[str]) -> dict[str, Any]:
+    try:
+        updated = tomllib.loads("\n".join(lines))
+    except tomllib.TOMLDecodeError:
+        return state
+    todo = updated.get("todo")
+    if isinstance(todo, dict):
+        state = dict(state)
+        state["todo"] = todo
+    return state
 
 
 def _state_to_toml_lines(state: dict[str, Any]) -> list[str]:

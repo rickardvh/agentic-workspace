@@ -1,0 +1,219 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Archive Plan Cleanup Hardening",
+  "goal": [
+    "Fix #323 so `archive-plan --apply-cleanup` removes the active compact state row for the archived plan and preserves unrelated roadmap lanes.",
+    "Add regression coverage for the observed `.plan.json` active-row and unrelated-roadmap-lane failure."
+  ],
+  "non_goals": [
+    "Do not redesign archive-plan.",
+    "Do not close the machine-first-planning-state lane.",
+    "Do not change legacy Markdown roadmap cleanup beyond the bug fix needed here."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Make archive cleanup trustworthy for compact state.toml installs.",
+      "constraints": "Preserve unrelated roadmap lanes/candidates; remove only TODO rows that point at the archived plan; keep cleanup behavior narrow and regression-tested.",
+      "latitude": "Patch the smallest matching/merge bug in the planning package and add focused tests.",
+      "escalation": "Escalate if the fix requires changing archive semantics or broad roadmap matching policy."
+    },
+    "execution": {
+      "milestone": "compact-state-cleanup-regression",
+      "status": "completed",
+      "next_step": "Archive this completed plan with `archive-plan --apply-cleanup`, close #323, and continue with #325.",
+      "proof": "Focused planning package tests reproduce and cover the active row removal plus unrelated lane preservation; full installer tests and ruff pass."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/archive-plan-cleanup-hardening.plan.json",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_installer.py"
+      ],
+      "invariants": [
+        "State cleanup preserves unrelated roadmap lanes.",
+        "A compact TODO row that uses `plan` or `surface` can be removed when it points at the archived plan.",
+        "Roadmap cleanup must not match on generic planning/workflow tokens alone."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "machine-first planning state and closeout hygiene",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane machine-first-planning-state",
+    "parent lane": "machine-first-planning-state"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml roadmap lane machine-first-planning-state",
+    "activation trigger": "continue with #325 after archive cleanup is fixed"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Archive cleanup can be trusted again for compact state closeout.",
+    "intentionally deferred": "#325 product-level reconciliation view",
+    "discovered implications": "Initial inspection found likely stale-state overwrite and over-broad token matching.",
+    "proof achieved now": "archive cleanup now matches compact `plan` references, preserves TODO cleanup when roadmap cleanup also writes state, and ignores generic `planning` roadmap tokens",
+    "validation still needed": "dogfood archive cleanup against this active plan, then run planning checks",
+    "next likely slice": "#325"
+  },
+  "intent_interpretation": {
+    "literal request": "continue planned lanes on autopilot",
+    "inferred intended outcome": "fix the next first-lane trust blocker discovered by dogfooding",
+    "chosen concrete what": "patch archive-plan compact cleanup so it removes the right active row and preserves unrelated roadmap lanes",
+    "interpretation distance": "low",
+    "review guidance": "reject broad archive rewrites; require a regression for the observed #323 shape"
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/archive-plan-cleanup-hardening.plan.json; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py",
+    "max changed files": "4",
+    "required validation commands": "uv run pytest packages/planning/tests/test_installer.py -q -k \"archive_execplan_apply_cleanup\"; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace summary --format json; rg -n \"planning-backed-dogfooding-guardrail|archive-plan-cleanup-hardening|_merge_todo_state_from_toml_lines|_plan_stem_tokens\" packages/planning .agentic-workspace/planning; git diff --check",
+    "ask-before-refactor threshold": "stop before broad archive-plan redesign or new cleanup modes",
+    "stop before touching": "GitHub issue state until tests pass"
+  },
+  "stop_conditions": {
+    "stop when": "focused regression tests and planning checks pass",
+    "escalate when boundary reached": "fix requires changing roadmap continuation semantics",
+    "escalate on scope drift": "work expands into product reconciliation or broader lane closure",
+    "escalate on proof failure": "regression cannot be reproduced or fixed narrowly"
+  },
+  "context_budget": {
+    "live working set": "archive_execplan, compact state TODO cleanup, roadmap cleanup token matching, focused installer tests",
+    "recoverable later": "older Markdown roadmap cleanup edge cases outside #323",
+    "externalize before shift": "the root cause and validation commands in this execplan",
+    "pre-work config pull": "agentic-workspace summary --format json",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "fix #323 in installer.py; active rows may use `plan`, and roadmap cleanup must not match generic `planning` token",
+    "context-shift triggers": "after adding tests or before committing"
+  },
+  "delegated_judgment": {
+    "requested outcome": "fix archive-plan cleanup so closeout can be trusted",
+    "hard constraints": "preserve unrelated roadmap lanes and remove only rows that point at the archived plan",
+    "agent may decide locally": "the exact narrow helper changes and regression test shape",
+    "escalate when": "the issue needs a broad archive cleanup redesign"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#323",
+      "label": "archive cleanup bug",
+      "role": "primary-intent",
+      "locator": "github issue #323"
+    },
+    {
+      "kind": "review",
+      "target": ".agentic-workspace/planning/reviews/lower-trust-closeout-audit-2026-04-26.review.json",
+      "label": "#324 audit",
+      "role": "preceding-proof",
+      "locator": "issue_classifications[id=#307]"
+    }
+  ],
+  "active_milestone": {
+    "id": "compact-state-cleanup-regression",
+    "status": "completed",
+    "scope": "Patch and test compact state archive cleanup for #323.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Dogfood archive cleanup against this plan, then close #323 and continue with #325."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/archive-plan-cleanup-hardening.plan.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "invariants": [
+    "Only the archived plan's active/queued row is removed.",
+    "Unrelated roadmap lanes and candidates are preserved.",
+    "The fix is covered by focused package tests."
+  ],
+  "contract_decisions_to_freeze": [
+    "Compact state TODO references may use `plan` as well as `surface`.",
+    "Generic plan-stem tokens such as `planning` are not safe roadmap cleanup discriminators."
+  ],
+  "open_questions_to_close": [
+    "Does the active row use `plan`, `surface`, or both?",
+    "Does roadmap cleanup overwrite TODO cleanup when both mutate state?",
+    "Which token caused unrelated lane removal?"
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"archive_execplan_apply_cleanup\"",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --format json",
+    "rg -n \"planning-backed-dogfooding-guardrail|archive-plan-cleanup-hardening|_merge_todo_state_from_toml_lines|_plan_stem_tokens\" packages/planning .agentic-workspace/planning",
+    "git diff --check"
+  ],
+  "required_tools": [
+    "uv",
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "#323 reproduction is covered by a failing-then-passing regression.",
+    "`archive-plan --apply-cleanup` removes the matching compact active row even when it uses `plan`.",
+    "Roadmap cleanup preserves unrelated lanes/candidates when only generic plan tokens overlap.",
+    "Focused tests and planning checks pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex dogfooding agentic-workspace",
+    "handoff source": "roadmap lane after #324 audit",
+    "what happened": "Patched archive cleanup so compact state rows using `plan` are recognized, TODO cleanup is merged with roadmap cleanup before writing state, and generic `planning` tokens do not remove unrelated roadmap lanes. Added a regression for the exact `.plan.json` active-row plus unrelated-lane failure.",
+    "scope touched": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/archive-plan-cleanup-hardening.plan.json; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py",
+    "changed surfaces": "planning active state and execplan; archive cleanup implementation; installer regression tests",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"archive_execplan_apply_cleanup\"; uv run pytest packages/planning/tests/test_installer.py -q; uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py; rg -n \"planning-backed-dogfooding-guardrail|archive-plan-cleanup-hardening|_merge_todo_state_from_toml_lines|_plan_stem_tokens\" packages/planning .agentic-workspace/planning",
+    "result for continuation": "#323 implementation is complete; #325 remains the next first-lane follow-up.",
+    "next step": "archive this plan with `archive-plan --apply-cleanup`"
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "summary used before implementation",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-but-keep-lane-open"
+  },
+  "proof_report": {
+    "validation proof": "`uv run pytest packages/planning/tests/test_installer.py -q -k \"archive_execplan_apply_cleanup\"`; `uv run pytest packages/planning/tests/test_installer.py -q`; `uv run ruff check packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py`; `rg -n \"planning-backed-dogfooding-guardrail|archive-plan-cleanup-hardening|_merge_todo_state_from_toml_lines|_plan_stem_tokens\" packages/planning .agentic-workspace/planning`",
+    "proof achieved now": "Archive cleanup removes compact active rows that use `plan`, preserves that removal when roadmap cleanup also writes compact state, and preserves unrelated roadmap lanes when only generic `planning` tokens overlap.",
+    "evidence for \"proof achieved\" state": "Regression `test_archive_execplan_apply_cleanup_merges_compact_state_todo_and_roadmap_cleanup` and 93 passing installer tests."
+  },
+  "intent_satisfaction": {
+    "original intent": "fix #323 archive cleanup defect",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The #323 bug itself is fixed and regression-tested, but the parent machine-first closeout-hygiene lane remains open.",
+    "unsolved intent passed to": "#325"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Agentic Workspace should make agent closeout and continuation trustworthy through checked-in, machine-readable state.",
+    "slice shaping bias": "fix the package workflow defect before relying on archive cleanup again",
+    "broader-lane validation question": "Can archive cleanup be used without corrupting active state or roadmap continuation?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#323 is fixed, but #325 still owns product-level reconciliation for lower-trust closeouts.",
+    "evidence carried forward": "installer regression test plus this archived execplan",
+    "reopen trigger": "reopen if archive cleanup again leaves active rows or removes unrelated lanes"
+  },
+  "execution_summary": {
+    "outcome delivered": "fixed #323 archive cleanup defect in the planning package",
+    "validation confirmed": "focused archive cleanup tests, full installer tests, and ruff passed",
+    "follow-on routed to": "#325",
+    "post-work posterity capture": "archive this execplan after dogfooding cleanup",
+    "knowledge promoted (Memory/Docs/Config)": "package regression test for compact archive cleanup",
+    "resume from": ".agentic-workspace/planning/execplans/archive-plan-cleanup-hardening.plan.json"
+  },
+  "drift_log": [
+    "2026-04-26: Active execplan created from #323 after #324 audit closeout.",
+    "2026-04-26: Patched archive cleanup matching/merge behavior and added regression coverage."
+  ]
+}
