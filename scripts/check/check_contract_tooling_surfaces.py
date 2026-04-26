@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import importlib.util
 import tempfile
 from pathlib import Path
@@ -505,6 +506,81 @@ def _validate_generated_command_adapter_output() -> list[str]:
     return errors
 
 
+def _validate_python_contract_consumption_policy(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    entries = payload.get("validated_at_consumption", [])
+    if not isinstance(entries, list):
+        return ["python_contract_consumption.json validated_at_consumption must be a list"]
+    dynamic_entries = payload.get("dynamic_validated_loader_boundary", [])
+    if not isinstance(dynamic_entries, list):
+        return ["python_contract_consumption.json dynamic_validated_loader_boundary must be a list"]
+    dynamic_loaders = {str(entry.get("loader", "")) for entry in dynamic_entries if isinstance(entry, dict)}
+    implemented_dynamic_loaders: set[str] = set()
+
+    contract_tooling_path = REPO_ROOT / "src" / "agentic_workspace" / "contract_tooling.py"
+    tree = ast.parse(contract_tooling_path.read_text(encoding="utf-8"))
+    validated_loader_calls: dict[str, tuple[str, str]] = {}
+    for node in tree.body:
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        for child in ast.walk(node):
+            if not isinstance(child, ast.Call):
+                continue
+            if not isinstance(child.func, ast.Name) or child.func.id != "load_validated_contract_json":
+                continue
+            if len(child.args) < 2:
+                errors.append(f"validated loader {node.name} calls load_validated_contract_json without contract and schema")
+                continue
+            contract_arg, schema_arg = child.args[:2]
+            if not isinstance(contract_arg, ast.Constant) or not isinstance(schema_arg, ast.Constant):
+                if node.name not in dynamic_loaders:
+                    errors.append(f"validated loader {node.name} must use literal contract and schema refs or be declared dynamic")
+                else:
+                    implemented_dynamic_loaders.add(node.name)
+                continue
+            if not isinstance(contract_arg.value, str) or not isinstance(schema_arg.value, str):
+                errors.append(f"validated loader {node.name} must use string contract and schema refs")
+                continue
+            validated_loader_calls[node.name] = (contract_arg.value, schema_arg.value)
+
+    declared_loaders: set[str] = set()
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            errors.append(f"validated_at_consumption entry {index} must be an object")
+            continue
+        loader = str(entry.get("loader", ""))
+        contract = str(entry.get("contract", ""))
+        schema = str(entry.get("schema", ""))
+        consumer = str(entry.get("consumer", ""))
+        if not loader or not contract or not schema or not consumer:
+            errors.append(f"validated_at_consumption entry {index} is missing loader, contract, schema, or consumer")
+            continue
+        declared_loaders.add(loader)
+        actual_refs = validated_loader_calls.get(loader)
+        if actual_refs is None:
+            errors.append(f"validated contract consumer {consumer} declares unknown loader {loader}")
+            continue
+        if actual_refs != (contract, schema):
+            errors.append(
+                f"validated contract consumer {consumer} declares {contract} with {schema}, "
+                f"but loader {loader} validates {actual_refs[0]} with {actual_refs[1]}"
+            )
+
+    unrecorded_loaders = sorted(set(validated_loader_calls) - declared_loaders - dynamic_loaders - {"python_contract_consumption_manifest"})
+    if unrecorded_loaders:
+        errors.append(
+            "validated contract loaders are not recorded in python_contract_consumption.json: "
+            + ", ".join(unrecorded_loaders)
+        )
+    missing_dynamic_loaders = sorted(dynamic_loaders - implemented_dynamic_loaders)
+    if missing_dynamic_loaders:
+        errors.append(
+            "dynamic validated loaders are declared but not implemented in contract_tooling.py: "
+            + ", ".join(missing_dynamic_loaders)
+        )
+    return errors
+
+
 def _parser_snapshot(parser) -> list[dict[str, object]]:
     subparsers_action = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
     return [_command_parser_snapshot(subparsers_action.choices[name]) for name in subparsers_action.choices]
@@ -764,7 +840,8 @@ def main(argv: list[str] | None = None) -> int:
         ),
         (
             "python contract consumption policy",
-            _validate(python_contract_consumption_manifest(), "python_contract_consumption.schema.json"),
+            _validate(python_contract_consumption_manifest(), "python_contract_consumption.schema.json")
+            + _validate_python_contract_consumption_policy(python_contract_consumption_manifest()),
         ),
         (
             "python runtime boundary",
@@ -834,34 +911,11 @@ def main(argv: list[str] | None = None) -> int:
     if defaults_payload["proof_surfaces"]["default_routes"] != proof_routes_manifest()["default_routes"]:
         checks.append(("proof routes parity", ["defaults payload proof routes drifted from proof_routes.json"]))
     proof_rules = proof_selection_rules_manifest()
-    consumption_policy = python_contract_consumption_manifest()
     validation_lane_ids = {lane["id"] for lane in defaults_payload["validation"]["lanes"]}
     proof_rule_lanes = {rule["lane"] for rule in proof_rules["rules"]} | {proof_rules["fallback_lane"]}
     unknown_rule_lanes = sorted(proof_rule_lanes - validation_lane_ids)
     if unknown_rule_lanes:
         checks.append(("proof selection rules parity", [f"unknown validation lane(s): {', '.join(unknown_rule_lanes)}"]))
-    expected_validated_contracts = {
-        ("proof_selection_rules.json", "proof_selection_rules.schema.json", "agentic_workspace.cli:_proof_selection_for_changed_paths"),
-        ("authority_markers.json", "authority_markers.schema.json", "agentic_workspace.cli:_authority_marker_for_path"),
-        ("context_templates.json", "context_templates.schema.json", "agentic_workspace.cli:_start_payload"),
-        ("context_templates.json", "context_templates.schema.json", "agentic_workspace.cli:_implement_payload"),
-        (
-            "command_adapter_generation.json",
-            "command_adapter_generation.schema.json",
-            "scripts/check/check_contract_tooling_surfaces.py",
-        ),
-    }
-    actual_validated_contracts = {
-        (entry["contract"], entry["schema"], entry["consumer"]) for entry in consumption_policy["validated_at_consumption"]
-    }
-    if expected_validated_contracts - actual_validated_contracts:
-        missing_consumers = sorted(consumer for _, _, consumer in expected_validated_contracts - actual_validated_contracts)
-        checks.append(
-            (
-                "python contract consumption parity",
-                [f"validated contract consumers are not recorded: {', '.join(missing_consumers)}"],
-            )
-        )
     if cli._reporting_schema_payload() != report_contract_manifest():  # type: ignore[attr-defined]
         checks.append(("report contract parity", ["reporting schema payload drifted from report_contract.json"]))
     workspace_surfaces = workspace_surfaces_manifest()

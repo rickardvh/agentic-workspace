@@ -66,6 +66,38 @@ def test_command_adapter_generation_contract_records_multi_target_requirements()
     assert target_kinds["local-mcp-tool"]["status"] == "requirements-baseline"
 
 
+def test_python_contract_consumption_declares_validated_loader_bindings() -> None:
+    manifest = contract_tooling.python_contract_consumption_manifest()
+    entries = manifest["validated_at_consumption"]
+
+    assert all(entry["loader"].endswith("_manifest") for entry in entries)
+    assert manifest["dynamic_validated_loader_boundary"] == [
+        {
+            "loader": "conformance_contract_manifest",
+            "schema": "conformance.schema.json",
+            "reason": "The contract path is selected from conformance_contracts.json at runtime, so only the schema side is static.",
+        }
+    ]
+    assert {
+        (entry["contract"], entry["schema"], entry["loader"]) for entry in entries if entry["contract"] == "command_adapter_generation.json"
+    } == {
+        (
+            "command_adapter_generation.json",
+            "command_adapter_generation.schema.json",
+            "command_adapter_generation_manifest",
+        )
+    }
+
+
+def test_contract_tooling_check_derives_validated_consumption_from_policy() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    text = script_path.read_text(encoding="utf-8")
+
+    assert "expected_validated_contracts" not in text
+    assert "_validate_python_contract_consumption_policy" in text
+    assert "validated_loader_calls" in text
+
+
 def test_generated_command_adapter_module_is_current() -> None:
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_adapters.py"
     spec = importlib.util.spec_from_file_location("generate_command_adapters", script_path)

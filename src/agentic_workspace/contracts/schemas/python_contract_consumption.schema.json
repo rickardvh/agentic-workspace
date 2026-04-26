@@ -6,6 +6,7 @@
   "required": [
     "schema_version",
     "loader_boundary",
+    "dynamic_validated_loader_boundary",
     "validated_at_consumption",
     "model_derivation_policy"
   ],
@@ -44,6 +45,7 @@
         "required": [
           "contract",
           "schema",
+          "loader",
           "consumer"
         ],
         "properties": {
@@ -53,7 +55,35 @@
           "schema": {
             "type": "string"
           },
+          "loader": {
+            "type": "string",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          },
           "consumer": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "dynamic_validated_loader_boundary": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "loader",
+          "schema",
+          "reason"
+        ],
+        "properties": {
+          "loader": {
+            "type": "string",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          },
+          "schema": {
+            "type": "string"
+          },
+          "reason": {
             "type": "string"
           }
         },

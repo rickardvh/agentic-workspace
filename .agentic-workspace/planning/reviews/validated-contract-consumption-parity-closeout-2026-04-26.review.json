@@ -1,0 +1,25 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Validated Contract Consumption Parity Closeout",
+  "date": "2026-04-26",
+  "scope": "#364 and #356",
+  "classification": "closeout",
+  "findings": [
+    {
+      "id": "#364",
+      "title": "[Review]: Derive validated contract-consumption parity from declared loader use",
+      "action_state": "evidence-present",
+      "evidence": "python_contract_consumption.json now declares static loader bindings and a dynamic conformance-loader boundary; check_contract_tooling_surfaces.py derives parity by parsing contract_tooling.py validated-loader calls.",
+      "follow_up": "",
+      "notes": "Dogfooding friction was absorbed into the existing policy/check surfaces without adding a new first-contact surface."
+    },
+    {
+      "id": "#356",
+      "title": "[Workspace]: Generate shipped CLI adapters from authoritative package definitions",
+      "action_state": "evidence-present",
+      "evidence": "#357-#364 completed the planned generated-adapter migration lane: audit, generation contract, root adapter, package adapter, drift/conformance, no-direct-edit guardrails, projection requirements, and parity friction cleanup.",
+      "follow_up": "",
+      "notes": "The lane proves the boundary and migration path; it intentionally does not generate every future adapter target."
+    }
+  ]
+}

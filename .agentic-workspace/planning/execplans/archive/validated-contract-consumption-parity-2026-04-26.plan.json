@@ -1,0 +1,205 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Validated Contract Consumption Parity",
+  "goal": [
+    "Implement #364 by making validated contract-consumption parity derive from declared consumption policy and loader bindings instead of a second hard-coded expected set."
+  ],
+  "non_goals": [
+    "Change which contracts are validated at consumption.",
+    "Generate contract loaders.",
+    "Add host-, tracker-, or agent-specific assumptions.",
+    "Broaden generated adapter behavior."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Adding a validated contract should require one obvious policy declaration plus the loader implementation, with the check deriving parity from that declaration.",
+      "constraints": "Keep the core package repo-/agent-/tool-/language-agnostic; avoid hard-coded consumer parity lists.",
+      "latitude": "Add compact policy fields, AST-based loader checks, and focused tests.",
+      "escalation": "Stop before broad loader generation or target-specific adapter work."
+    },
+    "execution": {
+      "milestone": "validated-contract-consumption-parity-2026-04-26",
+      "status": "completed",
+      "next_step": "Archive this slice; the generated adapter migration roadmap lane is complete.",
+      "proof": "Run contract tooling checks, focused contract tests, planning checks, reconcile, and summary."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/python_contract_consumption.json",
+        "src/agentic_workspace/contracts/schemas/python_contract_consumption.schema.json",
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "tests/test_contract_tooling.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Generated shipped CLI adapters from authoritative package definitions.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#356"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#356",
+    "activation trigger": "After #364, decide whether the generated adapter migration lane has enough infrastructure or needs the next adapter generation slice."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Future validated contract consumers can be added by declaring loader bindings in python_contract_consumption.json and implementing the loader, without updating a second hard-coded parity set.",
+    "intentionally deferred": "Generated loaders and broader contract architecture changes.",
+    "discovered implications": "The new check found existing static validated loaders that had not been recorded, so they were absorbed into the policy.",
+    "proof achieved now": "Contract tooling, focused tests, proof-selected workspace tests, ruff, and planning doctor passed.",
+    "validation still needed": "No planned generated-adapter child slice remains open.",
+    "next likely slice": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Derive validated contract-consumption parity from declared loader use.",
+    "hard constraints": "No hard-coded second expected consumer set; no host-specific assumptions.",
+    "agent may decide locally": "How to encode loader names and check contract/schema pairs against actual Python loader functions.",
+    "escalate when": "The fix would require generated loaders or broad contract architecture changes."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#364",
+      "label": "validated contract consumption parity",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#356",
+      "label": "generated CLI adapter lane",
+      "role": "parent",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "validated-contract-consumption-parity-2026-04-26",
+    "status": "completed",
+    "scope": "#364",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/python_contract_consumption.json",
+    "src/agentic_workspace/contracts/schemas/python_contract_consumption.schema.json",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "tests/test_contract_tooling.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "#364 is implemented and closed.",
+    "The checker no longer carries a separate hard-coded expected validated-consumer set.",
+    "The policy declares loader names for validated contract consumption.",
+    "The checker verifies declared loader functions call the matching validated loader."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Validated contract-consumption parity now derives from declared loader bindings and actual load_validated_contract_json calls instead of a second expected-consumer set.",
+    "validation confirmed": "Contract tooling, focused contract tests, proof-selected workspace CLI tests, ruff, planning doctor, planning-surface checks, reconcile, and summary passed.",
+    "follow-on routed to": "none for #364; parent #356 closed after acceptance review.",
+    "post-work posterity capture": "Closeout review plus archived execplan.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory or docs promotion; durable learning is encoded in python_contract_consumption.json and the checker.",
+    "resume from": "No active planned lane remains."
+  },
+  "proof_report": {
+    "validation proof": "uv run agentic-workspace proof --target . --changed <paths> --format json selected workspace CLI and planning-surface lanes; contract tooling and focused tests were run as lane-specific proof.",
+    "proof achieved now": "The checker derives validated consumption parity from policy-declared loader bindings, records static validated loaders, and explicitly classifies the dynamic conformance loader boundary.",
+    "evidence for \"proof achieved\" state": "src/agentic_workspace/contracts/python_contract_consumption.json, src/agentic_workspace/contracts/schemas/python_contract_consumption.schema.json, scripts/check/check_contract_tooling_surfaces.py, tests/test_contract_tooling.py, and .agentic-workspace/planning/reviews/validated-contract-consumption-parity-closeout-2026-04-26.review.json."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "The local repair loop detail is not needed after the policy/check/test encode the improvement.",
+          "owner": "discard",
+          "source": "execution_summary"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "none for #364; parent #356 closed after acceptance review.",
+          "owner": "#356",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No Memory or docs promotion; durable learning is encoded in python_contract_consumption.json and the checker.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "No Memory or docs promotion; durable learning is encoded in python_contract_consumption.json and the checker.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "No Memory or docs promotion; durable learning is encoded in python_contract_consumption.json and the checker.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "Validated contract-consumption parity",
+          "owner": "issue",
+          "source": "#364"
+        },
+        {
+          "summary": "Generated CLI adapter migration",
+          "owner": "issue",
+          "source": "#356"
+        }
+      ]
+    }
+  },
+  "intent_satisfaction": {
+    "original intent": "Derive validated contract-consumption parity from declared loader use.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "python_contract_consumption.json declares loader bindings and check_contract_tooling_surfaces.py derives parity from contract_tooling.py validated-loader calls.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#364 and parent #356 acceptance criteria are satisfied; no planned child slice remains open.",
+    "evidence carried forward": "src/agentic_workspace/contracts/python_contract_consumption.json, src/agentic_workspace/contracts/schemas/python_contract_consumption.schema.json, scripts/check/check_contract_tooling_surfaces.py, tests/test_contract_tooling.py, .agentic-workspace/planning/reviews/validated-contract-consumption-parity-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen #364 if adding a validated contract again requires editing a second hard-coded expected-consumer set."
+  },
+  "drift_log": [
+    "2026-04-26: Promoted from TODO direct-task shape into an execplan.",
+    "2026-04-26: Completed validated-consumption parity derivation and closed parent #356."
+  ]
+}

@@ -734,7 +734,7 @@
       "system": "github",
       "id": "#356",
       "title": "[Workspace]: Generate shipped CLI adapters from authoritative package definitions",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
@@ -806,7 +806,7 @@
       "system": "github",
       "id": "#364",
       "title": "[Review]: Derive validated contract-consumption parity from declared loader use",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#356",
       "planning_residue_expected": "required"

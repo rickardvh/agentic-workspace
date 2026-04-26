@@ -6,30 +6,54 @@
     "validated_loader": "load_validated_contract_json(relative_path, schema_relative_path)",
     "error_type": "ContractValidationError"
   },
+  "dynamic_validated_loader_boundary": [
+    {
+      "loader": "conformance_contract_manifest",
+      "schema": "conformance.schema.json",
+      "reason": "The contract path is selected from conformance_contracts.json at runtime, so only the schema side is static."
+    }
+  ],
   "validated_at_consumption": [
     {
       "contract": "proof_selection_rules.json",
       "schema": "proof_selection_rules.schema.json",
+      "loader": "proof_selection_rules_manifest",
       "consumer": "agentic_workspace.cli:_proof_selection_for_changed_paths"
     },
     {
       "contract": "authority_markers.json",
       "schema": "authority_markers.schema.json",
+      "loader": "authority_markers_manifest",
       "consumer": "agentic_workspace.cli:_authority_marker_for_path"
     },
     {
       "contract": "context_templates.json",
       "schema": "context_templates.schema.json",
+      "loader": "context_templates_manifest",
       "consumer": "agentic_workspace.cli:_start_payload"
     },
     {
       "contract": "context_templates.json",
       "schema": "context_templates.schema.json",
+      "loader": "context_templates_manifest",
       "consumer": "agentic_workspace.cli:_implement_payload"
     },
     {
       "contract": "command_adapter_generation.json",
       "schema": "command_adapter_generation.schema.json",
+      "loader": "command_adapter_generation_manifest",
+      "consumer": "scripts/check/check_contract_tooling_surfaces.py"
+    },
+    {
+      "contract": "workflow_definition_format.json",
+      "schema": "workflow_definition_format.schema.json",
+      "loader": "workflow_definition_format_manifest",
+      "consumer": "scripts/check/check_contract_tooling_surfaces.py"
+    },
+    {
+      "contract": "python_runtime_boundary.json",
+      "schema": "python_runtime_boundary.schema.json",
+      "loader": "python_runtime_boundary_manifest",
       "consumer": "scripts/check/check_contract_tooling_surfaces.py"
     }
   ],
