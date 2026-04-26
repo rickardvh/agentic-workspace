@@ -1,0 +1,47 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Retrospective Follow-Ups Closeout",
+  "summary": "Classify #347-#351 after the retrospective follow-up implementation slice landed and was archived.",
+  "issue_classifications": [
+    {
+      "id": "#347",
+      "title": "[Review]: Distinguish legacy archive-distillation debt from new regressions in operational-compression reporting",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "Operational-compression report now exposes legacy_missing_distillation_count and post_contract_missing_distillation_count; live repo shows 178 legacy and 0 post-contract misses.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#348",
+      "title": "[Bug]: Generated llms.txt adapter repeats startup and success guidance",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "The generated llms.txt template was de-duplicated and the checked-in adapter was refreshed through make maintainer-surfaces.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#349",
+      "title": "[Review]: Make broad-work closeout show package dogfooding evidence",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "Workspace report closeout_trust now includes package_workflow_evidence derived from active planning proof expectations and execution-run evidence.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#350",
+      "title": "[Review]: Add branch-continuity guardrails for workflow-changing git actions",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "Branch workflow posture now includes a branch_mutation_policy for branch switching, cross-branch merging, rebasing, and pushing a different branch.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#351",
+      "title": "[Review]: Resolve or baseline remaining historical closeout-audit debt",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "Planning closeout reconciliation now supports accepted_historical_baseline and this repo carries 000-historical-closeout-baseline-2026-04-26.review.json.",
+      "follow_up": "#230"
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Historical Closeout Baseline",
+  "summary": "Baseline older lower-trust closeout references that predate the current package-use and closeout-distillation follow-through. These remain historical audit context, not current external-work state.",
+  "issue_classifications": [
+    {
+      "id": "#258",
+      "title": "[Workspace]: Reopen declarative portability so stable lifecycle and runtime truth stops depending on large Python-owned implementations",
+      "classification": "accepted_historical_baseline",
+      "live_state": "closed",
+      "evidence": "Historical audit reference retained for context; current provider-agnostic evidence is reconciled separately.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#281",
+      "title": "[Planning]: Add navigation/index surfaces so agents can find contract, workflow, schema, and report entrypoints without broad directory scans",
+      "classification": "accepted_historical_baseline",
+      "live_state": "closed",
+      "evidence": "Historical audit reference retained for context; current provider-agnostic evidence is reconciled separately.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#330",
+      "title": "[Review]: Make promote-to-plan support compact TOML active items",
+      "classification": "accepted_historical_baseline",
+      "live_state": "closed",
+      "evidence": "Historical audit reference retained for context; current provider-agnostic evidence is reconciled separately.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#337",
+      "title": "[Workspace]: Close the gap between system intent and operating reality",
+      "classification": "accepted_historical_baseline",
+      "live_state": "closed",
+      "evidence": "Historical audit reference retained for context; current provider-agnostic evidence is reconciled separately.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#338",
+      "title": "[Workspace]: Add surface-sprawl guardrails for new contract, memory, and report surfaces",
+      "classification": "accepted_historical_baseline",
+      "live_state": "closed",
+      "evidence": "Historical audit reference retained for context; current provider-agnostic evidence is reconciled separately.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#339",
+      "title": "[Workspace]: Add a compact effective authority and system-intent embodiment view",
+      "classification": "accepted_historical_baseline",
+      "live_state": "closed",
+      "evidence": "Historical audit reference retained for context; current provider-agnostic evidence is reconciled separately.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#341",
+      "title": "[Review]: Make the default workspace report a router instead of an encyclopedia",
+      "classification": "accepted_historical_baseline",
+      "live_state": "closed",
+      "evidence": "Historical audit reference retained for context; current provider-agnostic evidence is reconciled separately.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#342",
+      "title": "[Workspace]: Turn the surface-value guardrail into an ordinary review gate for durable surfaces",
+      "classification": "accepted_historical_baseline",
+      "live_state": "closed",
+      "evidence": "Historical audit reference retained for context; current provider-agnostic evidence is reconciled separately.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#343",
+      "title": "[Planning]: Add closeout distillation so archived execplans stop being the durable-learning carrier",
+      "classification": "accepted_historical_baseline",
+      "live_state": "closed",
+      "evidence": "Historical audit reference retained for context; current provider-agnostic evidence is reconciled separately.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#344",
+      "title": "[Memory]: Shrink ordinary Memory pulls through structured durable-fact routing",
+      "classification": "accepted_historical_baseline",
+      "live_state": "closed",
+      "evidence": "Historical audit reference retained for context; current provider-agnostic evidence is reconciled separately.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#345",
+      "title": "[Workspace]: Add selector and size discipline for high-volume report sections",
+      "classification": "accepted_historical_baseline",
+      "live_state": "closed",
+      "evidence": "Historical audit reference retained for context; current provider-agnostic evidence is reconciled separately.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#346",
+      "title": "[Workspace]: Make operational-compression measures falsifiable without adding dashboards",
+      "classification": "accepted_historical_baseline",
+      "live_state": "closed",
+      "evidence": "Historical audit reference retained for context; current provider-agnostic evidence is reconciled separately.",
+      "follow_up": "#230"
+    }
+  ]
+}

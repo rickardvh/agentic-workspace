@@ -653,7 +653,7 @@
       "system": "github",
       "id": "#347",
       "title": "[Review]: Distinguish legacy archive-distillation debt from new regressions in operational-compression reporting",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
@@ -662,7 +662,7 @@
       "system": "github",
       "id": "#348",
       "title": "[Bug]: Generated llms.txt adapter repeats startup and success guidance",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
@@ -671,7 +671,7 @@
       "system": "github",
       "id": "#349",
       "title": "[Review]: Make broad-work closeout show package dogfooding evidence",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
@@ -680,7 +680,7 @@
       "system": "github",
       "id": "#350",
       "title": "[Review]: Add branch-continuity guardrails for workflow-changing git actions",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
@@ -689,7 +689,7 @@
       "system": "github",
       "id": "#351",
       "title": "[Review]: Resolve or baseline remaining historical closeout-audit debt",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"

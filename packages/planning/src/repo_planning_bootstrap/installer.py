@@ -2249,6 +2249,7 @@ def _compact_closeout_reconciliation(reconciliation: Any) -> dict[str, Any]:
         "needs-audit": [],
         "evidence-present": [],
         "follow-up-open": [],
+        "historical-baseline": [],
         "likely-premature-closeout": [],
     }
     for item in reconciliation.get("items", []):
@@ -2612,6 +2613,7 @@ def _closeout_reconciliation_from_reviews(
         "needs_audit_count": sum(1 for item in items if item["action_state"] == "needs-audit"),
         "evidence_present_count": sum(1 for item in items if item["action_state"] == "evidence-present"),
         "follow_up_open_count": sum(1 for item in items if item["action_state"] == "follow-up-open"),
+        "historical_baseline_count": sum(1 for item in items if item["action_state"] == "historical-baseline"),
         "likely_premature_closeout_count": sum(1 for item in items if item["action_state"] == "likely-premature-closeout"),
     }
     status = "present" if items else "absent"
@@ -2620,7 +2622,8 @@ def _closeout_reconciliation_from_reviews(
     return {
         "status": status,
         "rule": (
-            "Read checked-in planning review issue classifications first; any closed residue item without a classification remains needs-audit."
+            "Read checked-in planning review issue classifications first; accepted historical baselines are resolved audit debt, "
+            "and any closed residue item without a classification remains needs-audit."
         ),
         "source_count": len(source_paths),
         "sources": source_paths,
@@ -2636,6 +2639,8 @@ def _closeout_reconciliation_action_state(classification: str) -> str:
         return "evidence-present"
     if normalized in {"bounded-slice-satisfied-parent-open", "covered-by-open-followup", "follow-up-open"}:
         return "follow-up-open"
+    if normalized in {"accepted-historical-baseline", "historical-baseline", "baseline-accepted"}:
+        return "historical-baseline"
     if normalized in {"premature-or-needs-reopening", "likely-premature-closeout"}:
         return "likely-premature-closeout"
     return "needs-audit"

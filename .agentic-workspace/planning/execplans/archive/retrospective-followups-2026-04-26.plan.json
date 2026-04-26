@@ -1,0 +1,247 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Retrospective Follow-Ups",
+  "goal": [
+    "Implement the open retrospective child issues #347-#351 end-to-end while dogfooding the package workflow."
+  ],
+  "non_goals": [
+    "Close the broader #230 product-compression umbrella unless a materially complete product-shape compression pass is achieved.",
+    "Switch branches or introduce host-specific requirements into shipped package behavior."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Operational and closeout signals distinguish current actionable work from historical residue, generated adapters are less repetitive, and branch/dogfooding workflow boundaries are visible.",
+      "constraints": "Stay on master, keep shipped behavior repo-/agent-/tool-/language-/host-agnostic, and use provider-agnostic planning evidence for issue tracking.",
+      "latitude": "Implement compact package-level signals and tests; choose exact field names to fit existing report/preflight/summary contracts.",
+      "escalation": "Stop if an issue requires a host-specific workflow engine or branch switching."
+    },
+    "execution": {
+      "milestone": "retrospective-followups",
+      "status": "completed",
+      "next_step": "Archive this plan and continue #230 only when fresh product-compression friction appears.",
+      "proof": "agentic-workspace proof selected workspace_cli, planning_package, maintainer_surfaces, and planning_surfaces; all required commands passed."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        "llms.txt",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/"
+      ],
+      "invariants": [
+        "Core planning consumes provider-agnostic external evidence only.",
+        "Branch-continuity guidance is advisory package signal, not a GitHub-only policy.",
+        "Closeout dogfooding evidence is explicit in this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Reduce visible product residue and make ordinary operation cheaper and easier to trust.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#230 remains the umbrella unless this pass fully compresses the broader product shape.",
+    "parent lane": "#230"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "New measured friction or repeated product residue after this slice."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Open retrospective issues are implemented through package surfaces rather than ad hoc chat memory.",
+    "intentionally deferred": "A full product-shape subtraction program for #230.",
+    "discovered implications": "",
+    "proof achieved now": "",
+    "validation still needed": "",
+    "next likely slice": ""
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest and implement open issues end-to-end again.",
+    "inferred intended outcome": "Close the concrete open retrospective follow-ups and leave the package state clean.",
+    "chosen concrete what": "Implement #347-#351 and keep #230 as parent unless fully satisfied.",
+    "interpretation distance": "low",
+    "review guidance": "Check that each child issue has a shipped behavior or visible signal, not just documentation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace CLI/reporting code, tests, generated llms adapter, planning state/evidence, active execplan.",
+    "max changed files": "Prefer under 8 changed files before generated surfaces.",
+    "required validation commands": "proof-selected tests, ruff, planning checks, reconcile, summary/doctor/report dogfood.",
+    "ask-before-refactor threshold": "Large CLI decomposition or schema replacement.",
+    "stop before touching": "External provider-specific workflow requirements or branch switching."
+  },
+  "stop_conditions": {
+    "stop when": "All child issues #347-#351 are implemented, validated, closed, and planning evidence is reconciled.",
+    "escalate when boundary reached": "Any child requires policy that cannot stay advisory and host-agnostic.",
+    "escalate on scope drift": "Work expands into unrelated #230 compression.",
+    "escalate on proof failure": "Validation failures point outside touched behavior."
+  },
+  "context_budget": {
+    "live working set": "preflight, open issue bodies, targeted CLI/test code, this execplan",
+    "recoverable later": "archived execplans and historical audit reviews",
+    "externalize before shift": "Update this execplan execution_run and closeout_distillation.",
+    "pre-work config pull": "uv run agentic-workspace preflight --format json",
+    "pre-work memory pull": "Not needed; no memory-specific durable fact edit expected.",
+    "tiny resumability note": "Continue from this execplan and package proof selector.",
+    "context-shift triggers": "Before broad reread or after validation failure."
+  },
+  "delegated_judgment": {
+    "requested outcome": "No delegation requested.",
+    "hard constraints": "Stay local and keep package behavior portable.",
+    "agent may decide locally": "Exact field names and compact report phrasing.",
+    "escalate when": "A decision needs human branch/process policy beyond advisory package signals."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#347",
+      "label": "legacy archive distillation",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#348",
+      "label": "llms duplicate guidance",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#349",
+      "label": "dogfooding closeout evidence",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#350",
+      "label": "branch continuity guardrail",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#351",
+      "label": "historical closeout audit baseline",
+      "role": "child",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "retrospective-followups",
+    "status": "completed",
+    "scope": "#347-#351",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect targeted CLI functions and tests, then patch compact signals."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/execplans/retrospective-followups-2026-04-26.plan.json",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "invariants": [
+    "Do not switch branches.",
+    "Do not make GitHub a shipped package dependency.",
+    "Use the package workflow during implementation and record evidence."
+  ],
+  "contract_decisions_to_freeze": [
+    "Broad-work closeout should include package-use evidence.",
+    "Branch-continuity should be surfaced as advisory preflight/report signal.",
+    "Historical audit debt should become baselineable or clearly separated from current risk."
+  ],
+  "open_questions_to_close": [
+    "Can #230 remain open while child issues close? Yes, unless product-shape compression is fully satisfied."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "required_tools": [
+    "gh",
+    "uv",
+    "git"
+  ],
+  "completion_criteria": [
+    "#347-#351 are implemented and closed.",
+    "Planning evidence tracks only remaining open work.",
+    "No active execplan remains after archive closeout.",
+    "Validations pass and changes are committed and pushed."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace preflight --format json and live gh issue list",
+    "what happened": "Implemented #347-#351: operational compression now separates legacy from post-contract archive distillation debt; generated llms guidance is de-duplicated; closeout trust reports package workflow evidence; branch posture includes branch-mutation policy; planning closeout reconciliation supports accepted historical baselines and this repo carries a baseline review artifact.",
+    "scope touched": "Workspace CLI/reporting, planning package reconciliation, generated llms adapter, tests, provider-agnostic issue evidence, historical review baseline, and this execplan.",
+    "changed surfaces": "src/agentic_workspace/cli.py, packages/planning/src/repo_planning_bootstrap/installer.py, tests, llms.txt, planning evidence/review/execplan surfaces.",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; make maintainer-surfaces; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace report --target . --section operational_compression --format json; uv run agentic-workspace summary --format json.",
+    "result for continuation": "#347-#351 were closed; #230 remains the only open umbrella item.",
+    "next step": "Archive this execplan and continue only from #230 if new measured residue appears."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; work stayed on #347-#351 and did not switch branches.",
+    "proof status": "passed",
+    "intent served": "yes; open child issues were implemented and closed end-to-end.",
+    "config compliance": "compliant with repo-owned workflow surfaces and package dogfooding.",
+    "misinterpretation risk": "low for child issues; #230 remains intentionally open as broader umbrella.",
+    "follow-on decision": "#230 remains the continuation surface."
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; make maintainer-surfaces; uv run agentic-workspace doctor --target . --modules planning --format json.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Focused and full workspace CLI tests passed; planning package tests passed; ruff passed in root and planning package; maintainer surfaces and planning doctor passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Ingest and implement open issues end-to-end again.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#347-#351 are closed upstream and implemented in package behavior with tests.",
+    "unsolved intent passed to": "#230"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Reduce total successful-completion cost across restart, handoff, review, and proof loops.",
+    "slice shaping bias": "Prefer compact queryable state and advisory workflow signals over new manual docs.",
+    "broader-lane validation question": "Did this pass make future package-led operation cheaper to trust?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "partial",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "All concrete child issues are closed, but the product-compression direction is intentionally broader than this pass.",
+    "evidence carried forward": "Code/tests, baseline review artifact, provider-agnostic issue evidence, and closed issue comments.",
+    "reopen trigger": "A closed child issue regresses or fresh residue appears under #230."
+  },
+  "execution_summary": {
+    "outcome delivered": "#347-#351 implemented and closed.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#230",
+    "post-work posterity capture": "This execplan closeout plus historical baseline review artifact.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory or config promotion needed.",
+    "resume from": "No active execplan; reingest #230 if new product-compression work is requested."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-26: Promoted #347-#351 from the retrospective roadmap candidate after package preflight and live issue ingestion.",
+    "2026-04-26: Completed after proof-selected validation passed and #347-#351 were closed."
+  ]
+}

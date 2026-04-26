@@ -16,7 +16,6 @@ Target repository:
 - the repository containing this llms.txt file
 
 Default startup path:
-- Read AGENTS.md first.
 - Read `AGENTS.md` first.
 - Then run `agentic-workspace preflight --format json` when you want startup guidance, resolved config, and active state in one compact answer.
 - Then run `agentic-workspace defaults --section startup --format json` for the ordered compact startup route.
@@ -37,7 +36,6 @@ Preferred lifecycle commands:
 - `agentic-workspace report --target ./repo --format json`
 
 Quick state check:
-- If .agentic-workspace/config.local.toml is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.
 - If `.agentic-workspace/config.local.toml` is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.
 
 Rules:
@@ -47,6 +45,5 @@ Rules:
 - .agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans stay authoritative; no extra runtime artifact should carry durable state.
 
 Success means:
-- AGENTS.md remains the repo startup entrypoint
 - `AGENTS.md` remains the repo startup entrypoint
 - `llms.txt` stays aligned with the installed workspace contract

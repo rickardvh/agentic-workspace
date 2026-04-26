@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -533,8 +534,11 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
     assert "Do not assume agentic-workspace is already installed" in text
     assert "agentic-workspace config --target ./repo --format json" in text
     assert "agentic-workspace summary --format json" in text
-    assert ".agentic-workspace/config.local.toml is present" in text
+    assert "`AGENTS.md` remains the repo startup entrypoint" in text
     assert "Compact routing docs when present" not in text
+    assert text.count("Read `AGENTS.md` first.") == 1
+    assert text.count("config.local.toml") == 1
+    assert text.count("`AGENTS.md` remains the repo startup entrypoint") == 1
 
 
 def test_external_agent_handoff_text_demotes_broad_routing_until_compact_startup_fails() -> None:
@@ -559,8 +563,8 @@ def test_external_agent_handoff_text_demotes_broad_routing_until_compact_startup
 def test_external_agent_handoff_text_uses_configured_agent_instructions_filename() -> None:
     text = cli._external_agent_handoff_text(selected_modules=["planning"], agent_instructions_file="GEMINI.md")
 
-    assert "Read GEMINI.md first." in text
-    assert "GEMINI.md remains the repo startup entrypoint" in text
+    assert "Read `GEMINI.md` first." in text
+    assert "`GEMINI.md` remains the repo startup entrypoint" in text
 
 
 def test_external_agent_handoff_text_reports_workflow_artifact_profile() -> None:
@@ -2482,7 +2486,7 @@ def test_init_autodetects_existing_gemini_file_as_startup_entrypoint(monkeypatch
     assert payload["agent_instructions_file"] == "GEMINI.md"
     assert payload["repo_state"] == "light_existing_workflow"
     assert payload["detected_surfaces"] == ["GEMINI.md"]
-    assert "Read GEMINI.md first." in (tmp_path / "llms.txt").read_text(encoding="utf-8")
+    assert "Read `GEMINI.md` first." in (tmp_path / "llms.txt").read_text(encoding="utf-8")
 
 
 def test_init_treats_multiple_supported_startup_files_as_high_ambiguity(monkeypatch, tmp_path: Path, capsys) -> None:
@@ -2524,7 +2528,7 @@ def test_init_can_create_gemini_startup_file_for_blank_repo(monkeypatch, tmp_pat
     assert payload["agent_instructions_file"] == "GEMINI.md"
     assert (tmp_path / "GEMINI.md").exists()
     assert not (tmp_path / "AGENTS.md").exists()
-    assert "Read GEMINI.md first." in (tmp_path / "llms.txt").read_text(encoding="utf-8")
+    assert "Read `GEMINI.md` first." in (tmp_path / "llms.txt").read_text(encoding="utf-8")
 
 
 def test_init_dry_run_rewrites_module_startup_actions_for_custom_agent_file(monkeypatch, tmp_path: Path, capsys) -> None:
@@ -2781,7 +2785,7 @@ def test_install_real_init_can_use_gemini_as_root_startup_entrypoint(tmp_path: P
     gemini_text = (target / "GEMINI.md").read_text(encoding="utf-8")
     assert "Keep this file thin." in gemini_text
     assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." in gemini_text
-    assert "Read GEMINI.md first." in (target / "llms.txt").read_text(encoding="utf-8")
+    assert "Read `GEMINI.md` first." in (target / "llms.txt").read_text(encoding="utf-8")
 
 
 def test_install_real_init_generates_llms_with_compact_startup_path_first(tmp_path: Path) -> None:
@@ -3053,6 +3057,52 @@ def test_report_section_selector_returns_operational_compression_measures(tmp_pa
     assert measures["archived_plan_distillation"]["archived_plan_count"] == 1
     assert measures["archived_plan_distillation"]["with_distillation_count"] == 1
     assert measures["archived_plan_distillation"]["missing_distillation_count"] == 0
+    assert measures["archived_plan_distillation"]["post_contract_missing_distillation_count"] == 0
+
+
+def test_report_distinguishes_legacy_archive_distillation_debt(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    archive_dir = target / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    legacy_missing = archive_dir / "legacy-missing.plan.json"
+    compressed = archive_dir / "compressed-lane.plan.json"
+    current_missing = archive_dir / "current-missing.plan.json"
+    _write_json(legacy_missing, {"kind": "planning-execplan/v1", "active_milestone": {"status": "completed"}})
+    _write_json(
+        compressed,
+        {
+            "kind": "planning-execplan/v1",
+            "active_milestone": {"status": "completed"},
+            "closeout_distillation": {
+                "buckets": {
+                    "continuation": [{"summary": "Parent remains open.", "owner": "planning", "source": "test"}],
+                    "discard": [],
+                    "memory": [],
+                    "config_check": [],
+                    "docs": [],
+                    "issue_follow_up": [],
+                }
+            },
+        },
+    )
+    _write_json(current_missing, {"kind": "planning-execplan/v1", "active_milestone": {"status": "completed"}})
+    os.utime(legacy_missing, (1_000_000, 1_000_000))
+    os.utime(compressed, (2_000_000, 2_000_000))
+    os.utime(current_missing, (3_000_000, 3_000_000))
+
+    assert cli.main(["report", "--target", str(target), "--section", "operational_compression", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    measure = payload["answer"]["measures"]["archived_plan_distillation"]
+    assert measure["missing_distillation_count"] == 2
+    assert measure["legacy_missing_distillation_count"] == 1
+    assert measure["post_contract_missing_distillation_count"] == 1
+    assert measure["distillation_contract_anchor"] == "compressed-lane.plan.json"
+    signal = next(item for item in payload["answer"]["signals"] if item["measure"] == "archived_plan_distillation")
+    assert signal["count"] == 1
 
 
 def test_report_routes_roadmap_backed_work_to_planning_before_broad_execution(tmp_path: Path, capsys) -> None:
@@ -3109,6 +3159,65 @@ def test_report_surfaces_default_branch_commit_risk(tmp_path: Path, capsys) -> N
     assert posture["on_default_branch"] is True
     assert posture["risk"] == "default-branch-commit-risk"
     assert "do not switch branches unless the user decides" in posture["recommended_next_action"]
+    policy = posture["branch_mutation_policy"]
+    assert policy["advisory_only"] is True
+    assert "switch-branch" in policy["guarded_actions"]
+    assert "explicit user intent" in policy["rule"]
+
+
+def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "package-use.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Package Use",
+            "active_milestone": {"id": "package-use", "status": "active"},
+            "delegated_judgment": {
+                "requested outcome": "Use package workflow.",
+                "hard constraints": "Stay portable.",
+                "agent may decide locally": "Exact signal shape.",
+                "escalate when": "Package workflow is unavailable.",
+            },
+            "immediate_next_action": ["Use package workflow."],
+            "completion_criteria": ["Package workflow evidence is visible."],
+            "validation_commands": ["uv run agentic-workspace proof --target . --format json"],
+            "execution_run": {
+                "run status": "active",
+                "executor": "test",
+                "handoff source": "uv run agentic-workspace preflight --format json",
+                "what happened": "Used package workflow.",
+                "scope touched": "test",
+                "changed surfaces": "test",
+                "validations run": "uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
+                "result for continuation": "continue",
+                "next step": "finish",
+            },
+        },
+    )
+    (target / ".agentic-workspace" / "planning" / "state.toml").write_text(
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'package-use', title = 'Package use', execplan = '.agentic-workspace/planning/execplans/package-use.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--profile", "full", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    evidence = payload["closeout_trust"]["package_workflow_evidence"]
+    assert evidence["status"] == "present"
+    assert evidence["trust"] == "normal"
+    assert evidence["required_for_broad_work"] is True
+    assert evidence["used_surfaces"] == ["preflight", "summary", "proof", "reconcile"]
 
 
 def test_report_surfaces_local_only_memory_status(tmp_path: Path, capsys) -> None:
@@ -3164,6 +3273,7 @@ def test_preflight_surfaces_non_default_branch_posture(tmp_path: Path, capsys) -
     assert posture["default_branch"] == "master"
     assert posture["on_default_branch"] is False
     assert posture["risk"] == "normal"
+    assert posture["branch_mutation_policy"]["requires_user_intent_before"][0] == "changing the execution branch"
 
 
 def test_report_handles_modules_with_empty_findings_lists(tmp_path: Path, monkeypatch, capsys) -> None:

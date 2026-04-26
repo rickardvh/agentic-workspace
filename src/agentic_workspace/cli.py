@@ -1419,7 +1419,6 @@ def _external_agent_handoff_text(
         "- the repository containing this llms.txt file",
         "",
         "Default startup path:",
-        f"- Read {agent_instructions_file} first.",
         f"- Read `{agent_instructions_file}` first.",
         "- Then run `agentic-workspace preflight --format json` when you want startup guidance, resolved config, and active state in one compact answer.",
         "- Then run `agentic-workspace defaults --section startup --format json` for the ordered compact startup route.",
@@ -1448,7 +1447,6 @@ def _external_agent_handoff_text(
             "- `agentic-workspace report --target ./repo --format json`",
             "",
             "Quick state check:",
-            "- If .agentic-workspace/config.local.toml is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.",
             "- If `.agentic-workspace/config.local.toml` is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.",
             "",
             "Rules:",
@@ -1458,7 +1456,6 @@ def _external_agent_handoff_text(
             f"- {artifact_profile['sync_rule']}",
             "",
             "Success means:",
-            f"- {agent_instructions_file} remains the repo startup entrypoint",
             f"- `{agent_instructions_file}` remains the repo startup entrypoint",
             "- `llms.txt` stays aligned with the installed workspace contract",
             "",
@@ -2726,13 +2723,14 @@ def _operational_compression_payload(
                 "count": len(adapter_missing_removal_paths),
             }
         )
-    if _as_int(archived_distillation.get("missing_distillation_count")):
+    post_contract_missing = _as_int(archived_distillation.get("post_contract_missing_distillation_count"))
+    if post_contract_missing:
         advisory_signals.append(
             {
                 "severity": "advisory",
                 "measure": "archived_plan_distillation",
-                "message": "Some archived execplans do not expose closeout distillation buckets.",
-                "count": _as_int(archived_distillation.get("missing_distillation_count")),
+                "message": "Some post-contract archived execplans do not expose closeout distillation buckets.",
+                "count": post_contract_missing,
             }
         )
     if _as_int(intent_counts.get("untracked_external_open_count")):
@@ -2777,7 +2775,11 @@ def _archived_plan_distillation_measure(*, target: Any) -> dict[str, Any]:
             "archived_plan_count": 0,
             "with_distillation_count": 0,
             "missing_distillation_count": 0,
+            "legacy_missing_distillation_count": 0,
+            "post_contract_missing_distillation_count": 0,
+            "distillation_contract_anchor": "",
             "sample_missing_distillation": [],
+            "sample_post_contract_missing_distillation": [],
         }
     archive_dir = Path(target_text) / ".agentic-workspace" / "planning" / "execplans" / "archive"
     if not archive_dir.exists():
@@ -2785,10 +2787,16 @@ def _archived_plan_distillation_measure(*, target: Any) -> dict[str, Any]:
             "archived_plan_count": 0,
             "with_distillation_count": 0,
             "missing_distillation_count": 0,
+            "legacy_missing_distillation_count": 0,
+            "post_contract_missing_distillation_count": 0,
+            "distillation_contract_anchor": "",
             "sample_missing_distillation": [],
+            "sample_post_contract_missing_distillation": [],
         }
     archived_plans = [path for path in sorted(archive_dir.glob("*.plan.json")) if path.is_file()]
     missing: list[str] = []
+    missing_with_mtime: list[tuple[str, float]] = []
+    distillation_anchors: list[tuple[str, float]] = []
     with_distillation = 0
     for path in archived_plans:
         try:
@@ -2800,13 +2808,25 @@ def _archived_plan_distillation_measure(*, target: Any) -> dict[str, Any]:
         buckets = distillation.get("buckets", {}) if isinstance(distillation, dict) else {}
         if isinstance(buckets, dict) and any(_list_payload(buckets.get(bucket)) for bucket in buckets):
             with_distillation += 1
+            distillation_anchors.append((path.name, path.stat().st_mtime))
         else:
             missing.append(path.name)
+            missing_with_mtime.append((path.name, path.stat().st_mtime))
+    anchor_name = ""
+    anchor_mtime: float | None = None
+    if distillation_anchors:
+        anchor_name, anchor_mtime = min(distillation_anchors, key=lambda item: item[1])
+    legacy_missing = [name for name, mtime in missing_with_mtime if anchor_mtime is None or mtime < anchor_mtime]
+    post_contract_missing = [name for name, mtime in missing_with_mtime if anchor_mtime is not None and mtime >= anchor_mtime]
     return {
         "archived_plan_count": len(archived_plans),
         "with_distillation_count": with_distillation,
         "missing_distillation_count": len(missing),
+        "legacy_missing_distillation_count": len(legacy_missing),
+        "post_contract_missing_distillation_count": len(post_contract_missing),
+        "distillation_contract_anchor": anchor_name,
         "sample_missing_distillation": missing[:5],
+        "sample_post_contract_missing_distillation": post_contract_missing[:5],
     }
 
 
@@ -3034,6 +3054,7 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
         return {
             "status": "unavailable",
             "reason": "planning module is not installed",
+            "package_workflow_evidence": _package_workflow_evidence_payload(planning_report={}),
         }
 
     intent_validation = planning_report.get("intent_validation", {})
@@ -3041,6 +3062,7 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
         return {
             "status": "unavailable",
             "reason": "planning intent validation is unavailable",
+            "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
         }
 
     counts = intent_validation.get("counts", {})
@@ -3073,6 +3095,63 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
         "lower_trust_closeout_count": lower_trust_closeout_count,
         "summary": summary,
         "sample_signals": sample_signals,
+        "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
+        "recommended_next_action": recommended_next_action,
+    }
+
+
+def _package_workflow_evidence_payload(*, planning_report: dict[str, Any]) -> dict[str, Any]:
+    active = planning_report.get("active", {}) if isinstance(planning_report, dict) else {}
+    planning_record = active.get("planning_record", {}) if isinstance(active, dict) else {}
+    execution_run_contract = active.get("execution_run_contract", {}) if isinstance(active, dict) else {}
+    if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
+        return {
+            "status": "unavailable",
+            "reason": "no active planning record exposes package-use evidence",
+            "required_for_broad_work": True,
+        }
+    proof_expectations = [str(item) for item in _list_payload(planning_record.get("proof_expectations"))]
+    execution_run = planning_record.get("execution_run", {})
+    if not isinstance(execution_run, dict):
+        execution_run = {}
+    evidence_text_parts = [
+        " ".join(proof_expectations),
+        str(execution_run.get("handoff source", "")),
+        str(execution_run.get("validations run", "")),
+        str(execution_run.get("what happened", "")),
+    ]
+    if isinstance(execution_run_contract, dict):
+        evidence_text_parts.extend(
+            [
+                str(execution_run_contract.get("handoff_source", "")),
+                str(execution_run_contract.get("validations_run", "")),
+                str(execution_run_contract.get("what_happened", "")),
+            ]
+        )
+    evidence_text = "\n".join(evidence_text_parts).lower()
+    used_surfaces = [
+        surface
+        for surface in ["preflight", "summary", "report", "proof", "reconcile", "doctor"]
+        if f"agentic-workspace {surface}" in evidence_text
+    ]
+    skipped_text = str(execution_run.get("package workflow skipped", "") or execution_run.get("package_workflow_skipped", "")).strip()
+    trust = "normal" if used_surfaces and not skipped_text else "lower-trust"
+    if trust == "normal":
+        recommended_next_action = "Package workflow use is visible in the active planning record."
+    elif skipped_text:
+        recommended_next_action = "Review the declared package workflow skip before trusting broad-work closeout."
+    else:
+        recommended_next_action = "Record package workflow surfaces used or intentionally skipped before broad-work closeout."
+    return {
+        "status": "present",
+        "required_for_broad_work": True,
+        "trust": trust,
+        "used_surfaces": used_surfaces,
+        "skipped": skipped_text,
+        "evidence_sources": [
+            "planning.active.planning_record.proof_expectations",
+            "planning.active.planning_record.execution_run",
+        ],
         "recommended_next_action": recommended_next_action,
     }
 
@@ -3187,6 +3266,24 @@ def _branch_workflow_posture_payload(*, target_root: Path) -> dict[str, Any]:
         recommended_next_action = "Make the default-branch posture explicit before implementation, commit, or push; do not switch branches unless the user decides."
     else:
         recommended_next_action = "Continue normal branch-aware workflow; keep commit and push posture explicit before closeout."
+    branch_mutation_policy = {
+        "status": "present",
+        "advisory_only": True,
+        "rule": "Branch switching, cross-branch merging, and pushing from a different branch than startup require explicit user intent.",
+        "guarded_actions": [
+            "switch-branch",
+            "create-branch",
+            "merge-from-other-branch",
+            "rebase-onto-other-branch",
+            "push-different-branch",
+        ],
+        "current_branch_is_execution_branch": bool(current_branch),
+        "requires_user_intent_before": [
+            "changing the execution branch",
+            "merging another branch into the execution branch",
+            "pushing work from a branch other than the execution branch",
+        ],
+    }
 
     return {
         "status": "present",
@@ -3197,6 +3294,7 @@ def _branch_workflow_posture_payload(*, target_root: Path) -> dict[str, Any]:
         "risk": risk,
         "advisory_only": True,
         "rule": rule,
+        "branch_mutation_policy": branch_mutation_policy,
         "sources": sources,
         "recommended_next_action": recommended_next_action,
     }

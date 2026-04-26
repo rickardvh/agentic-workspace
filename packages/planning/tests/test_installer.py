@@ -3069,6 +3069,58 @@ def test_planning_summary_reconciles_lower_trust_closeouts_from_review_artifact(
     assert summary["intent_validation_contract"]["counts"]["closeout_needs_audit_count"] == 1
 
 
+def test_planning_summary_accepts_historical_closeout_baseline(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "EXT-1",
+                "title": "Historical closeout",
+                "status": "closed",
+                "kind": "slice",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            },
+        ],
+    )
+    _write(
+        tmp_path / ".agentic-workspace/planning/reviews/historical-baseline.review.json",
+        json.dumps(
+            {
+                "kind": "planning-review/v1",
+                "title": "Historical Baseline",
+                "issue_classifications": [
+                    {
+                        "id": "EXT-1",
+                        "title": "Historical closeout",
+                        "classification": "accepted_historical_baseline",
+                        "live_state": "closed",
+                        "evidence": "Legacy debt accepted as baseline.",
+                        "follow_up": "none",
+                    },
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    reconciliation = summary["intent_validation_contract"]["closeout_reconciliation"]
+
+    assert reconciliation["status"] == "present"
+    assert reconciliation["counts"]["historical_baseline_count"] == 1
+    assert reconciliation["counts"]["needs_audit_count"] == 0
+    assert reconciliation["items_by_state"] == {"historical-baseline": ["EXT-1"]}
+    assert summary["intent_validation_contract"]["counts"]["closeout_needs_audit_count"] == 0
+
+
 def test_planning_reconcile_reports_stale_state_from_provider_agnostic_evidence(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
