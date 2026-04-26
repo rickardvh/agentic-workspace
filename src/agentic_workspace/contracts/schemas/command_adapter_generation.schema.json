@@ -20,6 +20,44 @@
     "schema": {
       "const": "schemas/command_adapter_generation.schema.json"
     },
+    "generated_outputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "program",
+          "path"
+        ],
+        "properties": {
+          "program": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_./-]+\\.py$"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "package_surface_migration": {
+      "type": "object",
+      "required": [
+        "planning",
+        "memory"
+      ],
+      "properties": {
+        "planning": {
+          "$ref": "#/$defs/package_migration"
+        },
+        "memory": {
+          "$ref": "#/$defs/package_migration"
+        }
+      },
+      "additionalProperties": false
+    },
     "adapters": {
       "type": "array",
       "minItems": 1,
@@ -79,10 +117,18 @@
               "minLength": 1
             },
             "command_manifest": {
-              "const": "cli_commands.json"
+              "enum": [
+                "cli_commands.json",
+                "package:planning:cli",
+                "package:memory:cli"
+              ]
             },
             "option_group_manifest": {
-              "const": "cli_option_groups.json"
+              "enum": [
+                "cli_option_groups.json",
+                "package:planning:cli",
+                "package:memory:cli"
+              ]
             }
           },
           "additionalProperties": false
@@ -262,6 +308,34 @@
         "type": "string",
         "minLength": 1
       }
+    },
+    "package_migration": {
+      "type": "object",
+      "required": [
+        "program",
+        "first_read_only_candidate",
+        "status",
+        "next_step"
+      ],
+      "properties": {
+        "program": {
+          "type": "string",
+          "minLength": 1
+        },
+        "first_read_only_candidate": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_step": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

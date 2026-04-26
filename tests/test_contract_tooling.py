@@ -34,6 +34,19 @@ def test_command_adapter_generation_contract_identifies_defaults_candidate() -> 
     assert "primitive implementation" in defaults_adapter["generation_boundary"]["runtime_owns"]
 
 
+def test_command_adapter_generation_contract_records_package_migration_path() -> None:
+    manifest = contract_tooling.command_adapter_generation_manifest()
+    migration = manifest["package_surface_migration"]
+    adapters = {adapter["id"]: adapter for adapter in manifest["adapters"]}
+
+    assert migration["planning"]["program"] == "agentic-planning-bootstrap"
+    assert migration["planning"]["status"] == "first-read-only-generated"
+    assert adapters["planning.status.cli"]["command"]["program"] == migration["planning"]["program"]
+    assert adapters["planning.status.cli"]["command"]["name"] == migration["planning"]["first_read_only_candidate"]
+    assert migration["memory"]["program"] == "agentic-memory-bootstrap"
+    assert migration["memory"]["status"] == "planned-next-package-surface"
+
+
 def test_generated_command_adapter_module_is_current() -> None:
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_adapters.py"
     spec = importlib.util.spec_from_file_location("generate_command_adapters", script_path)

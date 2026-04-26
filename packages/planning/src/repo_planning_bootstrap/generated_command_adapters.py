@@ -1,7 +1,7 @@
 """Generated command adapter metadata.
 
 Source: src/agentic_workspace/contracts/command_adapter_generation.json
-Program: agentic-workspace
+Program: agentic-planning-bootstrap
 Regenerate with: uv run python scripts/generate/generate_command_adapters.py
 """
 
@@ -17,15 +17,15 @@ from typing import Any
 GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
     r"""
 {
-  "defaults": {
+  "status": {
     "command": {
-      "command_manifest": "cli_commands.json",
-      "name": "defaults",
-      "option_group_manifest": "cli_option_groups.json",
-      "program": "agentic-workspace"
+      "command_manifest": "package:planning:cli",
+      "name": "status",
+      "option_group_manifest": "package:planning:cli",
+      "program": "agentic-planning-bootstrap"
     },
     "conformance_refs": [
-      "defaults.report.process"
+      "planning.status.process"
     ],
     "effect_hints": {
       "destructive": false,
@@ -34,21 +34,18 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
       "requires_preflight_gate": false,
       "writes_repo_state": false
     },
-    "id": "defaults.report.cli",
-    "operation_id": "defaults.report",
+    "id": "planning.status.cli",
+    "operation_id": "planning.status.report",
     "runtime_binding": {
       "kind": "operation-primitive-sequence",
       "primitive_refs": [
-        "workspace.defaults.load",
-        "workspace.defaults.select",
+        "planning.bootstrap.status.load",
         "output.emit"
       ]
     },
     "schemas": {
       "input": [],
-      "output": [
-        "compact_contract_answer.schema.json"
-      ]
+      "output": []
     },
     "status": "generated"
   }

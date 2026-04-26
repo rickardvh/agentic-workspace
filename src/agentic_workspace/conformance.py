@@ -132,6 +132,7 @@ def _expand_command_template(
 ) -> list[str]:
     overrides: dict[str, Sequence[str]] = {
         "agentic_workspace_cli": shlex.split(os.environ.get("AGENTIC_WORKSPACE_CONFORMANCE_CLI", "uv run agentic-workspace")),
+        "agentic_planning_cli": shlex.split(os.environ.get("AGENTIC_PLANNING_CONFORMANCE_CLI", "uv run agentic-planning-bootstrap")),
         "python": [sys.executable],
     }
     if command_overrides:

@@ -6,6 +6,7 @@ import shutil
 
 from repo_planning_bootstrap import __version__
 from repo_planning_bootstrap._source import UpgradeSource, resolve_upgrade_source
+from repo_planning_bootstrap.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 from repo_planning_bootstrap.installer import (
     adopt_bootstrap,
     archive_execplan,
@@ -138,6 +139,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
+    generated_adapter = _generated_adapter_for_command(str(args.command))
+    if generated_adapter is not None:
+        return _run_generated_command_adapter(args, adapter=generated_adapter)
+
     if args.command in {"install", "init"}:
         return _emit(install_bootstrap(target=args.target, dry_run=args.dry_run, force=args.force, local_only=args.local), args.format)
     if args.command == "adopt":
@@ -224,6 +229,28 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     parser.error(f"Unknown command: {args.command}")
     return 2
+
+
+def _generated_adapter_for_command(command_name: str) -> dict[str, object] | None:
+    return GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
+
+
+def _run_status_report_adapter(args: argparse.Namespace) -> int:
+    return _emit(collect_status(target=args.target), args.format)
+
+
+_GENERATED_RUNTIME_HANDLERS = {
+    "planning.status.report": _run_status_report_adapter,
+}
+
+
+def _run_generated_command_adapter(args: argparse.Namespace, *, adapter: dict[str, object]) -> int:
+    operation_id = str(adapter["operation_id"])
+    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
+    if handler is None:
+        parser = build_parser()
+        parser.error(f"Generated adapter for {args.command} references unsupported operation {operation_id}.")
+    return handler(args)
 
 
 def _emit(result, output_format: str) -> int:

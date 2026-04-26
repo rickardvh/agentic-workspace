@@ -1,0 +1,31 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Package Read-Only Generated Adapter Closeout",
+  "summary": "#362 extended generated adapter migration beyond the root command by generating planning package `status` adapter metadata and routing planning status dispatch through it. The command adapter contract records memory `status` as the next package surface. #363 remains open for multi-adapter projection requirements, and #356 remains open as the parent lane.",
+  "issue_classifications": [
+    {
+      "id": "#362",
+      "title": "[Workspace]: Extend generated adapter migration to planning and memory command surfaces",
+      "classification": "bounded_slice_satisfied_parent_open",
+      "live_state": "closed",
+      "evidence": "packages/planning/src/repo_planning_bootstrap/generated_command_adapters.py, packages/planning/src/repo_planning_bootstrap/cli.py, and src/agentic_workspace/contracts/command_adapter_generation.json",
+      "follow_up": "#363"
+    },
+    {
+      "id": "#356",
+      "title": "[Workspace]: Generate shipped CLI adapters from authoritative package definitions",
+      "classification": "covered_by_open_followup",
+      "live_state": "open",
+      "evidence": "#362 landed the first package read-only generated adapter; #363 remains open for projection requirements.",
+      "follow_up": "#363"
+    },
+    {
+      "id": "#363",
+      "title": "[Workspace]: Define multi-adapter projection requirements for generated command surfaces",
+      "classification": "covered_by_open_followup",
+      "live_state": "open",
+      "evidence": "Root and planning package generated outputs now exist; projection requirements remain the next planned slice.",
+      "follow_up": "#363"
+    }
+  ]
+}

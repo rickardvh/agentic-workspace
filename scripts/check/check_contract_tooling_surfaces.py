@@ -367,10 +367,15 @@ def _validate_command_adapter_generation(payload: dict[str, object]) -> list[str
             errors.append(f"command adapter {adapter_id} has malformed command, operation_ref, or runtime_binding")
             continue
         command_name = str(command.get("name", ""))
-        if command_manifest.get("program") != command.get("program"):
+        command_program = str(command.get("program", ""))
+        if command_program == command_manifest.get("program") and command.get("command_manifest") != "cli_commands.json":
+            errors.append(f"command adapter {adapter_id} root command must use cli_commands.json")
+        if command_program == command_manifest.get("program") and command_manifest.get("program") != command.get("program"):
             errors.append(f"command adapter {adapter_id} program drifted from cli_commands.json")
-        if command_name not in known_commands:
+        if command_program == command_manifest.get("program") and command_name not in known_commands:
             errors.append(f"command adapter {adapter_id} references unknown command {command_name}")
+        if command_program != command_manifest.get("program") and not str(command.get("command_manifest", "")).startswith("package:"):
+            errors.append(f"command adapter {adapter_id} package command must use a package command manifest marker")
         operation_id = str(operation_ref.get("id", ""))
         operation_registry_ref = operation_refs.get(operation_id)
         if operation_registry_ref is None:
@@ -410,19 +415,22 @@ def _validate_generated_command_adapter_output() -> list[str]:
     errors: list[str] = []
     repo_root = Path(__file__).resolve().parents[2]
     generator_path = repo_root / "scripts" / "generate" / "generate_command_adapters.py"
-    generated_path = repo_root / "src" / "agentic_workspace" / "generated_command_adapters.py"
     spec = importlib.util.spec_from_file_location("generate_command_adapters", generator_path)
     if spec is None or spec.loader is None:
         return [f"generator layer: cannot load {generator_path.relative_to(repo_root).as_posix()}"]
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    expected = module._render_generated_module(command_adapter_generation_manifest())
-    current = generated_path.read_text(encoding="utf-8") if generated_path.exists() else ""
-    if current != expected:
-        errors.append(
-            "generated adapter layer: src/agentic_workspace/generated_command_adapters.py is stale; "
-            "run uv run python scripts/generate/generate_command_adapters.py"
-        )
+    manifest = command_adapter_generation_manifest()
+    for output_spec in manifest["generated_outputs"]:
+        program = str(output_spec["program"])
+        generated_path = repo_root / str(output_spec["path"])
+        expected = module._render_generated_module(manifest, program=program)
+        current = generated_path.read_text(encoding="utf-8") if generated_path.exists() else ""
+        if current != expected:
+            errors.append(
+                f"generated adapter layer: {generated_path.relative_to(repo_root).as_posix()} is stale; "
+                "run uv run python scripts/generate/generate_command_adapters.py"
+            )
 
     expected_by_command = {
         str(adapter["command"]["name"]): {
@@ -435,6 +443,7 @@ def _validate_generated_command_adapter_output() -> list[str]:
             "conformance_refs": adapter["conformance_refs"],
         }
         for adapter in command_adapter_generation_manifest()["adapters"]
+        if adapter["command"]["program"] == "agentic-workspace"
     }
     for command_name, expected_adapter in expected_by_command.items():
         actual_adapter = GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
@@ -728,7 +737,8 @@ def main(argv: list[str] | None = None) -> int:
     for operation_ref in operation_contracts["operations"]:
         operation = operation_manifest(operation_ref["path"])
         command_surface = operation["command_surface"]
-        operation_surfaces.append((str(command_surface["command"]), command_surface.get("subcommand")))
+        if command_surface.get("program", "agentic-workspace") == cli_commands_manifest()["program"]:
+            operation_surfaces.append((str(command_surface["command"]), command_surface.get("subcommand")))
         checks.append(
             (
                 f"operation contract {operation_ref['id']}",

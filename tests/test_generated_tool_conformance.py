@@ -5,6 +5,9 @@ import sys
 from pathlib import Path
 
 import pytest
+from repo_planning_bootstrap.generated_command_adapters import (
+    GENERATED_COMMAND_ADAPTERS_BY_COMMAND as GENERATED_PLANNING_COMMAND_ADAPTERS_BY_COMMAND,
+)
 
 from agentic_workspace.conformance import materialize_fixture, run_process_conformance
 from agentic_workspace.contract_tooling import conformance_contract_manifest, conformance_contracts_manifest
@@ -15,6 +18,12 @@ CLI_SHIM = (
     "import sys; "
     f"sys.path.insert(0, {str(REPO_ROOT / 'src')!r}); "
     "from agentic_workspace.cli import main; "
+    "raise SystemExit(main(sys.argv[1:]))"
+)
+PLANNING_CLI_SHIM = (
+    "import sys; "
+    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'planning' / 'src')!r}); "
+    "from repo_planning_bootstrap.cli import main; "
     "raise SystemExit(main(sys.argv[1:]))"
 )
 
@@ -33,7 +42,10 @@ def test_generated_tool_process_conformance_contracts(contract_ref: dict[str, st
         contract=contract,
         fixture_root=fixture_root,
         repo_root=fixture_root,
-        command_overrides={"agentic_workspace_cli": [sys.executable, "-c", CLI_SHIM]},
+        command_overrides={
+            "agentic_workspace_cli": [sys.executable, "-c", CLI_SHIM],
+            "agentic_planning_cli": [sys.executable, "-c", PLANNING_CLI_SHIM],
+        },
     )
 
 
@@ -70,7 +82,11 @@ def test_generated_adapters_are_backed_by_black_box_conformance_contracts() -> N
     registry = conformance_contracts_manifest()
     contracts_by_id = {contract["id"]: contract for contract in registry["contracts"]}
 
-    for command_name, adapter in GENERATED_COMMAND_ADAPTERS_BY_COMMAND.items():
+    generated_adapters_by_command = {
+        **GENERATED_COMMAND_ADAPTERS_BY_COMMAND,
+        **GENERATED_PLANNING_COMMAND_ADAPTERS_BY_COMMAND,
+    }
+    for command_name, adapter in generated_adapters_by_command.items():
         for conformance_ref in adapter["conformance_refs"]:
             registry_ref = contracts_by_id[conformance_ref]
             contract = conformance_contract_manifest(registry_ref["path"])
@@ -78,5 +94,8 @@ def test_generated_adapters_are_backed_by_black_box_conformance_contracts() -> N
 
             assert registry_ref["operation_id"] == adapter["operation_id"]
             assert contract["operation_id"] == adapter["operation_id"]
-            assert command_template[0] == "{agentic_workspace_cli}"
+            expected_placeholder = (
+                "{agentic_workspace_cli}" if adapter["command"]["program"] == "agentic-workspace" else "{agentic_planning_cli}"
+            )
+            assert command_template[0] == expected_placeholder
             assert command_template[1] == command_name

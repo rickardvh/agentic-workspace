@@ -13,10 +13,10 @@ if str(SRC_ROOT) not in sys.path:
 
 from agentic_workspace.contract_tooling import command_adapter_generation_manifest  # noqa: E402
 
-OUTPUT_PATH = REPO_ROOT / "src" / "agentic_workspace" / "generated_command_adapters.py"
+DEFAULT_PROGRAM = "agentic-workspace"
 
 
-def _render_generated_module(manifest: dict[str, Any]) -> str:
+def _adapters_for_program(manifest: dict[str, Any], *, program: str) -> dict[str, dict[str, Any]]:
     adapters_by_command = {
         str(adapter["command"]["name"]): {
             "id": adapter["id"],
@@ -29,11 +29,20 @@ def _render_generated_module(manifest: dict[str, Any]) -> str:
             "conformance_refs": adapter["conformance_refs"],
         }
         for adapter in manifest["adapters"]
+        if adapter["command"]["program"] == program
     }
+    if not adapters_by_command:
+        raise SystemExit(f"No command adapters declared for program {program!r}.")
+    return adapters_by_command
+
+
+def _render_generated_module(manifest: dict[str, Any], *, program: str = DEFAULT_PROGRAM) -> str:
+    adapters_by_command = _adapters_for_program(manifest, program=program)
     rendered = json.dumps(adapters_by_command, indent=2, sort_keys=True)
     return (
         '"""Generated command adapter metadata.\n\n'
         "Source: src/agentic_workspace/contracts/command_adapter_generation.json\n"
+        f"Program: {program}\n"
         "Regenerate with: uv run python scripts/generate/generate_command_adapters.py\n"
         '"""\n\n'
         "from __future__ import annotations\n\n"
@@ -54,22 +63,51 @@ def _render_generated_module(manifest: dict[str, Any]) -> str:
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate command adapter metadata from contract manifests.")
     parser.add_argument("--check", action="store_true", help="Fail if the generated command adapter module is stale.")
+    parser.add_argument("--program", help="Generate only adapters for this program.")
+    parser.add_argument("--output", help="Output path for one program. Defaults to the contract-declared output.")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    rendered = _render_generated_module(command_adapter_generation_manifest())
+    manifest = command_adapter_generation_manifest()
+    output_specs = list(manifest["generated_outputs"])
+    if args.program is not None or args.output is not None:
+        program = args.program or DEFAULT_PROGRAM
+        output_path = Path(args.output) if args.output is not None else _output_path_for_program(manifest, program=program)
+        output_specs = [{"program": program, "path": output_path.as_posix()}]
+
+    stale_outputs: list[str] = []
+    rendered_outputs: list[tuple[Path, str]] = []
+    for output_spec in output_specs:
+        program = str(output_spec["program"])
+        output_path = (REPO_ROOT / str(output_spec["path"])).resolve()
+        rendered = _render_generated_module(manifest, program=program)
+        rendered_outputs.append((output_path, rendered))
+        if args.check:
+            current = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
+            if current != rendered:
+                stale_outputs.append(output_path.relative_to(REPO_ROOT).as_posix())
+
     if args.check:
-        current = OUTPUT_PATH.read_text(encoding="utf-8") if OUTPUT_PATH.exists() else ""
-        if current != rendered:
-            print(f"{OUTPUT_PATH.relative_to(REPO_ROOT).as_posix()} is stale; regenerate command adapters.")
+        if stale_outputs:
+            for output in stale_outputs:
+                print(f"{output} is stale; regenerate command adapters.")
             return 1
         print("[ok] generated command adapters")
         return 0
-    OUTPUT_PATH.write_text(rendered, encoding="utf-8")
-    print(f"[ok] wrote {OUTPUT_PATH.relative_to(REPO_ROOT).as_posix()}")
+    for output_path, rendered in rendered_outputs:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(rendered, encoding="utf-8")
+        print(f"[ok] wrote {output_path.relative_to(REPO_ROOT).as_posix()}")
     return 0
+
+
+def _output_path_for_program(manifest: dict[str, Any], *, program: str) -> Path:
+    matches = [Path(str(output["path"])) for output in manifest["generated_outputs"] if output["program"] == program]
+    if len(matches) != 1:
+        raise SystemExit(f"Expected exactly one generated output for program {program!r}, found {len(matches)}.")
+    return matches[0]
 
 
 if __name__ == "__main__":

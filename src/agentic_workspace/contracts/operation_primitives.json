@@ -23,6 +23,10 @@
       "summary": "Load provider-agnostic planning reconciliation state when the planning module is installed."
     },
     {
+      "id": "planning.bootstrap.status.load",
+      "summary": "Load package-local planning bootstrap status for a target repository."
+    },
+    {
       "id": "workspace.defaults.load",
       "summary": "Load compact startup defaults, route contracts, and generated policy answers."
     },

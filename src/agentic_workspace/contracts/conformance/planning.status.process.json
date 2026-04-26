@@ -1,0 +1,59 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "planning.status.process",
+  "operation_id": "planning.status.report",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_planning_cli}",
+      "status",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-planning-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "dry_run"
+          ],
+          "equals": false
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": [
+        ".agentic-workspace"
+      ]
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

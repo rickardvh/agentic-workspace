@@ -615,6 +615,22 @@ def test_status_reports_missing_and_present_files(tmp_path: Path) -> None:
     assert any(action.kind == "present" for action in result.actions)
 
 
+def test_status_command_routes_through_generated_adapter(monkeypatch, tmp_path: Path, capsys) -> None:
+    calls: list[tuple[str, str, str]] = []
+
+    def fake_status_handler(args) -> int:
+        calls.append((args.command, args.format, args.target))
+        print('{"ok": true}')
+        return 0
+
+    monkeypatch.setitem(planning_cli._GENERATED_RUNTIME_HANDLERS, "planning.status.report", fake_status_handler)
+
+    assert planning_cli.main(["status", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    assert json.loads(capsys.readouterr().out) == {"ok": True}
+    assert calls == [("status", "json", str(tmp_path))]
+
+
 def test_payload_filters_generated_artifacts(tmp_path: Path, monkeypatch) -> None:
     payload_root = tmp_path / "payload"
     _write(payload_root / "AGENTS.md", "agents\n")

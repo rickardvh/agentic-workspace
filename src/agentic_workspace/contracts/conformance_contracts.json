@@ -8,6 +8,12 @@
       "operation_id": "defaults.report",
       "path": "conformance/defaults.report.process.json",
       "adapter_kind": "process"
+    },
+    {
+      "id": "planning.status.process",
+      "operation_id": "planning.status.report",
+      "path": "conformance/planning.status.process.json",
+      "adapter_kind": "process"
     }
   ]
 }

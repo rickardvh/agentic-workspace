@@ -1,0 +1,198 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Package Read-Only Generated Adapter",
+  "goal": [
+    "Implement #362 by extending generated adapter migration beyond the root workspace command and wiring one package read-only command through generated metadata."
+  ],
+  "non_goals": [
+    "Generate all planning or memory commands.",
+    "Generate mutation or lifecycle commands.",
+    "Merge package commands into the root front door.",
+    "Move package runtime primitive behavior into generated metadata."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Planning and memory command surfaces have a clear migration path, and planning `status` is the first package read-only generated adapter slice.",
+      "constraints": "Stay on master; keep runtime implementation package-local and hand-written; avoid root-command-only generator assumptions.",
+      "latitude": "Choose the smallest generator/output shape that supports multiple programs.",
+      "escalation": "Stop before broad package command generation or lifecycle mutation commands."
+    },
+    "execution": {
+      "milestone": "package-readonly-generated-adapter",
+      "status": "completed",
+      "next_step": "Archive this slice and continue with #363 multi-adapter projection requirements.",
+      "proof": "Use proof --changed, generator freshness, contract tooling, planning package tests, workspace tests, ruff, planning checks, reconcile, summary."
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Generated shipped CLI adapters from authoritative package definitions.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#363",
+    "parent lane": "#356"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#363",
+    "activation trigger": "After one package read-only adapter is generated, define multi-adapter projection requirements."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#362",
+      "label": "package command surface expansion",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#356",
+      "label": "generated CLI adapter lane",
+      "role": "parent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#363",
+      "label": "multi-adapter projection requirements",
+      "role": "continuation",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "package-readonly-generated-adapter",
+    "status": "completed",
+    "scope": "#362",
+    "ready": "yes",
+    "blocked": "no"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Extend generated adapter migration to planning and memory package command surfaces.",
+    "hard constraints": "Generate only one read-only package command now; keep package-local runtime primitive ownership.",
+    "agent may decide locally": "Use planning status as the first package adapter and record memory expansion as remaining continuation.",
+    "escalate when": "The change requires broad package CLI generation or lifecycle mutation adapters."
+  },
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/package-readonly-generated-adapter-2026-04-26.plan.json",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/reviews/package-readonly-generated-adapter-closeout-2026-04-26.review.json",
+    "packages/planning/src/repo_planning_bootstrap/cli.py",
+    "packages/planning/src/repo_planning_bootstrap/generated_command_adapters.py",
+    "packages/planning/tests/test_installer.py",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "scripts/generate/generate_command_adapters.py",
+    "src/agentic_workspace/conformance.py",
+    "src/agentic_workspace/contracts/command_adapter_generation.json",
+    "src/agentic_workspace/contracts/conformance_contracts.json",
+    "src/agentic_workspace/contracts/conformance/planning.status.process.json",
+    "src/agentic_workspace/contracts/operation_contracts.json",
+    "src/agentic_workspace/contracts/operation_primitives.json",
+    "src/agentic_workspace/contracts/operations/planning.status.report.json",
+    "src/agentic_workspace/contracts/schemas/command_adapter_generation.schema.json",
+    "src/agentic_workspace/contracts/schemas/operation.schema.json",
+    "src/agentic_workspace/generated_command_adapters.py",
+    "tests/test_contract_tooling.py",
+    "tests/test_generated_tool_conformance.py"
+  ],
+  "immediate_next_action": [
+    "Close and archive #362 after final proof."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run python scripts/generate/generate_command_adapters.py --check",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest packages/planning/tests tests/test_contract_tooling.py tests/test_generated_tool_conformance.py",
+    "uv run ruff check src tests scripts packages/planning/src packages/planning/tests",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "completion_criteria": [
+    "#362 is implemented and closed.",
+    "Planning and memory command surfaces have a migration path recorded in the command adapter contract.",
+    "Planning `status` dispatches through generated metadata.",
+    "Generated output checks are not root-command-only.",
+    "No active execplan remains after archive closeout."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "summary, #362 issue, #361 closeout",
+    "what happened": "Generalized generated command adapter outputs by program, generated planning package adapter metadata, routed planning status through generated metadata, and recorded memory status as the next package surface.",
+    "validations run": "proof --changed; generator freshness; contract tooling; generated conformance tests; planning package tests; workspace CLI tests; ruff; planning surface check; reconcile; summary.",
+    "next step": "Promote #363."
+  },
+  "execution_summary": {
+    "outcome delivered": "Generated planning package `status` adapter metadata and routed planning status dispatch through it; memory status migration path was recorded for the next package surface.",
+    "validation confirmed": "Proof-selected planning package, workspace CLI, contract tooling, generator freshness, conformance, ruff, planning checks, reconcile, and summary checks passed.",
+    "follow-on routed to": "#363",
+    "post-work posterity capture": "Closeout review and archived execplan.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory, docs, or config promotion was needed; `command_adapter_generation.json` now carries the package migration path.",
+    "resume from": "#363 multi-adapter projection requirements."
+  },
+  "proof_report": {
+    "validation proof": "uv run agentic-workspace proof --target . --changed <paths> --format json selected planning package, workspace CLI, contract tooling, generator freshness, conformance, ruff, planning-surface, reconcile, and summary checks.",
+    "proof achieved now": "Planning status dispatches through generated metadata; generator freshness, contract tooling, conformance, planning package tests, workspace CLI tests, lint, planning checks, reconcile, and summary passed.",
+    "evidence for \"proof achieved\" state": "Generated package adapter file, planning CLI dispatch through generated metadata, command_adapter_generation package migration path, operation and conformance contract entries, focused and proof-selected validation commands."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#363 remains open for multi-adapter projection requirements after the first package adapter slice.",
+          "owner": "#363",
+          "source": "#362"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed; `command_adapter_generation.json` now carries the package migration path.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed; `command_adapter_generation.json` now carries the package migration path.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed; `command_adapter_generation.json` now carries the package migration path.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "Package read-only generated adapter",
+          "owner": "issue",
+          "source": "#362"
+        }
+      ]
+    }
+  },
+  "intent_satisfaction": {
+    "original intent": "Extend generated adapter migration to planning and memory package command surfaces.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#362 generated planning status adapter metadata and dispatch, and recorded memory status migration path",
+    "unsolved intent passed to": "#363 and remaining #356 child slices"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#362 delivered one package read-only adapter; parent #356 still needs multi-adapter projection requirements.",
+    "evidence carried forward": "packages/planning/src/repo_planning_bootstrap/generated_command_adapters.py, packages/planning/src/repo_planning_bootstrap/cli.py, src/agentic_workspace/contracts/command_adapter_generation.json, .agentic-workspace/planning/reviews/package-readonly-generated-adapter-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen #362 if planning package status cannot be maintained through generated adapter metadata or memory no longer has a recorded package migration path."
+  }
+}

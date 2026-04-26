@@ -2,6 +2,30 @@
   "schema_version": "agentic-workspace/command-adapter-generation/v1",
   "summary": "Generator-facing bindings that join command shape, operation contracts, primitive refs, schemas, projection hints, and conformance refs without owning runtime primitive behavior.",
   "schema": "schemas/command_adapter_generation.schema.json",
+  "generated_outputs": [
+    {
+      "program": "agentic-workspace",
+      "path": "src/agentic_workspace/generated_command_adapters.py"
+    },
+    {
+      "program": "agentic-planning-bootstrap",
+      "path": "packages/planning/src/repo_planning_bootstrap/generated_command_adapters.py"
+    }
+  ],
+  "package_surface_migration": {
+    "planning": {
+      "program": "agentic-planning-bootstrap",
+      "first_read_only_candidate": "status",
+      "status": "first-read-only-generated",
+      "next_step": "Use the planning status adapter proof before considering summary/report/handoff read-only adapters."
+    },
+    "memory": {
+      "program": "agentic-memory-bootstrap",
+      "first_read_only_candidate": "status",
+      "status": "planned-next-package-surface",
+      "next_step": "Add memory status as the next read-only package adapter only after multi-adapter projection requirements are explicit."
+    }
+  },
   "adapters": [
     {
       "id": "defaults.report.cli",
@@ -84,6 +108,80 @@
       },
       "conformance_refs": [
         "defaults.report.process"
+      ]
+    },
+    {
+      "id": "planning.status.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning-bootstrap",
+        "name": "status",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "package:planning:cli"
+      },
+      "operation_ref": {
+        "id": "planning.status.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.status.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.bootstrap.status.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "live planning surface inspection",
+          "payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "planning.status.process"
       ]
     }
   ]
