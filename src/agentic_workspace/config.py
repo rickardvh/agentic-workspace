@@ -14,6 +14,7 @@ WORKSPACE_LOCAL_CONFIG_PATH = Path(".agentic-workspace/config.local.toml")
 LEGACY_WORKSPACE_LOCAL_CONFIG_PATH = Path("agentic-workspace.local.toml")
 WORKSPACE_DELEGATION_OUTCOMES_PATH = Path(".agentic-workspace/delegation-outcomes.json")
 LEGACY_WORKSPACE_DELEGATION_OUTCOMES_PATH = Path("agentic-workspace.delegation-outcomes.json")
+WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH = Path(".agentic-workspace/local/memory.toml")
 WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH = Path(".agentic-workspace/local/integrations")
 WORKSPACE_LOCAL_INTEGRATION_SUBFOLDER_CONVENTION = "<vendor-or-runtime>/"
 WORKSPACE_LOCAL_INTEGRATION_ALLOWED_AID_KINDS = (
@@ -163,6 +164,8 @@ class MixedAgentLocalOverride:
     prefer_internal_delegation_when_available: bool | None
     safe_to_auto_run_commands: bool | None
     requires_human_verification_on_pr: bool | None
+    local_memory_enabled: bool | None
+    local_memory_path: Path
     delegation_targets: tuple[DelegationTargetProfile, ...]
 
 
@@ -256,6 +259,18 @@ def require_optional_bool(*, payload: dict[str, Any], key: str, config_path: Pat
     if not isinstance(value, bool):
         raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be a boolean.")
     return value
+
+
+def require_optional_relative_path(*, payload: dict[str, Any], key: str, config_path: Path, default: Path) -> Path:
+    if key not in payload:
+        return default
+    value = payload[key]
+    if not isinstance(value, str) or not value.strip():
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be a non-empty relative path string.")
+    path = Path(value.strip())
+    if path.is_absolute() or ".." in path.parts:
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must stay inside the target repository.")
+    return path
 
 
 def require_optional_confidence(*, payload: dict[str, Any], key: str, config_path: Path) -> float | None:
@@ -577,6 +592,8 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         prefer_internal_delegation_when_available=None,
         safe_to_auto_run_commands=None,
         requires_human_verification_on_pr=None,
+        local_memory_enabled=None,
+        local_memory_path=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
         delegation_targets=(),
     )
 
@@ -599,7 +616,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} must set schema_version = 1 for the current local mixed-agent override contract."
         )
 
-    unknown_top_level = sorted(set(payload) - {"schema_version", "runtime", "handoff", "safety", "delegation_targets"})
+    unknown_top_level = sorted(set(payload) - {"schema_version", "runtime", "handoff", "safety", "local_memory", "delegation_targets"})
     if unknown_top_level:
         unknown_text = ", ".join(unknown_top_level)
         warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} contains unsupported top-level field(s): {unknown_text}.")
@@ -635,6 +652,16 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
     if unknown_safety:
         unknown_text = ", ".join(unknown_safety)
         warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [safety] contains unsupported field(s): {unknown_text}.")
+
+    raw_local_memory = payload.get("local_memory", {})
+    if raw_local_memory is None:
+        raw_local_memory = {}
+    if not isinstance(raw_local_memory, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [local_memory] section must be a table.")
+    unknown_local_memory = sorted(set(raw_local_memory) - {"enabled", "path"})
+    if unknown_local_memory:
+        unknown_text = ", ".join(unknown_local_memory)
+        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [local_memory] contains unsupported field(s): {unknown_text}.")
 
     raw_delegation_targets = payload.get("delegation_targets", {})
     if raw_delegation_targets is None:
@@ -680,6 +707,17 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             payload=raw_safety,
             key="requires_human_verification_on_pr",
             config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        ),
+        local_memory_enabled=require_optional_bool(
+            payload=raw_local_memory,
+            key="enabled",
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        ),
+        local_memory_path=require_optional_relative_path(
+            payload=raw_local_memory,
+            key="path",
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+            default=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
         ),
         delegation_targets=delegation_targets,
     ), warnings

@@ -21,6 +21,7 @@ Treat Agentic Workspace as a repo-owned agent configuration system with four con
 | Startup and adapter policy | Canonical startup entrypoint, prose adapter role, and runtime-artifact profile. | workspace config plus this contract | `agentic-workspace defaults --section startup --format json` |
 | Workspace policy | Repo-owned default preset, improvement latitude, optimization bias, and update intent. | `.agentic-workspace/config.toml` | `agentic-workspace config --target ./repo --format json` |
 | Local integration aids | Optional vendor/runtime helpers that make local compliance cheaper without becoming shared truth. | `.agentic-workspace/local/integrations/` | `agentic-workspace config --target ./repo --format json` |
+| Local-only memory | Optional machine-local continuity notes that stay advisory and outside shared repo authority. | `.agentic-workspace/local/memory.toml` | `agentic-workspace report --target ./repo --format json` |
 | Module attachment | Which behavior modules exist, what they own, and how they compose without merging ownership. | module descriptors plus `.agentic-workspace/OWNERSHIP.toml` | `agentic-workspace ownership --target ./repo --format json`; `agentic-workspace modules --format json` |
 | Module state | Active planning state and durable memory state that consume the substrate but stay module-owned. | planning and memory surfaces | `agentic-workspace report --target ./repo --format json` |
 
@@ -31,6 +32,7 @@ Planning and Memory remain behavior modules inside that substrate rather than am
 
 - **Repo-owned workspace policy** lives in `.agentic-workspace/config.toml`.
 - **Local-only integration aids** may live under `.agentic-workspace/local/integrations/<vendor-or-runtime>/`; they are ignored, optional, non-authoritative, and safe to delete.
+- **Local-only memory** may live at `.agentic-workspace/local/memory.toml` only when enabled by `.agentic-workspace/config.local.toml`; it is ignored, advisory, non-authoritative, and promoted to checked-in Memory only by deliberate manual action.
 - **Workspace-owned shared contract docs** live in `.agentic-workspace/docs/`.
 - **Ownership and authority lookup** live in `.agentic-workspace/OWNERSHIP.toml` and `agentic-workspace ownership --target ./repo --format json`.
 - **Module descriptors** define installed module capabilities, workflow surfaces, generated artifacts, dependencies, and conflicts.

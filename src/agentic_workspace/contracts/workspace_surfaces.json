@@ -24,6 +24,8 @@
     "handoff.prefer_internal_delegation_when_available",
     "safety.safe_to_auto_run_commands",
     "safety.requires_human_verification_on_pr",
+    "local_memory.enabled",
+    "local_memory.path",
     "delegation_targets.<target>.strength",
     "delegation_targets.<target>.location",
     "delegation_targets.<target>.confidence",

@@ -12,6 +12,7 @@
     "health",
     "output_contract",
     "branch_workflow_posture",
+    "local_memory",
     "agent_configuration_system",
     "agent_configuration_queries",
     "system_intent_mirror",

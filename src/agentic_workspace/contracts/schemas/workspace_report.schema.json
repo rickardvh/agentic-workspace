@@ -13,6 +13,7 @@
     "health",
     "output_contract",
     "branch_workflow_posture",
+    "local_memory",
     "agent_configuration_system",
     "agent_configuration_queries",
     "workflow_obligations",
@@ -90,6 +91,9 @@
       "type": "object"
     },
     "branch_workflow_posture": {
+      "type": "object"
+    },
+    "local_memory": {
       "type": "object"
     },
     "agent_configuration_system": {

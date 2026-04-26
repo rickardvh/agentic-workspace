@@ -54,6 +54,7 @@ from agentic_workspace.config import (
     WORKSPACE_LOCAL_INTEGRATION_BOUNDARY_RULES,
     WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH,
     WORKSPACE_LOCAL_INTEGRATION_SUBFOLDER_CONVENTION,
+    WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
     WORKSPACE_POINTER_BLOCK,
     WORKSPACE_SYSTEM_INTENT_MIRROR_PATH,
     WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH,
@@ -175,6 +176,42 @@ def _local_integration_area_payload(*, target_root: Path | None = None) -> dict[
         "canonical_doc": ".agentic-workspace/docs/local-integration-area.md",
         "allowed_aid_kinds": list(WORKSPACE_LOCAL_INTEGRATION_ALLOWED_AID_KINDS),
         "boundary_rules": list(WORKSPACE_LOCAL_INTEGRATION_BOUNDARY_RULES),
+    }
+
+
+def _local_memory_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    local_override = config.local_override
+    enabled = bool(local_override.local_memory_enabled)
+    relative_path = local_override.local_memory_path or WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH
+    exists = False
+    if config.target_root is not None:
+        exists = (config.target_root / relative_path).exists()
+    return {
+        "status": "enabled" if enabled else "disabled",
+        "enabled": enabled,
+        "configured": local_override.local_memory_enabled is not None,
+        "path": relative_path.as_posix(),
+        "exists": exists,
+        "controlled_by": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
+        "authoritative": False,
+        "advisory_only": True,
+        "git_ignored": True,
+        "safe_to_delete": True,
+        "record_shape": {
+            "kind": "agentic-workspace/local-memory/v1",
+            "fields": ["id", "summary", "scope", "source", "confidence", "promotion_candidate"],
+        },
+        "promotion_guidance": (
+            "Promote manually into checked-in Memory only when the knowledge is durable, shareable, non-private, "
+            "and useful beyond this machine."
+        ),
+        "boundary_rules": [
+            "machine-local and repo-scoped",
+            "not shared repo authority",
+            "not a secret store",
+            "does not override checked-in Memory, planning, config, or docs",
+            "safe to disable or delete without changing shared behavior",
+        ],
     }
 
 
@@ -2424,6 +2461,7 @@ def _run_report_command(
     )
     execution_shape = _execution_shape_payload(config=config, module_reports=module_reports)
     branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
+    local_memory = _local_memory_payload(config=config)
     closeout_trust = _report_closeout_trust_payload(module_reports=module_reports)
     return {
         "kind": "workspace-report/v1",
@@ -2440,6 +2478,7 @@ def _run_report_command(
             surface="report",
         ),
         "branch_workflow_posture": branch_workflow_posture,
+        "local_memory": local_memory,
         "execution_shape": execution_shape,
         "agent_configuration_system": _agent_configuration_report_payload(
             config=config,
@@ -2542,6 +2581,7 @@ def _run_preflight_command(
     active_state = _preflight_active_state_payload(target_root=target_root)
     planning_record = active_state.get("planning_record", {"status": "unavailable"})
     branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
+    local_memory = _local_memory_payload(config=config)
 
     if active_only:
         # Return only compact active state for polling/monitoring.
@@ -2555,6 +2595,7 @@ def _run_preflight_command(
             "preflight_token": preflight_token,
             "timestamp_hint": "Run this periodically to poll current active state without startup overhead.",
             "branch_workflow_posture": branch_workflow_posture,
+            "local_memory": local_memory,
             "active_planning_state": active_state,
             "planning_record": planning_record if isinstance(planning_record, dict) else {"status": "unavailable"},
         }
@@ -2584,6 +2625,7 @@ def _run_preflight_command(
             "agent_instructions_file": config_payload.get("workspace", {}).get("agent_instructions_file", "AGENTS.md"),
         },
         "branch_workflow_posture": branch_workflow_posture,
+        "local_memory": local_memory,
         "active_planning_state": active_state,
     }
 
@@ -5035,6 +5077,22 @@ def _defaults_payload() -> dict[str, Any]:
                     "but shared workflow truth must stay in repo-owned workspace, planning, and memory surfaces."
                 ),
             },
+            "local_memory": {
+                "path": WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH.as_posix(),
+                "controlled_by": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
+                "status": "available-local-only",
+                "authoritative": False,
+                "advisory_only": True,
+                "git_ignored": True,
+                "rule": (
+                    "Machine-local repo memory may support same-machine continuity when explicitly enabled, "
+                    "but checked-in Memory remains the shared durable authority."
+                ),
+                "promotion_guidance": (
+                    "Promote manually into checked-in Memory only when the knowledge is durable, shareable, non-private, "
+                    "and useful beyond this machine."
+                ),
+            },
             "runtime_inference": {
                 "tool_owned": True,
                 "report_when_behavior_changes": True,
@@ -6887,6 +6945,7 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             **_local_integration_area_payload(target_root=config.target_root),
             "rule": ("local-only vendor/runtime aids; may reduce local operating cost, but must not become shared workflow authority"),
         },
+        "local_memory": _local_memory_payload(config=config),
         "runtime_inference": {
             "tool_owned": defaults["runtime_inference"]["tool_owned"],
             "reported_here": False,
@@ -6966,6 +7025,7 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "workflow_path": WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(),
             },
             "workflow_obligations": _workflow_obligation_payloads(config),
+            "local_memory": _local_memory_payload(config=config),
             "detected_agent_instructions_files": list(config.detected_agent_instructions_files),
             "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
             "supported_workflow_artifact_profiles": list(SUPPORTED_WORKFLOW_ARTIFACT_PROFILES),

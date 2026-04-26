@@ -1,0 +1,219 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Local Only Memory Continuity",
+  "goal": [
+    "Resolve #328 with a small opt-in local-only memory surface for repo-scoped machine-local continuity.",
+    "Expose the feature through compact package output without making local knowledge authoritative or checked in."
+  ],
+  "non_goals": [
+    "Do not sync local memory across machines.",
+    "Do not store secrets or credentials.",
+    "Do not make local-only memory override checked-in Memory, config, planning, or repo doctrine.",
+    "Do not build a broad search layer or personal knowledge system."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Local config can opt into a clearly local memory path, report/preflight expose the status and boundary, and docs/tests define manual promotion guidance.",
+      "constraints": "Disabled unless enabled by local config; local records stay ignored/removable/advisory; promotion to checked-in Memory is manual.",
+      "latitude": "Choose the smallest config fields, path convention, report payload, and documentation needed for the first slice.",
+      "escalation": "Stop if implementation would require a new memory database, automatic promotion, or secret storage handling."
+    },
+    "execution": {
+      "milestone": "local-memory-config-reporting",
+      "status": "completed",
+      "next_step": "Archive this execplan, commit, push, and close #328.",
+      "proof": "Tests plus live report/preflight show disabled default and local-memory posture."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+        "src/agentic_workspace/contracts/workspace_surfaces.json",
+        "docs or .agentic-workspace docs for local-only memory guidance",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/local-only-memory-continuity.plan.json"
+      ],
+      "invariants": [
+        "Local-only memory is advisory and non-authoritative.",
+        "No checked-in local records are created by default.",
+        "The feature is controlled by local config."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "local-only memory continuity",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane local-only-memory-continuity",
+    "parent lane": "local-only-memory-continuity"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "none",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "local memory remains invisible to compact startup/report surfaces or lacks a safe promotion boundary"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Machine-local continuity can be represented without promoting weak/private context into checked-in Memory.",
+    "intentionally deferred": "Any automatic ingestion, search, sync, or promotion workflow.",
+    "discovered implications": "Local-only continuity belongs in config/report/preflight posture, not checked-in Memory records or automatic promotion.",
+    "proof achieved now": "yes",
+    "validation still needed": "none",
+    "next likely slice": "python-consumable-contract-extraction"
+  },
+  "intent_interpretation": {
+    "literal request": "execute all planned work lane by lane and dogfood the package",
+    "inferred intended outcome": "complete #328's first small local-only memory slice",
+    "chosen concrete what": "local config switch, ignored local path convention, compact reporting, and promotion guidance",
+    "interpretation distance": "low",
+    "review guidance": "reject work that turns local-only memory into hidden repo authority or broad memory infrastructure"
+  },
+  "execution_bounds": {
+    "allowed paths": "workspace config/report source and contracts; memory/workspace docs only for boundary guidance; tests; active planning state and this execplan",
+    "max changed files": "12",
+    "required validation commands": "focused pytest for config/report changes; uv run agentic-workspace preflight --format json; uv run agentic-workspace report --target . --format json; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "ask-before-refactor threshold": "stop before broad memory package refactors or automatic promotion behavior",
+    "stop before touching": "unrelated planned lanes"
+  },
+  "stop_conditions": {
+    "stop when": "the first local-only memory slice is shipped, dogfooded, committed, pushed, and #328 is closed or residual work is routed",
+    "escalate when boundary reached": "the design needs secret handling, synchronization, or authority over checked-in Memory",
+    "escalate on scope drift": "implementation becomes a broad memory subsystem",
+    "escalate on proof failure": "live compact outputs do not make local-memory status discoverable"
+  },
+  "context_budget": {
+    "live working set": "#328, config/report code, local override schema, memory boundary docs, active execplan",
+    "recoverable later": "full memory package history and old local integration lane details",
+    "externalize before shift": "update this execplan execution_run and immediate_next_action",
+    "pre-work config pull": "uv run agentic-workspace summary and gh issue view #328",
+    "pre-work memory pull": "inspect only boundary docs/surfaces if compact code context is insufficient",
+    "tiny resumability note": "add advisory local-memory config/reporting without creating checked-in local memory records",
+    "context-shift triggers": "local config support is larger than expected or memory package changes become necessary"
+  },
+  "delegated_judgment": {
+    "requested outcome": "ship opt-in local-only memory continuity",
+    "hard constraints": "disabled by default; advisory only; local/removable; no automatic promotion",
+    "agent may decide locally": "field names, default path, and whether report or preflight carries the compact status",
+    "escalate when": "the feature would become authoritative, synced, secret-bearing, or broad"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#328",
+      "label": "local-only memory continuity",
+      "role": "primary-intent",
+      "locator": "github issue #328"
+    },
+    {
+      "kind": "path",
+      "target": ".agentic-workspace/config.local.toml",
+      "label": "local override config",
+      "role": "configuration-boundary",
+      "locator": "repo local config"
+    }
+  ],
+  "active_milestone": {
+    "id": "local-memory-config-reporting",
+    "status": "completed",
+    "scope": "local config plus compact reporting",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this execplan.",
+    "Commit, push, and close #328."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/local-only-memory-continuity.plan.json"
+  ],
+  "invariants": [
+    "Local-only memory remains advisory.",
+    "Local-only records are not checked in.",
+    "Promotion to checked-in Memory is manual."
+  ],
+  "contract_decisions_to_freeze": [
+    "Local-only memory is controlled by local config and reported as advisory status, not active repo authority."
+  ],
+  "open_questions_to_close": [
+    "Closed: use [local_memory] enabled/path in local config, defaulting to .agentic-workspace/local/memory.toml."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"local_memory or config_command\"",
+    "uv run agentic-workspace preflight --format json",
+    "uv run agentic-workspace report --target . --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "git diff --check"
+  ],
+  "required_tools": [
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "Local-only memory defaults to disabled.",
+    "Local config can enable it and set or expose a local path.",
+    "Compact output reports enabled/disabled status, advisory boundary, path, and promotion guidance.",
+    "Docs/tests state it is not shared repo authority and should not store secrets."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "active execplan",
+    "what happened": "Added disabled-by-default local-only memory config support, report/preflight exposure, contract schemas, text output, docs, and tests.",
+    "scope touched": "workspace config/report/preflight source, workspace contracts, workspace docs, focused CLI tests, and active planning state",
+    "changed surfaces": "src/agentic_workspace/config.py; src/agentic_workspace/cli.py; src/agentic_workspace/workspace_output.py; workspace contracts; .agentic-workspace/docs/local-memory.md; .agentic-workspace/docs/workspace-config-contract.md; tests/test_workspace_cli.py",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"local_memory or config_command_reports_effective_defaults_without_repo_file or defaults_command_reports_machine_readable_default_routes_as_json or report_real_init_summarizes_combined_workspace_state or preflight\"; uv run ruff check src/agentic_workspace/config.py src/agentic_workspace/cli.py src/agentic_workspace/workspace_output.py tests/test_workspace_cli.py; uv run python scripts/check/check_contract_tooling_surfaces.py; make maintainer-surfaces; uv run agentic-workspace report --target . --format json; uv run agentic-workspace preflight --format json; uv run agentic-workspace summary --format json; uv run pytest -q; uv run ruff check src tests; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "result for continuation": "No local-memory follow-up required for #328; continue with python-consumable-contract-extraction.",
+    "next step": "Archive and close #328."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "focused tests, full pytest, ruff, contract surface check, maintainer surfaces, live report/preflight/summary, planning checker, and diff whitespace check all passed; git diff --check only reported the existing state.toml line-ending warning.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "report/preflight expose local_memory disabled by default with advisory boundary, local path, record shape, promotion guidance, and boundary rules; tests cover defaults, local override, report, and preflight."
+  },
+  "intent_satisfaction": {
+    "original intent": "Add opt-in local-only memory for machine-local agent continuity.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Local config now supports [local_memory] enabled/path, compact report/preflight expose status and advisory boundaries, docs define non-authoritative/no-secret/manual-promotion behavior, and tests validate the contract.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve only context that is expensive to rediscover while keeping shared residue bounded and reviewable.",
+    "slice shaping bias": "Prefer one local, opt-in, advisory surface over broad checked-in memory expansion.",
+    "broader-lane validation question": "Does this make same-machine continuation cheaper without creating hidden repo doctrine?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The implementation satisfies #328's opt-in local-only continuity request without creating authoritative, synced, secret-bearing, or broad memory behavior.",
+    "evidence carried forward": "this execplan proof_report plus tests and live report/preflight output",
+    "reopen trigger": "local-only memory remains undiscoverable or becomes authoritative"
+  },
+  "execution_summary": {
+    "outcome delivered": "Opt-in local-only memory continuity is discoverable through config, report, and preflight while remaining advisory, local, ignored, and manually promoted.",
+    "validation confirmed": "focused tests, full pytest, ruff, contract checks, maintainer surfaces, live report/preflight/summary, planning checker, and diff check",
+    "follow-on routed to": "python-consumable-contract-extraction",
+    "post-work posterity capture": ".agentic-workspace/docs/local-memory.md and workspace config contract updates",
+    "knowledge promoted (Memory/Docs/Config)": "Docs and config contracts updated; no checked-in local memory records created.",
+    "resume from": "python-consumable-contract-extraction"
+  },
+  "drift_log": [
+    "2026-04-26: Promoted #328 local-only memory continuity from the roadmap."
+  ]
+}

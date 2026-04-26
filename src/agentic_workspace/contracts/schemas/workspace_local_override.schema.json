@@ -46,6 +46,19 @@
       },
       "additionalProperties": false
     },
+    "local_memory": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
     "delegation_targets": {
       "type": "object",
       "patternProperties": {

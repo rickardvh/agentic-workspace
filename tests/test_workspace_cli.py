@@ -284,6 +284,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "handoff.prefer_internal_delegation_when_available",
         "safety.safe_to_auto_run_commands",
         "safety.requires_human_verification_on_pr",
+        "local_memory.enabled",
+        "local_memory.path",
         "delegation_targets.<target>.strength",
         "delegation_targets.<target>.location",
         "delegation_targets.<target>.confidence",
@@ -316,6 +318,9 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["mixed_agent"]["local_integration_area"]["git_ignored"] is True
     assert payload["mixed_agent"]["local_integration_area"]["canonical_doc"] == ".agentic-workspace/docs/local-integration-area.md"
     assert "not a plugin registry or shared compatibility framework" in payload["mixed_agent"]["local_integration_area"]["boundary_rules"]
+    assert payload["mixed_agent"]["local_memory"]["path"] == ".agentic-workspace/local/memory.toml"
+    assert payload["mixed_agent"]["local_memory"]["authoritative"] is False
+    assert payload["mixed_agent"]["local_memory"]["advisory_only"] is True
     assert payload["mixed_agent"]["runtime_inference"]["tool_owned"] is True
     assert payload["mixed_agent"]["handoff_quality"]["must_recover"] == [
         "current intent",
@@ -623,6 +628,9 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
         ],
         "rule": "local-only vendor/runtime aids; may reduce local operating cost, but must not become shared workflow authority",
     }
+    assert payload["mixed_agent"]["local_memory"]["status"] == "disabled"
+    assert payload["mixed_agent"]["local_memory"]["path"] == ".agentic-workspace/local/memory.toml"
+    assert payload["mixed_agent"]["local_memory"]["authoritative"] is False
     assert payload["mixed_agent"]["runtime_inference"]["tool_owned"] is True
     assert payload["mixed_agent"]["runtime_inference"]["reported_here"] is False
     assert payload["mixed_agent"]["effective_posture"]["supports_internal_delegation"] == {"value": None, "source": "unset"}
@@ -1487,6 +1495,29 @@ def test_config_command_reports_reserved_local_override_presence_without_applyin
         "value": True,
         "source": "local-override",
     }
+
+
+def test_config_command_reports_local_only_memory_override(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        'schema_version = 1\n\n[local_memory]\nenabled = true\npath = ".agentic-workspace/local/memory.toml"\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    local_memory = payload["mixed_agent"]["local_memory"]
+    assert local_memory["status"] == "enabled"
+    assert local_memory["enabled"] is True
+    assert local_memory["configured"] is True
+    assert local_memory["path"] == ".agentic-workspace/local/memory.toml"
+    assert local_memory["controlled_by"] == ".agentic-workspace/config.local.toml"
+    assert local_memory["authoritative"] is False
+    assert local_memory["advisory_only"] is True
+    assert "not a secret store" in local_memory["boundary_rules"]
 
 
 def test_config_command_reports_narrow_local_override_fields_with_source_attribution(tmp_path: Path, capsys) -> None:
@@ -2905,6 +2936,7 @@ def test_report_surfaces_default_branch_commit_risk(tmp_path: Path, capsys) -> N
 
     payload = json.loads(capsys.readouterr().out)
     assert "branch_workflow_posture" in payload["schema"]["shared_fields"]
+    assert "local_memory" in payload["schema"]["shared_fields"]
     posture = payload["branch_workflow_posture"]
     assert posture["status"] == "present"
     assert posture["current_branch"] == "master"
@@ -2912,6 +2944,44 @@ def test_report_surfaces_default_branch_commit_risk(tmp_path: Path, capsys) -> N
     assert posture["on_default_branch"] is True
     assert posture["risk"] == "default-branch-commit-risk"
     assert "do not switch branches unless the user decides" in posture["recommended_next_action"]
+
+
+def test_report_surfaces_local_only_memory_status(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        'schema_version = 1\n\n[local_memory]\nenabled = true\npath = ".agentic-workspace/local/memory.toml"\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    local_memory = payload["local_memory"]
+    assert local_memory["status"] == "enabled"
+    assert local_memory["path"] == ".agentic-workspace/local/memory.toml"
+    assert local_memory["git_ignored"] is True
+    assert local_memory["safe_to_delete"] is True
+    assert "checked-in Memory" in local_memory["promotion_guidance"]
+
+
+def test_preflight_surfaces_local_only_memory_status(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "schema_version = 1\n\n[local_memory]\nenabled = true\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["preflight", "--target", str(target), "--active-only", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["local_memory"]["status"] == "enabled"
+    assert payload["local_memory"]["path"] == ".agentic-workspace/local/memory.toml"
 
 
 def test_preflight_surfaces_non_default_branch_posture(tmp_path: Path, capsys) -> None:
