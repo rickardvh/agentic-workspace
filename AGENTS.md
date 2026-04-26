@@ -15,7 +15,8 @@ Keep this file thin. Treat it as the repo-owned startup adapter over the structu
 
 ## Startup
 
-- Use `uv run agentic-workspace preflight --format json` when you want startup guidance, resolved config, and active state in one compact answer.
+- Use `uv run agentic-workspace start --format json` for ordinary compact startup context.
+- Use `uv run agentic-workspace preflight --format json` when you need bundled takeover or recovery context.
 - Use `uv run agentic-workspace defaults --section startup --format json` when startup order or first-contact routing is the question.
 - Use `uv run agentic-workspace config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.
 - Use `uv run agentic-workspace summary --format json` when only active planning or ownership state is the question.

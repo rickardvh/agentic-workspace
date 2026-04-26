@@ -124,7 +124,8 @@ Keep this file thin. Treat it as the repo-owned startup adapter over the structu
 
 ## Startup
 
-- Use `agentic-workspace preflight --format json` when you want startup guidance, resolved config, and active state in one compact answer.
+- Use `agentic-workspace start --format json` for ordinary compact startup context.
+- Use `agentic-workspace preflight --format json` when you need bundled takeover or recovery context.
 - Use `agentic-workspace defaults --section startup --format json` when startup order or first-contact routing is the question.
 - Use `agentic-workspace config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.
 - Use `agentic-workspace summary --format json` when only active planning or ownership state is the question.
@@ -143,8 +144,15 @@ Keep this file thin. Treat it as the repo-owned startup adapter over the structu
         """
 # Agent Entrypoint Router
 
-- If you are here to DEVELOP this repository: Read `AGENTS.md`
-- If you are here to INSTALL or ADOPT Agentic Workspace: Read `.agentic-workspace/docs/routing-contract.md`
+Generated compatibility adapter.
+
+Ordinary path:
+- Read `AGENTS.md` first.
+- Run `agentic-workspace start --format json` for compact startup context.
+- Run `agentic-workspace proof --changed <paths> --format json` before claiming validation.
+
+When needed:
+- Open raw planning or contract files only when compact commands point there.
 """,
     )
     _write(

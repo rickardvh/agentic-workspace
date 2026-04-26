@@ -4,35 +4,18 @@
 
 > GENERATED STATIC ROUTING ADAPTER. Do not edit manually. Rerender with `python scripts/render_agent_docs.py`.
 
-Static, non-authoritative entry table for agents that need one obvious next surface.
+Generated, non-authoritative helper. It points to compact query surfaces and owns no workflow truth.
 
-## Start Here
+## Route
 
 - Read `AGENTS.md` first.
-- Run `uv run agentic-workspace preflight --format json` for startup guidance plus active state.
-- Run `uv run agentic-workspace summary --format json` when active planning recovery is the question.
-- Run `uv run agentic-workspace defaults --section startup --format json` when startup order is the question.
-
-## Authority Table
-
-| Need | Use |
-| --- | --- |
-| ordinary repo startup | `AGENTS.md` |
-| compact startup/config state | `uv run agentic-workspace preflight --format json` |
-| active planning and continuation | `uv run agentic-workspace summary --format json` |
-| configured entrypoint/posture | `uv run agentic-workspace config --target . --format json` |
-| machine-readable routing mirror | `.agentic-workspace/planning/agent-manifest.json` |
+- Run `uv run agentic-workspace start --format json` for compact startup context.
+- Run `uv run agentic-workspace summary --format json` only when active planning or roadmap state matters.
+- Run `uv run agentic-workspace preflight --format json` only when you need bundled takeover or recovery context.
+- Run `uv run agentic-workspace report --target . --format json` when you need health, warnings, or section hints.
 
 ## Constraints
 
 - This file is a generated static adapter, not a doctrine or state owner.
 - Do not bulk-read all planning surfaces; follow compact query results to the one needed file.
 - Keep changing operational truth in structured/queryable surfaces, not in this helper.
-
-## Escalation Table
-
-| Boundary | First move |
-| --- | --- |
-| workspace startup, lifecycle, ownership, or config | `uv run agentic-workspace defaults --section startup --format json` |
-| planning sequence, blockers, proof, or continuation | `uv run agentic-workspace summary --format json` |
-| durable repo knowledge or repeated rediscovery | read `.agentic-workspace/memory/WORKFLOW.md` |

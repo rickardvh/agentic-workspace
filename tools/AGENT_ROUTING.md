@@ -4,7 +4,7 @@
 
 > GENERATED STATIC ROUTING ADAPTER. Do not edit manually. Rerender with `python scripts/render_agent_docs.py`.
 
-Static routing table for weak-agent discovery. It does not mirror active state.
+Generated, state-free routing helper. Use compact commands for current truth.
 
 ## Precedence
 
@@ -13,16 +13,13 @@ Static routing table for weak-agent discovery. It does not mirror active state.
 3. `AGENTS.md` and the nearest package-local `AGENTS.md` for the files being edited.
 4. Repo docs explicitly referenced by the active route.
 
-## Routing Table
+## Compact Queries
 
-| Situation | Route |
-| --- | --- |
-| startup order or first-contact routing | `uv run agentic-workspace defaults --section startup --format json` |
-| active work, queue, proof, or continuation | `uv run agentic-workspace summary --format json` |
-| startup guidance plus resolved config and active state | `uv run agentic-workspace preflight --format json` |
-| configured entrypoint, posture, or obligations | `uv run agentic-workspace config --target . --format json` |
-| combined workspace/module state | `uv run agentic-workspace report --target . --format json` |
-| task-specific package rules | nearest package-local `AGENTS.md` |
+- `uv run agentic-workspace start --format json` for ordinary compact startup context.
+- `uv run agentic-workspace preflight --format json` for bundled takeover or recovery context.
+- `uv run agentic-workspace summary --format json` for active planning, queue, proof, or continuation.
+- `uv run agentic-workspace config --target . --format json` for configured entrypoint, posture, or obligations.
+- `uv run agentic-workspace report --target . --format json` for health, warnings, and selectors to deeper detail.
 
 ## Boundaries
 

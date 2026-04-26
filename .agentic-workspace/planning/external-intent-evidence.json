@@ -693,6 +693,33 @@
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#352",
+      "title": "[Workspace]: Inventory the current visible product surface before the next subtraction slice",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#353",
+      "title": "[Workspace]: Compress generated adapter surfaces behind contract-backed renderers",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#354",
+      "title": "[Workspace]: Prove the compact report remains a router after the contract and memory tranche",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
     }
   ]
 }

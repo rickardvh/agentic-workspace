@@ -526,38 +526,32 @@ def test_external_agent_handoff_text_names_target_repository_and_no_install_assu
     assert "Authority marker:" in text
     assert "- authority: generated-adapter" in text
     assert "- safe_to_edit: false" in text
-    assert "repository that contains this file" in text
-    assert "Target repository:" in text
-    assert "Default startup path:" in text
+    assert "Generated compatibility adapter" in text
+    assert "Ordinary path:" in text
+    assert "agentic-workspace start --format json" in text
     assert "agentic-workspace preflight --format json" in text
-    assert "agentic-workspace defaults --section startup --format json" in text
-    assert "Do not assume agentic-workspace is already installed" in text
     assert "agentic-workspace config --target ./repo --format json" in text
     assert "agentic-workspace summary --format json" in text
+    assert "agentic-workspace proof --changed <paths> --format json" in text
     assert "`AGENTS.md` remains the repo startup entrypoint" in text
     assert "Compact routing docs when present" not in text
     assert text.count("Read `AGENTS.md` first.") == 1
-    assert text.count("config.local.toml") == 1
     assert text.count("`AGENTS.md` remains the repo startup entrypoint") == 1
 
 
 def test_external_agent_handoff_text_demotes_broad_routing_until_compact_startup_fails() -> None:
     text = cli._external_agent_handoff_text(selected_modules=["planning"])
 
+    start_index = text.index("agentic-workspace start --format json")
     preflight_index = text.index("agentic-workspace preflight --format json")
-    startup_index = text.index("agentic-workspace defaults --section startup --format json")
     config_index = text.index("agentic-workspace config --target ./repo --format json")
     summary_index = text.index("agentic-workspace summary --format json")
-    routing_index = text.index(".agentic-workspace/docs/routing-contract.md")
-    planning_index = text.index(".agentic-workspace/planning/state.toml")
 
-    assert preflight_index < routing_index
-    assert startup_index < routing_index
-    assert config_index < routing_index
-    assert summary_index < planning_index
+    assert start_index < preflight_index
+    assert start_index < config_index
+    assert start_index < summary_index
     assert "When needed:" in text
-    assert "only when lifecycle or install/adopt routing is still ambiguous after the compact startup path" in text
-    assert "only when `agentic-workspace summary --format json` points there" in text
+    assert "Open raw planning or contract files only when compact commands point there." in text
 
 
 def test_external_agent_handoff_text_uses_configured_agent_instructions_filename() -> None:
@@ -575,9 +569,9 @@ def test_external_agent_handoff_text_reports_workflow_artifact_profile() -> None
     )
 
     assert "Workflow artifact profile: gemini." in text
-    assert "compatibility adapter over the structured workspace config" in text
-    assert "agentic-workspace defaults --section agent_configuration_queries --format json" in text
-    assert "mirror the durable execution state into .agentic-workspace/planning/state.toml and the active execplan" in text
+    assert "Generated compatibility adapter" in text
+    assert "agentic-workspace start --format json" in text
+    assert "Keep canonical authority in contracts, config, planning, Memory, and checks, not this adapter." in text
 
 
 def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: Path, capsys) -> None:
@@ -2763,6 +2757,7 @@ def test_install_real_init_creates_combined_memory_and_planning_surfaces(tmp_pat
     agents_text = (target / "AGENTS.md").read_text(encoding="utf-8")
     assert "<!-- agentic-workspace:workflow:start -->" in agents_text
     assert "Read `.agentic-workspace/WORKFLOW.md` for shared workflow rules." in agents_text
+    assert "agentic-workspace start --format json" in agents_text
     assert "agentic-workspace preflight --format json" in agents_text
     assert (
         "Read `.agentic-workspace/memory/WORKFLOW.md` only when changing memory behavior or the memory workflow itself." not in agents_text
@@ -2796,16 +2791,17 @@ def test_install_real_init_generates_llms_with_compact_startup_path_first(tmp_pa
     assert cli.main(["init", "--target", str(target)]) == 0
 
     llms_text = (target / "llms.txt").read_text(encoding="utf-8")
-    startup_index = llms_text.index("agentic-workspace defaults --section startup --format json")
+    start_index = llms_text.index("agentic-workspace start --format json")
+    preflight_index = llms_text.index("agentic-workspace preflight --format json")
     config_index = llms_text.index("agentic-workspace config --target ./repo --format json")
     summary_index = llms_text.index("agentic-workspace summary --format json")
-    routing_index = llms_text.index(".agentic-workspace/docs/routing-contract.md")
-    planning_index = llms_text.index(".agentic-workspace/planning/state.toml")
+    proof_index = llms_text.index("agentic-workspace proof --changed <paths> --format json")
+    raw_index = llms_text.index("Open raw planning or contract files only when compact commands point there.")
 
-    assert "Default startup path:" in llms_text
-    assert startup_index < routing_index
-    assert config_index < routing_index
-    assert summary_index < planning_index
+    assert "Ordinary path:" in llms_text
+    assert start_index < summary_index < proof_index
+    assert proof_index < preflight_index
+    assert config_index < raw_index
 
 
 def test_status_real_init_reports_workspace_shared_layer_surfaces(tmp_path: Path, capsys) -> None:
@@ -2979,6 +2975,12 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert payload["report_profile"]["default_profile"] == "router"
     assert payload["report_profile"]["full_profile"] == "full"
     assert payload["report_profile"]["decision_grade_fields"][0] == "health"
+    guard = payload["report_profile"]["router_shape_guard"]
+    assert guard["status"] == "active"
+    assert len(payload) <= guard["max_top_level_fields"]
+    assert len(payload["warning_summary"]["sample"]) <= guard["warning_sample_limit"]
+    for section in guard["high_volume_sections_excluded"]:
+        assert section not in payload
     assert payload["health"] == "healthy"
     assert "module_reports" not in payload
     assert "reports" not in payload

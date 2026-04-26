@@ -1,0 +1,233 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Visible Surface Compression",
+  "goal": [
+    "Implement #352-#354: inventory current visible product surfaces, compress one generated adapter path, and prove the compact report remains a router."
+  ],
+  "non_goals": [
+    "Close the broader #230 umbrella.",
+    "Remove all generated adapters.",
+    "Create a dashboard, score, or host-specific workflow dependency."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "The next subtraction slice has a compact surface inventory, generated adapters are thinner, and report router shape is guarded by tests.",
+      "constraints": "Stay on master; keep package behavior repo-/agent-/tool-/language-agnostic; use package workflow surfaces throughout.",
+      "latitude": "Choose the smallest adapter compression and report-shape test that satisfy the issues.",
+      "escalation": "Stop before deleting startup adapters or changing branch."
+    },
+    "execution": {
+      "milestone": "visible-surface-compression",
+      "status": "completed",
+      "next_step": "Archive this plan after reconcile/summary confirm no live residue.",
+      "proof": "Use agentic-workspace proof --changed, root/package tests, ruff, maintainer surfaces, planning checks, reconcile, summary."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/",
+        ".agentic-workspace/planning/reviews/",
+        "packages/planning/src/repo_planning_bootstrap/_render.py",
+        "packages/planning/tests/test_installer.py",
+        "tests/test_workspace_cli.py",
+        "tools/AGENT_QUICKSTART.md",
+        "tools/AGENT_ROUTING.md"
+      ],
+      "invariants": [
+        "Generated adapters stay non-authoritative and contract-backed.",
+        "Default report remains a router; deep detail stays behind selectors or full profile.",
+        "Archived execplans must expose closeout distillation buckets."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Strip visible product residue that no longer earns its keep while preserving leverage.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#230",
+    "parent lane": "#230"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "Fresh issue or measured friction under #230 after #352-#354 close."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Next product-compression work can choose a subtraction target from a compact inventory instead of broad rediscovery.",
+    "intentionally deferred": "A full product-shape cleanup of every visible surface and any deletion of weak-agent adapters.",
+    "discovered implications": "The package had duplicate startup-policy checks in root, installed, and payload copies; product-shape compression must keep validation expectations compressed in lockstep with generated adapters.",
+    "proof achieved now": "Visible-surface inventory exists; generated adapters route through start and no longer carry authority/routing tables; default report shape is guarded by tests.",
+    "validation still needed": "None for #352-#354 after final reconcile and archive.",
+    "next likely slice": "#230 remains open for future measured product-residue reductions."
+  },
+  "intent_interpretation": {
+    "literal request": "Refresh and repeat.",
+    "inferred intended outcome": "Reingest current issues and implement the next open product-compression child issues end-to-end.",
+    "chosen concrete what": "Implement #352, #353, and #354 in order; keep #230 open.",
+    "interpretation distance": "low",
+    "review guidance": "Check that this pass removes or guards visible residue rather than adding another first-line concept."
+  },
+  "execution_bounds": {
+    "allowed paths": "Planning state/evidence/reviews/execplan, generated adapter renderer outputs, report tests, planning package renderer/tests, and any directly required payload mirrors.",
+    "max changed files": "Prefer under 15 files including generated outputs.",
+    "required validation commands": "agentic-workspace proof --changed; root workspace CLI tests; planning package tests; ruff; maintainer surfaces; planning checks; reconcile; summary.",
+    "ask-before-refactor threshold": "Removing an adapter entirely or changing public command names.",
+    "stop before touching": "Branch switching, provider-specific workflow dependencies, or broad unrelated contract extraction."
+  },
+  "stop_conditions": {
+    "stop when": "#352-#354 are implemented, closed, evidenced, and this plan archives with no warnings.",
+    "escalate when boundary reached": "Inventory points to removals larger than one bounded slice.",
+    "escalate on scope drift": "Work expands beyond visible-surface compression/report-router proof.",
+    "escalate on proof failure": "Proof-selected validation fails outside touched surfaces."
+  },
+  "context_budget": {
+    "live working set": "preflight, open issue bodies, operational_compression report, adapter renderer, report tests, this execplan",
+    "recoverable later": "full historical review set and archived execplans",
+    "externalize before shift": "Update execution_run and closeout_distillation before archive.",
+    "pre-work config pull": "uv run agentic-workspace preflight --format json",
+    "pre-work memory pull": "Not needed.",
+    "tiny resumability note": "Continue from this plan and #352-#354.",
+    "context-shift triggers": "Before broad surface inventory rereads or after validation failure."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #352-#354 with minimal visible-surface growth.",
+    "hard constraints": "Stay on master; keep behavior portable and generated adapters non-authoritative.",
+    "agent may decide locally": "Exact inventory artifact format, adapter wording, and report-shape guard thresholds.",
+    "escalate when": "The smallest useful compression would delete or rename a startup surface."
+  },
+  "references": [
+    { "kind": "issue", "target": "#352", "label": "visible surface inventory", "role": "child", "locator": "" },
+    { "kind": "issue", "target": "#353", "label": "adapter compression", "role": "child", "locator": "" },
+    { "kind": "issue", "target": "#354", "label": "report router proof", "role": "child", "locator": "" },
+    { "kind": "issue", "target": "#230", "label": "product compression umbrella", "role": "parent", "locator": "" }
+  ],
+  "active_milestone": {
+    "id": "visible-surface-compression",
+    "status": "completed",
+    "scope": "#352-#354",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed plan and leave #230 as the only open continuation."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/execplans/visible-surface-compression-2026-04-26.plan.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json"
+  ],
+  "invariants": [
+    "Do not switch branches.",
+    "Do not make GitHub a shipped package dependency.",
+    "Do not add a new first-line product concept for the inventory."
+  ],
+  "contract_decisions_to_freeze": [
+    "Report router shape should be tested as compact, with raw high-volume detail behind full profile or section selectors.",
+    "Generated adapters should route to compact package queries instead of restating broad doctrine."
+  ],
+  "open_questions_to_close": [
+    "Closed: compress generated adapters behind start/summary/proof while preserving weak-agent compatibility."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "cd packages/planning && uv run pytest tests/test_installer.py",
+    "cd packages/planning && uv run ruff check .",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "required_tools": [
+    "gh",
+    "uv",
+    "git"
+  ],
+  "completion_criteria": [
+    "#352-#354 are implemented and closed.",
+    "Visible-surface inventory exists and identifies candidates.",
+    "At least one generated adapter is shorter or better routed to compact queries.",
+    "Default report router shape is guarded by tests.",
+    "No active execplan remains after archive closeout."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace preflight --format json; gh issue list --state open; uv run agentic-workspace summary --format json; uv run agentic-workspace report --section operational_compression",
+    "what happened": "Implemented #352-#354: added a compact visible-surface inventory review artifact, compressed generated startup adapters behind compact commands, updated renderer/check payloads, and added default-report router-shape guard coverage.",
+    "scope touched": "Planning state/evidence, generated adapter renderers and payload copies, adapter outputs, planning-surface checks, report CLI/test coverage, and the review inventory artifact.",
+    "changed surfaces": "AGENTS.md, llms.txt, tools/AGENT_QUICKSTART.md, tools/AGENT_ROUTING.md, docs/reviews/visible-product-surface-inventory-2026-04-26.md, renderer/check sources, planning state/evidence, and tests.",
+    "validations run": "proof --changed; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace doctor --target . --modules planning --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests scripts/check/check_planning_surfaces.py .agentic-workspace/planning/scripts/check/check_planning_surfaces.py; cd packages/planning && uv run pytest tests/test_installer.py tests/test_check_planning_surfaces.py; cd packages/planning && uv run ruff check .",
+    "result for continuation": "#352, #353, and #354 are closed; #230 remains open as the broader product-compression umbrella.",
+    "next step": "Run reconcile/summary and archive this completed plan."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; the pass compressed existing surfaces and added only a review artifact justified by #352.",
+    "proof status": "passed selected lanes",
+    "intent served": "yes; product shape is smaller at first contact and guarded against default-report bloat.",
+    "config compliance": "used package workflow surfaces, stayed on master, preserved portability, and kept GitHub as external evidence only.",
+    "misinterpretation risk": "low; #230 remains open and adapter deletion was intentionally deferred.",
+    "follow-on decision": "archive this slice; continue future product-shape compression under #230."
+  },
+  "proof_report": {
+    "validation proof": "proof selected planning_surfaces, maintainer_surfaces, planning_package, and workspace_cli with surface_value_review accepted and flagged_count 0.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Maintainer surfaces, planning-surface check, planning doctor, root CLI tests, root ruff, planning package tests, and planning package ruff passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Refresh and repeat.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The refreshed child issues #352, #353, and #354 were implemented and closed with validation comments, but the broader #230 product-compression umbrella remains open.",
+    "unsolved intent passed to": "#230"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Reduce total successful-completion cost across restart, handoff, review, and proof loops.",
+    "slice shaping bias": "Prefer compact queryable routing and generated adapter compression over new durable public surfaces.",
+    "broader-lane validation question": "Did this pass make the public product shape smaller or easier to trust?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The child issues are complete, but product-shape compression is an ongoing umbrella outcome.",
+    "evidence carried forward": "Review inventory plus renderer/check/report tests identify and protect the current compression targets.",
+    "reopen trigger": "A generated adapter or default report grows independent doctrine or high-volume payload by default."
+  },
+  "execution_summary": {
+    "outcome delivered": "Visible surface inventory, generated adapter compression, and default report router guard.",
+    "validation confirmed": "All proof-selected checks passed.",
+    "follow-on routed to": "#230",
+    "post-work posterity capture": "Review inventory is checked in under docs/reviews as evidence/history, not a startup surface.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory promotion needed; validation guard updates captured recurring checker friction.",
+    "resume from": "#230 for future measured compression slices."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        { "summary": "Command-by-command execution detail is retained only in this archived proof record.", "owner": "discard", "source": "execution_run" }
+      ],
+      "continuation": [
+        { "summary": "#230 remains open for future product-shape compression after #352-#354.", "owner": "#230", "source": "closure_check" }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        { "summary": "Visible-surface inventory", "owner": "issue", "source": "#352" },
+        { "summary": "Generated adapter compression", "owner": "issue", "source": "#353" },
+        { "summary": "Compact report router proof", "owner": "issue", "source": "#354" }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-26: Promoted #352-#354 from refreshed live issue state after preflight, summary, and operational-compression dogfood.",
+    "2026-04-26: Closed #352-#354 after compressing generated adapters, adding report router guard coverage, and updating startup-policy drift checks."
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Visible Surface Compression Closeout",
+  "summary": "Classify #352-#354 after the product-shape compression slice landed.",
+  "issue_classifications": [
+    {
+      "id": "#352",
+      "title": "[Workspace]: Inventory the current visible product surface before the next subtraction slice",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "docs/reviews/visible-product-surface-inventory-2026-04-26.md classifies the requested visible surfaces by role and authority and identifies concrete compression candidates.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#353",
+      "title": "[Workspace]: Compress generated adapter surfaces behind contract-backed renderers",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "llms.txt, AGENTS.md, tools/AGENT_QUICKSTART.md, and tools/AGENT_ROUTING.md now route ordinary startup through agentic-workspace start; renderer and drift-check payload copies were updated so adapters stay non-authoritative.",
+      "follow_up": "#230"
+    },
+    {
+      "id": "#354",
+      "title": "[Workspace]: Prove the compact report remains a router after the contract and memory tranche",
+      "classification": "fully_satisfied_with_evidence",
+      "live_state": "closed",
+      "evidence": "Default report payload now carries router_shape_guard metadata and tests assert high-volume sections stay out of the default report.",
+      "follow_up": "#230"
+    }
+  ]
+}

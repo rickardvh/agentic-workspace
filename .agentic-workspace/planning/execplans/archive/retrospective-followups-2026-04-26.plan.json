@@ -232,8 +232,20 @@
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [],
+      "discard": [
+        {
+          "summary": "Local execution detail stayed in the archived proof record.",
+          "owner": "archive",
+          "source": "execution_run"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#230 remains open as the broader product-compression umbrella.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "closure_check"
+        }
+      ],
       "memory": [],
       "config_check": [],
       "docs": [],

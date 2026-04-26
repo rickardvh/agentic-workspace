@@ -7,27 +7,19 @@ Authority marker:
 - safe_to_edit: false
 - refresh_command: `make maintainer-surfaces`
 
-This file is the agent entrypoint router.
-Treat it as a lightweight compatibility adapter over the structured workspace config, not as the primary authority.
+Generated compatibility adapter. Canonical startup behavior lives in `AGENTS.md`, workspace contracts, and compact commands.
 
-Use Agentic Workspace as the lifecycle front door for the repository that contains this file.
-
-Target repository:
-- the repository containing this llms.txt file
-
-Default startup path:
+Ordinary path:
 - Read `AGENTS.md` first.
-- Then run `agentic-workspace preflight --format json` when you want startup guidance, resolved config, and active state in one compact answer.
-- Then run `agentic-workspace defaults --section startup --format json` for the ordered compact startup route.
-- Run `agentic-workspace config --target ./repo --format json` when the configured startup entrypoint, posture, or workflow obligations matter.
-- Run `agentic-workspace summary --format json` when active planning or ownership state matters.
-- Do not assume agentic-workspace is already installed; follow the checked-in lifecycle instructions in this repository.
-- For lifecycle work, use agentic-workspace rather than package-specific CLIs unless package-local debugging is required.
+- Run `agentic-workspace start --format json` for compact startup context.
+- Run `agentic-workspace summary --format json` when active work or roadmap state matters.
+- Run `agentic-workspace proof --changed <paths> --format json` before claiming validation.
 
 When needed:
-- Read `.agentic-workspace/docs/routing-contract.md` only when lifecycle or install/adopt routing is still ambiguous after the compact startup path.
-- For compact configuration queries beyond startup order, prefer `agentic-workspace defaults --section agent_configuration_queries --format json` before broader prose.
-- Open `.agentic-workspace/planning/state.toml` and the active execplan only when `agentic-workspace summary --format json` points there.
+- `agentic-workspace preflight --format json` for takeover context.
+- `agentic-workspace config --target ./repo --format json` for configured posture or obligations.
+- `agentic-workspace report --target ./repo --format json` for health, warnings, and selectors.
+- Open raw planning or contract files only when compact commands point there.
 
 Preferred lifecycle commands:
 - `agentic-workspace install --target ./repo --preset full`
@@ -35,12 +27,10 @@ Preferred lifecycle commands:
 - `agentic-workspace summary --format json`
 - `agentic-workspace report --target ./repo --format json`
 
-Quick state check:
-- If `.agentic-workspace/config.local.toml` is present, use the config report to see local capability/cost posture without treating it as checked-in repo policy.
-
 Rules:
 - Keep this file lightweight.
 - Keep planning and memory ownership boundaries explicit.
+- Keep canonical authority in contracts, config, planning, Memory, and checks, not this adapter.
 - Workflow artifact profile: repo-owned.
 - .agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans stay authoritative; no extra runtime artifact should carry durable state.
 

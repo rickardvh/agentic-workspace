@@ -663,6 +663,8 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     contributor_text = "\n".join(_read_lines(contributor_path)).lower() if contributor_path.exists() else ""
 
     required_agents_fragments = (
+        "agentic-workspace start --format json",
+        "agentic-workspace preflight --format json",
         "agentic-workspace summary --format json",
         "agentic-workspace config --target . --format json",
         "open module, planning, memory, or deeper routing files only when the compact answers point there",
@@ -679,9 +681,10 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         )
 
     if (
-        "agentic-workspace summary --format json" not in quickstart_text
+        "agentic-workspace start --format json" not in quickstart_text
+        or "agentic-workspace summary --format json" not in quickstart_text
         or "do not bulk-read all planning surfaces" not in quickstart_text
-        or "## authority table" not in quickstart_text
+        or "## authority table" in quickstart_text
         or "generated static adapter" not in quickstart_text
     ):
         warnings.append(
@@ -695,9 +698,11 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
     if llms_text and not all(
         fragment in llms_text
         for fragment in (
-            "agent entrypoint router",
+            "generated compatibility adapter",
             "read `agents.md`",
-            "read `.agentic-workspace/docs/routing-contract.md`",
+            "agentic-workspace start --format json",
+            "agentic-workspace proof --changed <paths> --format json",
+            "open raw planning or contract files only when compact commands point there",
         )
     ):
         warnings.append(
