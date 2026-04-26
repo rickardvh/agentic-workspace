@@ -1,0 +1,97 @@
+{
+  "kind": "planning-review/v1",
+  "title": "System-Intent Self-Improvement Review",
+  "date": "2026-04-26",
+  "scope": [
+    "current self-improvement branch",
+    "system-intent alignment",
+    "compact report and skill-discovery surfaces"
+  ],
+  "classification": "system-intent",
+  "goal": [
+    "Find current package behaviors that make self-improvement less cheap, quiet, or intent-aligned than the system intent requires."
+  ],
+  "non_goals": [
+    "Do not reopen historical lanes or create new durable first-line surfaces.",
+    "Do not treat repo-local dogfooding convenience as shipped package authority."
+  ],
+  "review_mode": {
+    "mode": "system-intent",
+    "review_question": "Do the current compact surfaces make package dogfooding the cheapest honest path while preserving quiet, low-residue operation?",
+    "default_finding_cap": "bounded",
+    "inputs_inspected_first": "agentic-workspace summary, report, reconcile, skills, effective_authority, repo_friction, operational_compression, SYSTEM_INTENT.md, .agentic-workspace/system-intent/intent.toml"
+  },
+  "review_method": {
+    "commands_used": [
+      "uv run agentic-workspace summary --format json",
+      "uv run agentic-workspace report --target . --format json",
+      "uv run agentic-workspace reconcile --format json",
+      "uv run agentic-workspace skills --target . --task \"create a system-intent review and use it to run self-improvement until all findings have been addressed\" --format json",
+      "uv run agentic-workspace report --target . --section effective_authority --format json",
+      "uv run agentic-workspace report --target . --section repo_friction --format json",
+      "uv run agentic-workspace report --target . --section operational_compression --format json"
+    ],
+    "evidence_sources": [
+      "SYSTEM_INTENT.md",
+      ".agentic-workspace/system-intent/intent.toml",
+      "tools/skills/self-improvement-dogfooding/SKILL.md",
+      "tools/skills/REGISTRY.json",
+      "src/agentic_workspace/cli.py",
+      "tests/test_workspace_cli.py"
+    ]
+  },
+  "findings": [
+    {
+      "id": "skill-selector-misses-explicit-self-improvement",
+      "title": "Skill discovery fails the cheapest-path test for explicit self-improvement requests",
+      "action_state": "addressed",
+      "confidence": "high",
+      "source_class": "friction-confirmed",
+      "evidence": "The task explicitly said self-improvement, and the repo-local self-improvement-dogfooding skill was listed, but recommendations ranked planning-review-pass first and did not include self-improvement-dogfooding. This contradicts prior closeout evidence that the skill should be recommended for repeat system-intent dogfooding prompts.",
+      "promotion_target": "runtime selector and CLI tests",
+      "promotion_trigger": "Addressed in this pass because the current task depends on skill discovery as the dogfooding entrypoint.",
+      "resolution": "Normalized multi-word skill term matching against normalized task text and added a regression test for hyphenated self-improvement prompts.",
+      "system_intent_pressure": [
+        "Make the package the cheapest path for bounded work.",
+        "Reduce repeated steering and context overload.",
+        "Keep repo-local dogfooding separate but discoverable when explicitly named."
+      ]
+    },
+    {
+      "id": "idle-effective-authority-overstates-review-pressure",
+      "title": "Effective authority reports needs-review for an idle clean workspace",
+      "action_state": "addressed",
+      "confidence": "high",
+      "source_class": "analysis-confirmed",
+      "evidence": "report --section effective_authority returns status needs-review solely because no active planning record is present, while summary reports narrow-direct-ready and report findings are empty. No active plan is expected for idle or narrow direct work, so the status makes the package feel noisier than the compact surfaces otherwise indicate.",
+      "promotion_target": "report effective_authority payload and CLI tests",
+      "promotion_trigger": "Addressed in this pass because it is a default-router quietness issue, not a new capability.",
+      "resolution": "Moved no-active-planning-record from unresolved_gaps into idle_context so clean idle workspaces report effective_authority.status = ready while still exposing the absence of active work.",
+      "system_intent_pressure": [
+        "Stay quiet, repo-native, and low-residue.",
+        "Prefer compact queryable state over prose-first operation.",
+        "Do not make ordinary work feel like a visible workflow framework."
+      ]
+    }
+  ],
+  "recommendation": {
+    "promote": "Both bounded runtime/reporting findings were fixed in the current branch.",
+    "defer": "Do not create new commands or durable first-line surfaces.",
+    "dismiss": "No broader external-work or planning-residue finding is present; summary, reconcile, and report findings are clean."
+  },
+  "retention": {
+    "closeout_shape": "keep as compact evidence for this self-improvement pass; update finding action_state after proof",
+    "trigger": "all findings addressed and validation passes",
+    "proof_surface": "agentic-workspace proof --target . --changed <paths> --format json"
+  },
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"skills_command_recommends_self_improvement or report_real_init or report_section_selector_returns_compact_section_answer or default_profile_returns_router\"",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace skills --target . --task \"create a system-intent review and use it to run self-improvement until all findings have been addressed\" --format json",
+    "uv run agentic-workspace report --target . --section effective_authority --format json"
+  ],
+  "drift_log": [
+    "2026-04-26: Review created with two actionable findings from current dogfooding evidence.",
+    "2026-04-26: Both findings marked addressed after local regression checks and live command verification."
+  ]
+}

@@ -5120,11 +5120,12 @@ def _effective_authority_payload(
     contract_areas = contract_inventory.get("areas", [])
     config_payload = _system_intent_source_payload(config) if config is not None else {}
     unresolved_gaps: list[dict[str, str]] = []
+    idle_context: list[dict[str, str]] = []
     if active_status == "absent":
-        unresolved_gaps.append(
+        idle_context.append(
             {
                 "id": "no-active-planning-record",
-                "summary": "No active planning record is present, so current-work alignment cannot be judged from an active execplan.",
+                "summary": "No active planning record is present; this is normal for idle or narrow direct work.",
                 "recommended_query": "agentic-workspace summary --format json",
             }
         )
@@ -5228,6 +5229,7 @@ def _effective_authority_payload(
             "ownership": "agentic-workspace ownership --target ./repo --format json",
         },
         "unresolved_gaps": unresolved_gaps,
+        "idle_context": idle_context,
     }
 
 
@@ -8710,6 +8712,7 @@ def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
 
 def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[SkillRecommendation]:
     task_text_lower = task_text.lower()
+    task_text_normalized = " ".join(_skill_match_tokens(task_text))
     if "setup" in task_text_lower:
         for skill in skills:
             if skill.skill_id == "planning-reporting":
@@ -8733,6 +8736,7 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
         matched_phrases = _matched_skill_terms(
             terms=skill.activation_hints.phrases,
             task_text_lower=task_text_lower,
+            task_text_normalized=task_text_normalized,
             task_tokens=task_tokens,
         )
         if matched_phrases:
@@ -8746,7 +8750,12 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
             ("noun", skill.activation_hints.nouns, 2),
             ("context", skill.activation_hints.when, 1),
         ):
-            matched = _matched_skill_terms(terms=terms, task_text_lower=task_text_lower, task_tokens=task_tokens)
+            matched = _matched_skill_terms(
+                terms=terms,
+                task_text_lower=task_text_lower,
+                task_text_normalized=task_text_normalized,
+                task_tokens=task_tokens,
+            )
             if matched:
                 matched_score = len(matched) * weight
                 score += matched_score
@@ -8776,17 +8785,32 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
     return recommendations
 
 
-def _matched_skill_terms(*, terms: tuple[str, ...], task_text_lower: str, task_tokens: set[str]) -> list[str]:
-    matched = [term for term in terms if _skill_term_matches(term=term, task_text_lower=task_text_lower, task_tokens=task_tokens)]
+def _matched_skill_terms(
+    *,
+    terms: tuple[str, ...],
+    task_text_lower: str,
+    task_text_normalized: str,
+    task_tokens: set[str],
+) -> list[str]:
+    matched = [
+        term
+        for term in terms
+        if _skill_term_matches(
+            term=term,
+            task_text_lower=task_text_lower,
+            task_text_normalized=task_text_normalized,
+            task_tokens=task_tokens,
+        )
+    ]
     return sorted(dict.fromkeys(matched))
 
 
-def _skill_term_matches(*, term: str, task_text_lower: str, task_tokens: set[str]) -> bool:
+def _skill_term_matches(*, term: str, task_text_lower: str, task_text_normalized: str, task_tokens: set[str]) -> bool:
     normalised = " ".join(_skill_match_tokens(term))
     if not normalised:
         return False
     if " " in normalised:
-        return normalised in task_text_lower
+        return normalised in task_text_lower or normalised in task_text_normalized
     return normalised in task_tokens
 
 
