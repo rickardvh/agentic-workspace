@@ -86,7 +86,7 @@ def detect_bootstrap_layout(target_root: Path) -> str:
 
 
 def _record_repo_context_warnings(target_root: Path, result) -> None:
-    parent_repo = _find_parent_repo_root(target_root)
+    parent_repo = None if _has_git_boundary(target_root) else _find_parent_repo_root(target_root)
     if parent_repo is not None:
         result.add(
             "warning",
@@ -109,8 +109,7 @@ def _record_repo_context_warnings(target_root: Path, result) -> None:
 def _find_repo_candidates(start: Path) -> list[Path]:
     candidates: list[Path] = []
     for candidate in [start, *start.parents]:
-        git_dir = candidate / ".git"
-        if git_dir.is_dir() or git_dir.is_file():
+        if _has_git_boundary(candidate):
             candidates.append(candidate)
             continue
         if any((candidate / marker).exists() for marker in PROJECT_MARKERS):
@@ -120,12 +119,16 @@ def _find_repo_candidates(start: Path) -> list[Path]:
 
 def _find_parent_repo_root(target_root: Path) -> Path | None:
     for candidate in target_root.parents:
-        git_dir = candidate / ".git"
-        if git_dir.is_dir() or git_dir.is_file():
+        if _has_git_boundary(candidate):
             return candidate
         if any((candidate / marker).exists() for marker in PROJECT_MARKERS):
             return candidate
     return None
+
+
+def _has_git_boundary(path: Path) -> bool:
+    git_dir = path / ".git"
+    return git_dir.is_dir() or git_dir.is_file()
 
 
 def _find_nested_repo_roots(target_root: Path) -> list[Path]:
