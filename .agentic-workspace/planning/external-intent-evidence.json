@@ -666,6 +666,33 @@
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#349",
+      "title": "[Review]: Make broad-work closeout show package dogfooding evidence",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#350",
+      "title": "[Review]: Add branch-continuity guardrails for workflow-changing git actions",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#351",
+      "title": "[Review]: Resolve or baseline remaining historical closeout-audit debt",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
     }
   ]
 }
