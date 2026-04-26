@@ -2236,6 +2236,9 @@ def test_planning_summary_reports_active_items_and_warnings(tmp_path: Path) -> N
     assert summary["machine_first_planning"]["active_canonical_count"] == 0
     assert summary["machine_first_planning"]["active_markdown_fallback_count"] == 1
     assert "sidecar is canonical" in summary["machine_first_planning"]["rule"]
+    assert summary["execution_readiness"]["status"] == "planning-backed"
+    assert summary["execution_readiness"]["broad_work_allowed"] is True
+    assert summary["execution_readiness"]["recommendation"]["id"] == "continue-active-plan"
     assert summary["planning_surface_health"]["status"] == "clean"
     assert summary["planning_surface_health"]["warning_count"] == 0
     assert summary["planning_surface_health"]["recommended_next_action"] == "No planning-surface drift detected."
@@ -2396,6 +2399,8 @@ candidates = [
     assert summary["schema"]["full_profile_command"] == "agentic-workspace summary --format json --profile full"
     assert summary["machine_first_planning"]["status"] == "markdown-fallback-active"
     assert summary["machine_first_planning"]["active_markdown_fallback_count"] == 1
+    assert summary["execution_readiness"]["status"] == "planning-backed"
+    assert summary["execution_readiness"]["recommendation"]["id"] == "continue-active-plan"
     assert summary["planning_record"]["system_intent_alignment"]["relevant system intent"] == (
         "Preserve larger user or product outcome separately from the bounded slice."
     )
@@ -2409,6 +2414,35 @@ candidates = [
     assert summary["ownership_review"]["repo_owned_surface_count"] >= 1
     assert "repo_owned_surfaces" not in summary["ownership_review"]
     assert "shared_fields" in summary["schema"]
+
+
+def test_planning_summary_flags_roadmap_work_without_active_plan(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "dogfooding-guardrail", title = "Dogfooding guardrail", priority = "first", issues = ["#322"], outcome = "Make planned work use planning.", reason = "A broad run bypassed active planning.", promotion_signal = "Promote before broad work.", suggested_first_slice = "Add readiness guardrail." },
+]
+candidates = [
+  { priority = "first", summary = "Dogfooding guardrail" },
+]
+""",
+    )
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+
+    readiness = summary["execution_readiness"]
+    assert readiness["status"] == "roadmap-needs-promotion"
+    assert readiness["broad_work_allowed"] is False
+    assert readiness["direct_work_allowed"] is True
+    assert readiness["recommendation"]["id"] == "promote-before-broad-work"
+    assert "Roadmap candidates are not execution authority" in readiness["rule"]
 
 
 def test_planning_summary_reports_candidate_lanes(tmp_path: Path) -> None:

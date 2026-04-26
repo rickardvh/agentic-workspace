@@ -3203,6 +3203,8 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
     planning_record = active.get("planning_record", {})
     handoff_contract = active.get("handoff_contract", {})
     has_active_execplan = bool(planning_status.get("active_execplan_count"))
+    roadmap_candidate_count = int(planning_status.get("roadmap_candidate_count") or 0)
+    roadmap_lane_count = int(planning_status.get("roadmap_lane_count") or 0)
     strong_planner = bool(mixed_agent["effective_posture"]["strong_planner_available"]["value"])
     cheap_executor = bool(mixed_agent["effective_posture"]["cheap_bounded_executor_available"]["value"])
     internal_delegation = bool(mixed_agent["effective_posture"]["supports_internal_delegation"]["value"])
@@ -3308,10 +3310,38 @@ def _execution_shape_payload(*, config: WorkspaceConfig, module_reports: list[di
         )
         return payload
 
+    if roadmap_candidate_count or roadmap_lane_count:
+        payload["task_shape"] = {
+            "id": "roadmap-backed-no-active-plan",
+            "summary": "Roadmap candidates exist, but no active planning-backed slice is present.",
+            "why": (
+                "Roadmap candidates are not execution authority. Broad planned or autopilot work needs an active "
+                "TODO item plus execplan before implementation; narrow direct tasks may still proceed."
+            ),
+        }
+        payload["recommendation"] = {
+            "id": "promote-before-broad-work",
+            "summary": "Promote the selected roadmap lane into active planning before broad implementation.",
+            "why": [
+                "The repo has roadmap candidates but no active execplan.",
+                "Broad planned work needs checked-in milestone, proof, and continuation state before code changes.",
+                "Direct execution remains appropriate only for narrow tasks that do not claim roadmap lane progress.",
+            ],
+            "consult": ["agentic-workspace summary --format json"],
+            "allowed_execution_methods": ["single-agent fallback for narrow work", "planning-backed execution after promotion"],
+            "deviation_visibility": (
+                "If broad work proceeds without promotion, record that as a workflow violation and treat closeout as lower trust."
+            ),
+        }
+        payload["deviation_rule"] = (
+            "Do not implement roadmap or autopilot lanes from chat or issue context alone; promote active planning first."
+        )
+        return payload
+
     payload["task_shape"] = {
         "id": "direct-or-no-active-plan",
         "summary": "No planning-backed broad slice is active right now.",
-        "why": "Without an active execplan-backed slice, the cheapest honest default is still direct execution.",
+        "why": "Without roadmap-backed planned work or an active execplan, the cheapest honest default is direct execution.",
     }
     payload["recommendation"] = {
         "id": "stay-direct",

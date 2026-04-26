@@ -1367,6 +1367,12 @@ def planning_summary(*, target: str | Path | None = None, profile: str = "full")
             "archived_count": archived_execplans,
         },
         "machine_first_planning": _machine_first_planning_payload(active_execplans=active_execplans),
+        "execution_readiness": _execution_readiness_payload(
+            active_items=active_items,
+            active_execplans=active_execplans,
+            roadmap_lanes=roadmap_lanes,
+            roadmap_candidates=roadmap_candidates,
+        ),
         "planning_record": planning_record,
         "active_contract": _contract_projection(active_contract, view_name="active_contract"),
         "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
@@ -1614,6 +1620,7 @@ def _planning_summary_schema() -> dict[str, Any]:
             "todo",
             "execplans",
             "machine_first_planning",
+            "execution_readiness",
             "ownership_review",
             "planning_surface_health",
             "planning_record",
@@ -1855,6 +1862,69 @@ def _machine_first_planning_payload(*, active_execplans: list[dict[str, str]]) -
     }
 
 
+def _execution_readiness_payload(
+    *,
+    active_items: list[dict[str, str]],
+    active_execplans: list[dict[str, str]],
+    roadmap_lanes: list[dict[str, Any]],
+    roadmap_candidates: list[dict[str, str]],
+) -> dict[str, Any]:
+    if active_execplans:
+        return {
+            "status": "planning-backed",
+            "broad_work_allowed": True,
+            "direct_work_allowed": True,
+            "active_execplan_count": len(active_execplans),
+            "roadmap_candidate_count": len(roadmap_candidates),
+            "recommendation": {
+                "id": "continue-active-plan",
+                "summary": "Use the active planning record as the execution authority for broad work.",
+                "next_step": "Continue from planning_record, resumable_contract, or handoff_contract before implementation.",
+            },
+            "rule": "Broad planned work should execute from the active checked-in planning record.",
+        }
+    if active_items:
+        return {
+            "status": "active-item-without-execplan",
+            "broad_work_allowed": False,
+            "direct_work_allowed": True,
+            "active_todo_count": len(active_items),
+            "roadmap_candidate_count": len(roadmap_candidates),
+            "recommendation": {
+                "id": "promote-active-item-before-broad-work",
+                "summary": "Promote or tighten the active TODO item before treating it as broad planned execution.",
+                "next_step": "Create or link an execplan when the active item needs milestone sequencing, proof scope, or handoff continuity.",
+            },
+            "rule": "A TODO row can own narrow direct work, but broad planned work needs an active execplan.",
+        }
+    if roadmap_lanes or roadmap_candidates:
+        return {
+            "status": "roadmap-needs-promotion",
+            "broad_work_allowed": False,
+            "direct_work_allowed": True,
+            "roadmap_lane_count": len(roadmap_lanes),
+            "roadmap_candidate_count": len(roadmap_candidates),
+            "recommendation": {
+                "id": "promote-before-broad-work",
+                "summary": "Promote a roadmap candidate into an active planning record before broad or autopilot implementation.",
+                "next_step": "Create one active TODO item plus an execplan for the selected lane, then continue from the compact planning contract.",
+            },
+            "rule": "Roadmap candidates are not execution authority; broad planned work must be promoted before implementation.",
+        }
+    return {
+        "status": "narrow-direct-ready",
+        "broad_work_allowed": False,
+        "direct_work_allowed": True,
+        "roadmap_candidate_count": 0,
+        "recommendation": {
+            "id": "stay-direct-for-narrow-work",
+            "summary": "No active planning-backed slice is present; narrow direct work may proceed.",
+            "next_step": "Promote to planning only if the work widens into milestone sequencing, proof scope, or handoff continuity.",
+        },
+        "rule": "Direct execution is acceptable for narrow work; broad planned work needs checked-in planning first.",
+    }
+
+
 def _planning_summary_compact_schema() -> dict[str, Any]:
     return {
         "schema_version": "planning-summary-compact-schema/v1",
@@ -1869,6 +1939,7 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
             "todo",
             "execplans",
             "machine_first_planning",
+            "execution_readiness",
             "planning_surface_health",
             "planning_record",
             "active_contract",
@@ -1902,6 +1973,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
     todo = dict(summary.get("todo", {}))
     execplans = dict(summary.get("execplans", {}))
     machine_first_planning = dict(summary.get("machine_first_planning", {}))
+    execution_readiness = dict(summary.get("execution_readiness", {}))
     roadmap = dict(summary.get("roadmap", {}))
     planning_surface_health = dict(summary.get("planning_surface_health", {}))
     ownership_review = dict(summary.get("ownership_review", {}))
@@ -1936,6 +2008,13 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "active_canonical_count": machine_first_planning.get("active_canonical_count", 0),
             "active_markdown_fallback_count": machine_first_planning.get("active_markdown_fallback_count", 0),
             "rule": machine_first_planning.get("rule", ""),
+        },
+        "execution_readiness": {
+            "status": execution_readiness.get("status", "unknown"),
+            "broad_work_allowed": bool(execution_readiness.get("broad_work_allowed", False)),
+            "direct_work_allowed": bool(execution_readiness.get("direct_work_allowed", True)),
+            "recommendation": execution_readiness.get("recommendation", {}),
+            "rule": execution_readiness.get("rule", ""),
         },
         "planning_surface_health": {
             "status": planning_surface_health.get("status", "unknown"),

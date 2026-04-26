@@ -1,0 +1,229 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning Backed Dogfooding Guardrail",
+  "goal": [
+    "Make broad planned or autopilot work visibly require an active checked-in planning record before implementation.",
+    "Preserve narrow direct execution for small tasks while preventing roadmap-backed lane work from looking like the default direct path."
+  ],
+  "non_goals": [
+    "Do not add a scheduler.",
+    "Do not block ordinary narrow fixes.",
+    "Do not turn GitHub issues into the canonical execution state."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Expose a compact execution-readiness guardrail so agents dogfood Agentic Workspace planning before broad implementation work.",
+      "constraints": "The guardrail must be advisory and machine-readable, must preserve cheap direct work, and must route broad roadmap/autopilot work into active planning before code changes.",
+      "latitude": "Choose the smallest summary/report/preflight surface that makes the unsafe no-active-plan state explicit.",
+      "escalation": "Escalate if the fix requires prompt parsing, a hard runtime gate, or a second planning authority."
+    },
+    "execution": {
+      "milestone": "surface-no-active-plan-broad-work-guardrail",
+      "status": "completed",
+      "next_step": "Archive this completed plan, close issue #322, then commit and push the guardrail.",
+      "proof": "Focused CLI/report/summary tests, lint, maintainer-surface checks, contract tooling checks, and planning-surface checks show the guardrail appears when roadmap candidates exist without an active execplan."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/planning-backed-dogfooding-guardrail.plan.json",
+        "src/agentic_workspace/cli.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "tests/test_workspace_cli.py",
+        "packages/planning/tests/test_installer.py"
+      ],
+      "invariants": [
+        "Checked-in planning remains the canonical execution substrate for broad planned work.",
+        "Narrow direct work remains allowed when no active plan exists.",
+        "Summary/report outputs stay compact and machine-readable."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "make this dogfooding failure harder to repeat by surfacing a planning-backed execution-readiness guardrail",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "planning-backed-dogfooding-guardrail"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "open a new follow-up only if agents can still run broad roadmap/autopilot work from chat or issues without an active planning record"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A compact warning and recommendation path for no-active-plan broad work.",
+    "intentionally deferred": "Hard enforcement, prompt classification, and complete remediation of older lower-trust closeouts.",
+    "discovered implications": "The current report default of `stay-direct` is unsafe when roadmap candidates exist and the user asks for broad planned implementation.",
+    "proof achieved now": "summary exposes `execution_readiness`, report routes roadmap-backed no-active-plan work to `promote-before-broad-work`, and focused regression tests cover the behavior.",
+    "validation still needed": "none for this slice after review; hard commit/closeout enforcement remains optional follow-up if the advisory guardrail is bypassed again.",
+    "next likely slice": "decide whether commit/closeout tooling should refuse broad-lane closure without active planning residue if advisory output is insufficient"
+  },
+  "intent_interpretation": {
+    "literal request": "use the serious dogfooding miss as a valuable improvement signal",
+    "inferred intended outcome": "turn the operator failure into a product guardrail so the package is harder to bypass during planned work",
+    "chosen concrete what": "surface execution readiness for roadmap-backed no-active-plan states and recommend plan promotion before broad work",
+    "interpretation distance": "low",
+    "review guidance": "Reject a fix that only documents the mistake without changing the package's compact operating outputs."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/planning-backed-dogfooding-guardrail.plan.json; src/agentic_workspace/cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; tests/test_workspace_cli.py; packages/planning/tests/test_installer.py",
+    "max changed files": "8",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -q -k \"execution_shape or dogfooding or summary\"; uv run pytest packages/planning/tests/test_installer.py -q -k \"summary or roadmap\"; uv run agentic-workspace summary --format json; uv run agentic-workspace report --target . --format json",
+    "ask-before-refactor threshold": "stop before changing plan file formats or adding a hard runtime command gate",
+    "stop before touching": "unrelated memory routing, installer lifecycle, or broad issue-closeout repair"
+  },
+  "stop_conditions": {
+    "stop when": "the guardrail is visible in compact outputs and focused tests prove the broad/no-active-plan distinction",
+    "escalate when boundary reached": "the fix needs prompt classification or runtime enforcement instead of state-derived readiness",
+    "escalate on scope drift": "the work turns into a general workflow engine or historical closeout cleanup",
+    "escalate on proof failure": "summary/report cannot expose the guardrail without breaking existing direct-work semantics"
+  },
+  "context_budget": {
+    "live working set": "summary/report execution-shape code, planning summary roadmap counts, focused tests, active plan state",
+    "recoverable later": "full history of the previous lane implementation run and older lower-trust closeout warnings",
+    "externalize before shift": "guardrail fields, validation commands, and any deferred hard-enforcement follow-up",
+    "pre-work config pull": "agentic-workspace report --target . --format json",
+    "pre-work memory pull": "dogfooding usage and recurring-failure notes when deciding posterity capture",
+    "tiny resumability note": "make no-active-plan plus roadmap candidates recommend promote-before-broad-work, not stay-direct",
+    "context-shift triggers": "before changing schema shape or after tests reveal incompatible summary/report expectations"
+  },
+  "delegated_judgment": {
+    "requested outcome": "make package dogfooding unavoidable enough for broad planned work",
+    "hard constraints": "state-derived, compact, advisory, no scheduler, narrow direct work stays cheap",
+    "agent may decide locally": "field names, exact wording, and whether the guardrail lives in summary, report, or both",
+    "escalate when": "hard enforcement, prompt classification, or historical issue remediation becomes necessary"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#322",
+      "label": "planning-backed execution guardrail",
+      "role": "active-issue",
+      "locator": "github issue #322"
+    },
+    {
+      "kind": "memory",
+      "target": ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
+      "label": "dogfooding usage signal",
+      "role": "supporting-context",
+      "locator": "memory note"
+    },
+    {
+      "kind": "memory",
+      "target": ".agentic-workspace/memory/repo/mistakes/recurring-failures.md",
+      "label": "recurring failures promotion target",
+      "role": "posterity-capture",
+      "locator": "memory note"
+    }
+  ],
+  "active_milestone": {
+    "id": "surface-no-active-plan-broad-work-guardrail",
+    "status": "completed",
+    "scope": "Add state-derived execution-readiness guidance for roadmap-backed work when no active execplan exists.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add and test the compact guardrail in summary/report outputs."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/planning-backed-dogfooding-guardrail.plan.json",
+    "src/agentic_workspace/cli.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "tests/test_workspace_cli.py",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "invariants": [
+    "Do not represent roadmap candidates as active execution state.",
+    "Do not make direct execution impossible for small tasks.",
+    "Do not rely on chat memory for broad work sequencing."
+  ],
+  "contract_decisions_to_freeze": [
+    "No-active-plan plus roadmap candidates is not enough authority for broad planned/autopilot implementation.",
+    "The compact package output should say to promote a planning record before broad work.",
+    "Direct execution remains acceptable only for narrow work that does not claim roadmap lane progress."
+  ],
+  "open_questions_to_close": [
+    "Closed: the guardrail appears in planning summary as `execution_readiness` and in workspace report as the no-active-plan execution-shape recommendation.",
+    "Closed: `execution_readiness.status` distinguishes `planning-backed`, `active-item-without-execplan`, `roadmap-needs-promotion`, and `narrow-direct-ready`."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"execution_shape or summary\"",
+    "uv run pytest packages/planning/tests/test_installer.py -q -k \"summary or roadmap\"",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace report --target . --format json",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "uv",
+    "gh"
+  ],
+  "completion_criteria": [
+    "No-active-plan plus roadmap candidates produces a compact promote-before-broad-work guardrail.",
+    "Existing planning-backed and narrow direct execution recommendations remain coherent.",
+    "Focused tests cover the new guardrail.",
+    "Issue #322 is closed only after proof and planning residue are current."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "single-agent direct with checked-in active plan",
+    "handoff source": "this active execplan",
+    "what happened": "Added a state-derived `execution_readiness` contract to planning summaries and changed workspace report execution-shape guidance so roadmap-backed no-active-plan work recommends promotion before broad implementation.",
+    "scope touched": ".agentic-workspace planning state and execplan; planning summary implementation; workspace report implementation; focused workspace/planning tests; recurring-failure memory note.",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/planning-backed-dogfooding-guardrail.plan.json; .agentic-workspace/memory/repo/mistakes/recurring-failures.md; .agentic-workspace/memory/repo/manifest.toml; packages/planning/src/repo_planning_bootstrap/installer.py; src/agentic_workspace/cli.py; packages/planning/tests/test_installer.py; tests/test_workspace_cli.py",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"execution_shape or summary or roadmap_backed\"; uv run pytest packages/planning/tests/test_installer.py -q -k \"summary or roadmap\"; uv run agentic-workspace summary --format json; uv run agentic-workspace report --target . --format json; uv run ruff check src packages/planning/src tests/test_workspace_cli.py packages/planning/tests/test_installer.py; uv run python scripts/check/check_planning_surfaces.py; uv run python scripts/check/check_contract_tooling_surfaces.py; make maintainer-surfaces; uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py packages/planning/tests/test_installer.py -q; uv run ruff check src packages/planning/src tests packages/planning/tests",
+    "result for continuation": "Issue #322 is satisfied by the advisory guardrail and durable anti-trap memory entry; hard enforcement should be a separate follow-up only if bypass recurs.",
+    "next step": "archive plan, close #322, commit, and push"
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "followed active planning before implementation and used configured proof/check surfaces before closeout",
+    "misinterpretation risk": "low; the fix changes machine-readable operating outputs rather than only documenting the mistake",
+    "follow-on decision": "close #322; open hard-enforcement follow-up only if advisory readiness is bypassed again"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_cli.py -q -k \"execution_shape or summary or roadmap_backed\"; uv run pytest packages/planning/tests/test_installer.py -q -k \"summary or roadmap\"; uv run pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py packages/planning/tests/test_installer.py -q; uv run ruff check src packages/planning/src tests packages/planning/tests; uv run agentic-workspace summary --format json; uv run agentic-workspace report --target . --format json; uv run python scripts/check/check_planning_surfaces.py; uv run python scripts/check/check_contract_tooling_surfaces.py; make maintainer-surfaces",
+    "proof achieved now": "The compact summary now exposes `execution_readiness`; roadmap-backed no-active-plan states recommend `promote-before-broad-work`; active planned work reports `planning-backed`; and focused plus broader tests pass.",
+    "evidence for \"proof achieved\" state": "243 targeted tests passed, ruff passed, planning surfaces were clean, contract tooling had no drift, maintainer surfaces were clean, and live summary/report output was planning-backed for this slice."
+  },
+  "intent_satisfaction": {
+    "original intent": "Use the serious dogfooding miss as a valuable improvement signal.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The product now surfaces the unsafe no-active-plan state directly and memory records the trap with a test/tooling remediation path.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Agentic Workspace should be a quiet repo-native continuity and execution layer that lowers restart, handoff, review, and proof cost.",
+    "slice shaping bias": "Prefer a compact queryable guardrail over more prose ritual.",
+    "broader-lane validation question": "Does the package now make bypassing checked-in planning less attractive for broad planned work?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "the package now gives agents a compact state-derived warning before broad roadmap/autopilot work without active planning, and the active work itself was executed from checked-in planning.",
+    "evidence carried forward": "issue #322, this archived execplan, `execution_readiness` summary output, workspace report execution-shape tests, and recurring-failure memory note",
+    "reopen trigger": "agents can still implement roadmap lanes from chat without active planning residue"
+  },
+  "execution_summary": {
+    "outcome delivered": "Added a compact planning-backed execution-readiness guardrail for roadmap-backed no-active-plan work.",
+    "validation confirmed": "Focused and broader tests, ruff, summary/report live checks, planning-surface check, contract tooling check, and maintainer-surface check passed.",
+    "follow-on routed to": "none required; optional hard enforcement only if bypass recurs",
+    "post-work posterity capture": ".agentic-workspace/memory/repo/mistakes/recurring-failures.md records the anti-trap lesson.",
+    "knowledge promoted (Memory/Docs/Config)": "Memory recurring-failure note plus manifest routing; package summary/report outputs carry the operational guardrail.",
+    "resume from": "issue #322 closure and archived plan"
+  },
+  "drift_log": [
+    "2026-04-26: Created from the observed failure where broad roadmap lane implementation used package reports/checks but did not keep an active planning record.",
+    "2026-04-26: Completed by adding `execution_readiness`, report promotion guidance for roadmap-backed no-active-plan work, focused tests, and recurring-failure memory capture."
+  ]
+}

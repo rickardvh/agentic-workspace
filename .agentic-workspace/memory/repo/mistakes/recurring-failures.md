@@ -29,13 +29,39 @@ Active
 
 ## Rule or lesson
 
-- No recurring failure pattern is recorded here yet.
 - This note is anti-trap memory, not a bug tracker, issue mirror, or backlog.
 - Add an entry after repeated recurrence, or after one verified incident that clearly exposes a trap likely to recur.
 - Prefer stable lessons, verification cues, and practical fixes over incident history or triage detail.
 - Keep entries concise, symptom-driven, and operational.
 - Use one entry per recurring trap or root lesson.
 - Move one-off bugs, active debugging, and status tracking into tests, canonical docs, issues, or the planning surface instead.
+
+### Failure: broad planned work bypasses active planning
+
+Symptom
+- A broad roadmap or autopilot run implements and closes issues while `agentic-workspace summary --format json` reports no active execplan.
+
+Likely cause
+- The agent treats GitHub issues, roadmap candidates, and chat context as enough execution authority, then uses Agentic Workspace only as an after-the-fact checker.
+
+Verify
+- Run `agentic-workspace summary --format json` and inspect `execution_readiness`, `planning_record`, and `execplans.active_count` before broad work.
+
+Fix
+- Promote the selected lane into `todo.active_items` plus an execplan before implementation; for roadmap-backed no-active-plan states, the compact output should recommend `promote-before-broad-work`.
+
+Load when
+- The user asks for autopilot, planned lanes, milestone sequences, broad roadmap implementation, or issue-closing implementation work.
+
+Review when
+- Summary/report execution-readiness behavior changes, or hard commit/closeout enforcement replaces the advisory guardrail.
+
+Failure signals
+- `execution_readiness.status` is `roadmap-needs-promotion` but implementation starts anyway.
+- Closeout claims roadmap progress without checked-in planning residue.
+
+Last confirmed
+2026-04-26 during issue #322 planning-backed dogfooding guardrail work.
 
 ## Entry format
 

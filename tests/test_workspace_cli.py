@@ -2859,6 +2859,40 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["config"]["mixed_agent"]["status"] == "reporting-only"
 
 
+def test_report_routes_roadmap_backed_work_to_planning_before_broad_execution(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    (target / ".agentic-workspace" / "planning" / "state.toml").write_text(
+        "[todo]\n"
+        "active_items = []\n"
+        "queued_items = []\n\n"
+        "[roadmap]\n"
+        "lanes = [\n"
+        "  { id = 'dogfooding-guardrail', title = 'Dogfooding guardrail', priority = 'first', issues = ['#322'], outcome = 'Make planned work use planning.', reason = 'A broad run bypassed active planning.', promotion_signal = 'Promote before broad work.', suggested_first_slice = 'Add readiness guardrail.' },\n"
+        "]\n"
+        "candidates = [\n"
+        "  { priority = 'first', summary = 'Dogfooding guardrail' },\n"
+        "]\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    execution_shape = payload["execution_shape"]
+    assert execution_shape["task_shape"]["id"] == "roadmap-backed-no-active-plan"
+    assert execution_shape["recommendation"]["id"] == "promote-before-broad-work"
+    assert execution_shape["recommendation"]["consult"] == ["agentic-workspace summary --format json"]
+    assert execution_shape["recommendation"]["allowed_execution_methods"] == [
+        "single-agent fallback for narrow work",
+        "planning-backed execution after promotion",
+    ]
+    assert "chat or issue context alone" in execution_shape["deviation_rule"]
+
+
 def test_report_handles_modules_with_empty_findings_lists(tmp_path: Path, monkeypatch, capsys) -> None:
     from repo_memory_bootstrap import installer as memory_installer
     from repo_planning_bootstrap import installer as planning_installer
