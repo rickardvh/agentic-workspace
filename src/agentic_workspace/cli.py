@@ -1235,8 +1235,11 @@ def _workspace_status_report(
 ) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
+    installed_modules = [
+        module_name for module_name in _ordered_module_names(descriptors) if descriptors[module_name].detector(target_root)
+    ]
     expected_handoff = _external_agent_handoff_text(
-        selected_modules=selected_modules,
+        selected_modules=installed_modules or selected_modules,
         agent_instructions_file=config.agent_instructions_file,
         workflow_artifact_profile=config.workflow_artifact_profile,
     )

@@ -4,8 +4,8 @@ queued_items = []
 
 [roadmap]
 lanes = [
-  { id = "further-product-compression-on-repeated-pressure", title = "Further product compression on repeated pressure", priority = "first", issues = ["#230"], outcome = "Continue removing, demoting, internalizing, or making measurable visible product residue so ordinary operation gets cheaper without losing leverage.", reason = "#341-#346 landed and closed as focused child slices; #230 remains open for broader product-compression pressure only when new repeated cost is visible.", promotion_signal = "Promote the smallest fresh slice that reduces default reading, durable residue, or review cost without adding a new first-line concept.", suggested_first_slice = "Do not promote automatically; wait for fresh #230 pressure or a new child issue." },
+  { id = "further-product-compression-on-repeated-pressure", title = "Further product compression on repeated pressure", priority = "first", issues = ["#230", "#347", "#348"], outcome = "Continue removing, demoting, internalizing, or making measurable visible product residue so ordinary operation gets cheaper without losing leverage.", reason = "#341-#346 landed and closed as focused child slices; the latest retrospective found #347 legacy-vs-new signal ambiguity and #348 duplicated generated llms.txt adapter residue.", promotion_signal = "Promote the smallest fresh slice that reduces default reading, durable residue, or review cost without adding a new first-line concept.", suggested_first_slice = "Start with #348 if adapter residue is the cheapest cleanup; start with #347 if reviewing operational-compression signals is the active need." },
 ]
 candidates = [
-  { priority = "first", summary = "Further product compression only when fresh #230 pressure appears" },
+  { priority = "first", summary = "Further product compression follow-ups from retrospective (#347/#348 under #230)" },
 ]

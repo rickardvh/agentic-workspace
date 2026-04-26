@@ -648,6 +648,24 @@
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#347",
+      "title": "[Review]: Distinguish legacy archive-distillation debt from new regressions in operational-compression reporting",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#348",
+      "title": "[Bug]: Generated llms.txt adapter repeats startup and success guidance",
+      "status": "open",
+      "kind": "issue",
+      "parent_id": "#230",
+      "planning_residue_expected": "required"
     }
   ]
 }

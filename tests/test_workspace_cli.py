@@ -3198,6 +3198,22 @@ def test_report_handles_modules_with_empty_findings_lists(tmp_path: Path, monkey
     assert payload["findings"] == []
 
 
+def test_doctor_module_filter_checks_llms_against_installed_modules(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["doctor", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "llms.txt: external-agent handoff file differs from the current workspace contract" not in payload["warnings"]
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    llms_action = next(action for action in workspace_report["actions"] if action["path"] == "llms.txt")
+    assert llms_action["kind"] == "current"
+
+
 def test_report_surfaces_planning_intent_validation_findings(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
