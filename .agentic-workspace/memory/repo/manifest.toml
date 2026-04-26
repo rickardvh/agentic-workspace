@@ -440,6 +440,8 @@ preferred_remediation = "test"
 improvement_candidate = true
 improvement_note = "Prefer regression tests, validation, or compact readiness output before growing this note."
 elimination_target = "shrink"
+config_treatment = "promote"
+config_note = "Current repo posture favors executable planning guardrails for broad work before retaining this as long-term passive memory."
 
 [durable_facts."memory-owner-boundary"]
 summary = "Memory owns durable rediscovery-saving repo facts, not active sequencing, backlog state, or workflow policy."
