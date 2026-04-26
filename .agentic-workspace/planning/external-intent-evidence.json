@@ -608,7 +608,7 @@
       "system": "github",
       "id": "#342",
       "title": "[Workspace]: Turn the surface-value guardrail into an ordinary review gate for durable surfaces",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
