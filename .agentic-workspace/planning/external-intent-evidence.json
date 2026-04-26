@@ -30,6 +30,15 @@
     },
     {
       "system": "github",
+      "id": "#252",
+      "title": "[Workspace]: Make the default entry path easier for generic agents to discover and follow so startup compliance does not depend on deep product awareness",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#251",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
       "id": "#253",
       "title": "[Workspace]: Make core package surfaces cheaper for generic agents to consume so using the package is easier than broad repo scavenging or private reinvention",
       "status": "closed",
@@ -62,6 +71,15 @@
       "status": "closed",
       "kind": "issue",
       "parent_id": "#251",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#257",
+      "title": "[Workspace]: Surface dangling larger intent and lower-trust closeout signals without assuming any external planning system",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "",
       "planning_residue_expected": "required"
     },
     {
@@ -139,7 +157,7 @@
     {
       "system": "github",
       "id": "#267",
-      "title": "[Planning]: Add an explicit planning↔config handshake so bounded work pulls material config before execution and checks config compliance after finishing",
+      "title": "[Planning]: Add an explicit planning\u2194config handshake so bounded work pulls material config before execution and checks config compliance after finishing",
       "status": "closed",
       "kind": "issue",
       "parent_id": "",
@@ -148,28 +166,10 @@
     {
       "system": "github",
       "id": "#268",
-      "title": "[Memory]: Add an explicit memory↔config handshake so memory creation asks how current config wants signals, notes, promotion, and cleanup to be treated",
+      "title": "[Memory]: Add an explicit memory\u2194config handshake so memory creation asks how current config wants signals, notes, promotion, and cleanup to be treated",
       "status": "closed",
       "kind": "issue",
       "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#257",
-      "title": "[Workspace]: Surface dangling larger intent and lower-trust closeout signals without assuming any external planning system",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "required"
-    },
-    {
-      "system": "github",
-      "id": "#252",
-      "title": "[Workspace]: Make the default entry path easier for generic agents to discover and follow so startup compliance does not depend on deep product awareness",
-      "status": "closed",
-      "kind": "issue",
-      "parent_id": "#251",
       "planning_residue_expected": "required"
     },
     {
@@ -1007,6 +1007,51 @@
       "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#388",
+      "title": "[Review]: Add ordinary agent path summary",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#389",
+      "title": "[Review]: Mark historical reviews as evidence-only unless selected",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#390",
+      "title": "[Review]: Explain why report sections matter now",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#391",
+      "title": "[Review]: Quiet idle planning projections further",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#392",
+      "title": "[Review]: Normalize agent feedback artifacts",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "",
       "planning_residue_expected": "required"
     }
   ]

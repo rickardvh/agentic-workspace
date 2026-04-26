@@ -63,6 +63,48 @@
       "locator": "src/agentic_workspace/contracts/schemas/agent_feedback.schema.json"
     }
   ],
+  "issue_classifications": [
+    {
+      "id": "#388",
+      "title": "[Review]: Add ordinary agent path summary",
+      "classification": "evidence-present",
+      "live_state": "closed",
+      "follow_up": "",
+      "evidence": "Implemented by commit 1fe7cf4 in report_profile.ordinary_agent_path with test coverage in tests/test_workspace_cli.py."
+    },
+    {
+      "id": "#389",
+      "title": "[Review]: Mark historical reviews as evidence-only unless selected",
+      "classification": "evidence-present",
+      "live_state": "closed",
+      "follow_up": "",
+      "evidence": "Implemented by commit 1fe7cf4 in closeout_trust.historical_review_artifacts with report-router coverage."
+    },
+    {
+      "id": "#390",
+      "title": "[Review]: Explain why report sections matter now",
+      "classification": "evidence-present",
+      "live_state": "closed",
+      "follow_up": "",
+      "evidence": "Implemented by commit 1fe7cf4 in section_hints[].why_now with test coverage in tests/test_workspace_cli.py."
+    },
+    {
+      "id": "#391",
+      "title": "[Review]: Quiet idle planning projections further",
+      "classification": "evidence-present",
+      "live_state": "closed",
+      "follow_up": "",
+      "evidence": "Implemented by commit 1fe7cf4 in compact planning summary projection_state and idle reason_code coverage."
+    },
+    {
+      "id": "#392",
+      "title": "[Review]: Normalize agent feedback artifacts",
+      "classification": "evidence-present",
+      "live_state": "closed",
+      "follow_up": "",
+      "evidence": "Implemented by commit 1fe7cf4 with src/agentic_workspace/contracts/schemas/agent_feedback.schema.json and schema validation coverage."
+    }
+  ],
   "findings": [],
   "recommendation": {
     "promote": "none",
