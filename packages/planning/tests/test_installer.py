@@ -3646,17 +3646,14 @@ def test_planning_summary_exposes_closure_evidence(tmp_path: Path) -> None:
 def test_planning_summary_dedupes_unavailable_projection_reason_fragments(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
 
-    summary = planning_summary(target=tmp_path)
+    summary = planning_summary(target=tmp_path, profile="compact")
 
-    reason = summary["hierarchy_contract"]["reason"]
-    fragments = [fragment.strip() for fragment in reason.split(";") if fragment.strip()]
-    assert len(fragments) == len(set(fragments))
-    assert fragments == [
-        "requires exactly one active execplan and at most one active TODO item",
-        "requires one active execplan with a present active intent contract",
-        "requires one active execplan with a present planning record",
-        "requires exactly one active execplan",
-    ]
+    assert summary["projection_state"]["status"] == "idle"
+    assert summary["projection_state"]["reason"] == "no active planning record"
+    assert summary["schema"]["shared_fields"][10] == "projection_state"
+    assert summary["hierarchy_contract"]["reason"] == "no active planning record"
+    assert summary["hierarchy_contract"]["reason_code"] == "idle-no-active-planning-record"
+    assert summary["handoff_contract"]["reason_code"] == "idle-no-active-planning-record"
 
 
 def test_planning_report_prints_closure_evidence(tmp_path: Path, capsys) -> None:

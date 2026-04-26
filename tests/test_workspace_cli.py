@@ -3100,6 +3100,11 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert payload["report_profile"]["default_profile"] == "router"
     assert payload["report_profile"]["full_profile"] == "full"
     assert payload["report_profile"]["decision_grade_fields"][0] == "health"
+    ordinary_path = payload["report_profile"]["ordinary_agent_path"]
+    assert ordinary_path["entry_command"] == "agentic-workspace start --target ./repo --format json"
+    assert ordinary_path["current_work_command"] == "agentic-workspace summary --format json"
+    assert ordinary_path["proof_command"] == "agentic-workspace proof --target ./repo --changed <paths> --format json"
+    assert "report_profile.ordinary_agent_path" in payload["report_profile"]["decision_grade_fields"]
     guard = payload["report_profile"]["router_shape_guard"]
     assert guard["status"] == "active"
     assert len(payload) <= guard["max_top_level_fields"]
@@ -3122,12 +3127,19 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert payload["deeper_detail"]["high_volume_sections"][0]["section"] == "module_reports"
     section_hints = {item["section"]: item for item in payload["section_hints"]}
     assert section_hints["module_reports"]["volume"] == "high"
+    assert "compact router field" in section_hints["module_reports"]["why_now"]
     assert section_hints["operational_compression"]["volume"] == "normal"
+    assert "reducing total work" in section_hints["operational_compression"]["why_now"]
     assert section_hints["external_work_delta"]["volume"] == "normal"
     assert "idle context" in section_hints["effective_authority"]["purpose"]
+    assert "idle state" in section_hints["effective_authority"]["why_now"]
     assert section_hints["effective_authority"]["command"] == (
         "agentic-workspace report --target ./repo --section effective_authority --format json"
     )
+    historical_reviews = payload["closeout_trust"]["historical_review_artifacts"]
+    assert historical_reviews["status"] == "evidence-only"
+    assert "not ordinary operating input" in historical_reviews["role"]
+    assert "Do not read historical review artifacts during startup" in historical_reviews["rule"]
 
 
 def test_report_section_selector_returns_compact_section_answer(tmp_path: Path, capsys) -> None:

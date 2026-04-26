@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from agentic_workspace import contract_tooling
 
@@ -16,6 +17,53 @@ def test_contract_tooling_check_passes() -> None:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     assert module.main([]) == 0
+
+
+def test_agent_feedback_schema_validates_normalized_feedback_artifact() -> None:
+    schema = contract_tooling.contract_schema("agent_feedback.schema.json")
+    sample = {
+        "kind": "agent-feedback-review/v1",
+        "schema_version": "agentic-workspace/agent-feedback/v1",
+        "evaluated_at": "2026-04-26",
+        "prompt_ref": "agent-feedback-prompt.txt",
+        "context": {
+            "target": ".",
+            "work_window": "current self-improvement branch",
+            "package_surfaces_used": [
+                "agentic-workspace report --target . --format json",
+                "agentic-workspace summary --format json",
+            ],
+        },
+        "impact": {
+            "outcome": "better recovery and proof routing",
+            "quality": "higher closeout confidence",
+            "efficiency": "lower total reconstruction work",
+            "cognitive_load": "lower when compact routes answer the task",
+        },
+        "findings": [
+            {
+                "id": "ordinary-agent-path",
+                "summary": "The ordinary path should be one compact answer.",
+                "classification": "product-general",
+                "evidence": ["agent-feedback-prompt.txt evaluation"],
+                "severity": "medium",
+            }
+        ],
+        "suggestions": [
+            {
+                "finding_id": "ordinary-agent-path",
+                "summary": "Expose entry, state, proof, and escalation guidance together.",
+                "expected_effect": "new agents can start with less reconstruction",
+            }
+        ],
+        "follow_up_routing": {
+            "issues": ["#388"],
+            "deferred": [],
+        },
+    }
+
+    errors = list(Draft202012Validator(schema).iter_errors(sample))
+    assert errors == []
 
 
 def test_command_adapter_generation_contract_identifies_defaults_candidate() -> None:

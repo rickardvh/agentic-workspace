@@ -3008,7 +3008,12 @@ def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "source": "execution_shape",
             }
     section_hints = _report_section_hints(payload)
-    profile_payload = payload.get("report_profile", _report_profile_payload())
+    profile_payload = dict(payload.get("report_profile", _report_profile_payload()))
+    profile_payload["ordinary_agent_path"] = _ordinary_agent_path_payload(payload=payload, findings=findings)
+    decision_grade_fields = list(profile_payload.get("decision_grade_fields", []))
+    if "report_profile.ordinary_agent_path" not in decision_grade_fields:
+        decision_grade_fields.append("report_profile.ordinary_agent_path")
+    profile_payload["decision_grade_fields"] = decision_grade_fields
     return {
         "kind": "workspace-report-router/v1",
         "schema": {
@@ -3111,6 +3116,33 @@ def _report_router_external_work_delta(value: Any) -> dict[str, Any]:
     }
 
 
+def _ordinary_agent_path_payload(*, payload: dict[str, Any], findings: list[dict[str, Any]]) -> dict[str, Any]:
+    effective_authority = payload.get("effective_authority", {})
+    current_work = effective_authority.get("current_work", {}) if isinstance(effective_authority, dict) else {}
+    if not isinstance(current_work, dict):
+        current_work = {}
+    current_status = str(current_work.get("status", "unknown") or "unknown")
+    warning_count = len(findings)
+    return {
+        "status": "ready",
+        "entry_command": "agentic-workspace start --target ./repo --format json",
+        "state_command": "agentic-workspace report --target ./repo --format json",
+        "current_work_command": "agentic-workspace summary --format json",
+        "proof_command": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+        "deep_detail_rule": "Open section, memory, planning, or review artifacts only when compact output points there.",
+        "current_signal": {
+            "current_work_status": current_status,
+            "warning_count": warning_count,
+        },
+        "stop_or_escalate_when": [
+            "compact report health is not healthy",
+            "summary reports active broad work without a checked-in plan you can continue from",
+            "proof selection is ambiguous for the changed paths",
+            "the next change would alter product direction, authority boundaries, or system intent",
+        ],
+    }
+
+
 def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
     section_purposes = {
         "effective_authority": "authority, current work, system-intent pressure, idle context, and unresolved gaps",
@@ -3128,6 +3160,29 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
         "config": "resolved workspace config and local posture",
         "registry": "module registry and lifecycle metadata",
     }
+    findings = [finding for finding in payload.get("findings", []) if isinstance(finding, dict)]
+    current_work = (
+        payload.get("effective_authority", {}).get("current_work", {}) if isinstance(payload.get("effective_authority"), dict) else {}
+    )
+    current_status = str(current_work.get("status", "unknown") if isinstance(current_work, dict) else "unknown")
+    why_now = {
+        "effective_authority": ("inspect now if authority, idle state, or unresolved intent pressure affects whether work can proceed"),
+        "execution_shape": "inspect now to choose direct work, light planning, or checked-in execplan promotion",
+        "operational_compression": "inspect now when assessing whether package surfaces are reducing total work",
+        "findings": "inspect now because warnings are present" if findings else "skip unless diagnosing an absent-warning state",
+        "module_reports": "deep detail; inspect only when a compact router field points to planning or memory internals",
+        "reports": "deep lifecycle detail; inspect only for report/debug work",
+        "surface_value_guardrail": "inspect before adding or expanding a visible surface",
+        "closeout_trust": "inspect before closing broad work or auditing package-use evidence",
+        "external_work_delta": "inspect when external-work intake or closure state is part of the task",
+        "discovery": "inspect during setup, bootstrap, or missing-surface diagnosis",
+        "standing_intent": "inspect when product direction or stronger-home placement is the question",
+        "repo_friction": "inspect when choosing or routing improvement targets",
+        "config": "deep detail; inspect only when resolved config, posture, or obligations matter",
+        "registry": "deep detail; inspect only when module metadata or lifecycle registration matters",
+    }
+    if current_status in {"absent", "direct-or-no-active-plan"}:
+        why_now["effective_authority"] = "inspect now only if idle state, authority, or system-intent pressure is unclear"
     hints: list[dict[str, Any]] = []
     for section, purpose in section_purposes.items():
         if section in payload:
@@ -3135,6 +3190,7 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 {
                     "section": section,
                     "purpose": purpose,
+                    "why_now": why_now.get(section, "inspect when this section is named by compact routing output"),
                     "command": f"agentic-workspace report --target ./repo --section {section} --format json",
                     "volume": "high" if section in {"module_reports", "reports", "registry", "config"} else "normal",
                 }
@@ -3153,6 +3209,7 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
             "reason": "planning module is not installed",
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report={}),
             "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report={}),
+            "historical_review_artifacts": _historical_review_artifacts_policy(planning_report={}, intent_validation={}),
         }
 
     intent_validation = planning_report.get("intent_validation", {})
@@ -3162,6 +3219,10 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
             "reason": "planning intent validation is unavailable",
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
             "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report),
+            "historical_review_artifacts": _historical_review_artifacts_policy(
+                planning_report=planning_report,
+                intent_validation={},
+            ),
         }
 
     counts = intent_validation.get("counts", {})
@@ -3196,7 +3257,32 @@ def _report_closeout_trust_payload(*, module_reports: list[dict[str, Any]]) -> d
         "sample_signals": sample_signals,
         "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
         "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report),
+        "historical_review_artifacts": _historical_review_artifacts_policy(
+            planning_report=planning_report,
+            intent_validation=intent_validation,
+        ),
         "recommended_next_action": recommended_next_action,
+    }
+
+
+def _historical_review_artifacts_policy(*, planning_report: dict[str, Any], intent_validation: dict[str, Any]) -> dict[str, Any]:
+    historical = intent_validation.get("historical_audit_references", {}) if isinstance(intent_validation, dict) else {}
+    if not isinstance(historical, dict):
+        historical = {}
+    source_count = _as_int(historical.get("source_count"))
+    item_count = _as_int(historical.get("item_count"))
+    if source_count == 0 and isinstance(planning_report, dict):
+        reconcile = planning_report.get("closeout_reconciliation", {})
+        if isinstance(reconcile, dict):
+            source_count = _as_int(reconcile.get("source_count"))
+            item_count = _as_int(reconcile.get("item_count"))
+    return {
+        "status": "evidence-only",
+        "role": "evidence/history, not ordinary operating input",
+        "source_count": source_count,
+        "item_count": item_count,
+        "rule": "Do not read historical review artifacts during startup unless a selected issue, audit, or report section points there.",
+        "selection_path": "agentic-workspace report --target ./repo --section closeout_trust --format json",
     }
 
 

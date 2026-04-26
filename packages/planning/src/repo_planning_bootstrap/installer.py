@@ -2115,6 +2115,7 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
             "machine_first_planning",
             "execution_readiness",
             "planning_surface_health",
+            "projection_state",
             "planning_record",
             "active_contract",
             "resumable_contract",
@@ -2132,11 +2133,19 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
     }
 
 
-def _compact_projection(payload: dict[str, Any], *, fields: tuple[str, ...]) -> dict[str, Any]:
+def _compact_projection(
+    payload: dict[str, Any],
+    *,
+    fields: tuple[str, ...],
+    idle_unavailable_reason: str | None = None,
+) -> dict[str, Any]:
     projected: dict[str, Any] = {}
     for key in ("status", "reason", "view_role", "view", "view_of"):
         if key in payload:
             projected[key] = payload[key]
+    if payload.get("status") != "present" and idle_unavailable_reason:
+        projected["reason"] = idle_unavailable_reason
+        projected["reason_code"] = "idle-no-active-planning-record"
     if payload.get("status") == "present":
         for field in fields:
             if field in payload:
@@ -2159,6 +2168,9 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         )
     finished_work_inspection_contract = dict(summary.get("finished_work_inspection_contract", {}))
     system_intent = dict(summary.get("system_intent", {}))
+    idle_unavailable_reason = (
+        "no active planning record" if todo.get("active_count", 0) == 0 and execplans.get("active_count", 0) == 0 else None
+    )
 
     compact_summary: dict[str, Any] = {
         "kind": summary.get("kind", "planning-summary/v1"),
@@ -2201,6 +2213,11 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "recommended_next_action": planning_surface_health.get("recommended_next_action", ""),
             "warnings": planning_surface_health.get("warnings", []),
         },
+        "projection_state": {
+            "status": "idle" if idle_unavailable_reason else "active-or-needs-review",
+            "reason": idle_unavailable_reason or "active planning projections may carry contract-specific reasons",
+            "rule": "Idle summaries state the absent active plan once; individual unavailable contracts keep short machine-readable reasons.",
+        },
         "planning_record": _compact_projection(
             dict(summary.get("planning_record", {})),
             fields=(
@@ -2216,10 +2233,12 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "stop_conditions",
                 "minimal_refs",
             ),
+            idle_unavailable_reason=idle_unavailable_reason,
         ),
         "active_contract": _compact_projection(
             dict(summary.get("active_contract", {})),
             fields=("todo_item", "intent", "touched_scope", "proof_expectations", "tool_verification", "minimal_refs"),
+            idle_unavailable_reason=idle_unavailable_reason,
         ),
         "resumable_contract": _compact_projection(
             dict(summary.get("resumable_contract", {})),
@@ -2233,6 +2252,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "blockers",
                 "minimal_refs",
             ),
+            idle_unavailable_reason=idle_unavailable_reason,
         ),
         "hierarchy_contract": _compact_projection(
             dict(summary.get("hierarchy_contract", {})),
@@ -2247,6 +2267,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "closure_check",
                 "minimal_refs",
             ),
+            idle_unavailable_reason=idle_unavailable_reason,
         ),
         "handoff_contract": _compact_projection(
             dict(summary.get("handoff_contract", {})),
@@ -2268,6 +2289,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "return_with",
                 "worker_contract",
             ),
+            idle_unavailable_reason=idle_unavailable_reason,
         ),
         "closeout_distillation_contract": _compact_projection(
             dict(summary.get("closeout_distillation_contract", {})),
@@ -2280,6 +2302,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 "recommended_next_action",
                 "minimal_refs",
             ),
+            idle_unavailable_reason=idle_unavailable_reason,
         ),
         "intent_validation_contract": _compact_projection(
             intent_validation_contract,

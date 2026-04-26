@@ -1,0 +1,89 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Agent feedback findings closeout",
+  "goal": [
+    "Record the implementation and proof for feedback-derived issues #388-#392."
+  ],
+  "scope": [
+    "Default report router guidance",
+    "Historical review artifact treatment",
+    "Report section routing hints",
+    "Compact planning summary idle projections",
+    "Normalized feedback artifact schema"
+  ],
+  "non_goals": [
+    "Add a new first-line command",
+    "Make GitHub or any other tracker a package dependency",
+    "Turn repo-local self-improvement workflow into shipped package doctrine"
+  ],
+  "review_mode": {
+    "mode": "closeout",
+    "review question": "Were the feedback-derived findings implemented with compact, package-agnostic surfaces and enough proof?",
+    "default finding cap": "n/a",
+    "inputs inspected first": "agent-feedback-prompt.txt evaluation findings; issues #388-#392; agentic-workspace report/summary/proof output"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace report --target . --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace proof --target . --changed <paths> --format json; uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_contract_tooling.py -q; cd packages/planning && uv run pytest tests/test_installer.py; uv run ruff check src tests; cd packages/planning && uv run ruff check .; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace reconcile --format json",
+    "evidence sources": "src/agentic_workspace/cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; src/agentic_workspace/contracts/schemas/agent_feedback.schema.json; tests/test_workspace_cli.py; tests/test_contract_tooling.py; packages/planning/tests/test_installer.py"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#388",
+      "label": "ordinary agent path",
+      "role": "closed by implementation",
+      "locator": "report_profile.ordinary_agent_path"
+    },
+    {
+      "kind": "issue",
+      "target": "#389",
+      "label": "historical reviews evidence-only",
+      "role": "closed by implementation",
+      "locator": "closeout_trust.historical_review_artifacts"
+    },
+    {
+      "kind": "issue",
+      "target": "#390",
+      "label": "section why-now hints",
+      "role": "closed by implementation",
+      "locator": "section_hints[].why_now"
+    },
+    {
+      "kind": "issue",
+      "target": "#391",
+      "label": "idle projection compactness",
+      "role": "closed by implementation",
+      "locator": "summary.projection_state and idle reason_code"
+    },
+    {
+      "kind": "issue",
+      "target": "#392",
+      "label": "feedback artifact schema",
+      "role": "closed by implementation",
+      "locator": "src/agentic_workspace/contracts/schemas/agent_feedback.schema.json"
+    }
+  ],
+  "findings": [],
+  "recommendation": {
+    "promote": "none",
+    "defer": "none",
+    "dismiss": "none"
+  },
+  "retention": {
+    "closeout shape": "compact review evidence",
+    "trigger": "issues #388-#392 closed after implementation proof",
+    "proof surface": "agentic-workspace proof-selected workspace_cli and planning_package lanes"
+  },
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run ruff check src tests",
+    "cd packages/planning && uv run pytest tests/test_installer.py",
+    "cd packages/planning && uv run ruff check .",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "drift_log": [
+    "2026-04-26: Review created from feedback-driven self-improvement closeout."
+  ]
+}
