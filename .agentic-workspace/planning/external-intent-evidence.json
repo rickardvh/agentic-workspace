@@ -810,6 +810,51 @@
       "kind": "issue",
       "parent_id": "#356",
       "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#365",
+      "title": "[Draft][Workspace]: Reassess lifecycle tools as generated-adapter-safe orchestration primitives",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#356",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#366",
+      "title": "[Draft][Workspace]: Map lifecycle command tasks and phases before generation",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#365",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#367",
+      "title": "[Draft][Workspace]: Define lifecycle risk and effect matrix",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#365",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#368",
+      "title": "[Draft][Workspace]: Review lifecycle primitives and output contracts",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#365",
+      "planning_residue_expected": "required"
+    },
+    {
+      "system": "github",
+      "id": "#369",
+      "title": "[Draft][Workspace]: Plan lifecycle conformance fixtures before adapter generation",
+      "status": "closed",
+      "kind": "issue",
+      "parent_id": "#365",
+      "planning_residue_expected": "required"
     }
   ]
 }

@@ -21,6 +21,7 @@ from agentic_workspace.contract_tooling import (
     contract_inventory_manifest,
     contract_schema,
     improvement_latitude_policy_manifest,
+    lifecycle_generation_readiness_manifest,
     module_registry_manifest,
     operation_contracts_manifest,
     operation_manifest,
@@ -581,6 +582,50 @@ def _validate_python_contract_consumption_policy(payload: dict[str, object]) -> 
     return errors
 
 
+def _validate_lifecycle_generation_readiness(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    phase_model = payload.get("phase_model", [])
+    commands = payload.get("commands", [])
+    if not isinstance(phase_model, list) or not isinstance(commands, list):
+        return ["lifecycle_generation_readiness.json phase_model and commands must be lists"]
+    phase_set = {str(phase) for phase in phase_model}
+    expected_commands = {
+        ("root", "install"),
+        ("root", "init"),
+        ("root", "adopt"),
+        ("root", "upgrade"),
+        ("root", "uninstall"),
+        ("root", "doctor"),
+        ("root", "status"),
+        ("planning-package", "status"),
+        ("memory-package", "status"),
+    }
+    actual_commands: set[tuple[str, str]] = set()
+    for command in commands:
+        if not isinstance(command, dict):
+            errors.append("lifecycle_generation_readiness.json command entries must be objects")
+            continue
+        surface_command = (str(command.get("surface", "")), str(command.get("command", "")))
+        actual_commands.add(surface_command)
+        for phase_field in ("phases", "adapter_owned_phases", "runtime_owned_phases"):
+            unknown = sorted(str(phase) for phase in command.get(phase_field, []) if str(phase) not in phase_set)
+            if unknown:
+                errors.append(f"lifecycle {surface_command} references unknown {phase_field}: {', '.join(unknown)}")
+        effects = command.get("effects", {})
+        if not isinstance(effects, dict):
+            errors.append(f"lifecycle {surface_command} effects must be an object")
+            continue
+        eligibility = str(command.get("generation_eligibility", ""))
+        if effects.get("destructive_potential") and eligibility != "deferred-destructive":
+            errors.append(f"lifecycle {surface_command} destructive command must be deferred-destructive")
+        if effects.get("writes_repo_state") and eligibility == "eligible-read-only":
+            errors.append(f"lifecycle {surface_command} mutating command cannot be eligible-read-only")
+    missing = sorted(expected_commands - actual_commands)
+    if missing:
+        errors.append(f"lifecycle_generation_readiness.json missing command classifications: {missing}")
+    return errors
+
+
 def _parser_snapshot(parser) -> list[dict[str, object]]:
     subparsers_action = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
     return [_command_parser_snapshot(subparsers_action.choices[name]) for name in subparsers_action.choices]
@@ -846,6 +891,11 @@ def main(argv: list[str] | None = None) -> int:
         (
             "python runtime boundary",
             _validate(python_runtime_boundary_manifest(), "python_runtime_boundary.schema.json"),
+        ),
+        (
+            "lifecycle generation readiness",
+            _validate(lifecycle_generation_readiness_manifest(), "lifecycle_generation_readiness.schema.json")
+            + _validate_lifecycle_generation_readiness(lifecycle_generation_readiness_manifest()),
         ),
         (
             "authority marker parity",

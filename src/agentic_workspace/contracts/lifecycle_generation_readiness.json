@@ -1,0 +1,133 @@
+{
+  "schema_version": "agentic-workspace/lifecycle-generation-readiness/v1",
+  "summary": "Requirements baseline for deciding when lifecycle command surfaces can safely become generated adapters while runtime mutation remains primitive-owned.",
+  "phase_model": [
+    "resolve context",
+    "resolve selection",
+    "plan changes",
+    "validate plan",
+    "apply changes",
+    "verify result",
+    "emit output/proof"
+  ],
+  "commands": [
+    {
+      "surface": "root",
+      "command": "install",
+      "phases": ["resolve context", "resolve selection", "plan changes", "validate plan", "apply changes", "verify result", "emit output/proof"],
+      "adapter_owned_phases": ["resolve selection", "emit output/proof"],
+      "runtime_owned_phases": ["resolve context", "plan changes", "validate plan", "apply changes", "verify result"],
+      "effects": {"read_only": false, "writes_repo_state": true, "destructive_potential": false, "idempotency": "planned-idempotent", "preflight_required": true, "local_only_interaction": true, "branch_sensitive": true, "review_required_when_ambiguous": true},
+      "generation_eligibility": "deferred-mutation",
+      "notes": "May create or refresh package-managed surfaces; generated adapter must not own mutation semantics."
+    },
+    {
+      "surface": "root",
+      "command": "init",
+      "phases": ["resolve context", "resolve selection", "plan changes", "validate plan", "apply changes", "verify result", "emit output/proof"],
+      "adapter_owned_phases": ["resolve selection", "emit output/proof"],
+      "runtime_owned_phases": ["resolve context", "plan changes", "validate plan", "apply changes", "verify result"],
+      "effects": {"read_only": false, "writes_repo_state": true, "destructive_potential": false, "idempotency": "planned-idempotent", "preflight_required": true, "local_only_interaction": true, "branch_sensitive": true, "review_required_when_ambiguous": true},
+      "generation_eligibility": "deferred-mutation",
+      "notes": "Alias-like lifecycle entry must share install planning and verification."
+    },
+    {
+      "surface": "root",
+      "command": "adopt",
+      "phases": ["resolve context", "resolve selection", "plan changes", "validate plan", "apply changes", "verify result", "emit output/proof"],
+      "adapter_owned_phases": ["resolve selection", "emit output/proof"],
+      "runtime_owned_phases": ["resolve context", "plan changes", "validate plan", "apply changes", "verify result"],
+      "effects": {"read_only": false, "writes_repo_state": true, "destructive_potential": false, "idempotency": "context-dependent", "preflight_required": true, "local_only_interaction": true, "branch_sensitive": true, "review_required_when_ambiguous": true},
+      "generation_eligibility": "deferred-mutation",
+      "notes": "Adoption must preserve repo-owned files and needs explicit ownership checks."
+    },
+    {
+      "surface": "root",
+      "command": "upgrade",
+      "phases": ["resolve context", "resolve selection", "plan changes", "validate plan", "apply changes", "verify result", "emit output/proof"],
+      "adapter_owned_phases": ["resolve selection", "emit output/proof"],
+      "runtime_owned_phases": ["resolve context", "plan changes", "validate plan", "apply changes", "verify result"],
+      "effects": {"read_only": false, "writes_repo_state": true, "destructive_potential": false, "idempotency": "planned-idempotent", "preflight_required": true, "local_only_interaction": true, "branch_sensitive": true, "review_required_when_ambiguous": true},
+      "generation_eligibility": "deferred-mutation",
+      "notes": "Dry-run and apply must use the same planner."
+    },
+    {
+      "surface": "root",
+      "command": "uninstall",
+      "phases": ["resolve context", "resolve selection", "plan changes", "validate plan", "apply changes", "verify result", "emit output/proof"],
+      "adapter_owned_phases": ["resolve selection", "emit output/proof"],
+      "runtime_owned_phases": ["resolve context", "plan changes", "validate plan", "apply changes", "verify result"],
+      "effects": {"read_only": false, "writes_repo_state": true, "destructive_potential": true, "idempotency": "context-dependent", "preflight_required": true, "local_only_interaction": true, "branch_sensitive": true, "review_required_when_ambiguous": true},
+      "generation_eligibility": "deferred-destructive",
+      "notes": "Must refuse ambiguous ownership and preserve local-only state unless explicitly targeted."
+    },
+    {
+      "surface": "root",
+      "command": "doctor",
+      "phases": ["resolve context", "resolve selection", "plan changes", "validate plan", "verify result", "emit output/proof"],
+      "adapter_owned_phases": ["resolve selection", "emit output/proof"],
+      "runtime_owned_phases": ["resolve context", "plan changes", "validate plan", "verify result"],
+      "effects": {"read_only": true, "writes_repo_state": false, "destructive_potential": false, "idempotency": "idempotent", "preflight_required": false, "local_only_interaction": true, "branch_sensitive": false, "review_required_when_ambiguous": false},
+      "generation_eligibility": "eligible-read-only",
+      "notes": "Read-only diagnostic surfaces are the first lifecycle generation candidates."
+    },
+    {
+      "surface": "root",
+      "command": "status",
+      "phases": ["resolve context", "verify result", "emit output/proof"],
+      "adapter_owned_phases": ["emit output/proof"],
+      "runtime_owned_phases": ["resolve context", "verify result"],
+      "effects": {"read_only": true, "writes_repo_state": false, "destructive_potential": false, "idempotency": "idempotent", "preflight_required": false, "local_only_interaction": true, "branch_sensitive": false, "review_required_when_ambiguous": false},
+      "generation_eligibility": "eligible-read-only",
+      "notes": "Package status analogues should share the same output meaning."
+    },
+    {
+      "surface": "planning-package",
+      "command": "status",
+      "phases": ["resolve context", "verify result", "emit output/proof"],
+      "adapter_owned_phases": ["emit output/proof"],
+      "runtime_owned_phases": ["resolve context", "verify result"],
+      "effects": {"read_only": true, "writes_repo_state": false, "destructive_potential": false, "idempotency": "idempotent", "preflight_required": false, "local_only_interaction": false, "branch_sensitive": false, "review_required_when_ambiguous": false},
+      "generation_eligibility": "eligible-read-only",
+      "notes": "Already has generated adapter metadata for the first package read-only proof."
+    },
+    {
+      "surface": "memory-package",
+      "command": "status",
+      "phases": ["resolve context", "verify result", "emit output/proof"],
+      "adapter_owned_phases": ["emit output/proof"],
+      "runtime_owned_phases": ["resolve context", "verify result"],
+      "effects": {"read_only": true, "writes_repo_state": false, "destructive_potential": false, "idempotency": "idempotent", "preflight_required": false, "local_only_interaction": false, "branch_sensitive": false, "review_required_when_ambiguous": false},
+      "generation_eligibility": "eligible-read-only",
+      "notes": "Recorded as the next package read-only migration candidate."
+    }
+  ],
+  "primitive_review": [
+    "workspace.root.resolve and workspace.selection.resolve are adapter-adjacent but runtime-owned because they inspect local context.",
+    "workspace.lifecycle.plan must be the shared dry-run and apply planner.",
+    "workspace.lifecycle.apply must own repo mutations and deletion safeguards.",
+    "A future workspace.lifecycle.verify primitive should be explicit before mutating lifecycle adapters are generated.",
+    "module.status.inspect and module.payload.render remain useful candidate primitive families but are not yet required for this slice."
+  ],
+  "output_contract": [
+    "Lifecycle output should distinguish plan, apply, verify, and refusal results.",
+    "Dry-run output must be a plan result, not a separate command-specific rendering path.",
+    "Detailed diagnostics should remain behind report/doctor detail fields rather than becoming adapter interface truth.",
+    "Every result should carry dry_run, actions, warnings, and target_root when applicable."
+  ],
+  "conformance_fixture_plan": [
+    "empty repo install dry-run has no filesystem effects and reports planned creates",
+    "existing repo adopt dry-run preserves repo-owned files",
+    "installed repo status is read-only and idempotent",
+    "installed repo upgrade dry-run uses planner without writes",
+    "ambiguous ownership uninstall refuses without deletion",
+    "local-only state is preserved by install, upgrade, and uninstall",
+    "strict preflight blocks high-risk mutation when configured"
+  ],
+  "generation_decision": [
+    "Read-only doctor/status lifecycle surfaces may be generated after output contracts are explicit.",
+    "install/init/adopt/upgrade remain deferred mutation surfaces until lifecycle.verify and plan/apply output contracts are explicit.",
+    "uninstall remains deferred destructive until refusal fixtures and ownership checks are black-box conformance-covered.",
+    "Generated adapters may own command shape and dispatch only; runtime primitives own planning, mutation, verification, and local inspection."
+  ]
+}

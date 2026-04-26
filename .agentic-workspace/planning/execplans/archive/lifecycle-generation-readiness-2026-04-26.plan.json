@@ -1,0 +1,186 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Lifecycle Generation Readiness",
+  "goal": [
+    "Implement draft lifecycle analysis issues #365-#369 by recording a compact lifecycle generated-adapter readiness baseline before any lifecycle adapter generation starts."
+  ],
+  "non_goals": [
+    "Generate lifecycle adapters now.",
+    "Refactor lifecycle implementations.",
+    "Change lifecycle command behavior.",
+    "Add host-, agent-, or tracker-specific assumptions."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Lifecycle commands have a phase map, risk/effect matrix, primitive/output review, conformance fixture plan, and explicit generation eligibility decision.",
+      "constraints": "Analysis and contract baseline only; runtime mutation remains primitive-owned.",
+      "latitude": "Use one compact contract surface if it prevents scattered review residue.",
+      "escalation": "Stop before generated lifecycle adapter implementation or lifecycle behavior changes."
+    },
+    "execution": {
+      "milestone": "lifecycle-generation-readiness",
+      "status": "completed",
+      "next_step": "Archive this slice; #365-#369 are closed.",
+      "proof": "Run contract tooling checks, focused tests, planning checks, reconcile, and summary."
+    }
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#365",
+      "label": "lifecycle readiness parent",
+      "role": "parent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#366",
+      "label": "phase map",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#367",
+      "label": "risk matrix",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#368",
+      "label": "primitive and output review",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#369",
+      "label": "conformance fixture plan",
+      "role": "child",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "lifecycle-generation-readiness",
+    "status": "completed",
+    "scope": "#365-#369",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete draft lifecycle readiness analysis before lifecycle adapter generation.",
+    "hard constraints": "Do not generate lifecycle adapters or change lifecycle behavior.",
+    "agent may decide locally": "Contract shape and validation coverage for the analysis baseline.",
+    "escalate when": "The analysis requires lifecycle implementation changes."
+  },
+  "touched_paths": [
+    "src/agentic_workspace/contracts/lifecycle_generation_readiness.json",
+    "src/agentic_workspace/contracts/schemas/lifecycle_generation_readiness.schema.json",
+    "src/agentic_workspace/contract_tooling.py",
+    "src/agentic_workspace/contracts/python_contract_consumption.json",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "tests/test_contract_tooling.py"
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json"
+  ],
+  "completion_criteria": [
+    "#365-#369 are implemented and closed.",
+    "Lifecycle phases are mapped across root, planning, and memory surfaces.",
+    "Risk/effect and generation eligibility are explicit.",
+    "Primitive/output gaps and first conformance fixtures are recorded.",
+    "No lifecycle adapter is generated in this slice."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Lifecycle readiness contract added with phase map, risk/effect matrix, primitive/output review, conformance fixture plan, and generation decisions.",
+    "validation confirmed": "Contract tooling, focused contract tests, ruff, planning checks, reconcile, and summary passed.",
+    "follow-on routed to": "none; lifecycle adapter generation remains deferred until a future concrete slice.",
+    "post-work posterity capture": "Closeout review plus archived execplan.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory or docs promotion; durable baseline is the lifecycle_generation_readiness contract.",
+    "resume from": "No active lifecycle readiness slice remains."
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/check_contract_tooling_surfaces.py; uv run pytest tests/test_contract_tooling.py -q; uv run ruff check src tests scripts; uv run python scripts/check/check_planning_surfaces.py.",
+    "proof achieved now": "The lifecycle readiness baseline is schema-valid, loader-validated, semantically checked, and test-covered.",
+    "evidence for \"proof achieved\" state": "src/agentic_workspace/contracts/lifecycle_generation_readiness.json, schema, loader, python contract consumption entry, semantic checker, tests, and closeout review."
+  },
+  "intent_satisfaction": {
+    "original intent": "Complete draft lifecycle readiness analysis before lifecycle adapter generation.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "lifecycle_generation_readiness.json covers lifecycle phase map, risk/effect matrix, primitive/output review, fixture plan, and generation decisions.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#365-#369 were draft analysis slices and are satisfied by the checked-in readiness baseline; adapter implementation was explicitly out of scope.",
+    "evidence carried forward": "src/agentic_workspace/contracts/lifecycle_generation_readiness.json, src/agentic_workspace/contracts/schemas/lifecycle_generation_readiness.schema.json, tests/test_contract_tooling.py, .agentic-workspace/planning/reviews/lifecycle-generation-readiness-closeout-2026-04-26.review.json",
+    "reopen trigger": "Reopen if lifecycle adapter work starts without a phase, risk, primitive/output, and fixture baseline."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Issue-body analysis detail is superseded by the compact readiness contract and tests.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "none; lifecycle adapter generation remains deferred until a future concrete slice.",
+          "owner": "lifecycle_generation_readiness.json, lifecycle_generation_readiness.schema.json, contract tooling checks, focused tests, and closeout review.",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No Memory or docs promotion; durable baseline is the lifecycle_generation_readiness contract.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "No Memory or docs promotion; durable baseline is the lifecycle_generation_readiness contract.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "lifecycle readiness parent",
+          "owner": "issue",
+          "source": "#365"
+        },
+        {
+          "summary": "phase map",
+          "owner": "issue",
+          "source": "#366"
+        },
+        {
+          "summary": "risk matrix",
+          "owner": "issue",
+          "source": "#367"
+        },
+        {
+          "summary": "primitive and output review",
+          "owner": "issue",
+          "source": "#368"
+        },
+        {
+          "summary": "conformance fixture plan",
+          "owner": "issue",
+          "source": "#369"
+        }
+      ]
+    }
+  }
+}

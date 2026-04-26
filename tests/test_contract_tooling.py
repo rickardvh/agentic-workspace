@@ -87,6 +87,27 @@ def test_python_contract_consumption_declares_validated_loader_bindings() -> Non
             "command_adapter_generation_manifest",
         )
     }
+    assert any(entry["loader"] == "lifecycle_generation_readiness_manifest" for entry in entries)
+
+
+def test_lifecycle_generation_readiness_records_phase_risk_and_fixture_plan() -> None:
+    manifest = contract_tooling.lifecycle_generation_readiness_manifest()
+    commands = {(entry["surface"], entry["command"]): entry for entry in manifest["commands"]}
+
+    assert manifest["phase_model"] == [
+        "resolve context",
+        "resolve selection",
+        "plan changes",
+        "validate plan",
+        "apply changes",
+        "verify result",
+        "emit output/proof",
+    ]
+    assert commands[("root", "doctor")]["generation_eligibility"] == "eligible-read-only"
+    assert commands[("root", "uninstall")]["generation_eligibility"] == "deferred-destructive"
+    assert commands[("root", "uninstall")]["effects"]["destructive_potential"] is True
+    assert commands[("planning-package", "status")]["generation_eligibility"] == "eligible-read-only"
+    assert any("strict preflight" in fixture for fixture in manifest["conformance_fixture_plan"])
 
 
 def test_contract_tooling_check_derives_validated_consumption_from_policy() -> None:

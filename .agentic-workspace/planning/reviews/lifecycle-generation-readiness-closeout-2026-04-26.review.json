@@ -1,0 +1,91 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Lifecycle Generation Readiness Closeout",
+  "date": "2026-04-26",
+  "scope": "#365-#369",
+  "classification": "closeout",
+  "issue_classifications": [
+    {
+      "id": "#365",
+      "title": "[Draft][Workspace]: Reassess lifecycle tools as generated-adapter-safe orchestration primitives",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "",
+      "evidence": "lifecycle_generation_readiness.json records phase map, risk/effect matrix, primitive/output review, fixture plan, and generation decisions before lifecycle adapter generation."
+    },
+    {
+      "id": "#366",
+      "title": "[Draft][Workspace]: Map lifecycle command tasks and phases before generation",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "",
+      "evidence": "The readiness contract maps shared phases across root lifecycle commands plus planning and memory status surfaces."
+    },
+    {
+      "id": "#367",
+      "title": "[Draft][Workspace]: Define lifecycle risk and effect matrix",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "",
+      "evidence": "Each command entry carries read/write, repo-write, destructive, idempotency, preflight, local-only, branch-sensitive, review, and generation-eligibility fields."
+    },
+    {
+      "id": "#368",
+      "title": "[Draft][Workspace]: Review lifecycle primitives and output contracts",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "",
+      "evidence": "The readiness contract records primitive responsibilities, output contract expectations, and the lifecycle.verify gap before mutating lifecycle generation."
+    },
+    {
+      "id": "#369",
+      "title": "[Draft][Workspace]: Plan lifecycle conformance fixtures before adapter generation",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "",
+      "evidence": "The readiness contract records first fixture scenarios for dry-run, status, upgrade dry-run, uninstall refusal, local-only preservation, and strict preflight."
+    }
+  ],
+  "findings": [
+    {
+      "id": "#365",
+      "title": "[Draft][Workspace]: Reassess lifecycle tools as generated-adapter-safe orchestration primitives",
+      "action_state": "evidence-present",
+      "evidence": "lifecycle_generation_readiness.json records phase map, risk/effect matrix, primitive/output review, fixture plan, and generation decisions before lifecycle adapter generation.",
+      "follow_up": "",
+      "notes": "No lifecycle adapter was generated; mutation and destructive lifecycle surfaces remain deferred."
+    },
+    {
+      "id": "#366",
+      "title": "[Draft][Workspace]: Map lifecycle command tasks and phases before generation",
+      "action_state": "evidence-present",
+      "evidence": "The readiness contract maps shared phases across root lifecycle commands plus planning and memory status surfaces.",
+      "follow_up": "",
+      "notes": "Adapter-owned phases and runtime-owned phases are separated per command."
+    },
+    {
+      "id": "#367",
+      "title": "[Draft][Workspace]: Define lifecycle risk and effect matrix",
+      "action_state": "evidence-present",
+      "evidence": "Each command entry carries read/write, repo-write, destructive, idempotency, preflight, local-only, branch-sensitive, review, and generation-eligibility fields.",
+      "follow_up": "",
+      "notes": "Semantic checks reject mutating commands marked eligible-read-only and destructive commands not deferred-destructive."
+    },
+    {
+      "id": "#368",
+      "title": "[Draft][Workspace]: Review lifecycle primitives and output contracts",
+      "action_state": "evidence-present",
+      "evidence": "The readiness contract records primitive responsibilities, output contract expectations, and the lifecycle.verify gap before mutating lifecycle generation.",
+      "follow_up": "",
+      "notes": "Runtime primitives continue to own planning, mutation, verification, and local inspection."
+    },
+    {
+      "id": "#369",
+      "title": "[Draft][Workspace]: Plan lifecycle conformance fixtures before adapter generation",
+      "action_state": "evidence-present",
+      "evidence": "The readiness contract records first fixture scenarios for dry-run, status, upgrade dry-run, uninstall refusal, local-only preservation, and strict preflight.",
+      "follow_up": "",
+      "notes": "Fixture implementation remains out of scope for the draft planning slice."
+    }
+  ]
+}

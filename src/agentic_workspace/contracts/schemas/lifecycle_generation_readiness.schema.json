@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/lifecycle-generation-readiness.schema.json",
+  "title": "Lifecycle Generation Readiness Contract",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "summary",
+    "phase_model",
+    "commands",
+    "primitive_review",
+    "output_contract",
+    "conformance_fixture_plan",
+    "generation_decision"
+  ],
+  "properties": {
+    "schema_version": {"const": "agentic-workspace/lifecycle-generation-readiness/v1"},
+    "summary": {"type": "string", "minLength": 1},
+    "phase_model": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "commands": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "surface",
+          "command",
+          "phases",
+          "adapter_owned_phases",
+          "runtime_owned_phases",
+          "effects",
+          "generation_eligibility"
+        ],
+        "properties": {
+          "surface": {"enum": ["root", "planning-package", "memory-package"]},
+          "command": {"enum": ["install", "init", "adopt", "upgrade", "uninstall", "doctor", "status"]},
+          "phases": {"$ref": "#/$defs/non_empty_strings"},
+          "adapter_owned_phases": {"$ref": "#/$defs/non_empty_strings"},
+          "runtime_owned_phases": {"$ref": "#/$defs/non_empty_strings"},
+          "effects": {
+            "type": "object",
+            "required": [
+              "read_only",
+              "writes_repo_state",
+              "destructive_potential",
+              "idempotency",
+              "preflight_required",
+              "local_only_interaction",
+              "branch_sensitive",
+              "review_required_when_ambiguous"
+            ],
+            "properties": {
+              "read_only": {"type": "boolean"},
+              "writes_repo_state": {"type": "boolean"},
+              "destructive_potential": {"type": "boolean"},
+              "idempotency": {"enum": ["idempotent", "planned-idempotent", "context-dependent"]},
+              "preflight_required": {"type": "boolean"},
+              "local_only_interaction": {"type": "boolean"},
+              "branch_sensitive": {"type": "boolean"},
+              "review_required_when_ambiguous": {"type": "boolean"}
+            },
+            "additionalProperties": false
+          },
+          "generation_eligibility": {"enum": ["eligible-read-only", "deferred-mutation", "deferred-destructive"]},
+          "notes": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "primitive_review": {"$ref": "#/$defs/non_empty_strings"},
+    "output_contract": {"$ref": "#/$defs/non_empty_strings"},
+    "conformance_fixture_plan": {"$ref": "#/$defs/non_empty_strings"},
+    "generation_decision": {"$ref": "#/$defs/non_empty_strings"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "non_empty_strings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    }
+  }
+}

@@ -55,6 +55,12 @@
       "schema": "python_runtime_boundary.schema.json",
       "loader": "python_runtime_boundary_manifest",
       "consumer": "scripts/check/check_contract_tooling_surfaces.py"
+    },
+    {
+      "contract": "lifecycle_generation_readiness.json",
+      "schema": "lifecycle_generation_readiness.schema.json",
+      "loader": "lifecycle_generation_readiness_manifest",
+      "consumer": "scripts/check/check_contract_tooling_surfaces.py"
     }
   ],
   "model_derivation_policy": {
