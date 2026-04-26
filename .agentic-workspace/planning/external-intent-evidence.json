@@ -599,7 +599,7 @@
       "system": "github",
       "id": "#341",
       "title": "[Review]: Make the default workspace report a router instead of an encyclopedia",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
@@ -635,7 +635,7 @@
       "system": "github",
       "id": "#345",
       "title": "[Workspace]: Add selector and size discipline for high-volume report sections",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#230",
       "planning_residue_expected": "required"
