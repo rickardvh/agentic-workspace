@@ -34,6 +34,16 @@
       "notes": "Changed-path proof classification rules are manifest-backed so bounded implementer proof selection does not depend on inline Python path tables."
     },
     {
+      "area": "authority_marker_policy",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/authority_markers.json",
+      "consumers": [
+        "agentic_workspace.cli:_authority_marker_for_path",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Authority marker labels, canonical source policy, safe-to-edit defaults, refresh commands, and representative parity paths are manifest-backed while runtime path normalization and matching stay Python-owned."
+    },
+    {
       "area": "report_contract",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/report_contract.json",

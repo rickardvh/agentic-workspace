@@ -9,6 +9,7 @@
     "procedural-owned"
   ],
   "extraction_readiness": [
+    "extracted",
     "extract now",
     "extract after schema exists",
     "operation-contract candidate",
@@ -30,9 +31,9 @@
       "proposed_owner_surface": "src/agentic_workspace/contracts/authority_markers.json",
       "future_owner": "JSON contract data",
       "authority_status": "authoritative",
-      "extraction_readiness": "extract after schema exists",
-      "rationale": "The marker table is stable policy data introduced to reduce adapter/source ambiguity; matching rules still need Python runtime path normalization.",
-      "issue_hint": "#295"
+      "extraction_readiness": "extracted",
+      "rationale": "The marker table is stable policy data introduced to reduce adapter/source ambiguity; matching rules still need Python runtime path normalization. The first #320 slice moved these values into authority_markers.json with schema and representative-path parity checks.",
+      "issue_hint": "#320"
     },
     {
       "id": "changed-path-proof-rules",
@@ -45,7 +46,7 @@
       "proposed_owner_surface": "src/agentic_workspace/contracts/proof_selection_rules.json",
       "future_owner": "JSON contract data",
       "authority_status": "authoritative",
-      "extraction_readiness": "extract now",
+      "extraction_readiness": "extracted",
       "rationale": "Validation lane payloads are already contract-backed; the path classifier is now simple declarative mapping plus one procedural de-duplication step.",
       "issue_hint": "#315"
     },
@@ -139,8 +140,8 @@
       "proposed_owner_surface": "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
       "future_owner": "generated or schema-derived Python model",
       "authority_status": "derived",
-      "extraction_readiness": "extract after schema exists",
-      "rationale": "The schema exists; a generated or schema-derived model can remove duplicate field shape, but parser diagnostics and BOM handling should stay Python-owned.",
+      "extraction_readiness": "defer with reason",
+      "rationale": "The reusable local override contract shape is schema-backed; replacing the handwritten runtime parser with a generated or schema-derived model may reduce duplication later, but parser diagnostics and BOM handling are runtime-owned and no longer block non-Python contract consumption.",
       "issue_hint": "#314"
     },
     {

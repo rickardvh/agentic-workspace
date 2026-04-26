@@ -13,6 +13,11 @@
       "consumer": "agentic_workspace.cli:_proof_selection_for_changed_paths"
     },
     {
+      "contract": "authority_markers.json",
+      "schema": "authority_markers.schema.json",
+      "consumer": "agentic_workspace.cli:_authority_marker_for_path"
+    },
+    {
       "contract": "context_templates.json",
       "schema": "context_templates.schema.json",
       "consumer": "agentic_workspace.cli:_start_payload"

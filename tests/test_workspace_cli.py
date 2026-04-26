@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from agentic_workspace import cli
+from agentic_workspace.contract_tooling import authority_markers_manifest
 from agentic_workspace.result_adapter import adapt_action, adapt_module_result
 
 _ORIGINAL_PATH_WRITE_TEXT = Path.write_text
@@ -3926,6 +3927,17 @@ def test_ownership_path_answer_includes_authority_marker_and_boundary_warning(ca
         "refresh_command": "make maintainer-surfaces",
     }
     assert answer["boundary_warning"]["requires_attention"] is True
+
+
+def test_authority_marker_policy_representative_paths_match_runtime() -> None:
+    policy = authority_markers_manifest()
+
+    for marker in policy["markers"]:
+        for path in marker["representative_paths"]:
+            actual = cli._authority_marker_for_path(path)  # type: ignore[attr-defined]
+            assert actual["authority"] == marker["authority"]
+            assert actual["safe_to_edit"] == marker["safe_to_edit"]
+            assert actual["refresh_command"] == marker["refresh_command"]
 
 
 def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> None:

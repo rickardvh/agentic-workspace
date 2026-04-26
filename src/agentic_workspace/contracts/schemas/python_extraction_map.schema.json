@@ -38,6 +38,7 @@
       "type": "array",
       "items": {
         "enum": [
+          "extracted",
           "extract now",
           "extract after schema exists",
           "operation-contract candidate",
@@ -101,9 +102,10 @@
             ]
           },
           "extraction_readiness": {
-            "enum": [
-              "extract now",
-              "extract after schema exists",
+              "enum": [
+                "extracted",
+                "extract now",
+                "extract after schema exists",
               "operation-contract candidate",
               "template candidate",
               "procedural-owned for now",

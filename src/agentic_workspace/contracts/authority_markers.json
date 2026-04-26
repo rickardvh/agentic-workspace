@@ -1,0 +1,106 @@
+{
+  "schema_version": "agentic-workspace/authority-markers/v1",
+  "markers": [
+    {
+      "id": "root-agent-instructions",
+      "authority": "adapter",
+      "canonical_source": {
+        "kind": "fixed",
+        "value": ".agentic-workspace/config.toml + agentic-workspace start --format json"
+      },
+      "safe_to_edit": true,
+      "refresh_command": null,
+      "representative_paths": [
+        "AGENTS.md"
+      ]
+    },
+    {
+      "id": "external-agent-handoff",
+      "authority": "generated-adapter",
+      "canonical_source": {
+        "kind": "fixed",
+        "value": "src/agentic_workspace/cli.py:_external_agent_handoff_text"
+      },
+      "safe_to_edit": false,
+      "refresh_command": "make maintainer-surfaces",
+      "representative_paths": [
+        "llms.txt"
+      ]
+    },
+    {
+      "id": "planning-surface",
+      "authority": "canonical",
+      "canonical_source": {
+        "kind": "path"
+      },
+      "safe_to_edit": true,
+      "refresh_command": "uv run python scripts/check/check_planning_surfaces.py",
+      "representative_paths": [
+        ".agentic-workspace/planning/state.toml"
+      ]
+    },
+    {
+      "id": "memory-surface",
+      "authority": "canonical",
+      "canonical_source": {
+        "kind": "path"
+      },
+      "safe_to_edit": true,
+      "refresh_command": null,
+      "representative_paths": [
+        ".agentic-workspace/memory/index.toml"
+      ]
+    },
+    {
+      "id": "package-bootstrap-payload",
+      "authority": "payload",
+      "canonical_source": {
+        "kind": "package-root-source"
+      },
+      "safe_to_edit": false,
+      "refresh_command": "sync package payload from source before claiming completion",
+      "representative_paths": [
+        "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
+        "vendor/bootstrap"
+      ]
+    },
+    {
+      "id": "source",
+      "authority": "source",
+      "canonical_source": {
+        "kind": "path"
+      },
+      "safe_to_edit": true,
+      "refresh_command": null,
+      "representative_paths": [
+        "src/agentic_workspace/cli.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py"
+      ]
+    },
+    {
+      "id": "managed-workspace-surface",
+      "authority": "managed",
+      "canonical_source": {
+        "kind": "fixed",
+        "value": ".agentic-workspace/OWNERSHIP.toml"
+      },
+      "safe_to_edit": true,
+      "refresh_command": "agentic-workspace ownership --target . --path <path> --format json",
+      "representative_paths": [
+        ".agentic-workspace/config.toml"
+      ]
+    },
+    {
+      "id": "repo-owned",
+      "authority": "repo-owned",
+      "canonical_source": {
+        "kind": "path"
+      },
+      "safe_to_edit": true,
+      "refresh_command": null,
+      "representative_paths": [
+        "README.md"
+      ]
+    }
+  ]
+}

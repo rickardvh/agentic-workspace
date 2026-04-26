@@ -67,6 +67,7 @@ from agentic_workspace.config import (
     WorkspaceUsageError,
 )
 from agentic_workspace.contract_tooling import (
+    authority_markers_manifest,
     cli_commands_manifest,
     cli_option_groups_manifest,
     compact_contract_manifest,
@@ -2744,69 +2745,48 @@ def _package_boundary_payload(*, target_root: Path) -> dict[str, Any]:
 def _authority_marker_for_path(path_text: str) -> dict[str, Any]:
     normalized = _normalize_changed_paths([path_text])[0] if _normalize_changed_paths([path_text]) else path_text
     if normalized == "AGENTS.md":
-        return {
-            "path": normalized,
-            "authority": "adapter",
-            "canonical_source": ".agentic-workspace/config.toml + agentic-workspace start --format json",
-            "safe_to_edit": True,
-            "refresh_command": None,
-        }
+        return _authority_marker_payload(marker_id="root-agent-instructions", normalized=normalized)
     if normalized == "llms.txt":
-        return {
-            "path": normalized,
-            "authority": "generated-adapter",
-            "canonical_source": "src/agentic_workspace/cli.py:_external_agent_handoff_text",
-            "safe_to_edit": False,
-            "refresh_command": "make maintainer-surfaces",
-        }
+        return _authority_marker_payload(marker_id="external-agent-handoff", normalized=normalized)
     if normalized.startswith(".agentic-workspace/planning/"):
-        return {
-            "path": normalized,
-            "authority": "canonical",
-            "canonical_source": normalized,
-            "safe_to_edit": True,
-            "refresh_command": "uv run python scripts/check/check_planning_surfaces.py",
-        }
+        return _authority_marker_payload(marker_id="planning-surface", normalized=normalized)
     if normalized.startswith(".agentic-workspace/memory/"):
-        return {
-            "path": normalized,
-            "authority": "canonical",
-            "canonical_source": normalized,
-            "safe_to_edit": True,
-            "refresh_command": None,
-        }
+        return _authority_marker_payload(marker_id="memory-surface", normalized=normalized)
     if "/bootstrap/" in normalized or normalized.endswith("/bootstrap"):
-        package_root = "/".join(normalized.split("/")[:2]) if normalized.startswith("packages/") else "package"
-        return {
-            "path": normalized,
-            "authority": "payload",
-            "canonical_source": f"{package_root}/src/",
-            "safe_to_edit": False,
-            "refresh_command": "sync package payload from source before claiming completion",
-        }
+        return _authority_marker_payload(marker_id="package-bootstrap-payload", normalized=normalized)
     if normalized.startswith("src/agentic_workspace/") or normalized.startswith("packages/"):
-        return {
-            "path": normalized,
-            "authority": "source",
-            "canonical_source": normalized,
-            "safe_to_edit": True,
-            "refresh_command": None,
-        }
+        return _authority_marker_payload(marker_id="source", normalized=normalized)
     if normalized.startswith(".agentic-workspace/"):
-        return {
-            "path": normalized,
-            "authority": "managed",
-            "canonical_source": ".agentic-workspace/OWNERSHIP.toml",
-            "safe_to_edit": True,
-            "refresh_command": "agentic-workspace ownership --target . --path <path> --format json",
-        }
+        return _authority_marker_payload(marker_id="managed-workspace-surface", normalized=normalized)
+    return _authority_marker_payload(marker_id="repo-owned", normalized=normalized)
+
+
+def _authority_marker_payload(*, marker_id: str, normalized: str) -> dict[str, Any]:
+    marker = _authority_marker_policy_by_id()[marker_id]
     return {
         "path": normalized,
-        "authority": "repo-owned",
-        "canonical_source": normalized,
-        "safe_to_edit": True,
-        "refresh_command": None,
+        "authority": marker["authority"],
+        "canonical_source": _authority_marker_canonical_source(marker=marker, normalized=normalized),
+        "safe_to_edit": marker["safe_to_edit"],
+        "refresh_command": marker["refresh_command"],
     }
+
+
+def _authority_marker_policy_by_id() -> dict[str, dict[str, Any]]:
+    return {marker["id"]: marker for marker in authority_markers_manifest()["markers"]}
+
+
+def _authority_marker_canonical_source(*, marker: dict[str, Any], normalized: str) -> str:
+    canonical_source = marker["canonical_source"]
+    kind = canonical_source["kind"]
+    if kind == "fixed":
+        return str(canonical_source["value"])
+    if kind == "path":
+        return normalized
+    if kind == "package-root-source":
+        package_root = "/".join(normalized.split("/")[:2]) if normalized.startswith("packages/") else "package"
+        return f"{package_root}/src/"
+    raise WorkspaceUsageError(f"Unsupported authority marker canonical source kind: {kind}")
 
 
 def _boundary_warning_for_path(path_text: str) -> dict[str, Any]:

@@ -8,6 +8,7 @@ from jsonschema import Draft202012Validator
 
 from agentic_workspace import cli
 from agentic_workspace.contract_tooling import (
+    authority_markers_manifest,
     cli_commands_manifest,
     cli_option_groups_manifest,
     compact_contract_manifest,
@@ -433,12 +434,65 @@ def _executable_command_surfaces(command_specs: list[dict[str, object]]) -> set[
     return surfaces
 
 
+def _expected_authority_marker(marker: dict[str, object], path: str) -> dict[str, object]:
+    canonical_source = marker["canonical_source"]
+    if not isinstance(canonical_source, dict):
+        return {}
+    kind = canonical_source["kind"]
+    if kind == "fixed":
+        source = canonical_source["value"]
+    elif kind == "path":
+        source = path
+    elif kind == "package-root-source":
+        package_root = "/".join(path.split("/")[:2]) if path.startswith("packages/") else "package"
+        source = f"{package_root}/src/"
+    else:
+        source = ""
+    return {
+        "path": path,
+        "authority": marker["authority"],
+        "canonical_source": source,
+        "safe_to_edit": marker["safe_to_edit"],
+        "refresh_command": marker["refresh_command"],
+    }
+
+
+def _validate_authority_marker_parity(payload: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    seen_ids: set[str] = set()
+    markers = payload.get("markers", [])
+    if not isinstance(markers, list):
+        return ["authority marker manifest must contain marker list"]
+    for marker in markers:
+        if not isinstance(marker, dict):
+            errors.append("authority marker entry must be an object")
+            continue
+        marker_id = str(marker.get("id", ""))
+        if marker_id in seen_ids:
+            errors.append(f"duplicate authority marker id {marker_id}")
+        seen_ids.add(marker_id)
+        representative_paths = marker.get("representative_paths", [])
+        if not isinstance(representative_paths, list):
+            errors.append(f"authority marker {marker_id} representative_paths must be a list")
+            continue
+        for path in representative_paths:
+            if not isinstance(path, str):
+                errors.append(f"authority marker {marker_id} representative path must be a string")
+                continue
+            expected = _expected_authority_marker(marker, path)
+            actual = cli._authority_marker_for_path(path)  # type: ignore[attr-defined]
+            if actual != expected:
+                errors.append(f"authority marker {marker_id} representative path {path} drifted: expected {expected}, got {actual}")
+    return errors
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     checks: list[tuple[str, list[str]]] = [
         ("compact_contract_profile.json", _validate(compact_contract_manifest(), "selector_contracts_manifest.schema.json")),
         ("proof_routes.json", _validate(proof_routes_manifest(), "proof_routes_manifest.schema.json")),
         ("proof_selection_rules.json", _validate(proof_selection_rules_manifest(), "proof_selection_rules.schema.json")),
+        ("authority_markers.json", _validate(authority_markers_manifest(), "authority_markers.schema.json")),
         ("context_templates.json", _validate(context_templates_manifest(), "context_templates.schema.json")),
         ("report_contract.json", _validate(report_contract_manifest(), "report_contract_manifest.schema.json")),
         ("contract_inventory.json", _validate(contract_inventory_manifest(), "contract_inventory.schema.json")),
@@ -537,6 +591,10 @@ def main(argv: list[str] | None = None) -> int:
             "python runtime boundary",
             _validate(python_runtime_boundary_manifest(), "python_runtime_boundary.schema.json"),
         ),
+        (
+            "authority marker parity",
+            _validate_authority_marker_parity(authority_markers_manifest()),
+        ),
     ]
 
     operation_contracts = operation_contracts_manifest()
@@ -604,6 +662,7 @@ def main(argv: list[str] | None = None) -> int:
         checks.append(("proof selection rules parity", [f"unknown validation lane(s): {', '.join(unknown_rule_lanes)}"]))
     expected_validated_contracts = {
         ("proof_selection_rules.json", "proof_selection_rules.schema.json", "agentic_workspace.cli:_proof_selection_for_changed_paths"),
+        ("authority_markers.json", "authority_markers.schema.json", "agentic_workspace.cli:_authority_marker_for_path"),
         ("context_templates.json", "context_templates.schema.json", "agentic_workspace.cli:_start_payload"),
         ("context_templates.json", "context_templates.schema.json", "agentic_workspace.cli:_implement_payload"),
     }

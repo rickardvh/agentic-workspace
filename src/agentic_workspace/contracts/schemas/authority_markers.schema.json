@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/authority-markers.schema.json",
+  "title": "Authority Marker Policy",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "markers"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/authority-markers/v1"
+    },
+    "markers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "authority",
+          "canonical_source",
+          "safe_to_edit",
+          "refresh_command",
+          "representative_paths"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "authority": {
+            "enum": [
+              "adapter",
+              "generated-adapter",
+              "canonical",
+              "payload",
+              "source",
+              "managed",
+              "repo-owned"
+            ]
+          },
+          "canonical_source": {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "fixed",
+                  "path",
+                  "package-root-source"
+                ]
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "fixed"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "value"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "path",
+                        "package-root-source"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                },
+                "then": {
+                  "not": {
+                    "required": [
+                      "value"
+                    ]
+                  }
+                }
+              }
+            ],
+            "additionalProperties": false
+          },
+          "safe_to_edit": {
+            "type": "boolean"
+          },
+          "refresh_command": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "representative_paths": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

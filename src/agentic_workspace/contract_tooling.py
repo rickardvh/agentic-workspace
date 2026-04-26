@@ -48,6 +48,10 @@ def proof_selection_rules_manifest() -> dict[str, Any]:
     return load_validated_contract_json("proof_selection_rules.json", "proof_selection_rules.schema.json")
 
 
+def authority_markers_manifest() -> dict[str, Any]:
+    return load_validated_contract_json("authority_markers.json", "authority_markers.schema.json")
+
+
 def report_contract_manifest() -> dict[str, Any]:
     return load_contract_json("report_contract.json")
 

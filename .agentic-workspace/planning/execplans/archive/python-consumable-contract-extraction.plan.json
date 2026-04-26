@@ -1,0 +1,222 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python Consumable Contract Extraction",
+  "goal": [
+    "Resolve #320 by extracting stable authority marker policy values out of cli.py into a checked-in contract and schema.",
+    "Advance #258 by making Python consume that contract while preserving runtime path normalization and matching behavior."
+  ],
+  "non_goals": [
+    "Do not change authority semantics.",
+    "Do not rewrite ownership ledger matching.",
+    "Do not move dynamic path normalization or matching order out of Python.",
+    "Do not close #258 unless the broader declarative portability parent is demonstrably complete."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Authority marker static values are authored in a contract, validated by schema/tooling, and consumed by cli.py.",
+      "constraints": "Keep runtime path normalization and path classification procedural; preserve start, implement, ownership --path, and llms.txt behavior.",
+      "latitude": "Choose contract file shape, schema names, and representative parity tests.",
+      "escalation": "Stop if extraction requires changing marker semantics or broad ownership matching."
+    },
+    "execution": {
+      "milestone": "authority-marker-policy-contract",
+      "status": "completed",
+      "next_step": "Archive this execplan, commit, push, and close #320/#258.",
+      "proof": "Contract tooling validates the new contract and tests prove existing marker outputs stay stable."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/authority_markers.json",
+        "src/agentic_workspace/contracts/schemas/authority_markers.schema.json",
+        "src/agentic_workspace/contracts/contract_inventory.json",
+        "src/agentic_workspace/contracts/python_extraction_map.json",
+        "src/agentic_workspace/cli.py",
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/python-consumable-contract-extraction.plan.json"
+      ],
+      "invariants": [
+        "Path normalization stays runtime-owned.",
+        "Marker policy static payloads are contract-owned.",
+        "Existing start, implement, ownership --path, and llms.txt marker outputs remain compatible."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "python-consumable contract extraction / declarative portability",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane python-consumable-contract-extraction",
+    "parent lane": "python-consumable-contract-extraction"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "none",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "authority marker values remain authored only in Python or #258 still has stable extractable Python-owned contract truth"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Non-Python adapters can consume authority marker policy data without reverse-engineering cli.py.",
+    "intentionally deferred": "Further extraction of procedural lifecycle/runtime behavior not owned by #320.",
+    "discovered implications": "The extraction map needed an explicit extracted state so completed slices no longer look pending.",
+    "proof achieved now": "yes",
+    "validation still needed": "none",
+    "next likely slice": "further-product-compression-on-repeated-pressure"
+  },
+  "intent_interpretation": {
+    "literal request": "execute all planned work lane by lane and dogfood the package",
+    "inferred intended outcome": "complete the next planned extraction slice without collapsing procedural runtime behavior into static data",
+    "chosen concrete what": "extract authority marker static policy data to contract JSON and consume it from Python",
+    "interpretation distance": "low",
+    "review guidance": "reject work that changes marker semantics, broadens ownership matching, or closes #258 without evidence"
+  },
+  "execution_bounds": {
+    "allowed paths": "authority marker contract/schema, contract inventory/extraction map, cli marker consumer, contract tooling checker, focused tests, active planning state and execplan",
+    "max changed files": "10",
+    "required validation commands": "uv run python scripts/check/check_contract_tooling_surfaces.py; uv run pytest tests/test_workspace_cli.py -q -k \"authority_marker or start or implement\"; uv run agentic-workspace start --format json; uv run agentic-workspace implement --changed AGENTS.md --format json; uv run agentic-workspace ownership --target . --path llms.txt --format json; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "ask-before-refactor threshold": "stop before changing marker semantics, parser surfaces, or ownership ledger matching",
+    "stop before touching": "unrelated roadmap lanes"
+  },
+  "stop_conditions": {
+    "stop when": "#320 is shipped, dogfooded, committed, pushed, and closed or residual work is routed",
+    "escalate when boundary reached": "contract data cannot express current marker values without changing runtime path behavior",
+    "escalate on scope drift": "implementation expands into ownership ledger or lifecycle extraction",
+    "escalate on proof failure": "start/implement/ownership marker outputs drift unexpectedly"
+  },
+  "context_budget": {
+    "live working set": "#320, #258, authority marker code/tests, contract tooling checker, active execplan",
+    "recoverable later": "full declarative portability history and closed extraction issues",
+    "externalize before shift": "update this execplan execution_run and immediate_next_action",
+    "pre-work config pull": "uv run agentic-workspace summary and gh issue view #320/#258",
+    "pre-work memory pull": "none",
+    "tiny resumability note": "extract stable authority marker policy values, keep matching procedural",
+    "context-shift triggers": "authority marker extraction implies broader ownership matching changes"
+  },
+  "delegated_judgment": {
+    "requested outcome": "ship Python-consumable authority marker policy extraction",
+    "hard constraints": "preserve behavior; keep dynamic path matching in Python; schema-validate the contract",
+    "agent may decide locally": "contract shape and representative parity tests",
+    "escalate when": "the broader #258 parent would need multiple further extraction slices"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#320",
+      "label": "authority marker policy extraction",
+      "role": "primary-intent",
+      "locator": "github issue #320"
+    },
+    {
+      "kind": "issue",
+      "target": "#258",
+      "label": "declarative portability parent",
+      "role": "parent-intent",
+      "locator": "github issue #258"
+    }
+  ],
+  "active_milestone": {
+    "id": "authority-marker-policy-contract",
+    "status": "completed",
+    "scope": "contract/schema plus Python consumer and parity proof",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this execplan.",
+    "Commit, push, and close #320/#258."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/python-consumable-contract-extraction.plan.json"
+  ],
+  "invariants": [
+    "Stable marker values are contract-owned.",
+    "Path matching remains runtime-owned.",
+    "Existing marker output remains compatible."
+  ],
+  "contract_decisions_to_freeze": [
+    "Authority marker payload data is stable policy data; selector normalization and matching stay procedural."
+  ],
+  "open_questions_to_close": [
+    "Closed: authority_markers.json stores static marker payload data plus representative paths; Python keeps path normalization and rule matching."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest tests/test_workspace_cli.py -q -k \"authority_marker or start or implement\"",
+    "uv run agentic-workspace start --format json",
+    "uv run agentic-workspace implement --changed AGENTS.md --format json",
+    "uv run agentic-workspace ownership --target . --path llms.txt --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "git diff --check"
+  ],
+  "required_tools": [
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "Authority marker static values are no longer authored only inside cli.py.",
+    "The contract and schema are validated by contract tooling.",
+    "Representative paths prove each marker rule can produce the expected payload.",
+    "Existing start, implement, ownership --path, and llms.txt behavior remains compatible."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "active execplan",
+    "what happened": "Added authority_markers.json and schema, wired cli.py authority marker payloads to consume the validated contract, added representative-path parity checks, updated contract inventory/consumption metadata, and gave python_extraction_map an extracted state for completed slices.",
+    "scope touched": "workspace contract data/schema/tooling, cli authority marker consumer, focused CLI tests, extraction map, and active planning state",
+    "changed surfaces": "src/agentic_workspace/contracts/authority_markers.json; src/agentic_workspace/contracts/schemas/authority_markers.schema.json; src/agentic_workspace/cli.py; src/agentic_workspace/contract_tooling.py; scripts/check/check_contract_tooling_surfaces.py; contract inventory/consumption/extraction map; tests/test_workspace_cli.py",
+    "validations run": "uv run python scripts/check/check_contract_tooling_surfaces.py; uv run pytest tests/test_workspace_cli.py -q -k \"authority_marker or start or implement\"; uv run ruff check src scripts/check/check_contract_tooling_surfaces.py tests/test_workspace_cli.py; uv run agentic-workspace start --format json; uv run agentic-workspace implement --changed AGENTS.md --format json; uv run agentic-workspace ownership --target . --path llms.txt --format json; uv run agentic-workspace ownership --target . --path src/agentic_workspace/contracts/authority_markers.json --format json; uv run pytest -q; make maintainer-surfaces; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "result for continuation": "#320 is complete and #258's planned extraction blocker is closed; continue with further-product-compression-on-repeated-pressure.",
+    "next step": "Archive and close #320/#258."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "proof_report": {
+    "validation proof": "Contract tooling, focused tests, full pytest, ruff, maintainer surfaces, live start/implement/ownership dogfood, summary, planning checker, and diff check passed; diff check only reported the existing state.toml line-ending warning.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "authority_markers.json is schema-validated and consumed by cli.py; representative-path parity covers every marker rule; live start/implement/ownership outputs preserve AGENTS.md, llms.txt, planning, and source marker behavior."
+  },
+  "intent_satisfaction": {
+    "original intent": "Extract authority marker policy data from cli.py.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Authority labels, canonical source policy, safe-to-edit defaults, refresh commands, and representative paths now live in authority_markers.json with schema and parity checks; cli.py keeps only path normalization and matching behavior.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Keep durable, shareable contract truth in small checked-in surfaces and use Python as a reference implementation where possible.",
+    "slice shaping bias": "Extract stable policy data only; keep live runtime behavior procedural.",
+    "broader-lane validation question": "Does this make authority marker behavior consumable by non-Python adapters without reverse-engineering cli.py?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#320's concrete marker extraction landed and #258's planned portability lane no longer has a known stable Python-owned contract blocker; remaining runtime and template candidates are either extracted, classified, deferred with reason, or owned by later roadmap lanes.",
+    "evidence carried forward": "this execplan proof_report plus authority_markers contract/schema, contract tooling parity, live dogfood outputs, and python_extraction_map extracted/deferred classifications",
+    "reopen trigger": "authority marker values remain Python-authored or marker outputs drift"
+  },
+  "execution_summary": {
+    "outcome delivered": "Authority marker static policy data is contract-backed and Python consumes it as a reference adapter while keeping runtime matching procedural.",
+    "validation confirmed": "contract tooling, focused tests, full pytest, ruff, maintainer surfaces, live dogfood commands, planning checker, and diff check",
+    "follow-on routed to": "further-product-compression-on-repeated-pressure",
+    "post-work posterity capture": "contract inventory, python_contract_consumption, and python_extraction_map updated",
+    "knowledge promoted (Memory/Docs/Config)": "Contract metadata updated; no Memory changes needed.",
+    "resume from": "further-product-compression-on-repeated-pressure"
+  },
+  "drift_log": [
+    "2026-04-26: Promoted python-consumable contract extraction from roadmap, with #320 as the first slice and #258 as parent."
+  ]
+}
