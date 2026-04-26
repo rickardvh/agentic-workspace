@@ -6,7 +6,7 @@ Active
 
 ## Scope
 
-- Lightweight evidence for repeated package or workflow friction that is real enough to preserve, but not yet strong enough to justify a dedicated issue or active plan.
+- Lightweight evidence for repeated package or workflow friction below issue or active-plan level.
 
 ## Applies to
 
@@ -34,9 +34,9 @@ Active
 
 ## When to use this
 
-- The signal is real and recurring, but still below the threshold for active planned work or issue creation.
-- You need one compact place to accumulate repeated package friction across sessions.
-- You want a later promotion decision to be justified by actual recurrence rather than hindsight.
+- A friction class repeats during ordinary work.
+- The signal is still below issue or active-plan level.
+- You need a compact recurrence trail for later routing.
 
 ## Rules
 
@@ -54,7 +54,7 @@ Observed recurrences
 - 2026-04-22: <short symptom plus surface>
 
 Keep now
-- <why this is still below issue or active-plan level for now>
+- <short reason this stays below issue or active-plan level for now>
 
 Promote when
 - <clear trigger for planning, issue creation, docs, test, validation, or automation>
@@ -83,7 +83,7 @@ Most likely remediation
 - validation
 
 Config treatment
-- retain because the current proactive posture favors one compact proof entry.
+- retain; current proactive posture favors one compact proof entry.
 
 Last seen
 2026-04-23 during issue #263 lane closeout
@@ -91,7 +91,7 @@ Last seen
 ## Verification
 
 - Repeated friction can be preserved without opening an issue immediately.
-- A later promotion decision can cite concrete recurrence bullets instead of chat memory.
+- A later promotion choice can cite concrete recurrence bullets instead of chat memory.
 - The note stays compact enough for routine maintenance.
 
 ## Boundary reminder

@@ -15,6 +15,10 @@ def _render_script_path() -> Path:
     return WORKSPACE_ROOT / "scripts" / "render_agent_docs.py"
 
 
+def _render_handoff_script_path() -> Path:
+    return WORKSPACE_ROOT / "scripts" / "render_external_agent_handoff.py"
+
+
 def _load_module(path: Path, module_name: str):
     spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:
@@ -387,3 +391,26 @@ def test_render_wrapper_keeps_backward_compatible_entrypoint_alias() -> None:
 
     assert mod.REPO_ROOT == WORKSPACE_ROOT
     assert mod.render_readme_entrypoints is mod.render_quickstart
+
+
+def test_render_external_agent_handoff_updates_stale_llms_adapter(tmp_path: Path) -> None:
+    mod = _load_module(_render_handoff_script_path(), "maintainer_render_handoff")
+    _write(tmp_path / "AGENTS.md", "# Agent Instructions\n")
+    _write(tmp_path / "llms.txt", "# stale handoff\n")
+
+    result = mod.render_external_agent_handoff(target_root=tmp_path)
+
+    assert result == {"status": "updated", "path": "llms.txt"}
+    text = (tmp_path / "llms.txt").read_text(encoding="utf-8")
+    assert "Authority marker:" in text
+    assert "refresh_command: `make maintainer-surfaces`" in text
+
+
+def test_render_external_agent_handoff_reports_current_when_adapter_matches(tmp_path: Path) -> None:
+    mod = _load_module(_render_handoff_script_path(), "maintainer_render_handoff_current")
+    _write(tmp_path / "AGENTS.md", "# Agent Instructions\n")
+
+    mod.render_external_agent_handoff(target_root=tmp_path)
+    result = mod.render_external_agent_handoff(target_root=tmp_path)
+
+    assert result == {"status": "current", "path": "llms.txt"}

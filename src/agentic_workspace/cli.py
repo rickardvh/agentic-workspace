@@ -1438,6 +1438,24 @@ def _external_agent_handoff_text(
     return "\n".join(lines)
 
 
+def _external_agent_handoff_text_for_target(*, target_root: Path) -> str:
+    descriptors = _module_operations()
+    config = _load_workspace_config(target_root=target_root, descriptors=descriptors)
+    selected_modules, _resolved_preset = _selected_modules(
+        command_name="report",
+        preset_name=None,
+        module_arg=None,
+        target_root=target_root,
+        descriptors=descriptors,
+        config=config,
+    )
+    return _external_agent_handoff_text(
+        selected_modules=selected_modules,
+        agent_instructions_file=config.agent_instructions_file,
+        workflow_artifact_profile=config.workflow_artifact_profile,
+    )
+
+
 def _write_generated_text(*, destination: Path, text: str, dry_run: bool) -> None:
     if dry_run:
         return

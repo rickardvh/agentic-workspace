@@ -264,6 +264,27 @@ elimination_target = "promote"
 config_treatment = "promote"
 config_note = "Use current repo or local config to decide whether repeated friction should promote into planning or stronger enforcement instead of remaining weak evidence."
 
+[notes.".agentic-workspace/memory/repo/decisions/recurring-friction-ledger.md"]
+note_type = "decision"
+canonical_home = ".agentic-workspace/memory/repo/decisions/recurring-friction-ledger.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system", "planning"]
+surfaces = ["decision", "review"]
+routes_from = [
+  ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md",
+  ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
+  ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
+]
+stale_when = [
+  ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md",
+  ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
+  ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
+]
+memory_role = "durable_truth"
+
 [notes.".agentic-workspace/memory/repo/runbooks/vague-instruction-failure-capture.md"]
 note_type = "runbook"
 canonical_home = ".agentic-workspace/memory/repo/runbooks/vague-instruction-failure-capture.md"

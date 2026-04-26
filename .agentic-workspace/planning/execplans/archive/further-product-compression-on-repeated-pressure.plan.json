@@ -1,0 +1,221 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Further Product Compression On Repeated Pressure",
+  "goal": [
+    "Resolve concrete product-compression friction in #319 by making the llms.txt generated-adapter refresh path truthful.",
+    "If scope remains small, resolve #326 by splitting durable rationale out of the recurring-friction runbook into a decision note."
+  ],
+  "non_goals": [
+    "Do not rewrite the full startup model.",
+    "Do not delete weak-agent routing surfaces without replacement.",
+    "Do not close #230 unless the broader product-shape direction is materially complete.",
+    "Do not make llms.txt a richer handbook."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Visible compatibility residue is smaller and more trustworthy: llms.txt has one working refresh path, and recurring friction memory separates procedure from rationale.",
+      "constraints": "Prefer deletion/demotion/automation over adding new visible prose; preserve compact startup routing.",
+      "latitude": "Choose whether #319 alone is the milestone or whether #326 fits the same bounded product-compression proof.",
+      "escalation": "Stop if work expands into broad front-door redesign or deletes compatibility surfaces."
+    },
+    "execution": {
+      "milestone": "truthful-maintainer-refresh-and-memory-rationale-split",
+      "status": "completed",
+      "next_step": "Archive this slice while keeping the product-compression lane open for #230/#281.",
+      "proof": "Changing the handoff source has one documented refresh path and the maintainer target leaves no adapter drift."
+    },
+    "scope": {
+      "touched": [
+        "Makefile",
+        "scripts/",
+        "src/agentic_workspace/cli.py",
+        "tests/",
+        ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md",
+        ".agentic-workspace/memory/repo/decisions/",
+        ".agentic-workspace/memory/repo/manifest.toml",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/further-product-compression-on-repeated-pressure.plan.json"
+      ],
+      "invariants": [
+        "llms.txt stays lightweight and generated-adapter shaped.",
+        "make maintainer-surfaces is the truthful refresh command when llms.txt source changes.",
+        "Memory runbooks stay procedural and compact."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "product-shape compression by removing or demoting visible residue",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane further-product-compression-on-repeated-pressure",
+    "parent lane": "further-product-compression-on-repeated-pressure"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "generated adapter refresh remains untruthful, memory rationale remains in procedural runbooks, or broader #230 remains materially open"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A concrete compatibility adapter can be maintained through one command rather than manual patching.",
+    "intentionally deferred": "Broad startup/front-door deletion or generated-doc family redesign.",
+    "discovered implications": "make maintainer-surfaces needed a real llms.txt render step; recurring-friction rationale can live in a decision note while the runbook stays procedural.",
+    "proof achieved now": "yes",
+    "validation still needed": "none",
+    "next likely slice": "generated-tool-conformance"
+  },
+  "intent_interpretation": {
+    "literal request": "execute all planned work lane by lane and dogfood the package",
+    "inferred intended outcome": "remove real visible-product residue that repeated dogfooding has proven costly",
+    "chosen concrete what": "make llms.txt refresh automatic/truthful and split recurring-friction rationale if bounded",
+    "interpretation distance": "medium",
+    "review guidance": "reject changes that add more visible docs or broaden llms.txt"
+  },
+  "delegated_judgment": {
+    "requested outcome": "ship concrete product-compression cleanup for generated adapter refresh and, if bounded, memory rationale split",
+    "hard constraints": "preserve compact routing; do not broaden llms.txt; do not delete weak-agent compatibility surfaces",
+    "agent may decide locally": "script/helper shape, tests, and whether #326 fits the same bounded milestone",
+    "escalate when": "the work requires front-door redesign, broad generated-doc removal, or changing startup semantics"
+  },
+  "execution_bounds": {
+    "allowed paths": "Makefile, scripts, workspace CLI helper/tests, maintainer docs if command list changes, memory recurring-friction runbook/decision/manifest if #326 is included, active planning state and execplan",
+    "max changed files": "12",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py tests/test_maintainer_surfaces.py -q -k \"llms or maintainer or external_agent_handoff or recurring\"; make maintainer-surfaces; uv run agentic-workspace report --target . --format json; uv run agentic-workspace summary --format json; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "ask-before-refactor threshold": "stop before deleting entry surfaces or rewriting startup/front-door doctrine",
+    "stop before touching": "unrelated roadmap lanes"
+  },
+  "context_budget": {
+    "live working set": "#319, #326, #230, Makefile maintainer target, llms handoff source, recurring-friction memory surfaces, active execplan",
+    "recoverable later": "full product-compression history and older startup/front-door archive plans",
+    "externalize before shift": "update this execplan execution_run and immediate_next_action",
+    "pre-work config pull": "uv run agentic-workspace summary and gh issue view for #319/#326/#230",
+    "pre-work memory pull": "read only the recurring-friction runbook, candidate decision note, and manifest if #326 is included",
+    "tiny resumability note": "make llms.txt refresh truthful through make maintainer-surfaces; split memory rationale only if bounded",
+    "context-shift triggers": "refresh path requires startup semantics changes or memory cleanup expands beyond recurring-friction rationale"
+  },
+  "stop_conditions": {
+    "stop when": "#319 and any included bounded memory cleanup are shipped, dogfooded, committed, pushed, and closed or residual work is routed",
+    "escalate when boundary reached": "a generated adapter cannot be refreshed without changing lifecycle semantics",
+    "escalate on scope drift": "work becomes a broad product-shape redesign",
+    "escalate on proof failure": "make maintainer-surfaces still leaves llms.txt drift"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#319",
+      "label": "truthful llms refresh path",
+      "role": "primary-intent",
+      "locator": "github issue #319"
+    },
+    {
+      "kind": "issue",
+      "target": "#326",
+      "label": "recurring-friction rationale split",
+      "role": "secondary-bounded-intent",
+      "locator": "github issue #326"
+    },
+    {
+      "kind": "issue",
+      "target": "#230",
+      "label": "product compression parent",
+      "role": "parent-intent",
+      "locator": "github issue #230"
+    }
+  ],
+  "active_milestone": {
+    "id": "truthful-maintainer-refresh-and-memory-rationale-split",
+    "status": "completed",
+    "scope": "maintainer refresh truth plus bounded memory hygiene if it stays small",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this slice while preserving the product-compression roadmap lane.",
+    "Commit, push, and close #319/#326."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/further-product-compression-on-repeated-pressure.plan.json"
+  ],
+  "invariants": [
+    "Compatibility adapters stay small.",
+    "Changing truth stays in structured/queryable sources.",
+    "Procedural memory runbooks do not accumulate rationale."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_maintainer_surfaces.py -q -k \"llms or maintainer or external_agent_handoff or recurring\"",
+    "make maintainer-surfaces",
+    "uv run agentic-workspace report --target . --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "git diff --check"
+  ],
+  "required_tools": [
+    "gh",
+    "git"
+  ],
+  "completion_criteria": [
+    "Changing the external-agent handoff template has one documented refresh path.",
+    "make maintainer-surfaces updates llms.txt or the authority marker no longer claims it does.",
+    "Doctor/report no longer reports adapter drift after the documented refresh command has run.",
+    "Any recurring-friction rationale cleanup leaves the runbook procedural and manifest-routed."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "active execplan",
+    "what happened": "Added a source-owned llms.txt renderer, wired make maintainer-surfaces and strict maintainer-surfaces to run it before drift checks, added tests for stale/current llms rendering, and split recurring-friction rationale from the procedural runbook into a manifest-routed decision note.",
+    "scope touched": "Makefile maintainer target, workspace CLI handoff helper, render script, maintainer tests, recurring-friction memory runbook/decision/manifest, and active planning state",
+    "changed surfaces": "Makefile; scripts/render_external_agent_handoff.py; src/agentic_workspace/cli.py; tests/test_maintainer_surfaces.py; .agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md; .agentic-workspace/memory/repo/decisions/recurring-friction-ledger.md; .agentic-workspace/memory/repo/manifest.toml",
+    "validations run": "uv run pytest tests/test_workspace_cli.py tests/test_maintainer_surfaces.py -q -k \"llms or maintainer or external_agent_handoff or recurring\"; uv run ruff check src/agentic_workspace/cli.py scripts/render_external_agent_handoff.py tests/test_maintainer_surfaces.py; make maintainer-surfaces; uv run agentic-workspace report --target . --format json; uv run pytest -q; uv run ruff check src tests scripts; uv run python scripts/check/check_planning_surfaces.py; git diff --check",
+    "result for continuation": "#319 and #326 are complete; #230 and #281 remain open as the broader product-compression continuation.",
+    "next step": "Archive partial slice and close #319/#326."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes for #319/#326; partial for #230/#281",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-but-keep-lane-open"
+  },
+  "proof_report": {
+    "validation proof": "Focused tests, full pytest, ruff, maintainer-surfaces, report dogfood, planning checker, and diff check passed; diff check only reported existing line-ending warnings.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "make maintainer-surfaces now runs render_external_agent_handoff before drift checks; tests prove stale llms.txt is updated and current llms.txt remains current; report no longer shows the recurring-friction rationale/manual-review warning."
+  },
+  "intent_satisfaction": {
+    "original intent": "Reduce product-visible residue proven costly by repeated dogfooding.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#319 and #326 concrete friction are satisfied: the llms adapter refresh path is truthful, and recurring-friction rationale is split into a decision note.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane further-product-compression-on-repeated-pressure (#230/#281)"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Reduce visible product residue while preserving durable leverage and clear ownership.",
+    "slice shaping bias": "Prefer making an existing command truthful over adding another visible instruction surface.",
+    "broader-lane validation question": "Does this remove a repeated first-line friction without increasing startup concepts?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#319 and #326 landed, but #230/#281 still represent broader product-compression and generated-compatibility residue decisions.",
+    "evidence carried forward": "this execplan proof_report plus open #230/#281 and the roadmap lane",
+    "reopen trigger": "llms.txt refresh remains manual or memory runbook rationale keeps accumulating"
+  },
+  "execution_summary": {
+    "outcome delivered": "The concrete #319/#326 friction is resolved while the larger product-compression lane remains open.",
+    "validation confirmed": "focused tests, full pytest, ruff, maintainer-surfaces, report dogfood, planning checker, and diff check",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane further-product-compression-on-repeated-pressure (#230/#281)",
+    "post-work posterity capture": "recurring-friction decision note and manifest route",
+    "knowledge promoted (Memory/Docs/Config)": "Memory decision note added; no config changes needed.",
+    "resume from": "further-product-compression-on-repeated-pressure"
+  },
+  "drift_log": [
+    "2026-04-26: Promoted product compression lane with #319 as the concrete first milestone and #326 as a bounded secondary cleanup if scope remains small."
+  ]
+}
