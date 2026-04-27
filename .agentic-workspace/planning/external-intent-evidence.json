@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-27T23:39:38+00:00",
+  "refreshed_at": "2026-04-27T23:46:07+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-27T23:39:38+00:00",
+    "refreshed_at": "2026-04-27T23:46:07+00:00",
     "item_count": 458,
-    "open_count": 17,
-    "closed_count": 441,
+    "open_count": 16,
+    "closed_count": 442,
     "limit": 600,
     "state": "all",
     "command": "gh issue list --state all --json number,title,state,url,labels,createdAt,updatedAt,body,comments"
@@ -7342,7 +7342,7 @@
       "system": "github",
       "id": "#470",
       "title": "[Planning]: Suppress archived child audit pressure when continuation is already active",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#462",
       "planning_residue_expected": "optional",
@@ -7352,8 +7352,8 @@
         "planning"
       ],
       "created_at": "2026-04-27T21:03:01Z",
-      "updated_at": "2026-04-27T21:03:01Z",
-      "comments_count": 0
+      "updated_at": "2026-04-27T23:45:50Z",
+      "comments_count": 1
     },
     {
       "system": "github",
