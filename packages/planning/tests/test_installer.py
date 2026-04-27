@@ -3352,6 +3352,54 @@ candidates = []
     assert "close or reroute" in summary["intent_validation_contract"]["recommended_next_action"].lower()
 
 
+def test_planning_summary_does_not_treat_follow_up_role_as_landed_open_issue(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#900",
+                "title": "Parent lane remains open",
+                "status": "open",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "required",
+            },
+        ],
+    )
+    archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    plan_path = archive_dir / "child-slice.plan.json"
+    _write_execplan_record(plan_path, item_id="child-slice", status="completed")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["references"] = [
+        {"kind": "issue", "target": "#901", "role": "closed_item"},
+        {"kind": "issue", "target": "#900", "role": "parent_intent"},
+    ]
+    record["closure_check"] = {
+        "slice status": "completed",
+        "larger-intent status": "open",
+        "closure decision": "archive-and-close",
+        "why this decision is honest": "The child slice landed while the parent lane remains active.",
+        "evidence carried forward": "#900 remains a follow-up context reference, not this closeout target.",
+        "reopen trigger": "parent lane work is lost",
+    }
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    reconciliation = summary["intent_validation_contract"]["landed_open_issue_reconciliation"]
+
+    assert reconciliation["status"] == "absent"
+    assert reconciliation["counts"]["implemented_and_unclosed_count"] == 0
+    assert reconciliation["counts"]["ambiguous_open_reference_count"] == 0
+    assert summary["intent_validation_contract"]["counts"]["landed_open_issue_count"] == 0
+
+
 def test_planning_summary_accepts_historical_closeout_baseline(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
@@ -3775,6 +3823,78 @@ def test_planning_summary_suppresses_child_continuation_consumed_by_later_parent
     ]
     assert contract["derived_follow_up_candidates"] == []
     assert summary["execution_readiness"]["status"] == "narrow-direct-ready"
+
+
+def test_planning_summary_uses_reference_roles_before_prose_issue_refs(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    archive_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    plan_path = archive_dir / "role-aware-closeout.plan.json"
+    _write_execplan_record(
+        plan_path,
+        item_id="role-aware-closeout",
+        status="completed",
+        references=[
+            {
+                "kind": "github-issue",
+                "target": "#500",
+                "label": "delivered slice",
+                "role": "closed_item",
+                "locator": "issue",
+            },
+            {
+                "kind": "github-issue",
+                "target": "#442",
+                "label": "parent lane",
+                "role": "parent_intent",
+                "locator": "issue",
+            },
+            {
+                "kind": "github-issue",
+                "target": "#445",
+                "label": "next lane",
+                "role": "next_lane",
+                "locator": "issue",
+            },
+        ],
+    )
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["proof_report"] = {
+        "validation proof": "focused tests",
+        "proof achieved now": "implemented #500 while preserving parent #442 and next lane #445.",
+        'evidence for "proof achieved" state': "role-aware refs distinguish closure from context",
+    }
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+    _write_finished_work_evidence(
+        tmp_path / ".agentic-workspace/planning/finished-work-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "#600",
+                "title": "Parent continuation remains open",
+                "status": "open",
+                "kind": "lane",
+                "reopens": ["#442"],
+            }
+        ],
+    )
+
+    summary = planning_summary(target=tmp_path)
+    contract = summary["finished_work_inspection_contract"]
+    inspection = contract["inspections"][0]
+
+    assert contract["counts"]["role_aware_reference_plan_count"] == 1
+    assert contract["counts"]["non_closure_reference_count"] == 2
+    assert contract["counts"]["likely_premature_closeout_count"] == 0
+    assert contract["counts"]["clearly_landed_count"] == 1
+    assert inspection["tracked_refs"] == ["#500"]
+    assert inspection["non_closure_refs"] == ["#442", "#445"]
+    assert inspection["reference_roles"]["by_role"] == {
+        "closed_item": ["#500"],
+        "next_lane": ["#445"],
+        "parent_intent": ["#442"],
+    }
 
 
 def test_planning_summary_exposes_closeout_distillation_contract(tmp_path: Path) -> None:

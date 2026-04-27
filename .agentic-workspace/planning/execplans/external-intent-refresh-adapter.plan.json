@@ -1,0 +1,164 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "External Intent Refresh Adapter",
+  "goal": [
+    "After #444 made issue-reference roles explicit, #445 is the next #442 slice and should reduce manual tracker refresh work."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "After #444 made issue-reference roles explicit, #445 is the next #442 slice and should reduce manual tracker refresh work.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "external-intent-refresh-adapter",
+      "status": "in-progress",
+      "next_step": "Inspect the current external intent evidence refresh path and design the smallest optional GitHub adapter boundary.",
+      "proof": "focused workspace/planning tests for external intent evidence refresh plus proof selector"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/external-intent-refresh-adapter.plan.json",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#442: make the plan -> implement -> evaluate continuation loop first-class for long lanes.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane long-session-dogfooding-intent-loop"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#446-#448 remain open after this slice, and #442 remains open until the loop itself is first-class.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #445 closeout, promote the next issue in the dogfooding lane"
+  },
+  "parent_lane": {
+    "id": "#442",
+    "title": "Add an autopilot intent loop for plan, implement, evaluate, and continue",
+    "priority": "1",
+    "issues": "#442, #443, #444, #445, #446, #447, #448"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "delegated_judgment": {
+    "requested outcome": "After #444 made issue-reference roles explicit, #445 is the next #442 slice and should reduce manual tracker refresh work.",
+    "hard constraints": "Keep core planning provider-agnostic; host-specific GitHub behavior must stay in an optional adapter or workspace wrapper path.",
+    "agent may decide locally": "The smallest command shape and evidence schema extension needed to refresh current external-work evidence.",
+    "escalate when": "The change would make core planning depend directly on GitHub, require secrets in checked-in state, or broaden into issue closure automation."
+  },
+  "context_budget": {
+    "live working set": "state, this execplan, #445 issue, current external intent evidence refresh code/tests",
+    "recoverable later": "archived #443/#444 closeouts and dogfooding report",
+    "externalize before shift": "update execution_run and closure_check",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Next active issue is #445 external intent refresh adapter.",
+    "context-shift triggers": "Before adding provider-specific behavior to core planning or changing evidence schema."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/445",
+      "label": "#445 external intent refresh adapter",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/442",
+      "label": "#442 autopilot intent loop",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "external-intent-refresh-adapter",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect current external-intent evidence loading, reporting, and manual refresh assumptions.",
+    "Identify the smallest optional GitHub refresh adapter boundary.",
+    "Add focused tests before implementing refresh behavior."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/execplans/external-intent-refresh-adapter.plan.json",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"external_intent or evidence_refresh or reconcile\"",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/external-intent-evidence.json .agentic-workspace/planning/execplans/external-intent-refresh-adapter.plan.json src/agentic_workspace/cli.py tests/test_workspace_cli.py --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Agents can refresh provider-agnostic external intent evidence through a bounded adapter instead of manual JSON edits."
+  ],
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "closure_check": {
+    "slice status": "open",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "Implementation has not started.",
+    "evidence carried forward": "#444 role-aware reference inspection landed and #445 is now active.",
+    "reopen trigger": "manual external intent evidence refresh remains required"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted from TODO direct-task shape into an execplan."
+  ]
+}

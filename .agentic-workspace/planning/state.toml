@@ -1,6 +1,6 @@
 [todo]
 active_items = [
-  { id = "structured-reference-roles", status = "in-progress", title = "Add structured reference roles for closeout and review evidence", source = "github:#444", why_now = "After #443 suppressed consumed child continuations, #444 is the next issue in the high-priority dogfooding lane and should replace prose-sensitive issue reference interpretation with explicit roles.", next_action = "Plan and implement structured reference role handling for closeout and review evidence.", done_when = "Closeout/review artifacts can record issue refs with explicit roles and finished-work inspection consumes role data before fallback prose scanning." },
+  { id = "external-intent-refresh-adapter", status = "in-progress", title = "Add a GitHub adapter to refresh provider-agnostic external intent evidence", source = "github:#445", why_now = "After #444 made issue-reference roles explicit, #445 is the next #442 slice and should reduce manual tracker refresh work.", surface = ".agentic-workspace/planning/execplans/external-intent-refresh-adapter.plan.json" },
 ]
 queued_items = []
 

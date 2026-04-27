@@ -1626,7 +1626,7 @@
       "system": "github",
       "id": "#444",
       "title": "[Planning]: Add structured reference roles for closeout and review evidence",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#442",
       "planning_residue_expected": "required"

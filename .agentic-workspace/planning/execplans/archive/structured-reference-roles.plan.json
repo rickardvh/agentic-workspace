@@ -18,8 +18,8 @@
     },
     "execution": {
       "milestone": "first slice for #444",
-      "status": "in-progress",
-      "next_step": "Inspect existing structured reference extraction and add role-aware finished-work inspection behavior.",
+      "status": "completed",
+      "next_step": "Archive this completed slice, then promote #445 when continuing the #442 lane.",
       "proof": "focused planning installer tests plus proof selector"
     },
     "scope": {
@@ -43,7 +43,8 @@
     "parent lane": "#442"
   },
   "required_continuation": {
-    "required follow-on for the larger intended outcome": "#445-#448 remain open after this slice, and #442 remains open until the loop itself is first-class.",
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#445-#448 remain open after this slice, and #442 remains open until the loop itself is first-class.",
     "owner surface": ".agentic-workspace/planning/state.toml",
     "activation trigger": "after #444 closeout, promote the next issue in the dogfooding lane"
   },
@@ -108,7 +109,7 @@
   ],
   "active_milestone": {
     "id": "role-aware-finished-work-inspection",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "finished-work inspection and reference extraction",
     "ready": "yes",
     "blocked": "no",
@@ -153,35 +154,35 @@
     "#442 parent lane remains routed after #444."
   ],
   "execution_run": {
-    "run status": "not-started",
+    "run status": "completed",
     "executor": "Codex",
     "handoff source": "#443 closeout continuation",
-    "what happened": "Promoted #444 after #443 completion.",
-    "scope touched": "planning state and this execplan so far",
-    "changed surfaces": ".agentic-workspace/planning/state.toml; this execplan",
-    "validations run": "",
-    "result for continuation": "",
-    "next step": "Implement #444."
+    "what happened": "Implemented role-aware issue-reference extraction for finished-work inspection. Explicit closure roles now override prose scanning, and parent/next-lane references are exposed as non-closure refs.",
+    "scope touched": "planning installer, planning installer tests, planning state, and this execplan",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_installer.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; this execplan",
+    "validations run": "uv run pytest packages/planning/tests/test_installer.py -q -k \"reference_role or finished_work_inspection or suppresses_child_continuation or uses_reference_roles\"; cd packages/planning && uv run pytest tests/test_installer.py; cd packages/planning && uv run ruff check .; uv run agentic-workspace proof --target . --changed packages/planning/src/repo_planning_bootstrap/installer.py packages/planning/tests/test_installer.py --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "#444 landed; #442 remains open and #445 is the next planned slice.",
+    "next step": "Archive this completed plan and promote #445 when continuing the lane."
   },
   "finished_run_review": {
-    "review status": "not-yet-run",
-    "scope respected": "",
-    "proof status": "",
-    "intent served": "",
-    "config compliance": "",
-    "misinterpretation risk": "",
-    "follow-on decision": ""
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes for #444; no for parent #442",
+    "config compliance": "used planning-autopilot and self-improvement dogfooding surfaces; kept work inside planning installer/tests and checked-in planning state",
+    "misinterpretation risk": "lower: role-aware refs now distinguish closed_item/source_intent/child from parent_intent/next_lane/context",
+    "follow-on decision": "archive-but-keep-lane-open"
   },
   "proof_report": {
-    "validation proof": "",
-    "proof achieved now": "",
-    "evidence for \"proof achieved\" state": ""
+    "validation proof": "Full planning installer tests and planning package ruff passed.",
+    "proof achieved now": "Role-aware finished-work inspection is implemented and regression covered.",
+    "evidence for \"proof achieved\" state": "The regression proves closed_item is tracked while parent_intent and next_lane are non-closure refs; live summary exposes role-aware reference counts without increasing continuation pressure."
   },
   "intent_satisfaction": {
-    "original intent": "Ingest and address the new dogfooding issues first.",
+    "original intent": "Ingest those new issues and address them first.",
     "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "#443 landed; #444 is now active.",
-    "unsolved intent passed to": ".agentic-workspace/planning/state.toml long-session-dogfooding-intent-loop"
+    "evidence of intent satisfaction": "Finished-work inspection now consumes explicit issue-reference roles before prose fallback; focused and full planning package tests passed.",
+    "unsolved intent passed to": "#445 external intent refresh remains next in the #442 dogfooding lane."
   },
   "system_intent_alignment": {
     "relevant system intent": "Confirmed higher-level intent must stay recoverable separately from the currently active slice.",
@@ -190,35 +191,73 @@
     "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
   },
   "closure_check": {
-    "slice status": "open",
+    "slice status": "completed",
     "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "Implementation has not started.",
-    "evidence carried forward": "",
-    "reopen trigger": "role-aware inspection remains absent"
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The #444 slice landed, but parent #442 remains open for the larger plan -> implement -> evaluate loop.",
+    "evidence carried forward": "Role-aware regression covers closed_item vs parent_intent and next_lane references; summary exposes role-aware reference counts.",
+    "reopen trigger": "Parent or next-lane references are again treated as closure claims."
   },
   "execution_summary": {
-    "outcome delivered": "",
-    "validation confirmed": "",
-    "follow-on routed to": "",
-    "post-work posterity capture": "",
-    "knowledge promoted (Memory/Docs/Config)": "",
-    "resume from": ".agentic-workspace/planning/execplans/structured-reference-roles.plan.json"
+    "outcome delivered": "Finished-work inspection now consumes explicit issue-reference roles before prose fallback.",
+    "validation confirmed": "Full planning installer tests and planning package ruff passed.",
+    "follow-on routed to": "#445 and parent #442",
+    "post-work posterity capture": "No Memory promotion needed; the behavior is captured in tests and archived execplan residue.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": ".agentic-workspace/planning/state.toml long-session-dogfooding-intent-loop"
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [
-        "#442 remains the parent lane after #444."
+      "discard": [
+        {
+          "summary": "No durable memory promotion needed; implementation details are covered by tests and archive residue.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
       ],
-      "memory": [],
-      "config_check": [],
+      "continuation": [
+        {
+          "summary": "#442 remains the parent lane after #444.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "none",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
       "docs": [],
       "issue_follow_up": [
-        "#445",
-        "#446",
-        "#447",
-        "#448"
+        {
+          "summary": "#445",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#446",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#447",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#448",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
       ]
     }
   },

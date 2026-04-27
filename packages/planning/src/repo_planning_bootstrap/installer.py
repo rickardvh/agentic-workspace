@@ -116,6 +116,22 @@ EXECPLAN_RECORD_KIND = "planning-execplan/v1"
 REVIEW_RECORD_KIND = "planning-review/v1"
 PLANNING_REFERENCE_KIND_DEFAULT = "artifact"
 PLANNING_REFERENCE_ROLE_DEFAULT = "context"
+PLANNING_REFERENCE_CLOSURE_ROLES = frozenset(
+    {
+        "closed_item",
+        "closed",
+        "implemented_item",
+        "implemented",
+        "delivered_item",
+        "delivered",
+        "completed_item",
+        "completed",
+        "source",
+        "source_intent",
+        "child",
+        "closed_child",
+    }
+)
 
 PACKAGE_MANAGED_FILES = tuple(
     relative for relative in REQUIRED_PAYLOAD_FILES if relative not in ROOT_SURFACE_FILES and relative not in GENERATED_PAYLOAD_FILES
@@ -2860,6 +2876,11 @@ def _landed_open_issue_reconciliation(
             for ref in refs
             if ref.startswith(".agentic-workspace/planning/execplans/archive/") or ref.startswith(".agentic-workspace/planning/reviews/")
         ]
+        evidence_refs = [
+            ref
+            for ref in evidence_refs
+            if not _checked_in_ref_is_open_follow_up_context(target_root=target_root, relative_path=ref, item_id=item_id)
+        ]
         if not evidence_refs:
             continue
         closeout_refs = [
@@ -2928,6 +2949,35 @@ def _checked_in_ref_looks_landed(*, target_root: Path, relative_path: str, item_
     return "complete" in slice_status or "landed" in slice_status
 
 
+def _checked_in_ref_is_open_follow_up_context(*, target_root: Path, relative_path: str, item_id: str) -> bool:
+    path = target_root / relative_path
+    if not path.exists() or not path.is_file() or path.suffix != ".json":
+        return False
+    try:
+        record = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    if not isinstance(record, dict):
+        return False
+    reference_roles = _execplan_issue_reference_roles(path)
+    if item_id in reference_roles.get("closure_refs", []):
+        return False
+    if item_id in reference_roles.get("non_closure_refs", []):
+        return True
+    closeout_distillation = record.get("closeout_distillation", {})
+    buckets = closeout_distillation.get("buckets", {}) if isinstance(closeout_distillation, dict) else {}
+    issue_follow_up = buckets.get("issue_follow_up", []) if isinstance(buckets, dict) else []
+    if isinstance(issue_follow_up, list):
+        for raw in issue_follow_up:
+            text = json.dumps(raw, sort_keys=True) if isinstance(raw, dict) else str(raw)
+            if item_id in text:
+                return True
+    required_continuation = record.get("required_continuation", {})
+    if isinstance(required_continuation, dict) and item_id in json.dumps(required_continuation, sort_keys=True):
+        return True
+    return False
+
+
 def _closeout_reconciliation_action_state(classification: str) -> str:
     normalized = classification.strip().lower().replace("_", "-")
     if normalized in {"fully-satisfied-with-evidence", "evidence-present"}:
@@ -2951,11 +3001,17 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
     partial = 0
     likely_premature = 0
     superseded_continuation = 0
+    role_aware_reference_plan_count = 0
+    non_closure_reference_count = 0
 
     archived_paths = _archived_execplan_paths(archive_dir)
     evidence_items = evidence.get("items", [])
 
     for path in archived_paths:
+        reference_roles = _execplan_issue_reference_roles(path)
+        if reference_roles["status"] == "present":
+            role_aware_reference_plan_count += 1
+            non_closure_reference_count += len(reference_roles["non_closure_refs"])
         issue_refs = sorted(_execplan_issue_refs(path))
         reopened_by = _finished_work_reopeners(issue_refs=issue_refs, evidence_items=evidence_items)
         closure_check = _execplan_closure_check(path)
@@ -2980,6 +3036,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
                 reopened_by=reopened_by,
                 closure_check=closure_check,
                 intent_satisfaction=intent_satisfaction,
+                reference_roles=reference_roles,
             )
             derived_follow_up_candidates.append(candidate)
             signals.append(
@@ -3009,6 +3066,7 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
                 reopened_by=reopened_by,
                 closure_check=closure_check,
                 intent_satisfaction=intent_satisfaction,
+                reference_roles=reference_roles,
             )
             derived_follow_up_candidates.append(candidate)
             signals.append(
@@ -3037,6 +3095,8 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
                 "larger_intent_status": closure_check.get("larger-intent status", ""),
                 "intent_satisfied": intent_satisfaction.get("was original intent fully satisfied?", ""),
                 "tracked_refs": issue_refs,
+                "reference_roles": reference_roles,
+                "non_closure_refs": reference_roles["non_closure_refs"],
                 "reopened_by": reopened_by,
                 "reason": reason,
                 "superseded_by": [],
@@ -3096,6 +3156,8 @@ def _finished_work_inspection_contract(*, target_root: Path) -> dict[str, Any]:
         "partial_count": partial,
         "likely_premature_closeout_count": likely_premature,
         "superseded_continuation_count": superseded_continuation,
+        "role_aware_reference_plan_count": role_aware_reference_plan_count,
+        "non_closure_reference_count": non_closure_reference_count,
         "derived_follow_up_candidate_count": len(derived_follow_up_candidates),
         "attention_count": len(signals),
     }
@@ -3216,6 +3278,7 @@ def _finished_work_follow_up_candidate(
     reopened_by: list[dict[str, str]],
     closure_check: dict[str, str],
     intent_satisfaction: dict[str, str],
+    reference_roles: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     reopened_refs = [item["id"] for item in reopened_by if item.get("id")]
     return {
@@ -3229,6 +3292,7 @@ def _finished_work_follow_up_candidate(
         "intent_satisfied": intent_satisfaction.get("was original intent fully satisfied?", ""),
         "unsolved_intent": intent_satisfaction.get("unsolved intent passed to", ""),
         "tracked_refs": issue_refs,
+        "reference_roles": reference_roles or {"status": "absent", "closure_refs": issue_refs, "non_closure_refs": [], "by_role": {}},
         "reopened_by": reopened_refs,
         "recommended_owner": ".agentic-workspace/planning/state.toml",
         "recommended_action": "promote to active planning, implement the next bounded slice, then re-run finished-work inspection",
@@ -6533,8 +6597,61 @@ def _execplan_title(path: Path) -> str:
 
 
 def _execplan_issue_refs(path: Path) -> set[str]:
+    role_summary = _execplan_issue_reference_roles(path)
+    if role_summary["status"] == "present":
+        return set(role_summary["closure_refs"])
+    return _execplan_prose_issue_refs(path)
+
+
+def _execplan_prose_issue_refs(path: Path) -> set[str]:
     tokens = set(re.findall(r"(?<![A-Za-z0-9_])(?:#[0-9]+|[A-Z][A-Z0-9]+-\d+)(?![A-Za-z0-9_])", path.read_text(encoding="utf-8")))
     return {token.strip() for token in tokens if token.strip()}
+
+
+def _normalize_reference_role_key(role: str) -> str:
+    normalized = role.strip().lower().replace("-", "_").replace(" ", "_")
+    return normalized or PLANNING_REFERENCE_ROLE_DEFAULT
+
+
+def _reference_issue_token(target: str) -> str:
+    stripped = target.strip()
+    if not stripped:
+        return ""
+    direct = re.fullmatch(r"(#[0-9]+|[A-Z][A-Z0-9]+-\d+)", stripped)
+    if direct:
+        return direct.group(1)
+    issue_url = re.search(r"/issues/([0-9]+)(?:\b|/|$)", stripped)
+    if issue_url:
+        return f"#{issue_url.group(1)}"
+    tokens = re.findall(r"(?<![A-Za-z0-9_])(?:#[0-9]+|[A-Z][A-Z0-9]+-\d+)(?![A-Za-z0-9_])", stripped)
+    return tokens[0].strip() if len(tokens) == 1 else ""
+
+
+def _execplan_issue_reference_roles(path: Path) -> dict[str, Any]:
+    references = _execplan_references(path)
+    by_role: dict[str, list[str]] = {}
+    labels_by_ref: dict[str, str] = {}
+    for reference in references:
+        token = _reference_issue_token(str(reference.get("target", "")))
+        if not token:
+            continue
+        role = _normalize_reference_role_key(str(reference.get("role", "")))
+        by_role.setdefault(role, [])
+        if token not in by_role[role]:
+            by_role[role].append(token)
+        label = str(reference.get("label", "")).strip()
+        if label:
+            labels_by_ref[token] = label
+    closure_refs = sorted({ref for role, refs in by_role.items() if role in PLANNING_REFERENCE_CLOSURE_ROLES for ref in refs})
+    non_closure_refs = sorted({ref for role, refs in by_role.items() if role not in PLANNING_REFERENCE_CLOSURE_ROLES for ref in refs})
+    return {
+        "status": "present" if by_role else "absent",
+        "closure_refs": closure_refs,
+        "non_closure_refs": non_closure_refs,
+        "by_role": {role: sorted(refs) for role, refs in sorted(by_role.items())},
+        "labels_by_ref": labels_by_ref,
+        "rule": ("Explicit issue-reference roles override prose scanning; only closure roles are treated as finished-work closure claims."),
+    }
 
 
 def _execplan_validation_commands(path: Path) -> list[str]:
