@@ -1243,10 +1243,22 @@
       "system": "github",
       "id": "#409",
       "title": "[Workspace]: Strengthen architecture boundaries after contract and generated-layer expansion",
-      "status": "open",
+      "status": "closed",
       "kind": "lane",
       "parent_id": "",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "present",
+      "closeout": {
+        "plan": ".agentic-workspace/planning/execplans/archive/architecture-boundary-parent-validation.plan.json",
+        "proof": "Parent acceptance mapped to closed children: #410 root CLI authority audit, #411 source/payload/root sync proof, #412 enclave removability/quietness, #413 historical review artifact routing, #414 one-owner-per-concern authority, and #415-#418 documentation/stale-surface lane.",
+        "validation": [
+          "gh issue view 409 --json number,title,body,state,labels,url,comments",
+          "gh issue view 410 --json number,title,state,url; gh issue view 411 --json number,title,state,url; gh issue view 412 --json number,title,state,url; gh issue view 413 --json number,title,state,url; gh issue view 414 --json number,title,state,url; gh issue view 415 --json number,title,state,url; gh issue view 416 --json number,title,state,url; gh issue view 417 --json number,title,state,url; gh issue view 418 --json number,title,state,url",
+          "uv run agentic-workspace summary --format json",
+          "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/external-intent-evidence.json .agentic-workspace/planning/execplans/architecture-boundary-parent-validation.plan.json --format json",
+          "uv run agentic-workspace reconcile --format json",
+          "uv run agentic-workspace doctor --target . --modules planning --format json"
+        ]
+      }
     },
     {
       "system": "github",

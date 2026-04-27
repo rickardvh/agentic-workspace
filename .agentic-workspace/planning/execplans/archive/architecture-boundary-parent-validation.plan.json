@@ -1,0 +1,266 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Architecture Boundary Parent Validation",
+  "goal": [
+    "Validate and close parent issue #409 by proving all child architecture-boundary risks have owner boundaries and proof stories."
+  ],
+  "non_goals": [
+    "Do not add new architecture capability.",
+    "Do not reopen child implementations unless validation reveals a concrete gap.",
+    "Do not treat child issue closure alone as parent intent satisfaction."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Parent #409 has explicit checked-in validation evidence mapping each requested architecture risk to child proof.",
+      "constraints": "Validation-only milestone unless a child acceptance gap is found.",
+      "latitude": "Use live GitHub state plus checked-in package evidence and comments as the parent proof story.",
+      "escalation": "Escalate or create follow-up issues if any child risk lacks proof or owner boundary."
+    },
+    "execution": {
+      "milestone": "architecture-boundary-parent-validation",
+      "status": "completed",
+      "next_step": "Archive parent validation and close #409.",
+      "proof": "Check live child issue states, run package summary/reconcile/doctor, and record parent closeout."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/architecture-boundary-parent-validation.plan.json"
+      ],
+      "invariants": [
+        "Child closure alone is not parent validation.",
+        "Each architecture risk maps to a proof story and owner boundary.",
+        "Remaining follow-up work must become explicit rather than hidden in parent closure."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Strengthen architectural boundaries without adding broad new capability.",
+    "this slice completes the larger intended outcome": "yes if all child proofs map to parent acceptance",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "architecture-boundary-remaining-slices"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no if validation passes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "Create follow-up only if validation finds missing proof."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Parent #409 now has an explicit evidence map from each architecture risk to a closed child issue, owner boundary, and proof story.",
+    "intentionally deferred": "None expected for #409 if validation passes.",
+    "discovered implications": "Package summary still reports older historical audit candidates, but the current architecture-boundary lane no longer has an implementation gap after #410 and #411 closeout plus #412-#414 validation comments.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for #409.",
+    "next likely slice": "Move to the next roadmap lane after #409 closes."
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest and implement all issues lane by lane. Commit and push after each milestone. Collect dogfooding evidence.",
+    "inferred intended outcome": "Close the architecture-boundary parent only after validating child evidence, not as a side effect of child issue closure.",
+    "chosen concrete what": "Parent validation record with child evidence map.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm child issue state and proof mapping satisfy every parent acceptance bullet."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning evidence surfaces only unless validation discovers a real implementation gap",
+    "max changed files": "3",
+    "required validation commands": "gh issue views for #409-#418, summary, reconcile, doctor, proof selector",
+    "ask-before-refactor threshold": "Any implementation change beyond parent closeout evidence.",
+    "stop before touching": "Runtime code or package payloads."
+  },
+  "context_budget": {
+    "live working set": "issue #409, child issue states #410-#418, #410/#411 archives, #412-#414 validation comments",
+    "recoverable later": "GitHub issue comments and archived child plans",
+    "externalize before shift": "Keep this plan updated with the parent evidence map.",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "gh issue view 409 --json number,title,body,state,labels,url,comments",
+    "tiny resumability note": "Active #409: validate parent architecture-boundary lane.",
+    "context-shift triggers": "Any child proof gap requiring implementation follow-up."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#409",
+      "label": "Strengthen architecture boundaries after contract and generated-layer expansion",
+      "role": "source intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/409"
+    }
+  ],
+  "delegated_judgment": {
+    "requested outcome": "Validate parent architecture-boundary lane.",
+    "hard constraints": "Do not close parent solely because children are closed; prove acceptance mapping.",
+    "agent may decide locally": "Whether existing child evidence is sufficient.",
+    "escalate when": "Any parent acceptance bullet lacks a proof story."
+  },
+  "active_milestone": {
+    "id": "architecture-boundary-parent-validation",
+    "status": "completed",
+    "scope": "Parent validation and closeout evidence only.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Validate #409 against child issue proof stories."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/execplans/architecture-boundary-parent-validation.plan.json"
+  ],
+  "invariants": [
+    "Child closure alone is not parent validation.",
+    "Each architecture risk maps to a proof story and owner boundary.",
+    "Remaining follow-up work must become explicit rather than hidden in parent closure."
+  ],
+  "validation_commands": [
+    "gh issue view 409 --json number,title,body,state,labels,url,comments",
+    "gh issue view 410 --json number,title,state,url; gh issue view 411 --json number,title,state,url; gh issue view 412 --json number,title,state,url; gh issue view 413 --json number,title,state,url; gh issue view 414 --json number,title,state,url; gh issue view 415 --json number,title,state,url; gh issue view 416 --json number,title,state,url; gh issue view 417 --json number,title,state,url; gh issue view 418 --json number,title,state,url",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/external-intent-evidence.json .agentic-workspace/planning/execplans/architecture-boundary-parent-validation.plan.json --format json"
+  ],
+  "completion_criteria": [
+    "Child issues cover the remaining architecture-structure risks.",
+    "Each child issue has a clear owner boundary and proof story.",
+    "Future changes can preserve architecture discipline without broad rereading."
+  ],
+  "parent_acceptance_map": [
+    {
+      "risk": "root cli.py interface authority keeps shrinking",
+      "issue": "#410",
+      "status": "closed",
+      "owner_boundary": "python_runtime_boundary contract owns root_cli_authority_audit; cli.py only projects contract-owned data.",
+      "proof_story": "archive/root-cli-interface-authority-audit.plan.json; defaults root_cli_authority output; contract tooling check; tests."
+    },
+    {
+      "risk": "source -> packaged payload -> installed root synchronization is easier to prove",
+      "issue": "#411",
+      "status": "closed",
+      "owner_boundary": "scripts/check/check_source_payload_operational_install.py owns sync proof; package pyprojects and bootstrap dirs remain package owned; root .agentic-workspace is operational.",
+      "proof_story": "archive/source-payload-install-sync-proof.plan.json; sync_proof current output; maintainer-surfaces."
+    },
+    {
+      "risk": "product-managed .agentic-workspace removability and quietness",
+      "issue": "#412",
+      "status": "closed",
+      "owner_boundary": "product_managed_enclave report/contract tooling owns boundary leak and quietness checks.",
+      "proof_story": "issue comment reports product_managed_enclave status clean, startup_quietness compact, local-only state non-authoritative, boundary_leaks empty."
+    },
+    {
+      "risk": "review artifacts stay historical and out of ordinary startup",
+      "issue": "#413",
+      "status": "closed",
+      "owner_boundary": "closeout_trust report and contract tooling own review-artifact routing.",
+      "proof_story": "issue comment reports closeout_trust classifies reviews as evidence-only and contract tooling blocks startup routing to review dirs."
+    },
+    {
+      "risk": "one owner per durable concern",
+      "issue": "#414",
+      "status": "closed",
+      "owner_boundary": "effective_authority defaults and contract tooling own owner_choice_review.",
+      "proof_story": "issue comment reports owner_choice_review covers config policy, contract/schema authority, planning active state, Memory, review evidence, generated output, package payload, and runtime primitives."
+    },
+    {
+      "risk": "documentation and stale installed surfaces do not undermine architecture boundary",
+      "issue": "#415-#418",
+      "status": "closed",
+      "owner_boundary": "documentation role map and stale installed-surface checks own docs structure under the docs child lane.",
+      "proof_story": "live child issue states #415-#418 are closed; parent #409 listed docs/stale-surface references and these children cover them."
+    }
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace summary --format json; gh issue view 409 --json number,title,body,state,labels,url,comments",
+    "what happened": "Validated parent #409 against child evidence for #410-#414 plus docs/stale-surface lane #415-#418.",
+    "scope touched": "planning state, external intent evidence, and parent validation execplan",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/architecture-boundary-parent-validation.plan.json",
+    "validations run": "gh issue views for #409-#418; uv run agentic-workspace summary --format json; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/external-intent-evidence.json .agentic-workspace/planning/execplans/architecture-boundary-parent-validation.plan.json --format json; uv run agentic-workspace reconcile --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "#409 is satisfied; next work is owned by the roadmap rather than this parent archive.",
+    "next step": "Archive parent validation, commit and push, close #409."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; validation-only, no runtime or payload changes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used checked-in planning, live issue state, proof, reconcile, and doctor",
+    "misinterpretation risk": "low; parent closure is based on explicit risk-to-child proof mapping, not child closure alone",
+    "follow-on decision": "move to the next roadmap lane after commit/push."
+  },
+  "proof_report": {
+    "validation proof": "Live GitHub shows #410-#418 closed; #410 and #411 have checked-in archives from this run; #412-#414 have post-close intent-validation comments; proof selected planning surfaces; reconcile clean; doctor healthy.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "`gh issue view 410-418` states are CLOSED; `uv run agentic-workspace proof ...` selected planning_surfaces; `uv run agentic-workspace reconcile --format json` status clean; `uv run agentic-workspace doctor --target . --modules planning --format json` health healthy."
+  },
+  "intent_satisfaction": {
+    "original intent": "Ingest and implement all issues lane by lane. Commit and push after each milestone. Collect dogfooding evidence.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "All #409 architecture risks map to closed child evidence with owner boundaries and proof stories; #410-#418 are closed live.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve architecture discipline through explicit ownership and proof rather than broad manual rereading.",
+    "slice shaping bias": "Validation record only; no new capability unless evidence reveals a gap.",
+    "broader-lane validation question": "Can the architecture-boundary lane close without hidden follow-on?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Parent #409 acceptance is satisfied after explicit child proof mapping.",
+    "evidence carried forward": "parent_acceptance_map; #410/#411 archives; #412-#414 validation comments; live child issue states; proof/reconcile/doctor.",
+    "reopen trigger": "Reopen or create follow-up if a future architecture change lacks owner boundary, proof route, source/payload/root sync proof, root CLI authority classification, enclave quietness/removability, review artifact historical routing, or one-owner-per-concern validation."
+  },
+  "execution_summary": {
+    "outcome delivered": "Parent #409 architecture-boundary lane validated and ready to close.",
+    "validation confirmed": "Live issue state, checked-in child archives, issue validation comments, proof, reconcile, and doctor all support closure.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap.",
+    "post-work posterity capture": "Parent acceptance map is kept in this archive.",
+    "knowledge promoted (Memory/Docs/Config)": "No new durable surface needed; child checks and contracts remain the durable owners.",
+    "resume from": "Start the next roadmap lane."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Raw full GitHub issue JSON beyond child state and proof comments.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Proceed to the next roadmap lane.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "roadmap"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "No new durable surface needed; child checks and contracts remain the durable owners.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Close parent #409 after commit/push.",
+          "owner": "github:#409",
+          "source": "parent validation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted parent #409 validation after #410 and #411 closed."
+  ]
+}
