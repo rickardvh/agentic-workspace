@@ -983,6 +983,11 @@ def test_defaults_section_selector_returns_effective_authority_view(capsys) -> N
     concerns = {entry["concern"]: entry for entry in answer["authority_map"]}
     assert concerns["compiled system intent"]["authority_class"] == "authoritative"
     assert concerns["runtime implementation"]["authority_class"] == "procedural-owned"
+    owner_choice = answer["owner_choice_review"]
+    concern_classes = {entry["id"]: entry for entry in owner_choice["concern_classes"]}
+    assert concern_classes["config_policy"]["owner_surface"] == ".agentic-workspace/config.toml"
+    assert concern_classes["generated_adapter_output"]["owner_surface"] == "generated/"
+    assert concern_classes["runtime_primitive_implementation"]["authority_class"] == "procedural-owned"
     assert answer["system_intent_embodiment"]["status"] == "needs-review"
     assert answer["provenance"]["contract_inventory"] == "src/agentic_workspace/contracts/contract_inventory.json"
     assert answer["unresolved_gaps"][0]["id"] == "memory-not-installed"

@@ -19,6 +19,24 @@ def test_contract_tooling_check_passes() -> None:
     assert module.main([]) == 0
 
 
+def test_contract_inventory_declares_owner_choice_model() -> None:
+    manifest = contract_tooling.contract_inventory_manifest()
+    concern_classes = {entry["id"]: entry for entry in manifest["owner_choice_model"]["concern_classes"]}
+
+    assert {
+        "config_policy",
+        "contract_schema_authority",
+        "planning_active_state",
+        "memory_durable_understanding",
+        "review_evidence",
+        "generated_adapter_output",
+        "package_payload",
+        "runtime_primitive_implementation",
+    } <= concern_classes.keys()
+    assert concern_classes["contract_schema_authority"]["owner_surface"] == "src/agentic_workspace/contracts/"
+    assert concern_classes["review_evidence"]["authority_class"] == "historical-evidence"
+
+
 def test_agent_feedback_schema_validates_normalized_feedback_artifact() -> None:
     schema = contract_tooling.contract_schema("agent_feedback.schema.json")
     metadata = schema["x-agentic-workspace"]

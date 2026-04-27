@@ -1009,6 +1009,47 @@ def _validate_authority_marker_parity(payload: dict[str, object]) -> list[str]:
     return errors
 
 
+def _validate_contract_inventory_owner_choice() -> list[str]:
+    errors: list[str] = []
+    manifest = contract_inventory_manifest()
+    areas = manifest.get("areas", [])
+    if isinstance(areas, list):
+        seen_areas: set[str] = set()
+        for entry in areas:
+            if not isinstance(entry, dict):
+                continue
+            area = entry.get("area")
+            if not isinstance(area, str):
+                continue
+            if area in seen_areas:
+                errors.append(f"contract_inventory.json declares duplicate area {area}")
+            seen_areas.add(area)
+
+    model = manifest.get("owner_choice_model", {})
+    concern_classes = model.get("concern_classes", []) if isinstance(model, dict) else []
+    declared = {
+        concern.get("id")
+        for concern in concern_classes
+        if isinstance(concern, dict) and isinstance(concern.get("id"), str)
+    }
+    required = {
+        "config_policy",
+        "contract_schema_authority",
+        "planning_active_state",
+        "memory_durable_understanding",
+        "review_evidence",
+        "generated_adapter_output",
+        "package_payload",
+        "runtime_primitive_implementation",
+    }
+    missing = sorted(required - declared)
+    if missing:
+        errors.append("contract_inventory.json owner_choice_model is missing concern class(es): " + ", ".join(missing))
+    if len(declared) != len(concern_classes):
+        errors.append("contract_inventory.json owner_choice_model concern class ids must be unique strings")
+    return errors
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     checks: list[tuple[str, list[str]]] = [
@@ -1019,6 +1060,7 @@ def main(argv: list[str] | None = None) -> int:
         ("context_templates.json", _validate(context_templates_manifest(), "context_templates.schema.json")),
         ("report_contract.json", _validate(report_contract_manifest(), "report_contract_manifest.schema.json")),
         ("contract_inventory.json", _validate(contract_inventory_manifest(), "contract_inventory.schema.json")),
+        ("contract_inventory owner choice", _validate_contract_inventory_owner_choice()),
         ("compact answer sample", _validate(_sample_compact_answer(), "compact_contract_answer.schema.json")),
         ("workspace report sample", _validate(_sample_report_payload(), "workspace_report.schema.json")),
         ("workspace config sample", _validate(_sample_workspace_config_payload(), "workspace_config.schema.json")),

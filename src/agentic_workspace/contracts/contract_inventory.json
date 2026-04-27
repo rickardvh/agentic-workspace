@@ -1,6 +1,72 @@
 {
   "schema_version": "workspace-contract-inventory/v1",
   "canonical_doc": "docs/declarative-contract-boundary.md",
+  "owner_choice_model": {
+    "purpose": "Route each durable concern to one primary owner surface before adding or trusting another copy.",
+    "review_questions": [
+      "Is this a stable repo-wide policy, a behavior contract, current execution state, durable understanding, review evidence, generated mirror, package payload, or runtime primitive?",
+      "Which surface is allowed to be edited directly, and which surfaces must be regenerated, archived, or treated as derived?",
+      "Would putting this fact in a second visible place create duplicate authority instead of a useful adapter or proof?"
+    ],
+    "concern_classes": [
+      {
+        "id": "config_policy",
+        "owner_surface": ".agentic-workspace/config.toml",
+        "authority_class": "authoritative-policy",
+        "route_when": "The concern is a stable machine-readable repo default, posture, or workflow obligation.",
+        "avoid_when": "The concern is only active-slice state, historical evidence, or implementation behavior."
+      },
+      {
+        "id": "contract_schema_authority",
+        "owner_surface": "src/agentic_workspace/contracts/",
+        "authority_class": "authoritative-contract",
+        "route_when": "The concern defines a reusable payload, schema, command contract, proof route, or generation source.",
+        "avoid_when": "The concern needs live filesystem inspection or imperative runtime behavior."
+      },
+      {
+        "id": "planning_active_state",
+        "owner_surface": ".agentic-workspace/planning/state.toml",
+        "authority_class": "active-direction",
+        "route_when": "The concern is current continuation, active work, roadmap ordering, or slice-local execution state.",
+        "avoid_when": "The concern should remain true after the active lane closes without promotion."
+      },
+      {
+        "id": "memory_durable_understanding",
+        "owner_surface": ".agentic-workspace/memory/repo/",
+        "authority_class": "interpretive-understanding",
+        "route_when": "The concern is reusable repo understanding or learned context that informs future interpretation.",
+        "avoid_when": "The concern is a binding policy, active task, or validation rule."
+      },
+      {
+        "id": "review_evidence",
+        "owner_surface": ".agentic-workspace/planning/reviews/",
+        "authority_class": "historical-evidence",
+        "route_when": "The concern is bounded review output, finding evidence, or issue-intake history.",
+        "avoid_when": "The concern has been accepted as current plan, durable memory, or enforceable contract."
+      },
+      {
+        "id": "generated_adapter_output",
+        "owner_surface": "generated/",
+        "authority_class": "derived-generated",
+        "route_when": "The concern is a generated mirror or runnable adapter derived from contracts.",
+        "avoid_when": "The concern is the source contract or hand-written runtime primitive."
+      },
+      {
+        "id": "package_payload",
+        "owner_surface": ".agentic-workspace/",
+        "authority_class": "installed-payload",
+        "route_when": "The concern is installed product-managed payload, managed fence content, or upgrade-replaceable module state.",
+        "avoid_when": "The concern belongs to repo-owned startup instructions or local runtime implementation."
+      },
+      {
+        "id": "runtime_primitive_implementation",
+        "owner_surface": "src/agentic_workspace/cli.py",
+        "authority_class": "procedural-owned",
+        "route_when": "The concern needs imperative behavior, live repo inspection, subprocess execution, or mutation sequencing.",
+        "avoid_when": "The concern can be expressed as a declarative contract, schema, or package payload."
+      }
+    ]
+  },
   "areas": [
     {
       "area": "compact_contract_profile",

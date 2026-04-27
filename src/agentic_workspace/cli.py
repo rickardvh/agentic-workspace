@@ -5310,6 +5310,7 @@ def _effective_authority_payload(
                 "status": "present",
             },
         ],
+        "owner_choice_review": contract_inventory.get("owner_choice_model", {}),
         "system_intent_embodiment": {
             "status": "needs-review" if unresolved_gaps else "inspectable",
             "must_answer_before_closure": [
