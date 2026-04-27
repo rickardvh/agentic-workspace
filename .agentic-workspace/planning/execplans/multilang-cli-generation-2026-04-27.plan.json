@@ -21,7 +21,7 @@
     "execution": {
       "milestone": "multilang-cli-generation-2026-04-27",
       "status": "active",
-      "next_step": "Implement the audit and off-the-shelf strategy milestone for #394/#395.",
+      "next_step": "Define the canonical command-package IR for #396.",
       "proof": "Use agentic-workspace proof --changed, focused contract tests, generated-package checks, maintainer surfaces, planning checks, and root CLI tests as selected."
     },
     "scope": {
@@ -56,10 +56,10 @@
   "iterative_follow_through": {
     "what this slice enabled": "A durable migration path from hand-authored CLI surfaces to generated Python and TypeScript package adapters.",
     "intentionally deferred": "Full lifecycle mutation generation and broad shell implementation.",
-    "discovered implications": "",
-    "proof achieved now": "",
-    "validation still needed": "All milestone proof lanes.",
-    "next likely slice": "#394/#395 audit and generator strategy."
+    "discovered implications": "The existing generated-adapter contract is adapter-centric; multi-language packages need one compact command-package view that joins command shape, operation refs, primitive bindings, target outputs, and conformance refs.",
+    "proof achieved now": "#394/#395 audit and strategy artifacts identify blockers, first safe slices, and off-the-shelf-first tooling posture.",
+    "validation still needed": "Command-package IR validation and generated target proofs.",
+    "next likely slice": "#396 canonical command-package IR."
   },
   "intent_interpretation": {
     "literal request": "Create a branch, ingest issues, plan and implement the work end-to-end, commit after each milestone, create a PR, and dogfood the package with new issues for actionable improvement lanes.",
@@ -113,15 +113,15 @@
     }
   ],
   "active_milestone": {
-    "id": "audit-and-strategy",
+    "id": "command-package-ir",
     "status": "active",
-    "scope": "#394/#395",
+    "scope": "#396",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Add compact audit and off-the-shelf strategy artifacts for #394/#395, then validate and commit milestone 1."
+    "Define and validate a compact command-package IR for #396."
   ],
   "blockers": [
     "None."
@@ -129,7 +129,9 @@
   "touched_paths": [
     ".agentic-workspace/planning/state.toml",
     ".agentic-workspace/planning/external-intent-evidence.json",
-    ".agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json"
+    ".agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json",
+    "docs/reviews/multi-language-cli-generation-gap-audit-2026-04-27.md",
+    "docs/reviews/generated-cli-package-strategy-2026-04-27.md"
   ],
   "invariants": [
     "Preserve runtime primitive ownership.",
@@ -163,12 +165,12 @@
     "run status": "active",
     "executor": "Codex",
     "handoff source": "#393-#401",
-    "what happened": "Created branch, ingested issue bodies, and initialized checked-in planning.",
-    "scope touched": "planning state/evidence/execplan",
-    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json",
-    "validations run": "startup, summary, ownership",
-    "result for continuation": "Begin milestone 1.",
-    "next step": "Implement audit and strategy artifacts."
+    "what happened": "Created branch, ingested issue bodies, initialized checked-in planning, and added the #394/#395 audit/strategy artifacts.",
+    "scope touched": "planning state/evidence/execplan and review artifacts",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json; docs/reviews/multi-language-cli-generation-gap-audit-2026-04-27.md; docs/reviews/generated-cli-package-strategy-2026-04-27.md",
+    "validations run": "startup, summary, ownership, planning surface check, planning doctor",
+    "result for continuation": "#394/#395 evidence is present; continue to #396.",
+    "next step": "Define command-package IR."
   },
   "finished_run_review": {
     "review status": "not-finished",
@@ -210,7 +212,7 @@
     "follow-on routed to": "",
     "post-work posterity capture": "",
     "knowledge promoted (Memory/Docs/Config)": "",
-    "resume from": "Continue with active_milestone audit-and-strategy."
+    "resume from": "Continue with active_milestone command-package-ir."
   },
   "closeout_distillation": {
     "buckets": {
