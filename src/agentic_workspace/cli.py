@@ -5673,6 +5673,24 @@ def _defaults_payload() -> dict[str, Any]:
     proof_manifest = proof_routes_manifest()
     validation_lanes = [
         {
+            "id": "generated_command_packages",
+            "when": [
+                "command-package IR, generator, or generated Python/TypeScript package outputs change",
+                "the trust question is generated package freshness or non-Python package conformance",
+            ],
+            "enough_proof": [
+                "uv run python scripts/check/check_generated_command_packages.py",
+                "uv run python scripts/check/check_generated_command_packages.py --docker",
+            ],
+            "broaden_when": [
+                "the change also alters runtime CLI behavior outside generated metadata",
+                "the change also touches package installer behavior beyond generated package surfaces",
+            ],
+            "escalate_when": [
+                "generated package proof no longer covers the changed implementation boundary",
+            ],
+        },
+        {
             "id": "workspace_cli",
             "when": [
                 "root workspace CLI changes",

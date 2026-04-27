@@ -4490,6 +4490,29 @@ def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> No
     assert answer["required_commands"] == ["agentic-workspace doctor --target ./repo --modules planning --format json"]
 
 
+def test_proof_changed_selector_routes_generated_command_packages(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--changed",
+                "generated/typescript/workspace-cli/src/commandPackage.ts",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert answer["selected_lanes"][0]["id"] == "generated_command_packages"
+    assert answer["required_commands"] == [
+        "uv run python scripts/check/check_generated_command_packages.py",
+        "uv run python scripts/check/check_generated_command_packages.py --docker",
+    ]
+
+
 def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None:
     assert (
         cli.main(

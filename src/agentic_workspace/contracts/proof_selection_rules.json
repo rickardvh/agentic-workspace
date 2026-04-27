@@ -2,6 +2,21 @@
   "schema_version": "agentic-workspace/proof-selection-rules/v1",
   "rules": [
     {
+      "id": "generated-command-packages",
+      "lane": "generated_command_packages",
+      "exact": [
+        "src/agentic_workspace/contracts/command_package_ir.json"
+      ],
+      "prefixes": [
+        "generated/typescript/",
+        "scripts/generate/generate_command_packages.py",
+        "scripts/check/check_generated_command_packages.py",
+        "src/agentic_workspace/generated_cli_package/",
+        "packages/planning/src/repo_planning_bootstrap/generated_cli_package/",
+        "packages/memory/src/repo_memory_bootstrap/generated_cli_package/"
+      ]
+    },
+    {
       "id": "planning-package",
       "lane": "planning_package",
       "prefixes": [
