@@ -2,6 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/agent-feedback.schema.json",
   "title": "Agent Feedback Artifact",
+  "description": "Optional review artifact shape for comparing agent-feedback evaluations; not a required operating surface unless a later command emits it valid-by-construction.",
+  "x-agentic-workspace": {
+    "surface_role": "optional-review-artifact-schema",
+    "required_operating_surface": false,
+    "emitted_by_command": false
+  },
   "type": "object",
   "required": [
     "kind",

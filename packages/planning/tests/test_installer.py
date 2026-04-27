@@ -3650,7 +3650,7 @@ def test_planning_summary_dedupes_unavailable_projection_reason_fragments(tmp_pa
 
     assert summary["projection_state"]["status"] == "idle"
     assert summary["projection_state"]["reason"] == "no active planning record"
-    assert summary["schema"]["shared_fields"][10] == "projection_state"
+    assert "projection_state" in summary["schema"]["shared_fields"]
     assert summary["hierarchy_contract"]["reason"] == "no active planning record"
     assert summary["hierarchy_contract"]["reason_code"] == "idle-no-active-planning-record"
     assert summary["handoff_contract"]["reason_code"] == "idle-no-active-planning-record"

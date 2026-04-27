@@ -21,6 +21,11 @@ def test_contract_tooling_check_passes() -> None:
 
 def test_agent_feedback_schema_validates_normalized_feedback_artifact() -> None:
     schema = contract_tooling.contract_schema("agent_feedback.schema.json")
+    metadata = schema["x-agentic-workspace"]
+    assert metadata["surface_role"] == "optional-review-artifact-schema"
+    assert metadata["required_operating_surface"] is False
+    assert metadata["emitted_by_command"] is False
+
     sample = {
         "kind": "agent-feedback-review/v1",
         "schema_version": "agentic-workspace/agent-feedback/v1",
