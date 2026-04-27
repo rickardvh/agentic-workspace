@@ -1,0 +1,88 @@
+{
+  "schema_version": "agentic-workspace/improvement-signal-contract/v1",
+  "kind": "workspace-improvement-signal-contract/v1",
+  "role": "candidate-shape-not-backlog",
+  "rule": "Capture only compact remediation-oriented signals before deciding whether to fix, route, remember, review, or dismiss them.",
+  "candidate_kind": "workspace-improvement-signal-candidate/v1",
+  "required_fields": [
+    "kind",
+    "observed_during",
+    "symptom",
+    "cost",
+    "suspected_owner",
+    "likely_remediation",
+    "confidence",
+    "recurrence",
+    "immediate_action",
+    "retention"
+  ],
+  "kinds": [
+    "workflow_cost",
+    "architecture_cost",
+    "footprint_cost",
+    "validation_friction",
+    "docs_routing",
+    "module_boundary",
+    "repeated_human_steering",
+    "weak_agent_failure",
+    "shipped_footprint",
+    "default_feature_creep"
+  ],
+  "likely_remediations": [
+    "docs",
+    "tests",
+    "validation",
+    "command",
+    "skill",
+    "refactor",
+    "module_split",
+    "remove",
+    "make_optional",
+    "unship",
+    "unknown"
+  ],
+  "confidence": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "recurrence": [
+    "first_seen",
+    "repeated",
+    "human_confirmed"
+  ],
+  "immediate_actions": [
+    "fix_now",
+    "route",
+    "review",
+    "remember",
+    "dismiss"
+  ],
+  "retention": [
+    "shrink_after_fix",
+    "delete_after_fix",
+    "keep_with_justification"
+  ],
+  "destinations": [
+    "discard",
+    "active planning state or execplan",
+    "roadmap",
+    "Memory",
+    "canonical docs",
+    "config/check surface",
+    "issue follow-up"
+  ],
+  "closeout_statuses": [
+    "found",
+    "fixed",
+    "routed",
+    "dismissed",
+    "none"
+  ],
+  "guardrails": [
+    "A signal is not a work item until an owner and proof path are chosen.",
+    "Do not preserve low-confidence one-off discomfort without a clear owner.",
+    "Do not use Memory as active state for signals.",
+    "Prefer shrinking or deleting the signal residue after remediation unless it still prevents rediscovery."
+  ]
+}

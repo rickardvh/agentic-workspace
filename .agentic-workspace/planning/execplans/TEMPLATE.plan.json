@@ -176,6 +176,14 @@
     "knowledge promoted (Memory/Docs/Config)": "",
     "resume from": ""
   },
+  "improvement_signal_review": {
+    "status": "none",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
   "closeout_distillation": {
     "buckets": {
       "discard": [],

@@ -1,0 +1,242 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "First Class Improvement Signal Capture",
+  "goal": [
+    "Implement #469 by defining a compact improvement-signal contract and making common report/intake surfaces emit signal candidates before remediation routing."
+  ],
+  "non_goals": [
+    "Do not create a new backlog system.",
+    "Do not automatically promote every signal into work.",
+    "Do not make improvement-signal capture a new first-line operating layer."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Agents can capture compact remediation-oriented improvement signals from report/intake output before deciding whether to fix, route, remember, review, or dismiss them.",
+      "constraints": "Keep signal candidates compact, structured, and router-shaped; preserve existing Planning and Memory ownership boundaries.",
+      "latitude": "Use existing report, defaults, and planning-template surfaces rather than adding a new command.",
+      "escalation": "Escalate if signal capture would become a separate backlog or require host-specific tracker assumptions."
+    },
+    "execution": {
+      "milestone": "first-class-improvement-signal-capture",
+      "status": "completed",
+      "next_step": "Archive this completed slice and continue with #467 or the next current #450 child lane.",
+      "proof": "workspace CLI tests, contract tooling checks, planning surface checks, proof selector, doctor"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/first-class-improvement-signal-capture.plan.json",
+        "src/agentic_workspace/",
+        "src/agentic_workspace/contracts/",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+        "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json"
+      ],
+      "invariants": [
+        "Signals are candidates, not automatic work items.",
+        "Memory improvement signals stay remediation-oriented and not active state.",
+        "Report remains router-shaped by default."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450: make advanced features opt-in through feature tiers and merged surfaces; #467: reduce total operating cost.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#467 remains after this signal-capture slice unless validation proves it is satisfied or superseded.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #469 closeout, refresh external evidence and promote #467 or the next current child indicated by validation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A compact improvement-signal contract is available through defaults, report improvement_intake emits structured candidates, and planning closeout templates can record signal status.",
+    "intentionally deferred": "#467 remains the lane that uses captured signals to reduce total operating cost.",
+    "discovered implications": "Initial candidates identify large workspace/package/test/evidence surfaces as operating-cost pressure; existing lanes cover command extraction and operational footprint, and #467 can use the captured signal stream.",
+    "proof achieved now": "yes; workspace CLI tests, ruff, contract tooling, planning-surface checks, proof selector, package planning tests, package ruff, and workspace doctor passed.",
+    "validation still needed": "none for this bounded slice",
+    "next likely slice": "refresh external evidence, then promote #467 or the next current child indicated by open issue state"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Add first-class improvement signal capture before routing and remediation.",
+    "hard constraints": "Do not create a backlog or promote weak/speculative signals automatically.",
+    "agent may decide locally": "Exact compact signal shape and which existing report path emits the first candidates.",
+    "escalate when": "The change would require a new command or new durable operating surface."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Use existing report/defaults/planning surfaces to capture signals cheaply.",
+    "broader-lane validation question": "Can self-improvement see cost signals before it tries to reduce operating cost?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/469"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/469",
+      "label": "#469 improvement signal capture",
+      "role": "source_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/467",
+      "label": "#467 total operating cost",
+      "role": "next_lane",
+      "locator": "issue body"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "first-class-improvement-signal-capture",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive the completed plan, refresh external evidence, and promote #467 or the next current #450 child lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/first-class-improvement-signal-capture.plan.json",
+    "src/agentic_workspace/",
+    "src/agentic_workspace/contracts/",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json"
+  ],
+  "invariants": [
+    "Signals are candidates, not automatic work items.",
+    "Memory improvement signals stay remediation-oriented and not active state.",
+    "Report remains router-shaped by default."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/first-class-improvement-signal-capture.plan.json src/agentic_workspace tests/test_workspace_cli.py .agentic-workspace/planning/execplans/TEMPLATE.plan.json packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json --format json",
+    "uv run agentic-workspace doctor --target . --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "A compact shared improvement-signal contract is available through defaults.",
+    "At least one report/intake path emits structured improvement_signal_candidates.",
+    "Planning closeout templates can record signal status found, fixed, routed, dismissed, or none.",
+    "Tests prove the default report remains router-shaped while section output carries candidates."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Added a compact improvement-signal contract, defaults selector, report/intake candidate emission, router sample counts, tests, and planning-template closeout fields.",
+    "validation confirmed": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/first-class-improvement-signal-capture.plan.json src/agentic_workspace tests/test_workspace_cli.py .agentic-workspace/planning/execplans/TEMPLATE.plan.json packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json --format json; uv run agentic-workspace doctor --target . --format json; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge and #467 total operating cost",
+    "post-work posterity capture": "The reusable signal shape lives in src/agentic_workspace/contracts/improvement_signal_contract.json and is surfaced through defaults/report.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "next #450/#467 child lane after external evidence refresh"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "codex",
+    "handoff source": ".agentic-workspace/planning/execplans/first-class-improvement-signal-capture.plan.json",
+    "what happened": "Implemented first-class signal capture through existing defaults, report, and planning-template surfaces without adding a new command or backlog.",
+    "scope touched": "workspace CLI/report contracts, workspace tests, planning templates, and planning state",
+    "changed surfaces": "src/agentic_workspace/cli.py; src/agentic_workspace/contract_tooling.py; src/agentic_workspace/contracts/improvement_signal_contract.json; tests/test_workspace_cli.py; .agentic-workspace/planning/execplans/TEMPLATE.plan.json; packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json; planning state/execplan",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/first-class-improvement-signal-capture.plan.json src/agentic_workspace tests/test_workspace_cli.py .agentic-workspace/planning/execplans/TEMPLATE.plan.json packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json --format json; uv run agentic-workspace doctor --target . --format json; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .",
+    "result for continuation": "#469 is complete; #467 remains to use the captured signals for total operating-cost reduction.",
+    "next step": "archive this plan, close #469, refresh external evidence, then continue #467 or the next open child lane"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; the change reused existing report/defaults/planning-template surfaces.",
+    "proof status": "validation and closure checks passed for the bounded slice.",
+    "intent served": "yes; report/intake now captures structured candidates before remediation routing.",
+    "config compliance": "yes; no new command or host-specific tracker assumption was added.",
+    "misinterpretation risk": "medium-low; candidates are explicitly not work items until routed.",
+    "follow-on decision": "archive-but-keep-lane-open for #450/#467."
+  },
+  "improvement_signal_review": {
+    "status": "routed",
+    "signals found": [
+      "report improvement_intake now emits large-surface operating-cost candidates from repo_friction evidence"
+    ],
+    "signals fixed": [
+      "#469 fixed missing first-class capture shape and report/intake emission"
+    ],
+    "signals routed": [
+      "Use #467 to decide which captured cost candidates should be reduced next"
+    ],
+    "signals dismissed": [],
+    "next owner": "github:#467"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-level execution detail is preserved only in the archived proof record.",
+          "owner": "discard",
+          "source": "execution_summary"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#467 remains open to consume captured improvement signals for total operating-cost reduction.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#469 improvement signal capture",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/469"
+        },
+        {
+          "summary": "#467 total operating cost",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/467"
+        },
+        {
+          "summary": "#450 feature tiers and surface merge",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/450"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted after #470 closeout; #469 is upstream of #467 operating-cost reduction."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Add first-class improvement signal capture before routing and remediation.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge activates a fresh bounded slice."
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/first-class-improvement-signal-capture.plan.json src/agentic_workspace tests/test_workspace_cli.py .agentic-workspace/planning/execplans/TEMPLATE.plan.json packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json --format json; uv run agentic-workspace doctor --target . --format json; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check .",
+    "proof achieved now": "yes; workspace CLI tests, ruff, contract tooling, planning-surface checks, proof selector, package planning tests, package ruff, and workspace doctor passed.",
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/first-class-improvement-signal-capture.plan.json src/agentic_workspace tests/test_workspace_cli.py .agentic-workspace/planning/execplans/TEMPLATE.plan.json packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json --format json; uv run agentic-workspace doctor --target . --format json; cd packages/planning && uv run pytest tests/test_installer.py -q; cd packages/planning && uv run ruff check ."
+  }
+}

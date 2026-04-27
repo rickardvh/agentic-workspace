@@ -76,6 +76,7 @@ from agentic_workspace.contract_tooling import (
     context_templates_manifest,
     contract_inventory_manifest,
     improvement_latitude_policy_manifest,
+    improvement_signal_contract_manifest,
     module_registry_manifest,
     optimization_bias_policy_manifest,
     preflight_policy_manifest,
@@ -113,6 +114,7 @@ _WORKSPACE_SURFACES_MANIFEST = workspace_surfaces_manifest()
 _WORKFLOW_ARTIFACT_PROFILES_MANIFEST = workflow_artifact_profiles_manifest()
 _WORKFLOW_DEFINITION_FORMAT = workflow_definition_format_manifest()
 _IMPROVEMENT_LATITUDE_POLICY = improvement_latitude_policy_manifest()
+_IMPROVEMENT_SIGNAL_CONTRACT = improvement_signal_contract_manifest()
 _OPTIMIZATION_BIAS_POLICY = optimization_bias_policy_manifest()
 _REPO_FRICTION_POLICY = repo_friction_policy_manifest()
 _PREFLIGHT_POLICY = preflight_policy_manifest()
@@ -659,13 +661,147 @@ def _repo_friction_external_setup_findings_payload(*, target_root: Path) -> dict
     }
 
 
-def _improvement_intake_payload(*, target_root: Path | None = None, config: WorkspaceConfig | None = None) -> dict[str, Any]:
+def _improvement_signal_contract_payload() -> dict[str, Any]:
+    return {
+        "kind": _IMPROVEMENT_SIGNAL_CONTRACT["kind"],
+        "role": _IMPROVEMENT_SIGNAL_CONTRACT["role"],
+        "rule": _IMPROVEMENT_SIGNAL_CONTRACT["rule"],
+        "candidate_kind": _IMPROVEMENT_SIGNAL_CONTRACT["candidate_kind"],
+        "required_fields": list(_IMPROVEMENT_SIGNAL_CONTRACT["required_fields"]),
+        "kinds": list(_IMPROVEMENT_SIGNAL_CONTRACT["kinds"]),
+        "likely_remediations": list(_IMPROVEMENT_SIGNAL_CONTRACT["likely_remediations"]),
+        "closeout_statuses": list(_IMPROVEMENT_SIGNAL_CONTRACT["closeout_statuses"]),
+        "destinations": list(_IMPROVEMENT_SIGNAL_CONTRACT["destinations"]),
+        "guardrails": list(_IMPROVEMENT_SIGNAL_CONTRACT["guardrails"]),
+    }
+
+
+def _improvement_signal_candidate(
+    *,
+    kind: str,
+    observed_during: str,
+    symptom: str,
+    cost: str,
+    suspected_owner: str,
+    likely_remediation: str,
+    confidence: str,
+    recurrence: str,
+    immediate_action: str,
+    retention: str,
+    source: str,
+) -> dict[str, str]:
+    return {
+        "candidate_kind": str(_IMPROVEMENT_SIGNAL_CONTRACT["candidate_kind"]),
+        "kind": kind,
+        "observed_during": observed_during,
+        "symptom": symptom,
+        "cost": cost,
+        "suspected_owner": suspected_owner,
+        "likely_remediation": likely_remediation,
+        "confidence": confidence,
+        "recurrence": recurrence,
+        "immediate_action": immediate_action,
+        "retention": retention,
+        "source": source,
+    }
+
+
+def _improvement_signal_candidates_from_repo_friction(repo_friction: dict[str, Any] | None) -> list[dict[str, str]]:
+    if not isinstance(repo_friction, dict):
+        return []
+    candidates: list[dict[str, str]] = []
+    for item in _list_payload(
+        repo_friction.get("large_file_hotspots", {}).get("items") if isinstance(repo_friction.get("large_file_hotspots"), dict) else []
+    ):
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("path", "")).strip()
+        line_count = str(item.get("line_count", "")).strip()
+        if not path:
+            continue
+        candidates.append(
+            _improvement_signal_candidate(
+                kind="architecture_cost",
+                observed_during="agentic-workspace report --section repo_friction",
+                symptom=f"{path} has {line_count} lines and exceeds the large-file friction threshold.",
+                cost="Large surfaces increase reading, review, and change-localization cost.",
+                suspected_owner=path,
+                likely_remediation="refactor",
+                confidence="medium",
+                recurrence="first_seen",
+                immediate_action="route",
+                retention="shrink_after_fix",
+                source="repo_friction.large_file_hotspots",
+            )
+        )
+    for item in _list_payload(
+        repo_friction.get("concept_surface_hotspots", {}).get("items")
+        if isinstance(repo_friction.get("concept_surface_hotspots"), dict)
+        else []
+    ):
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("path", "")).strip()
+        if not path:
+            continue
+        candidates.append(
+            _improvement_signal_candidate(
+                kind="docs_routing" if str(item.get("kind", "")) == "docs" else "footprint_cost",
+                observed_during="agentic-workspace report --section repo_friction",
+                symptom=f"{path} is a high-volume concept surface.",
+                cost="Large concept surfaces can make first-contact routing and review more expensive.",
+                suspected_owner=path,
+                likely_remediation="docs",
+                confidence="medium",
+                recurrence="first_seen",
+                immediate_action="review",
+                retention="shrink_after_fix",
+                source="repo_friction.concept_surface_hotspots",
+            )
+        )
+    for evidence in _list_payload(repo_friction.get("external_evidence", [])):
+        if not isinstance(evidence, dict) or evidence.get("kind") != "setup-findings":
+            continue
+        for item in _list_payload(evidence.get("items")):
+            if not isinstance(item, dict):
+                continue
+            candidates.append(
+                _improvement_signal_candidate(
+                    kind="workflow_cost",
+                    observed_during=str(item.get("source", "agentic-workspace setup")).strip() or "agentic-workspace setup",
+                    symptom=str(item.get("symptom", item.get("summary", "Promotable setup finding."))).strip(),
+                    cost=str(item.get("cost", "Setup finding indicates repeated friction or rediscovery cost.")).strip(),
+                    suspected_owner=str(item.get("path", item.get("owner", "unknown"))).strip() or "unknown",
+                    likely_remediation=str(item.get("suggested_remediation", "unknown")).strip() or "unknown",
+                    confidence=str(item.get("confidence", "medium")).strip() or "medium",
+                    recurrence=str(item.get("recurrence", "first_seen")).strip() or "first_seen",
+                    immediate_action="route",
+                    retention="shrink_after_fix",
+                    source="setup_findings.promotable.repo_friction_evidence",
+                )
+            )
+    return candidates[:5]
+
+
+def _improvement_intake_payload(
+    *,
+    target_root: Path | None = None,
+    config: WorkspaceConfig | None = None,
+    repo_friction: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     setup_findings = _setup_findings_input_payload(target_root=target_root) if target_root is not None else None
     review_enabled = bool(config and "review_artifacts" in config.advanced_features)
+    signal_candidates = _improvement_signal_candidates_from_repo_friction(repo_friction)
     return {
         "kind": "workspace-improvement-intake/v1",
         "role": "router-not-backlog",
         "command": "agentic-workspace report --target ./repo --section improvement_intake --format json",
+        "signal_contract": {
+            "command": "agentic-workspace defaults --section improvement_signal --format json",
+            "candidate_kind": _IMPROVEMENT_SIGNAL_CONTRACT["candidate_kind"],
+            "required_fields": list(_IMPROVEMENT_SIGNAL_CONTRACT["required_fields"]),
+            "closeout_statuses": list(_IMPROVEMENT_SIGNAL_CONTRACT["closeout_statuses"]),
+        },
         "default_rule": (
             "Treat setup findings, dogfooding friction, review findings, validation friction, and memory "
             "improvement signals as one intake question: what should happen to this signal, if anything?"
@@ -751,6 +887,8 @@ def _improvement_intake_payload(*, target_root: Path | None = None, config: Work
             "Keep speculative findings transient unless a durable owner is clear.",
             "Preserve provenance and confidence when a signal is routed.",
         ],
+        "improvement_signal_candidates": signal_candidates,
+        "candidate_count": len(signal_candidates),
         "setup_findings": (
             {
                 "status": setup_findings.get("status"),
@@ -2983,7 +3121,7 @@ def _run_report_command(
         "next_action": next_action,
         "discovery": discovery,
         "standing_intent": standing_intent,
-        "improvement_intake": _improvement_intake_payload(target_root=target_root, config=config),
+        "improvement_intake": _improvement_intake_payload(target_root=target_root, config=config, repo_friction=repo_friction),
         "repo_friction": repo_friction,
         "registry": status_payload["registry"],
         "config": status_payload["config"],
@@ -3619,6 +3757,9 @@ def _report_router_improvement_intake(value: Any) -> dict[str, Any]:
         "command": value.get("command", "agentic-workspace report --target ./repo --section improvement_intake --format json"),
         "subtypes": [item.get("id", "") for item in _list_payload(value.get("subtypes")) if isinstance(item, dict)],
         "allowed_destinations": value.get("allowed_destinations", []),
+        "signal_contract": value.get("signal_contract", {}),
+        "candidate_count": value.get("candidate_count", 0),
+        "candidate_sample": _list_payload(value.get("improvement_signal_candidates"))[:3],
         "setup_findings": value.get("setup_findings", {}),
         "advanced_review_route": value.get("advanced_review_route", {}),
     }
@@ -7416,6 +7557,12 @@ def _defaults_payload() -> dict[str, Any]:
             "command": "agentic-workspace defaults --section improvement_intake --format json",
             "rule": "Use one improvement-intake router before treating setup findings, dogfooding feedback, review findings, validation friction, or memory improvement signals as separate mechanisms.",
             "payload": _improvement_intake_payload(),
+        },
+        "improvement_signal": {
+            "canonical_doc": "src/agentic_workspace/contracts/improvement_signal_contract.json",
+            "command": "agentic-workspace defaults --section improvement_signal --format json",
+            "rule": "Use the compact signal shape to capture friction before deciding whether to fix, route, remember, review, or dismiss it.",
+            "payload": _improvement_signal_contract_payload(),
         },
         "agent_configuration_system": _agent_configuration_system_payload(),
         "agent_configuration_queries": _agent_configuration_queries_payload(),

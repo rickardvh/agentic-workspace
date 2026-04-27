@@ -176,6 +176,14 @@
     "knowledge promoted (Memory/Docs/Config)": "",
     "resume from": ""
   },
+  "improvement_signal_review": {
+    "status": "none",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
   "drift_log": [
     "2026-01-01: Initial plan created."
   ]

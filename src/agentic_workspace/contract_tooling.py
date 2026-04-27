@@ -80,6 +80,10 @@ def improvement_latitude_policy_manifest() -> dict[str, Any]:
     return load_contract_json("improvement_latitude_policy.json")
 
 
+def improvement_signal_contract_manifest() -> dict[str, Any]:
+    return load_contract_json("improvement_signal_contract.json")
+
+
 def optimization_bias_policy_manifest() -> dict[str, Any]:
     return load_contract_json("optimization_bias_policy.json")
 

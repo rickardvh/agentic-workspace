@@ -1195,8 +1195,25 @@ def test_defaults_improvement_intake_section_selector_returns_unified_router(cap
     }
     review_route = next(item for item in answer["payload"]["subtypes"] if item["id"] == "review_finding")
     assert review_route["advanced_feature"] == "review_artifacts"
+    assert answer["payload"]["signal_contract"]["candidate_kind"] == "workspace-improvement-signal-candidate/v1"
+    assert "found" in answer["payload"]["signal_contract"]["closeout_statuses"]
     assert "issue follow-up" in answer["payload"]["allowed_destinations"]
     assert answer["payload"]["setup_findings"]["status"] == "not-evaluated"
+
+
+def test_defaults_improvement_signal_section_selector_returns_signal_contract(capsys) -> None:
+    assert cli.main(["defaults", "--section", "improvement_signal", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "improvement_signal"}
+    assert payload["matched"] is True
+    answer = payload["answer"]
+    assert answer["payload"]["candidate_kind"] == "workspace-improvement-signal-candidate/v1"
+    assert "workflow_cost" in answer["payload"]["kinds"]
+    assert answer["payload"]["closeout_statuses"] == ["found", "fixed", "routed", "dismissed", "none"]
+    assert "A signal is not a work item until an owner and proof path are chosen." in answer["payload"]["guardrails"]
 
 
 def test_defaults_operating_questions_section_selector_returns_compact_contract_answer(capsys) -> None:
@@ -3283,6 +3300,9 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     intake = payload["improvement_intake"]
     assert intake["kind"] == "workspace-improvement-intake/v1"
     assert intake["role"] == "router-not-backlog"
+    assert intake["signal_contract"]["candidate_kind"] == "workspace-improvement-signal-candidate/v1"
+    assert isinstance(intake["candidate_count"], int)
+    assert len(intake["candidate_sample"]) <= 3
     assert intake["subtypes"] == [
         "setup_finding",
         "dogfooding_friction",
@@ -4319,6 +4339,11 @@ def test_report_surfaces_large_file_hotspots_as_repo_friction_evidence(tmp_path:
     assert payload["repo_friction"]["large_file_hotspots"]["items"][0]["path"] == "src/big_module.py"
     assert payload["repo_friction"]["large_file_hotspots"]["items"][0]["line_count"] == 450
     assert payload["repo_friction"]["large_file_hotspots"]["items"][0]["kind"] == "code"
+    signal = payload["improvement_intake"]["improvement_signal_candidates"][0]
+    assert signal["candidate_kind"] == "workspace-improvement-signal-candidate/v1"
+    assert signal["kind"] == "architecture_cost"
+    assert signal["suspected_owner"] == "src/big_module.py"
+    assert signal["immediate_action"] == "route"
 
 
 def test_report_surfaces_concept_hotspots_as_repo_friction_evidence(tmp_path: Path, capsys) -> None:
