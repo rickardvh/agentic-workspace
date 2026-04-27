@@ -18,8 +18,8 @@
     },
     "execution": {
       "milestone": "planning-optional-extension-boundary",
-      "status": "in-progress",
-      "next_step": "Inspect current optional payload discovery and config surfaces after #463 shrink.",
+      "status": "completed",
+      "next_step": "Promote #465 extraction candidates as the next #461 child.",
       "proof": "planning package tests, workspace CLI tests, ruff, proof selector, and planning doctor"
     },
     "scope": {
@@ -52,11 +52,11 @@
     "issues": "#461, #464, #465, #466"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
-    "intentionally deferred": "module extraction and capability-map refresh",
-    "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
+    "what this slice enabled": "Optional review, intake, recovery, reporting, orchestration, and autopilot surfaces can now be copied explicitly with --include-optional on install, adopt, or upgrade while default installs remain core-only.",
+    "intentionally deferred": "module extraction and capability-map refresh remain with #465 and #466.",
+    "discovered implications": "list-files needed an enablement hint, not just inventory, so agents can discover the copy path without reading docs.",
+    "proof achieved now": "planning package tests, workspace CLI tests, ruff, proof selector, and planning doctor passed.",
+    "validation still needed": "parent #461 still needs extraction-boundary and capability-map follow-through.",
     "next likely slice": "#465 extraction candidates"
   },
   "delegated_judgment": {
@@ -105,7 +105,7 @@
   ],
   "active_milestone": {
     "id": "planning-optional-extension-boundary",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "Keep this execution thread bounded to optional-extension discovery and explicit enablement.",
     "ready": "ready",
     "blocked": "none",
@@ -143,32 +143,78 @@
     "This repo can explicitly enable advanced planning extensions for dogfooding."
   ],
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
+    "outcome delivered": "Added explicit optional payload enablement through --include-optional on planning package install, adopt, and upgrade; kept optional payload absent from default install; added list-files optional_enable_commands for compact discovery.",
+    "validation confirmed": "cd packages/planning && uv run pytest tests/test_installer.py tests/test_packaging.py -q; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests packages/planning/src packages/planning/tests; proof selector; planning doctor.",
+    "follow-on routed to": "#465 extraction candidates",
+    "post-work posterity capture": "README and tests record the optional enablement boundary.",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "resume from": "#465 extraction candidates"
   },
   "closure_check": {
-    "slice status": "open",
+    "slice status": "completed",
     "larger-intent status": "open",
-    "closure decision": "keep-active",
-    "why this decision is honest": "Implementation has not started.",
-    "evidence carried forward": "#464 owns optional extension boundary after #463 default shrink.",
-    "reopen trigger": "optional planning capabilities require broad manual file reads or default install residue to discover"
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The optional-extension boundary is satisfied, but the parent #461 payload-boundary lane still has extraction and capability-map children.",
+    "evidence carried forward": "Package tests, workspace CLI tests, ruff, proof selector, and planning doctor passed before archive.",
+    "reopen trigger": "Optional planning capabilities become default-installed again or cannot be discovered/enabled through compact commands."
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [],
+      "discard": [
+        {
+          "summary": "Local implementation detail does not need durable promotion.",
+          "owner": "discard",
+          "source": ""
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Promote #465 extraction candidates as the next #461 child.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": ""
+        }
+      ],
       "memory": [],
-      "config_check": [],
-      "docs": [],
-      "issue_follow_up": []
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "README now documents the --include-optional enablement path.",
+          "owner": "packages/planning/README.md",
+          "source": ""
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#464 optional extension boundary",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/464"
+        },
+        {
+          "summary": "#461 planning payload boundary",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/461"
+        }
+      ]
     }
   },
   "drift_log": [
     "2026-04-27: Promoted after #463 shrank default planning install."
-  ]
+  ],
+  "intent_satisfaction": {
+    "original intent": "Move review, intake, recovery, and autopilot surfaces behind config or on-demand discovery.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#464 delivered explicit --include-optional lifecycle enablement and list-files optional_enable_commands while default install remains core-only.",
+    "unsolved intent passed to": "#465 extraction candidates and #466 capability-map follow-through remain in #461"
+  },
+  "proof_report": {
+    "validation proof": "cd packages/planning && uv run pytest tests/test_installer.py tests/test_packaging.py -q passed with 132 tests; uv run pytest tests/test_workspace_cli.py -q passed with 179 tests; uv run ruff check src tests packages/planning/src packages/planning/tests passed.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "The changed package installer, CLI, README, and tests keep optional payload absent by default and expose --include-optional plus list-files optional_enable_commands for deliberate enablement."
+  }
 }

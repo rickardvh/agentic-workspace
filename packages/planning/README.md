@@ -40,6 +40,7 @@ Bundled skills:
 
 - The package ships planning skills under `skills/`, but new default installs do not copy them into target repositories.
 - Use `agentic-planning-bootstrap list-files --format json` to discover bundled skills and optional payload surfaces when a repo chooses to enable richer planning workflows.
+- Pass `--include-optional` to `install`, `adopt`, or `upgrade` to copy those optional docs and bundled skills into a repo that intentionally wants the richer workflow.
 
 ## Quick Start
 
@@ -254,6 +255,7 @@ Keep this README as the package entrypoint. Use the installed contracts for deep
 - `.agentic-workspace/docs/routing-contract.md`: hierarchy between state, execplans, and reviews.
 
 Optional packaged contracts remain discoverable through `agentic-planning-bootstrap list-files --format json` when a repo needs capability-aware execution, review promotion, upstream-task intake, richer reporting, or orchestration workflows.
+Use `--include-optional` with `install`, `adopt`, or `upgrade` only when the repo intentionally wants those richer workflow surfaces copied into its checkout.
 
 Planning is deliberately not a task tracker, backlog manager, knowledge base, documentation system, database-backed planner, or runtime orchestration tool.
 It should preserve active execution state and route durable knowledge to memory or canonical docs.
@@ -276,7 +278,7 @@ The default install writes only the core daily-operation payload:
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/planning/execplans/archive/README.md`
 
-The package also ships optional payload files that are not copied by default:
+The package also ships optional payload files that are not copied by default. Use `--include-optional` with `install`, `adopt`, or `upgrade` to copy them on purpose:
 
 - `.agentic-workspace/docs/candidate-lanes-contract.md`
 - `.agentic-workspace/docs/capability-aware-execution.md`

@@ -1,0 +1,180 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Planning Extraction Candidates",
+  "goal": [
+    "Implement #465 by defining which planning-adjacent capabilities should stay internal, remain optional extensions, or become future module extraction candidates."
+  ],
+  "non_goals": [
+    "Do not create new packages in this slice.",
+    "Do not treat the capability map as a backlog.",
+    "Do not extract planning core."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Extraction candidates have clear boundaries, reasons, evidence requirements, and blockers.",
+      "constraints": "Keep planning core narrow and avoid adding first-contact surfaces.",
+      "latitude": "Use docs/agent-os-capabilities.md, payload classification, and current optional payload boundaries to shape the candidate map.",
+      "escalation": "Escalate if a candidate requires immediate package creation or broad architecture work outside #465."
+    },
+    "execution": {
+      "milestone": "planning-extraction-candidates",
+      "status": "in-progress",
+      "next_step": "Inspect docs/agent-os-capabilities.md, payload-surface-classification.json, and #465 acceptance criteria to draft the extraction-candidate map.",
+      "proof": "planning package tests if package surfaces change, workspace CLI tests if root query surfaces change, ruff, proof selector, and planning doctor"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/planning-extraction-candidates.plan.json"
+      ],
+      "invariants": [
+        "Planning core remains narrow.",
+        "No new package is created in this slice.",
+        "Follow-up issues are created only for stable candidate shapes."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#461: make Agentic Planning smaller by default and clearer by boundary.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane planning-payload-boundary"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#466 still needs capability-map follow-through after extraction candidates land.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #465 closeout, promote #466 or close #461 if validation proves the parent satisfied"
+  },
+  "parent_lane": {
+    "id": "#461",
+    "title": "Reclassify planning payload into core, optional extensions, and extraction candidates",
+    "priority": "1",
+    "issues": "#461, #465, #466"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "capability-map refresh",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "#466 capability-map follow-through"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Define extraction candidates for review, intake, reconciliation, and advanced agent-operation capabilities.",
+    "hard constraints": "Do not create new packages or grow default startup/install surfaces.",
+    "agent may decide locally": "Exact format and location of the candidate map if it avoids becoming another ordinary startup surface.",
+    "escalate when": "The solution requires module extraction implementation instead of boundary definition."
+  },
+  "context_budget": {
+    "live working set": "state, this execplan, #461/#465, docs/agent-os-capabilities.md, payload classification, optional-extension archive",
+    "recoverable later": "#462, #463, and #464 archived closeouts",
+    "externalize before shift": "record extraction candidates, criteria, blockers, and any stable follow-up issues",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Next active issue is #465 planning extraction candidates.",
+    "context-shift triggers": "Before creating any new package or broad root-level surface."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Separate capability boundaries before adding or extracting implementation.",
+    "broader-lane validation question": "Can planning stay small by naming adjacent capabilities and extraction criteria rather than absorbing them?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/465"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/465",
+      "label": "#465 extraction candidates",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/461",
+      "label": "#461 planning payload boundary",
+      "role": "parent_intent",
+      "locator": "issue body"
+    },
+    {
+      "kind": "artifact",
+      "target": "docs/agent-os-capabilities.md",
+      "label": "Agent OS capability map",
+      "role": "input",
+      "locator": "capability categories"
+    },
+    {
+      "kind": "artifact",
+      "target": "packages/planning/payload-surface-classification.json",
+      "label": "#462 payload classification",
+      "role": "dependency",
+      "locator": "surface roles and compression candidates"
+    }
+  ],
+  "active_milestone": {
+    "id": "planning-extraction-candidates",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to extraction-candidate definition and follow-up routing.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect docs/agent-os-capabilities.md and payload-surface-classification.json.",
+    "Add a compact candidate map with boundaries, extraction criteria, blockers, and stable follow-up issues if justified."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/planning-extraction-candidates.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan.",
+    "Keep planning core narrow and avoid making candidate analysis part of ordinary startup."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests packages/planning/src packages/planning/tests",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/planning-extraction-candidates.plan.json --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "Extraction candidates have clear boundaries and reasons.",
+    "Each candidate has evidence required before extraction.",
+    "Planning core remains narrow and does not absorb every agent-OS capability.",
+    "Follow-up issues are only created when a candidate has stable enough shape."
+  ],
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "closure_check": {
+    "slice status": "open",
+    "larger-intent status": "open",
+    "closure decision": "keep-active",
+    "why this decision is honest": "Implementation has not started.",
+    "evidence carried forward": "#465 owns extraction-candidate boundaries after #464 optional enablement.",
+    "reopen trigger": "planning-adjacent capability boundaries stay ambiguous enough that planning keeps absorbing non-core surfaces"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted after #464 added explicit optional enablement."
+  ]
+}

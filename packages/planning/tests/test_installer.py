@@ -515,6 +515,23 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert any(action.kind in {"copied", "created", "updated"} for action in result.actions)
 
 
+def test_install_bootstrap_include_optional_copies_optional_payload_and_skills(tmp_path: Path) -> None:
+    result = install_bootstrap(target=tmp_path, include_optional=True)
+
+    assert (tmp_path / ".agentic-workspace" / "docs" / "capability-aware-execution.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "docs" / "extraction-and-discovery-contract.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "reviews" / "README.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.review.json").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "upstream-task-intake.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "pre-ingestion-refinement.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md").exists()
+    assert any(
+        action.kind == "copied" and action.path == tmp_path / ".agentic-workspace" / "planning" / "reviews" / "README.md"
+        for action in result.actions
+    )
+
+
 def test_install_dry_run_json_includes_compact_lifecycle_plan(tmp_path: Path, capsys) -> None:
     result = planning_cli.main(["install", "--target", str(tmp_path), "--dry-run", "--format", "json"])
 
@@ -529,6 +546,25 @@ def test_install_dry_run_json_includes_compact_lifecycle_plan(tmp_path: Path, ca
     assert plan["files"]["create"]
     assert plan["local_only_state"]["status"] == "not-authoritative"
     assert plan["next_safe_command"].startswith("agentic-planning-bootstrap install --target ")
+
+
+def test_install_include_optional_dry_run_json_includes_optional_payload(tmp_path: Path, capsys) -> None:
+    result = planning_cli.main(["install", "--target", str(tmp_path), "--include-optional", "--dry-run", "--format", "json"])
+
+    assert result == 0
+    payload = json.loads(capsys.readouterr().out)
+    actions = payload["actions"]
+    assert any(
+        action["kind"] == "would copy" and action["path"].replace("\\", "/").endswith(".agentic-workspace/planning/reviews/README.md")
+        for action in actions
+    )
+    assert any(
+        action["kind"] == "would copy"
+        and action["path"].replace("\\", "/").endswith(".agentic-workspace/planning/skills/planning-autopilot/SKILL.md")
+        for action in actions
+    )
+    assert ".agentic-workspace/planning/reviews/README.md" in payload["lifecycle_plan"]["files"]["create"]
+    assert ".agentic-workspace/planning/skills/planning-autopilot/SKILL.md" in payload["lifecycle_plan"]["files"]["create"]
 
 
 def test_ownership_module_root_matches_workspace_ledger() -> None:
@@ -597,6 +633,18 @@ def test_adopt_bootstrap_docs_heavy_repo_preserves_root_surfaces_and_installs_he
         for action in result.actions
     )
     assert not (tmp_path / "tools").exists()
+
+
+def test_adopt_bootstrap_include_optional_preserves_existing_optional_surfaces(tmp_path: Path) -> None:
+    review_readme_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "README.md"
+    _write(review_readme_path, "# Existing review workflow\n")
+
+    result = adopt_bootstrap(target=tmp_path, include_optional=True)
+
+    assert review_readme_path.read_text(encoding="utf-8") == "# Existing review workflow\n"
+    assert (tmp_path / ".agentic-workspace" / "planning" / "upstream-task-intake.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-intake-upstream-task" / "SKILL.md").exists()
+    assert any(action.kind == "skipped" and action.path == review_readme_path for action in result.actions)
 
 
 def test_render_wrapper_install_does_not_ship_root_script_entrypoint(tmp_path: Path) -> None:
@@ -723,6 +771,7 @@ def test_list_files_json_separates_default_optional_and_skill_payloads(capsys) -
     assert "planning-autopilot/SKILL.md" in payload["bundled_skill_files"]
     assert ".agentic-workspace/docs/capability-aware-execution.md" in payload["files"]
     assert "skills/planning-autopilot/SKILL.md" not in payload["files"]
+    assert "agentic-planning-bootstrap install --include-optional" in payload["optional_enable_commands"]
 
 
 def test_bootstrap_review_readme_includes_canonical_review_portfolio() -> None:
@@ -1181,6 +1230,22 @@ def test_upgrade_bootstrap_overwrites_managed_files_but_preserves_root_surfaces(
     assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
     assert any(action.kind == "overwritten" and action.path == checker_path for action in result.actions)
     assert not any(action.path == skill_path for action in result.actions)
+
+
+def test_upgrade_bootstrap_include_optional_refreshes_optional_payload_and_skills(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path, include_optional=True)
+    review_readme_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "README.md"
+    skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
+
+    review_readme_path.write_text("stale optional review surface\n", encoding="utf-8")
+    skill_path.write_text("stale optional skill\n", encoding="utf-8")
+
+    result = upgrade_bootstrap(target=tmp_path, include_optional=True)
+
+    assert "stale optional review surface" not in review_readme_path.read_text(encoding="utf-8")
+    assert "stale optional skill" not in skill_path.read_text(encoding="utf-8")
+    assert any(action.kind == "overwritten" and action.path == review_readme_path for action in result.actions)
+    assert any(action.kind == "overwritten" and action.path == skill_path for action in result.actions)
 
 
 def test_upgrade_bootstrap_legacy_standalone_install_adds_managed_helpers_without_overwriting_root_surfaces(tmp_path: Path) -> None:

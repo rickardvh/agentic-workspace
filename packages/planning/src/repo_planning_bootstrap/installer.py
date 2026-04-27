@@ -1055,10 +1055,14 @@ def install_bootstrap(
     dry_run: bool = False,
     force: bool = False,
     local_only: bool = False,
+    include_optional: bool = False,
 ) -> InstallResult:
     target_root = resolve_target_root(target, local_only=local_only)
     result = InstallResult(target_root=target_root, message="Install plan", dry_run=dry_run)
     _copy_payload(target_root=target_root, result=result, conservative=False, force=force)
+    if include_optional:
+        _copy_payload(target_root=target_root, result=result, conservative=False, force=force, files=OPTIONAL_PAYLOAD_FILES)
+        _copy_bundled_skills(target_root=target_root, result=result, conservative=False, force=force)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
         _migrate_legacy_planning_surfaces(target_root, force=force)
@@ -1082,10 +1086,13 @@ def _ensure_local_ignored(repo_root: str | Path) -> None:
             f.write("\n# Agentic Workspace local-only storage\n.agentic-workspace/\n")
 
 
-def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) -> InstallResult:
+def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False, include_optional: bool = False) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message="Adoption plan for existing repository", dry_run=dry_run)
     _copy_payload(target_root=target_root, result=result, conservative=True, force=False)
+    if include_optional:
+        _copy_payload(target_root=target_root, result=result, conservative=True, force=False, files=OPTIONAL_PAYLOAD_FILES)
+        _copy_bundled_skills(target_root=target_root, result=result, conservative=True, force=False)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
         _migrate_legacy_planning_surfaces(target_root)
@@ -1097,12 +1104,17 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) 
     return result
 
 
-def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False) -> InstallResult:
+def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False, include_optional: bool = False) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message="Upgrade plan", dry_run=dry_run)
 
     for relative in PACKAGE_MANAGED_FILES:
         _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=True)
+
+    if include_optional:
+        for relative in OPTIONAL_PAYLOAD_FILES:
+            _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=True)
+        _copy_bundled_skills(target_root=target_root, result=result, conservative=False, force=True)
 
     for relative in ROOT_SURFACE_FILES:
         _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=False)
@@ -6067,9 +6079,16 @@ def format_summary_json(summary: dict[str, Any]) -> str:
     return json.dumps(summary, indent=2)
 
 
-def _copy_payload(*, target_root: Path, result: InstallResult, conservative: bool, force: bool) -> None:
+def _copy_payload(
+    *,
+    target_root: Path,
+    result: InstallResult,
+    conservative: bool,
+    force: bool,
+    files: Iterable[Path] = REQUIRED_PAYLOAD_FILES,
+) -> None:
     root = payload_root()
-    for relative in sorted(REQUIRED_PAYLOAD_FILES, key=lambda path: path.as_posix()):
+    for relative in sorted(files, key=lambda path: path.as_posix()):
         if relative in GENERATED_PAYLOAD_FILES:
             continue
         source = root / relative

@@ -46,21 +46,40 @@ def build_parser() -> argparse.ArgumentParser:
         command_parser.add_argument("--dry-run", action="store_true")
         command_parser.add_argument("--force", action="store_true")
         command_parser.add_argument("--local", action="store_true", help="Set up the workspace in a local, non-tracked directory.")
+        command_parser.add_argument(
+            "--include-optional",
+            action="store_true",
+            help="Copy optional planning docs and bundled skills for richer review, intake, recovery, and autopilot workflows.",
+        )
         command_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     adopt_parser = subparsers.add_parser("adopt", help="Conservatively add planning bootstrap files to an existing repository.")
     adopt_parser.add_argument("--target")
     adopt_parser.add_argument("--dry-run", action="store_true")
+    adopt_parser.add_argument(
+        "--include-optional",
+        action="store_true",
+        help="Copy optional planning docs and bundled skills without overwriting existing repo-owned files.",
+    )
     adopt_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    for command, help_text in (
-        ("upgrade", "Refresh package-managed helper surfaces without overwriting repo-owned root planning files."),
-        ("uninstall", "Remove managed bootstrap files when they still match package content."),
-    ):
-        command_parser = subparsers.add_parser(command, help=help_text)
-        command_parser.add_argument("--target")
-        command_parser.add_argument("--dry-run", action="store_true")
-        command_parser.add_argument("--format", choices=("text", "json"), default="text")
+    upgrade_parser = subparsers.add_parser(
+        "upgrade",
+        help="Refresh package-managed helper surfaces without overwriting repo-owned root planning files.",
+    )
+    upgrade_parser.add_argument("--target")
+    upgrade_parser.add_argument("--dry-run", action="store_true")
+    upgrade_parser.add_argument(
+        "--include-optional",
+        action="store_true",
+        help="Refresh optional planning docs and bundled skills when the repo has enabled richer planning workflows.",
+    )
+    upgrade_parser.add_argument("--format", choices=("text", "json"), default="text")
+
+    uninstall_parser = subparsers.add_parser("uninstall", help="Remove managed bootstrap files when they still match package content.")
+    uninstall_parser.add_argument("--target")
+    uninstall_parser.add_argument("--dry-run", action="store_true")
+    uninstall_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     for command in ("doctor", "status"):
         command_parser = subparsers.add_parser(command)
@@ -158,11 +177,20 @@ def main(argv: list[str] | None = None) -> int:
         return _run_generated_command_adapter(args, adapter=generated_adapter)
 
     if args.command in {"install", "init"}:
-        return _emit(install_bootstrap(target=args.target, dry_run=args.dry_run, force=args.force, local_only=args.local), args.format)
+        return _emit(
+            install_bootstrap(
+                target=args.target,
+                dry_run=args.dry_run,
+                force=args.force,
+                local_only=args.local,
+                include_optional=args.include_optional,
+            ),
+            args.format,
+        )
     if args.command == "adopt":
-        return _emit(adopt_bootstrap(target=args.target, dry_run=args.dry_run), args.format)
+        return _emit(adopt_bootstrap(target=args.target, dry_run=args.dry_run, include_optional=args.include_optional), args.format)
     if args.command == "upgrade":
-        return _emit(upgrade_bootstrap(target=args.target, dry_run=args.dry_run), args.format)
+        return _emit(upgrade_bootstrap(target=args.target, dry_run=args.dry_run, include_optional=args.include_optional), args.format)
     if args.command == "uninstall":
         return _emit(uninstall_bootstrap(target=args.target, dry_run=args.dry_run), args.format)
     if args.command == "doctor":
@@ -251,6 +279,11 @@ def main(argv: list[str] | None = None) -> int:
                         "default_files": list_default_payload_files(),
                         "optional_files": list_optional_payload_files(),
                         "bundled_skill_files": list_bundled_skill_files(),
+                        "optional_enable_commands": [
+                            "agentic-planning-bootstrap install --include-optional",
+                            "agentic-planning-bootstrap adopt --include-optional",
+                            "agentic-planning-bootstrap upgrade --include-optional",
+                        ],
                     },
                     indent=2,
                 )
