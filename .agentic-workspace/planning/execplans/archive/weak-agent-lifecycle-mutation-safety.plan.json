@@ -164,9 +164,9 @@
   },
   "intent_satisfaction": {
     "original intent": "Ingest and implement all issues lane by lane. Commit and push after each milestone. Collect dogfooding evidence.",
-    "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "#405 acceptance is met, but the parent weak-agent recovery lane still has later child slices.",
-    "unsolved intent passed to": ".agentic-workspace/planning/state.toml weak-agent recovery lane for later child slices"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#405 acceptance is met, and parent #403 was later closed after #404-#408 child evidence was reviewed.",
+    "unsolved intent passed to": "none"
   },
   "system_intent_alignment": {
     "relevant system intent": "Make weak-agent lifecycle mutation safe enough that work continuity is not lost to unsafe apply paths.",
@@ -176,16 +176,16 @@
   },
   "closure_check": {
     "slice status": "completed",
-    "larger-intent status": "open",
-    "closure decision": "archive-but-keep-lane-open",
-    "why this decision is honest": "The bounded #405 slice is implemented and externally closable, while parent-lane continuation remains tracked in state.toml.",
-    "evidence carried forward": "tests/test_workspace_cli.py; src/agentic_workspace/cli.py; proof selector output; planning summary/reconcile",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded #405 slice is implemented, and parent #403 was closed after all named child issues landed.",
+    "evidence carried forward": "tests/test_workspace_cli.py; src/agentic_workspace/cli.py; proof selector output; planning summary/reconcile; .agentic-workspace/planning/execplans/archive/weak-agent-parent-lane-review.plan.json",
     "reopen trigger": "Reopen if lifecycle_plan.mutation_safety stops exposing dry-run/apply, review-required, preflight, destructive, and local-only preservation signals."
   },
   "execution_summary": {
     "outcome delivered": "Lifecycle mutation safety is first-class in lifecycle_plan output and covered by tests.",
     "validation confirmed": "Focused tests, full workspace CLI tests, ruff, planning doctor, summary, and reconcile passed.",
-    "follow-on routed to": ".agentic-workspace/planning/state.toml weak-agent recovery lane for later child slices.",
+    "follow-on routed to": "none; parent #403 closed after all named child slices landed.",
     "post-work posterity capture": ".agentic-workspace/planning/execplans/archive/weak-agent-lifecycle-mutation-safety.plan.json",
     "knowledge promoted (Memory/Docs/Config)": "none",
     "resume from": "Promote the next weak-agent recovery child slice."

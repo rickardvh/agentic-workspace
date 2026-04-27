@@ -1139,10 +1139,21 @@
       "system": "github",
       "id": "#403",
       "title": "[Workspace]: Improve weak-agent recovery and strong-agent leverage from current package state",
-      "status": "open",
+      "status": "closed",
       "kind": "lane",
       "parent_id": "",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "present",
+      "closeout": {
+        "plan": ".agentic-workspace/planning/execplans/archive/weak-agent-parent-lane-review.plan.json",
+        "proof": "#403 intended outcome names five actionable gaps; each maps to a closed child issue with checked-in closeout evidence: #404, #405, #406, #407, and #408.",
+        "validation": [
+          "gh issue view 403 --json number,title,body,state,labels,url,comments",
+          "gh issue view 404 --json number,state,title,url; gh issue view 405 --json number,state,title,url; gh issue view 406 --json number,state,title,url; gh issue view 407 --json number,state,title,url; gh issue view 408 --json number,state,title,url",
+          "uv run agentic-workspace summary --format json",
+          "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/weak-agent-parent-lane-review.plan.json --format json",
+          "uv run agentic-workspace doctor --target . --modules planning --format json"
+        ]
+      }
     },
     {
       "system": "github",

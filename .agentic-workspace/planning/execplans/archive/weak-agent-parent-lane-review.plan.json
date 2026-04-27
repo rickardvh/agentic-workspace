@@ -1,0 +1,289 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Weak Agent Parent Lane Review",
+  "goal": [
+    "Resolve #403 by validating that the named child issues #404, #405, #406, #407, and #408 satisfy the parent lane outcome."
+  ],
+  "non_goals": [
+    "Do not add new implementation beyond the parent-lane closeout review.",
+    "Do not reopen broad product-compression work.",
+    "Do not treat a parent issue as closed unless every named child outcome has checked-in proof."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Close or replan the weak-agent parent lane based on child evidence.",
+      "constraints": "Use live GitHub child state, external intent evidence, archived child execplans, summary, reconcile, and proof output.",
+      "latitude": "Close #403 if the parent acceptance is fully covered by child evidence; otherwise promote one concrete follow-on.",
+      "escalation": "Escalate if a child issue is open, missing checked-in proof, or parent acceptance has an unsliced unmet expectation."
+    },
+    "execution": {
+      "milestone": "weak-agent-parent-lane-review",
+      "status": "active",
+      "next_step": "Compare parent acceptance against child closeout evidence.",
+      "proof": "Run summary, reconcile, issue-state checks, and planning doctor."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json",
+        ".agentic-workspace/planning/execplans/weak-agent-parent-lane-review.plan.json"
+      ],
+      "invariants": [
+        "Parent closure must distinguish child completion from broader future work.",
+        "Open follow-on work must remain routed in state or GitHub.",
+        "No implementation files should change for a pure parent-lane closeout."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Improve weak-agent recovery and strong-agent leverage for the package state represented by #403.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "weak-agent-recovery-and-strong-agent-guardrails"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Closed the weak-agent parent lane from checked-in child closeout evidence instead of relying on chat memory.",
+    "intentionally deferred": "Future weak-agent or strong-agent improvements may be new issues, but not required for #403's named acceptance.",
+    "discovered implications": "The package correctly kept #403 visible as an ambiguous parent continuation until the child evidence was reviewed.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for #403",
+    "next likely slice": "Move to the architecture-boundary lane #409/#410/#411."
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest and implement all issues lane by lane. Commit and push after each milestone. Collect dogfooding evidence.",
+    "inferred intended outcome": "Close the weak-agent recovery lane only after all named child issues are landed and audited.",
+    "chosen concrete what": "Review #403 parent acceptance against child closeout evidence and close or replan.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm #404-#408 are closed, have checked-in closeout evidence, and map to each #403 intended outcome bullet."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning state, external intent evidence, and this parent-lane execplan",
+    "max changed files": "3",
+    "required validation commands": "gh issue view for #403-#408, agentic-workspace summary, reconcile, doctor",
+    "ask-before-refactor threshold": "Any code or contract change beyond parent closeout evidence.",
+    "stop before touching": "implementation files"
+  },
+  "context_budget": {
+    "live working set": "issue #403, child issues #404-#408, archived child plans, external evidence, state.toml",
+    "recoverable later": "GitHub issue bodies and archived child closeout plans",
+    "externalize before shift": "Archive this parent-lane plan and update external evidence.",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "gh issue view 403 --json number,title,body,state,labels,url; gh issue view 404-408",
+    "tiny resumability note": "Parent #403 review: verify closed child issues cover acceptance, then close or replan.",
+    "context-shift triggers": "A child is open, lacks proof, or parent acceptance has unsliced work."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#403",
+      "label": "Improve weak-agent recovery and strong-agent leverage from current package state",
+      "role": "source intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/403"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#404",
+      "label": "Weak-agent off-happy-path recovery",
+      "role": "child proof",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/404"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#405",
+      "label": "Lifecycle mutation safety",
+      "role": "child proof",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/405"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#406",
+      "label": "Validation vs intent satisfaction",
+      "role": "child proof",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/406"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#407",
+      "label": "Anti-overfitting review",
+      "role": "child proof",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/407"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#408",
+      "label": "Generated non-Python maturity labels",
+      "role": "child proof",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/408"
+    }
+  ],
+  "delegated_judgment": {
+    "requested outcome": "Close or replan the #403 parent lane based on child evidence.",
+    "hard constraints": "No implementation changes; do not close the parent if any named child acceptance is unmet.",
+    "agent may decide locally": "Whether the parent can close from child evidence or needs a promoted follow-on.",
+    "escalate when": "Child evidence is missing, child state is open, or parent acceptance has unsliced requirements."
+  },
+  "active_milestone": {
+    "id": "weak-agent-parent-lane-review",
+    "status": "completed",
+    "scope": "Parent-lane closeout review and evidence update.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Compare #403 acceptance against #404-#408 child evidence."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/execplans/weak-agent-parent-lane-review.plan.json"
+  ],
+  "invariants": [
+    "Parent closure must distinguish child completion from broader future work.",
+    "Open follow-on work must remain routed in state or GitHub.",
+    "No implementation files should change for a pure parent-lane closeout."
+  ],
+  "validation_commands": [
+    "gh issue view 403 --json number,title,body,state,labels,url",
+    "gh issue view 404 --json number,state,title,url; gh issue view 405 --json number,state,title,url; gh issue view 406 --json number,state,title,url; gh issue view 407 --json number,state,title,url; gh issue view 408 --json number,state,title,url",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "completion_criteria": [
+    "#403 intended outcome bullets are mapped to closed child issues.",
+    "Every named child issue is closed and has checked-in closeout evidence.",
+    "Any remaining parent-level intent is either explicitly absent or promoted to a concrete follow-on.",
+    "External intent evidence and roadmap no longer keep a closed lane open."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace summary --format json --profile full; gh issue view 403 --json number,title,body,state,labels,url,comments",
+    "what happened": "Reviewed #403 parent acceptance against live child issue state and archived child closeout evidence. #404 covers off-happy-path weak-agent recovery, #405 covers lifecycle mutation safety, #406 covers validation-vs-intent closeout, #407 covers anti-overfitting review, and #408 covers generated non-Python maturity labels.",
+    "scope touched": "planning state and parent-lane execplan",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/weak-agent-parent-lane-review.plan.json",
+    "validations run": "gh issue view 403 --json number,title,body,state,labels,url,comments; gh issue view 404 --json number,state,title,url; gh issue view 405 --json number,state,title,url; gh issue view 406 --json number,state,title,url; gh issue view 407 --json number,state,title,url; gh issue view 408 --json number,state,title,url; uv run agentic-workspace summary --format json; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/weak-agent-parent-lane-review.plan.json --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "#403 acceptance satisfied; next lane is architecture-boundary #409/#410/#411.",
+    "next step": "Archive this plan, update external evidence, close #403, commit, push, then promote architecture-boundary work."
+  },
+  "finished_run_review": {
+    "review status": "accepted",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "package workflow dogfooded through summary, proof, and doctor",
+    "misinterpretation risk": "low",
+    "follow-on decision": "close #403; proceed to architecture-boundary lane"
+  },
+  "proof_report": {
+    "validation proof": "Live GitHub state shows #404, #405, #406, #407, and #408 are closed; package summary exposes this as an active parent-lane plan; proof selects planning_surfaces; planning doctor is healthy.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "gh issue view 403-408; uv run agentic-workspace summary --format json; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/weak-agent-parent-lane-review.plan.json --format json; uv run agentic-workspace doctor --target . --modules planning --format json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Ingest and implement all issues lane by lane. Commit and push after each milestone. Collect dogfooding evidence.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#403 intended outcome names five actionable gaps; each maps to a closed child issue with checked-in closeout evidence: #404, #405, #406, #407, and #408.",
+    "unsolved intent passed to": "none"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger outcome separately from bounded child slices until closeout evidence proves the parent lane is done.",
+    "slice shaping bias": "Prefer parent-lane evidence update over implementation if child evidence already satisfies the lane.",
+    "broader-lane validation question": "Do child closeouts satisfy every named #403 outcome bullet?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#403 is a parent over #404-#408, and all named child gaps are closed with checked-in closeout evidence.",
+    "evidence carried forward": ".agentic-workspace/planning/external-intent-evidence.json entries for #404-#408; archived child execplans for #404-#408",
+    "reopen trigger": "A named child issue reopens or a concrete unmet #403 acceptance bullet is identified."
+  },
+  "execution_summary": {
+    "outcome delivered": "#403 parent-lane acceptance validated against child closeout evidence.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "architecture-boundary lane #409/#410/#411",
+    "post-work posterity capture": "Archive this parent-lane plan and update provider-agnostic external evidence.",
+    "knowledge promoted (Memory/Docs/Config)": "No new docs/config needed; state and external evidence carry the lane transition.",
+    "resume from": "Promote architecture-boundary lane #409/#410/#411."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "architecture-boundary lane #409/#410/#411",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "No new docs/config needed; state and external evidence carry the lane transition.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "No new docs/config needed; state and external evidence carry the lane transition.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "Improve weak-agent recovery and strong-agent leverage from current package state",
+          "owner": "github-issue",
+          "source": "#403"
+        },
+        {
+          "summary": "Weak-agent off-happy-path recovery",
+          "owner": "github-issue",
+          "source": "#404"
+        },
+        {
+          "summary": "Lifecycle mutation safety",
+          "owner": "github-issue",
+          "source": "#405"
+        },
+        {
+          "summary": "Validation vs intent satisfaction",
+          "owner": "github-issue",
+          "source": "#406"
+        },
+        {
+          "summary": "Anti-overfitting review",
+          "owner": "github-issue",
+          "source": "#407"
+        },
+        {
+          "summary": "Generated non-Python maturity labels",
+          "owner": "github-issue",
+          "source": "#408"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted #403 parent-lane review after #404, #405, #406, #407, and #408 were closed in GitHub.",
+    "2026-04-27: Dogfooding evidence: summary kept the parent visible as ambiguous-open-reference until this explicit parent-lane review."
+  ]
+}
