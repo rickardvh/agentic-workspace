@@ -3506,6 +3506,11 @@ def _run_preflight_command(
     # Full preflight: startup + config + active state for takeover recovery
     # Get startup guidance
     startup_payload = _defaults_payload().get("startup", {})
+    tiny_safe_model = startup_payload.get("tiny_safe_model", {})
+    first_compact_queries = [
+        _command_with_cli_invoke(command=str(query), cli_invoke=config.cli_invoke)
+        for query in tiny_safe_model.get("first_compact_queries", [])
+    ]
 
     # Get config
     config_payload = _config_payload(config=config)
@@ -3519,7 +3524,11 @@ def _run_preflight_command(
         "timestamp_hint": "Use this to bootstrap into an interrupted or takeover recovery.",
         "startup_guidance": {
             "entrypoint": startup_payload.get("default_canonical_agent_instructions_file", "AGENTS.md"),
-            "first_compact_queries": startup_payload.get("tiny_safe_model", {}).get("first_compact_queries", []),
+            "entry_query": _command_with_cli_invoke(
+                command=str(tiny_safe_model.get("entry_query", "agentic-workspace preflight --format json")),
+                cli_invoke=config.cli_invoke,
+            ),
+            "first_compact_queries": first_compact_queries,
             "escalation_rules": startup_payload.get("escalation_cues", [])[:2],  # Top 2 most common
         },
         "resolved_config": {
@@ -3741,6 +3750,7 @@ def _authority_markers_for_startup(*, active_execplan: str | None = None) -> lis
 
 def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
     startup_template = _CONTEXT_TEMPLATES["startup_context"]
+    config = _load_workspace_config(target_root=target_root)
     preflight = _run_preflight_command(target_root=target_root)
     active_state = preflight.get("active_planning_state", {})
     planning_record = active_state.get("planning_record", {})
@@ -3764,6 +3774,7 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
             step["surface"] = str(step["surface"]).format(
                 agent_instructions_file=preflight.get("resolved_config", {}).get("agent_instructions_file", "AGENTS.md")
             )
+        step["command"] = _command_with_cli_invoke(command=step.get("command"), cli_invoke=config.cli_invoke)
 
     payload: dict[str, Any] = {
         "kind": "startup-context/v1",
@@ -3818,6 +3829,14 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str]) -> dict[s
             else implementer_template["next_allowed_action"]["default"]
         ),
     }
+
+
+def _command_with_cli_invoke(*, command: str | None, cli_invoke: str) -> str | None:
+    if command is None:
+        return None
+    if command == "agentic-workspace" or command.startswith("agentic-workspace "):
+        return f"{cli_invoke}{command.removeprefix('agentic-workspace')}"
+    return command
 
 
 def _preflight_active_state_payload(*, target_root: Path) -> dict[str, Any]:
@@ -5757,8 +5776,8 @@ def _defaults_payload() -> dict[str, Any]:
             "tiny_safe_model": {
                 "summary": "Start from one repo entrypoint, one cheap takeover query, and conditional deeper reads.",
                 "entrypoint": "AGENTS.md",
+                "entry_query": "agentic-workspace preflight --format json",
                 "first_compact_queries": [
-                    "agentic-workspace preflight --format json",
                     "agentic-workspace defaults --section startup --format json",
                     "agentic-workspace config --target ./repo --format json",
                     "agentic-workspace summary --format json",

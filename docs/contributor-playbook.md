@@ -22,15 +22,16 @@ Use `.agentic-workspace/docs/ownership-authority-contract.md` when the missing j
 Default startup path for an agent maintainer:
 
 1. Read `AGENTS.md`.
-2. Read `.agentic-workspace/planning/state.toml`.
+2. Run `agentic-workspace start --format json` for the ordinary compact startup context.
 3. If the question is startup order or first-contact routing, ask `agentic-workspace defaults --section startup --format json` before broader prose.
 4. If you need the current planning state, ask `agentic-workspace summary --format json` before opening raw planning files.
 5. If you need the combined workspace state, ask `agentic-workspace report --target ./repo --format json` before reading raw module files.
-6. If `.agentic-workspace/planning/state.toml` points at an active execplan and the compact surfaces are insufficient, read that plan before editing code.
-7. If you are handing the active slice to another executor, derive the worker contract from `agentic-workspace summary --format json` rather than drafting a fresh ad hoc prompt.
-8. Use `agentic-workspace config --target ./repo --format json` to inspect the effective mixed-agent posture, including the optional local capability/cost override in `.agentic-workspace/config.local.toml`.
-9. Read package-local `AGENTS.md` only for the package you will touch.
-10. Use this playbook to pick the right ownership surface and narrow validation lane.
+6. Open `.agentic-workspace/planning/state.toml` only when compact output points there or you are directly maintaining planning state.
+7. If `.agentic-workspace/planning/state.toml` points at an active execplan and the compact surfaces are insufficient, read that plan before editing code.
+8. If you are handing the active slice to another executor, derive the worker contract from `agentic-workspace summary --format json` rather than drafting a fresh ad hoc prompt.
+9. Use `agentic-workspace config --target ./repo --format json` to inspect the effective mixed-agent posture, including the optional local capability/cost override in `.agentic-workspace/config.local.toml`.
+10. Read package-local `AGENTS.md` only for the package you will touch.
+11. Use this playbook to pick the right ownership surface and narrow validation lane.
 
 Prefer repository-native state over chat-only context. If a follow-up matters after the current turn, record it in planning or memory instead of relying on conversational residue.
 

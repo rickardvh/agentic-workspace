@@ -109,8 +109,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["startup"]["default_canonical_agent_instructions_file"] == "AGENTS.md"
     assert payload["startup"]["supported_agent_instructions_files"] == ["AGENTS.md", "GEMINI.md"]
     assert payload["startup"]["tiny_safe_model"]["entrypoint"] == "AGENTS.md"
-    assert payload["startup"]["tiny_safe_model"]["first_compact_queries"][0] == "agentic-workspace preflight --format json"
-    assert payload["startup"]["tiny_safe_model"]["first_compact_queries"][1] == "agentic-workspace defaults --section startup --format json"
+    assert payload["startup"]["tiny_safe_model"]["entry_query"] == "agentic-workspace preflight --format json"
+    assert payload["startup"]["tiny_safe_model"]["first_compact_queries"][0] == "agentic-workspace defaults --section startup --format json"
     assert payload["startup"]["tiny_safe_model"]["deeper_reads_become_valid_when"][0].startswith("the active summary points")
     assert payload["startup"]["first_queries"][0]["command"] == "agentic-workspace preflight --format json"
     assert payload["startup"]["first_queries"][0]["field"] == "startup_guidance"
@@ -4351,6 +4351,10 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     target.mkdir()
     _init_git_repo(target)
     _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+    _write(
         target / ".agentic-workspace" / "planning" / "state.toml",
         "[todo]\n"
         "active_items = [\n"
@@ -4367,6 +4371,13 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "startup-context/v1"
     assert payload["startup_sequence"][0]["surface"] == "AGENTS.md"
+    assert payload["startup_sequence"][1]["command"] == "uv run agentic-workspace preflight --format json"
+    assert payload["startup_sequence"][2]["command"] == "uv run agentic-workspace summary --format json"
+    assert payload["immediate_next_allowed_action"]["read_first"] == [
+        "uv run agentic-workspace defaults --section startup --format json",
+        "uv run agentic-workspace config --target ./repo --format json",
+        "uv run agentic-workspace summary --format json",
+    ]
     assert payload["active_state_summary"]["todo_active_count"] == 1
     assert payload["authority_markers"][0] == {
         "path": "AGENTS.md",
@@ -5096,11 +5107,12 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     startup_answer = defaults_payload.get("answer", {})
     assert startup_answer.get("default_canonical_agent_instructions_file") == "AGENTS.md"
 
-    # Verify the first_compact_queries are correct and use agentic-workspace (not stale bootstrap)
+    # Verify the entry and follow-up compact queries use agentic-workspace (not stale bootstrap)
     tiny_safe = startup_answer.get("tiny_safe_model", {})
     assert tiny_safe.get("entrypoint") == "AGENTS.md"
+    assert tiny_safe.get("entry_query") == "agentic-workspace preflight --format json"
     queries = tiny_safe.get("first_compact_queries", [])
-    assert any("agentic-workspace preflight --format json" in q for q in queries)
+    assert not any("agentic-workspace preflight --format json" in q for q in queries)
     assert any("agentic-workspace defaults --section startup" in q for q in queries)
     assert any("agentic-workspace config --target" in q for q in queries)
     assert any("agentic-workspace summary" in q for q in queries)
@@ -5113,6 +5125,8 @@ def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -
     preflight_payload = json.loads(preflight_output)
     assert preflight_payload.get("kind") == "preflight-response/v1"
     assert "startup_guidance" in preflight_payload
+    assert preflight_payload["startup_guidance"]["entry_query"] == "agentic-workspace preflight --format json"
+    assert "agentic-workspace preflight --format json" not in preflight_payload["startup_guidance"]["first_compact_queries"]
     assert "resolved_config" in preflight_payload
     assert "active_planning_state" in preflight_payload
 
