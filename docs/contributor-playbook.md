@@ -17,6 +17,18 @@ Use `.agentic-workspace/docs/generated-surface-trust.md` when a change touches g
 Use `.agentic-workspace/docs/proof-surfaces-contract.md` when the missing judgment is which proof lane actually answers the current trust question.
 Use `.agentic-workspace/docs/ownership-authority-contract.md` when the missing judgment is who owns a concern or which checked-in surface is authoritative.
 
+## Documentation Role Map
+
+- `README.md`: public entrypoint and ordinary user path.
+- `AGENTS.md`: repo-owned startup adapter for agents.
+- `docs/contributor-playbook.md`: maintainer routing, ownership, and validation guide.
+- `docs/maintainer-commands.md`: literal command index.
+- `docs/design-principles.md`: product doctrine and tradeoff guidance.
+- `docs/dogfooding-feedback.md`: friction admission and routing policy.
+- `.agentic-workspace/docs/*`: product-managed installed contracts.
+- `packages/*/README.md`: package-specific install, ownership, and development reference.
+- `docs/reviews/*`: evidence and history, not ordinary startup input.
+
 ## Start Here
 
 Default startup path for an agent maintainer:

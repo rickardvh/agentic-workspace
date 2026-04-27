@@ -245,224 +245,53 @@ Bad fits:
 - Before: follow-on work derails the current thread because there is no compact place to capture it safely.
   After: future work stays in the roadmap section of `.agentic-workspace/planning/state.toml` while the current thread stays bounded.
 
-## Overview
+## Detailed Contracts
 
-`agentic-planning-bootstrap` is a file-based planning system for execution designed for repositories where development is performed by AI agents, humans working in short fragmented sessions, or both.
+Keep this README as the package entrypoint. Use the installed contracts for deep operating rules:
 
-Its purpose is simple:
+- `.agentic-workspace/docs/execution-flow-contract.md`: active state, execplans, handoff, restart, and closeout.
+- `.agentic-workspace/docs/capability-aware-execution.md`: direct execution, promotion to plans, delegation fit, and stop conditions.
+- `.agentic-workspace/docs/routing-contract.md`: hierarchy between state, execplans, and reviews.
+- `.agentic-workspace/planning/reviews/README.md`: bounded review-artifact roles and promotion rules.
+- `.agentic-workspace/planning/upstream-task-intake.md`: tracker-agnostic issue intake into checked-in planning.
 
-> Preserve direction, constrain active work, and ensure progress happens in coherent, completed threads.
-
-Unlike traditional task trackers, this package is not primarily about managing tasks.
-It is about keeping execution aligned over time.
-
-This repo is both the self-hosted reference install for that contract and the packaging source for the reusable bootstrap payload.
-
-## The Problem It Solves
-
-In agent-driven or session-based development, work tends to degrade over time:
-
-- long-term goals get forgotten
-- agents drift into low-value side work
-- partially completed features accumulate
-- context must be re-derived every session
-- follow-on work derails current execution
-
-This package helps prevent that by installing a structured execution layer that lives in the repo itself.
-
-For many users the simplest mental model is: planning owns what matters now, what comes next, and what counts as done.
-
-## Core Idea
-
-Development is organised across three horizons:
-
-| Horizon | Surface | Role |
-| ------ | ------- | ---- |
-| Direction + Activation | `.agentic-workspace/planning/state.toml` | What matters now and what might matter next through compact candidate lanes |
-| Execution | `.agentic-workspace/planning/execplans/` | How the active work is completed |
-
-Each layer has a single responsibility and should not duplicate the others.
-
-## What This System Does
-
-### 1. Preserves long-horizon direction
-
-Candidate lanes and strategic intent stay visible without being forced into active execution.
-
-### 2. Constrains active work
-
-Only a small number of items should be active at any given time, which reduces overload and drift.
-
-### 3. Enforces execution contracts
-
-Every meaningful piece of active work can be backed by a structured execution contract that defines:
-
-- scope
-- next action
-- blockers
-- validation
-- completion criteria
-
-### 4. Enables cheap resumption
-
-In the normal startup path, agents should be able to restart work by reading:
-
-`AGENTS.md -> agentic-workspace summary --format json -> one execplan -> begin execution`
-
-No large context load should be required.
-
-### 5. Prevents partial work accumulation
-
-The system biases strongly toward finishing and integrating work rather than starting new work.
-
-### 6. Captures follow-on work safely
-
-New ideas and follow-ups are routed into:
-
-- the roadmap, for future work
-- the active plan, if immediately relevant
-
-without breaking execution focus.
+Planning is deliberately not a task tracker, backlog manager, knowledge base, documentation system, database-backed planner, or runtime orchestration tool.
+It should preserve active execution state and route durable knowledge to memory or canonical docs.
 Required continuation for an unfinished larger intended outcome must be routed into a checked-in owner before the current slice closes; it should not survive only as drift-log prose or chat residue.
-
-### 7. Keeps active surfaces clean
-
-Completed work should leave active surfaces rather than accumulate there.
-The active queue in `.agentic-workspace/planning/state.toml` should stay live, not become a running list of what was finished in the current pass.
-
-## Key Properties
-
-### Multi-horizon structure
-
-Clear separation between:
-
-- direction
-- activation
-- execution
-
-### Anti-drift by design
-
-The checked-in surfaces preserve intent across fragmented sessions.
-
-### Single-thread bias
-
-The contract encourages finishing work before expanding scope.
-
-### Context compression
-
-Agents can operate with minimal working context.
-
-### Archive-over-accumulation
-
-Active files stay small and current.
-
-### File-native and inspectable
-
-- plain Markdown and JSON
-- version-controlled
-- no runtime dependencies in the adopting repo
-- no hidden state
-
-## Ownership Boundary
-
-Put information in planning when it changes what is active now, what comes next, or what counts as done for live work.
-
-Planning owns:
-
-- roadmap state
-- active queue state
-- execplan structure
-- bounded review-artifact structure for future-work discovery
-- milestone sequencing
-- blockers and completion criteria for live work
-- planning-surface lifecycle helpers
-
-Planning does not own:
-
-- durable subsystem memory
-- recurring technical lessons that outlive the active task
-- routing of durable note bundles
-- broad knowledge-base content
-- canonical architecture documentation
-
-## Review-Driven Future Work Discovery
-
-Planning includes a bounded review lane for deliberate future-work discovery:
-
-- `.agentic-workspace/planning/reviews/` captures review artifacts
-- the roadmap section of `.agentic-workspace/planning/state.toml` receives promoted future candidates
-- the active queue in `.agentic-workspace/planning/state.toml` plus `.agentic-workspace/planning/execplans/` receive only the findings that are explicitly activated
-
-The review lane exists so analysis-derived findings do not masquerade as friction-confirmed work.
-Its rules are:
-
-- capture and promotion are separate steps
-- each finding carries evidence, confidence, source class, and promotion guidance
-- friction-confirmed findings remain higher trust than pure analysis findings
-- weak or speculative findings should be dismissed instead of promoted
-
-The shipped review contract now includes a canonical review portfolio with named bounded modes such as `contract-integrity`, `planning-surface`, `current-context`, `memory-boundary`, `maintainer-workflow`, `source-payload-install`, and `generated-surface-trust`, plus occasional audit modes for `validation-lane`, `context-cost`, and `review-promotion`.
-Each mode defines what to inspect first, the typical finding class, the likely promotion target, and a default output cap so reviews do not turn into open-ended critique.
-The review lane also now defines an explicit improvement-targeting workflow so symptom-like memory or review signals choose one remediation target, route into the right surface, and then shrink, stub, or disappear after remediation instead of lingering as workaround residue.
-
-Use review artifacts when a task is a bounded review pass rather than implementation.
-Do not use them as a substitute for durable docs, memory notes, or active execplans.
-
-## Upstream Task Intake
-
-Planning also includes a tracker-agnostic intake contract for work that starts in an external tracker but should execute from checked-in planning.
-
-- `.agentic-workspace/planning/upstream-task-intake.md` owns the intake rules
-- `.agentic-workspace/planning/state.toml` owns both inactive accepted upstream candidates and the active queue
-- `.agentic-workspace/planning/execplans/` own detailed intake metadata for active promoted work
-
-The contract is intentionally neutral across GitHub Issues, Linear, Jira, Notion, and other upstream systems.
-The external tracker may supply the signal, but once the work is promoted, checked-in planning remains the execution authority.
-
-## What This Is Not
-
-`agentic-planning-bootstrap` is deliberately not primarily:
-
-- a task tracker
-- a backlog manager
-- a project management system
-- a knowledge base
-- a documentation system
-- a database-backed planner
-- a runtime orchestration tool
-
-It is not meant to become a Jira replacement, even though a repo may use it for lightweight planning and tracking.
-
-## Anti-Blur Rules
-
-- Planning must not become a knowledge base.
-- Planning should not absorb durable technical residue that belongs in memory or canonical docs.
-- Planning should stay useful on its own; it must not require a memory install to make sense.
-- The package should preserve clear horizons rather than growing a shadow routing or orchestration layer inside planning surfaces.
 
 ## What the Package Installs
 
-The package installs the checked-in planning contract and its supporting surfaces:
+The package ships these payload files:
 
-- `AGENTS.md`
-- `.agentic-workspace/planning/state.toml`
-- `.agentic-workspace/planning/execplans/README.md`
-- `.agentic-workspace/planning/execplans/TEMPLATE.md`
-- `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
-- `.agentic-workspace/planning/execplans/archive/README.md`
-- `.agentic-workspace/planning/upstream-task-intake.md`
+- `AGENTS.template.md`
+- `.agentic-workspace/docs/candidate-lanes-contract.md`
+- `.agentic-workspace/docs/capability-aware-execution.md`
+- `.agentic-workspace/docs/capability-contract.json`
+- `.agentic-workspace/docs/context-budget-contract.md`
+- `.agentic-workspace/docs/execution-flow-contract.md`
+- `.agentic-workspace/docs/external-intent-evidence-contract.md`
+- `.agentic-workspace/docs/extraction-and-discovery-contract.md`
+- `.agentic-workspace/docs/finished-work-inspection-contract.md`
+- `.agentic-workspace/docs/installer-behavior.md`
+- `.agentic-workspace/docs/knowledge-promotion-workflow.md`
 - `.agentic-workspace/docs/lifecycle-and-config-contract.md`
+- `.agentic-workspace/docs/minimum-operating-model.md`
+- `.agentic-workspace/docs/orchestrator-workflow-contract.md`
+- `.agentic-workspace/docs/reporting-contract.md`
+- `.agentic-workspace/docs/routing-contract.md`
+- `.agentic-workspace/docs/signal-hygiene-contract.md`
+- `.agentic-workspace/docs/standing-intent-contract.md`
+- `.agentic-workspace/docs/system-intent-contract.md`
+- `.agentic-workspace/docs/workspace-config-contract.md`
 - `.agentic-workspace/planning/UPGRADE-SOURCE.toml`
 - `.agentic-workspace/planning/agent-manifest.json`
-- `.agentic-workspace/planning/scripts/render_agent_docs.py`
-- `.agentic-workspace/planning/scripts/check/check_planning_surfaces.py`
-- `.agentic-workspace/planning/scripts/check/check_maintainer_surfaces.py`
-- `tools/agent-manifest.json`
-- `tools/AGENT_QUICKSTART.md`
-- `tools/AGENT_ROUTING.md`
-- `scripts/render_agent_docs.py`
-- `scripts/check/check_planning_surfaces.py`
-- `scripts/check/check_maintainer_surfaces.py`
+- `.agentic-workspace/planning/execplans/README.md`
+- `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
+- `.agentic-workspace/planning/execplans/archive/README.md`
+- `.agentic-workspace/planning/pre-ingestion-refinement.md`
+- `.agentic-workspace/planning/reviews/README.md`
+- `.agentic-workspace/planning/reviews/TEMPLATE.review.json`
+- `.agentic-workspace/planning/upstream-task-intake.md`
 
 It packages:
 
@@ -480,111 +309,12 @@ It does not package repo-specific active execution content.
 
 In this monorepo checkout, the active operational planning install lives at the repository root. This package directory keeps the reusable package source, bootstrap payload, tests, and fixtures; the planning surfaces listed above describe the target-repository structure that `install` or `adopt` writes.
 
-## Repository Structure
+## Installed Operating Shape
 
-```text
-.agentic-workspace/planning/state.toml  # active queue + candidate lanes
-.agentic-workspace/planning/execplans/            # execution contracts
-.agentic-workspace/planning/execplans/archive/    # completed plans
-scripts/check/             # validation tooling
-```
+The installed planning state lives under `.agentic-workspace/planning/`.
+The root `AGENTS.md` adapter points agents to compact startup commands, and the package payload supplies reusable contracts and templates.
 
-## Execution Model
-
-### 1. Start from the startup surface
-
-Read `AGENTS.md`, then `agentic-workspace summary --format json`, and select one active item.
-
-### 2. Load the execution contract
-
-If the item references an execplan, read that plan.
-
-### 3. Execute in small steps
-
-Follow:
-
-- immediate next action
-- validation commands
-- invariants
-
-### 4. Keep scope tight
-
-Do not expand beyond:
-
-- touched paths
-- defined scope
-
-### 5. Capture follow-on work
-
-- future work goes to the roadmap
-- immediate execution follow-through goes into the active plan
-
-### 6. Complete and archive
-
-Once done:
-
-- remove the item from `.agentic-workspace/planning/state.toml`
-- mark the active milestone completed
-- archive the execplan when it no longer affects future execution
-
-## Design Principles
-
-### One surface per concern
-
-- `.agentic-workspace/planning/state.toml` -> activation and candidate lanes
-- `.agentic-workspace/planning/execplans/` -> execution only
-
-### No duplication of intent
-
-Each idea should have one primary home.
-If a slice leaves required continuation behind, that continuation should also have one explicit checked-in owner and trigger.
-
-### Plans are contracts, not notebooks
-
-Execplans should remain:
-
-- bounded
-- concise
-- actionable
-
-### Archive aggressively
-
-Completed work should leave active surfaces quickly.
-
-### Minimal startup context
-
-Agents should not need to read the entire system to begin work.
-
-### Preserve the proven contract
-
-The package should stabilise and document the repo-native contract already proved in practice, not replace it with unnecessary schema invention.
-
-## Relationship to Memory Systems
-
-This system is designed to work alongside a memory layer such as `agentic-memory`, but does not depend on it.
-
-- planning -> active work, sequencing, intent
-- memory -> durable technical knowledge
-
-Interaction points:
-
-- execplans may reference memory notes
-- durable insights may be promoted to memory
-- memory may use planning context such as touched paths for routing
-
-But planning remains the owner of execution state.
-
-Planning should remain useful in a repo with no memory installed at all, and memory should remain useful in a repo that uses a different planning system.
-
-## When to Use This
-
-This system is most useful when:
-
-- working with AI agents across many sessions
-- development is iterative and exploratory
-- long-term direction matters
-- work tends to fragment or stall
-- you want tight control over active scope
+This package can work alongside Agentic Memory, but does not require it: planning owns active execution state, while memory owns durable technical knowledge.
 
 ## Commands
 

@@ -56,3 +56,56 @@ def test_boundary_checker_warns_on_package_local_install_clones(tmp_path: Path) 
     }
     assert any(str(warning.path).endswith("packages/memory/.agentic-workspace") for warning in warnings)
     assert any(str(warning.path).endswith("packages/planning/.agentic-workspace") for warning in warnings)
+
+
+def test_planning_readme_payload_claim_parser_reads_exact_payload_block(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_boundary_readme_parser")
+    readme = tmp_path / "README.md"
+    _write(
+        readme,
+        """
+        # Package
+
+        The package ships these payload files:
+
+        - `AGENTS.template.md`
+        - `.agentic-workspace/planning/agent-manifest.json`
+
+        It packages:
+
+        - prose outside the checked payload block
+        """,
+    )
+
+    assert mod._markdown_payload_claims(readme) == [
+        "AGENTS.template.md",
+        ".agentic-workspace/planning/agent-manifest.json",
+    ]
+
+
+def test_planning_readme_payload_claim_warning_reports_stale_claims(monkeypatch, tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_boundary_readme_drift")
+    readme = tmp_path / "packages" / "planning" / "README.md"
+    _write(
+        readme,
+        """
+        # Planning
+
+        The package ships these payload files:
+
+        - `AGENTS.template.md`
+        - `tools/AGENT_QUICKSTART.md`
+        """,
+    )
+    monkeypatch.setattr(
+        mod,
+        "_planning_required_payload_claims",
+        lambda _repo_root: ["AGENTS.template.md", ".agentic-workspace/planning/agent-manifest.json"],
+    )
+
+    warnings = mod._readme_payload_claim_warnings(repo_root=tmp_path)
+
+    assert len(warnings) == 1
+    assert warnings[0].warning_class == "doc_installed_surface_drift"
+    assert "missing payload claim(s): .agentic-workspace/planning/agent-manifest.json" in warnings[0].message
+    assert "stale payload claim(s): tools/AGENT_QUICKSTART.md" in warnings[0].message

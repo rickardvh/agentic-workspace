@@ -9,7 +9,9 @@ dogfooded memory/planning systems.
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
+import sys
 from pathlib import Path
 from typing import NamedTuple
 
@@ -18,6 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 WARNING_PACKAGE_LOCAL_INSTALL_DRIFT = "package_local_install_drift"
 WARNING_ROOT_OPERATIONAL_INSTALL_DRIFT = "root_operational_install_drift"
 WARNING_CONTRACT_DRIFT = "contract_drift"
+WARNING_DOC_INSTALLED_SURFACE_DRIFT = "doc_installed_surface_drift"
 
 
 class BoundaryWarning(NamedTuple):
@@ -35,6 +38,71 @@ def _render_path(path: Path) -> str:
 
 def _existing(paths: list[Path]) -> list[Path]:
     return [path for path in paths if path.exists()]
+
+
+def _markdown_payload_claims(readme_path: Path) -> list[str]:
+    if not readme_path.exists():
+        return []
+    lines = readme_path.read_text(encoding="utf-8").splitlines()
+    start = None
+    for index, line in enumerate(lines):
+        if line.strip() == "The package ships these payload files:":
+            start = index + 1
+            break
+    if start is None:
+        return []
+    claims: list[str] = []
+    for line in lines[start:]:
+        stripped = line.strip()
+        if not stripped:
+            if claims:
+                break
+            continue
+        if not stripped.startswith("- `") or not stripped.endswith("`"):
+            break
+        claims.append(stripped.removeprefix("- `").removesuffix("`"))
+    return claims
+
+
+def _planning_required_payload_claims(repo_root: Path) -> list[str]:
+    package_src = repo_root / "packages" / "planning" / "src"
+    if not package_src.exists():
+        return []
+    sys.path.insert(0, str(package_src))
+    try:
+        installer = importlib.import_module("repo_planning_bootstrap.installer")
+        return sorted(path.as_posix() for path in installer.REQUIRED_PAYLOAD_FILES)
+    finally:
+        try:
+            sys.path.remove(str(package_src))
+        except ValueError:
+            pass
+
+
+def _readme_payload_claim_warnings(*, repo_root: Path) -> list[BoundaryWarning]:
+    readme_path = repo_root / "packages" / "planning" / "README.md"
+    expected = _planning_required_payload_claims(repo_root)
+    if not expected:
+        return []
+    actual = sorted(_markdown_payload_claims(readme_path))
+    if actual == expected:
+        return []
+    missing = sorted(set(expected) - set(actual))
+    extra = sorted(set(actual) - set(expected))
+    details: list[str] = []
+    if missing:
+        details.append("missing payload claim(s): " + ", ".join(missing))
+    if extra:
+        details.append("stale payload claim(s): " + ", ".join(extra))
+    if not actual:
+        details.append("missing `The package ships these payload files:` payload claim block")
+    return [
+        BoundaryWarning(
+            WARNING_DOC_INSTALLED_SURFACE_DRIFT,
+            _render_path(readme_path),
+            "Planning README installed-surface claims drifted from REQUIRED_PAYLOAD_FILES; " + "; ".join(details),
+        )
+    ]
 
 
 def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWarning]:
@@ -70,6 +138,8 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
                     message,
                 )
             )
+
+    warnings.extend(_readme_payload_claim_warnings(repo_root=repo_root))
 
     required_root_surfaces = {
         repo_root / ".agentic-workspace" / "memory" / "repo" / "index.md": (
