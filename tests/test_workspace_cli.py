@@ -3146,6 +3146,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert historical_reviews["status"] == "evidence-only"
     assert "not ordinary operating input" in historical_reviews["role"]
     assert "Do not read historical review artifacts during startup" in historical_reviews["rule"]
+    assert "Shrink, stub, or delete stale review artifacts" in historical_reviews["retention_guidance"][1]
 
 
 def test_report_section_selector_returns_compact_section_answer(tmp_path: Path, capsys) -> None:

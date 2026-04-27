@@ -3279,6 +3279,11 @@ def _historical_review_artifacts_policy(*, planning_report: dict[str, Any], inte
         "item_count": item_count,
         "rule": "Do not read historical review artifacts during startup unless a selected issue, audit, or report section points there.",
         "selection_path": "agentic-workspace report --target ./repo --section closeout_trust --format json",
+        "retention_guidance": [
+            "Promote durable findings to planning, canonical docs, checks, or Memory before treating them as current authority.",
+            "Shrink, stub, or delete stale review artifacts once findings are promoted, dismissed, or superseded.",
+            "Keep review artifacts out of ordinary startup and compact recovery unless the selected work explicitly asks for historical evidence.",
+        ],
     }
 
 

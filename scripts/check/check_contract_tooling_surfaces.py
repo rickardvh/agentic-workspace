@@ -1050,6 +1050,38 @@ def _validate_contract_inventory_owner_choice() -> list[str]:
     return errors
 
 
+def _find_review_references(value: object, *, path: str = "<root>") -> list[str]:
+    references: list[str] = []
+    review_markers = ("docs/reviews/", ".agentic-workspace/planning/reviews/")
+    if isinstance(value, str):
+        normalized = value.replace("\\", "/")
+        if any(marker in normalized for marker in review_markers):
+            references.append(f"{path}: {value}")
+    elif isinstance(value, dict):
+        for key, nested in value.items():
+            references.extend(_find_review_references(nested, path=f"{path}.{key}"))
+    elif isinstance(value, list):
+        for index, nested in enumerate(value):
+            references.extend(_find_review_references(nested, path=f"{path}[{index}]"))
+    return references
+
+
+def _validate_review_artifacts_not_startup_inputs() -> list[str]:
+    startup_surfaces = {
+        "defaults.startup": cli._defaults_payload()["startup"],  # type: ignore[attr-defined]
+        "context_templates.startup_context": context_templates_manifest()["startup_context"],
+        "start_payload": _sample_startup_context_payload(),
+    }
+    errors: list[str] = []
+    for name, payload in startup_surfaces.items():
+        references = _find_review_references(payload, path=name)
+        if references:
+            errors.append(
+                f"{name} routes ordinary startup to historical review artifact(s): " + "; ".join(references)
+            )
+    return errors
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     checks: list[tuple[str, list[str]]] = [
@@ -1061,6 +1093,7 @@ def main(argv: list[str] | None = None) -> int:
         ("report_contract.json", _validate(report_contract_manifest(), "report_contract_manifest.schema.json")),
         ("contract_inventory.json", _validate(contract_inventory_manifest(), "contract_inventory.schema.json")),
         ("contract_inventory owner choice", _validate_contract_inventory_owner_choice()),
+        ("review artifacts startup hygiene", _validate_review_artifacts_not_startup_inputs()),
         ("compact answer sample", _validate(_sample_compact_answer(), "compact_contract_answer.schema.json")),
         ("workspace report sample", _validate(_sample_report_payload(), "workspace_report.schema.json")),
         ("workspace config sample", _validate(_sample_workspace_config_payload(), "workspace_config.schema.json")),
