@@ -5265,7 +5265,7 @@ def format_actions(actions: list[Action], target_root: Path) -> list[str]:
 
 
 def format_result_json(result: InstallResult) -> str:
-    payload = {
+    payload: dict[str, Any] = {
         "target_root": str(result.target_root),
         "message": result.message,
         "dry_run": result.dry_run,
