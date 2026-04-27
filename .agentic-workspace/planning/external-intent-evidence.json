@@ -3,13 +3,13 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-27T20:24:07+00:00",
+  "refreshed_at": "2026-04-27T20:31:44+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-27T20:24:07+00:00",
-    "item_count": 33,
-    "open_count": 33,
+    "refreshed_at": "2026-04-27T20:31:44+00:00",
+    "item_count": 32,
+    "open_count": 32,
     "closed_count": 0,
     "limit": 1000,
     "state": "open",
@@ -235,23 +235,6 @@
       ],
       "created_at": "2026-04-27T15:07:31Z",
       "updated_at": "2026-04-27T15:07:31Z",
-      "comments_count": 0
-    },
-    {
-      "system": "github",
-      "id": "#447",
-      "title": "[Planning]: Surface CLI authority before generated or executable CLI edits",
-      "status": "open",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "optional",
-      "url": "https://github.com/rickardvh/agentic-workspace/issues/447",
-      "source_repository": "rickardvh/agentic-workspace",
-      "labels": [
-        "planning"
-      ],
-      "created_at": "2026-04-27T15:07:37Z",
-      "updated_at": "2026-04-27T15:07:37Z",
       "comments_count": 0
     },
     {
