@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-27T22:57:20+00:00",
+  "refreshed_at": "2026-04-27T23:06:24+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-27T22:57:20+00:00",
+    "refreshed_at": "2026-04-27T23:06:24+00:00",
     "item_count": 457,
-    "open_count": 21,
-    "closed_count": 436,
+    "open_count": 20,
+    "closed_count": 437,
     "limit": 600,
     "state": "all",
     "command": "gh issue list --state all --json number,title,state,url,labels,createdAt,updatedAt,body,comments"
@@ -7138,7 +7138,7 @@
       "system": "github",
       "id": "#458",
       "title": "[Workspace]: Merge external evidence, closeout reconciliation, and landed-commit checks into external-work reconciliation",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#450",
       "planning_residue_expected": "optional",
@@ -7148,8 +7148,8 @@
         "planning"
       ],
       "created_at": "2026-04-27T19:28:50Z",
-      "updated_at": "2026-04-27T19:28:50Z",
-      "comments_count": 0
+      "updated_at": "2026-04-27T23:06:04Z",
+      "comments_count": 1
     },
     {
       "system": "github",
