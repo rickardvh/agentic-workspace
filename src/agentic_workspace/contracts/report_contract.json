@@ -31,6 +31,7 @@
     "next_action",
     "discovery",
     "standing_intent",
+    "improvement_intake",
     "repo_friction",
     "registry",
     "config",
@@ -46,6 +47,7 @@
     "surface effective standing intent with source provenance instead of leaving it implicit in chat",
     "surface one default execution-shaping answer when planning state and local posture together make it cheap to do so",
     "surface compact provider-agnostic external-work deltas when prior evidence is available",
-    "let optimization bias change rendering density, not canonical truth or execution method"
+    "let optimization bias change rendering density, not canonical truth or execution method",
+    "route improvement signals through one intake model before promoting them to work, memory, docs, checks, or dismissal"
   ]
 }

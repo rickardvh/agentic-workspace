@@ -32,6 +32,8 @@ Preferred destinations:
 
 Do not leave meaningful product feedback in chat-only residue.
 
+Use `agentic-workspace defaults --section improvement_intake --format json` as the compact router before treating setup findings, dogfooding feedback, review findings, validation friction, or Memory improvement-signal notes as separate mechanisms. The underlying artifacts stay useful evidence, but the first question is shared: admit, dismiss, or route the signal to a durable owner.
+
 ## Classification
 
 Classify friction into one of these buckets before routing it:

@@ -23,6 +23,8 @@ This review lane exists to keep analysis-derived findings explicit, bounded, and
 
 Do not use review artifacts as a substitute for execplans, memory notes, or canonical docs.
 
+For ordinary improvement routing, use `agentic-workspace defaults --section improvement_intake --format json` first. Review findings are one improvement-intake subtype with higher trust, not a separate always-on operating path; the review artifact machinery remains advanced/maintainer-tier unless explicitly selected.
+
 ## When To Use A Review Artifact
 
 Use a review artifact when:

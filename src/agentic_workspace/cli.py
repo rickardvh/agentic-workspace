@@ -659,6 +659,122 @@ def _repo_friction_external_setup_findings_payload(*, target_root: Path) -> dict
     }
 
 
+def _improvement_intake_payload(*, target_root: Path | None = None, config: WorkspaceConfig | None = None) -> dict[str, Any]:
+    setup_findings = _setup_findings_input_payload(target_root=target_root) if target_root is not None else None
+    review_enabled = bool(config and "review_artifacts" in config.advanced_features)
+    return {
+        "kind": "workspace-improvement-intake/v1",
+        "role": "router-not-backlog",
+        "command": "agentic-workspace report --target ./repo --section improvement_intake --format json",
+        "default_rule": (
+            "Treat setup findings, dogfooding friction, review findings, validation friction, and memory "
+            "improvement signals as one intake question: what should happen to this signal, if anything?"
+        ),
+        "promotion_rule": (
+            "Preserve or promote only signals with a clear evidence source, confidence/trust signal, and durable owner; "
+            "dismiss weak or speculative signals explicitly."
+        ),
+        "subtypes": [
+            {
+                "id": "setup_finding",
+                "source": SETUP_FINDINGS_PATH.as_posix(),
+                "evidence_class": "agent-provided setup artifact",
+                "confidence_field": "confidence",
+                "accepted_classes": list(SUPPORTED_SETUP_FINDING_CLASSES),
+                "primary_route": "repo_friction.external_evidence or planning promotion review",
+                "selector": "agentic-workspace setup --target ./repo --format json",
+            },
+            {
+                "id": "dogfooding_friction",
+                "source": "docs/dogfooding-feedback.md",
+                "evidence_class": "maintainer dogfooding signal",
+                "confidence_field": "repeated practical friction or maintainer override",
+                "primary_route": "active execplan, roadmap, Memory, docs, or issue follow-up",
+                "selector": "agentic-workspace report --target ./repo --section repo_friction --format json",
+            },
+            {
+                "id": "review_finding",
+                "source": ".agentic-workspace/planning/reviews/",
+                "evidence_class": "bounded review finding",
+                "confidence_field": "review mode and finding severity/trust",
+                "primary_route": "planning review promotion only when the review_artifacts advanced feature is enabled or explicitly selected",
+                "selector": "agentic-workspace report --target ./repo --section closeout_trust --format json",
+                "advanced_feature": "review_artifacts",
+            },
+            {
+                "id": "validation_friction",
+                "source": "src/agentic_workspace/contracts/repo_friction_policy.json",
+                "evidence_class": "proof or validation friction",
+                "confidence_field": "repeated failure against otherwise straightforward work",
+                "primary_route": "repo_friction evidence, config/check improvement, or proof-route cleanup",
+                "selector": "agentic-workspace defaults --section improvement_latitude --format json",
+            },
+            {
+                "id": "memory_improvement_signal",
+                "source": ".agentic-workspace/memory/WORKFLOW.md",
+                "evidence_class": "durable memory note carrying upstream improvement pressure",
+                "confidence_field": "memory_role=improvement_signal plus config_treatment",
+                "primary_route": "Memory note, config/check follow-up, docs clarification, or issue follow-up",
+                "selector": "agentic-workspace report --target ./repo --section repo_friction --format json",
+            },
+        ],
+        "routing_decision": [
+            {
+                "step": "classify",
+                "question": "Which subtype and evidence source produced the signal?",
+            },
+            {
+                "step": "admit-or-dismiss",
+                "question": "Is there enough confidence, repetition, or maintainer override to preserve it?",
+            },
+            {
+                "step": "choose-owner",
+                "question": "Should it become active planning, roadmap, Memory, docs, config/checks, issue follow-up, or be discarded?",
+            },
+            {
+                "step": "prove",
+                "question": "Can the reviewer see the evidence and owner without reconstructing chat?",
+            },
+        ],
+        "allowed_destinations": [
+            "discard",
+            "active planning state or execplan",
+            "roadmap",
+            "Memory",
+            "canonical docs",
+            "config/check surface",
+            "issue follow-up",
+        ],
+        "guardrails": [
+            "Do not auto-promote every signal to work.",
+            "Do not treat review artifacts as ordinary startup input.",
+            "Keep speculative findings transient unless a durable owner is clear.",
+            "Preserve provenance and confidence when a signal is routed.",
+        ],
+        "setup_findings": (
+            {
+                "status": setup_findings.get("status"),
+                "path": setup_findings.get("path"),
+                "loaded_count": setup_findings.get("loaded_count"),
+                "promotable_counts": {
+                    key: len(value) for key, value in setup_findings.get("promotable", {}).items() if isinstance(value, list)
+                },
+                "transient_count": len(setup_findings.get("transient", [])) if isinstance(setup_findings.get("transient"), list) else 0,
+            }
+            if isinstance(setup_findings, dict)
+            else {
+                "status": "not-evaluated",
+                "path": SETUP_FINDINGS_PATH.as_posix(),
+            }
+        ),
+        "advanced_review_route": {
+            "feature": "review_artifacts",
+            "enabled": review_enabled,
+            "rule": "Review findings are an improvement-intake subtype, but review artifact machinery remains advanced opt-in.",
+        },
+    }
+
+
 def _with_agent_instructions_file(config: WorkspaceConfig, *, filename: str, source: str) -> WorkspaceConfig:
     return replace(
         config,
@@ -2862,6 +2978,7 @@ def _run_report_command(
         "next_action": next_action,
         "discovery": discovery,
         "standing_intent": standing_intent,
+        "improvement_intake": _improvement_intake_payload(target_root=target_root, config=config),
         "repo_friction": repo_friction,
         "registry": status_payload["registry"],
         "config": status_payload["config"],
@@ -3357,6 +3474,7 @@ def _report_profile_payload() -> dict[str, Any]:
             "section_hints",
             "effective_authority",
             "execution_shape",
+            "improvement_intake",
             "maintenance_pressure",
         ],
         "router_shape_guard": {
@@ -3468,6 +3586,7 @@ def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "section_hints": section_hints,
         "effective_authority": _report_router_effective_authority(payload.get("effective_authority", {})),
         "execution_shape": _report_router_execution_shape(payload.get("execution_shape", {})),
+        "improvement_intake": _report_router_improvement_intake(payload.get("improvement_intake", {})),
         "surface_value_guardrail": {
             "command": "agentic-workspace defaults --section surface_value_guardrail --format json",
             "prefer": payload.get("surface_value_guardrail", {}).get("preference_order", [])[:3],
@@ -3482,6 +3601,20 @@ def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if "maintenance_pressure" in enabled_advanced_features or maintenance_pressure_relevant:
         router_payload["maintenance_pressure"] = _report_router_maintenance_pressure(payload.get("maintenance_pressure", {}))
     return router_payload
+
+
+def _report_router_improvement_intake(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    return {
+        "kind": value.get("kind", "workspace-improvement-intake/v1"),
+        "role": value.get("role", "router-not-backlog"),
+        "command": value.get("command", "agentic-workspace report --target ./repo --section improvement_intake --format json"),
+        "subtypes": [item.get("id", "") for item in _list_payload(value.get("subtypes")) if isinstance(item, dict)],
+        "allowed_destinations": value.get("allowed_destinations", []),
+        "setup_findings": value.get("setup_findings", {}),
+        "advanced_review_route": value.get("advanced_review_route", {}),
+    }
 
 
 def _report_router_maintenance_pressure(value: Any) -> dict[str, Any]:
@@ -3654,6 +3787,7 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
         "external_work_delta": "provider-agnostic external-work snapshot or delta from prior evidence when available",
         "discovery": "setup discovery and candidate surfaces",
         "standing_intent": "effective standing intent and stronger-home guidance",
+        "improvement_intake": "unified routing for setup findings, dogfooding friction, review findings, validation friction, and memory improvement signals",
         "repo_friction": "repo-friction and improvement pressure evidence",
         "config": "resolved workspace config and local posture",
         "registry": "module registry and lifecycle metadata",
@@ -3676,6 +3810,7 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
         "external_work_delta": "inspect when external-work intake or closure state is part of the task",
         "discovery": "inspect during setup, bootstrap, or missing-surface diagnosis",
         "standing_intent": "inspect when product direction or stronger-home placement is the question",
+        "improvement_intake": "inspect when a product or workflow improvement signal needs routing, dismissal, or durable ownership",
         "repo_friction": "inspect when choosing or routing improvement targets",
         "config": "deep detail; inspect only when resolved config, posture, or obligations matter",
         "registry": "deep detail; inspect only when module metadata or lifecycle registration matters",
@@ -7192,6 +7327,7 @@ def _defaults_payload() -> dict[str, Any]:
         "setup_findings_promotion": {
             "canonical_doc": "docs/setup-findings-contract.md",
             "command": "agentic-workspace setup --target ./repo --format json",
+            "primary_router": "agentic-workspace defaults --section improvement_intake --format json",
             "rule": (
                 "Setup may accept one optional agent-produced findings artifact, but it should preserve only the classes "
                 "that reduce rediscovery and have a clear durable owner."
@@ -7204,6 +7340,12 @@ def _defaults_payload() -> dict[str, Any]:
                 "Promote only evidence-backed repo-friction findings or bounded planning candidates; leave everything else transient."
             ),
             "secondary": list(_SETUP_FINDINGS_POLICY["secondary"]),
+        },
+        "improvement_intake": {
+            "canonical_doc": "docs/dogfooding-feedback.md",
+            "command": "agentic-workspace defaults --section improvement_intake --format json",
+            "rule": "Use one improvement-intake router before treating setup findings, dogfooding feedback, review findings, validation friction, or memory improvement signals as separate mechanisms.",
+            "payload": _improvement_intake_payload(),
         },
         "agent_configuration_system": _agent_configuration_system_payload(),
         "agent_configuration_queries": _agent_configuration_queries_payload(),

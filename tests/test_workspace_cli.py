@@ -1165,11 +1165,38 @@ def test_defaults_setup_findings_promotion_section_selector_returns_compact_cont
     assert payload["selector"] == {"section": "setup_findings_promotion"}
     assert payload["matched"] is True
     assert payload["answer"]["canonical_doc"] == "docs/setup-findings-contract.md"
+    assert payload["answer"]["primary_router"] == "agentic-workspace defaults --section improvement_intake --format json"
     assert payload["answer"]["artifact_path"] == "tools/setup-findings.json"
     assert payload["answer"]["schema_path"] == "src/agentic_workspace/contracts/schemas/setup_findings.schema.json"
     assert payload["answer"]["accepted_classes"][0]["class"] == "repo_friction_evidence"
     assert "docs/setup-findings-contract.md" in payload["refs"]
     assert "agentic-workspace setup --target ./repo --format json" in payload["refs"]
+
+
+def test_defaults_improvement_intake_section_selector_returns_unified_router(capsys) -> None:
+    assert cli.main(["defaults", "--section", "improvement_intake", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "improvement_intake"}
+    assert payload["matched"] is True
+    answer = payload["answer"]
+    assert answer["canonical_doc"] == "docs/dogfooding-feedback.md"
+    assert answer["payload"]["kind"] == "workspace-improvement-intake/v1"
+    assert answer["payload"]["role"] == "router-not-backlog"
+    subtype_ids = {item["id"] for item in answer["payload"]["subtypes"]}
+    assert subtype_ids == {
+        "setup_finding",
+        "dogfooding_friction",
+        "review_finding",
+        "validation_friction",
+        "memory_improvement_signal",
+    }
+    review_route = next(item for item in answer["payload"]["subtypes"] if item["id"] == "review_finding")
+    assert review_route["advanced_feature"] == "review_artifacts"
+    assert "issue follow-up" in answer["payload"]["allowed_destinations"]
+    assert answer["payload"]["setup_findings"]["status"] == "not-evaluated"
 
 
 def test_defaults_operating_questions_section_selector_returns_compact_contract_answer(capsys) -> None:
@@ -3253,6 +3280,18 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     )
     assert payload["execution_shape"]["task_shape_recommender"]["status"] == "available"
     assert payload["execution_shape"]["narrow_work_fast_path"]["status"] == "blessed"
+    intake = payload["improvement_intake"]
+    assert intake["kind"] == "workspace-improvement-intake/v1"
+    assert intake["role"] == "router-not-backlog"
+    assert intake["subtypes"] == [
+        "setup_finding",
+        "dogfooding_friction",
+        "review_finding",
+        "validation_friction",
+        "memory_improvement_signal",
+    ]
+    assert intake["advanced_review_route"]["enabled"] is False
+    assert "improvement_intake" in payload["report_profile"]["decision_grade_fields"]
     assert payload["surface_value_guardrail"]["first_contact_budget"]["status"] == "active"
     assert payload["deeper_detail"]["high_volume_sections"][0]["section"] == "module_reports"
     section_hints = {item["section"]: item for item in payload["section_hints"]}
@@ -3260,6 +3299,8 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "compact router field" in section_hints["module_reports"]["why_now"]
     assert section_hints["maintenance_pressure"]["volume"] == "normal"
     assert "residue" in section_hints["maintenance_pressure"]["purpose"]
+    assert section_hints["improvement_intake"]["volume"] == "normal"
+    assert "improvement signal" in section_hints["improvement_intake"]["why_now"]
     assert "operational_compression" not in section_hints
     assert "external_work_delta" not in section_hints
     assert "idle context" in section_hints["effective_authority"]["purpose"]
@@ -4338,6 +4379,10 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
     assert setup_findings["path"] == "tools/setup-findings.json"
     assert setup_findings["items"][0]["path"] == "src/agentic_workspace/cli.py"
     assert setup_findings["items"][0]["promotion_reason"] == "grounded friction evidence is worth preserving"
+    assert payload["improvement_intake"]["setup_findings"]["status"] == "loaded"
+    assert payload["improvement_intake"]["setup_findings"]["loaded_count"] == 2
+    assert payload["improvement_intake"]["setup_findings"]["promotable_counts"]["repo_friction_evidence"] == 1
+    assert payload["improvement_intake"]["setup_findings"]["transient_count"] == 1
 
 
 def test_report_surfaces_reporting_only_repo_friction_posture(tmp_path: Path, capsys) -> None:

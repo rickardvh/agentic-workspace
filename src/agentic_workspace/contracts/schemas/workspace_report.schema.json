@@ -30,6 +30,7 @@
     "next_action",
     "discovery",
     "standing_intent",
+    "improvement_intake",
     "repo_friction",
     "registry",
     "config",
@@ -153,6 +154,9 @@
       "type": "object"
     },
     "standing_intent": {
+      "type": "object"
+    },
+    "improvement_intake": {
       "type": "object"
     },
     "repo_friction": {

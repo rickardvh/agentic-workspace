@@ -1,0 +1,232 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Workspace Improvement Intake",
+  "goal": [
+    "Implement #457 by making setup findings, dogfooding friction, review findings, validation friction, and memory improvement signals appear as one improvement-intake routing concept with explicit evidence subtypes and promotion rules."
+  ],
+  "non_goals": [
+    "Do not remove the underlying artifacts in this slice.",
+    "Do not turn improvement intake into an automatic backlog.",
+    "Do not make advanced review machinery part of ordinary startup."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Agents see one compact improvement-intake path first, while provenance, confidence, and destination decisions stay explicit.",
+      "constraints": "Keep the default product smaller; use existing defaults/report/config/docs surfaces instead of adding a new top-level command.",
+      "latitude": "Choose the lightest contract, report, docs, and tests needed to merge the concepts.",
+      "escalation": "Escalate if unifying the route would hide evidence trust or make speculative signals look like accepted work."
+    },
+    "execution": {
+      "milestone": "workspace-improvement-intake",
+      "status": "completed",
+      "next_step": "Archive this completed slice, close #457, refresh external issue evidence, then promote the next #450 child indicated by refreshed planning state.",
+      "proof": "workspace CLI tests, contract tooling if contracts change, ruff, maintainer/planning surfaces, proof selector, workspace doctor"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/workspace-improvement-intake.plan.json",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/",
+        "tests/test_workspace_cli.py",
+        "docs/",
+        ".agentic-workspace/docs/"
+      ],
+      "invariants": [
+        "Improvement intake is a router, not a backlog.",
+        "Advanced review routing remains opt-in.",
+        "Weak or speculative signals remain dismissible."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450: make advanced features opt-in through feature tiers and merged surfaces.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#458-#460 plus #467/#469/#471 remain after this slice unless validation proves they are satisfied or superseded.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #457 closeout, refresh external evidence and promote the next #450 child indicated by validation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Setup findings, dogfooding friction, review findings, validation friction, and Memory improvement-signal notes now share one compact improvement-intake router in defaults/report output.",
+    "intentionally deferred": "none",
+    "discovered implications": "#470 already tracks summary noise when archived partial children have active continuations; root CLI authority still routes stable report/default fields toward existing command-generation guard work.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this bounded slice",
+    "next likely slice": "promote the next #450 child after external issue evidence refresh"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Merge setup findings, dogfooding feedback, and review promotion into improvement intake.",
+    "hard constraints": "Preserve evidence provenance and keep review machinery advanced/opt-in.",
+    "agent may decide locally": "Which existing report/default/docs surfaces are enough to expose the unified route.",
+    "escalate when": "The work would require a new command or hide evidence confidence."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Merge related routing concepts instead of adding capability or new surfaces.",
+    "broader-lane validation question": "Does this reduce cognitive load for product/workflow improvement signals while preserving trust and provenance?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/457"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/457",
+      "label": "#457 improvement intake",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "workspace-improvement-intake",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add a compact improvement-intake payload to existing defaults/report routing, then update tests and docs."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/workspace-improvement-intake.plan.json",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/",
+    "tests/test_workspace_cli.py",
+    "docs/",
+    ".agentic-workspace/docs/"
+  ],
+  "invariants": [
+    "Improvement intake is a router, not a backlog.",
+    "Advanced review routing remains opt-in.",
+    "Weak or speculative signals remain dismissible."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/workspace-improvement-intake.plan.json src/agentic_workspace/cli.py src/agentic_workspace/contracts tests/test_workspace_cli.py docs .agentic-workspace/docs --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run agentic-workspace doctor --target . --modules planning,memory --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "Agents have one conceptual path for routing product/workflow improvement signals.",
+    "Evidence source and confidence remain explicit.",
+    "Weak/speculative signals are easier to dismiss than promote.",
+    "Docs stop presenting setup findings, dogfooding feedback, and review promotion as unrelated mechanisms."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": ".agentic-workspace/planning/execplans/workspace-improvement-intake.plan.json",
+    "what happened": "Added the improvement_intake router to defaults and report output, connected setup_findings_promotion to it, preserved review_artifacts as advanced opt-in, and updated docs/tests around the shared intake model.",
+    "scope touched": ".agentic-workspace/planning state and review docs, report contracts, src/agentic_workspace/cli.py, tests/test_workspace_cli.py, docs/contributor-playbook.md, docs/dogfooding-feedback.md",
+    "changed surfaces": "Existing defaults/report/docs/test/planning surfaces were updated; no new top-level command or first-contact file was added.",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed ... --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning,memory --format json",
+    "result for continuation": "This slice is ready to archive and #457 can close; parent #450 remains open.",
+    "next step": "Refresh external issue evidence and promote the next #450 child."
+  },
+  "finished_run_review": {
+    "review status": "reviewed",
+    "scope respected": "yes; the change merged existing improvement-signal routes through existing report/default/docs surfaces.",
+    "proof status": "passed",
+    "intent served": "yes; agents now have one conceptual intake path while provenance and confidence remain explicit.",
+    "config compliance": "yes; advanced review routing remains controlled by workspace.advanced_features.",
+    "misinterpretation risk": "low; tests cover defaults/router shape and loaded setup-findings evidence.",
+    "follow-on decision": "archive #457 and continue parent #450 through remaining child issues."
+  },
+  "proof_report": {
+    "validation proof": "All selected proof commands passed: workspace CLI tests, contract tooling tests/check, ruff, maintainer surface generation, planning surface check, proof selector, root CLI authority query, and planning/memory doctor.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "tests/test_workspace_cli.py plus tests/test_contract_tooling.py: 207 passed; check_contract_tooling_surfaces: no drift warnings; ruff: all checks passed; make maintainer-surfaces: all subtasks ok; check_planning_surfaces: no drift warnings; proof selector matched planning_surfaces/workspace_cli/cli_authority/maintainer_surfaces; doctor health: healthy."
+  },
+  "intent_satisfaction": {
+    "original intent": "Merge setup findings, dogfooding feedback, and review promotion into improvement intake.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Added a workspace-improvement-intake/v1 router to defaults/report output, linked setup-findings promotion to that router, kept review findings advanced/opt-in, surfaced setup-finding counts in report evidence, and updated docs so setup findings, dogfooding feedback, review findings, validation friction, and Memory improvement signals are not presented as unrelated mechanisms.",
+    "validation confirmed": "uv run pytest tests/test_workspace_cli.py -q; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run ruff check src tests packages/memory/src packages/memory/tests packages/planning/src packages/planning/tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed ... --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run agentic-workspace doctor --target . --modules planning,memory --format json",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge",
+    "post-work posterity capture": "Plan closeout records that #470 already covers archived-child promotion noise and #410/root CLI authority covers future report/default extraction guard work.",
+    "knowledge promoted (Memory/Docs/Config)": "docs/dogfooding-feedback.md, docs/contributor-playbook.md, and .agentic-workspace/planning/reviews/README.md now point to improvement_intake as the shared router.",
+    "resume from": "refresh external issue evidence and promote the next #450 child"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "One-off implementation details about where tests were inserted are not durable beyond the commit.",
+          "owner": "archive-only",
+          "source": ""
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue the parent #450 feature-tier/surface-merge lane after #457 closeout.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": ""
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "improvement_intake is now exposed by defaults/report tests without introducing a new command.",
+          "owner": "tests/test_workspace_cli.py",
+          "source": ""
+        }
+      ],
+      "docs": [
+        {
+          "summary": "Dogfooding, contributor, and review docs now point to improvement_intake as the shared router.",
+          "owner": "docs/dogfooding-feedback.md, docs/contributor-playbook.md, .agentic-workspace/planning/reviews/README.md",
+          "source": ""
+        },
+        {
+          "summary": "docs/dogfooding-feedback.md, docs/contributor-playbook.md, and .agentic-workspace/planning/reviews/README.md now point to improvement_intake as the shared router.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#457 can close after commit/push; parent #450 remains open for remaining children.",
+          "owner": "github",
+          "source": ""
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-28: Promoted after #456 advanced opt-in feature closeout."
+  ]
+}
