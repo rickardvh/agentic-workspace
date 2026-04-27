@@ -70,6 +70,13 @@ SUPPORTED_OPTIMIZATION_BIASES = (
     "balanced",
     "human-legibility",
 )
+SUPPORTED_ADVANCED_FEATURES = (
+    "review_artifacts",
+    "command_generation",
+    "external_adapters",
+    "autopilot_loops",
+    "maintenance_pressure",
+)
 DEFAULT_CLI_INVOKE = "agentic-workspace"
 SUPPORTED_WORKFLOW_OBLIGATION_STAGES = (
     "pre-work",
@@ -203,6 +210,8 @@ class WorkspaceConfig:
     improvement_latitude_source: str
     optimization_bias: str
     optimization_bias_source: str
+    advanced_features: tuple[str, ...]
+    advanced_features_source: str
     cli_invoke: str
     cli_invoke_source: str
     detected_agent_instructions_files: tuple[str, ...]
@@ -796,6 +805,8 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     improvement_latitude_source = "product-default"
     optimization_bias = DEFAULT_OPTIMIZATION_BIAS
     optimization_bias_source = "product-default"
+    advanced_features: tuple[str, ...] = ()
+    advanced_features_source = "product-default"
     cli_invoke = DEFAULT_CLI_INVOKE
     cli_invoke_source = "product-default"
     if local_override.cli_invoke is not None:
@@ -821,6 +832,8 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             improvement_latitude_source=improvement_latitude_source,
             optimization_bias=optimization_bias,
             optimization_bias_source=optimization_bias_source,
+            advanced_features=advanced_features,
+            advanced_features_source=advanced_features_source,
             cli_invoke=cli_invoke,
             cli_invoke_source=cli_invoke_source,
             detected_agent_instructions_files=detected_agent_instruction_files,
@@ -870,6 +883,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             "workflow_artifact_profile",
             "improvement_latitude",
             "optimization_bias",
+            "advanced_features",
         }
     )
     if unknown_workspace:
@@ -896,6 +910,15 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     if raw_optimization_bias is not None:
         optimization_bias = validate_optimization_bias(str(raw_optimization_bias))
         optimization_bias_source = "repo-config"
+    configured_advanced_features = require_optional_string_list(
+        payload=raw_workspace,
+        key="advanced_features",
+        config_path=WORKSPACE_CONFIG_PATH,
+        allowed=SUPPORTED_ADVANCED_FEATURES,
+    )
+    if configured_advanced_features:
+        advanced_features = configured_advanced_features
+        advanced_features_source = "repo-config"
     if local_override.cli_invoke is not None:
         cli_invoke = local_override.cli_invoke
         cli_invoke_source = "local-override"
@@ -1002,6 +1025,8 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         improvement_latitude_source=improvement_latitude_source,
         optimization_bias=optimization_bias,
         optimization_bias_source=optimization_bias_source,
+        advanced_features=advanced_features,
+        advanced_features_source=advanced_features_source,
         cli_invoke=cli_invoke,
         cli_invoke_source=cli_invoke_source,
         detected_agent_instructions_files=detected_agent_instruction_files,

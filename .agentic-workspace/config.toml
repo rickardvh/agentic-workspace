@@ -4,6 +4,13 @@ schema_version = 1
 default_preset = "full"
 improvement_latitude = "proactive"
 optimization_bias = "agent-efficiency"
+advanced_features = [
+  "review_artifacts",
+  "command_generation",
+  "external_adapters",
+  "autopilot_loops",
+  "maintenance_pressure",
+]
 
 [system_intent]
 sources = ["SYSTEM_INTENT.md", "README.md"]

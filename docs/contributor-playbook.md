@@ -79,6 +79,7 @@ The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`,
 - Treat `.agentic-workspace/` module trees as product-managed surfaces; change them through the owning package or managed source rather than as freehand repo docs.
 - Treat `tools/` agent docs as generated mirrors; change `.agentic-workspace/planning/agent-manifest.json` and rerender instead of editing them directly.
 - Treat CLI interface authoring as definition-owned during the generated-package migration. Change command shape, option semantics, generated package metadata, operation refs, primitive refs, schemas, and conformance refs in contracts or generators; use direct `cli.py` edits for runtime primitives, live inspection, dispatch migration glue, or explicitly justified uncovered fixes.
+- Treat reviews, command/code generation, external tracker adapters, autopilot/self-improvement loops, and heavy maintenance pressure as advanced maintainer/dogfooding features. They stay available here through `.agentic-workspace/config.toml workspace.advanced_features`, but ordinary host repos should not need them for first contact.
 - In checked-in human-facing docs, prefer clickable Markdown links for navigation, but keep the target paths repo-relative. Do not introduce absolute filesystem paths into links or prose unless the absolute external path is itself the documented subject.
 
 As a maintainer rule of thumb:

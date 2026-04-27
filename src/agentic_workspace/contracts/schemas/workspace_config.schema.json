@@ -47,6 +47,19 @@
             "balanced",
             "human-legibility"
           ]
+        },
+        "advanced_features": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "review_artifacts",
+              "command_generation",
+              "external_adapters",
+              "autopilot_loops",
+              "maintenance_pressure"
+            ]
+          },
+          "uniqueItems": true
         }
       },
       "additionalProperties": false

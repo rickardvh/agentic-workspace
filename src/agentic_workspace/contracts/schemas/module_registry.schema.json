@@ -5,6 +5,7 @@
   "required": [
     "schema_version",
     "feature_tiers",
+    "advanced_features",
     "module_command_args",
     "modules"
   ],
@@ -63,6 +64,45 @@
             "type": "string"
           },
           "cost_model": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "advanced_features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "tier",
+          "default_enabled",
+          "activation",
+          "default_surface_policy",
+          "selector_hint"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "tier": {
+            "type": "string"
+          },
+          "default_enabled": {
+            "type": "boolean"
+          },
+          "activation": {
+            "type": "string"
+          },
+          "default_surface_policy": {
+            "type": "string"
+          },
+          "selector_hint": {
             "type": "string"
           }
         },

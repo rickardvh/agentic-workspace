@@ -1,7 +1,5 @@
 [todo]
-active_items = [
-  { id = "workspace-advanced-opt-in-features", title = "Mark reviews, codegen, external adapters, and autopilot as advanced opt-in features", status = "in-progress", source = "github:#456", surface = ".agentic-workspace/planning/execplans/workspace-advanced-opt-in-features.plan.json", why_now = "#455 removed current-memory as a shared active-state surface; #456 is the next #450 child to classify remaining advanced machinery as opt-in/maintainer-tier." },
-]
+active_items = []
 queued_items = []
 
 [roadmap]

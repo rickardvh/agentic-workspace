@@ -33,6 +33,7 @@ from agentic_workspace.config import (
     MEMORY_POINTER_BLOCK,
     MEMORY_WORKFLOW_MARKER_END,
     MEMORY_WORKFLOW_MARKER_START,
+    SUPPORTED_ADVANCED_FEATURES,
     SUPPORTED_AGENT_INSTRUCTIONS_FILES,
     SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
     SUPPORTED_CAPABILITY_LOCATIONS,
@@ -157,6 +158,7 @@ _IMPROVEMENT_LATITUDE_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for ite
 _OPTIMIZATION_BIAS_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for item in _OPTIMIZATION_BIAS_POLICY["modes"]}
 _MODULE_REGISTRY_ENTRIES = {str(item["name"]): copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST["modules"]}
 _FEATURE_TIER_ENTRIES = tuple(copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("feature_tiers", []))
+_ADVANCED_FEATURE_ENTRIES = tuple(copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("advanced_features", []))
 _CLI_COMMAND_MANIFESTS = {str(item["name"]): copy.deepcopy(item) for item in _CLI_COMMANDS_MANIFEST["commands"]}
 _SETUP_FINDING_CLASS_PAYLOADS = {str(item["class"]): copy.deepcopy(item) for item in _SETUP_FINDINGS_POLICY["accepted_classes"]}
 if str(_WORKFLOW_ARTIFACT_PROFILES_MANIFEST["default_profile"]) != DEFAULT_WORKFLOW_ARTIFACT_PROFILE:
@@ -1976,6 +1978,7 @@ def _feature_tier_payload(
     selected_modules: list[str],
     installed_modules: list[str] | None = None,
     resolved_preset: str | None = None,
+    config: WorkspaceConfig | None = None,
     compact: bool = False,
 ) -> dict[str, Any]:
     active_modules = installed_modules if installed_modules is not None else selected_modules
@@ -2008,6 +2011,7 @@ def _feature_tier_payload(
         "active": active,
         "default_rule": "Use the smallest tier whose modules match the repo footprint; maintainer dogfooding requires explicit activation.",
         "detail_command": "agentic-workspace modules --target ./repo --format json",
+        "advanced_policy": _advanced_feature_policy_payload(config=config, include_catalog=not compact),
     }
     if compact:
         return payload
@@ -2023,6 +2027,33 @@ def _feature_tier_payload(
         }
         for tier in _FEATURE_TIER_ENTRIES
     ]
+    return payload
+
+
+def _advanced_feature_policy_payload(*, config: WorkspaceConfig | None, include_catalog: bool = False) -> dict[str, Any]:
+    enabled = list(config.advanced_features) if config is not None else []
+    payload: dict[str, Any] = {
+        "schema_version": "workspace-advanced-feature-policy/v1",
+        "enabled_features": enabled,
+        "enabled_source": config.advanced_features_source if config is not None else "product-default",
+        "default_rule": "Advanced maintainer and dogfooding features are opt-in; ordinary startup should not route into them unless enabled or directly relevant.",
+        "ordinary_startup_rule": "Use start, summary, report, defaults, and proof first; inspect advanced review, codegen, external-adapter, autopilot, or heavy maintenance sections only by selector or explicit enabled feature.",
+        "config_field": "workspace.advanced_features",
+        "detail_command": "agentic-workspace modules --target ./repo --format json",
+    }
+    if include_catalog:
+        payload["available_features"] = [
+            {
+                "id": str(item.get("id", "")),
+                "label": str(item.get("label", item.get("id", ""))),
+                "tier": str(item.get("tier", "maintainer-dogfooding")),
+                "default_enabled": bool(item.get("default_enabled", False)),
+                "activation": str(item.get("activation", "")),
+                "default_surface_policy": str(item.get("default_surface_policy", "")),
+                "selector_hint": str(item.get("selector_hint", "")),
+            }
+            for item in _ADVANCED_FEATURE_ENTRIES
+        ]
     return payload
 
 
@@ -2785,6 +2816,7 @@ def _run_report_command(
             selected_modules=selected_modules,
             installed_modules=installed_modules,
             resolved_preset=resolved_preset,
+            config=config,
         ),
         "health": status_payload["health"],
         "report_profile": _report_profile_payload(),
@@ -3385,18 +3417,31 @@ def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
     section_hints = _report_section_hints(payload)
     profile_payload = dict(payload.get("report_profile", _report_profile_payload()))
     profile_payload["ordinary_agent_path"] = _ordinary_agent_path_payload(payload=payload, findings=findings)
-    profile_payload["feature_tier"] = _feature_tier_payload(
-        selected_modules=list(payload.get("selected_modules", [])),
-        installed_modules=list(payload.get("installed_modules", [])),
-        compact=True,
+    full_feature_tier = dict(payload.get("feature_tier", {})) if isinstance(payload.get("feature_tier"), dict) else {}
+    advanced_policy = (
+        dict(full_feature_tier.get("advanced_policy", {})) if isinstance(full_feature_tier.get("advanced_policy"), dict) else {}
     )
+    advanced_policy.pop("available_features", None)
+    profile_payload["feature_tier"] = {key: value for key, value in full_feature_tier.items() if key not in {"available_tiers"}}
+    if advanced_policy:
+        profile_payload["feature_tier"]["advanced_policy"] = advanced_policy
     decision_grade_fields = list(profile_payload.get("decision_grade_fields", []))
     if "report_profile.ordinary_agent_path" not in decision_grade_fields:
         decision_grade_fields.append("report_profile.ordinary_agent_path")
     if "report_profile.feature_tier" not in decision_grade_fields:
         decision_grade_fields.append("report_profile.feature_tier")
+    enabled_advanced_features = set(advanced_policy.get("enabled_features", []) if isinstance(advanced_policy, dict) else [])
+    maintenance_pressure_value = payload.get("maintenance_pressure", {})
+    maintenance_pressure_status = str(maintenance_pressure_value.get("status", "")) if isinstance(maintenance_pressure_value, dict) else ""
+    maintenance_pressure_relevant = maintenance_pressure_status == "attention"
+    if (
+        "maintenance_pressure" in decision_grade_fields
+        and "maintenance_pressure" not in enabled_advanced_features
+        and not maintenance_pressure_relevant
+    ):
+        decision_grade_fields.remove("maintenance_pressure")
     profile_payload["decision_grade_fields"] = decision_grade_fields
-    return {
+    router_payload = {
         "kind": "workspace-report-router/v1",
         "schema": {
             "schema_version": "workspace-report-router-schema/v1",
@@ -3423,7 +3468,6 @@ def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "section_hints": section_hints,
         "effective_authority": _report_router_effective_authority(payload.get("effective_authority", {})),
         "execution_shape": _report_router_execution_shape(payload.get("execution_shape", {})),
-        "maintenance_pressure": _report_router_maintenance_pressure(payload.get("maintenance_pressure", {})),
         "surface_value_guardrail": {
             "command": "agentic-workspace defaults --section surface_value_guardrail --format json",
             "prefer": payload.get("surface_value_guardrail", {}).get("preference_order", [])[:3],
@@ -3435,6 +3479,9 @@ def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "high_volume_sections": profile_payload.get("high_volume_sections", []),
         },
     }
+    if "maintenance_pressure" in enabled_advanced_features or maintenance_pressure_relevant:
+        router_payload["maintenance_pressure"] = _report_router_maintenance_pressure(payload.get("maintenance_pressure", {}))
+    return router_payload
 
 
 def _report_router_maintenance_pressure(value: Any) -> dict[str, Any]:
@@ -3635,9 +3682,24 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
     }
     if current_status in {"absent", "direct-or-no-active-plan"}:
         why_now["effective_authority"] = "inspect now only if idle state, authority, or system-intent pressure is unclear"
+    feature_tier = payload.get("feature_tier", {})
+    advanced_policy = feature_tier.get("advanced_policy", {}) if isinstance(feature_tier, dict) else {}
+    enabled_advanced_features = set(advanced_policy.get("enabled_features", []) if isinstance(advanced_policy, dict) else [])
+    advanced_sections = {
+        "maintenance_pressure": "maintenance_pressure",
+        "operational_compression": "maintenance_pressure",
+        "closeout_trust": "review_artifacts",
+        "external_work_delta": "external_adapters",
+    }
+    maintenance_pressure_value = payload.get("maintenance_pressure", {})
+    maintenance_pressure_status = str(maintenance_pressure_value.get("status", "")) if isinstance(maintenance_pressure_value, dict) else ""
     hints: list[dict[str, Any]] = []
     for section, purpose in section_purposes.items():
         if section in payload:
+            advanced_feature = advanced_sections.get(section)
+            relevant_advanced_section = section == "maintenance_pressure" and maintenance_pressure_status == "attention"
+            if advanced_feature and advanced_feature not in enabled_advanced_features and not relevant_advanced_section:
+                continue
             hints.append(
                 {
                     "section": section,
@@ -3645,6 +3707,7 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
                     "why_now": why_now.get(section, "inspect when this section is named by compact routing output"),
                     "command": f"agentic-workspace report --target ./repo --section {section} --format json",
                     "volume": "high" if section in {"module_reports", "reports", "registry", "config"} else "normal",
+                    **({"advanced_feature": advanced_feature} if advanced_feature else {}),
                 }
             )
     return hints
@@ -4309,7 +4372,10 @@ def _run_preflight_command(
             ),
             "first_compact_queries": first_compact_queries,
             "escalation_rules": startup_payload.get("escalation_cues", [])[:2],  # Top 2 most common
-            "skill_routing": _startup_skill_routing_payload(cli_invoke=config.cli_invoke),
+            "skill_routing": _startup_skill_routing_payload(
+                cli_invoke=config.cli_invoke,
+                include_advanced=bool(config.advanced_features),
+            ),
         },
         "resolved_config": {
             "workspace_config": config_payload.get("workspace", {}),
@@ -4575,6 +4641,7 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
             selected_modules=selected_modules,
             installed_modules=installed_modules or None,
             resolved_preset=config.default_preset,
+            config=config,
             compact=True,
         ),
         "active_state_summary": {
@@ -4591,7 +4658,10 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
         },
         "workflow_obligations": preflight.get("workflow_obligations", {}),
         "closeout_obligations": preflight.get("closeout_obligations", {}),
-        "skill_routing": _startup_skill_routing_payload(cli_invoke=config.cli_invoke),
+        "skill_routing": _startup_skill_routing_payload(
+            cli_invoke=config.cli_invoke,
+            include_advanced=bool(config.advanced_features),
+        ),
     }
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths:
@@ -6539,6 +6609,7 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     payload = {
         "feature_tiers": copy.deepcopy(list(_FEATURE_TIER_ENTRIES)),
+        "advanced_features": copy.deepcopy(list(_ADVANCED_FEATURE_ENTRIES)),
         "modules": [
             {
                 "name": entry.name,
@@ -6569,48 +6640,60 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
     _emit_payload(payload=payload, format_name=format_name)
 
 
-def _startup_skill_routing_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+def _startup_skill_routing_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE, include_advanced: bool = False) -> dict[str, Any]:
     skill_command = _command_with_cli_invoke(
         command='agentic-workspace skills --target ./repo --task "<task>" --format json',
         cli_invoke=cli_invoke,
     )
-    return {
+    core_routes = [
+        {
+            "task_shape": "active planning report, restart, or proof posture",
+            "skill": "planning-reporting",
+            "fallback": "agentic-workspace summary --format json",
+        },
+        {
+            "task_shape": "managed planning bootstrap upgrade",
+            "skill": "bootstrap-upgrade",
+            "fallback": "agentic-workspace doctor --target ./repo --modules planning --format json",
+        },
+    ]
+    advanced_routes = [
+        {
+            "task_shape": "active planned work or autopilot execution",
+            "skill": "planning-autopilot",
+            "feature": "autopilot_loops",
+            "fallback": "agentic-workspace summary --format json, then the active execplan",
+        },
+        {
+            "task_shape": "external issue or tracker intake",
+            "skill": "planning-intake-upstream-task",
+            "feature": "external_adapters",
+            "fallback": ".agentic-workspace/planning/upstream-task-intake.md plus checked-in planning state",
+        },
+        {
+            "task_shape": "bounded review or finding capture",
+            "skill": "planning-review-pass",
+            "feature": "review_artifacts",
+            "fallback": "agentic-workspace report --target ./repo --format json before selecting any review artifact",
+        },
+    ]
+    payload = {
         "status": "advisory",
-        "rule": "Prefer task-specific package skills when the runtime supports them; keep compact CLI and workflow docs as the fallback.",
+        "rule": "Prefer task-specific package skills when the runtime supports them; keep compact CLI and workflow docs as the fallback. Advanced skills are opt-in.",
         "query": skill_command,
+        "advanced_route_rule": "Review, external-intake, autopilot, code-generation, and maintenance-pressure skills are surfaced only when the repo enables the matching advanced feature or a compact selector points there.",
         "fallback_when_skills_unavailable": [
             "follow AGENTS.md and .agentic-workspace/WORKFLOW.md",
             "use agentic-workspace preflight --format json for one-call takeover context",
             "use agentic-workspace summary --format json before raw planning reads",
         ],
-        "preferred_routes": [
-            {
-                "task_shape": "active planned work or autopilot execution",
-                "skill": "planning-autopilot",
-                "fallback": "agentic-workspace summary --format json, then the active execplan",
-            },
-            {
-                "task_shape": "external issue or tracker intake",
-                "skill": "planning-intake-upstream-task",
-                "fallback": ".agentic-workspace/planning/upstream-task-intake.md plus checked-in planning state",
-            },
-            {
-                "task_shape": "bounded review or finding capture",
-                "skill": "planning-review-pass",
-                "fallback": "agentic-workspace report --target ./repo --format json before selecting any review artifact",
-            },
-            {
-                "task_shape": "active planning report, restart, or proof posture",
-                "skill": "planning-reporting",
-                "fallback": "agentic-workspace summary --format json",
-            },
-            {
-                "task_shape": "managed planning bootstrap upgrade",
-                "skill": "bootstrap-upgrade",
-                "fallback": "agentic-workspace doctor --target ./repo --modules planning --format json",
-            },
-        ],
+        "preferred_routes": core_routes + (advanced_routes if include_advanced else []),
     }
+    if include_advanced:
+        payload["enabled_advanced_routes"] = [route["feature"] for route in advanced_routes]
+    else:
+        payload["available_advanced_route_command"] = "agentic-workspace modules --target ./repo --format json"
+    return payload
 
 
 def _defaults_payload() -> dict[str, Any]:
@@ -7141,6 +7224,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "workspace.workflow_artifact_profile",
                 "workspace.improvement_latitude",
                 "workspace.optimization_bias",
+                "workspace.advanced_features",
                 "system_intent.sources",
                 "system_intent.preferred_source",
                 "workflow_obligations.<name>.summary",
@@ -9377,7 +9461,7 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "path": WORKSPACE_CONFIG_PATH.as_posix(),
             "source": "repo-config" if config.exists else "product-defaults",
             "authoritative": config.exists,
-            "supported_fields": ["workspace.improvement_latitude"],
+            "supported_fields": ["workspace.improvement_latitude", "workspace.advanced_features"],
         },
         "local_override": {
             "path": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
@@ -9487,6 +9571,8 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "improvement_latitude_source": config.improvement_latitude_source,
             "optimization_bias": config.optimization_bias,
             "optimization_bias_source": config.optimization_bias_source,
+            "advanced_features": list(config.advanced_features),
+            "advanced_features_source": config.advanced_features_source,
             "cli_invoke": config.cli_invoke,
             "cli_invoke_source": config.cli_invoke_source,
             "workflow_artifact_adapter": _workflow_artifact_profile_payload(config.workflow_artifact_profile),
@@ -9508,6 +9594,7 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "supported_workflow_artifact_profiles": list(SUPPORTED_WORKFLOW_ARTIFACT_PROFILES),
             "supported_improvement_latitudes": list(SUPPORTED_IMPROVEMENT_LATITUDES),
             "supported_optimization_biases": list(SUPPORTED_OPTIMIZATION_BIASES),
+            "supported_advanced_features": list(SUPPORTED_ADVANCED_FEATURES),
         },
         "update": {
             "wrapper_rule": "normal update execution stays behind agentic-workspace",
@@ -9553,6 +9640,11 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig) -> None:
     print(f"Workflow obligations: {len(payload['workspace']['workflow_obligations'])} configured")
     print(f"Improvement latitude: {payload['workspace']['improvement_latitude']} ({payload['workspace']['improvement_latitude_source']})")
     print(f"Optimization bias: {payload['workspace']['optimization_bias']} ({payload['workspace']['optimization_bias_source']})")
+    print(
+        "Advanced features: "
+        f"{', '.join(payload['workspace']['advanced_features']) or 'none'} "
+        f"({payload['workspace']['advanced_features_source']})"
+    )
     print(f"CLI invoke: {payload['workspace']['cli_invoke']} ({payload['workspace']['cli_invoke_source']})")
     print(f"Wrapper rule: {payload['update']['wrapper_rule']}")
     print("Update modules:")

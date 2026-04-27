@@ -238,6 +238,18 @@
         "query": {
           "type": "string"
         },
+        "advanced_route_rule": {
+          "type": "string"
+        },
+        "available_advanced_route_command": {
+          "type": "string"
+        },
+        "enabled_advanced_routes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "fallback_when_skills_unavailable": {
           "type": "array",
           "items": {
@@ -261,6 +273,9 @@
                 "type": "string"
               },
               "fallback": {
+                "type": "string"
+              },
+              "feature": {
                 "type": "string"
               }
             },

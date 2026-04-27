@@ -76,6 +76,14 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert "does not imply maintainer dogfooding" in full_tier["cost_model"]
     dogfooding_tier = next(entry for entry in payload["feature_tiers"] if entry["id"] == "maintainer-dogfooding")
     assert dogfooding_tier["default_active"] is False
+    assert {entry["id"] for entry in payload["advanced_features"]} == {
+        "review_artifacts",
+        "command_generation",
+        "external_adapters",
+        "autopilot_loops",
+        "maintenance_pressure",
+    }
+    assert all(entry["default_enabled"] is False for entry in payload["advanced_features"])
     assert [entry["name"] for entry in payload["modules"]] == ["planning", "memory"]
     planning_module = next(entry for entry in payload["modules"] if entry["name"] == "planning")
     assert planning_module["install_signals"] == ["TODO.md", ".agentic-workspace/planning/execplans", ".agentic-workspace/planning"]
@@ -150,9 +158,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     skill_routing = payload["startup"]["skill_routing"]
     assert skill_routing["status"] == "advisory"
     assert skill_routing["query"] == 'agentic-workspace skills --target ./repo --task "<task>" --format json'
-    assert "planning-autopilot" in {route["skill"] for route in skill_routing["preferred_routes"]}
-    assert "planning-intake-upstream-task" in {route["skill"] for route in skill_routing["preferred_routes"]}
-    assert "planning-review-pass" in {route["skill"] for route in skill_routing["preferred_routes"]}
+    assert "planning-autopilot" not in {route["skill"] for route in skill_routing["preferred_routes"]}
+    assert "planning-intake-upstream-task" not in {route["skill"] for route in skill_routing["preferred_routes"]}
+    assert "planning-review-pass" not in {route["skill"] for route in skill_routing["preferred_routes"]}
+    assert skill_routing["available_advanced_route_command"] == "agentic-workspace modules --target ./repo --format json"
     assert any("WORKFLOW.md" in fallback for fallback in skill_routing["fallback_when_skills_unavailable"])
     assert payload["compact_contract_profile"]["canonical_doc"] == ".agentic-workspace/docs/compact-contract-profile.md"
     assert payload["compact_contract_profile"]["rule"] == (
@@ -638,6 +647,9 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["workspace"]["improvement_latitude_source"] == "product-default"
     assert payload["workspace"]["optimization_bias"] == "balanced"
     assert payload["workspace"]["optimization_bias_source"] == "product-default"
+    assert payload["workspace"]["advanced_features"] == []
+    assert payload["workspace"]["advanced_features_source"] == "product-default"
+    assert "autopilot_loops" in payload["workspace"]["supported_advanced_features"]
     assert payload["workspace"]["workflow_artifact_adapter"]["canonical_surfaces"] == [
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans/",
@@ -725,6 +737,20 @@ def test_config_command_accepts_agent_efficiency_optimization_bias(tmp_path: Pat
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["optimization_bias"] == "agent-efficiency"
     assert payload["workspace"]["optimization_bias_source"] == "repo-config"
+
+
+def test_config_command_reports_enabled_advanced_features(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        'schema_version = 1\n\n[workspace]\nadvanced_features = ["review_artifacts", "autopilot_loops"]\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workspace"]["advanced_features"] == ["review_artifacts", "autopilot_loops"]
+    assert payload["workspace"]["advanced_features_source"] == "repo-config"
 
 
 def test_config_command_reports_workflow_obligations_from_repo_config(tmp_path: Path, capsys) -> None:
@@ -3203,6 +3229,8 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "module_reports" not in payload
     assert "reports" not in payload
     assert "maintenance_pressure" in payload
+    assert payload["maintenance_pressure"]["status"] == "attention"
+    assert payload["report_profile"]["feature_tier"]["advanced_policy"]["enabled_features"] == []
     assert "operational_compression" not in payload
     assert "closeout_trust" not in payload
     assert "external_work_delta" not in payload
@@ -3232,9 +3260,8 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "compact router field" in section_hints["module_reports"]["why_now"]
     assert section_hints["maintenance_pressure"]["volume"] == "normal"
     assert "residue" in section_hints["maintenance_pressure"]["purpose"]
-    assert section_hints["operational_compression"]["volume"] == "normal"
-    assert "reducing total work" in section_hints["operational_compression"]["why_now"]
-    assert section_hints["external_work_delta"]["volume"] == "normal"
+    assert "operational_compression" not in section_hints
+    assert "external_work_delta" not in section_hints
     assert "idle context" in section_hints["effective_authority"]["purpose"]
     assert "idle state" in section_hints["effective_authority"]["why_now"]
     assert section_hints["effective_authority"]["command"] == (
@@ -4541,7 +4568,8 @@ def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None
     assert startup["skill_routing"]["status"] == "advisory"
     configured_cli = payload["resolved_config"]["workspace_config"]["cli_invoke"]
     assert startup["skill_routing"]["query"] == f'{configured_cli} skills --target ./repo --task "<task>" --format json'
-    assert startup["skill_routing"]["preferred_routes"][0]["skill"] == "planning-autopilot"
+    assert "planning-autopilot" in {route["skill"] for route in startup["skill_routing"]["preferred_routes"]}
+    assert "autopilot_loops" in startup["skill_routing"]["enabled_advanced_routes"]
 
     # Verify config is present
     config = payload["resolved_config"]
@@ -4706,7 +4734,8 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["immediate_next_allowed_action"]["summary"] == "run the compact startup path."
     assert payload["skill_routing"]["status"] == "advisory"
     assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
-    assert payload["skill_routing"]["preferred_routes"][0]["skill"] == "planning-autopilot"
+    assert "planning-autopilot" not in {route["skill"] for route in payload["skill_routing"]["preferred_routes"]}
+    assert payload["skill_routing"]["available_advanced_route_command"] == "agentic-workspace modules --target ./repo --format json"
     assert any("WORKFLOW.md" in step for step in payload["skill_routing"]["fallback_when_skills_unavailable"])
     assert payload["proof"]["required_commands"] == [
         "uv run pytest tests/test_workspace_cli.py -q",
