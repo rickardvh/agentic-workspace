@@ -317,7 +317,10 @@ class WorkspaceArgumentParser(argparse.ArgumentParser):
             if suggestions:
                 suggestion_text = ", ".join(suggestions)
                 message = f"{message}\nDid you mean: {suggestion_text}?"
-            message = f"{message}\nStartup tip: run 'agentic-workspace preflight --format json' to recover a compact takeover context."
+            message = (
+                f"{message}\nStartup tip: run 'agentic-workspace start --format json' for normal startup "
+                "or 'agentic-workspace preflight --format json' to recover a compact takeover context."
+            )
         super().error(message)
 
 
@@ -3124,7 +3127,7 @@ def _ordinary_agent_path_payload(*, payload: dict[str, Any], findings: list[dict
         current_work = {}
     current_status = str(current_work.get("status", "unknown") or "unknown")
     warning_count = len(findings)
-    return {
+    ordinary_path = {
         "status": "ready",
         "entry_command": "agentic-workspace start --target ./repo --format json",
         "state_command": "agentic-workspace report --target ./repo --format json",
@@ -3140,6 +3143,48 @@ def _ordinary_agent_path_payload(*, payload: dict[str, Any], findings: list[dict
             "summary reports active broad work without a checked-in plan you can continue from",
             "proof selection is ambiguous for the changed paths",
             "the next change would alter product direction, authority boundaries, or system intent",
+        ],
+    }
+    ordinary_path["off_happy_path_recovery"] = _off_happy_path_recovery_payload()
+    return ordinary_path
+
+
+def _off_happy_path_recovery_payload() -> dict[str, Any]:
+    return {
+        "kind": "workspace-off-happy-path-recovery/v1",
+        "status": "available",
+        "rule": "When an agent starts from the wrong package surface, recover through compact commands before reading deep artifacts or hand-authoring durable state.",
+        "scenarios": [
+            {
+                "id": "opened-report-before-start",
+                "misuse": "agent starts from report detail before compact startup",
+                "recovery_signal": "report_profile.ordinary_agent_path.entry_command",
+                "recover_by": "agentic-workspace start --target ./repo --format json",
+            },
+            {
+                "id": "opened-deep-review-artifact",
+                "misuse": "agent opens review or module detail before compact routing points there",
+                "recovery_signal": "report_profile.ordinary_agent_path.deep_detail_rule",
+                "recover_by": "agentic-workspace report --target ./repo --format json, then only the named --section when needed",
+            },
+            {
+                "id": "invalid-near-miss-command",
+                "misuse": "agent runs an invalid or near-miss workspace command",
+                "recovery_signal": "parser suggestion plus startup/preflight fallback hint",
+                "recover_by": "agentic-workspace preflight --format json",
+            },
+            {
+                "id": "direct-generated-adapter-edit",
+                "misuse": "agent changes a generated adapter or executable CLI surface directly",
+                "recovery_signal": "proof selector generated-command or direct-cli-edit review",
+                "recover_by": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+            },
+            {
+                "id": "hand-authored-durable-artifact",
+                "misuse": "agent hand-authors a durable docs/planning/memory artifact without a compact proof route",
+                "recovery_signal": "proof selector surface_value_review",
+                "recover_by": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+            },
         ],
     }
 
@@ -5824,6 +5869,10 @@ def _defaults_payload() -> dict[str, Any]:
             "escalate_when": [
                 "generated package proof no longer covers the changed implementation boundary",
             ],
+            "recovery_signal": (
+                "Generated adapter/package changes must route back through command-package checks and conformance proof "
+                "instead of being trusted as hand edits."
+            ),
         },
         {
             "id": "workspace_cli",
@@ -5844,6 +5893,9 @@ def _defaults_payload() -> dict[str, Any]:
                 "the narrow lane cannot prove the change on its own",
                 "package or repo-wide behavior is now part of the trust question",
             ],
+            "recovery_signal": (
+                "Direct workspace CLI changes need workspace CLI proof and, for interface changes, review against generated command contracts."
+            ),
         },
         {
             "id": "planning_package",
@@ -7345,6 +7397,7 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
                 "id": lane["id"],
                 "when": lane["when"],
                 "required_commands": lane["enough_proof"],
+                "recovery_signal": lane.get("recovery_signal", ""),
             }
             for lane in selected_lanes
         ],
@@ -7394,6 +7447,10 @@ def _direct_cli_edit_review_for_changed_paths(changed_paths: list[str]) -> dict[
         "proof_hint": (
             "When direct CLI edits accompany interface changes, include command-package IR/generator proof or split the runtime fix "
             "from definition work."
+        ),
+        "recovery_signal": (
+            "Use proof output to decide whether the edit is allowed runtime work; route interface or generated-surface changes "
+            "back to command contracts, command-package IR, and generated outputs."
         ),
     }
 

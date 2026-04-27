@@ -1148,7 +1148,7 @@
       "system": "github",
       "id": "#404",
       "title": "[Workspace]: Test weak-agent off-happy-path recovery from package misuse",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#403",
       "planning_residue_expected": "required"

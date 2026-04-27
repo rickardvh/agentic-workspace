@@ -3124,6 +3124,19 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert ordinary_path["entry_command"] == "agentic-workspace start --target ./repo --format json"
     assert ordinary_path["current_work_command"] == "agentic-workspace summary --format json"
     assert ordinary_path["proof_command"] == "agentic-workspace proof --target ./repo --changed <paths> --format json"
+    recovery = ordinary_path["off_happy_path_recovery"]
+    assert recovery["kind"] == "workspace-off-happy-path-recovery/v1"
+    scenarios = {item["id"]: item for item in recovery["scenarios"]}
+    assert set(scenarios) >= {
+        "opened-report-before-start",
+        "opened-deep-review-artifact",
+        "invalid-near-miss-command",
+        "direct-generated-adapter-edit",
+        "hand-authored-durable-artifact",
+    }
+    assert scenarios["opened-report-before-start"]["recover_by"] == "agentic-workspace start --target ./repo --format json"
+    assert "deep_detail_rule" in scenarios["opened-deep-review-artifact"]["recovery_signal"]
+    assert scenarios["hand-authored-durable-artifact"]["recovery_signal"] == "proof selector surface_value_review"
     assert "report_profile.ordinary_agent_path" in payload["report_profile"]["decision_grade_fields"]
     guard = payload["report_profile"]["router_shape_guard"]
     assert guard["status"] == "active"
@@ -4569,6 +4582,7 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
     assert answer["selected_lanes"][0]["id"] == "generated_command_packages"
+    assert "route back through command-package checks" in answer["selected_lanes"][0]["recovery_signal"]
     assert answer["required_commands"] == [
         "uv run python scripts/check/check_generated_command_packages.py",
         "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
@@ -4586,6 +4600,7 @@ def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
     assert review["changed_paths"] == ["src/agentic_workspace/cli.py"]
     assert "normal interface authoring belongs in command contracts" in review["rule"]
     assert "runtime primitive implementation and live workspace inspection" in review["allowed_direct_cli_work"]
+    assert "route interface or generated-surface changes back" in review["recovery_signal"]
 
 
 def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None:
@@ -4713,6 +4728,7 @@ def test_invalid_command_shows_preflight_fallback_hint(capsys) -> None:
     assert excinfo.value.code == 2
     stderr = capsys.readouterr().err
     assert "Did you mean: preflight?" in stderr
+    assert "agentic-workspace start --format json" in stderr
     assert "agentic-workspace preflight --format json" in stderr
 
 
