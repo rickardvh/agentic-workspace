@@ -3484,10 +3484,22 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any]) -> di
             "reason": "no active planning record exposes intent-continuity evidence",
             "required_for_broad_work": True,
             "rule": "Validation success is not enough; closeout should say whether the larger intent is satisfied, partially satisfied, or needs follow-up.",
+            "closure_scope": {
+                "validation_proof": {
+                    "status": "separate-answer",
+                    "not_sufficient_for_closure": True,
+                    "rule": "Validation success proves implementation behavior, not intent closure by itself.",
+                },
+                "requested_slice": {"status": "unavailable"},
+                "lane_or_system_intent": {"status": "unavailable"},
+                "larger_intent_closure": {"status": "unavailable"},
+                "non_substitution_rule": "Validation success alone is not closure evidence.",
+            },
         }
     intent_continuity = planning_record.get("intent_continuity", {})
     required_continuation = planning_record.get("required_continuation", {})
     hierarchy_contract = active.get("hierarchy_contract", {}) if isinstance(active, dict) else {}
+    resumable_contract = active.get("resumable_contract", {}) if isinstance(active, dict) else {}
     hierarchy_required = hierarchy_contract.get("required_continuation", {}) if isinstance(hierarchy_contract, dict) else {}
     if not isinstance(intent_continuity, dict):
         intent_continuity = {}
@@ -3506,6 +3518,26 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any]) -> di
             "required follow-on for the larger intended outcome": hierarchy_required.get("required_follow_on", ""),
             "owner surface": hierarchy_required.get("owner_surface", ""),
         }
+    proof_expectations = [str(item) for item in _list_payload(planning_record.get("proof_expectations"))]
+    if not proof_expectations and isinstance(resumable_contract, dict):
+        proof_expectations = [str(item) for item in _list_payload(resumable_contract.get("proof_expectations"))]
+    active_milestone = planning_record.get("active_milestone", {})
+    if (not isinstance(active_milestone, dict) or not active_milestone) and isinstance(resumable_contract, dict):
+        active_milestone = resumable_contract.get("active_milestone", {})
+    if not isinstance(active_milestone, dict):
+        active_milestone = {}
+    completion_criteria = [str(item) for item in _list_payload(planning_record.get("completion_criteria"))]
+    if not completion_criteria and isinstance(resumable_contract, dict):
+        completion_criteria = [str(item) for item in _list_payload(resumable_contract.get("completion_criteria"))]
+    proof_report = planning_record.get("proof_report", {})
+    if not isinstance(proof_report, dict):
+        proof_report = {}
+    closure_check = planning_record.get("closure_check", {})
+    if not isinstance(closure_check, dict):
+        closure_check = {}
+    hierarchy_closure = hierarchy_contract.get("closure_check", {}) if isinstance(hierarchy_contract, dict) else {}
+    if not closure_check and isinstance(hierarchy_closure, dict):
+        closure_check = hierarchy_closure
     completes = str(intent_continuity.get("this slice completes the larger intended outcome", "")).strip().lower()
     continuation = str(required_continuation.get("required follow-on for the larger intended outcome", "")).strip().lower()
     if completes in {"yes", "true"} and continuation in {"no", "false", "none"}:
@@ -3526,6 +3558,50 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any]) -> di
         "required_follow_on": required_continuation.get("required follow-on for the larger intended outcome", ""),
         "continuation_surface": intent_continuity.get("continuation surface", required_continuation.get("owner surface", "")),
         "rule": "Proof and validation answer whether the implementation works; this check answers whether the intended outcome is actually closed.",
+        "closure_scope": {
+            "validation_proof": {
+                "status": "separate-answer",
+                "not_sufficient_for_closure": True,
+                "proof_expectation_count": len(proof_expectations),
+                "proof_report": proof_report.get("validation proof", ""),
+                "sources": [
+                    "planning.active.planning_record.proof_expectations",
+                    "planning.active.planning_record.proof_report",
+                ],
+                "rule": "Validation success proves implementation behavior, not intent closure by itself.",
+            },
+            "requested_slice": {
+                "status": active_milestone.get("status", ""),
+                "milestone_id": active_milestone.get("id", ""),
+                "completion_criteria_count": len(completion_criteria),
+                "sources": [
+                    "planning.active.planning_record.active_milestone",
+                    "planning.active.resumable_contract.completion_criteria",
+                ],
+                "rule": "Slice landing is narrower than lane or larger-intent satisfaction.",
+            },
+            "lane_or_system_intent": {
+                "status": trust,
+                "larger_intent": intent_continuity.get("larger intended outcome", ""),
+                "slice_completes_larger_intent": intent_continuity.get("this slice completes the larger intended outcome", ""),
+                "required_follow_on": required_continuation.get("required follow-on for the larger intended outcome", ""),
+                "continuation_surface": intent_continuity.get("continuation surface", required_continuation.get("owner surface", "")),
+                "sources": [
+                    "planning.active.planning_record.intent_continuity",
+                    "planning.active.planning_record.required_continuation",
+                    "planning.active.hierarchy_contract.required_continuation",
+                ],
+            },
+            "larger_intent_closure": {
+                "status": closure_check.get("larger-intent status", ""),
+                "closure_decision": closure_check.get("closure decision", ""),
+                "evidence": closure_check.get("evidence carried forward", ""),
+                "reopen_trigger": closure_check.get("reopen trigger", ""),
+                "source": "planning.active.hierarchy_contract.closure_check",
+                "rule": "Only explicit closure-check evidence may close the larger intent.",
+            },
+            "non_substitution_rule": "Validation success alone is not closure evidence.",
+        },
         "recommended_next_action": recommended_next_action,
     }
 

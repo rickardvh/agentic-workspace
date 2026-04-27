@@ -3442,6 +3442,33 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
             "immediate_next_action": ["Use package workflow."],
             "completion_criteria": ["Package workflow evidence is visible."],
             "validation_commands": ["uv run agentic-workspace proof --target . --format json"],
+            "intent_continuity": {
+                "larger intended outcome": "Close broad package workflow lane.",
+                "this slice completes the larger intended outcome": "no",
+                "continuation surface": ".agentic-workspace/planning/state.toml",
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": "yes",
+                "owner surface": ".agentic-workspace/planning/state.toml",
+                "activation trigger": "after proof passes",
+            },
+            "iterative_follow_through": {
+                "what this slice enabled": "package workflow evidence",
+                "intentionally deferred": "broad package workflow lane closeout",
+                "discovered implications": "validation proof is not intent closure",
+                "proof achieved now": "yes",
+                "validation still needed": "lane follow-on",
+                "next likely slice": "continue broad workflow lane",
+            },
+            "context_budget": {
+                "live working set": "report output and closeout trust",
+                "recoverable later": "archived plan",
+                "externalize before shift": "state.toml",
+                "pre-work config pull": "uv run agentic-workspace summary --format json",
+                "pre-work memory pull": "uv run agentic-workspace report --format json",
+                "tiny resumability note": "validation proof is separate from lane closure",
+                "context-shift triggers": "larger intent remains open",
+            },
             "execution_run": {
                 "run status": "active",
                 "executor": "test",
@@ -3453,12 +3480,25 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
                 "result for continuation": "continue",
                 "next step": "finish",
             },
+            "proof_report": {
+                "validation proof": "uv run agentic-workspace proof passed",
+                "proof achieved now": "yes",
+                'evidence for "proof achieved" state': "focused report test fixture",
+            },
+            "closure_check": {
+                "slice status": "active",
+                "larger-intent status": "open",
+                "closure decision": "archive-but-keep-lane-open",
+                "why this decision is honest": "The proof passed but the broader workflow lane still has follow-on work.",
+                "evidence carried forward": ".agentic-workspace/planning/state.toml",
+                "reopen trigger": "follow-on remains open",
+            },
         },
     )
     (target / ".agentic-workspace" / "planning" / "state.toml").write_text(
         "[todo]\n"
         "active_items = [\n"
-        "  { id = 'package-use', title = 'Package use', execplan = '.agentic-workspace/planning/execplans/package-use.plan.json' },\n"
+        "  { id = 'package-use', title = 'Package use', surface = '.agentic-workspace/planning/execplans/package-use.plan.json' },\n"
         "]\n"
         "queued_items = []\n\n"
         "[roadmap]\nlanes = []\ncandidates = []\n",
@@ -3476,7 +3516,17 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert evidence["missing_expected_surfaces"] == []
     intent_check = payload["closeout_trust"]["intent_satisfaction_check"]
     assert intent_check["status"] == "present"
-    assert intent_check["trust"] == "needs-review"
+    assert intent_check["trust"] == "follow-up-required"
+    closure_scope = intent_check["closure_scope"]
+    assert closure_scope["validation_proof"]["status"] == "separate-answer"
+    assert closure_scope["validation_proof"]["not_sufficient_for_closure"] is True
+    assert closure_scope["validation_proof"]["proof_expectation_count"] == 1
+    assert closure_scope["requested_slice"]["status"] == "active"
+    assert closure_scope["lane_or_system_intent"]["status"] == "follow-up-required"
+    assert closure_scope["lane_or_system_intent"]["required_follow_on"] == "yes"
+    assert closure_scope["larger_intent_closure"]["status"] == "open"
+    assert closure_scope["larger_intent_closure"]["closure_decision"] == "archive-but-keep-lane-open"
+    assert closure_scope["non_substitution_rule"] == "Validation success alone is not closure evidence."
 
 
 def test_report_surfaces_local_only_memory_status(tmp_path: Path, capsys) -> None:

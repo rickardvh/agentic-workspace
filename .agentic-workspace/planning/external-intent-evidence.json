@@ -1166,10 +1166,23 @@
       "system": "github",
       "id": "#406",
       "title": "[Workspace]: Make validation-vs-intent satisfaction explicit in broad work closeout",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#403",
-      "planning_residue_expected": "required"
+      "planning_residue_expected": "present",
+      "closeout": {
+        "plan": ".agentic-workspace/planning/execplans/archive/broad-closeout-validation-intent-separation.plan.json",
+        "proof": "closeout_trust.intent_satisfaction_check.closure_scope now separates validation_proof, requested_slice, lane_or_system_intent, and larger_intent_closure, with a non-substitution rule that validation success alone is not closure evidence.",
+        "validation": [
+          "uv run pytest tests/test_workspace_cli.py -q -k \"closeout_trust or intent_satisfaction or report_surfaces_package_workflow_evidence\"",
+          "uv run agentic-workspace proof --target . --changed tests/test_workspace_cli.py src/agentic_workspace/cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/broad-closeout-validation-intent-separation.plan.json --format json",
+          "uv run pytest tests/test_workspace_cli.py -q",
+          "uv run ruff check src tests",
+          "uv run agentic-workspace doctor --target . --modules planning --format json",
+          "uv run agentic-workspace summary --format json",
+          "uv run agentic-workspace reconcile --format json"
+        ]
+      }
     },
     {
       "system": "github",

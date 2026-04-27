@@ -1,0 +1,235 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Broad Closeout Validation Intent Separation",
+  "goal": [
+    "Resolve #406 by making broad-work closeout separate validation proof, slice landing, lane satisfaction, and larger-intent closure in compact review output."
+  ],
+  "non_goals": [
+    "Do not create a scoring system for intent satisfaction.",
+    "Do not replace human review.",
+    "Do not make validation less strict."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Broad work closeout exposes validation proof and intent satisfaction as separate answers, and validation success alone is not sufficient closure evidence.",
+      "constraints": "Reuse planning/report records where possible; avoid a new durable surface unless the compact report cannot carry the signal.",
+      "latitude": "Tighten compact closeout_trust fields, summary projections, or focused tests as needed.",
+      "escalation": "Escalate if the fix needs a new satisfaction scoring system or broad planning archive rewrite."
+    },
+    "execution": {
+      "milestone": "broad-closeout-validation-intent-separation",
+      "status": "active",
+      "next_step": "Inspect current closeout_trust and intent satisfaction output, then tighten compact fields/tests.",
+      "proof": "Run focused closeout/report tests, package proof selector, full workspace CLI tests, ruff, planning doctor, summary, and reconcile."
+    },
+    "scope": {
+      "touched": [
+        "tests/test_workspace_cli.py",
+        "src/agentic_workspace/cli.py",
+        ".agentic-workspace/planning/execplans/broad-closeout-validation-intent-separation.plan.json",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json"
+      ],
+      "invariants": [
+        "Validation commands remain strict proof, not intent satisfaction.",
+        "Slice, lane, and larger-intent closure remain separately visible.",
+        "No new scoring system or replacement for human review is introduced."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Improve weak-agent recovery and strong-agent leverage for package lifecycle and closeout workflows.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "weak-agent-recovery-and-strong-agent-guardrails"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Broad closeout/report output now separates validation proof, requested slice, lane/system intent, and larger-intent closure in closeout_trust.intent_satisfaction_check.closure_scope.",
+    "intentionally deferred": "Parent issue review may remain if live GitHub parent has additional unsliced expectations.",
+    "discovered implications": "The package proof selector correctly flagged direct src/agentic_workspace/cli.py edits for review; this edit is runtime report payload work rather than command-definition semantics.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for #406; inspect parent #403 before claiming the broader weak-agent lane closed.",
+    "next likely slice": "Re-evaluate the parent weak-agent lane and close or replan it based on live issue state."
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest and implement all issues lane by lane. Commit and push after each milestone. Collect dogfooding evidence.",
+    "inferred intended outcome": "Complete the remaining weak-agent recovery child slice with checked-in planning, proof, and honest parent-lane continuation.",
+    "chosen concrete what": "Implement #406 as a compact closeout/review signal hardening slice.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm validation proof, slice landed, lane/system intent, and larger-intent closure are distinct in compact output."
+  },
+  "execution_bounds": {
+    "allowed paths": "workspace CLI closeout/report output/tests and planning evidence surfaces for #406",
+    "max changed files": "5",
+    "required validation commands": "focused closeout/report tests, full workspace CLI tests, ruff, planning doctor, summary, reconcile",
+    "ask-before-refactor threshold": "Any new satisfaction scoring system, new durable closeout surface, or broad archive migration.",
+    "stop before touching": "Planning package archive algorithms unless the compact workspace report cannot expose the needed distinction."
+  },
+  "context_budget": {
+    "live working set": "issue #406, closeout_trust output, summary projections, tests/test_workspace_cli.py, src/agentic_workspace/cli.py",
+    "recoverable later": "GitHub issue body and archived plan closeout",
+    "externalize before shift": "Keep this plan updated with proof and closeout state.",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "gh issue view 406 --json number,title,body,state,labels,url",
+    "tiny resumability note": "Active slice #406: separate validation proof from intent satisfaction in broad closeout.",
+    "context-shift triggers": "Need for scoring, new surface, or broad planning archive rewrite."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#406",
+      "label": "Make validation-vs-intent satisfaction explicit in broad work closeout",
+      "role": "source intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/406"
+    }
+  ],
+  "delegated_judgment": {
+    "requested outcome": "Make broad-work closeout distinguish proof success from intent satisfaction.",
+    "hard constraints": "No scoring system, no human-review replacement, and no weakening of validation proof.",
+    "agent may decide locally": "Which compact report fields/tests to tighten, as long as validation and closure semantics are clearly separated.",
+    "escalate when": "The implementation needs a new durable closeout surface, scoring system, or broad archive migration."
+  },
+  "active_milestone": {
+    "id": "broad-closeout-validation-intent-separation",
+    "status": "completed",
+    "scope": "Compact closeout/review signal hardening and focused tests.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect closeout_trust fields and add focused tests/fields that separate proof, slice, lane, and larger intent."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "tests/test_workspace_cli.py",
+    "src/agentic_workspace/cli.py",
+    ".agentic-workspace/planning/execplans/broad-closeout-validation-intent-separation.plan.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json"
+  ],
+  "invariants": [
+    "Validation commands remain strict proof, not intent satisfaction.",
+    "Slice, lane, and larger-intent closure remain separately visible.",
+    "No new scoring system or replacement for human review is introduced."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"closeout_trust or intent_satisfaction or report_surfaces_package_workflow_evidence\"",
+    "uv run agentic-workspace proof --target . --changed tests/test_workspace_cli.py src/agentic_workspace/cli.py --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "completion_criteria": [
+    "Broad work closeout exposes validation proof and intent satisfaction as separate answers.",
+    "Reviewers can see whether closure is for the slice, the lane, or the larger intent.",
+    "Validation success alone is not presented as sufficient closure evidence.",
+    "The compact signal is covered by tests."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace summary --format json; gh issue view 406 --json number,title,body,state,labels,url",
+    "what happened": "Added closeout_trust.intent_satisfaction_check.closure_scope with separate answers for validation proof, requested slice, lane/system intent, and larger-intent closure. Added a report fixture where proof passes while follow-on remains required.",
+    "scope touched": "workspace CLI report payload, workspace CLI tests, planning state, and active execplan",
+    "changed surfaces": "src/agentic_workspace/cli.py; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/broad-closeout-validation-intent-separation.plan.json",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"closeout_trust or intent_satisfaction or report_surfaces_package_workflow_evidence\"; uv run agentic-workspace proof --target . --changed tests/test_workspace_cli.py src/agentic_workspace/cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/broad-closeout-validation-intent-separation.plan.json --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
+    "result for continuation": "#406 completed; parent #403 remains the next weak-agent lane review surface.",
+    "next step": "Archive #406, commit and push, close #406, then inspect parent #403."
+  },
+  "finished_run_review": {
+    "review status": "accepted",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes for #406",
+    "config compliance": "package workflow dogfooded through summary, proof, doctor, and reconcile",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive #406; keep parent #403 open until live parent review confirms lane closure"
+  },
+  "proof_report": {
+    "validation proof": "Focused closeout test passed, full tests/test_workspace_cli.py passed, ruff passed, package proof selected workspace_cli and planning_surfaces lanes, planning doctor passed, summary remained clean, reconcile remained clean.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_workspace_cli.py -q -k \"closeout_trust or intent_satisfaction or report_surfaces_package_workflow_evidence\"; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; uv run agentic-workspace proof --target . --changed tests/test_workspace_cli.py src/agentic_workspace/cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/broad-closeout-validation-intent-separation.plan.json --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Ingest and implement all issues lane by lane. Commit and push after each milestone. Collect dogfooding evidence.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#406 implementation landed and tests prove closeout_trust separates validation proof from intent closure; parent #403 remains open.",
+    "unsolved intent passed to": "GitHub issue #403 parent lane review"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Validation should prove the slice, not silently replace larger intent satisfaction.",
+    "slice shaping bias": "Prefer compact review fields over new surfaces.",
+    "broader-lane validation question": "Can a reviewer see what passed, what landed, and whether the larger intent is actually closed?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "#406 is complete, but parent #403 remains open in live issue state and should be reviewed before closing the weak-agent lane.",
+    "evidence carried forward": ".agentic-workspace/planning/state.toml weak-agent lane; GitHub issue #403",
+    "reopen trigger": "A broad closeout can still claim validation proof as sufficient intent closure or parent #403 contains additional unmet expectations."
+  },
+  "execution_summary": {
+    "outcome delivered": "Broad closeout now exposes proof and intent satisfaction as separate inspectable answers.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "GitHub issue #403 and .agentic-workspace/planning/state.toml weak-agent lane",
+    "post-work posterity capture": "Archived execplan should retain dogfooding evidence and direct CLI edit review.",
+    "knowledge promoted (Memory/Docs/Config)": "No new durable docs/config needed; compact report output carries the behavior.",
+    "resume from": "Inspect parent #403 after closing #406."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "GitHub issue #403 and .agentic-workspace/planning/state.toml weak-agent lane",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "No new durable docs/config needed; compact report output carries the behavior.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "No new durable docs/config needed; compact report output carries the behavior.",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "Make validation-vs-intent satisfaction explicit in broad work closeout",
+          "owner": "github-issue",
+          "source": "#406"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted #406 as the remaining weak-agent recovery child slice.",
+    "2026-04-27: Dogfooding catch: proof surfaced direct_cli_edit_review for src/agentic_workspace/cli.py. The direct edit was accepted as report runtime payload work, not command-generation/interface definition work."
+  ]
+}
