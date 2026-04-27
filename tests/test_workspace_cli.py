@@ -2391,6 +2391,9 @@ def test_install_local_only_uses_agentic_workspace_local_only_root_and_updates_g
     git_exclude_text = (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
     assert ".agentic-workspace/" in git_exclude_text
     assert not (repo_root / ".gitignore").exists()
+    lifecycle_plan = payload["lifecycle_plan"]
+    assert "--local-only" in lifecycle_plan["next_safe_command"]["command"]
+    assert lifecycle_plan["mutation_safety"]["local_only_preservation"]["status"] == "explicit-local-only-target"
 
 
 def test_install_local_only_migrates_legacy_gitignore_residue(tmp_path: Path, capsys) -> None:
@@ -2427,6 +2430,9 @@ def test_uninstall_local_only_removes_agentic_workspace_local_only_root_and_git_
     assert not install_root.exists()
     assert not (install_root / "LOCAL-ONLY.toml").exists()
     assert ".agentic-workspace/" not in (repo_root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+    lifecycle_plan = payload["lifecycle_plan"]
+    assert "--local-only" in lifecycle_plan["next_safe_command"]["command"]
+    assert lifecycle_plan["mutation_safety"]["classification"] == "destructive-mutation"
 
 
 def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_path: Path, capsys) -> None:
@@ -4746,6 +4752,64 @@ def test_upgrade_json_collects_summary_categories(monkeypatch, tmp_path: Path, c
     assert payload["needs_review"] == ["README.md: inspect manually"]
     assert payload["warnings"] == []
     assert payload["stale_generated_surfaces"] == [".agentic-workspace/planning/agent-manifest.json"]
+    safety = payload["lifecycle_plan"]["mutation_safety"]
+    assert safety["classification"] == "lifecycle-mutation"
+    assert safety["dry_run_apply_separation"]["status"] == "dry-run-only"
+    assert safety["review_required_before_apply"] is True
+    assert safety["strict_preflight"]["available"] is True
+    scenarios = {entry["scenario"]: entry for entry in safety["fixture_coverage"]}
+    assert scenarios["upgrade dry-run on installed repo"]["status"] == "covered"
+
+
+def test_uninstall_dry_run_requires_review_for_ambiguous_workspace_payload(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    workflow_path = target / ".agentic-workspace" / "WORKFLOW.md"
+    workflow_path.write_text(workflow_path.read_text(encoding="utf-8") + "\nLocal owner edit.\n", encoding="utf-8")
+
+    assert cli.main(["uninstall", "--modules", "planning", "--target", str(target), "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert (
+        ".agentic-workspace/WORKFLOW.md: local workspace shared-layer file differs from managed payload; remove manually if intended"
+        in payload["needs_review"]
+    )
+    lifecycle_plan = payload["lifecycle_plan"]
+    assert lifecycle_plan["review_required"] is True
+    assert lifecycle_plan["next_safe_command"]["status"] == "review-required"
+    safety = lifecycle_plan["mutation_safety"]
+    assert safety["classification"] == "destructive-mutation"
+    assert safety["destructive_risk"]["planned_removal_count"] >= 1
+    assert safety["review_required_before_apply"] is True
+    scenarios = {entry["scenario"]: entry for entry in safety["fixture_coverage"]}
+    assert scenarios["ambiguous ownership uninstall refuses deletion"]["status"] == "covered"
+
+
+def test_upgrade_apply_preserves_local_only_memory_and_integration_state(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    local_memory = target / ".agentic-workspace" / "local" / "memory.toml"
+    local_integration = target / ".agentic-workspace" / "local" / "integrations" / "tool" / "state.txt"
+    local_memory.parent.mkdir(parents=True)
+    local_integration.parent.mkdir(parents=True)
+    local_memory.write_text('kind = "local-memory"\n', encoding="utf-8")
+    local_integration.write_text("private state\n", encoding="utf-8")
+
+    assert cli.main(["upgrade", "--modules", "planning", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert local_memory.read_text(encoding="utf-8") == 'kind = "local-memory"\n'
+    assert local_integration.read_text(encoding="utf-8") == "private state\n"
+    safety = payload["lifecycle_plan"]["mutation_safety"]
+    assert safety["local_only_preservation"]["status"] == "preserve-by-default"
+    scenarios = {entry["scenario"]: entry for entry in safety["fixture_coverage"]}
+    assert scenarios["local-only memory/integration preservation"]["status"] == "covered"
 
 
 def test_upgrade_preserves_repo_owned_agents_content_outside_workspace_fence(tmp_path: Path, capsys) -> None:

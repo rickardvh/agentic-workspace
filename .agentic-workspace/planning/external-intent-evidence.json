@@ -1157,7 +1157,7 @@
       "system": "github",
       "id": "#405",
       "title": "[Workspace]: Expand lifecycle mutation safety before weak-agent use",
-      "status": "open",
+      "status": "closed",
       "kind": "slice",
       "parent_id": "#403",
       "planning_residue_expected": "required"

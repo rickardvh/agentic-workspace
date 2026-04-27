@@ -1,0 +1,231 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Weak Agent Lifecycle Mutation Safety",
+  "goal": [
+    "Resolve #405 by strengthening lifecycle mutation safety coverage and review-required signals before weak-agent-facing lifecycle expansion."
+  ],
+  "non_goals": [
+    "Do not generate lifecycle mutation adapters.",
+    "Do not hide destructive risk from agents.",
+    "Do not replace existing module-local lifecycle tests."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "High-risk lifecycle mutation scenarios are covered by black-box fixtures or a concrete fixture plan, and weak agents see review-required signals before unsafe mutation.",
+      "constraints": "Keep mutation/apply primitives hand-owned; prefer black-box workspace CLI checks over implementation-specific unit tests.",
+      "latitude": "Add compact risk/review output only when existing surfaces do not clearly separate dry-run, apply, strict preflight, ownership refusal, or local-only preservation.",
+      "escalation": "Escalate if the fix requires generated lifecycle mutation adapters or broad lifecycle primitive rewrites."
+    },
+    "execution": {
+      "milestone": "weak-agent-lifecycle-mutation-safety",
+      "status": "completed",
+      "next_step": "Archive this plan, update external issue evidence, close #405, then promote the next child slice.",
+      "proof": "Focused lifecycle tests, package proof selector, full workspace CLI tests, ruff, planning doctor, summary, and reconcile passed."
+    },
+    "scope": {
+      "touched": [
+        "tests/test_workspace_cli.py",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/lifecycle_generation_readiness.json",
+        ".agentic-workspace/planning/execplans/weak-agent-lifecycle-mutation-safety.plan.json",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/external-intent-evidence.json"
+      ],
+      "invariants": [
+        "Dry-run and apply lifecycle paths remain visibly separate.",
+        "Uninstall/destructive mutation requires review/preflight signals.",
+        "Local-only memory and integration surfaces are preserved unless local-only removal is explicitly requested."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Improve weak-agent recovery and strong-agent leverage for package lifecycle and closeout workflows.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml",
+    "parent lane": "weak-agent-recovery-and-strong-agent-guardrails"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "After #405 is validated, promote the next open child slice in the weak-agent recovery lane."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Weak-agent lifecycle mutation safety is visible in lifecycle_plan.mutation_safety and covered by black-box fixtures.",
+    "intentionally deferred": "Validation-vs-intent broad closeout remains the later child slice in this lane.",
+    "discovered implications": "The local-only lifecycle plan apply command used the wrong flag name; fixed to --local-only.",
+    "proof achieved now": "Focused lifecycle tests, full workspace CLI tests, ruff, package proof selector, planning doctor, summary, and reconcile passed.",
+    "validation still needed": "none for #405",
+    "next likely slice": "Promote the next weak-agent recovery child slice from state.toml."
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest and implement all issues lane by lane. Commit and push after each milestone. Collect dogfooding evidence.",
+    "inferred intended outcome": "Continue the weak-agent lane by closing #405 with checked-in planning, proof, and continuation evidence.",
+    "chosen concrete what": "Implement #405 as a bounded lifecycle safety coverage and compact signal slice.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm uninstall/refusal, local-only preservation, dry-run/apply separation, and strict preflight/review signals are explicitly covered."
+  },
+  "execution_bounds": {
+    "allowed paths": "workspace CLI tests/contracts/output and planning evidence surfaces for #405",
+    "max changed files": "6",
+    "required validation commands": "focused lifecycle tests, full workspace CLI tests, ruff, planning doctor, summary, reconcile",
+    "ask-before-refactor threshold": "Any lifecycle primitive rewrite, generated mutation adapter work, or package-local installer refactor.",
+    "stop before touching": "Module-local installer internals unless black-box coverage proves a real behavior gap that cannot be covered at workspace level."
+  },
+  "context_budget": {
+    "live working set": "issue #405, lifecycle readiness contract, lifecycle tests, workspace CLI lifecycle output",
+    "recoverable later": "GitHub issue body and archived plan closeout",
+    "externalize before shift": "Keep this plan updated with fixture coverage and closeout state.",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "gh issue view 405 --json number,title,body,state,labels,url",
+    "tiny resumability note": "Active slice #405: strengthen weak-agent lifecycle mutation safety coverage.",
+    "context-shift triggers": "Mutation semantics change, fixture scope widens, or lifecycle adapter generation becomes tempting."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#405",
+      "label": "Expand lifecycle mutation safety before weak-agent use",
+      "role": "source intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/405"
+    }
+  ],
+  "delegated_judgment": {
+    "requested outcome": "Make lifecycle mutation safety stronger before weak-agent-facing expansion.",
+    "hard constraints": "Keep mutation/apply primitives hand-owned and do not generate lifecycle mutation adapters.",
+    "agent may decide locally": "Exact fixture shape and compact output wording, as long as priority risks are covered or explicitly planned.",
+    "escalate when": "The implementation needs lifecycle primitive rewrites, generated mutation adapters, or broad package-local refactors."
+  },
+  "active_milestone": {
+    "id": "weak-agent-lifecycle-mutation-safety",
+    "status": "completed",
+    "scope": "Lifecycle mutation risk fixture coverage and compact review-required signals.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect current lifecycle readiness and tests, then add the smallest missing fixture coverage or compact signal."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "tests/test_workspace_cli.py",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/lifecycle_generation_readiness.json",
+    ".agentic-workspace/planning/execplans/weak-agent-lifecycle-mutation-safety.plan.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json"
+  ],
+  "invariants": [
+    "Dry-run and apply lifecycle paths remain visibly separate.",
+    "Uninstall/destructive mutation requires review/preflight signals.",
+    "Local-only memory and integration surfaces are preserved unless local-only removal is explicitly requested."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q -k \"lifecycle or uninstall or upgrade or strict_preflight or local_only\"",
+    "uv run agentic-workspace proof --target . --changed tests/test_workspace_cli.py src/agentic_workspace/cli.py src/agentic_workspace/contracts/lifecycle_generation_readiness.json --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "completion_criteria": [
+    "High-risk lifecycle scenarios have fixture coverage or a concrete fixture plan.",
+    "Uninstall/refusal and local-only preservation are explicitly covered.",
+    "Dry-run and apply remain clearly separated.",
+    "Weak agents get review-required signals before unsafe mutation."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace summary --format json; gh issue view 405 --json number,title,body,state,labels,url",
+    "what happened": "Added lifecycle_plan.mutation_safety, fixed local-only apply command rendering, and added black-box tests for dry-run/apply separation, ambiguous uninstall review, local-only preservation, and high-risk mutation signals.",
+    "scope touched": "workspace CLI implementation/tests and planning evidence surfaces",
+    "changed surfaces": "src/agentic_workspace/cli.py; tests/test_workspace_cli.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/weak-agent-lifecycle-mutation-safety.plan.json",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q -k \"lifecycle or uninstall or upgrade or strict_preflight or local_only\"; uv run agentic-workspace proof --target . --changed tests/test_workspace_cli.py src/agentic_workspace/cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/weak-agent-lifecycle-mutation-safety.plan.json --format json; uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests",
+    "result for continuation": "#405 complete; later weak-agent recovery work remains in the roadmap lane.",
+    "next step": "Archive this plan, update external evidence, close #405, and promote the next child slice."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; no generated lifecycle mutation adapters or package-local installer refactor were added.",
+    "proof status": "passed",
+    "intent served": "yes; lifecycle mutation safety now exposes review-required signals and fixture coverage.",
+    "config compliance": "used package summary, proof, doctor, reconcile, and archive flow.",
+    "misinterpretation risk": "low; remaining parent-lane work is explicit in state.toml.",
+    "follow-on decision": "close #405 and keep later weak-agent recovery work in the roadmap lane."
+  },
+  "proof_report": {
+    "validation proof": "Focused lifecycle tests, package proof selector, full workspace CLI tests, ruff, planning doctor, summary, and reconcile passed.",
+    "proof achieved now": "High-risk lifecycle scenarios have compact safety signals and black-box tests; local-only apply command rendering is fixed.",
+    "evidence for \"proof achieved\" state": "tests/test_workspace_cli.py; src/agentic_workspace/cli.py; agentic-workspace proof output"
+  },
+  "intent_satisfaction": {
+    "original intent": "Ingest and implement all issues lane by lane. Commit and push after each milestone. Collect dogfooding evidence.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#405 acceptance is met, but the parent weak-agent recovery lane still has later child slices.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml weak-agent recovery lane for later child slices"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make weak-agent lifecycle mutation safe enough that work continuity is not lost to unsafe apply paths.",
+    "slice shaping bias": "Prefer black-box executable safety checks over prose warnings.",
+    "broader-lane validation question": "Do weak agents see enough compact risk/review signal before mutation while strong agents retain hand-owned lifecycle primitives?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded #405 slice is implemented and externally closable, while parent-lane continuation remains tracked in state.toml.",
+    "evidence carried forward": "tests/test_workspace_cli.py; src/agentic_workspace/cli.py; proof selector output; planning summary/reconcile",
+    "reopen trigger": "Reopen if lifecycle_plan.mutation_safety stops exposing dry-run/apply, review-required, preflight, destructive, and local-only preservation signals."
+  },
+  "execution_summary": {
+    "outcome delivered": "Lifecycle mutation safety is first-class in lifecycle_plan output and covered by tests.",
+    "validation confirmed": "Focused tests, full workspace CLI tests, ruff, planning doctor, summary, and reconcile passed.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml weak-agent recovery lane for later child slices.",
+    "post-work posterity capture": ".agentic-workspace/planning/execplans/archive/weak-agent-lifecycle-mutation-safety.plan.json",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "Promote the next weak-agent recovery child slice."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/state.toml weak-agent recovery lane for later child slices.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Expand lifecycle mutation safety before weak-agent use",
+          "owner": "github-issue",
+          "source": "#405"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted #405 as the next active child slice under the weak-agent recovery lane.",
+    "2026-04-27: Direct src/agentic_workspace/cli.py edit was limited to lifecycle-plan safety output and local-only flag rendering; proof output kept direct CLI review visible."
+  ],
+  "direct_cli_edit_review": {
+    "status": "reviewed",
+    "changed_path": "src/agentic_workspace/cli.py",
+    "why_direct_edit_was_used": "Lifecycle_plan safety output and local-only apply command rendering are currently emitted from the root workspace CLI runtime; this changed recovery/review metadata and a rendered option string, not command interface semantics.",
+    "follow_on_needed": "none for #405; the broader root CLI authority lane remains open in external work evidence."
+  }
+}

@@ -2451,6 +2451,13 @@ def _lifecycle_plan_payload(
         "review_required": review_required,
         "review_items": review_items,
         "local_only_state_interaction": "install-root" if local_only else "not-requested",
+        "mutation_safety": _lifecycle_mutation_safety_payload(
+            command_name=command_name,
+            dry_run=dry_run,
+            local_only=local_only,
+            review_required=review_required,
+            planned_removals=planned_removals,
+        ),
         "next_safe_command": {
             "status": "review-required" if review_required else "ready",
             "command": next_command,
@@ -2459,12 +2466,84 @@ def _lifecycle_plan_payload(
     }
 
 
+def _lifecycle_mutation_safety_payload(
+    *,
+    command_name: str,
+    dry_run: bool,
+    local_only: bool,
+    review_required: bool,
+    planned_removals: list[str],
+) -> dict[str, Any]:
+    mutation_commands = {"install", "init", "adopt", "upgrade", "uninstall"}
+    destructive_commands = {"uninstall"}
+    is_mutation = command_name in mutation_commands
+    is_destructive = command_name in destructive_commands
+    classification = "read-only"
+    if is_destructive:
+        classification = "destructive-mutation"
+    elif is_mutation:
+        classification = "lifecycle-mutation"
+    return {
+        "kind": "workspace-lifecycle-mutation-safety/v1",
+        "classification": classification,
+        "hand_owned_runtime": is_mutation,
+        "dry_run_apply_separation": {
+            "status": "dry-run-only" if dry_run and is_mutation else "apply-or-read-only",
+            "dry_run": dry_run,
+            "rule": "Dry-run output is a plan; apply remains a separate lifecycle invocation through hand-owned runtime primitives.",
+        },
+        "review_required_before_apply": bool(is_mutation and (dry_run or review_required or is_destructive)),
+        "strict_preflight": {
+            "available": command_name in HIGH_RISK_COMMANDS,
+            "required_when_enabled": command_name in HIGH_RISK_COMMANDS,
+            "hint": "Run preflight first and pass a fresh token when using --strict-preflight for high-risk mutation.",
+        },
+        "destructive_risk": {
+            "status": "present" if is_destructive else "not-destructive",
+            "planned_removal_count": len(planned_removals),
+            "planned_removals": planned_removals,
+            "rule": "Destructive lifecycle paths require ownership review before deletion.",
+        },
+        "local_only_preservation": {
+            "status": "explicit-local-only-target" if local_only else "preserve-by-default",
+            "rule": "Repo-local private memory and integration aids are preserved unless --local-only explicitly targets the local-only install tree.",
+        },
+        "fixture_coverage": [
+            {
+                "scenario": "upgrade dry-run on installed repo",
+                "status": "covered",
+                "proof": "tests/test_workspace_cli.py::test_upgrade_json_collects_summary_categories",
+            },
+            {
+                "scenario": "ambiguous ownership uninstall refuses deletion",
+                "status": "covered",
+                "proof": "tests/test_workspace_cli.py::test_uninstall_dry_run_requires_review_for_ambiguous_workspace_payload",
+            },
+            {
+                "scenario": "local-only memory/integration preservation",
+                "status": "covered",
+                "proof": "tests/test_workspace_cli.py::test_upgrade_apply_preserves_local_only_memory_and_integration_state",
+            },
+            {
+                "scenario": "second-run lifecycle idempotency",
+                "status": "covered",
+                "proof": "tests/test_workspace_cli.py::test_install_real_init_creates_combined_memory_and_planning_surfaces",
+            },
+            {
+                "scenario": "strict preflight blocks high-risk mutation",
+                "status": "covered",
+                "proof": "tests/test_workspace_cli.py::test_upgrade_strict_preflight_requires_token",
+            },
+        ],
+    }
+
+
 def _lifecycle_apply_command(*, command_name: str, target_root: Path, selected_modules: list[str], local_only: bool) -> str:
     parts = ["agentic-workspace", command_name, "--target", target_root.as_posix()]
     for module_name in selected_modules:
         parts.extend(["--module", module_name])
     if local_only:
-        parts.append("--local")
+        parts.append("--local-only")
     parts.extend(["--format", "json"])
     return " ".join(parts)
 
