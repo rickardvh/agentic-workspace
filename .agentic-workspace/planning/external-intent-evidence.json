@@ -1058,7 +1058,7 @@
       "system": "github",
       "id": "#393",
       "title": "[Workspace]: Generate multi-language CLI packages from implementation-independent definitions",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "required"
@@ -1067,7 +1067,7 @@
       "system": "github",
       "id": "#394",
       "title": "[Workspace]: Audit CLI generation gaps for multi-language packages",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#393",
       "planning_residue_expected": "required"
@@ -1076,7 +1076,7 @@
       "system": "github",
       "id": "#395",
       "title": "[Workspace]: Choose an off-the-shelf-first CLI generation strategy",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#393",
       "planning_residue_expected": "required"
@@ -1085,7 +1085,7 @@
       "system": "github",
       "id": "#396",
       "title": "[Workspace]: Define the canonical command-package IR for generated CLIs",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#393",
       "planning_residue_expected": "required"
@@ -1094,7 +1094,7 @@
       "system": "github",
       "id": "#397",
       "title": "[Workspace]: Generate the Python CLI package from canonical definitions",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#393",
       "planning_residue_expected": "required"
@@ -1103,7 +1103,7 @@
       "system": "github",
       "id": "#398",
       "title": "[Workspace]: Generate the TypeScript CLI package from the same definitions",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#393",
       "planning_residue_expected": "required"
@@ -1112,7 +1112,7 @@
       "system": "github",
       "id": "#399",
       "title": "[Workspace]: Add Docker-isolated conformance tests for generated CLI packages",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#393",
       "planning_residue_expected": "required"
@@ -1121,7 +1121,7 @@
       "system": "github",
       "id": "#400",
       "title": "[Workspace]: Define shell adapter feasibility for bash and PowerShell",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#393",
       "planning_residue_expected": "required"
@@ -1130,7 +1130,7 @@
       "system": "github",
       "id": "#401",
       "title": "[Workspace]: Migrate implementation work away from direct CLI edits",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "#393",
       "planning_residue_expected": "required"

@@ -20,8 +20,8 @@
     },
     "execution": {
       "milestone": "multilang-cli-generation-2026-04-27",
-      "status": "active",
-      "next_step": "Add shell feasibility and direct-CLI-edit guardrails for #400/#401.",
+      "status": "completed",
+      "next_step": "Create the pull request for review.",
       "proof": "Use agentic-workspace proof --changed, focused contract tests, generated-package checks, maintainer surfaces, planning checks, and root CLI tests as selected."
     },
     "scope": {
@@ -58,8 +58,8 @@
     "intentionally deferred": "Full lifecycle mutation generation and broad shell implementation.",
     "discovered implications": "The existing generated-adapter contract is adapter-centric; multi-language packages need one compact command-package view that joins command shape, operation refs, primitive bindings, target outputs, and conformance refs.",
     "proof achieved now": "#394/#395 audit/strategy artifacts are present; #396 command-package IR validates; #397/#398 Python and TypeScript package proof fixtures generate from the IR and are freshness-checked; #399 adds a generated-package proof lane with Docker-isolated TypeScript checks.",
-    "validation still needed": "Shell feasibility and direct-CLI-edit guardrails.",
-    "next likely slice": "#400/#401 shell/direct-edit guardrails."
+    "validation still needed": "None for this planned slice.",
+    "next likely slice": "Review the PR and decide whether to expand generated runtime adapter coverage."
   },
   "intent_interpretation": {
     "literal request": "Create a branch, ingest issues, plan and implement the work end-to-end, commit after each milestone, create a PR, and dogfood the package with new issues for actionable improvement lanes.",
@@ -114,14 +114,14 @@
   ],
   "active_milestone": {
     "id": "shell-and-direct-cli-guardrails",
-    "status": "active",
+    "status": "completed",
     "scope": "#400/#401",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Add shell feasibility and direct-CLI-edit guardrails for #400/#401."
+    "Create the pull request for review."
   ],
   "blockers": [
     "None."
@@ -131,14 +131,12 @@
     ".agentic-workspace/planning/external-intent-evidence.json",
     ".agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json",
     "docs/reviews/multi-language-cli-generation-gap-audit-2026-04-27.md",
-    "docs/reviews/generated-cli-package-strategy-2026-04-27.md"
-    ,
+    "docs/reviews/generated-cli-package-strategy-2026-04-27.md",
     "src/agentic_workspace/contracts/command_package_ir.json",
     "src/agentic_workspace/contracts/schemas/command_package_ir.schema.json",
     "src/agentic_workspace/contract_tooling.py",
     "scripts/check/check_contract_tooling_surfaces.py",
-    "tests/test_contract_tooling.py"
-    ,
+    "tests/test_contract_tooling.py",
     "scripts/generate/generate_command_packages.py",
     "src/agentic_workspace/generated_cli_package/__init__.py",
     "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py",
@@ -178,35 +176,35 @@
     "A PR is created."
   ],
   "execution_run": {
-    "run status": "active",
+    "run status": "completed",
     "executor": "Codex",
     "handoff source": "#393-#401",
-    "what happened": "Created branch, ingested issue bodies, added the #394/#395 audit/strategy artifacts, added the #396 command-package IR, generated Python/TypeScript package proof fixtures from that IR, and added #399 Docker-isolated proof routing for generated command packages.",
-    "scope touched": "planning state/evidence/execplan, review artifacts, contracts, generator, generated package fixtures, generated package checker, Dockerfile, proof selector, and focused tests",
-    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json; docs/reviews/multi-language-cli-generation-gap-audit-2026-04-27.md; docs/reviews/generated-cli-package-strategy-2026-04-27.md; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/schemas/command_package_ir.schema.json; src/agentic_workspace/contracts/contract_inventory.json; src/agentic_workspace/contracts/python_contract_consumption.json; src/agentic_workspace/contracts/proof_selection_rules.json; src/agentic_workspace/contract_tooling.py; src/agentic_workspace/cli.py; scripts/check/check_contract_tooling_surfaces.py; scripts/check/check_generated_command_packages.py; scripts/generate/generate_command_packages.py; generated/typescript/; generated Python package metadata; tests/test_contract_tooling.py; tests/test_workspace_cli.py",
-    "validations run": "generated package freshness check, generated package Docker proof command with local daemon-unavailable skip, contract tooling check, focused contract/workspace CLI tests, focused ruff, proof selector query",
-    "result for continuation": "#399 generated package proof lane is present and checked; continue to #400/#401.",
-    "next step": "Add shell feasibility and direct-CLI-edit guardrails."
+    "what happened": "Created branch, ingested issue bodies, added #394/#395 audit/strategy artifacts, added the #396 command-package IR, generated #397/#398 Python/TypeScript package proof fixtures, added #399 Docker-isolated proof routing, and added #400/#401 shell feasibility plus direct CLI edit guardrails.",
+    "scope touched": "planning state/evidence/execplan, review artifacts, contributor guidance, contracts, generator, generated package fixtures, generated package checker, Dockerfile, proof selector, and focused tests",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/external-intent-evidence.json; .agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json; docs/contributor-playbook.md; docs/reviews/multi-language-cli-generation-gap-audit-2026-04-27.md; docs/reviews/generated-cli-package-strategy-2026-04-27.md; docs/reviews/shell-adapter-feasibility-2026-04-27.md; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/schemas/command_package_ir.schema.json; src/agentic_workspace/contracts/contract_inventory.json; src/agentic_workspace/contracts/python_contract_consumption.json; src/agentic_workspace/contracts/proof_selection_rules.json; src/agentic_workspace/contract_tooling.py; src/agentic_workspace/cli.py; scripts/check/check_contract_tooling_surfaces.py; scripts/check/check_generated_command_packages.py; scripts/generate/generate_command_packages.py; generated/typescript/; generated Python package metadata; tests/test_contract_tooling.py; tests/test_workspace_cli.py",
+    "validations run": "contract tooling check, generated package checks, generated package Docker proof command with local daemon-unavailable skip, focused contract/workspace CLI tests, focused ruff, maintainer surfaces, planning doctor, proof selector query",
+    "result for continuation": "All child issues #394-#401 are implemented; create PR.",
+    "next step": "Push branch and create PR."
   },
   "finished_run_review": {
-    "review status": "not-finished",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
+    "review status": "finished",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
     "config compliance": "package dogfooding started with start, summary, ownership, and checked-in planning",
     "misinterpretation risk": "medium; keep each milestone bounded and evidence-backed",
-    "follow-on decision": "pending"
+    "follow-on decision": "no required follow-up created; PR review may choose the next generated runtime coverage slice"
   },
   "proof_report": {
-    "validation proof": "",
-    "proof achieved now": "",
-    "evidence for \"proof achieved\" state": ""
+    "validation proof": "Focused contract/workspace tests, contract tooling, generated package checks, maintainer surfaces, planning doctor, and proof selector output passed.",
+    "proof achieved now": "#394-#401 implemented.",
+    "evidence for \"proof achieved\" state": "Commits 9c0de66, fd69249, 2518fa1, e0df5b6, and final guardrail commit."
   },
   "intent_satisfaction": {
-    "original intent": "Create branch, ingest issues, plan, implement end-to-end, commit after each milestone, create PR, and create new issues for actionable dogfooding improvements.",
-    "was original intent fully satisfied?": "not yet",
-    "evidence of intent satisfaction": "",
-    "unsolved intent passed to": "#393 active plan"
+    "original intent": "Create a branch, ingest issues, plan and implement the work end-to-end, commit after each milestone, create a PR, and dogfood the package with new issues for actionable improvement lanes.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#394-#401 implemented and closed or ready to close with commits; generated package IR, Python/TypeScript fixtures, Docker proof routing, shell feasibility, and direct CLI edit guardrails are checked in.",
+    "unsolved intent passed to": "none"
   },
   "system_intent_alignment": {
     "relevant system intent": "Do not let this repo's current language, tooling, structure, or agent preferences become hidden universal product assumptions.",
@@ -215,29 +213,52 @@
     "intent evidence source": ".agentic-workspace/system-intent/intent.toml"
   },
   "closure_check": {
-    "slice status": "active",
-    "larger-intent status": "active",
-    "closure decision": "pending",
-    "why this decision is honest": "Work has just started.",
-    "evidence carried forward": "#393-#401, this execplan",
-    "reopen trigger": "N/A while active."
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "All planned child slices in #393 are implemented on this branch and have proof coverage.",
+    "evidence carried forward": "Focused contract/workspace tests, contract tooling checks, generated package checks, maintainer surfaces, planning doctor, and proof selector output passed.",
+    "reopen trigger": "Reopen if command/interface changes again require normal direct CLI implementation instead of definition or generated package changes."
   },
   "execution_summary": {
-    "outcome delivered": "",
-    "validation confirmed": "",
-    "follow-on routed to": "",
-    "post-work posterity capture": "",
-    "knowledge promoted (Memory/Docs/Config)": "",
-    "resume from": "Continue with active_milestone shell-and-direct-cli-guardrails."
+    "outcome delivered": "Implementation-independent command-package IR, generated Python/TypeScript package proof fixtures, Docker-selected generated-package proof, shell feasibility decision, and direct CLI edit guardrails.",
+    "validation confirmed": "Focused tests, ruff, contract tooling, generated package checks, maintainer surfaces, planning doctor, and proof selector query.",
+    "follow-on routed to": "PR review; no new issue required from current dogfooding.",
+    "post-work posterity capture": "Archive this execplan after final commit.",
+    "knowledge promoted (Memory/Docs/Config)": "Contributor playbook, command-package IR policy, shell feasibility review.",
+    "resume from": "Review PR."
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [],
+      "discard": [
+        {
+          "summary": "Execution sequencing details and transient Docker daemon availability.",
+          "owner": "",
+          "source": ""
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "PR review; no new issue required from current dogfooding.",
+          "owner": "#393",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
       "memory": [],
       "config_check": [],
       "docs": [],
-      "issue_follow_up": []
+      "issue_follow_up": [
+        {
+          "summary": "multi-language CLI generation parent",
+          "owner": "issue",
+          "source": "#393"
+        },
+        {
+          "summary": "child issues",
+          "owner": "issue",
+          "source": "#394-#401"
+        }
+      ]
     }
   },
   "drift_log": [

@@ -1,21 +1,7 @@
 [todo]
-active_items = [
-  { id = "multilang-cli-generation", title = "Generate multi-language CLI packages from implementation-independent definitions", source = "#393", plan = ".agentic-workspace/planning/execplans/multilang-cli-generation-2026-04-27.plan.json" },
-]
+active_items = []
 queued_items = []
 
 [roadmap]
-lanes = [
-  { id = "cli-generation-audit-strategy", title = "Audit and off-the-shelf strategy for generated CLI packages", priority = "first", issues = ["#394", "#395"] },
-  { id = "command-package-ir", title = "Canonical command-package IR for generated CLIs", priority = "second", issues = ["#396"] },
-  { id = "python-typescript-generated-packages", title = "Generated Python and TypeScript CLI package proof", priority = "third", issues = ["#397", "#398"] },
-  { id = "docker-generated-package-proof", title = "Docker-isolated generated package conformance", priority = "fourth", issues = ["#399"] },
-  { id = "shell-and-direct-cli-guardrails", title = "Shell adapter feasibility and direct CLI edit guardrails", priority = "fifth", issues = ["#400", "#401"] },
-]
-candidates = [
-  { priority = "first", summary = "Audit and off-the-shelf strategy for generated CLI packages" },
-  { priority = "second", summary = "Canonical command-package IR for generated CLIs" },
-  { priority = "third", summary = "Generated Python and TypeScript CLI package proof" },
-  { priority = "fourth", summary = "Docker-isolated generated package conformance" },
-  { priority = "fifth", summary = "Shell adapter feasibility and direct CLI edit guardrails" },
-]
+lanes = []
+candidates = []

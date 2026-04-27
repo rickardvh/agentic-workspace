@@ -4513,6 +4513,17 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     ]
 
 
+def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
+    assert cli.main(["proof", "--changed", "src/agentic_workspace/cli.py", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    review = payload["answer"]["direct_cli_edit_review"]
+    assert review["status"] == "review-needed"
+    assert review["changed_paths"] == ["src/agentic_workspace/cli.py"]
+    assert "normal interface authoring belongs in command contracts" in review["rule"]
+    assert "runtime primitive implementation and live workspace inspection" in review["allowed_direct_cli_work"]
+
+
 def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None:
     assert (
         cli.main(

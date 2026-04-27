@@ -129,6 +129,8 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
         manifest["generation_policy"]["ordinary_development_environment"] == "Python development remains sufficient for ordinary repo work."
     )
     assert manifest["generation_policy"]["test_environment"] == "Generated non-Python package tests run in Docker-selected proof lanes."
+    assert "must not own runtime primitive behavior" in manifest["generation_policy"]["shell_adapter_policy"]
+    assert "direct cli.py edits" in manifest["generation_policy"]["direct_cli_edit_policy"]
 
     root_package = packages["root-workspace"]
     targets = {target["kind"]: target for target in root_package["targets"]}

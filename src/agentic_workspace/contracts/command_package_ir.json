@@ -15,7 +15,9 @@
     "runtime_boundary": "Runtime primitives and live workspace inspection stay hand-owned and are referenced, not generated.",
     "ordinary_development_environment": "Python development remains sufficient for ordinary repo work.",
     "test_environment": "Generated non-Python package tests run in Docker-selected proof lanes.",
-    "custom_codegen_boundary": "Custom generation code should stay small: validated IR loading, target rendering, freshness checks, and no-direct-edit sentinels."
+    "custom_codegen_boundary": "Custom generation code should stay small: validated IR loading, target rendering, freshness checks, and no-direct-edit sentinels.",
+    "shell_adapter_policy": "Bash and PowerShell targets are deferred downstream projections for thin wrappers, help, argument validation, completion metadata, and runtime handoff only; they must not own runtime primitive behavior.",
+    "direct_cli_edit_policy": "Interface shape, generated package metadata, and adapter wiring should move through contracts, IR, and generators; direct cli.py edits are for runtime primitives, migration exceptions, and uncovered urgent fixes."
   },
   "packages": [
     {

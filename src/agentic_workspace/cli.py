@@ -7223,7 +7223,43 @@ def _proof_selection_for_changed_paths(*, changed_paths: list[str], target_root:
     surface_value_review = _surface_value_review_for_changed_paths(changed_paths=changed_paths, target_root=target_root)
     if surface_value_review["durable_surface_count"]:
         proof_selection["surface_value_review"] = surface_value_review
+    direct_cli_review = _direct_cli_edit_review_for_changed_paths(changed_paths)
+    if direct_cli_review["changed_paths"]:
+        proof_selection["direct_cli_edit_review"] = direct_cli_review
     return proof_selection
+
+
+def _direct_cli_edit_review_for_changed_paths(changed_paths: list[str]) -> dict[str, Any]:
+    cli_paths = [
+        path
+        for path in changed_paths
+        if path == "src/agentic_workspace/cli.py"
+        or path.endswith("/src/repo_planning_bootstrap/cli.py")
+        or path.endswith("/src/repo_memory_bootstrap/cli.py")
+    ]
+    return {
+        "kind": "direct-cli-edit-review/v1",
+        "changed_paths": cli_paths,
+        "status": "review-needed" if cli_paths else "not-applicable",
+        "rule": (
+            "Treat direct CLI edits as runtime-primitive work or migration exceptions; normal interface authoring belongs in "
+            "command contracts, command-package IR, and generated outputs."
+        ),
+        "definition_owned_work": [
+            "command identity and option semantics",
+            "generated adapter/package metadata",
+            "effect hints, operation refs, primitive refs, schema refs, and conformance refs",
+        ],
+        "allowed_direct_cli_work": [
+            "runtime primitive implementation and live workspace inspection",
+            "dispatch glue while a command is not yet covered by generated adapters",
+            "urgent migration exceptions with proof output naming why definitions were insufficient",
+        ],
+        "proof_hint": (
+            "When direct CLI edits accompany interface changes, include command-package IR/generator proof or split the runtime fix "
+            "from definition work."
+        ),
+    }
 
 
 def _surface_value_review_for_changed_paths(*, changed_paths: list[str], target_root: Path | None) -> dict[str, Any]:
