@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -17,6 +19,161 @@ def _run(command: list[str]) -> int:
 
 def _python_executable() -> str:
     return sys.executable or "python"
+
+
+def _conformance_env(*, runtime: str | None = None) -> dict[str, str]:
+    env = os.environ.copy()
+    paths = [str(REPO_ROOT / "src")]
+    existing_pythonpath = env.get("PYTHONPATH")
+    if existing_pythonpath:
+        paths.append(existing_pythonpath)
+    env["PYTHONPATH"] = os.pathsep.join(paths)
+    if runtime is not None:
+        env["AGENTIC_WORKSPACE_RUNTIME"] = runtime
+    return env
+
+
+def _capture(command: list[str], *, cwd: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(command, cwd=cwd, env=env, text=True, capture_output=True, check=False)
+
+
+def _selected_defaults_fields(stdout: str) -> dict[str, object]:
+    payload = json.loads(stdout)
+    return {
+        "profile": payload.get("profile"),
+        "surface": payload.get("surface"),
+        "section": payload.get("selector", {}).get("section") if isinstance(payload.get("selector"), dict) else None,
+        "matched": payload.get("matched"),
+        "default_canonical_agent_instructions_file": (
+            payload.get("answer", {}).get("default_canonical_agent_instructions_file")
+            if isinstance(payload.get("answer"), dict)
+            else None
+        ),
+    }
+
+
+def _run_adapter_conformance(*, require_node: bool) -> list[str]:
+    errors: list[str] = []
+    node = shutil.which("node")
+    if node is None:
+        message = "adapter conformance skipped: node is not available"
+        if require_node:
+            return [message]
+        print(message)
+        return []
+
+    cli = REPO_ROOT / "generated" / "typescript" / "workspace-cli" / "src" / "cli.mjs"
+    if not cli.is_file():
+        return ["adapter conformance failed before execution: generated/typescript/workspace-cli/src/cli.mjs is missing"]
+
+    python = _python_executable()
+    with tempfile.TemporaryDirectory(prefix="agentic-workspace-generated-adapter-") as tmp:
+        temp_root = Path(tmp)
+        shim = temp_root / "agentic_workspace_cli_shim.py"
+        shim.write_text(
+            "import sys\n"
+            f"sys.path.insert(0, {str(REPO_ROOT / 'src')!r})\n"
+            "from agentic_workspace.cli import main\n"
+            "raise SystemExit(main(sys.argv[1:]))\n",
+            encoding="utf-8",
+        )
+        runtime = f'"{python}" "{shim}"'
+        fixture_root = temp_root / "minimal-repo"
+        (fixture_root / ".git").mkdir(parents=True)
+        (fixture_root / ".git" / ".keep").write_text("", encoding="utf-8")
+        (fixture_root / "README.md").write_text("# Fixture\n", encoding="utf-8")
+
+        success_args = ["defaults", "--section", "startup", "--format", "json"]
+        canonical = _capture(
+            [python, str(shim), *success_args],
+            cwd=fixture_root,
+            env=_conformance_env(),
+        )
+        if canonical.returncode != 0:
+            return [
+                "runtime primitive failure: canonical defaults command exited "
+                f"{canonical.returncode}; stderr={canonical.stderr!r}"
+            ]
+        try:
+            canonical_fields = _selected_defaults_fields(canonical.stdout)
+        except json.JSONDecodeError as exc:
+            return [f"runtime primitive failure: canonical defaults stdout was not JSON: {exc}"]
+        expected_fields = {
+            "profile": "compact-contract-answer/v1",
+            "surface": "defaults",
+            "section": "startup",
+            "matched": True,
+            "default_canonical_agent_instructions_file": "AGENTS.md",
+        }
+        if canonical_fields != expected_fields:
+            return [
+                "runtime primitive failure: canonical defaults output shape drifted; "
+                f"expected selected fields {expected_fields!r}, got {canonical_fields!r}"
+            ]
+
+        adapter = _capture(
+            [node, str(cli), *success_args],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=runtime),
+        )
+        if adapter.returncode != canonical.returncode:
+            errors.append(
+                "adapter failure: defaults exit code drifted from canonical process; "
+                f"expected {canonical.returncode}, got {adapter.returncode}; stderr={adapter.stderr!r}"
+            )
+        else:
+            try:
+                adapter_fields = _selected_defaults_fields(adapter.stdout)
+            except json.JSONDecodeError as exc:
+                errors.append(f"adapter failure: defaults stdout was not JSON: {exc}; stdout={adapter.stdout!r}")
+            else:
+                if adapter_fields != canonical_fields:
+                    errors.append(
+                        "adapter failure: defaults JSON selected fields drifted from canonical process; "
+                        f"expected {canonical_fields!r}, got {adapter_fields!r}"
+                    )
+        if adapter.stderr.strip():
+            errors.append(f"adapter failure: defaults emitted unexpected stderr: {adapter.stderr!r}")
+
+        invalid_args = ["defaults", "--section", "startup", "--format", "json", "--definitely-invalid"]
+        canonical_invalid = _capture(
+            [python, str(shim), *invalid_args],
+            cwd=fixture_root,
+            env=_conformance_env(),
+        )
+        if canonical_invalid.returncode == 0 or not canonical_invalid.stderr.strip():
+            errors.append(
+                "runtime primitive failure: canonical invalid-option behavior did not fail with stderr; "
+                f"exit={canonical_invalid.returncode}, stderr={canonical_invalid.stderr!r}"
+            )
+        adapter_invalid = _capture(
+            [node, str(cli), *invalid_args],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=runtime),
+        )
+        if adapter_invalid.returncode != canonical_invalid.returncode:
+            errors.append(
+                "adapter failure: invalid-option exit code drifted from canonical process; "
+                f"expected {canonical_invalid.returncode}, got {adapter_invalid.returncode}"
+            )
+        if bool(adapter_invalid.stderr.strip()) != bool(canonical_invalid.stderr.strip()):
+            errors.append(
+                "adapter failure: invalid-option stderr presence drifted from canonical process; "
+                f"canonical={canonical_invalid.stderr!r}, adapter={adapter_invalid.stderr!r}"
+            )
+
+        unsupported = _capture(
+            [node, str(cli), "workspace-status", "--format", "json"],
+            cwd=fixture_root,
+            env=_conformance_env(runtime=runtime),
+        )
+        if unsupported.returncode != 2 or "Unsupported generated command" not in unsupported.stderr or unsupported.stdout.strip():
+            errors.append(
+                "adapter failure: unsupported command refusal drifted; "
+                f"exit={unsupported.returncode}, stdout={unsupported.stdout!r}, stderr={unsupported.stderr!r}"
+            )
+
+    return errors
 
 
 def _validate_static_surfaces() -> list[str]:
@@ -68,6 +225,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Run generated TypeScript package tests inside Docker.",
     )
     parser.add_argument(
+        "--conformance",
+        action="store_true",
+        help="Run black-box conformance for runnable generated adapters using local Node and the canonical Python CLI.",
+    )
+    parser.add_argument(
+        "--require-node",
+        action="store_true",
+        help="Fail instead of skipping adapter conformance when Node is unavailable.",
+    )
+    parser.add_argument(
         "--tag",
         default="agentic-workspace-generated-typescript-cli-test",
         help="Docker image tag used for generated TypeScript package tests.",
@@ -91,6 +258,13 @@ def main(argv: list[str] | None = None) -> int:
         for error in errors:
             print(error)
         return 1
+    if args.conformance:
+        conformance_errors = _run_adapter_conformance(require_node=bool(args.require_node))
+        if conformance_errors:
+            for error in conformance_errors:
+                print(error)
+            return 1
+        print("[ok] generated command package adapter conformance")
     if args.docker:
         return _run_docker(str(args.tag), require_docker=bool(args.require_docker))
     print("[ok] generated command package static proof")

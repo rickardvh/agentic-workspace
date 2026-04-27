@@ -257,6 +257,15 @@ def test_generated_command_package_check_surface_is_current() -> None:
     assert module.main([]) == 0
 
 
+def test_generated_command_package_adapter_conformance_check_passes() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_generated_command_packages.py"
+    spec = importlib.util.spec_from_file_location("check_generated_command_packages", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.main(["--conformance"]) == 0
+
+
 def test_generated_python_command_package_metadata_is_current() -> None:
     from agentic_workspace.generated_cli_package import GENERATED_COMMAND_PACKAGE
 

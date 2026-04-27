@@ -4509,7 +4509,8 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     assert answer["selected_lanes"][0]["id"] == "generated_command_packages"
     assert answer["required_commands"] == [
         "uv run python scripts/check/check_generated_command_packages.py",
-        "uv run python scripts/check/check_generated_command_packages.py --docker",
+        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+        "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
     ]
 
 
