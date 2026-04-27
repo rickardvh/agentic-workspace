@@ -3,13 +3,13 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-27T20:09:04+00:00",
+  "refreshed_at": "2026-04-27T20:15:38+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-27T20:09:04+00:00",
-    "item_count": 35,
-    "open_count": 35,
+    "refreshed_at": "2026-04-27T20:15:38+00:00",
+    "item_count": 34,
+    "open_count": 34,
     "closed_count": 0,
     "limit": 1000,
     "state": "open",
@@ -235,23 +235,6 @@
       ],
       "created_at": "2026-04-27T15:07:31Z",
       "updated_at": "2026-04-27T15:07:31Z",
-      "comments_count": 0
-    },
-    {
-      "system": "github",
-      "id": "#445",
-      "title": "[Planning]: Add a GitHub adapter to refresh provider-agnostic external intent evidence",
-      "status": "open",
-      "kind": "issue",
-      "parent_id": "",
-      "planning_residue_expected": "optional",
-      "url": "https://github.com/rickardvh/agentic-workspace/issues/445",
-      "source_repository": "rickardvh/agentic-workspace",
-      "labels": [
-        "planning"
-      ],
-      "created_at": "2026-04-27T15:07:35Z",
-      "updated_at": "2026-04-27T15:07:35Z",
       "comments_count": 0
     },
     {
