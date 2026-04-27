@@ -3,14 +3,14 @@
   "systems": [
     "github"
   ],
-  "refreshed_at": "2026-04-27T23:32:16+00:00",
+  "refreshed_at": "2026-04-27T23:39:38+00:00",
   "refresh_metadata": {
     "adapter": "github-gh-cli",
     "repository": "rickardvh/agentic-workspace",
-    "refreshed_at": "2026-04-27T23:32:16+00:00",
+    "refreshed_at": "2026-04-27T23:39:38+00:00",
     "item_count": 458,
-    "open_count": 18,
-    "closed_count": 440,
+    "open_count": 17,
+    "closed_count": 441,
     "limit": 600,
     "state": "all",
     "command": "gh issue list --state all --json number,title,state,url,labels,createdAt,updatedAt,body,comments"
@@ -7359,7 +7359,7 @@
       "system": "github",
       "id": "#471",
       "title": "[Review]: Archive closeout preparation should accept proof-report evidence",
-      "status": "open",
+      "status": "closed",
       "kind": "issue",
       "parent_id": "",
       "planning_residue_expected": "optional",
@@ -7367,8 +7367,8 @@
       "source_repository": "rickardvh/agentic-workspace",
       "labels": [],
       "created_at": "2026-04-27T21:23:28Z",
-      "updated_at": "2026-04-27T21:23:28Z",
-      "comments_count": 0
+      "updated_at": "2026-04-27T23:39:16Z",
+      "comments_count": 1
     },
     {
       "system": "github",
