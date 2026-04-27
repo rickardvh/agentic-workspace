@@ -156,6 +156,7 @@ _WORKFLOW_ARTIFACT_PROFILE_PAYLOADS = {
 _IMPROVEMENT_LATITUDE_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for item in _IMPROVEMENT_LATITUDE_POLICY["modes"]}
 _OPTIMIZATION_BIAS_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for item in _OPTIMIZATION_BIAS_POLICY["modes"]}
 _MODULE_REGISTRY_ENTRIES = {str(item["name"]): copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST["modules"]}
+_FEATURE_TIER_ENTRIES = tuple(copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("feature_tiers", []))
 _CLI_COMMAND_MANIFESTS = {str(item["name"]): copy.deepcopy(item) for item in _CLI_COMMANDS_MANIFEST["commands"]}
 _SETUP_FINDING_CLASS_PAYLOADS = {str(item["class"]): copy.deepcopy(item) for item in _SETUP_FINDINGS_POLICY["accepted_classes"]}
 if str(_WORKFLOW_ARTIFACT_PROFILES_MANIFEST["default_profile"]) != DEFAULT_WORKFLOW_ARTIFACT_PROFILE:
@@ -1970,6 +1971,61 @@ def _preset_modules(descriptors: dict[str, ModuleDescriptor]) -> dict[str, list[
     return presets
 
 
+def _feature_tier_payload(
+    *,
+    selected_modules: list[str],
+    installed_modules: list[str] | None = None,
+    resolved_preset: str | None = None,
+    compact: bool = False,
+) -> dict[str, Any]:
+    active_modules = installed_modules if installed_modules is not None else selected_modules
+    active_set = set(active_modules)
+    active_source = "installed_modules" if installed_modules is not None else "selected_modules"
+    active_tier = next(
+        (tier for tier in _FEATURE_TIER_ENTRIES if bool(tier.get("default_active", True)) and set(tier.get("modules", [])) == active_set),
+        None,
+    )
+    if active_tier is None:
+        active_tier = {
+            "id": "custom",
+            "label": "Custom",
+            "modules": list(active_modules),
+            "preset": resolved_preset,
+            "default_active": True,
+            "activation": "Custom module selection; inspect selected_modules for the exact footprint.",
+            "cost_model": "depends on selected modules.",
+        }
+    active = {
+        "id": str(active_tier.get("id", "")),
+        "label": str(active_tier.get("label", active_tier.get("id", ""))),
+        "modules": list(active_modules),
+        "preset": active_tier.get("preset") or resolved_preset,
+        "activation": str(active_tier.get("activation", "")),
+        "source": active_source,
+    }
+    payload: dict[str, Any] = {
+        "schema_version": "workspace-feature-tiers/v1",
+        "active": active,
+        "default_rule": "Use the smallest tier whose modules match the repo footprint; maintainer dogfooding requires explicit activation.",
+        "detail_command": "agentic-workspace modules --target ./repo --format json",
+    }
+    if compact:
+        return payload
+    payload["available_tiers"] = [
+        {
+            "id": str(tier["id"]),
+            "label": str(tier["label"]),
+            "modules": list(tier.get("modules", [])),
+            "preset": tier.get("preset"),
+            "default_active": bool(tier.get("default_active", True)),
+            "activation": str(tier.get("activation", "")),
+            "cost_model": str(tier.get("cost_model", "")),
+        }
+        for tier in _FEATURE_TIER_ENTRIES
+    ]
+    return payload
+
+
 def _parse_modules(module_arg: str, *, ordered_module_names: list[str]) -> set[str]:
     tokens = [token.strip() for token in module_arg.split(",") if token.strip()]
     if not tokens:
@@ -2684,6 +2740,11 @@ def _run_report_command(
         "target": target_root.as_posix(),
         "selected_modules": selected_modules,
         "installed_modules": installed_modules,
+        "feature_tier": _feature_tier_payload(
+            selected_modules=selected_modules,
+            installed_modules=installed_modules,
+            resolved_preset=resolved_preset,
+        ),
         "health": status_payload["health"],
         "report_profile": _report_profile_payload(),
         "output_contract": output_contract_payload(
@@ -3112,9 +3173,16 @@ def _report_router_payload(payload: dict[str, Any]) -> dict[str, Any]:
     section_hints = _report_section_hints(payload)
     profile_payload = dict(payload.get("report_profile", _report_profile_payload()))
     profile_payload["ordinary_agent_path"] = _ordinary_agent_path_payload(payload=payload, findings=findings)
+    profile_payload["feature_tier"] = _feature_tier_payload(
+        selected_modules=list(payload.get("selected_modules", [])),
+        installed_modules=list(payload.get("installed_modules", [])),
+        compact=True,
+    )
     decision_grade_fields = list(profile_payload.get("decision_grade_fields", []))
     if "report_profile.ordinary_agent_path" not in decision_grade_fields:
         decision_grade_fields.append("report_profile.ordinary_agent_path")
+    if "report_profile.feature_tier" not in decision_grade_fields:
+        decision_grade_fields.append("report_profile.feature_tier")
     profile_payload["decision_grade_fields"] = decision_grade_fields
     return {
         "kind": "workspace-report-router/v1",
@@ -4226,8 +4294,16 @@ def _authority_markers_for_startup(*, active_execplan: str | None = None) -> lis
 def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
     startup_template = _CONTEXT_TEMPLATES["startup_context"]
     config = _load_workspace_config(target_root=target_root)
+    descriptors = _module_operations()
+    registry = _module_registry(descriptors=descriptors, target_root=target_root)
+    installed_modules = [entry.name for entry in registry if entry.installed]
     preflight = _run_preflight_command(target_root=target_root)
     active_state = preflight.get("active_planning_state", {})
+    selected_modules = installed_modules or _preset_modules(descriptors).get(config.default_preset, [])
+    if not installed_modules and isinstance(active_state, dict):
+        active_count = active_state.get("todo", {}).get("active_count", 0)
+        if active_count or active_state.get("planning_record", {}).get("status") == "present":
+            selected_modules = ["planning"]
     planning_record = active_state.get("planning_record", {})
     active_contract = active_state.get("active_contract", {})
     active_execplans = active_state.get("execplans", {}).get("active_execplans", [])
@@ -4255,6 +4331,12 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
         "kind": "startup-context/v1",
         "target": target_root.as_posix(),
         "startup_sequence": startup_sequence,
+        "feature_tier": _feature_tier_payload(
+            selected_modules=selected_modules,
+            installed_modules=installed_modules or None,
+            resolved_preset=config.default_preset,
+            compact=True,
+        ),
         "active_state_summary": {
             "todo_active_count": active_state.get("todo", {}).get("active_count", 0),
             "active_execplan": active_execplan,
@@ -6216,6 +6298,7 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
     descriptors = _module_operations()
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     payload = {
+        "feature_tiers": copy.deepcopy(list(_FEATURE_TIER_ENTRIES)),
         "modules": [
             {
                 "name": entry.name,
@@ -6241,7 +6324,7 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
                 "command_args": {name: list(args) for name, args in descriptors[entry.name].command_args.items()},
             }
             for entry in registry
-        ]
+        ],
     }
     _emit_payload(payload=payload, format_name=format_name)
 

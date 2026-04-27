@@ -7,6 +7,7 @@
     "kind",
     "target",
     "startup_sequence",
+    "feature_tier",
     "active_state_summary",
     "package_boundary",
     "authority_markers",
@@ -50,6 +51,9 @@
         },
         "additionalProperties": false
       }
+    },
+    "feature_tier": {
+      "type": "object"
     },
     "active_state_summary": {
       "type": "object",

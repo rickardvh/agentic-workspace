@@ -1,5 +1,62 @@
 {
   "schema_version": "agentic-workspace/module-registry/v1",
+  "feature_tiers": [
+    {
+      "id": "routing-only",
+      "label": "Routing only",
+      "modules": [],
+      "preset": null,
+      "default_active": true,
+      "activation": "Use when the repo only needs compact entrypoint, config, and report routing surfaces.",
+      "cost_model": "smallest shared footprint; no checked-in module state required."
+    },
+    {
+      "id": "planning",
+      "label": "Planning",
+      "modules": [
+        "planning"
+      ],
+      "preset": "planning",
+      "default_active": true,
+      "activation": "Use when active execution state, execplan routing, or lane closeout must be recoverable.",
+      "cost_model": "adds checked-in planning state and active-work proof surfaces."
+    },
+    {
+      "id": "memory",
+      "label": "Memory",
+      "modules": [
+        "memory"
+      ],
+      "preset": "memory",
+      "default_active": true,
+      "activation": "Use when durable repo knowledge should prevent repeated rediscovery.",
+      "cost_model": "adds checked-in routed knowledge surfaces without active execution planning."
+    },
+    {
+      "id": "full",
+      "label": "Full",
+      "modules": [
+        "planning",
+        "memory"
+      ],
+      "preset": "full",
+      "default_active": true,
+      "activation": "Use when both active execution state and durable repo knowledge are worth the shared footprint.",
+      "cost_model": "current full preset; does not imply maintainer dogfooding or optional advanced surfaces."
+    },
+    {
+      "id": "maintainer-dogfooding",
+      "label": "Maintainer dogfooding",
+      "modules": [
+        "planning",
+        "memory"
+      ],
+      "preset": null,
+      "default_active": false,
+      "activation": "Use only for package development, self-improvement, review intake, extraction, and operating-cost pressure work.",
+      "cost_model": "optional maintainer/development layer; never implied by full installs."
+    }
+  ],
   "module_command_args": {
     "install": [
       "target",

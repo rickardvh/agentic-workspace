@@ -10,6 +10,7 @@
     "target",
     "selected_modules",
     "installed_modules",
+    "feature_tier",
     "health",
     "report_profile",
     "output_contract",
@@ -89,6 +90,9 @@
       "items": {
         "type": "string"
       }
+    },
+    "feature_tier": {
+      "type": "object"
     },
     "health": {
       "type": "string"

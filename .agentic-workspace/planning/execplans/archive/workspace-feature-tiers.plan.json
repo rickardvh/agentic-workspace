@@ -1,0 +1,223 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Workspace Feature Tiers",
+  "goal": [
+    "Implement #451 by defining compact feature tiers and activation criteria for major package capabilities."
+  ],
+  "non_goals": [
+    "Do not build a large feature flag framework.",
+    "Do not remove useful features entirely.",
+    "Do not break current full installs without migration guidance."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Major features have visible tier and activation metadata, and startup/report output can identify the active tier.",
+      "constraints": "Keep exact naming flexible and avoid broad framework work.",
+      "latitude": "Choose the smallest contract/config/report changes that make tiers visible and useful.",
+      "escalation": "Escalate if tiering requires incompatible install semantics or a large feature-flag system."
+    },
+    "execution": {
+      "milestone": "workspace-feature-tiers",
+      "status": "completed",
+      "next_step": "Archive #451 and promote #452 for the default setup posture slice.",
+      "proof": "workspace CLI tests, ruff, proof selector, and planning doctor; broaden to package tests if package surfaces change"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/workspace-feature-tiers.plan.json",
+        "README.md",
+        "src/agentic_workspace/contracts/module_registry.json",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/workspace_output.py",
+        "src/agentic_workspace/contracts/report_contract.json",
+        "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+        "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Full/dogfooding features are not implied defaults.",
+        "Smallest viable tier remains installable.",
+        "Tier metadata is compact and queryable."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450: make advanced features opt-in through feature tiers and merged surfaces.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#452-#460 plus #467/#469/#471 remain in the feature-tier and surface-merge lane.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #451 closeout, promote the next #450 child indicated by validation"
+  },
+  "parent_lane": {
+    "id": "#450",
+    "title": "Make advanced features opt-in through feature tiers and merged surfaces",
+    "priority": "1",
+    "issues": "#449, #450, #451, #452, #453, #454, #455, #456, #457, #458, #459, #460, #467, #469, #471"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Feature tiers and activation criteria now live in the module registry, startup output names the active tier, and default report exposes the active tier inside the router profile without expanding top-level report shape.",
+    "intentionally deferred": "#452 should make public setup minimal or recommendation-driven by default; later #450 children still own surface merge and optional advanced capability compression.",
+    "discovered implications": "README needed to say explicitly that full means planning plus memory and does not imply maintainer dogfooding or optional advanced surfaces.",
+    "proof achieved now": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests packages/planning/src packages/planning/tests; uv run agentic-workspace proof --target . --changed README.md src/agentic_workspace/contracts/module_registry.json src/agentic_workspace/cli.py src/agentic_workspace/workspace_output.py src/agentic_workspace/contracts/report_contract.json src/agentic_workspace/contracts/schemas/workspace_report.schema.json src/agentic_workspace/contracts/schemas/startup_context.schema.json tests/test_workspace_cli.py --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py",
+    "validation still needed": "none for #451; continue #450 through #452.",
+    "next likely slice": "#452"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Define feature tiers and activation criteria for major package capabilities.",
+    "hard constraints": "Do not build broad feature-flag infrastructure or imply full/dogfooding features by default.",
+    "agent may decide locally": "Exact tier naming and metadata shape.",
+    "escalate when": "Tiering requires incompatible install behavior or a broad framework."
+  },
+  "context_budget": {
+    "live working set": "state, this execplan, #450/#451, README, module registry, start/report outputs",
+    "recoverable later": "#461 closure archive and #451 issue body",
+    "externalize before shift": "record tier metadata and activation criteria plus any follow-up routing",
+    "pre-work config pull": "uv run agentic-workspace summary --format json",
+    "pre-work memory pull": "not needed",
+    "tiny resumability note": "Next active issue is #451 feature tiers.",
+    "context-shift triggers": "Before changing install semantics or adding new config fields."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Make advanced capability cost visible and opt-in rather than implicit.",
+    "broader-lane validation question": "Can a repo see and select the smallest viable tier without reading deep docs?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/451"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/451",
+      "label": "#451 feature tiers",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "workspace-feature-tiers",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to feature-tier metadata and activation criteria.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect README, module registry, start output, report output, and #451 acceptance criteria.",
+    "Define the smallest tier metadata and query/report surface that satisfies #451."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/workspace-feature-tiers.plan.json",
+    "README.md",
+    "src/agentic_workspace/contracts/module_registry.json",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/workspace_output.py",
+    "src/agentic_workspace/contracts/report_contract.json",
+    "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan.",
+    "Do not make advanced or dogfooding features implicit defaults."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests packages/planning/src packages/planning/tests",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/workspace-feature-tiers.plan.json --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "Major features have visible tier/activation metadata.",
+    "Startup/report output can identify the active tier.",
+    "A repo can install only the smallest viable tier.",
+    "Full/dogfooding features are not implied defaults."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Defined workspace feature tiers in the module registry; exposed active tier in startup and report outputs; documented that full does not imply maintainer dogfooding.",
+    "validation confirmed": "CLI tests, ruff, proof selection, planning doctor, root CLI authority review, maintainer-surface regeneration, and planning-surface check all passed.",
+    "follow-on routed to": "#452 minimal or recommendation-driven setup default",
+    "post-work posterity capture": "README and module registry carry durable tier semantics; tests guard startup/report/module visibility.",
+    "knowledge promoted (Memory/Docs/Config)": "README.md and src/agentic_workspace/contracts/module_registry.json",
+    "resume from": ".agentic-workspace/planning/state.toml active item for #452"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests packages/planning/src packages/planning/tests; uv run agentic-workspace proof --target . --changed README.md src/agentic_workspace/contracts/module_registry.json src/agentic_workspace/cli.py src/agentic_workspace/workspace_output.py src/agentic_workspace/contracts/report_contract.json src/agentic_workspace/contracts/schemas/workspace_report.schema.json src/agentic_workspace/contracts/schemas/startup_context.schema.json tests/test_workspace_cli.py --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py",
+    "proof achieved now": "Feature-tier metadata, startup/report visibility, and non-dogfooding full-tier framing are implemented and guarded.",
+    "evidence for \"proof achieved\" state": "All listed commands completed successfully; report router guard stayed within its top-level budget while carrying active tier in report_profile.feature_tier."
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded #451 slice is complete, but parent #450 remains open for default setup and surface-merge slices.",
+    "evidence carried forward": "Feature tiers are queryable through agentic-workspace modules, visible in start/report, and README states full does not imply maintainer dogfooding.",
+    "reopen trigger": "Active tier disappears from compact outputs, full again implies dogfooding, or feature tiers no longer name activation criteria."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Transient implementation details and local validation output do not need durable promotion.",
+          "owner": "discard",
+          "source": "execution_summary"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Promote #452 to make minimal or recommendation-driven setup the public default path.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "README.md and src/agentic_workspace/contracts/module_registry.json",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#451 feature tiers",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/451"
+        },
+        {
+          "summary": "#450 feature tiers and surface merge",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/450"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted after #466 completed the #461 payload-boundary lane.",
+    "2026-04-27: Completed #451 with compact feature tier metadata in the module registry plus startup/report visibility."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Define feature tiers and activation criteria for major package capabilities.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "#451 landed feature-tier metadata in the module registry and surfaced the active tier through start/report without activating maintainer dogfooding by default.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml active item workspace-minimal-setup-default"
+  }
+}

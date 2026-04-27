@@ -64,6 +64,18 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert cli.main(["modules", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    assert [entry["id"] for entry in payload["feature_tiers"]] == [
+        "routing-only",
+        "planning",
+        "memory",
+        "full",
+        "maintainer-dogfooding",
+    ]
+    full_tier = next(entry for entry in payload["feature_tiers"] if entry["id"] == "full")
+    assert full_tier["modules"] == ["planning", "memory"]
+    assert "does not imply maintainer dogfooding" in full_tier["cost_model"]
+    dogfooding_tier = next(entry for entry in payload["feature_tiers"] if entry["id"] == "maintainer-dogfooding")
+    assert dogfooding_tier["default_active"] is False
     assert [entry["name"] for entry in payload["modules"]] == ["planning", "memory"]
     planning_module = next(entry for entry in payload["modules"] if entry["name"] == "planning")
     assert planning_module["install_signals"] == ["TODO.md", ".agentic-workspace/planning/execplans", ".agentic-workspace/planning"]
@@ -3003,6 +3015,13 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "module_reports" in payload["schema"]["shared_fields"]
     assert payload["selected_modules"] == ["planning", "memory"]
     assert payload["installed_modules"] == ["planning", "memory"]
+    assert payload["feature_tier"]["active"]["id"] == "full"
+    assert payload["feature_tier"]["active"]["modules"] == ["planning", "memory"]
+    assert payload["feature_tier"]["active"]["source"] == "installed_modules"
+    assert payload["feature_tier"]["default_rule"].startswith("Use the smallest tier")
+    assert any(
+        tier["id"] == "maintainer-dogfooding" and tier["default_active"] is False for tier in payload["feature_tier"]["available_tiers"]
+    )
     assert payload["health"] == "healthy"
     assert payload["output_contract"]["optimization_bias"] == "balanced"
     assert payload["output_contract"]["optimization_bias_source"] == "product-default"
@@ -3159,6 +3178,9 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     guard = payload["report_profile"]["router_shape_guard"]
     assert guard["status"] == "active"
     assert len(payload) <= guard["max_top_level_fields"]
+    assert payload["report_profile"]["feature_tier"]["active"]["id"] == "full"
+    assert "available_tiers" not in payload["report_profile"]["feature_tier"]
+    assert "report_profile.feature_tier" in payload["report_profile"]["decision_grade_fields"]
     assert len(payload["warning_summary"]["sample"]) <= guard["warning_sample_limit"]
     for section in guard["high_volume_sections_excluded"]:
         assert section not in payload
@@ -4626,6 +4648,10 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["startup_sequence"][0]["surface"] == "AGENTS.md"
     assert payload["startup_sequence"][1]["command"] == "uv run agentic-workspace preflight --format json"
     assert payload["startup_sequence"][2]["command"] == "uv run agentic-workspace summary --format json"
+    assert payload["feature_tier"]["active"]["id"] == "planning"
+    assert payload["feature_tier"]["active"]["modules"] == ["planning"]
+    assert payload["feature_tier"]["active"]["source"] == "selected_modules"
+    assert "available_tiers" not in payload["feature_tier"]
     assert payload["immediate_next_allowed_action"]["read_first"] == [
         "uv run agentic-workspace defaults --section startup --format json",
         "uv run agentic-workspace config --target ./repo --format json",

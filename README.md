@@ -10,6 +10,8 @@ Choose one preset:
 - `planning`: active planning without memory
 - `full`: both together
 
+These presets map to feature tiers. `routing-only` is the smallest footprint when a repo only needs compact startup/config/report routing. `full` means planning plus memory; it does not activate maintainer dogfooding, review intake, extraction, or self-improvement surfaces.
+
 Then run:
 
 ```bash

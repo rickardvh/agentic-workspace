@@ -1,0 +1,149 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Workspace Minimal Setup Default",
+  "goal": [
+    "Implement #452 by making public setup guidance minimal or recommendation-driven instead of implying full-stack install is the normal default."
+  ],
+  "non_goals": [
+    "Do not remove the full preset.",
+    "Do not require recommendation analysis when a user explicitly selects a preset.",
+    "Do not implement a broad feature-flag framework."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Public docs no longer imply full-stack install is the normal default, and a new repo has a smallest-viable or recommendation-driven setup path.",
+      "constraints": "Keep existing full installs working and keep explicit memory/planning/full presets available.",
+      "latitude": "Choose whether the smallest slice is docs-only, setup recommendation output, or a minimal preset alias if that stays small.",
+      "escalation": "Escalate if satisfying #452 requires incompatible init semantics or broad configuration machinery."
+    },
+    "execution": {
+      "milestone": "workspace-minimal-setup-default",
+      "status": "in-progress",
+      "next_step": "Inspect README setup guidance, init/setup commands, module registry tiers, and #452 acceptance criteria.",
+      "proof": "README/setup tests as changed, workspace CLI tests, ruff, proof selector, and planning doctor."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/workspace-minimal-setup-default.plan.json",
+        "README.md",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Explicit full installs continue to work.",
+        "Memory, planning, and full remain available by name.",
+        "The default public setup path favors the smallest viable footprint or a recommendation."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450: make advanced features opt-in through feature tiers and merged surfaces.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#453-#460 plus #467/#469/#471 remain in the feature-tier and surface-merge lane.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #452 closeout, promote the next #450 child indicated by validation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make minimal or recommendation-driven setup the public default path.",
+    "hard constraints": "Keep full available and do not break existing explicit preset usage.",
+    "agent may decide locally": "Whether the first slice is docs-only, recommendation output, or a compact minimal/routing-only setup path.",
+    "escalate when": "The chosen path requires incompatible install behavior or broad feature-flag/config machinery."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "A new repo should begin from the smallest viable layer unless evidence justifies memory, planning, or full.",
+    "broader-lane validation question": "Does setup feel cheaper and less product-heavy after feature tiers are visible?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/452"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/452",
+      "label": "#452 minimal setup default",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "workspace-minimal-setup-default",
+    "status": "in-progress",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect README setup guidance, init/setup commands, module registry tiers, and #452 acceptance criteria."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/workspace-minimal-setup-default.plan.json",
+    "README.md",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Explicit full installs continue to work.",
+    "Memory, planning, and full remain available by name.",
+    "Default public setup guidance does not imply full-stack install."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests packages/planning/src packages/planning/tests",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/workspace-minimal-setup-default.plan.json README.md src/agentic_workspace/cli.py tests/test_workspace_cli.py --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "Public docs no longer imply full-stack install is the normal default.",
+    "A new repo has a smallest-viable setup path.",
+    "Recommendation output names why memory, planning, or full is justified, or the docs clearly route users to explicit preset selection.",
+    "Full preset is framed as opt-in for repos with both durable-memory and active-planning needs."
+  ],
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted from TODO direct-task shape into an execplan."
+  ]
+}
