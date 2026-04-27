@@ -1,0 +1,207 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Workspace Context Router Family",
+  "goal": [
+    "Implement #453 by presenting start, summary, report, defaults, and preflight as one context-router family in docs and compact output labels."
+  ],
+  "non_goals": [
+    "Do not break or rename existing commands.",
+    "Do not add a new first-contact surface.",
+    "Do not create a larger command taxonomy."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Agents can choose the right compact context-router view without treating each command as a separate product layer.",
+      "constraints": "Keep existing commands and startup compact; no new first-contact surface.",
+      "latitude": "Choose the smallest docs/output labels that make the shared family visible.",
+      "escalation": "Escalate if consolidation requires command behavior changes or new lifecycle machinery."
+    },
+    "execution": {
+      "milestone": "workspace-context-router-family",
+      "status": "completed",
+      "next_step": "Archive this completed slice, close #453, and promote #454 maintenance-pressure view as the next #450 child.",
+      "proof": "workspace CLI tests, ruff, proof selector, planning doctor, and adapter-surface refresh if startup docs change"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/workspace-context-router-family.plan.json",
+        "README.md",
+        "AGENTS.md",
+        "docs/contributor-playbook.md",
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Existing commands stay stable.",
+        "No new first-contact surface is added.",
+        "Startup remains compact."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#450: make advanced features opt-in through feature tiers and merged surfaces.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "required follow-on detail": "#454-#460 plus #467/#469/#471 remain in the feature-tier and surface-merge lane.",
+    "owner surface": ".agentic-workspace/planning/state.toml",
+    "activation trigger": "after #453 closeout, promote the next #450 child indicated by validation"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "The compact context commands now present as one context-router family, so agents can pick start, summary, report, defaults, or preflight as views rather than separate product layers.",
+    "intentionally deferred": "none",
+    "discovered implications": "Direct CLI rendering changes still need root CLI authority proof until more output surfaces move behind generated definitions.",
+    "proof achieved now": "workspace CLI tests, ruff, maintainer-surface refresh, planning-surface check, proof selector, planning doctor, and root CLI authority query passed.",
+    "validation still needed": "none for this bounded slice",
+    "next likely slice": "#454 maintenance-pressure view"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Merge compact context commands into a context-router family.",
+    "hard constraints": "Do not add a new first-contact surface or break existing commands.",
+    "agent may decide locally": "Which docs/output labels carry the shared family concept.",
+    "escalate when": "The change needs behavioral command consolidation rather than docs/output compression."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Make the package streamlined, lightweight, frictionless, cheap, modular, and small while preserving leverage.",
+    "slice shaping bias": "Make compact commands feel like one small router, not several product concepts.",
+    "broader-lane validation question": "Can an agent pick the right context view without reading a separate handbook?",
+    "intent evidence source": "https://github.com/rickardvh/agentic-workspace/issues/453"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/453",
+      "label": "#453 context-router family",
+      "role": "source_intent",
+      "locator": "issue body acceptance criteria"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/450",
+      "label": "#450 feature tiers and surface merge",
+      "role": "parent_intent",
+      "locator": "issue body"
+    }
+  ],
+  "active_milestone": {
+    "id": "workspace-context-router-family",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this completed slice, close #453, and promote #454 maintenance-pressure view as the next #450 child."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/workspace-context-router-family.plan.json",
+    "README.md",
+    "AGENTS.md",
+    "docs/contributor-playbook.md",
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+    "tests/test_workspace_cli.py"
+  ],
+  "invariants": [
+    "Existing commands stay stable.",
+    "No new first-contact surface is added.",
+    "Startup remains compact."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests packages/planning/src packages/planning/tests",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/workspace-context-router-family.plan.json README.md AGENTS.md docs/contributor-playbook.md src/agentic_workspace/cli.py src/agentic_workspace/contracts/schemas/startup_context.schema.json tests/test_workspace_cli.py --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json"
+  ],
+  "required_tools": [
+    "gh"
+  ],
+  "completion_criteria": [
+    "Docs describe start, summary, report, defaults, and preflight as one context-router family.",
+    "Agents can choose the right view without treating each command as a separate product layer.",
+    "No new first-contact surface is added.",
+    "Startup remains compact."
+  ],
+  "execution_summary": {
+    "outcome delivered": "Docs and compact command payloads now describe start, summary, report, defaults, and preflight as one context-router family. Startup schema and CLI tests cover the new payload.",
+    "validation confirmed": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests packages/planning/src packages/planning/tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; proof selector; planning doctor; root CLI authority query.",
+    "follow-on routed to": "#454 maintenance-pressure view remains the next #450 child.",
+    "post-work posterity capture": "Archive plan records #453 as closed while keeping #450 continuation explicit.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": ".agentic-workspace/planning/state.toml after promoting #454"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests packages/planning/src packages/planning/tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace proof --target . --changed .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/workspace-context-router-family.plan.json README.md AGENTS.md docs/contributor-playbook.md src/agentic_workspace/cli.py src/agentic_workspace/contracts/schemas/startup_context.schema.json tests/test_workspace_cli.py --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "proof achieved now": "The context-router family is visible in compact startup/default/report/preflight outputs and in first-contact docs without adding a new command or surface.",
+    "evidence for \"proof achieved\" state": "CLI tests assert startup/default/report/preflight context_router payloads, the startup schema requires the payload, and generated maintainer surfaces are fresh."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Local validation transcript details beyond command names and pass/fail status.",
+          "owner": "discard",
+          "source": "execution detail"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#454 maintenance-pressure view is the next bounded #450 child.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "Direct CLI payload-rendering edits remain allowed only with root CLI authority proof until generation covers this surface.",
+          "owner": "root_cli_authority defaults",
+          "source": "proof direct_cli_edit_review"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#453 context-router family",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/453"
+        },
+        {
+          "summary": "#450 feature tiers and surface merge",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/450"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted from TODO direct-task shape into an execplan.",
+    "2026-04-27: Completed by adding a context-router payload to start/defaults/report/preflight, docs, startup schema, and CLI tests."
+  ],
+  "intent_satisfaction": {
+    "original intent": "Merge compact context commands into a context-router family.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The bounded slice is complete; archive-plan --prepare-closeout generated normalized closeout fields.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner.",
+    "evidence carried forward": "Prepared closeout records intent satisfaction, closure decision, proof evidence, and distillation buckets.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml roadmap lane feature-tier-and-surface-merge activates a fresh bounded slice."
+  }
+}

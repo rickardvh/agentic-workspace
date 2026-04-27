@@ -15,11 +15,14 @@ Keep this file thin. Treat it as the repo-owned startup adapter over the structu
 
 ## Startup
 
+Treat `start`, `summary`, `report`, `defaults`, and `preflight` as context-router views, not separate handbooks.
+
 - Use `uv run agentic-workspace start --format json` for ordinary compact startup context.
+- Use `uv run agentic-workspace summary --format json` when current planning, active work, or handoff state is the question.
+- Use `uv run agentic-workspace report --target . --format json` when combined workspace routing, diagnostics, warnings, or section selectors are needed.
+- Use `uv run agentic-workspace defaults --section startup --format json` when startup order or first-contact routing policy is the question.
 - Use `uv run agentic-workspace preflight --format json` when you need bundled takeover or recovery context.
-- Use `uv run agentic-workspace defaults --section startup --format json` when startup order or first-contact routing is the question.
 - Use `uv run agentic-workspace config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter.
-- Use `uv run agentic-workspace summary --format json` when only active planning or ownership state is the question.
 - Open module, planning, memory, or deeper routing files only when the compact answers point there.
 - Read package-local `AGENTS.md` only for the package being edited.
 

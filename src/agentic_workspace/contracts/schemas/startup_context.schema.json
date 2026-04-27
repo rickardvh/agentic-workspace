@@ -7,6 +7,7 @@
     "kind",
     "target",
     "startup_sequence",
+    "context_router",
     "feature_tier",
     "active_state_summary",
     "package_boundary",
@@ -53,6 +54,9 @@
       }
     },
     "feature_tier": {
+      "type": "object"
+    },
+    "context_router": {
       "type": "object"
     },
     "active_state_summary": {

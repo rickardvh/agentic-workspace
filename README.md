@@ -22,13 +22,21 @@ Use `--preset planning` when active work continuity is the main problem, and `--
 
 ## Ordinary work
 
+Agentic Workspace exposes one context-router family through several compact views:
+
+- `start`: ordinary entry into the repo
+- `summary`: current planning, active work, or handoff state
+- `report`: combined workspace routing, diagnostics, warnings, and section selectors
+- `defaults`: policy, contract, setup, proof, and startup answers
+- `preflight`: takeover, recovery, or one-call startup plus active state
+
 The ordinary startup path in a repo using Agentic Workspace is:
 
 1. Read `AGENTS.md`.
-2. Read `SYSTEM_INTENT.md` as a compass when you need the repo's higher-level direction.
-3. Ask `agentic-workspace summary --format json`.
-4. Ask `agentic-workspace defaults --section agent_configuration_queries --format json` when you need the next compact routing answer.
-5. Read the active execplan only when the summary points there.
+2. Ask `agentic-workspace start --format json`.
+3. Read `SYSTEM_INTENT.md` as a compass when you need the repo's higher-level direction.
+4. Ask `agentic-workspace summary --format json` only when the current work state is the question.
+5. Read the active execplan only when the compact output points there.
 
 `AGENTS.md`, `llms.txt`, and the generated helper docs are compatibility adapters over the structured workspace config.
 New durable workflow behavior should land in the structured substrate first, then flow outward into those prose adapters.

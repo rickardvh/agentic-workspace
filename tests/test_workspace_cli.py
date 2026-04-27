@@ -118,6 +118,14 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["startup"]["canonical_doc"] == ".agentic-workspace/docs/minimum-operating-model.md"
+    assert payload["startup"]["context_router"]["kind"] == "workspace-context-router-family/v1"
+    assert [view["view"] for view in payload["startup"]["context_router"]["views"]] == [
+        "start",
+        "summary",
+        "report",
+        "defaults",
+        "preflight",
+    ]
     assert payload["startup"]["default_canonical_agent_instructions_file"] == "AGENTS.md"
     assert payload["startup"]["supported_agent_instructions_files"] == ["AGENTS.md", "GEMINI.md"]
     assert payload["startup"]["tiny_safe_model"]["entrypoint"] == "AGENTS.md"
@@ -3162,6 +3170,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert payload["schema"]["section_command"] == "agentic-workspace report --target ./repo --section <section> --format json"
     assert payload["report_profile"]["default_profile"] == "router"
     assert payload["report_profile"]["full_profile"] == "full"
+    assert payload["report_profile"]["context_router"]["first_view"] == "start"
     assert payload["report_profile"]["decision_grade_fields"][0] == "health"
     ordinary_path = payload["report_profile"]["ordinary_agent_path"]
     assert ordinary_path["entry_command"] == "agentic-workspace start --target ./repo --format json"
@@ -4504,6 +4513,8 @@ def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None
 
     # Verify startup guidance is present and correct
     startup = payload["startup_guidance"]
+    assert startup["context_router"]["kind"] == "workspace-context-router-family/v1"
+    assert startup["context_router"]["views"][0]["view"] == "start"
     assert startup["entrypoint"] == "AGENTS.md"
     assert "first_compact_queries" in startup
     assert any("agentic-workspace" in q for q in startup["first_compact_queries"])
@@ -4654,6 +4665,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["startup_sequence"][0]["surface"] == "AGENTS.md"
     assert payload["startup_sequence"][1]["command"] == "uv run agentic-workspace preflight --format json"
     assert payload["startup_sequence"][2]["command"] == "uv run agentic-workspace summary --format json"
+    assert payload["context_router"]["views"][0]["command"] == "uv run agentic-workspace start --target ./repo --format json"
     assert payload["feature_tier"]["active"]["id"] == "planning"
     assert payload["feature_tier"]["active"]["modules"] == ["planning"]
     assert payload["feature_tier"]["active"]["source"] == "selected_modules"

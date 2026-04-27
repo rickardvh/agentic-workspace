@@ -31,6 +31,14 @@ Use `.agentic-workspace/docs/ownership-authority-contract.md` when the missing j
 
 ## Start Here
 
+Treat `start`, `summary`, `report`, `defaults`, and `preflight` as context-router views over the same workspace state:
+
+- `start`: ordinary entry
+- `summary`: current planning, active work, and handoff state
+- `report`: workspace routing, diagnostics, warnings, and section selectors
+- `defaults`: policy, contract, setup, proof, and startup answers
+- `preflight`: takeover and recovery bundle
+
 Default startup path for an agent maintainer:
 
 1. Read `AGENTS.md`.

@@ -2026,6 +2026,47 @@ def _feature_tier_payload(
     return payload
 
 
+def _context_router_family_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE, compact: bool = False) -> dict[str, Any]:
+    views = [
+        {
+            "view": "start",
+            "command": _command_with_cli_invoke(command="agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
+            "use_when": "ordinary entry into the repo",
+        },
+        {
+            "view": "summary",
+            "command": _command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=cli_invoke),
+            "use_when": "current planning, active work, or handoff state is the question",
+        },
+        {
+            "view": "report",
+            "command": _command_with_cli_invoke(command="agentic-workspace report --target ./repo --format json", cli_invoke=cli_invoke),
+            "use_when": "combined workspace routing, diagnostics, warnings, or section selectors are needed",
+        },
+        {
+            "view": "defaults",
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace defaults --section <section> --format json", cli_invoke=cli_invoke
+            ),
+            "use_when": "policy, contract, setup, proof, or startup defaults are the question",
+        },
+        {
+            "view": "preflight",
+            "command": _command_with_cli_invoke(command="agentic-workspace preflight --format json", cli_invoke=cli_invoke),
+            "use_when": "takeover, recovery, or one-call startup plus active state is needed",
+        },
+    ]
+    payload: dict[str, Any] = {
+        "kind": "workspace-context-router-family/v1",
+        "rule": "Treat compact context commands as views over one router; choose the view that answers the current question and only then go deeper.",
+        "first_view": "start",
+        "views": views,
+    }
+    if not compact:
+        payload["non_goal"] = "Do not add a new command layer or require agents to run every view."
+    return payload
+
+
 def _parse_modules(module_arg: str, *, ordered_module_names: list[str]) -> set[str]:
     tokens = [token.strip() for token in module_arg.split(",") if token.strip()]
     if not tokens:
@@ -3079,6 +3120,7 @@ def _report_profile_payload() -> dict[str, Any]:
     return {
         "default_profile": "router",
         "full_profile": "full",
+        "context_router": _context_router_family_payload(compact=True),
         "section_selector": "--section <top-level-field>",
         "default_command": "agentic-workspace report --target ./repo --format json",
         "full_profile_command": "agentic-workspace report --target ./repo --profile full --format json",
@@ -4063,6 +4105,7 @@ def _run_preflight_command(
         "preflight_token": preflight_token,
         "timestamp_hint": "Use this to bootstrap into an interrupted or takeover recovery.",
         "startup_guidance": {
+            "context_router": _context_router_family_payload(cli_invoke=config.cli_invoke, compact=True),
             "entrypoint": startup_payload.get("default_canonical_agent_instructions_file", "AGENTS.md"),
             "entry_query": _command_with_cli_invoke(
                 command=str(tiny_safe_model.get("entry_query", "agentic-workspace preflight --format json")),
@@ -4331,6 +4374,7 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
         "kind": "startup-context/v1",
         "target": target_root.as_posix(),
         "startup_sequence": startup_sequence,
+        "context_router": _context_router_family_payload(cli_invoke=config.cli_invoke, compact=True),
         "feature_tier": _feature_tier_payload(
             selected_modules=selected_modules,
             installed_modules=installed_modules or None,
@@ -6517,6 +6561,7 @@ def _defaults_payload() -> dict[str, Any]:
         "startup": {
             "default_cli_invoke": DEFAULT_CLI_INVOKE,
             "canonical_doc": ".agentic-workspace/docs/minimum-operating-model.md",
+            "context_router": _context_router_family_payload(),
             "primary": [
                 "For one-call takeover context, run `agentic-workspace preflight --format json`.",
                 "Read the configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`).",
