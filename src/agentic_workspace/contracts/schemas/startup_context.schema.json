@@ -104,6 +104,9 @@
       },
       "additionalProperties": false
     },
+    "skill_routing": {
+      "$ref": "#/$defs/skill_routing"
+    },
     "proof": {
       "type": "object"
     },
@@ -196,6 +199,57 @@
         },
         "requires_attention": {
           "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "skill_routing": {
+      "type": "object",
+      "required": [
+        "status",
+        "rule",
+        "query",
+        "fallback_when_skills_unavailable",
+        "preferred_routes"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "rule": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "fallback_when_skills_unavailable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "preferred_routes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "task_shape",
+              "skill",
+              "fallback"
+            ],
+            "properties": {
+              "task_shape": {
+                "type": "string"
+              },
+              "skill": {
+                "type": "string"
+              },
+              "fallback": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false

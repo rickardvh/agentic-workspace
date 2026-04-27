@@ -3539,6 +3539,7 @@ def _run_preflight_command(
             ),
             "first_compact_queries": first_compact_queries,
             "escalation_rules": startup_payload.get("escalation_cues", [])[:2],  # Top 2 most common
+            "skill_routing": _startup_skill_routing_payload(cli_invoke=config.cli_invoke),
         },
         "resolved_config": {
             "workspace_config": config_payload.get("workspace", {}),
@@ -3801,6 +3802,7 @@ def _start_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, 
             "read_first": preflight.get("startup_guidance", {}).get("first_compact_queries", []),
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         },
+        "skill_routing": _startup_skill_routing_payload(cli_invoke=config.cli_invoke),
     }
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths:
@@ -5678,6 +5680,50 @@ def _emit_modules(*, format_name: str, target_root: Path | None) -> None:
     _emit_payload(payload=payload, format_name=format_name)
 
 
+def _startup_skill_routing_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    skill_command = _command_with_cli_invoke(
+        command='agentic-workspace skills --target ./repo --task "<task>" --format json',
+        cli_invoke=cli_invoke,
+    )
+    return {
+        "status": "advisory",
+        "rule": "Prefer task-specific package skills when the runtime supports them; keep compact CLI and workflow docs as the fallback.",
+        "query": skill_command,
+        "fallback_when_skills_unavailable": [
+            "follow AGENTS.md and .agentic-workspace/WORKFLOW.md",
+            "use agentic-workspace preflight --format json for one-call takeover context",
+            "use agentic-workspace summary --format json before raw planning reads",
+        ],
+        "preferred_routes": [
+            {
+                "task_shape": "active planned work or autopilot execution",
+                "skill": "planning-autopilot",
+                "fallback": "agentic-workspace summary --format json, then the active execplan",
+            },
+            {
+                "task_shape": "external issue or tracker intake",
+                "skill": "planning-intake-upstream-task",
+                "fallback": ".agentic-workspace/planning/upstream-task-intake.md plus checked-in planning state",
+            },
+            {
+                "task_shape": "bounded review or finding capture",
+                "skill": "planning-review-pass",
+                "fallback": "agentic-workspace report --target ./repo --format json before selecting any review artifact",
+            },
+            {
+                "task_shape": "active planning report, restart, or proof posture",
+                "skill": "planning-reporting",
+                "fallback": "agentic-workspace summary --format json",
+            },
+            {
+                "task_shape": "managed planning bootstrap upgrade",
+                "skill": "bootstrap-upgrade",
+                "fallback": "agentic-workspace doctor --target ./repo --modules planning --format json",
+            },
+        ],
+    }
+
+
 def _defaults_payload() -> dict[str, Any]:
     compact_manifest = compact_contract_manifest()
     proof_manifest = proof_routes_manifest()
@@ -5962,6 +6008,7 @@ def _defaults_payload() -> dict[str, Any]:
                     "prose or repo-local workaround guidance."
                 ),
             ],
+            "skill_routing": _startup_skill_routing_payload(),
         },
         "compact_contract_profile": {
             "canonical_doc": compact_manifest["canonical_doc"],

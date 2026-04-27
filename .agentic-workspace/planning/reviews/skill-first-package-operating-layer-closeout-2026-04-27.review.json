@@ -1,0 +1,54 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Skill-First Package Operating Layer Closeout",
+  "date": "2026-04-27",
+  "scope": "#427-#429",
+  "classification": "closeout",
+  "issue_classifications": [
+    {
+      "id": "#427",
+      "title": "[Workspace]: Make skills the preferred operating layer for package workflows",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "none",
+      "evidence": "Parent lane completed through #428 and #429: compact startup paths advertise task-shaped package skill routing while WORKFLOW.md remains the compatibility fallback."
+    },
+    {
+      "id": "#428",
+      "title": "[Workspace]: Advertise task-shaped package skills in startup output",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "none",
+      "evidence": "`start`, full `preflight`, and startup defaults now expose advisory `skill_routing` with at least three task-shaped package skill routes and fallback behavior."
+    },
+    {
+      "id": "#429",
+      "title": "[Workspace]: Keep WORKFLOW.md as a thin fallback while skills carry operations",
+      "classification": "evidence_present",
+      "live_state": "closed",
+      "follow_up": "none",
+      "evidence": "Installed `.agentic-workspace/WORKFLOW.md` and the packaged payload mirror now explicitly describe the file as a compatibility router/fallback and point capable agents to `agentic-workspace skills --target . --task \"<task>\" --format json`."
+    }
+  ],
+  "findings": [
+    {
+      "id": "#427",
+      "title": "Skill-first operating layer implemented",
+      "action_state": "evidence-present",
+      "evidence": "Archived execplan `skill-first-package-operating-layer-2026-04-27.plan.json` records the promoted autopilot run, validation, direct CLI edit review, and issue closeout.",
+      "follow_up": "none",
+      "notes": "Remaining roadmap lanes are unrelated and remain inactive until promoted."
+    }
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_generated_command_packages.py"
+  ]
+}

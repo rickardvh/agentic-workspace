@@ -4,7 +4,9 @@
 
 Shared product-managed startup and ownership contract for Agentic Workspace systems installed in a repository.
 
-Keep this file concise, product-managed, and replaceable.
+Keep this file concise, product-managed, and replaceable. It is a compatibility router, not the full operating layer.
+
+When skill support is available, prefer task-specific package skills discovered through `agentic-workspace skills --target . --task "<task>" --format json`. When skill support is unavailable, fall back to this file plus compact CLI commands.
 
 ## Ownership model
 
@@ -35,6 +37,7 @@ Keep this file concise, product-managed, and replaceable.
 ## Module delegation
 
 - Treat this file as the only required top-level startup handoff from `AGENTS.md`.
+- Use package skills for procedural work when available; use this file to recover the fallback route.
 - Use `.agentic-workspace/memory/WORKFLOW.md` for memory-specific operating rules.
 - Read module-local workflow files only when the shared workspace contract routes you there or when the task directly changes that module's behavior or workflow.
 - Add module-local workflow files only when a module needs guidance that should not live in the shared workspace contract.

@@ -1,0 +1,278 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Skill-First Package Operating Layer",
+  "goal": [
+    "Implement #427-#429 so capable agents are routed toward task-specific package skills while AGENTS.md, WORKFLOW.md, and compact CLI output remain readable fallbacks."
+  ],
+  "non_goals": [
+    "Remove AGENTS.md or .agentic-workspace/WORKFLOW.md.",
+    "Require every agent runtime to support skills.",
+    "Build a generic skill marketplace.",
+    "Replace compact CLI startup contracts with prose-only skill instructions."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Startup and fallback surfaces make skills the preferred operating layer for package workflows without breaking non-skill runtimes.",
+      "constraints": "Dogfood package workflow; keep provider/runtime neutrality; do not add a new first-contact surface.",
+      "latitude": "Choose the smallest machine-readable routing fields and fallback text that satisfy #428 and #429.",
+      "escalation": "Stop before changing product direction, removing compatibility adapters, or making skills mandatory."
+    },
+    "execution": {
+      "milestone": "skill-routing-startup-output",
+      "status": "completed",
+      "next_step": "Archive this completed plan and leave no active execution residue for #427-#429.",
+      "proof": "proof selected workspace_cli and planning_surfaces; required commands passed."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/skill-first-package-operating-layer-2026-04-27.plan.json",
+        ".agentic-workspace/WORKFLOW.md",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_cli.py",
+        "packages/planning/bootstrap/WORKFLOW.md",
+        "packages/planning/bootstrap/skills/REGISTRY.json",
+        "packages/planning/skills/"
+      ],
+      "invariants": [
+        "WORKFLOW.md remains a router/fallback, not a full operating manual.",
+        "Skills are advisory preferred routes; CLI/document fallback remains valid.",
+        "Skill routing stays compact and does not load full skill bodies."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make the package cheaper and harder to misuse by routing capable agents through skills while preserving weak-agent compatibility.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none",
+    "parent lane": "#427"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Future agents can discover package-local skills from compact startup paths before falling back to prose.",
+    "intentionally deferred": "Runtime-specific plugin integration and any generic skill marketplace behavior.",
+    "discovered implications": "Compact startup paths can advertise skills without a new first-contact surface; WORKFLOW.md can remain a compatibility router.",
+    "proof achieved now": "start, preflight, and startup defaults expose advisory skill routing with fallback behavior; WORKFLOW.md and payload mirror describe the fallback role.",
+    "validation still needed": "None for #427-#429 after final reconcile and summary.",
+    "next likely slice": "Return to the remaining open roadmap lanes if selected later."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement all planned work on autopilot. Properly dogfood the package this time.",
+    "inferred intended outcome": "Promote and implement the just-created skill-first workflow lane through checked-in planning rather than bypassing the package.",
+    "chosen concrete what": "Implement #428 and #429 under parent #427.",
+    "interpretation distance": "medium",
+    "review guidance": "Check that the run used package surfaces before edits and did not silently expand into all open roadmap lanes."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace CLI startup/defaults/skills routing, tests, managed WORKFLOW fallback text and package payload mirrors, this execplan, planning state/evidence/reviews as needed.",
+    "max changed files": "Prefer under 12 files before generated/payload mirrors.",
+    "required validation commands": "agentic-workspace proof --changed; focused workspace CLI tests; ruff; maintainer surfaces if adapters/payloads change; planning surface checks; summary/reconcile.",
+    "ask-before-refactor threshold": "Changing the skill registry schema, removing WORKFLOW.md, or altering package install layout.",
+    "stop before touching": "Provider-specific GitHub integration in core, branch switching, or broad unrelated roadmap lanes."
+  },
+  "stop_conditions": {
+    "stop when": "#427-#429 are implemented, validated, closed, and planning residue is archived.",
+    "escalate when boundary reached": "A useful implementation requires mandatory skill support or runtime-specific behavior.",
+    "escalate on scope drift": "Work expands into other roadmap lanes or broad planning engine redesign.",
+    "escalate on proof failure": "The narrow validation lane cannot prove startup skill routing and fallback behavior."
+  },
+  "context_budget": {
+    "live working set": "summary, report, reconcile, skills recommendation, #427-#429 issue bodies, startup/defaults/skills CLI functions, WORKFLOW.md.",
+    "recoverable later": "historical review artifacts and unrelated roadmap lanes.",
+    "externalize before shift": "Update execution_run, proof_report, closure_check, and closeout_distillation before archive.",
+    "pre-work config pull": "uv run agentic-workspace preflight --format json",
+    "pre-work memory pull": "Not needed.",
+    "tiny resumability note": "Continue from this plan; implement #428 then #429.",
+    "context-shift triggers": "Before editing skill registry schema or after validation failure."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make skills the preferred package operating layer with document/CLI fallback.",
+    "hard constraints": "Keep compatibility fallback; no new first-contact surface; stay provider/runtime neutral.",
+    "agent may decide locally": "Exact JSON field names, task route categories, and fallback wording.",
+    "escalate when": "The clean solution would require mandatory skill support or product-direction change."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#427",
+      "label": "skill-first parent lane",
+      "role": "parent",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#428",
+      "label": "startup skill routing",
+      "role": "child",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "#429",
+      "label": "workflow fallback",
+      "role": "child",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "skill-routing-startup-output",
+    "status": "completed",
+    "scope": "#427-#429",
+    "ready": "yes",
+    "blocked": "no",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "No further action for #427-#429."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/WORKFLOW.md",
+    "src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/external-intent-evidence.json",
+    ".agentic-workspace/planning/execplans/archive/skill-first-package-operating-layer-2026-04-27.plan.json"
+  ],
+  "invariants": [
+    "Do not make skills mandatory.",
+    "Do not add another first-contact surface.",
+    "Do not turn WORKFLOW.md into full procedure."
+  ],
+  "contract_decisions_to_freeze": [
+    "Skill routing belongs in compact startup/defaults outputs as advisory metadata.",
+    "WORKFLOW.md stays a compatibility router/fallback."
+  ],
+  "open_questions_to_close": [
+    "Closed: skill routing belongs in compact startup/preflight/defaults as advisory metadata with document/CLI fallback."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace proof --target . --changed <paths> --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run ruff check src tests",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace reconcile --format json",
+    "uv run agentic-workspace summary --format json",
+    "uv run python scripts/check/check_generated_command_packages.py"
+  ],
+  "required_tools": [
+    "uv",
+    "git",
+    "gh"
+  ],
+  "completion_criteria": [
+    "Startup/preflight/defaults expose advisory skill routing for at least three common package operation categories.",
+    "Skill routing includes fallback behavior for runtimes without skill support.",
+    "WORKFLOW.md is clearly a router/fallback rather than full operating layer.",
+    "#427-#429 have closeout evidence and tracker state is reconciled."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "uv run agentic-workspace start --format json; summary; report; reconcile; skills recommendation; active execplan",
+    "what happened": "Implemented #427-#429 by adding advisory skill_routing to start, preflight startup_guidance, and startup defaults; tightened WORKFLOW.md and the packaged payload mirror to state that workflow docs are compatibility fallback/router surfaces.",
+    "scope touched": "Workspace CLI startup/defaults/preflight output, tests, workflow fallback text, planning state/evidence, and this execplan.",
+    "changed surfaces": "src/agentic_workspace/cli.py, tests/test_workspace_cli.py, .agentic-workspace/WORKFLOW.md, src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md, planning state/evidence/execplan.",
+    "validations run": "uv run pytest tests/test_workspace_cli.py -q; uv run ruff check src tests; make maintainer-surfaces; uv run python scripts/check/check_planning_surfaces.py; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace proof --target . --changed ... --format json; uv run agentic-workspace reconcile --format json; uv run agentic-workspace summary --format json.; uv run python scripts/check/check_generated_command_packages.py.",
+    "result for continuation": "#427, #428, and #429 are closed. Remaining roadmap lanes are unrelated and remain inactive.",
+    "next step": "Archive this plan and commit the completed slice."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; the run stayed inside the promoted #427 lane and did not implement unrelated roadmap candidates.",
+    "proof status": "passed selected workspace_cli and planning_surfaces lanes; maintainer surface refresh passed.",
+    "intent served": "yes; capable agents can discover package skills from compact startup paths, and weaker runtimes retain document/CLI fallback.",
+    "config compliance": "Used start, summary, report, reconcile, skills, proof, maintainer surfaces, and checked-in planning before implementation and closeout.",
+    "misinterpretation risk": "low; all child issues were implemented and closed, while unrelated open issues remain in inactive roadmap lanes.",
+    "follow-on decision": "archive-and-close for #427-#429."
+  },
+  "proof_report": {
+    "validation proof": "proof selected workspace_cli and planning_surfaces; surface_value_review accepted updates to existing durable surfaces; direct_cli_edit_review was addressed as compact runtime reporting rather than command identity/option semantics.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "172 workspace CLI tests passed, ruff passed, maintainer surfaces passed, planning doctor healthy, planning-surface check clean, reconcile clean before issue closeout. Generated command package static proof passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement all planned work on autopilot and properly dogfood the package.",
+    "was original intent fully satisfied?": "yes for the promoted #427 skill-first package operating lane; no claim is made for unrelated inactive roadmap lanes.",
+    "evidence of intent satisfaction": "The run promoted the lane into checked-in planning before implementation, used package skill discovery and active planning surfaces, implemented #428 and #429, closed #427-#429 with proof comments, and archived the plan.",
+    "unsolved intent passed to": "Remaining unrelated roadmap lanes in .agentic-workspace/planning/state.toml."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Reduce total successful-completion cost across restart, handoff, review, and proof loops.",
+    "slice shaping bias": "Prefer compact, queryable skill routing over adding prose surfaces.",
+    "broader-lane validation question": "Did this make the package easier for capable agents without making weak agents fail?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "complete for #427",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The parent lane only required skill-first routing with compatibility fallback; both child slices are implemented and closed.",
+    "evidence carried forward": "Tests assert skill routing in defaults, preflight, and start; WORKFLOW.md and payload mirror carry fallback wording; archived plan records proof.",
+    "reopen trigger": "A capable agent cannot discover package skills from compact startup routing, or a non-skill runtime loses the document/CLI fallback path."
+  },
+  "execution_summary": {
+    "outcome delivered": "Skill routing is advertised in compact startup outputs and WORKFLOW.md is explicitly a fallback/router.",
+    "validation confirmed": "Workspace CLI tests, ruff, maintainer surfaces, planning doctor, planning-surface check, proof selection, reconcile, and summary.; generated command package static proof.",
+    "follow-on routed to": "Remaining open roadmap lanes only; none required for #427.",
+    "post-work posterity capture": "Archived execplan plus GitHub issue closeout comments.",
+    "knowledge promoted (Memory/Docs/Config)": "No Memory promotion needed; durable behavior is encoded in CLI output/tests and workflow payload text.",
+    "resume from": "No active plan for #427; use summary for next selected roadmap lane."
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail is retained only in this archived proof record.",
+          "owner": "discard",
+          "source": "execution_run"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Unrelated open roadmap lanes remain inactive and must be promoted separately before implementation.",
+          "owner": ".agentic-workspace/planning/state.toml",
+          "source": "intent_satisfaction"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "WORKFLOW.md fallback role is now explicit in installed and packaged payload copies.",
+          "owner": ".agentic-workspace/WORKFLOW.md",
+          "source": "#429"
+        }
+      ],
+      "issue_follow_up": [
+        {
+          "summary": "#427 closed after child implementation.",
+          "owner": "issue",
+          "source": "#427"
+        },
+        {
+          "summary": "#428 closed after compact startup skill routing implementation.",
+          "owner": "issue",
+          "source": "#428"
+        },
+        {
+          "summary": "#429 closed after workflow fallback update.",
+          "owner": "issue",
+          "source": "#429"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-04-27: Promoted #427-#429 after summary/report/reconcile/skills showed no active plan and recommended planning-backed autopilot.",
+    "2026-04-27: Implemented #428 and #429, closed #427-#429 with proof comments, and archived this plan."
+  ]
+}

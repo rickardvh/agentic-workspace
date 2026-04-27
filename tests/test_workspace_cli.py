@@ -127,6 +127,13 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["startup"]["escalation_cues"][1]["boundary"] == "planning"
     assert payload["startup"]["top_level_capabilities"][2]["module"] == "memory"
     assert any("current agent does not natively look for `AGENTS.md`" in step for step in payload["startup"]["fallbacks"])
+    skill_routing = payload["startup"]["skill_routing"]
+    assert skill_routing["status"] == "advisory"
+    assert skill_routing["query"] == 'agentic-workspace skills --target ./repo --task "<task>" --format json'
+    assert "planning-autopilot" in {route["skill"] for route in skill_routing["preferred_routes"]}
+    assert "planning-intake-upstream-task" in {route["skill"] for route in skill_routing["preferred_routes"]}
+    assert "planning-review-pass" in {route["skill"] for route in skill_routing["preferred_routes"]}
+    assert any("WORKFLOW.md" in fallback for fallback in skill_routing["fallback_when_skills_unavailable"])
     assert payload["compact_contract_profile"]["canonical_doc"] == ".agentic-workspace/docs/compact-contract-profile.md"
     assert payload["compact_contract_profile"]["rule"] == (
         "When one bounded answer is enough, prefer a narrow selector over a whole-surface dump."
@@ -4280,6 +4287,9 @@ def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None
     assert startup["entrypoint"] == "AGENTS.md"
     assert "first_compact_queries" in startup
     assert any("agentic-workspace" in q for q in startup["first_compact_queries"])
+    assert startup["skill_routing"]["status"] == "advisory"
+    assert startup["skill_routing"]["query"] == 'agentic-workspace skills --target ./repo --task "<task>" --format json'
+    assert startup["skill_routing"]["preferred_routes"][0]["skill"] == "planning-autopilot"
 
     # Verify config is present
     config = payload["resolved_config"]
@@ -4401,6 +4411,10 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
         "refresh_command": None,
     }
     assert payload["immediate_next_allowed_action"]["summary"] == "run the compact startup path."
+    assert payload["skill_routing"]["status"] == "advisory"
+    assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
+    assert payload["skill_routing"]["preferred_routes"][0]["skill"] == "planning-autopilot"
+    assert any("WORKFLOW.md" in step for step in payload["skill_routing"]["fallback_when_skills_unavailable"])
     assert payload["proof"]["required_commands"] == [
         "uv run pytest tests/test_workspace_cli.py -q",
         "uv run ruff check src tests",
